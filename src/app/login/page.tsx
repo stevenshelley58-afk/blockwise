@@ -28,7 +28,10 @@ export default async function LoginPage() {
           <h1 id="login-heading">Access your workspace</h1>
           <p className="login-copy">Use the account issued during onboarding. New clients can request access from the homepage.</p>
         </div>
-        <LoginForm showTestProfiles={process.env.NODE_ENV !== "production"} />
+        <LoginForm
+          showTestProfiles={process.env.NODE_ENV !== "production"}
+          testProfilePassword={process.env.NODE_ENV !== "production" ? process.env.BLOCKWISE_DEV_PASSWORD : undefined}
+        />
       </section>
     </main>
   );
