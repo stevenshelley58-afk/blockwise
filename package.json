@@ -18,10 +18,12 @@
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
+    "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^0.468.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.0",
