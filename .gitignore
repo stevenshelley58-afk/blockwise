@@ -1,0 +1,16 @@
+node_modules
+.tools
+.next
+.vercel
+supabase/.temp
+.trigger
+coverage
+playwright-report
+test-results
+.env
+.env*.local
+*.tsbuildinfo
+dist
+
+.vercel
+.env*
