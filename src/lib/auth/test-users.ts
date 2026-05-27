@@ -1,5 +1,3 @@
-export const DEV_TEST_PASSWORD = "SJS5858";
-
 export const testUsers = [
   {
     key: "operator",
