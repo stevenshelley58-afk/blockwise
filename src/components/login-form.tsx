@@ -3,18 +3,19 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
-import { DEV_TEST_PASSWORD, getRedirectForEmail, testUsers } from "@/lib/auth/test-users";
+import { getRedirectForEmail, testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type LoginFormProps = {
   showTestProfiles?: boolean;
+  testProfilePassword?: string;
 };
 
-export function LoginForm({ showTestProfiles = false }: LoginFormProps) {
+export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }: LoginFormProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [email, setEmail] = useState<string>(showTestProfiles ? testUsers[0].email : "");
-  const [password, setPassword] = useState<string>(showTestProfiles ? DEV_TEST_PASSWORD : "");
+  const [password, setPassword] = useState<string>(showTestProfiles ? testProfilePassword : "");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,7 +46,7 @@ export function LoginForm({ showTestProfiles = false }: LoginFormProps) {
 
   return (
     <div className="login-stack">
-      {showTestProfiles ? (
+      {showTestProfiles && testProfilePassword ? (
         <div className="profile-grid">
           {testUsers.map((user) => (
             <button
@@ -54,8 +55,8 @@ export function LoginForm({ showTestProfiles = false }: LoginFormProps) {
               key={user.email}
               onClick={() => {
                 setEmail(user.email);
-                setPassword(DEV_TEST_PASSWORD);
-                void signIn(user.email, DEV_TEST_PASSWORD);
+                setPassword(testProfilePassword);
+                void signIn(user.email, testProfilePassword);
               }}
               disabled={isSubmitting}
             >
