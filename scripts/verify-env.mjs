@@ -1,38 +1,37 @@
-const required = [
-  "NEXT_PUBLIC_APP_URL",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "TOKEN_ENCRYPTION_KEY",
-  "OPENAI_API_KEY",
-  "OPENROUTER_API_KEY",
-  "TRIGGER_SECRET_KEY",
-  "TRIGGER_PROJECT_ID",
-  "META_APP_ID",
-  "META_APP_SECRET",
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-];
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-const recommendedSecurity = [
-  "CLOUDFLARE_AI_GATEWAY_URL",
-  "CLOUDFLARE_AI_GATEWAY_TOKEN",
-  "AGENT_ALLOWED_OUTBOUND_DOMAINS",
-  "SECURITY_AUDIT_LOG_DRAIN_URL",
-];
+import {
+  getDeploymentReadiness,
+  parseEnvFile,
+} from "../src/lib/config/env.ts";
 
-const missing = required.filter((key) => !process.env[key]);
-const missingRecommendedSecurity = recommendedSecurity.filter((key) => !process.env[key]);
+const dotenvFiles = [".env.local", ".env"];
+const fileEnv = {};
 
-if (missing.length > 0) {
-  console.error(`Missing required environment variables: ${missing.join(", ")}`);
+for (const file of dotenvFiles) {
+  const path = resolve(process.cwd(), file);
+
+  if (existsSync(path)) {
+    Object.assign(fileEnv, parseEnvFile(readFileSync(path, "utf8")));
+  }
+}
+
+const env = {
+  ...fileEnv,
+  ...process.env,
+};
+const readiness = getDeploymentReadiness(env);
+
+if (readiness.invalid.length > 0) {
+  console.error(`Invalid or missing required environment variables: ${readiness.invalid.join(", ")}`);
   process.exit(1);
 }
 
-if (missingRecommendedSecurity.length > 0) {
+if (readiness.security.missingRecommended.length > 0) {
   console.warn(
-    `Missing recommended production security variables: ${missingRecommendedSecurity.join(", ")}`,
+    `Missing recommended production security variables: ${readiness.security.missingRecommended.join(", ")}`,
   );
 }
 
-console.log("All required Blockwise environment variables are present.");
+console.log("All required Blockwise environment variables are present and non-placeholder.");

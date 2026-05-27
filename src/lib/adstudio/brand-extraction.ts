@@ -1,0 +1,418 @@
+import { deterministicUuid } from "./id.ts";
+import type { AdStudioBrandKit, AdStudioReviewStatus } from "./types.ts";
+
+export type ExtractBrandKitInput = {
+  workspaceId: string;
+  websiteUrl: string;
+  marketCountry: "AU";
+  marketRegion?: string | null;
+  htmlByUrl: Record<string, string>;
+};
+
+export type BrandKitReviewPatch = {
+  reviewStatus?: AdStudioReviewStatus;
+  lockedFields?: string[];
+};
+
+const DEFAULT_COLOURS = {
+  primary: "#087F7A",
+  secondary: "#F1F5F2",
+  accent: "#2364AA",
+  background: "#FFFFFF",
+  text: "#18201F",
+};
+
+const COMMON_SYSTEM_FONTS = new Set([
+  "system-ui",
+  "-apple-system",
+  "BlinkMacSystemFont",
+  "Segoe UI",
+  "Arial",
+  "sans-serif",
+  "serif",
+  "ui-sans-serif",
+]);
+
+export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudioBrandKit {
+  const normalizedUrl = normalizeUrl(input.websiteUrl);
+  const entries = Object.entries(input.htmlByUrl);
+  const homepageHtml = input.htmlByUrl[normalizedUrl] ?? entries[0]?.[1] ?? "";
+  const pagesScanned = entries.map(([url]) => normalizeUrl(url));
+  const title = extractTagText(homepageHtml, "title");
+  const siteName =
+    extractMeta(homepageHtml, "og:site_name") ??
+    extractMeta(homepageHtml, "application-name") ??
+    cleanBusinessName(title) ??
+    hostToBusinessName(normalizedUrl);
+  const cssText = extractCssText(homepageHtml);
+  const colours = extractColours(cssText);
+  const font = extractPrimaryFont(cssText);
+  const logo = extractLogoUrl(homepageHtml, normalizedUrl);
+  const favicon = extractLinkUrl(homepageHtml, normalizedUrl, ["icon", "shortcut icon", "apple-touch-icon"]);
+  const privacyPolicyUrl = extractAnchorUrl(homepageHtml, normalizedUrl, /privacy/i);
+  const termsUrl = extractAnchorUrl(homepageHtml, normalizedUrl, /terms|conditions/i);
+  const socialLinks = extractSocialLinks(homepageHtml);
+
+  return {
+    brandKitId: deterministicUuid(`${input.workspaceId}:${normalizedUrl}`),
+    workspaceId: input.workspaceId,
+    source: {
+      type: "website",
+      url: normalizedUrl,
+      lastExtractedAt: new Date("2026-05-27T00:00:00.000Z").toISOString(),
+      pagesScanned,
+    },
+    identity: {
+      businessName: siteName,
+      tradingName: siteName,
+      marketCountry: input.marketCountry,
+      marketRegion: input.marketRegion ?? "WA",
+      licenceText: extractLicenceText(homepageHtml),
+    },
+    logos: {
+      primaryLogoUrl: logo,
+      darkLogoUrl: null,
+      lightLogoUrl: null,
+      faviconUrl: favicon,
+    },
+    colours: {
+      primary: colours[0] ?? DEFAULT_COLOURS.primary,
+      secondary: colours[1] ?? DEFAULT_COLOURS.secondary,
+      accent: colours[2] ?? DEFAULT_COLOURS.accent,
+      background: DEFAULT_COLOURS.background,
+      text: colours.find((colour) => colour !== colours[0]) ?? DEFAULT_COLOURS.text,
+      confidence: {
+        primary: colours[0] ? 0.88 : 0.52,
+        secondary: colours[1] ? 0.74 : 0.48,
+      },
+    },
+    typography: {
+      headingFont: font,
+      bodyFont: font,
+      fallbackHeading: fontLooksSerif(font) ? "serif" : "sans-serif",
+      fallbackBody: "sans-serif",
+    },
+    visualStyle: {
+      styleTags: inferStyleTags(homepageHtml, colours),
+      imageTreatment: "Bright local property imagery with clean brand typography.",
+      layoutDensity: "low",
+      cornerRadius: cssText.includes("border-radius: 8px") ? "small" : "medium",
+    },
+    tone: {
+      voice: inferVoice(homepageHtml),
+      avoid: ["hype", "cheap urgency", "unsupported guarantees"],
+      preferredPhrases: extractPreferredPhrases(homepageHtml),
+      sampleCopy: extractSampleCopy(homepageHtml),
+    },
+    assets: {
+      headshots: extractImageUrls(homepageHtml, normalizedUrl, /headshot|agent|profile/i),
+      officeImages: extractImageUrls(homepageHtml, normalizedUrl, /office|team/i),
+      listingImages: extractImageUrls(homepageHtml, normalizedUrl, /listing|property|home|house/i),
+      socialProofImages: extractImageUrls(homepageHtml, normalizedUrl, /sold|review|testimonial/i),
+    },
+    contact: {
+      phone: extractPhone(homepageHtml),
+      email: extractEmail(homepageHtml),
+      address: extractAddress(homepageHtml),
+      socialLinks,
+    },
+    compliance: {
+      disclaimers: extractDisclaimers(homepageHtml),
+      privacyPolicyUrl,
+      termsUrl,
+    },
+    reviewStatus: "pending_user_review",
+    lockedFields: [],
+  };
+}
+
+export function mergeBrandKitReview(
+  existing: AdStudioBrandKit,
+  next: AdStudioBrandKit,
+  patch: BrandKitReviewPatch = {},
+): AdStudioBrandKit {
+  const lockedFields = patch.lockedFields ?? existing.lockedFields;
+  const merged = structuredClone(next) as AdStudioBrandKit;
+
+  for (const path of lockedFields) {
+    const existingValue = getPath(existing, path);
+
+    if (existingValue !== undefined) {
+      setPath(merged, path, existingValue);
+    }
+  }
+
+  return {
+    ...merged,
+    reviewStatus: patch.reviewStatus ?? next.reviewStatus,
+    lockedFields,
+  };
+}
+
+function normalizeUrl(value: string): string {
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  const url = new URL(withProtocol);
+  url.hash = "";
+  return url.toString().replace(/\/$/, "");
+}
+
+function absoluteUrl(base: string, value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(decodeHtml(value), base).toString();
+  } catch {
+    return null;
+  }
+}
+
+function extractTagText(html: string, tagName: string): string | null {
+  const match = html.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i"));
+  return match?.[1] ? decodeHtml(stripTags(match[1]).trim()) : null;
+}
+
+function extractMeta(html: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+name=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) {
+      return decodeHtml(match[1]).trim();
+    }
+  }
+
+  return null;
+}
+
+function extractCssText(html: string): string {
+  return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
+}
+
+function extractColours(cssText: string): string[] {
+  const counts = new Map<string, number>();
+
+  for (const match of cssText.matchAll(/#[0-9a-f]{3,8}\b/gi)) {
+    const colour = normalizeHex(match[0]);
+    if (!colour || colour === "#FFFFFF" || colour === "#000000") {
+      continue;
+    }
+    counts.set(colour, (counts.get(colour) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([colour]) => colour).slice(0, 4);
+}
+
+function normalizeHex(value: string): string | null {
+  const raw = value.toUpperCase();
+
+  if (/^#[0-9A-F]{3}$/.test(raw)) {
+    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`;
+  }
+
+  if (/^#[0-9A-F]{6}$/.test(raw)) {
+    return raw;
+  }
+
+  if (/^#[0-9A-F]{8}$/.test(raw)) {
+    return raw.slice(0, 7);
+  }
+
+  return null;
+}
+
+function extractPrimaryFont(cssText: string): string {
+  const match = cssText.match(/font-family\s*:\s*([^;}]+)/i);
+  const fonts = (match?.[1] ?? "Inter")
+    .split(",")
+    .map((font) => font.replace(/["']/g, "").trim())
+    .filter(Boolean);
+
+  return fonts.find((font) => !COMMON_SYSTEM_FONTS.has(font)) ?? fonts[0] ?? "Inter";
+}
+
+function extractLogoUrl(html: string, baseUrl: string): string | null {
+  const imgMatches = [...html.matchAll(/<img\b[^>]*>/gi)].map((match) => match[0]);
+  const logoImg = imgMatches.find((tag) => /logo|brand/i.test(tag));
+  const src = logoImg?.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+
+  return absoluteUrl(baseUrl, src ?? null) ?? extractLinkUrl(html, baseUrl, ["mask-icon"]);
+}
+
+function extractLinkUrl(html: string, baseUrl: string, relCandidates: string[]): string | null {
+  for (const rel of relCandidates) {
+    const pattern = new RegExp(`<link[^>]+rel=["'][^"']*${rel}[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>`, "i");
+    const match = html.match(pattern);
+    const url = absoluteUrl(baseUrl, match?.[1] ?? null);
+    if (url) {
+      return url;
+    }
+  }
+
+  return null;
+}
+
+function extractAnchorUrl(html: string, baseUrl: string, labelPattern: RegExp): string | null {
+  const matches = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+
+  for (const match of matches) {
+    if (labelPattern.test(stripTags(match[2] ?? "")) || labelPattern.test(match[1] ?? "")) {
+      return absoluteUrl(baseUrl, match[1] ?? null);
+    }
+  }
+
+  return null;
+}
+
+function extractSocialLinks(html: string): string[] {
+  return [...html.matchAll(/href=["']([^"']+)["']/gi)]
+    .map((match) => decodeHtml(match[1] ?? ""))
+    .filter((href) => /facebook|instagram|linkedin|youtube/i.test(href))
+    .slice(0, 8);
+}
+
+function extractImageUrls(html: string, baseUrl: string, tagPattern: RegExp): string[] {
+  return [...html.matchAll(/<img\b[^>]*>/gi)]
+    .filter((match) => tagPattern.test(match[0]))
+    .map((match) => absoluteUrl(baseUrl, match[0].match(/\bsrc=["']([^"']+)["']/i)?.[1] ?? null))
+    .filter((url): url is string => Boolean(url))
+    .slice(0, 12);
+}
+
+function extractPhone(html: string): string | null {
+  const tel = html.match(/href=["']tel:([^"']+)["']/i)?.[1];
+  const text = tel ?? stripTags(html).match(/(?:\+?61|0)\s?(?:2|3|4|7|8)\s?\d{2,4}\s?\d{3}\s?\d{3}/)?.[0];
+  return text ? decodeHtml(text).trim() : null;
+}
+
+function extractEmail(html: string): string | null {
+  const mailto = html.match(/href=["']mailto:([^"'?]+)[^"']*["']/i)?.[1];
+  return mailto ?? stripTags(html).match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i)?.[0] ?? null;
+}
+
+function extractAddress(html: string): string | null {
+  const match = stripTags(html).match(/\b\d{1,5}\s+[A-Z][A-Za-z\s]+(?:Street|St|Road|Rd|Avenue|Ave|Drive|Dr|Parade|Pde)\b/);
+  return match?.[0] ?? null;
+}
+
+function extractLicenceText(html: string): string | null {
+  const text = stripTags(html).replace(/\s+/g, " ");
+  return text.match(/\b(?:Licence|License|REBA)\s*(?:No\.?|Number)?\s*[:#]?\s*[A-Z0-9 -]{4,24}\b/i)?.[0] ?? null;
+}
+
+function extractDisclaimers(html: string): string[] {
+  const blockText = [...html.matchAll(/<(?:p|small|footer|aside)[^>]*>([\s\S]*?)<\/(?:p|small|footer|aside)>/gi)]
+    .map((match) => stripTags(match[1] ?? "").replace(/\s+/g, " ").trim())
+    .join("\n");
+  const source = blockText || stripTags(html).replace(/\s+/g, " ");
+
+  return source
+    .split(/\n+/)
+    .filter((sentence) => /general only|privacy|terms|licensed|licence|disclaimer|not financial advice/i.test(sentence))
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function cleanBusinessName(title: string | null): string | null {
+  if (!title) {
+    return null;
+  }
+
+  return title.split(/[-|]/)[0]?.trim() || null;
+}
+
+function hostToBusinessName(value: string): string {
+  const host = new URL(value).hostname.replace(/^www\./, "");
+  return host
+    .split(".")[0]
+    .split(/[-_]/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function inferStyleTags(html: string, colours: string[]): string[] {
+  const text = stripTags(html).toLowerCase();
+  const tags = new Set<string>();
+
+  if (/premium|luxury|bespoke|executive/.test(text)) tags.add("premium");
+  if (/calm|trusted|local|advice/.test(text)) tags.add("professional");
+  if (colours.length <= 2) tags.add("minimal");
+  if (/family|community|neighbourhood/.test(text)) tags.add("warm");
+
+  return tags.size ? [...tags] : ["professional", "local", "clean"];
+}
+
+function inferVoice(html: string): string {
+  const text = stripTags(html).toLowerCase();
+
+  if (/premium|luxury|bespoke/.test(text)) {
+    return "premium local expert";
+  }
+
+  if (/calm|advice|trusted/.test(text)) {
+    return "calm local advisor";
+  }
+
+  return "professional local expert";
+}
+
+function extractPreferredPhrases(html: string): string[] {
+  return extractSampleCopy(html)
+    .filter((copy) => /local|market|seller|property|advice/i.test(copy))
+    .slice(0, 5);
+}
+
+function extractSampleCopy(html: string): string[] {
+  return [...html.matchAll(/<(?:h1|h2|p)[^>]*>([\s\S]*?)<\/(?:h1|h2|p)>/gi)]
+    .map((match) => decodeHtml(stripTags(match[1] ?? "")).replace(/\s+/g, " ").trim())
+    .filter((copy) => copy.length >= 12)
+    .slice(0, 8);
+}
+
+function fontLooksSerif(font: string): boolean {
+  return /serif|times|garamond|georgia/i.test(font);
+}
+
+function stripTags(value: string): string {
+  return value.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'");
+}
+
+function getPath(source: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((current, key) => {
+    if (current && typeof current === "object" && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+
+    return undefined;
+  }, source);
+}
+
+function setPath(target: unknown, path: string, value: unknown) {
+  const parts = path.split(".");
+  let current = target as Record<string, unknown>;
+
+  for (const part of parts.slice(0, -1)) {
+    const next = current[part];
+    if (!next || typeof next !== "object") {
+      current[part] = {};
+    }
+    current = current[part] as Record<string, unknown>;
+  }
+
+  current[parts.at(-1) ?? path] = value;
+}

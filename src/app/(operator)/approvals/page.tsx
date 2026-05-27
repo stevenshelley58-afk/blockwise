@@ -4,9 +4,15 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { HUMAN_APPROVAL_ACTIONS } from "@/lib/agents/permissions";
-import { approvalQueue } from "@/lib/product/demo-data";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listApprovalRows } from "@/lib/product/live-data";
 
-export default function ApprovalsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ApprovalsPage() {
+  const { supabase, access } = await requirePageSurfaceAccess("approvals");
+  const approvalQueue = await listApprovalRows(supabase, access.workspaceId);
+
   return (
     <main className="content">
       <PageHeading

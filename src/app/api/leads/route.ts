@@ -1,9 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { getLeadRowsWithDedupe } from "@/lib/product/workflow-data";
+import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { listLeadRowsWithDedupe } from "@/lib/product/live-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export function GET() {
-  return NextResponse.json(getLeadRowsWithDedupe());
+export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServerClient();
+  const access = await requireWorkspaceAccess(supabase, {
+    surface: "monitor",
+    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
+  });
+
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  return NextResponse.json(await listLeadRowsWithDedupe(supabase, access.access.workspaceId));
 }

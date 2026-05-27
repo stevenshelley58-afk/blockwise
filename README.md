@@ -22,7 +22,7 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 - `npm run typecheck` runs TypeScript checks.
 - `npm run build` verifies the Vercel/Next.js production build.
 
-The current implementation uses deterministic provider mocks so the first release can prove tenancy, operator control, model governance, and agent safety before live Meta/Google publishing.
+Production-live paths now use Supabase-backed workspace data, live provider sync helpers, OpenAI/OpenRouter provider adapters, and approval-gated provider publish requests. Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google app review, provider account IDs, token vault entries, and human approval flows have been verified in production.
 
 Security hardening docs live in `docs/security/agent-safety.md` and `docs/security/client-data-isolation.md`.
 

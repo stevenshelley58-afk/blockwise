@@ -3,10 +3,14 @@ import { Download, Fingerprint, Tags, UsersRound } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { getLeadRowsWithDedupe } from "@/lib/product/workflow-data";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listLeadRowsWithDedupe } from "@/lib/product/live-data";
 
-export default function LeadsPage() {
-  const { rows, incoming } = getLeadRowsWithDedupe();
+export const dynamic = "force-dynamic";
+
+export default async function LeadsPage() {
+  const { supabase, access } = await requirePageSurfaceAccess("monitor");
+  const { rows, incoming } = await listLeadRowsWithDedupe(supabase, access.workspaceId);
   const highIntentCount = rows.filter((lead) => lead.quality === "High intent").length;
 
   return (
@@ -18,7 +22,7 @@ export default function LeadsPage() {
       />
 
       <section className="grid cols-4">
-        <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="Demo ingestion across provider and import sources" />
+        <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="Provider and import sources" />
         <MetricCard icon={Tags} label="High intent" value={String(highIntentCount)} note="Quality labels feed reporting" />
         <MetricCard icon={Fingerprint} label="Duplicates" value={String(incoming.duplicateIds.length)} note="Normalized email and phone dedupe" />
         <MetricCard icon={Download} label="Exports" value="0" note="PII exports require approval" />

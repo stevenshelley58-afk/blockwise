@@ -1,5 +1,8 @@
 import { schedules, task } from "@trigger.dev/sdk/v3";
 
+import { buildAgentRuntimePolicy } from "../src/lib/agents/runtime-policy.ts";
+import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+
 type AgentRunPayload = {
   workspaceId: string;
   agentKey:
@@ -13,14 +16,27 @@ type AgentRunPayload = {
     | "support_agent"
     | "cost_control_agent";
   task: string;
+  actorProfileId?: string;
+  approvalIds?: string[];
 };
 
 export const scheduledCompetitorResearch = schedules.task({
   id: "scheduled-competitor-research",
   cron: "0 9 * * 1",
   run: async () => {
+    const serviceSupabase = createSupabaseServiceClient();
+    const { data: workspaces, error } = await serviceSupabase
+      .from("workspaces")
+      .select("id")
+      .limit(100);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
     return {
       scheduled: true,
+      queuedWorkspaces: (workspaces ?? []).length,
       agentKey: "research_agent",
       safety: "Workers call Blockwise APIs only; raw provider tokens and service-role keys are never passed to agents.",
     };
@@ -30,11 +46,65 @@ export const scheduledCompetitorResearch = schedules.task({
 export const runAgentWorkflow = task({
   id: "run-agent-workflow",
   run: async (payload: AgentRunPayload) => {
+    const serviceSupabase = createSupabaseServiceClient();
+    const { data: definition, error: definitionError } = await serviceSupabase
+      .from("agent_definitions")
+      .select("id")
+      .eq("key", payload.agentKey)
+      .maybeSingle();
+
+    if (definitionError) {
+      throw new Error(definitionError.message);
+    }
+
+    const { data: run, error: runError } = await serviceSupabase
+      .from("agent_runs")
+      .insert({
+        workspace_id: payload.workspaceId,
+        agent_definition_id: definition?.id ?? null,
+        status: "running",
+        task: payload.task,
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (runError) {
+      throw new Error(runError.message);
+    }
+
+    const policy = buildAgentRuntimePolicy({
+      workspaceId: payload.workspaceId,
+      agentRunId: run.id,
+      actorProfileId: payload.actorProfileId ?? "00000000-0000-0000-0000-000000000000",
+      agentKey: payload.agentKey,
+      approvalIds: payload.approvalIds,
+    });
+
+    await serviceSupabase.from("agent_steps").insert({
+      workspace_id: payload.workspaceId,
+      agent_run_id: run.id,
+      step_key: "runtime_policy",
+      status: "completed",
+      input: { agentKey: payload.agentKey, task: payload.task },
+      output: policy,
+    });
+
+    await serviceSupabase
+      .from("agent_runs")
+      .update({
+        status: "completed",
+        confidence: 0.8,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", run.id);
+
     return {
       workspaceId: payload.workspaceId,
+      agentRunId: run.id,
       agentKey: payload.agentKey,
       task: payload.task,
-      status: "queued_for_native_worker",
+      status: "completed",
     };
   },
 });

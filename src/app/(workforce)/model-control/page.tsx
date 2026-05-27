@@ -5,15 +5,17 @@ import { ModelControlPanel } from "@/components/model-control-panel";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { getModelControlViewData } from "@/lib/ai/model-profile-store";
-import { getAiLedgerRows } from "@/lib/product/workflow-data";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listAiLedgerRows } from "@/lib/product/live-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ModelControlPage() {
+  const { access } = await requirePageSurfaceAccess("model_control");
   const supabase = await createSupabaseServerClient();
   const modelControlData = await getModelControlViewData(supabase);
-  const ledgerRows = getAiLedgerRows();
+  const ledgerRows = await listAiLedgerRows(supabase, access.workspaceId);
   const profileCount = new Set(
     modelControlData.sections.flatMap((section) => section.profiles.map((profile) => profile.key)),
   ).size;
@@ -64,13 +66,13 @@ export default async function ModelControlPage() {
             {ledgerRows.map((row) => (
               <tr key={row.id}>
                 <td>{row.task}</td>
-                <td>{row.profileKey}</td>
+                <td>{row.profile}</td>
                 <td>{row.provider}</td>
                 <td>{row.model}</td>
                 <td>
-                  <StatusPill tone={row.status === "completed" ? "green" : "rose"}>{row.status}</StatusPill>
+                  <StatusPill tone={row.result === "completed" ? "green" : "rose"}>{row.result}</StatusPill>
                 </td>
-                <td>${row.estimatedCostUsd.toFixed(2)}</td>
+                <td>{row.estimatedCost}</td>
               </tr>
             ))}
           </tbody>

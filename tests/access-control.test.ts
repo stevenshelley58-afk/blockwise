@@ -17,3 +17,11 @@ test("self-serve workspaces can access monitor and self-serve surfaces", () => {
   assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "monitor"), true);
   assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "self_serve"), true);
 });
+
+test("adstudio is available to self-serve builders and operators only", () => {
+  assert.equal(canAccessSurface({ role: "operator", workspaceMode: "monitor" }, "adstudio"), true);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "self_serve" }, "adstudio"), true);
+  assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "adstudio"), true);
+  assert.equal(canAccessSurface({ role: "viewer", workspaceMode: "self_serve" }, "adstudio"), false);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), false);
+});

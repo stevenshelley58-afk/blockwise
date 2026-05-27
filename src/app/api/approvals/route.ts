@@ -1,9 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { approvalQueue } from "@/lib/product/demo-data";
+import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { listApprovalRows } from "@/lib/product/live-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export function GET() {
-  return NextResponse.json({ approvals: approvalQueue });
+export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServerClient();
+  const access = await requireWorkspaceAccess(supabase, {
+    surface: "approvals",
+    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
+  });
+
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  return NextResponse.json({ approvals: await listApprovalRows(supabase, access.access.workspaceId) });
 }

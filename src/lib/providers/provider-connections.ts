@@ -1,13 +1,13 @@
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { createSupabaseServiceClient } from "@/lib/supabase/service";
+import type { createSupabaseServerClient } from "../supabase/server.ts";
+import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
-import type { MonitorProvider, MonitorProviderStatus } from "@/lib/monitor/dashboard-data";
+import type { MonitorProvider, MonitorProviderStatus } from "../monitor/dashboard-data.ts";
 import {
   decryptToken,
   encryptToken,
   postgresByteaToTokenCiphertext,
   type EncryptedToken,
-} from "@/lib/providers/token-crypto";
+} from "./token-crypto.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;

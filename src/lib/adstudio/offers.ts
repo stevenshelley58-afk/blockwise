@@ -1,0 +1,150 @@
+import type { AdStudioGoal, AdStudioOfferTemplate } from "./types.ts";
+
+export const ADSTUDIO_OFFER_TEMPLATES: AdStudioOfferTemplate[] = [
+  {
+    offerId: "seller_prep_checklist",
+    name: "Top 10 things to do before selling",
+    goal: "seller_leads",
+    leadTemperature: "cold_to_warm",
+    requiredInputs: ["suburb", "agent_name", "brand_kit"],
+    defaultCta: "Download checklist",
+    landingPageType: "lead_magnet_download",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Homeowners preparing for a possible sale in the next 3 to 12 months.",
+  },
+  {
+    offerId: "home_value_update",
+    name: "What is your home worth in today's market?",
+    goal: "appraisal_bookings",
+    leadTemperature: "high_intent",
+    requiredInputs: ["suburb", "brand_kit", "destination_url"],
+    defaultCta: "Request price update",
+    landingPageType: "appraisal_booking",
+    followupType: "appraisal_nurture",
+    expectedLeadIntent: "Homeowners ready for a price opinion.",
+  },
+  {
+    offerId: "seller_mistakes_guide",
+    name: "7 mistakes that cost sellers money",
+    goal: "seller_leads",
+    leadTemperature: "cold_to_warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get the guide",
+    landingPageType: "lead_magnet_download",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Owners who respond to problem-aware seller education.",
+  },
+  {
+    offerId: "suburb_market_report",
+    name: "Suburb market report",
+    goal: "market_update_leads",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get market update",
+    landingPageType: "market_report",
+    followupType: "market_update_nurture",
+    expectedLeadIntent: "Passive owners tracking local activity.",
+  },
+  {
+    offerId: "auction_vs_private_treaty",
+    name: "Auction vs private treaty guide",
+    goal: "seller_leads",
+    leadTemperature: "cold_to_warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Compare options",
+    landingPageType: "lead_magnet_download",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Sellers comparing campaign methods.",
+  },
+  {
+    offerId: "renovate_or_sell",
+    name: "Renovate or sell as-is checklist",
+    goal: "seller_leads",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Download checklist",
+    landingPageType: "lead_magnet_download",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Owners deciding whether to spend before listing.",
+  },
+  {
+    offerId: "downsizer_guide",
+    name: "Downsizer selling guide",
+    goal: "downsizer_leads",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get the guide",
+    landingPageType: "lead_magnet_download",
+    followupType: "downsizer_nurture",
+    expectedLeadIntent: "Owners considering a lifestyle move without sensitive targeting assumptions.",
+  },
+  {
+    offerId: "buyer_inspection_checklist",
+    name: "First-home buyer inspection checklist",
+    goal: "buyer_leads",
+    leadTemperature: "cold",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Download checklist",
+    landingPageType: "lead_magnet_download",
+    followupType: "buyer_nurture",
+    expectedLeadIntent: "Buyers preparing to inspect property.",
+  },
+  {
+    offerId: "investor_suburb_snapshot",
+    name: "Investor suburb snapshot",
+    goal: "investor_leads",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get snapshot",
+    landingPageType: "market_report",
+    followupType: "investor_nurture",
+    expectedLeadIntent: "Investors seeking suburb-level information.",
+  },
+  {
+    offerId: "recent_sales_report",
+    name: "Recent sales report",
+    goal: "seller_leads",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get recent sales",
+    landingPageType: "market_report",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Owners comparing recent comparable sales.",
+  },
+  {
+    offerId: "prelisting_timeline",
+    name: "Pre-listing preparation timeline",
+    goal: "seller_leads",
+    leadTemperature: "cold_to_warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get timeline",
+    landingPageType: "lead_magnet_download",
+    followupType: "seller_nurture",
+    expectedLeadIntent: "Sellers who want a step-by-step preparation path.",
+  },
+  {
+    offerId: "open_home_followup",
+    name: "Open-home follow-up guide",
+    goal: "open_home_followup",
+    leadTemperature: "warm",
+    requiredInputs: ["suburb", "brand_kit"],
+    defaultCta: "Get the guide",
+    landingPageType: "lead_magnet_download",
+    followupType: "buyer_nurture",
+    expectedLeadIntent: "Buyers who inspected or enquired.",
+  },
+];
+
+export function getOfferTemplate(offerId: string): AdStudioOfferTemplate {
+  const offer = ADSTUDIO_OFFER_TEMPLATES.find((candidate) => candidate.offerId === offerId);
+
+  if (!offer) {
+    throw new Error(`Unknown AdStudio offer template: ${offerId}`);
+  }
+
+  return offer;
+}
+
+export function listOfferTemplates(goal?: AdStudioGoal): AdStudioOfferTemplate[] {
+  return goal ? ADSTUDIO_OFFER_TEMPLATES.filter((offer) => offer.goal === goal) : [...ADSTUDIO_OFFER_TEMPLATES];
+}

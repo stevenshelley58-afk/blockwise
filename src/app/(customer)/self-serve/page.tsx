@@ -3,9 +3,14 @@ import { ClipboardCheck, FileText, Image, Search, WandSparkles } from "lucide-re
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { campaignIdeas, competitorSignals } from "@/lib/product/demo-data";
 
-export default function SelfServePage() {
+export const dynamic = "force-dynamic";
+
+export default async function SelfServePage() {
+  await requirePageSurfaceAccess("self_serve");
+
   return (
     <main className="content">
       <PageHeading

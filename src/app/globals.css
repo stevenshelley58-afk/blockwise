@@ -622,6 +622,599 @@ h3 {
   background: var(--accent);
 }
 
+.onboarding-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.onboarding-hero-copy {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.onboarding-hero-copy h2 {
+  margin-bottom: 0;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.onboarding-hero-copy p,
+.onboarding-task p,
+.onboarding-side-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.onboarding-progress-panel {
+  display: grid;
+  min-height: 170px;
+  align-content: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 18px;
+}
+
+.onboarding-progress-panel > span {
+  font-size: 28px;
+  font-weight: 850;
+}
+
+.onboarding-progress-track {
+  overflow: hidden;
+  height: 12px;
+  border-radius: 999px;
+  background: #d9e0dc;
+}
+
+.onboarding-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.onboarding-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.onboarding-checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.onboarding-task {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.onboarding-task.complete {
+  background: #f7fbf7;
+}
+
+.onboarding-step-number {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.onboarding-task.complete .onboarding-step-number {
+  background: var(--green);
+}
+
+.onboarding-task-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.onboarding-task .button {
+  width: fit-content;
+  margin-top: 12px;
+}
+
+.onboarding-side-panel {
+  display: grid;
+  gap: 22px;
+}
+
+.onboarding-next-list {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.onboarding-next-list p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-next-list svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.adstudio-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.adstudio-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.adstudio-tabs button,
+.adstudio-ratio-row button,
+.adstudio-tool-panel button,
+.adstudio-stepper-row button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.adstudio-tabs button {
+  min-height: 38px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.adstudio-tabs button.active,
+.adstudio-ratio-row button.active,
+.adstudio-tool-panel button.active {
+  border-color: var(--accent);
+  background: #e6f4f2;
+  color: var(--accent-strong);
+}
+
+.adstudio-section {
+  display: grid;
+  gap: 16px;
+}
+
+.adstudio-live-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 0.55fr) minmax(160px, 0.45fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.adstudio-live-panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.adstudio-live-panel input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 8px 10px;
+}
+
+.adstudio-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.adstudio-live-actions .button {
+  min-height: 38px;
+}
+
+.adstudio-live-log {
+  display: grid;
+  gap: 6px;
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.adstudio-live-log p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.adstudio-dashboard,
+.adstudio-brief,
+.adstudio-copy-layout,
+.adstudio-export {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 16px;
+}
+
+.adstudio-primary-action,
+.adstudio-preview-card,
+.adstudio-download-panel {
+  align-content: space-between;
+  display: grid;
+  gap: 16px;
+}
+
+.adstudio-brand-grid,
+.adstudio-offer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.adstudio-brand-panel {
+  display: grid;
+  gap: 14px;
+  min-height: 220px;
+}
+
+.adstudio-logo-preview {
+  display: grid;
+  width: 86px;
+  height: 64px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.adstudio-swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.adstudio-swatches span {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.adstudio-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.adstudio-form-grid label,
+.adstudio-object-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.adstudio-form-grid input,
+.adstudio-object-controls textarea,
+.adstudio-object-controls input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 8px 10px;
+}
+
+.adstudio-object-controls textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.adstudio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.adstudio-offer-card {
+  display: grid;
+  gap: 14px;
+  min-height: 230px;
+}
+
+.adstudio-variant-layout {
+  grid-template-columns: minmax(240px, 0.28fr) minmax(0, 1fr);
+}
+
+.adstudio-variant-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.adstudio-variant-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+  box-shadow: var(--shadow);
+}
+
+.adstudio-variant-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.13);
+}
+
+.adstudio-thumb {
+  display: grid;
+  min-height: 150px;
+  align-items: start;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 127, 122, 0.14), transparent 52%),
+    linear-gradient(30deg, rgba(35, 100, 170, 0.13), transparent 45%),
+    #eef3ef;
+  padding: 18px;
+}
+
+.adstudio-thumb strong {
+  max-width: 260px;
+  font-size: 19px;
+  line-height: 1.08;
+}
+
+.adstudio-editor {
+  grid-template-columns: 230px minmax(0, 1fr) 290px;
+  align-items: start;
+}
+
+.adstudio-tool-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.adstudio-tool-panel button {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.adstudio-ratio-row,
+.adstudio-stepper-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.adstudio-ratio-row button,
+.adstudio-stepper-row button {
+  min-height: 34px;
+}
+
+.adstudio-canvas-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.adstudio-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adstudio-editor-bar div,
+.adstudio-recommendation,
+.adstudio-checklist p,
+.adstudio-brand-panel p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adstudio-canvas-wrap {
+  display: grid;
+  min-height: 550px;
+  place-items: center;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(104, 116, 111, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(104, 116, 111, 0.08) 1px, transparent 1px),
+    #f8fafc;
+  background-size: 24px 24px;
+  padding: 20px;
+}
+
+.adstudio-canvas {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(24, 32, 31, 0.18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 82% 10%, rgba(255, 255, 255, 0.75), transparent 18%),
+    #eef3ef;
+  box-shadow: 0 18px 48px rgba(24, 32, 31, 0.18);
+}
+
+.adstudio-canvas-object {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.adstudio-canvas-object.text {
+  display: block;
+  font-weight: 850;
+  line-height: 1.02;
+  white-space: normal;
+}
+
+.adstudio-canvas-object.shape {
+  border-radius: 14px;
+}
+
+.adstudio-canvas-object.image {
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 28%, #68746f 0 18%, transparent 19%),
+    radial-gradient(circle at 50% 78%, #68746f 0 42%, transparent 43%),
+    #d9e7e3;
+}
+
+.adstudio-canvas-object.logo {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.adstudio-canvas-object.selected {
+  border-color: #2364aa;
+  box-shadow: 0 0 0 3px rgba(35, 100, 170, 0.16);
+}
+
+.adstudio-object-controls,
+.adstudio-advanced,
+.adstudio-checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.adstudio-copy-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.adstudio-copy-tabs span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.adstudio-copy-block {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 14px 0;
+}
+
+.adstudio-copy-block div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adstudio-copy-block span,
+.adstudio-question span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.adstudio-copy-block p {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.adstudio-question {
+  display: grid;
+  gap: 5px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.adstudio-compliance {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.adstudio-download-panel .button {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .adstudio-dashboard,
+  .adstudio-live-panel,
+  .adstudio-brief,
+  .adstudio-copy-layout,
+  .adstudio-export,
+  .adstudio-variant-layout,
+  .adstudio-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .adstudio-brand-grid,
+  .adstudio-offer-grid,
+  .adstudio-variant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .adstudio-brand-grid,
+  .adstudio-offer-grid,
+  .adstudio-variant-grid,
+  .adstudio-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .adstudio-canvas-wrap {
+    min-height: 420px;
+  }
+}
+
 .site-shell {
   min-height: 100vh;
   background:
@@ -844,6 +1437,339 @@ h3 {
   line-height: 1.55;
 }
 
+.monitor-dashboard {
+  gap: 18px;
+}
+
+.monitor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.monitor-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.monitor-select-label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.monitor-select {
+  min-height: 40px;
+  min-width: 128px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 10px;
+  font-weight: 800;
+}
+
+.monitor-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.monitor-provider-strip,
+.monitor-provider-grid,
+.monitor-chart-grid,
+.monitor-recommendations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.monitor-provider-status {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+
+.monitor-provider-status > span:first-child {
+  font-weight: 850;
+}
+
+.monitor-provider-status small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.monitor-tabs {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 4px;
+}
+
+.monitor-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 14px;
+  font-weight: 850;
+}
+
+.monitor-tabs button.active,
+.monitor-tabs button:hover,
+.monitor-tabs button:focus-visible {
+  background: var(--ink);
+  color: #ffffff;
+  outline: none;
+}
+
+.monitor-tab-panel,
+.monitor-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.monitor-panel {
+  gap: 14px;
+}
+
+.monitor-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.monitor-kpi-grid.provider,
+.monitor-chart-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.monitor-metric {
+  min-height: 118px;
+}
+
+.monitor-chart {
+  width: 100%;
+  height: 310px;
+}
+
+.monitor-chart.small {
+  height: 230px;
+}
+
+.monitor-alert {
+  display: flex;
+  min-height: 48px;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.monitor-alert strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink);
+}
+
+.monitor-alert.green {
+  border-color: #cbe8cc;
+  background: #eff8f0;
+}
+
+.monitor-alert.amber {
+  border-color: #f1d39b;
+  background: #fff8e8;
+}
+
+.monitor-alert.rose {
+  border-color: #f3bfcc;
+  background: #fff0f4;
+}
+
+.monitor-alert.blue {
+  border-color: #c8d9ee;
+  background: #f0f6ff;
+}
+
+.monitor-provider-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.monitor-provider-card h2 {
+  margin-bottom: 6px;
+}
+
+.monitor-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.monitor-performance-table th button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 850;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+}
+
+.monitor-performance-table tbody tr {
+  cursor: pointer;
+}
+
+.monitor-performance-table tbody tr:hover {
+  background: var(--surface-subtle);
+}
+
+.monitor-row-title {
+  display: grid;
+  gap: 3px;
+  min-width: 180px;
+}
+
+.monitor-row-title span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.monitor-mobile-details {
+  display: none;
+}
+
+.monitor-performance-table tr.expanded .monitor-mobile-details {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.monitor-creative-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.monitor-creative-card {
+  display: grid;
+  grid-template-columns: 144px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.monitor-creative-card p {
+  margin-bottom: 8px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.monitor-creative-visual {
+  display: grid;
+  min-height: 120px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 127, 122, 0.18), transparent 52%),
+    linear-gradient(45deg, rgba(35, 100, 170, 0.16), transparent 48%),
+    #eef3ef;
+  color: var(--accent);
+}
+
+.monitor-creative-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.monitor-dedupe {
+  display: grid;
+  min-height: 230px;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.monitor-dedupe strong {
+  font-size: 52px;
+  line-height: 1;
+}
+
+.monitor-dedupe span {
+  max-width: 300px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.monitor-quality {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  background: #eef3ef;
+  color: var(--muted);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: capitalize;
+}
+
+.monitor-quality.valid,
+.monitor-quality.active {
+  background: #e4f3e5;
+  color: var(--green);
+}
+
+.monitor-quality.nurture {
+  background: #e7f0fb;
+  color: var(--blue);
+}
+
+.monitor-quality.duplicate {
+  background: #fff1d8;
+  color: var(--amber);
+}
+
+.monitor-quality.unqualified {
+  background: #fde4eb;
+  color: var(--rose);
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -858,13 +1784,33 @@ h3 {
   .grid.cols-3,
   .grid.cols-4,
   .split,
+  .onboarding-hero,
+  .onboarding-layout,
   .home-hero,
-  .home-band {
+  .home-band,
+  .monitor-kpi-grid,
+  .monitor-kpi-grid.provider,
+  .monitor-provider-strip,
+  .monitor-provider-grid,
+  .monitor-chart-grid,
+  .monitor-chart-grid.compact,
+  .monitor-recommendations,
+  .monitor-creative-grid {
     grid-template-columns: 1fr;
   }
 
   .home-hero {
     min-height: auto;
+  }
+
+  .monitor-header,
+  .monitor-provider-card {
+    flex-direction: column;
+  }
+
+  .monitor-controls,
+  .monitor-provider-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -915,5 +1861,47 @@ h3 {
 
   .hero-product-panel.wide {
     grid-column: auto;
+  }
+
+  .monitor-controls,
+  .monitor-tabs {
+    width: 100%;
+  }
+
+  .monitor-controls > *,
+  .monitor-select-label,
+  .monitor-select {
+    width: 100%;
+  }
+
+  .monitor-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .monitor-tabs button {
+    padding: 0 8px;
+  }
+
+  .monitor-provider-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .onboarding-task-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .monitor-chart {
+    height: 260px;
+  }
+
+  .monitor-creative-card {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-creative-visual {
+    min-height: 180px;
   }
 }

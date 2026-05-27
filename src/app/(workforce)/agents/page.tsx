@@ -4,9 +4,15 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { AGENT_DEFINITIONS, HUMAN_APPROVAL_ACTIONS } from "@/lib/agents/permissions";
-import { agentRuns } from "@/lib/product/demo-data";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listAgentRunRows } from "@/lib/product/live-data";
 
-export default function AgentWorkforcePage() {
+export const dynamic = "force-dynamic";
+
+export default async function AgentWorkforcePage() {
+  const { supabase, access } = await requirePageSurfaceAccess("agents");
+  const agentRuns = await listAgentRunRows(supabase, access.workspaceId);
+
   return (
     <main className="content">
       <PageHeading

@@ -3,10 +3,14 @@ import { BadgeCheck, Megaphone, ShieldCheck, TriangleAlert } from "lucide-react"
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { getCampaignReadinessRows } from "@/lib/product/workflow-data";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listCampaignReadinessRows } from "@/lib/product/live-data";
 
-export default function CampaignsPage() {
-  const campaigns = getCampaignReadinessRows();
+export const dynamic = "force-dynamic";
+
+export default async function CampaignsPage() {
+  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
+  const campaigns = await listCampaignReadinessRows(supabase, access.workspaceId);
   const readyCount = campaigns.filter((campaign) => campaign.readiness.ready).length;
   const blockedCount = campaigns.length - readyCount;
 

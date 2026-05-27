@@ -4,6 +4,7 @@ export type ProductSurface =
   | "operator"
   | "monitor"
   | "self_serve"
+  | "adstudio"
   | "agents"
   | "model_control"
   | "approvals";
@@ -28,6 +29,10 @@ export function canAccessSurface(context: AccessContext, surface: ProductSurface
 
   if (surface === "self_serve") {
     return context.workspaceMode === "self_serve" && ["owner", "admin", "member", "operator"].includes(context.role);
+  }
+
+  if (surface === "adstudio") {
+    return context.role === "operator" || (context.workspaceMode === "self_serve" && ["owner", "admin", "member"].includes(context.role));
   }
 
   return false;

@@ -1,7 +1,7 @@
-import type { ProviderConnectionStatus } from "@/lib/providers/mock-adapters";
 import type { ComplianceStatus } from "@/lib/compliance/real-estate-policy";
 
 export type ApprovalStatus = "draft" | "requested" | "approved" | "rejected" | "cancelled";
+export type ProviderConnectionStatus = "connected" | "needs_attention" | "not_connected";
 
 export type PublishReadinessInput = {
   providerConnectionStatus: ProviderConnectionStatus;
