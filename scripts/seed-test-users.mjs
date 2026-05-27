@@ -6,10 +6,14 @@ function cleanEnv(value) {
 
 const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
 const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
-const password = cleanEnv(process.env.BLOCKWISE_DEV_PASSWORD) ?? "SJS5858";
+const password = cleanEnv(process.env.BLOCKWISE_DEV_PASSWORD);
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+}
+
+if (!password || password.length < 16) {
+  throw new Error("Set BLOCKWISE_DEV_PASSWORD to a unique password of at least 16 characters before seeding test users.");
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
