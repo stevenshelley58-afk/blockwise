@@ -50,7 +50,7 @@ export async function refreshAdvertiserPage(args: {
     page_id: page.pageId,
     platform: page.platform,
     resultsLimit: env.APIFY_RESULTS_LIMIT_PER_PAGE,
-    activeStatus: "all" as const,
+    activeStatus: "",
   };
   const inputHash = payloadHash(inputPayload);
 
@@ -77,7 +77,7 @@ export async function refreshAdvertiserPage(args: {
     apifyOutcome = await apify.run({
       startUrls: [{ url: pageUrl }],
       resultsLimit: env.APIFY_RESULTS_LIMIT_PER_PAGE,
-      activeStatus: "all",
+      activeStatus: "",
       isDetailsPerAd: true,
     });
   } catch (err) {

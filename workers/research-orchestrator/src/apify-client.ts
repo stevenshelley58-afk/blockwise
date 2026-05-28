@@ -13,7 +13,7 @@ import { apifyMetaAdsDatasetSchema, type ApifyMetaAd } from "../../../src/lib/re
 export type RunActorInput = {
   startUrls: Array<{ url: string }>;
   resultsLimit: number;
-  activeStatus?: "active" | "inactive" | "all";
+  activeStatus?: "" | "active" | "inactive";
   isDetailsPerAd?: boolean;
 };
 
@@ -48,10 +48,13 @@ const runMetaSchema = z.object({
 });
 
 export class ApifyClient {
-  constructor(
-    private readonly token: string,
-    private readonly actorSlug: string,
-  ) {}
+    private readonly token: string;
+  private readonly actorSlug: string;
+
+  constructor(token: string, actorSlug: string) {
+    this.token = token;
+    this.actorSlug = actorSlug;
+  }
 
   async run(input: RunActorInput, opts: { timeoutMs?: number; pollIntervalMs?: number } = {}): Promise<ApifyRunOutcome> {
     const timeoutMs = opts.timeoutMs ?? 120_000;

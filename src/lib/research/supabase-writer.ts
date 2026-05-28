@@ -32,7 +32,11 @@ import {
  * cannot write to research.*.
  */
 export class SupabaseIngestWriter implements IngestWriter {
-  constructor(private readonly client: SupabaseClient) {}
+    private readonly client: SupabaseClient;
+
+  constructor(client: SupabaseClient) {
+    this.client = client;
+  }
 
   private get researchSchema() {
     // @ts-expect-error supabase-js types don't expose schema() on root
