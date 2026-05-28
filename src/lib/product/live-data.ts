@@ -315,22 +315,15 @@ export async function listAiLedgerRows(supabase: SupabaseServerClient, workspace
   return buildAiLedgerRows((data ?? []) as AiLedgerRow[]);
 }
 
-export async function listResearchSignals(supabase: SupabaseServerClient, workspaceId: string) {
-  const { data } = await supabase
-    .from("observed_ads")
-    .select("headline,body,source,source_url,competitors(name),pattern_classifications(confidence,source_evidence)")
-    .eq("workspace_id", workspaceId)
-    .order("observed_at", { ascending: false })
-    .limit(12);
-
-  return buildResearchSignals(
-    ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      competitor: one(row.competitors as Array<{ name?: string | null }> | { name?: string | null } | null)?.name,
-      signal: String(row.headline ?? row.body ?? "Observed competitor creative"),
-      evidence: String(row.source_url ?? row.source ?? "Stored source evidence"),
-      confidence: one(row.pattern_classifications as Array<{ confidence?: string | number | null }> | null)?.confidence,
-    })),
-  );
+// listResearchSignals is intentionally stubbed during the Hermes research engine rebuild.
+// The old implementation read from public.observed_ads + pattern_classifications, which were
+// part of the v1 research feature. The replacement reads from research.v_recent_creative_patterns
+// once the new schema is migrated and Hermes has ingested data.
+//
+// See: docs/research-engine/README.md and supabase/migrations/<date>_research_engine.sql
+// Tracking: feature/hermes-research-engine
+export async function listResearchSignals(_supabase: SupabaseServerClient, _workspaceId: string) {
+  return buildResearchSignals([]);
 }
 
 function normalizeProvider(provider: CampaignRow["provider"]): ProviderKey {
