@@ -3,131 +3,203 @@ import { z } from "zod";
 /**
  * Apify Meta Ad Library actor response shapes.
  *
- * Apify actors are independently authored, so field names and shapes drift
- * between actors. We parse loosely with `.passthrough()` and `.optional()`
- * on everything we don't strictly need, then normalise inside the ingestion
- * worker into our internal ObservedAdIngestInput shape.
+ * Supports both the canonical camelCase shape (apify/facebook-ads-scraper)
+ * and the snake_case shape used by community actors (leadsbrary, automly).
  *
- * This file represents the LOWEST COMMON DENOMINATOR fields across the
- * Apify actors we evaluated:
- *   - apify/facebook-ads-scraper (official Apify)
- *   - leadsbrary/meta-ads-library-scraper
- *   - automly/facebook-ad-library-scraper
- *   - curious_coder/facebook-ads-library-scraper
- *   - harvestlab/facebook-ads-library-scraper
+ * Real sample fixture: tests/research-engine/fixtures-apify-real.json
  *
- * When we add a new actor, extend the union types below — don't loosen the
- * existing ones.
+ * Rule: every field that could be null in the wild is .nullable().optional().
+ * Anything we do not list passes through via .passthrough().
  */
 
-const isoDateLike = z.union([z.string(), z.number()]).transform((v) => {
-  if (typeof v === "number") {
-    // Some actors emit unix seconds, others milliseconds. >1e12 -> ms.
-    const ms = v > 1e12 ? v : v * 1000;
-    return new Date(ms).toISOString();
-  }
-  return v;
-});
+const nstr = () => z.string().nullable().optional();
+const nnum = () => z.number().nullable().optional();
+const nbool = () => z.boolean().nullable().optional();
+const nstrnum = () => z.union([z.string(), z.number()]).nullable().optional();
 
-export const apifyMetaAdSnippetCardSchema = z
+
+/** snapshot.body can be a string OR { text: string } OR null */
+const snapshotBodyLike = z
+  .union([
+    z.string(),
+    z.object({ text: nstr(), markup: z.unknown().nullable().optional() }).passthrough(),
+    z.null(),
+  ])
+  .nullable()
+  .optional();
+
+export const apifySnapshotCardSchema = z
   .object({
-    body: z.string().optional(),
-    title: z.string().optional(),
-    caption: z.string().optional(),
-    cta_type: z.string().optional(),
-    cta_text: z.string().optional(),
-    link_url: z.string().optional(),
-    link_description: z.string().optional(),
-    image_url: z.string().optional(),
-    video_hd_url: z.string().optional(),
-    video_sd_url: z.string().optional(),
-    video_preview_image_url: z.string().optional(),
+    body: nstr(),
+    title: nstr(),
+    caption: nstr(),
+    ctaType: nstr(),
+    ctaText: nstr(),
+    cta_type: nstr(),
+    cta_text: nstr(),
+    linkUrl: nstr(),
+    link_url: nstr(),
+    linkDescription: nstr(),
+    link_description: nstr(),
+    imageUrl: nstr(),
+    image_url: nstr(),
+    videoHdUrl: nstr(),
+    videoSdUrl: nstr(),
+    video_hd_url: nstr(),
+    video_sd_url: nstr(),
+    videoPreviewImageUrl: nstr(),
+    video_preview_image_url: nstr(),
   })
   .passthrough();
-export type ApifyMetaAdSnippetCard = z.infer<typeof apifyMetaAdSnippetCardSchema>;
+export type ApifySnapshotCard = z.infer<typeof apifySnapshotCardSchema>;
+
+const snapshotImageSchema = z
+  .object({
+    originalImageUrl: nstr(),
+    resizedImageUrl: nstr(),
+    watermarkedResizedImageUrl: nstr(),
+  })
+  .passthrough();
+
+const snapshotVideoSchema = z
+  .object({
+    videoHdUrl: nstr(),
+    videoSdUrl: nstr(),
+    videoPreviewImageUrl: nstr(),
+    watermarkedVideoHdUrl: nstr(),
+  })
+  .passthrough();
+
+export const apifySnapshotSchema = z
+  .object({
+    title: nstr(),
+    body: snapshotBodyLike,
+    caption: nstr(),
+    cards: z.array(apifySnapshotCardSchema).nullable().optional(),
+    images: z.array(snapshotImageSchema).nullable().optional(),
+    videos: z.array(snapshotVideoSchema).nullable().optional(),
+    ctaType: nstr(),
+    ctaText: nstr(),
+    cta_type: nstr(),
+    cta_text: nstr(),
+    linkUrl: nstr(),
+    link_url: nstr(),
+    linkDescription: nstr(),
+    displayFormat: nstr(),
+    pageName: nstr(),
+    page_name: nstr(),
+    pageId: nstrnum(),
+    page_id: nstrnum(),
+    pageProfileUri: nstr(),
+    page_profile_uri: nstr(),
+    pageProfilePictureUrl: nstr(),
+    page_profile_picture_url: nstr(),
+    pageLikeCount: nnum(),
+    pageCategories: z.array(z.string()).nullable().optional(),
+  })
+  .passthrough();
+export type ApifySnapshot = z.infer<typeof apifySnapshotSchema>;
 
 export const apifyMetaAdSchema = z
   .object({
-    // Stable Ad Library IDs (one of these will be present)
-    ad_archive_id: z.union([z.string(), z.number()]).optional(),
-    ad_id: z.union([z.string(), z.number()]).optional(),
-    library_id: z.union([z.string(), z.number()]).optional(),
-    id: z.union([z.string(), z.number()]).optional(),
+    adArchiveID: nstrnum(),
+    adArchiveId: nstrnum(),
+    ad_archive_id: nstrnum(),
+    ad_id: nstrnum(),
+    adId: nstrnum(),
+    library_id: nstrnum(),
+    id: nstrnum(),
 
-    page_id: z.union([z.string(), z.number()]).optional(),
-    page_name: z.string().optional(),
-    page_profile_uri: z.string().optional(),
-    page_profile_picture_url: z.string().optional(),
+    pageID: nstrnum(),
+    pageId: nstrnum(),
+    page_id: nstrnum(),
+    pageName: nstr(),
+    page_name: nstr(),
+    pageProfileUri: nstr(),
+    page_profile_uri: nstr(),
 
-    is_active: z.boolean().optional(),
-    status: z.string().optional(),
+    isActive: nbool(),
+    is_active: nbool(),
+    status: nstr(),
 
-    start_date: isoDateLike.optional(),
-    end_date: isoDateLike.optional(),
-    started_at: isoDateLike.optional(),
-    stopped_at: isoDateLike.optional(),
-    creation_time: isoDateLike.optional(),
+    startDate: nstrnum(),
+    start_date: nstrnum(),
+    started_at: nstrnum(),
+    endDate: nstrnum(),
+    end_date: nstrnum(),
+    stopped_at: nstrnum(),
+    startDateFormatted: nstr(),
+    endDateFormatted: nstr(),
+    creation_time: nstrnum(),
 
-    publisher_platform: z.array(z.string()).optional(),
-    platforms: z.array(z.string()).optional(),
+    publisherPlatform: z.array(z.string()).nullable().optional(),
+    publisher_platform: z.array(z.string()).nullable().optional(),
+    platforms: z.array(z.string()).nullable().optional(),
 
-    snapshot: apifyMetaAdSnippetCardSchema.optional(),
-    cards: z.array(apifyMetaAdSnippetCardSchema).optional(),
+    snapshot: apifySnapshotSchema.nullable().optional(),
+    cards: z.array(apifySnapshotCardSchema).nullable().optional(),
 
-    body: z.string().optional(),
-    title: z.string().optional(),
-    cta_text: z.string().optional(),
-    cta_type: z.string().optional(),
-    link_url: z.string().optional(),
-    image_url: z.string().optional(),
-    video_hd_url: z.string().optional(),
-    video_sd_url: z.string().optional(),
+    body: nstr(),
+    title: nstr(),
+    cta_text: nstr(),
+    cta_type: nstr(),
+    link_url: nstr(),
+    image_url: nstr(),
+    video_hd_url: nstr(),
+    video_sd_url: nstr(),
 
-    targeted_or_reached_countries: z.array(z.string()).optional(),
-    impressions: z
-      .object({
-        lower_bound: z.number().optional(),
-        upper_bound: z.number().optional(),
-      })
-      .partial()
-      .optional(),
-    spend: z
-      .object({
-        lower_bound: z.number().optional(),
-        upper_bound: z.number().optional(),
-        currency: z.string().optional(),
-      })
-      .partial()
-      .optional(),
+    inputUrl: nstr(),
+    collationId: nstr(),
+    collationCount: nnum(),
+    categories: z.array(z.string()).nullable().optional(),
+    targetedOrReachedCountries: z.array(z.string()).nullable().optional(),
+    targeted_or_reached_countries: z.array(z.string()).nullable().optional(),
 
-    languages: z.array(z.string()).optional(),
-    locales: z.array(z.string()).optional(),
+    impressionsWithIndex: z.unknown().nullable().optional(),
+    impressions: z.unknown().nullable().optional(),
+    spend: z.unknown().nullable().optional(),
+
+    languages: z.array(z.string()).nullable().optional(),
+    locales: z.array(z.string()).nullable().optional(),
+
+    ad_details: z.record(z.unknown()).nullable().optional(),
+    pageInfo: z.record(z.unknown()).nullable().optional(),
+    page_info: z.record(z.unknown()).nullable().optional(),
   })
   .passthrough();
 export type ApifyMetaAd = z.infer<typeof apifyMetaAdSchema>;
 
 export const apifyMetaAdsDatasetSchema = z.array(apifyMetaAdSchema);
 
-/**
- * Extract a single stable external_ad_id from whichever id field the actor
- * provided. Throws if none are present — ingestion must skip and log such rows.
- */
 export function extractExternalAdId(ad: ApifyMetaAd): string {
   const candidate =
-    ad.ad_archive_id ?? ad.ad_id ?? ad.library_id ?? ad.id;
+    ad.adArchiveID ??
+    ad.adArchiveId ??
+    ad.ad_archive_id ??
+    ad.ad_id ??
+    ad.adId ??
+    ad.library_id ??
+    ad.id;
   if (candidate === undefined || candidate === null || candidate === "") {
     throw new Error("Apify ad payload is missing every known external_ad_id field");
   }
   return String(candidate);
 }
 
-/**
- * Best-effort active status derivation.
- */
+export function extractPageId(ad: ApifyMetaAd): string | null {
+  const candidate =
+    ad.pageID ?? ad.pageId ?? ad.page_id ?? ad.snapshot?.pageId ?? ad.snapshot?.page_id;
+  if (candidate === undefined || candidate === null || candidate === "") return null;
+  return String(candidate);
+}
+
+export function extractPageName(ad: ApifyMetaAd): string | null {
+  return ad.pageName ?? ad.page_name ?? ad.snapshot?.pageName ?? ad.snapshot?.page_name ?? null;
+}
+
 export function deriveActiveStatus(ad: ApifyMetaAd): "active" | "inactive" | "unknown" {
-  if (typeof ad.is_active === "boolean") {
-    return ad.is_active ? "active" : "inactive";
-  }
+  if (typeof ad.isActive === "boolean") return ad.isActive ? "active" : "inactive";
+  if (typeof ad.is_active === "boolean") return ad.is_active ? "active" : "inactive";
   const status = ad.status?.toLowerCase();
   if (status === "active") return "active";
   if (status === "inactive" || status === "stopped" || status === "ended") return "inactive";
