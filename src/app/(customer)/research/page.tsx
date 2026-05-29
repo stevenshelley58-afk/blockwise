@@ -61,7 +61,6 @@ export default async function ResearchPage({
   const format = params.format?.trim() || "";
   const q = params.q?.trim() || "";
 
-  // @ts-expect-error supabase-js typed schema not modelled
   const research = supabase.schema("research");
 
   let query = research

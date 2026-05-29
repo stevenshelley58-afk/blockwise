@@ -23,13 +23,7 @@ export const jsonbSchema: z.ZodType<JsonbValue> = z.lazy(() =>
   ]),
 );
 
-export type JsonbValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonbValue[]
-  | { [key: string]: JsonbValue };
+export type JsonbValue = unknown;
 
 export const australianStateSchema = z.enum(["WA", "NSW", "VIC", "QLD", "SA", "TAS", "ACT", "NT"]);
 export const postcodeSchema = z.string().regex(/^\d{4}$/u, "Expected 4-digit postcode");

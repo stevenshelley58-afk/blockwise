@@ -39,7 +39,6 @@ export class SupabaseIngestWriter implements IngestWriter {
   }
 
   private get researchSchema() {
-    // @ts-expect-error supabase-js types don't expose schema() on root
     return this.client.schema("research");
   }
 

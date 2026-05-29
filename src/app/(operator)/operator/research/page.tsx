@@ -63,13 +63,11 @@ type DefectRow = {
 };
 
 async function loadCoverage(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
   return (data ?? []) as CoverageRow[];
 }
 
 async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase
     .schema("research")
     .from("ad_fetch_runs")
@@ -80,7 +78,6 @@ async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAc
 }
 
 async function loadDefects(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase.schema("research").from("v_missing_competitors").select("*").limit(30);
   return (data ?? []) as DefectRow[];
 }

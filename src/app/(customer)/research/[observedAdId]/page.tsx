@@ -41,7 +41,6 @@ export default async function ResearchAdDetailPage({
   const { supabase } = await requirePageSurfaceAccess("monitor");
   const { observedAdId } = await params;
 
-  // @ts-expect-error supabase-js typed schema not modelled
   const research = supabase.schema("research");
 
   const { data: rows } = await research

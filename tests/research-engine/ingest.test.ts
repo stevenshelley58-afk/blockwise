@@ -112,7 +112,7 @@ test("re-observing with a changed payload writes a new snapshot and records a di
   )[1]!;
   // The diff between snapshots should include the changed snapshot.body field
   // (which lives nested under "snapshot" in the raw payload).
-  assert.ok(latest.changesFromPrior.snapshot, "expected snapshot.* diff entry");
+  assert.ok((latest.changesFromPrior as Record<string,unknown>).snapshot, "expected snapshot.* diff entry");
 });
 
 test("absence confirmation: one missing run increments counter, does NOT mark inactive", async () => {

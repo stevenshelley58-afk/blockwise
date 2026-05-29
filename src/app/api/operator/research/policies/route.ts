@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
-  // @ts-expect-error supabase-js types
   const { data, error } = await guard.supabase
     .schema("research")
     .from("refresh_policies")
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
   const parsed = upsertSchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  // @ts-expect-error supabase-js types
   const { data, error } = await guard.supabase
     .schema("research")
     .from("refresh_policies")

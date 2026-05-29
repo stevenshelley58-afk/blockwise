@@ -30,9 +30,9 @@ export function normaliseApifyAd(input: {
   const externalAdId = extractExternalAdId(ad);
   const activeStatus = deriveActiveStatus(ad);
 
-  const snapshot: ApifySnapshot | undefined = ad.snapshot;
+  const snapshot: ApifySnapshot | undefined = ad.snapshot ?? undefined;
   const firstCard: ApifySnapshotCard | undefined =
-    snapshot?.cards?.[0] ?? ad.cards?.[0];
+    (snapshot?.cards?.[0] ?? ad.cards?.[0]) ?? undefined;
 
   const headline = pickFirstString(
     firstCard?.title,
@@ -127,7 +127,7 @@ export function normaliseApifyAd(input: {
   };
 
   const creative: NormalisedCreative = {
-    format: deriveFormat({ primaryImageUrl, videoUrl, snapshot, cards: ad.cards }),
+    format: deriveFormat({ primaryImageUrl, videoUrl, snapshot, cards: ad.cards ?? undefined }),
     headline,
     body,
     cta,
