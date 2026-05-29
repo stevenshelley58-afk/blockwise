@@ -4,7 +4,7 @@ node_modules
 .vercel
 supabase/.temp
 .trigger
-coverage
+/coverage
 playwright-report
 test-results
 .env
