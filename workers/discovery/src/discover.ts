@@ -77,8 +77,12 @@ export async function runDiscoveryCycle(
   queries: DiscoveryQuery[],
   token: string,
 ): Promise<{ totalSearches: number; uniquePages: number; newPages: number; errors: number }> {
-  console.log(`[discovery] starting cycle: ${queries.length} queries`);
-  const concurrency = 6;
+  // Shuffle queries so consecutive cycles search different ground first,
+  // and the top-K most-likely-to-find-pages happens in a different order.
+  const shuffled = [...queries].sort(() => Math.random() - 0.5);
+  queries = shuffled;
+  console.log(`[discovery] starting cycle: ${queries.length} queries (shuffled)`);
+  const concurrency = 12;
   const allPages = new Map<string, { name: string; url: string | null; state: string; postcode: string }>();
   let errors = 0;
 
