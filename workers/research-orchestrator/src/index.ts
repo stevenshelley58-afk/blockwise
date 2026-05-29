@@ -18,19 +18,30 @@ async function tick(): Promise<void> {
   console.log(`[orchestrator] ${due.length} pages due`);
 
   let totalCost = 0;
-  for (const page of due) {
+  // Process pages in concurrent batches.
+  const concurrency = 6;
+  for (let i = 0; i < due.length; i += concurrency) {
     if (totalCost > env.APIFY_DAILY_SPEND_LIMIT_USD) {
       console.warn(`[orchestrator] daily spend cap reached ($${totalCost.toFixed(2)}), stopping tick`);
       break;
     }
-    try {
-      const r = await refreshAdvertiserPage({ supabase, apify, env, page });
-      totalCost += r.costUsd;
-      console.log(
-        `[orchestrator] page=${page.pageName} status=${r.status} observed=${r.observed} new=${r.inserted} upd=${r.updated} unchanged=${r.unchanged} missing=${r.missing} cost=$${r.costUsd.toFixed(4)}`,
-      );
-    } catch (err) {
-      console.error(`[orchestrator] page=${page.pageName} ERROR: ${(err as Error).message}`);
+    const batch = due.slice(i, i + concurrency);
+    const results = await Promise.allSettled(
+      batch.map(async (page) => {
+        const r = await refreshAdvertiserPage({ supabase, apify, env, page });
+        console.log(
+          `[orchestrator] page=${page.pageName} status=${r.status} observed=${r.observed} new=${r.inserted} upd=${r.updated} unchanged=${r.unchanged} missing=${r.missing} cost=$${r.costUsd.toFixed(4)}`,
+        );
+        return r.costUsd;
+      }),
+    );
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j];
+      if (r.status === "fulfilled") {
+        totalCost += r.value;
+      } else {
+        console.error(`[orchestrator] page=${batch[j].pageName} ERROR: ${(r.reason as Error)?.message ?? r.reason}`);
+      }
     }
   }
   console.log(`[orchestrator] tick complete total_cost=$${totalCost.toFixed(4)}`);

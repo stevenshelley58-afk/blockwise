@@ -192,7 +192,13 @@ export async function refreshAdvertiserPage(args: {
         observedByProvider: "apify_scrapers",
       });
     } catch (err) {
-      warnings.push(`normalise: ${(err as Error).message}`);
+      // Apify error rows ({error,errorDescription}) have no ad data; skip
+      // silently so the run is success-clean if all real rows ingested fine.
+      const msg = (err as Error).message;
+      if (msg.includes("missing every known external_ad_id")) {
+        continue;
+      }
+      warnings.push(`normalise: ${msg}`);
       continue;
     }
     try {
@@ -251,65 +257,6 @@ export async function refreshAdvertiserPage(args: {
             confidence: Number(a.confidence) || 50,
             evidence: { source: "orchestrator_auto", apifyRunId: apifyOutcome.runId },
           })));
-        }
-      } catch (areaErr) {
-        warnings.push(`area_match: ${(areaErr as Error).message}`);
-      }
-    } catch (err) {
-      warnings.push(`ingest ${extractExternalAdId(ad)}: ${(err as Error).message}`);
-    }
-  }
-
-  const absence = await applyAbsence(writer, {
-    advertiserPageId: page.advertiserPageId,
-    seenExternalAdIds: seenExternalIds,
-    adFetchRunId,
-    sourceProvider: "apify_scrapers",
-    now,
-  });
-
-  const summary = summariseOutcomes(outcomes, absence, {
-    creditsSpent: apifyOutcome.costUsd,
-    warnings,
-    errorCount: warnings.length,
-  });
-
-  const status = warnings.length === 0 ? "success" : "partial";
-
-  await research
-    .from("ad_fetch_runs")
-    .update({
-      status,
-      completed_at: new Date().toISOString(),
-      cost_usd: apifyOutcome.costUsd,
-      result_summary: summary,
-      source_document_id: sourceDocumentId,
-    })
-    .eq("id", adFetchRunId);
-
-  // Only on success: bump last_checked_at + last_successful_check_at, reset
-  // consecutive_failed_checks.
-  await research
-    .from("advertiser_pages")
-    .update({
-      last_checked_at: now,
-      last_successful_check_at: now,
-      consecutive_failed_checks: 0,
-    })
-    .eq("id", page.advertiserPageId);
-
-  return {
-    fetchRunId: adFetchRunId,
-    status,
-    observed: summary.adsObserved,
-    inserted: summary.adsNew,
-    updated: summary.adsUpdated,
-    unchanged: summary.adsUnchanged,
-    missing: absence.incremented,
-    costUsd: apifyOutcome.costUsd,
-  };
-}
-);
         }
       } catch (areaErr) {
         warnings.push(`area_match: ${(areaErr as Error).message}`);
