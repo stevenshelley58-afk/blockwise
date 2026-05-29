@@ -3,6 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrchestratorEnv } from "./env.ts";
 
 export type DuePage = {
+  agencyIdForMatches: string | null;
+  agentIdForMatches: string | null;
+  suburb: string | null;
   advertiserPageId: string;
   platform: "facebook" | "instagram" | "meta_ad_library";
   pageId: string;
@@ -87,6 +90,9 @@ export async function listDuePages(
         : Number.POSITIVE_INFINITY;
       if (overdueBy < 0) continue;
       const candidate: DuePage = {
+        agencyIdForMatches: (page.agency_id ?? null) as string | null,
+        agentIdForMatches: (page.agent_id ?? null) as string | null,
+        suburb: a.suburb ?? null,
         advertiserPageId: page.id,
         platform: page.platform,
         pageId: page.page_id,
@@ -109,6 +115,9 @@ export async function listDuePages(
 
 function rowToDuePage(row: Record<string, unknown>): DuePage {
   return {
+    agencyIdForMatches: (row.agency_id ?? null) as string | null,
+    agentIdForMatches: (row.agent_id ?? null) as string | null,
+    suburb: (row.suburb ?? null) as string | null,
     advertiserPageId: row.advertiser_page_id as string,
     platform: row.platform as DuePage["platform"],
     pageId: row.page_id as string,
