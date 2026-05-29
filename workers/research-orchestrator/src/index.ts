@@ -19,7 +19,7 @@ async function tick(): Promise<void> {
 
   let totalCost = 0;
   // Process pages in concurrent batches.
-  const concurrency = 6;
+  const concurrency = 24;
   for (let i = 0; i < due.length; i += concurrency) {
     if (totalCost > env.APIFY_DAILY_SPEND_LIMIT_USD) {
       console.warn(`[orchestrator] daily spend cap reached ($${totalCost.toFixed(2)}), stopping tick`);
