@@ -1,8 +1,8 @@
 import { creativeHash, payloadHash } from "./hash.ts";
 import {
-  type ApifyMetaAd,
-  type ApifySnapshot,
-  type ApifySnapshotCard,
+  type MetaAdLibraryAd,
+  type MetaAdLibrarySnapshot,
+  type MetaAdLibrarySnapshotCard,
   type ObservedAdIngestInput,
   type SourceProvider,
   deriveActiveStatus,
@@ -12,16 +12,16 @@ import {
 } from "./schemas/index.ts";
 
 /**
- * Normalise an Apify Meta Ad payload into our internal ingestion shape.
+ * Normalise a Meta Ad Library payload into our internal ingestion shape.
  *
  * Supports both:
- *   - canonical camelCase from apify/facebook-ads-scraper
- *   - snake_case from various community actors (leadsbrary, automly, ...)
+ *   - canonical camelCase
+ *   - snake_case variants returned by collector implementations
  *
  * Pure: no IO, no DB, no clock.
  */
-export function normaliseApifyAd(input: {
-  ad: ApifyMetaAd;
+export function normaliseMetaAdLibraryAd(input: {
+  ad: MetaAdLibraryAd;
   advertiserPageId: string;
   observedByProvider: SourceProvider;
 }): { observation: ObservedAdIngestInput; creative: NormalisedCreative; payloadHash: string } {
@@ -30,9 +30,9 @@ export function normaliseApifyAd(input: {
   const externalAdId = extractExternalAdId(ad);
   const activeStatus = deriveActiveStatus(ad);
 
-  const snapshot: ApifySnapshot | undefined = ad.snapshot ?? undefined;
-  const firstCard: ApifySnapshotCard | undefined =
-    (snapshot?.cards?.[0] ?? ad.cards?.[0]) ?? undefined;
+  const snapshot: MetaAdLibrarySnapshot | undefined = ad.snapshot ?? undefined;
+  const firstCard: MetaAdLibrarySnapshotCard | undefined =
+    snapshot?.cards?.[0] ?? ad.cards?.[0];
 
   const headline = pickFirstString(
     firstCard?.title,
@@ -67,7 +67,9 @@ export function normaliseApifyAd(input: {
     firstCard?.imageUrl,
     firstCard?.image_url,
     snapshot?.images?.[0]?.originalImageUrl,
+    (snapshot?.images?.[0] as Record<string, unknown> | undefined)?.["original_image_url"] as string | undefined,
     snapshot?.images?.[0]?.resizedImageUrl,
+    (snapshot?.images?.[0] as Record<string, unknown> | undefined)?.["resized_image_url"] as string | undefined,
     ad.image_url,
   );
   const videoUrl = pickFirstString(
@@ -76,7 +78,9 @@ export function normaliseApifyAd(input: {
     firstCard?.videoSdUrl,
     firstCard?.video_sd_url,
     snapshot?.videos?.[0]?.videoHdUrl,
+    (snapshot?.videos?.[0] as Record<string, unknown> | undefined)?.["video_hd_url"] as string | undefined,
     snapshot?.videos?.[0]?.videoSdUrl,
+    (snapshot?.videos?.[0] as Record<string, unknown> | undefined)?.["video_sd_url"] as string | undefined,
     (snapshot as Record<string, unknown> | undefined)?.["videoHdUrl"] as string | undefined,
     (snapshot as Record<string, unknown> | undefined)?.["videoSdUrl"] as string | undefined,
     (snapshot as Record<string, unknown> | undefined)?.["video_hd_url"] as string | undefined,
@@ -192,7 +196,7 @@ function coerceIso(value: string | number | null | undefined): string | null {
   return d.toISOString();
 }
 
-function snapshotBodyText(body: ApifySnapshot["body"]): string | undefined {
+function snapshotBodyText(body: MetaAdLibrarySnapshot["body"]): string | undefined {
   if (!body) return undefined;
   if (typeof body === "string") return body;
   if (typeof body === "object" && "text" in body && typeof body.text === "string") return body.text;
@@ -202,8 +206,8 @@ function snapshotBodyText(body: ApifySnapshot["body"]): string | undefined {
 function deriveFormat(input: {
   primaryImageUrl: string | null;
   videoUrl: string | null;
-  snapshot?: ApifySnapshot;
-  cards?: ApifySnapshotCard[];
+  snapshot?: MetaAdLibrarySnapshot;
+  cards?: MetaAdLibrarySnapshotCard[];
 }): "image" | "video" | "carousel" | "dco" | "unknown" {
   const displayFormat = input.snapshot?.displayFormat?.toUpperCase();
   if (displayFormat === "DCO") return "dco";
@@ -217,12 +221,14 @@ function deriveFormat(input: {
   return "unknown";
 }
 
-function collectImageUrls(ad: ApifyMetaAd, snapshot: ApifySnapshot | undefined): string[] {
+function collectImageUrls(ad: MetaAdLibraryAd, snapshot: MetaAdLibrarySnapshot | undefined): string[] {
   const out = new Set<string>();
   if (ad.image_url) out.add(ad.image_url);
   for (const img of snapshot?.images ?? []) {
     if (img.originalImageUrl) out.add(img.originalImageUrl);
+    else if ((img as Record<string, unknown>).original_image_url) out.add((img as Record<string, unknown>).original_image_url as string);
     else if (img.resizedImageUrl) out.add(img.resizedImageUrl);
+    else if ((img as Record<string, unknown>).resized_image_url) out.add((img as Record<string, unknown>).resized_image_url as string);
   }
   for (const card of snapshot?.cards ?? ad.cards ?? []) {
     if (card.imageUrl) out.add(card.imageUrl);

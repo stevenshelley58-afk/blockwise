@@ -1,13 +1,4 @@
-import {
-  Activity,
-  Eye,
-  Layers,
-  PlayCircle,
-  ScanSearch,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
-import Link from "next/link";
+import { Clock3, ExternalLink, FileSearch, ImageIcon, MapPin, Search, Users } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
@@ -16,260 +7,373 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 type ActiveAdRow = {
-  postcode: string;
-  suburb: string;
-  state: string;
+  postcode: string | null;
+  suburb: string | null;
+  state: string | null;
   observed_ad_id: string;
-  external_ad_id: string;
-  platform: string;
-  active_status: string;
-  first_seen_at: string;
-  last_seen_at: string;
-  page_id: string;
-  page_name: string;
+  external_ad_id: string | null;
+  active_status: string | null;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  last_checked_at?: string | null;
+  ad_delivery_started_at?: string | null;
+  advertiser_page_id: string | null;
+  page_id: string | null;
+  page_name: string | null;
   page_url: string | null;
-  agent_name: string | null;
   agency_name: string | null;
+  agent_name: string | null;
   format: string | null;
   headline: string | null;
   body: string | null;
   cta: string | null;
   cta_url: string | null;
   primary_image_url: string | null;
+  image_storage_path?: string | null;
+  image_urls?: string[] | null;
   video_url: string | null;
+  video_storage_path?: string | null;
+  video_thumbnail_url?: string | null;
+  media_assets?: unknown;
   landing_url: string | null;
-  classification: Record<string, unknown> | null;
+  classification: unknown;
+  ad_type?: string | null;
+  primary_intent?: string | null;
+  area_match_confidence: number | null;
 };
 
-type PolicyRow = { postcode: string };
-
-type SearchParams = {
-  postcode?: string;
-  format?: string;
-  q?: string;
+type AdvertiserGroup = {
+  key: string;
+  pageName: string;
+  agencyName: string;
+  pageUrl: string | null;
+  postcodes: string[];
+  rows: ActiveAdRow[];
 };
 
-export default async function ResearchPage({
-  searchParams,
-}: {
-  searchParams?: Promise<SearchParams>;
-}) {
+export default async function ResearchPage({ searchParams }: { searchParams?: SearchParams }) {
   const { supabase } = await requirePageSurfaceAccess("monitor");
-  const params = (searchParams ? await searchParams : {}) ?? {};
-  const postcode = params.postcode?.trim() || "";
-  const format = params.format?.trim() || "";
-  const q = params.q?.trim() || "";
+  const params = searchParams ? await searchParams : {};
+  const searchTerm = firstParam(params.q ?? params.postcode).trim();
 
-  const research = supabase.schema("research");
-
-  let query = research
-    .from("v_active_ads_by_postcode")
-    .select(
-      "postcode,suburb,state,observed_ad_id,external_ad_id,platform,active_status,first_seen_at,last_seen_at,page_id,page_name,page_url,agent_name,agency_name,format,headline,body,cta,cta_url,primary_image_url,video_url,landing_url,classification",
-    )
-    .order("last_seen_at", { ascending: false })
-    .limit(48);
-  if (postcode) query = query.eq("postcode", postcode);
-  if (format) query = query.eq("format", format);
-  if (q) query = query.or(`headline.ilike.%${q}%,body.ilike.%${q}%`);
-
-  const [{ data: adsData }, { data: policiesData }] = await Promise.all([
-    query,
-    research
-      .from("refresh_policies")
-      .select("postcode")
-      .eq("active", true)
-      .order("priority")
-      .order("postcode"),
-  ]);
-  const ads = (adsData ?? []) as ActiveAdRow[];
-  const policies = (policiesData ?? []) as PolicyRow[];
-  const seenAdIds = new Set<string>();
-  const uniqueAds = ads.filter((ad) => {
-    if (seenAdIds.has(ad.observed_ad_id)) return false;
-    seenAdIds.add(ad.observed_ad_id);
-    return true;
-  });
-
-  const totalActive = uniqueAds.length;
-  const totalAgencies = new Set(uniqueAds.map((a) => a.agency_name).filter(Boolean)).size;
-  const totalPostcodesCovered = new Set(uniqueAds.map((a) => a.postcode)).size;
-  const lastRefresh = uniqueAds[0]?.last_seen_at;
-
-  const filterActive = postcode || format || q;
+  const { rows, loadError } = await loadActiveAds(supabase, searchTerm);
+  const grouped = groupByAdvertiser(rows);
+  const allPostcodes = unique(rows.map((row) => row.postcode).filter(Boolean) as string[]);
+  const mediaReady = rows.filter((row) => Boolean(resolveMedia(row)?.url)).length;
+  const newestSeenAt = rows
+    .map((row) => row.last_seen_at)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
 
   return (
     <main className="content">
       <PageHeading
         eyebrow="Competitor intelligence"
         title="Research"
-        description="Live Meta ads from Australian real-estate advertisers, refreshed daily. Search by postcode, copy, or creative format. Click an ad to see its full history and similar creative."
+        description="Search live Australian real-estate ads by postcode, suburb, agency, agent, or ad copy."
       />
 
-      <section className="grid cols-4">
-        <MetricCard
-          icon={Eye}
-          label="Active ads"
-          value={String(totalActive)}
-          note={postcode ? `in postcode ${postcode}` : "across covered postcodes"}
-        />
-        <MetricCard
-          icon={Activity}
-          label="Agencies running"
-          value={String(totalAgencies)}
-          note={filterActive ? "matching your filter" : "across covered postcodes"}
-        />
-        <MetricCard
-          icon={Layers}
-          label="Postcodes shown"
-          value={String(totalPostcodesCovered)}
-          note={filterActive ? "filtered" : "with active ads"}
-        />
-        <MetricCard
-          icon={Sparkles}
-          label="Last refresh"
-          value={lastRefresh ? new Date(lastRefresh).toLocaleString() : "—"}
-          note="Apify pull cadence"
-        />
-      </section>
-
-      <section className="panel">
-        <form method="get" className="research-filters">
-          <label className="research-filter">
-            <span>Postcode</span>
-            <select name="postcode" defaultValue={postcode}>
-              <option value="">All covered</option>
-              {policies.map((p) => (
-                <option key={p.postcode} value={p.postcode}>
-                  {p.postcode}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="research-filter">
-            <span>Format</span>
-            <select name="format" defaultValue={format}>
-              <option value="">All</option>
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="carousel">Carousel</option>
-              <option value="dco">DCO</option>
-            </select>
-          </label>
-          <label className="research-filter research-filter--grow">
-            <span>Search copy</span>
+      <section className="panel research-search-panel">
+        <form className="research-search-form" action="/research">
+          <label htmlFor="research-query">
+            Search
             <input
-              type="search"
+              id="research-query"
               name="q"
-              defaultValue={q}
-              placeholder="e.g. open home, just sold, Subiaco"
+              defaultValue={searchTerm}
+              placeholder="6008, Subiaco, Ray White, appraisal"
+              autoComplete="off"
             />
           </label>
-          <button type="submit" className="btn-primary">
-            <ScanSearch size={14} /> Apply
+          <button className="button" type="submit">
+            <Search size={14} /> Search
           </button>
-          {filterActive ? (
-            <Link href="/research" className="btn-secondary">
-              Clear
-            </Link>
-          ) : null}
         </form>
+        <div className="research-freshness">
+          <Clock3 size={14} />
+          {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
+        </div>
       </section>
 
-      {uniqueAds.length === 0 ? (
-        <section className="panel">
-          <h2>No matching ads</h2>
-          <p>
-            {filterActive
-              ? "Your filter matched nothing in the live data. Try widening the postcode or removing the search term."
-              : "The orchestrator hasn't seen anything that meets the active-ad criteria yet. New ads land here within minutes of the next Apify refresh."}
-          </p>
-          <p className="item-meta">
-            Want to add an advertiser? File a missing-competitor report and the auditor will pick it up on
-            the next pass.
-          </p>
+      <section className="grid cols-4">
+        <MetricCard icon={FileSearch} label="Ads in view" value={String(rows.length)} note="Deduped active observations" />
+        <MetricCard icon={Users} label="Advertisers" value={String(grouped.length)} note="Pages with active ads" />
+        <MetricCard icon={MapPin} label="Postcodes" value={String(allPostcodes.length)} note="Matched service areas" />
+        <MetricCard icon={ImageIcon} label="Media visible" value={String(mediaReady)} note="Stored media or provider URL" />
+      </section>
+
+      {loadError ? (
+        <section className="panel research-blocker-card">
+          <h2>Research view unavailable</h2>
+          <p>{loadError}</p>
         </section>
-      ) : (
-        <section className="panel">
-          <div className="row-between">
-            <h2>
-              Active ads{postcode ? ` in ${postcode}` : ""}{format ? ` · ${format}` : ""}
-            </h2>
-            <span className="item-meta">{uniqueAds.length} showing</span>
+      ) : null}
+
+      <section className="panel">
+        <div className="section-title-row">
+          <div>
+            <h2>{searchTerm ? `Results for "${searchTerm}"` : "Latest active ads"}</h2>
+            <p className="item-meta">{rows.length} active ads across {grouped.length} advertiser pages.</p>
           </div>
-          <div className="grid cols-3">
-            {uniqueAds.map((ad) => (
-              <AdCard key={ad.observed_ad_id} ad={ad} />
-            ))}
+        </div>
+
+        <div className="research-advertiser-list">
+          {grouped.map((group) => (
+            <article className="research-advertiser-card item-card" key={group.key}>
+              <div className="research-advertiser-header">
+                <div>
+                  <h3>{group.pageName}</h3>
+                  <div className="research-page-row">
+                    <span className="research-source-chip">{group.agencyName}</span>
+                    {group.postcodes.map((postcode) => (
+                      <span className="research-source-chip" key={postcode}>
+                        {postcode}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {group.pageUrl ? (
+                  <a className="button secondary" href={group.pageUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} /> Page
+                  </a>
+                ) : null}
+              </div>
+
+              <div className="research-ad-list">
+                {group.rows.map((row) => (
+                  <AdCard key={`${row.observed_ad_id}-${row.postcode ?? "all"}`} row={row} />
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {grouped.length === 0 ? (
+          <div className="research-empty-state">
+            <h3>No active ads matched</h3>
+            <p>Try a WA postcode such as 6008 or 6000 while the background collector expands coverage.</p>
           </div>
-        </section>
-      )}
+        ) : null}
+      </section>
     </main>
   );
 }
 
-function AdCard({ ad }: { ad: ActiveAdRow }) {
-  const formatLabel = (ad.format ?? "unknown").toUpperCase();
-  const formatTone =
-    ad.format === "video" ? "blue" : ad.format === "carousel" ? "amber" : "green";
-  const adLibraryUrl = `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.external_ad_id)}`;
+function AdCard({ row }: { row: ActiveAdRow }) {
+  const media = resolveMedia(row);
+  const startedAt = row.ad_delivery_started_at ?? row.first_seen_at;
+  const daysRunning = daysSince(startedAt);
+  const title = row.headline || firstSentence(row.body) || "Ad creative captured";
+  const destination = row.cta_url || row.landing_url || null;
+
   return (
-    <article className="item-card research-card">
-      <div className="research-card-media">
-        {ad.video_url ? (
-          <div className="research-card-media-video">
-            <PlayCircle size={28} aria-hidden />
-            {ad.primary_image_url ? (
-              <img
-                src={ad.primary_image_url}
-                alt={ad.headline ?? "Ad creative thumbnail"}
-                loading="lazy"
-              />
-            ) : null}
-          </div>
-        ) : ad.primary_image_url ? (
-          <img
-            src={ad.primary_image_url}
-            alt={ad.headline ?? "Ad creative"}
-            loading="lazy"
-          />
-        ) : (
-          <div className="research-card-media-empty" aria-hidden>
-            <Sparkles size={24} />
-          </div>
-        )}
+    <article className="research-ad-row">
+      <div className="research-ad-copy">
+        <div className="research-match-row">
+          <StatusPill tone={row.active_status === "active" ? "green" : "amber"}>{row.active_status ?? "unknown"}</StatusPill>
+          <span className="research-source-chip">{classificationLabel(row)}</span>
+          {daysRunning ? <span className="item-meta">Running {daysRunning} day{daysRunning === 1 ? "" : "s"}</span> : null}
+          {row.area_match_confidence ? <span className="item-meta">Match {Math.round(row.area_match_confidence)}%</span> : null}
+        </div>
+        <h4>{title}</h4>
+        {row.body ? <p>{truncate(row.body, 420)}</p> : <p className="item-meta">Copy was not present in the latest provider payload.</p>}
+        <div className="research-match-row">
+          {row.cta ? <span className="research-source-chip">{row.cta}</span> : null}
+          {destination ? (
+            <a href={destination} target="_blank" rel="noreferrer">
+              Landing page <ExternalLink size={12} />
+            </a>
+          ) : null}
+          {row.external_ad_id ? <span className="item-meta">Ad {row.external_ad_id}</span> : null}
+        </div>
       </div>
-      <div className="research-card-meta">
-        <div className="row-between">
-          <strong>{ad.agency_name ?? "Unknown agency"}</strong>
-          <StatusPill tone={formatTone as "blue" | "amber" | "green"}>{formatLabel}</StatusPill>
-        </div>
-        <p className="item-meta">
-          {ad.page_name} · {ad.platform} · {ad.postcode} {ad.suburb}
-        </p>
-        {ad.headline ? <h3 className="research-card-headline">{ad.headline}</h3> : null}
-        {ad.body ? <p className="research-card-body">{ad.body}</p> : null}
-        <div className="row-between research-card-actions">
-          <Link className="btn-secondary" href={`/research/${ad.observed_ad_id}`}>
-            Details
-          </Link>
-          <a
-            className="btn-secondary"
-            href={adLibraryUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View on Meta
-          </a>
-          <Link
-            className="btn-primary"
-            href={`/ad-studio?from=${encodeURIComponent(ad.observed_ad_id)}`}
-          >
-            <Wand2 size={14} /> Generate
-          </Link>
-        </div>
+      <div className="research-media-frame">
+        {media?.kind === "video" ? (
+          <video className="research-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="metadata" playsInline />
+        ) : media?.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="research-media" src={media.url} alt={title} loading="lazy" />
+        ) : (
+          <div className="research-media-empty">No media</div>
+        )}
       </div>
     </article>
   );
+}
+
+async function loadActiveAds(
+  supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"],
+  searchTerm: string,
+): Promise<{ rows: ActiveAdRow[]; loadError: string | null }> {
+  const { data, error } = await supabase
+    .schema("research")
+    .from("v_active_ads_by_postcode")
+    .select("*")
+    .order("last_seen_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    return { rows: [], loadError: error.message };
+  }
+
+  const allRows = ((data ?? []) as ActiveAdRow[]).filter((row) => row.observed_ad_id);
+  const filtered = searchTerm
+    ? allRows.filter((row) => rowMatches(row, searchTerm))
+    : allRows.filter((row) => (row.state ?? "WA") === "WA");
+
+  return { rows: dedupeAds(filtered).slice(0, 80), loadError: null };
+}
+
+function rowMatches(row: ActiveAdRow, searchTerm: string): boolean {
+  const needle = searchTerm.toLowerCase();
+  return [
+    row.postcode,
+    row.suburb,
+    row.state,
+    row.page_name,
+    row.agency_name,
+    row.agent_name,
+    row.headline,
+    row.body,
+    row.cta,
+    row.external_ad_id,
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(needle));
+}
+
+function dedupeAds(rows: ActiveAdRow[]): ActiveAdRow[] {
+  const seen = new Set<string>();
+  const deduped: ActiveAdRow[] = [];
+  for (const row of rows) {
+    if (seen.has(row.observed_ad_id)) continue;
+    seen.add(row.observed_ad_id);
+    deduped.push(row);
+  }
+  return deduped;
+}
+
+function groupByAdvertiser(rows: ActiveAdRow[]): AdvertiserGroup[] {
+  const groups = new Map<string, AdvertiserGroup>();
+  for (const row of rows) {
+    const key = row.advertiser_page_id ?? row.page_id ?? row.page_name ?? "unknown";
+    const existing =
+      groups.get(key) ??
+      {
+        key,
+        pageName: row.page_name ?? "Unknown page",
+        agencyName: row.agency_name ?? row.agent_name ?? "Unmatched agency",
+        pageUrl: row.page_url,
+        postcodes: [],
+        rows: [],
+      };
+    if (row.postcode && !existing.postcodes.includes(row.postcode)) existing.postcodes.push(row.postcode);
+    existing.rows.push(row);
+    groups.set(key, existing);
+  }
+  return Array.from(groups.values()).sort((a, b) => b.rows.length - a.rows.length);
+}
+
+function resolveMedia(row: ActiveAdRow): { kind: "image" | "video"; url: string; posterUrl: string | null } | null {
+  const assets = parseMediaAssets(row.media_assets);
+  const storedVideo = row.video_storage_path ?? assets.find((asset) => asset.kind === "video" && asset.storagePath)?.storagePath ?? null;
+  const storedImage = row.image_storage_path ?? assets.find((asset) => asset.kind === "image" && asset.storagePath)?.storagePath ?? null;
+  const posterPath = assets.find((asset) => asset.kind === "thumbnail" && asset.storagePath)?.storagePath ?? null;
+
+  if (storedVideo) {
+    return {
+      kind: "video",
+      url: publicStorageUrl(storedVideo) ?? row.video_url ?? "",
+      posterUrl: posterPath ? publicStorageUrl(posterPath) : publicStorageUrl(row.video_thumbnail_url ?? ""),
+    };
+  }
+  if (storedImage) {
+    return { kind: "image", url: publicStorageUrl(storedImage) ?? row.primary_image_url ?? "", posterUrl: null };
+  }
+  if (row.video_url) return { kind: "video", url: row.video_url, posterUrl: row.video_thumbnail_url ?? null };
+  if (row.primary_image_url) return { kind: "image", url: row.primary_image_url, posterUrl: null };
+  const assetUrl = assets.find((asset) => asset.url)?.url ?? null;
+  if (assetUrl) return { kind: isVideoUrl(assetUrl) ? "video" : "image", url: assetUrl, posterUrl: null };
+  return null;
+}
+
+function parseMediaAssets(value: unknown): Array<{ kind: string | null; storagePath: string | null; url: string | null }> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((asset): asset is Record<string, unknown> => Boolean(asset) && typeof asset === "object")
+    .map((asset) => ({
+      kind: typeof asset.kind === "string" ? asset.kind : null,
+      storagePath: typeof asset.storagePath === "string" ? asset.storagePath : typeof asset.storage_path === "string" ? asset.storage_path : null,
+      url: typeof asset.url === "string" ? asset.url : typeof asset.sourceUrl === "string" ? asset.sourceUrl : null,
+    }));
+}
+
+function publicStorageUrl(path: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  if (!supabaseUrl) return null;
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  return `${supabaseUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
+}
+
+function classificationLabel(row: ActiveAdRow): string {
+  const classification = isRecord(row.classification) ? row.classification : {};
+  const value =
+    row.primary_intent ??
+    row.ad_type ??
+    stringValue(classification.primary_intent) ??
+    stringValue(classification.ad_type) ??
+    stringValue(classification.intent) ??
+    row.format;
+  return value ? value.replace(/_/g, " ") : "unclassified";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function firstSentence(value: string | null): string | null {
+  if (!value) return null;
+  return truncate(value.split(/[.!?]\s/)[0] ?? value, 96);
+}
+
+function truncate(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}...` : value;
+}
+
+function daysSince(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.max(1, Math.ceil((Date.now() - timestamp) / 86_400_000));
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function isVideoUrl(url: string): boolean {
+  return /\.mp4(?:$|\?)/i.test(url) || /video-/i.test(url);
 }

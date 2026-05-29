@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
  * whole reason payload_hash works.
  */
 export function canonicaliseJson(value: unknown): string {
-  return JSON.stringify(value, replacer);
+  return JSON.stringify(value ?? null, replacer) ?? "null";
 }
 
 function replacer(_key: string, value: unknown): unknown {
@@ -20,7 +20,7 @@ function replacer(_key: string, value: unknown): unknown {
     }
     return sorted;
   }
-  return value;
+  return value === undefined ? null : value;
 }
 
 /**

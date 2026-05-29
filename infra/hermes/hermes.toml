@@ -37,31 +37,19 @@ auto_reload = true
 names = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
-  "blockwise-apify-orchestrator",
+  "blockwise-ad-collector",
   "blockwise-ad-classifier",
   "blockwise-coverage-auditor",
   "blockwise-defect-investigator",
   "blockwise-operator-chat",
 ]
 
-[agent.tools.scrapling]
-mcp_url = "http://scrapling:9000"
-
 [agent.tools.browserbase]
 enabled = true
-
-[agent.tools.apify]
-default_actor = "apify/facebook-ads-scraper"
 
 [agent.scheduling]
 # Cron expressions in TZ Australia/Perth.
 timezone = "Australia/Perth"
-
-[[agent.scheduling.jobs]]
-name = "ad-refresh-loop"
-skill = "blockwise-apify-orchestrator"
-cron = "*/5 * * * *"
-input = { scope = "all_due" }
 
 [[agent.scheduling.jobs]]
 name = "weekly-census-priority-1"

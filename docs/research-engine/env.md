@@ -1,68 +1,41 @@
-# Research Engine — environment variables
+# Research Engine Environment Variables
 
-These are NOT in `.env.example` (deliberately — main `.env.example` is for
-Blockwise app vars). Add them to `.env.local` for local development and to
-Coolify env vars on the VPS deployment. Never commit real values.
+The ad collector is self-hosted on the VPS. There are no actor-marketplace variables in the
+active runtime.
 
 ```bash
-# ---------------------------------------------------------------------------
-# Apify — primary ad data source for Meta Ad Library
-# ---------------------------------------------------------------------------
-APIFY_API_TOKEN=
-APIFY_DEFAULT_ACTOR=apify/facebook-ads-scraper
-APIFY_DAILY_SPEND_LIMIT_USD=50
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
-# ---------------------------------------------------------------------------
-# Hermes agent runtime (deployed on VPS, called via signed webhook from app)
-# ---------------------------------------------------------------------------
+AD_COLLECTOR_PROVIDER=searchapi_meta
+SELF_HOSTED_META_COLLECTOR_URL=http://meta-ad-library-collector:9100
+META_AD_LIBRARY_COLLECTOR_URL=http://meta-ad-library-collector:9100
+SEARCHAPI_API_KEY=
+SEARCHAPI_BASE_URL=https://www.searchapi.io/api/v1/search
+SEARCHAPI_ESTIMATED_COST_PER_RUN_USD=0
+META_AD_LIBRARY_API_TOKEN=
+META_GRAPH_VERSION=v20.0
+AD_COLLECTOR_COUNTRY=AU
+AD_COLLECTOR_ACTIVE_STATUS=active
+AD_COLLECTOR_RESULTS_LIMIT_PER_PAGE=50
+AD_COLLECTOR_DAILY_SPEND_LIMIT_USD=0
+META_COLLECTOR_COOKIE_JSON=
+META_COLLECTOR_PROFILE_DIR=/data/profile
+
 HERMES_BASE_URL=https://hermes.blockwise.sale
 HERMES_API_TOKEN=
 HERMES_WEBHOOK_SECRET=
-
-# ---------------------------------------------------------------------------
-# OpenRouter — Hermes model gateway
-# ---------------------------------------------------------------------------
 OPENROUTER_API_KEY=
-
-# ---------------------------------------------------------------------------
-# OpenAI — embeddings only (search-by-style, similarity)
-# ---------------------------------------------------------------------------
-# Already in main env if other Blockwise features need it. We reuse it.
-
-# ---------------------------------------------------------------------------
-# mem0 — fuzzy memory layer
-# ---------------------------------------------------------------------------
 MEM0_API_KEY=
 MEM0_PROJECT_ID=blockwise-research
-
-# ---------------------------------------------------------------------------
-# Browserbase — managed headless browser fallback for Hermes
-# ---------------------------------------------------------------------------
 BROWSERBASE_API_KEY=
 BROWSERBASE_PROJECT_ID=
 
-# ---------------------------------------------------------------------------
-# Storage bucket names (created in Supabase Storage)
-# ---------------------------------------------------------------------------
 RESEARCH_RAW_EVIDENCE_BUCKET=research-raw-evidence
 RESEARCH_AD_CREATIVES_BUCKET=research-ad-creatives
 RESEARCH_SCREENSHOTS_BUCKET=research-screenshots
 ```
 
-## Where each lives
-
-| Variable                  | Local `.env.local` | Coolify VPS env | Vercel env |
-| ------------------------- | ------------------ | --------------- | ---------- |
-| APIFY_API_TOKEN           | yes                | yes (Hermes)    | no         |
-| HERMES_BASE_URL           | yes                | no              | yes        |
-| HERMES_API_TOKEN          | yes                | no              | yes        |
-| HERMES_WEBHOOK_SECRET     | yes                | yes (Hermes)    | yes        |
-| OPENROUTER_API_KEY        | yes                | yes (Hermes)    | no         |
-| MEM0_API_KEY              | yes                | yes (Hermes)    | no         |
-| BROWSERBASE_API_KEY       | yes                | yes (Hermes)    | no         |
-| RESEARCH_*_BUCKET         | yes                | yes (Hermes)    | yes        |
-| SUPABASE_SERVICE_ROLE_KEY | yes                | yes (Hermes)    | yes        |
-
-The signed webhook secret is the only secret shared between Hermes (server)
-and Blockwise (client of Hermes). Everything else is consumed only on the
-VPS side.
+`META_COLLECTOR_COOKIE_JSON` is optional and must only contain cookies from an
+operator-controlled session. Login walls and checkpoints are failed runs, not
+zero-ad results.

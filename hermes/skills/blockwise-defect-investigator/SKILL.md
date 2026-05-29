@@ -40,9 +40,9 @@ provider response, or a real Meta-side change?
      the most recent `ad_fetch_runs` for that page. Inspect raw payload.
 3. Decide:
    - **Genuine gap** (we never knew): resolved, with the entity now linked.
-   - **Provider blind spot** (Apify missed it; we see it on Meta UI):
-     mark provider quality issue in `result_summary`; consider running
-     verifier provider in future for that page; resolved with notes.
+   - **Collector blind spot** (the self-hosted collector missed it; we see
+     it on Meta UI): mark collector quality issue in `result_summary`;
+     queue a skill improvement for `blockwise-ad-collector`; resolved with notes.
    - **Stale data** (ad just ended; we hadn't noticed): not a defect; dismissed.
    - **Mis-reported by customer**: dismissed with notes.
 

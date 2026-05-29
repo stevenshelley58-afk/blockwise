@@ -146,8 +146,11 @@ export type PendingCreativeUpsert = {
   ctaUrl: string | null;
   primaryImageUrl: string | null;
   imageUrls: string[];
+  imageStoragePath: string | null;
   videoUrl: string | null;
+  videoStoragePath: string | null;
   videoThumbnailUrl: string | null;
+  mediaAssets: Record<string, unknown>[];
   landingUrl: string | null;
   locale: string | null;
   language: string | null;

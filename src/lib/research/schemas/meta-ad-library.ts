@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 /**
- * Apify Meta Ad Library actor response shapes.
+ * Meta Ad Library response shapes.
  *
- * Supports both the canonical camelCase shape (apify/facebook-ads-scraper)
- * and the snake_case shape used by community actors (leadsbrary, automly).
+ * Supports both the canonical camelCase shape and snake_case variants
+ * returned by collector implementations.
  *
- * Real sample fixture: tests/research-engine/fixtures-apify-real.json
+ * Real sample fixture: tests/research-engine/fixtures-meta-ad-library-real.json
  *
  * Rule: every field that could be null in the wild is .nullable().optional().
  * Anything we do not list passes through via .passthrough().
@@ -28,7 +28,7 @@ const snapshotBodyLike = z
   .nullable()
   .optional();
 
-export const apifySnapshotCardSchema = z
+export const metaAdLibrarySnapshotCardSchema = z
   .object({
     body: nstr(),
     title: nstr(),
@@ -51,7 +51,7 @@ export const apifySnapshotCardSchema = z
     video_preview_image_url: nstr(),
   })
   .passthrough();
-export type ApifySnapshotCard = z.infer<typeof apifySnapshotCardSchema>;
+export type MetaAdLibrarySnapshotCard = z.infer<typeof metaAdLibrarySnapshotCardSchema>;
 
 const snapshotImageSchema = z
   .object({
@@ -70,12 +70,12 @@ const snapshotVideoSchema = z
   })
   .passthrough();
 
-export const apifySnapshotSchema = z
+export const metaAdLibrarySnapshotSchema = z
   .object({
     title: nstr(),
     body: snapshotBodyLike,
     caption: nstr(),
-    cards: z.array(apifySnapshotCardSchema).nullable().optional(),
+    cards: z.array(metaAdLibrarySnapshotCardSchema).nullable().optional(),
     images: z.array(snapshotImageSchema).nullable().optional(),
     videos: z.array(snapshotVideoSchema).nullable().optional(),
     ctaType: nstr(),
@@ -98,9 +98,9 @@ export const apifySnapshotSchema = z
     pageCategories: z.array(z.string()).nullable().optional(),
   })
   .passthrough();
-export type ApifySnapshot = z.infer<typeof apifySnapshotSchema>;
+export type MetaAdLibrarySnapshot = z.infer<typeof metaAdLibrarySnapshotSchema>;
 
-export const apifyMetaAdSchema = z
+export const metaAdLibraryAdSchema = z
   .object({
     adArchiveID: nstrnum(),
     adArchiveId: nstrnum(),
@@ -136,8 +136,8 @@ export const apifyMetaAdSchema = z
     publisher_platform: z.array(z.string()).nullable().optional(),
     platforms: z.array(z.string()).nullable().optional(),
 
-    snapshot: apifySnapshotSchema.nullable().optional(),
-    cards: z.array(apifySnapshotCardSchema).nullable().optional(),
+    snapshot: metaAdLibrarySnapshotSchema.nullable().optional(),
+    cards: z.array(metaAdLibrarySnapshotCardSchema).nullable().optional(),
 
     body: nstr(),
     title: nstr(),
@@ -167,11 +167,11 @@ export const apifyMetaAdSchema = z
     page_info: z.record(z.unknown()).nullable().optional(),
   })
   .passthrough();
-export type ApifyMetaAd = z.infer<typeof apifyMetaAdSchema>;
+export type MetaAdLibraryAd = z.infer<typeof metaAdLibraryAdSchema>;
 
-export const apifyMetaAdsDatasetSchema = z.array(apifyMetaAdSchema);
+export const metaAdLibraryDatasetSchema = z.array(metaAdLibraryAdSchema);
 
-export function extractExternalAdId(ad: ApifyMetaAd): string {
+export function extractExternalAdId(ad: MetaAdLibraryAd): string {
   const candidate =
     ad.adArchiveID ??
     ad.adArchiveId ??
@@ -181,23 +181,23 @@ export function extractExternalAdId(ad: ApifyMetaAd): string {
     ad.library_id ??
     ad.id;
   if (candidate === undefined || candidate === null || candidate === "") {
-    throw new Error("Apify ad payload is missing every known external_ad_id field");
+    throw new Error("Meta Ad Library payload is missing every known external_ad_id field");
   }
   return String(candidate);
 }
 
-export function extractPageId(ad: ApifyMetaAd): string | null {
+export function extractPageId(ad: MetaAdLibraryAd): string | null {
   const candidate =
     ad.pageID ?? ad.pageId ?? ad.page_id ?? ad.snapshot?.pageId ?? ad.snapshot?.page_id;
   if (candidate === undefined || candidate === null || candidate === "") return null;
   return String(candidate);
 }
 
-export function extractPageName(ad: ApifyMetaAd): string | null {
+export function extractPageName(ad: MetaAdLibraryAd): string | null {
   return ad.pageName ?? ad.page_name ?? ad.snapshot?.pageName ?? ad.snapshot?.page_name ?? null;
 }
 
-export function deriveActiveStatus(ad: ApifyMetaAd): "active" | "inactive" | "unknown" {
+export function deriveActiveStatus(ad: MetaAdLibraryAd): "active" | "inactive" | "unknown" {
   if (typeof ad.isActive === "boolean") return ad.isActive ? "active" : "inactive";
   if (typeof ad.is_active === "boolean") return ad.is_active ? "active" : "inactive";
   const status = ad.status?.toLowerCase();

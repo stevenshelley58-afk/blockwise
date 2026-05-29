@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { ApifyClient } from "./apify-client.ts";
+import { createAdCollectionProvider } from "./ad-provider.ts";
 import { loadEnv } from "./env.ts";
 import { listDuePages } from "./policy.ts";
 import { refreshAdvertiserPage } from "./run.ts";
@@ -10,41 +10,56 @@ async function tick(): Promise<void> {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const apify = new ApifyClient(env.APIFY_API_TOKEN, env.APIFY_DEFAULT_ACTOR);
+  const provider = createAdCollectionProvider(env);
+  const estimatedRunCostUsd = estimateRunCostUsd(provider.sourceProvider, env);
+  const spendLimitUsd = env.AD_COLLECTOR_DAILY_SPEND_LIMIT_USD;
 
-  console.log(`[orchestrator] tick start mode=${env.ORCHESTRATOR_MODE} dry_run=${env.ORCHESTRATOR_DRY_RUN}`);
+  console.log(`[orchestrator] tick start mode=${env.ORCHESTRATOR_MODE} provider=${provider.name} dry_run=${env.ORCHESTRATOR_DRY_RUN}`);
 
   const due = await listDuePages(supabase, env);
   console.log(`[orchestrator] ${due.length} pages due`);
 
-  let totalCost = 0;
-  // Process pages in concurrent batches.
-  const concurrency = 24;
-  for (let i = 0; i < due.length; i += concurrency) {
-    if (totalCost > env.APIFY_DAILY_SPEND_LIMIT_USD) {
-      console.warn(`[orchestrator] daily spend cap reached ($${totalCost.toFixed(2)}), stopping tick`);
+  let totalCost = await loadSpendLast24hUsd(supabase, provider.sourceProvider);
+  console.log(`[orchestrator] spend_24h=$${totalCost.toFixed(4)} cap=$${spendLimitUsd.toFixed(2)} estimated_run=$${estimatedRunCostUsd.toFixed(4)}`);
+
+  for (const page of due) {
+    const projectedCost = totalCost + estimatedRunCostUsd;
+    if (spendLimitUsd <= 0 && estimatedRunCostUsd > 0) {
+      console.warn("[orchestrator] paid provider configured but daily spend cap is zero, stopping tick");
       break;
     }
-    const batch = due.slice(i, i + concurrency);
-    const results = await Promise.allSettled(
-      batch.map(async (page) => {
-        const r = await refreshAdvertiserPage({ supabase, apify, env, page });
-        console.log(
-          `[orchestrator] page=${page.pageName} status=${r.status} observed=${r.observed} new=${r.inserted} upd=${r.updated} unchanged=${r.unchanged} missing=${r.missing} cost=$${r.costUsd.toFixed(4)}`,
-        );
-        return r.costUsd;
-      }),
-    );
-    for (let j = 0; j < results.length; j++) {
-      const r = results[j];
-      if (r.status === "fulfilled") {
-        totalCost += r.value;
-      } else {
-        console.error(`[orchestrator] page=${batch[j].pageName} ERROR: ${(r.reason as Error)?.message ?? r.reason}`);
-      }
+    if (spendLimitUsd > 0 && projectedCost > spendLimitUsd) {
+      console.warn(`[orchestrator] daily spend cap reached ($${totalCost.toFixed(2)} / $${spendLimitUsd.toFixed(2)}), stopping tick`);
+      break;
+    }
+    try {
+      const r = await refreshAdvertiserPage({ supabase, provider, env, page });
+      totalCost += r.costUsd;
+      console.log(
+        `[orchestrator] page=${page.pageName} status=${r.status} observed=${r.observed} new=${r.inserted} upd=${r.updated} unchanged=${r.unchanged} missing=${r.missing} cost=$${r.costUsd.toFixed(4)}`,
+      );
+    } catch (err) {
+      console.error(`[orchestrator] page=${page.pageName} ERROR: ${(err as Error).message}`);
     }
   }
   console.log(`[orchestrator] tick complete total_cost=$${totalCost.toFixed(4)}`);
+}
+
+async function loadSpendLast24hUsd(supabase: SupabaseClient, sourceProvider: string): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .schema("research")
+    .from("ad_fetch_runs")
+    .select("cost_usd")
+    .eq("source_provider", sourceProvider)
+    .gte("started_at", since);
+  if (error) throw error;
+  return (data ?? []).reduce((sum, row: { cost_usd: number | string | null }) => sum + (Number(row.cost_usd) || 0), 0);
+}
+
+function estimateRunCostUsd(sourceProvider: string, env: ReturnType<typeof loadEnv>): number {
+  if (sourceProvider === "searchapi_meta") return env.SEARCHAPI_ESTIMATED_COST_PER_RUN_USD;
+  return 0;
 }
 
 async function main() {

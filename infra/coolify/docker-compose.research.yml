@@ -1,16 +1,3 @@
-# Coolify-managed stack for the Hermes Research Engine.
-# Deploy from feature/hermes-research-engine via Coolify's GitHub integration.
-#
-# Required env (set in Coolify dashboard, NOT in this file):
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-#   APIFY_API_TOKEN
-#   OPENROUTER_API_KEY, MEM0_API_KEY
-#   BROWSERBASE_API_KEY, BROWSERBASE_PROJECT_ID
-#   HERMES_WEBHOOK_SECRET
-#
-# All services bind only to localhost; Cloudflare Tunnel forwards
-# hermes.blockwise.sale, aion.blockwise.sale, etc.
-
 version: "3.9"
 
 services:
@@ -23,15 +10,47 @@ services:
     environment:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
-      APIFY_DEFAULT_ACTOR: apify/facebook-ads-scraper
-      APIFY_DAILY_SPEND_LIMIT_USD: "10"
-      APIFY_RESULTS_LIMIT_PER_PAGE: "50"
+      AD_COLLECTOR_PROVIDER: ${AD_COLLECTOR_PROVIDER:-self_hosted_meta}
+      SELF_HOSTED_META_COLLECTOR_URL: http://meta-ad-library-collector:9100
+      SEARCHAPI_API_KEY: ${SEARCHAPI_API_KEY:-}
+      SEARCHAPI_BASE_URL: ${SEARCHAPI_BASE_URL:-https://www.searchapi.io/api/v1/search}
+      SEARCHAPI_ESTIMATED_COST_PER_RUN_USD: ${SEARCHAPI_ESTIMATED_COST_PER_RUN_USD:-0.004}
+      META_AD_LIBRARY_API_TOKEN: ${META_AD_LIBRARY_API_TOKEN:-}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v20.0}
+      AD_COLLECTOR_COUNTRY: AU
+      AD_COLLECTOR_ACTIVE_STATUS: active
+      AD_COLLECTOR_DAILY_SPEND_LIMIT_USD: ${AD_COLLECTOR_DAILY_SPEND_LIMIT_USD:-5}
+      AD_COLLECTOR_RESULTS_LIMIT_PER_PAGE: "50"
       RESEARCH_RAW_EVIDENCE_BUCKET: research-raw-evidence
+      RESEARCH_AD_CREATIVES_BUCKET: research-ad-creatives
       ORCHESTRATOR_MODE: loop
-      ORCHESTRATOR_LOOP_INTERVAL_MS: "300000"
-      ORCHESTRATOR_MAX_PAGES_PER_TICK: "20"
+      ORCHESTRATOR_LOOP_INTERVAL_MS: ${ORCHESTRATOR_LOOP_INTERVAL_MS:-300000}
+      ORCHESTRATOR_MAX_PAGES_PER_TICK: ${ORCHESTRATOR_MAX_PAGES_PER_TICK:-5}
       ORCHESTRATOR_DRY_RUN: "false"
+    networks: [research]
+    depends_on: [meta-ad-library-collector]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  meta-ad-library-collector:
+    build:
+      context: ../..
+      dockerfile: workers/meta-ad-library-collector/Dockerfile
+    container_name: meta-ad-library-collector
+    restart: unless-stopped
+    environment:
+      META_COLLECTOR_PORT: "9100"
+      META_COLLECTOR_TIMEOUT_MS: "45000"
+      META_COLLECTOR_WAIT_MS: "9000"
+      META_COLLECTOR_COOKIE_JSON: ${META_COLLECTOR_COOKIE_JSON:-}
+      META_COLLECTOR_PROFILE_DIR: /data/profile
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../../workers/meta-ad-library-collector:/app:rw
+      - collector-profile:/data
+    ports:
+      - "127.0.0.1:9100:9100"
     networks: [research]
     logging:
       driver: json-file
@@ -48,30 +67,25 @@ services:
       MEM0_API_KEY: ${MEM0_API_KEY}
       BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
       BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
-      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SELF_HOSTED_META_COLLECTOR_URL: http://meta-ad-library-collector:9100
+      META_AD_LIBRARY_COLLECTOR_URL: http://meta-ad-library-collector:9100
+      AD_COLLECTOR_PROVIDER: ${AD_COLLECTOR_PROVIDER:-self_hosted_meta}
+      SEARCHAPI_API_KEY: ${SEARCHAPI_API_KEY:-}
+      META_AD_LIBRARY_API_TOKEN: ${META_AD_LIBRARY_API_TOKEN:-}
+      AD_COLLECTOR_DAILY_SPEND_LIMIT_USD: ${AD_COLLECTOR_DAILY_SPEND_LIMIT_USD:-5}
       HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
       HERMES_PORT: "8080"
     volumes:
       - hermes-data:/data
-      - ../../hermes/skills:/app/skills:ro
+      - ../../hermes/skills:/app/skills:rw
+      - ../../workers/meta-ad-library-collector:/opt/blockwise/meta-ad-library-collector:rw
     networks: [research]
+    depends_on: [meta-ad-library-collector]
     logging:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
-
-  scrapling:
-    build:
-      context: ../scrapling
-      dockerfile: Dockerfile
-    container_name: scrapling
-    restart: unless-stopped
-    environment:
-      SCRAPLING_MCP_PORT: "9000"
-    ports:
-      - "127.0.0.1:9000:9000"
-    networks: [research]
 
   uptime-kuma:
     image: louislam/uptime-kuma:latest
@@ -83,24 +97,10 @@ services:
       - uptime-data:/app/data
     networks: [research]
 
-  aionui:
-    image: iofficeai/aionui:latest
-    container_name: aionui
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:7000:7000"
-    environment:
-      AION_HERMES_URL: http://hermes:8080
-      AION_SCRAPLING_URL: http://scrapling:9000
-    volumes:
-      - aion-data:/data
-    networks: [research]
-    depends_on: [hermes]
-
 volumes:
   hermes-data:
+  collector-profile:
   uptime-data:
-  aion-data:
 
 networks:
   research:

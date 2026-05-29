@@ -117,7 +117,7 @@ export default async function OperatorResearchPage() {
         <MetricCard icon={Signal} label="Live active ads" value={String(liveAds)} note="Across all covered postcodes" />
         <MetricCard icon={Activity} label="Known agents" value={String(liveAgents)} note="From census + page resolution" />
         <MetricCard icon={AlertOctagon} label="Open defects" value={String(openDefects)} note="Gaps awaiting investigation" />
-        <MetricCard icon={Timer} label="24h Apify spend" value={`$${totalCost24h.toFixed(2)}`} note={`${failedRunsLast20} failed in last 20 runs`} />
+        <MetricCard icon={Timer} label="24h collector spend" value={`$${totalCost24h.toFixed(2)}`} note={`${failedRunsLast20} failed in last 20 runs`} />
       </section>
 
       <section className="panel">

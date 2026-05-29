@@ -15,7 +15,7 @@ the Next.js app at runtime.
 | -------------------------------- | ------------------------------------------------------------------------- |
 | `blockwise-agent-census`         | Discover agencies and agents from WA licence reg, REIWA, Domain, REA, GBP |
 | `blockwise-page-resolver`        | Match an agent/agency to their real Meta Page                             |
-| `blockwise-apify-orchestrator`   | Call Apify actors on schedule, hand results to the ingestion worker       |
+| `blockwise-ad-collector`         | Run the self-hosted Meta collector and hand results to the ingestion path |
 | `blockwise-ad-classifier`        | Tag every ad creative with type/hooks/style/audience                      |
 | `blockwise-coverage-auditor`     | Sample postcodes, browse Meta Ad Library, file defects for gaps           |
 | `blockwise-defect-investigator`  | Triggered by operator; reproduces and roots-causes a coverage defect      |
@@ -31,7 +31,7 @@ the Next.js app at runtime.
    evidence, and a model/cost trace.
 3. **Source evidence is mandatory.** Every claim cites a URL and a
    `source_documents.id`. No "I think this is right" without evidence.
-4. **Provider failure ≠ no ads.** A skill that calls Apify and gets a
+4. **Provider failure != no ads.** A skill that calls a collector and gets a
    bad response must mark the run failed. It must never call the
    ingestion worker with an empty result claiming "no ads here."
 5. **Idempotent.** Re-running a skill with the same input must produce
