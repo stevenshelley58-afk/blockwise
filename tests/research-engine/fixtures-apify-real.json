@@ -1,0 +1,1211 @@
+[{
+  "inputUrl": "https://www.facebook.com/raywhitegroup",
+  "pageInfo": {
+    "adLibrarySystemStatus": {
+      "systemStatus": {
+        "status": "NO_KNOWN_ISSUES",
+        "activeIssues": [
+          {
+            "product": "Ad Library",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library Report",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library API",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Branded Content",
+            "status": "NO_KNOWN_ISSUES"
+          }
+        ]
+      }
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+      "pageInfo": {
+        "relatedPages": [],
+        "hasBlankAds": false,
+        "hiddenAds": 0,
+        "pageIsDeleted": false
+      }
+    },
+    "page": {
+      "name": "Ray White",
+      "id": "482032085149002"
+    },
+    "adLibraryUser": null
+  },
+  "pageID": "482032085149002",
+  "adArchiveID": "4332994033607709",
+  "startDateFormatted": "2026-05-17T07:00:00.000Z",
+  "endDateFormatted": "2026-05-28T07:00:00.000Z",
+  "adArchiveId": "4332994033607709",
+  "collationCount": 2,
+  "collationId": "996672602798406",
+  "pageId": "482032085149002",
+  "snapshot": {
+    "brandedContent": null,
+    "pageId": "482032085149002",
+    "pageIsDeleted": false,
+    "pageProfileUri": "https://www.facebook.com/raywhitegroup/",
+    "rootResharedPost": null,
+    "byline": null,
+    "disclaimerLabel": null,
+    "pageName": "Ray White",
+    "pageProfilePictureUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/702361090_27064033676526766_3308127262579430071_n.jpg?stp=dst-jpg_s60x60_tt6&_nc_cat=102&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=NF3pF7y7igwQ7kNvwGIJCaZ&_nc_oc=AdoIj4W5rSed_k_uLPXDQiHaM0xNeLduqULWuGwlrN7Wi8wKUjoIC7Xff0vdp78dDr0&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af43SLtk6-3Hxdcm4q5fBQYgTp0N5q0wIiSyVYLt2Eb_zw&oe=6A1DED7B",
+    "event": null,
+    "caption": "www.raywhite.com",
+    "ctaText": "Download",
+    "cards": [
+      {
+        "body": "Explore trends in the luxury property market.",
+        "ctaType": "DOWNLOAD",
+        "caption": "www.raywhite.com",
+        "linkDescription": "Luxury Outlook Report",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQO2WaaizJPQYPKoxgxO1aYJ3RQpXtqJefMbMN8zcfUKswcugCFtrtuNDgQIh27PqMFbc9nFRitOsEEHfka1dvL5KOGMANHLMVte7SoId09YWg.mp4?_nc_cat=104&_nc_oc=AdqTxdBHrrhscwfxMPkj2aFBSt179wD0rUVww_Px38PyAmZC_lRe7MiZRbArei6H6PU&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=cWWI4qvmFbMQ7kNvwF0Za2Z&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjE1NTAyNTQ0Nzk5OTIyMTgsImFzc2V0X2FnZV9kYXlzIjoyMiwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjEwMiwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=3ae58b6987b3067c&_nc_vs=HBksFQIYRWZiX2VwaGVtZXJhbC8zQjQ4RjkxRkFCRTMyQjQxMTM1RkJBMDVFRUE3MTY4Q19tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAVAhhAZmJfcGVybWFuZW50LzIzNDQ2OTZEOUJCNzgwOEI5QjM3REQzNEE2MzZCMDlCX2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACa0lrv51_zABRUCKAJDMywXQFmzMzMzMzMYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4PcJ54_teCK-kWwnK4qvFzyz54fPbN4TJVDlnkIu-VLQ&oe=6A1DE92C",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/702830503_1293590182873978_8810581732989333190_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=tzblvSmroNwQ7kNvwH0G8db&_nc_oc=AdpsnnITIveHWGTMw9SkdODLMaEtMyfifQpuCKepc0-9-9ZXyYeE4zN1kh_L3AcwGhk&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af4GeXLNxcDgHMl1Dvuq92_e6fL0XWu1Ztbl9K-gc3fzbQ&oe=6A1DD9E7",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPRTyG5pi90nh4mZEFyNmrk-mKraTo0Z7jKRWF5wDjsf-COomfCVXtLpyo9e606iI5JQZ9Sx0i_OBB88zjfrG9nRenkbcmtCM9bp0Mmeg.mp4?_nc_cat=103&_nc_oc=AdoQwd8d3SvuZsfxLAaPl7d1K7SHxwTlsLcdj5hKkV4w0MUeCEzzJjJ-s4hBfP-L1HI&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=DRsgrGuTJCYQ7kNvwHF-Uhb&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTU1MDI1NDQ3OTk5MjIxOCwiYXNzZXRfYWdlX2RheXMiOjIyLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6MTAyLCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7xGda_UIMND1L9OoZfIOcgFzqk7C9MPgLovM5cRvHkXw&oe=6A1DDB1B",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Explore trends in the luxury property market.",
+        "ctaType": "DOWNLOAD",
+        "caption": "www.raywhite.com",
+        "linkDescription": "Luxury Outlook Report",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQMTFbCTr-jnzL4wmzHAcxK0jLRqOMnb2Z0GnxhidIk73MD3XxNs5lkLSbynkIW-ikaz95ZJAl4InekpX7FsQHa_mujgd9vCW69v0hM26L2evg.mp4?_nc_cat=105&_nc_oc=Adpk6o7oh1UpY8zDa412vbHT8LOi-XQkmYVaC0BNKSEbV_o8rz5S-MYjppU01Sy80-w&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=1BpdGeMNBz8Q7kNvwGADV9f&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjI2MDc3MTA5NDQ4NjM0OTQ5LCJhc3NldF9hZ2VfZGF5cyI6MjIsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjoxNSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=190374a4a2a0b01e&_nc_vs=HBksFQIYRWZiX2VwaGVtZXJhbC9DMzQyM0JGQTM1RUEyQkFFOTdEMUQxNkE4QzU3RDRCOF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAVAhhAZmJfcGVybWFuZW50L0E4NDFGOTQwNjJEOTMyMjNFMjhERUVFREJGMEEyQzk1X2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACaKyaPXxb_SXBUCKAJDMywXQC4Q5WBBiTcYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4tjEeLfx_nYLLJ-RV-mzC8EgEJwchWdk8LQWIfa5x2Sg&oe=6A1DE95F",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/701466437_820656337522693_8811742511394317062_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=qKF1Eyh9hDQQ7kNvwFnjZ4W&_nc_oc=AdqhKEQlHeOv6Tk_YFiOBW-CbFKqT6gELdTFOB5GqNhZvxzzEXz78Eogl5XYep_ywro&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af5eyY7BTx1QSAu5PskokJ19vDZAeLJIMGmZ9N72IVdByg&oe=6A1DE278",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQOFiBY4gs7Qls0UyYACINAb-af5ZbSPxxy7KPF_oDpcMatycj6n-8TIohJWWEajtHXE2muGka1CXX7-sDZeykNSFcJ3Kpx5swC8IifGZw.mp4?_nc_cat=102&_nc_oc=AdpuK4F4cxYnwIRBxYGMgguGF6vrmssf2KBNHixibOsaJgV1j8QGEZJZG6r8--ari2E&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=h2qeclNJOXMQ7kNvwE0v3d0&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MjYwNzcxMDk0NDg2MzQ5NDksImFzc2V0X2FnZV9kYXlzIjoyMiwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjE1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af75cv_o2tlSUZQHecqCaTNw1MY9TO-Gfmpn_8TXzTnkEQ&oe=6A1DC150",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      }
+    ],
+    "body": {
+      "text": "{{product.brand}}"
+    },
+    "ctaType": "DOWNLOAD",
+    "displayFormat": "DCO",
+    "linkDescription": "{{product.description}}",
+    "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+    "images": [],
+    "pageCategories": [
+      "Real Estate"
+    ],
+    "pageLikeCount": 27449,
+    "title": "{{product.name}}",
+    "videos": [],
+    "isReshared": false,
+    "extraLinks": [],
+    "extraTexts": [],
+    "extraImages": [],
+    "extraVideos": [],
+    "countryIsoCode": null,
+    "brazilTaxId": null,
+    "additionalInfo": null,
+    "ecCertificates": []
+  },
+  "isActive": true,
+  "hasUserReported": false,
+  "reportCount": null,
+  "menuItems": [],
+  "stateMediaRunLabel": null,
+  "pageIsDeleted": false,
+  "pageName": "Ray White",
+  "impressionsWithIndex": {
+    "impressionsText": null,
+    "impressionsIndex": -1
+  },
+  "gatedType": "ELIGIBLE",
+  "categories": [
+    "UNKNOWN"
+  ],
+  "isAaaEligible": false,
+  "containsDigitalCreatedMedia": false,
+  "reachEstimate": null,
+  "currency": "",
+  "spend": null,
+  "endDate": 1779951600,
+  "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK",
+    "WHATSAPP",
+    "THREADS"
+  ],
+  "startDate": 1779001200,
+  "containsSensitiveContent": false,
+  "totalActiveTime": null,
+  "regionalRegulationData": {
+    "finserv": {
+      "isDeemedFinserv": false,
+      "isLimitedDelivery": false
+    },
+    "twAntiScam": {
+      "isLimitedDelivery": false
+    }
+  },
+  "hideDataStatus": "NONE",
+  "fevInfo": null,
+  "adId": null,
+  "targetedOrReachedCountries": [],
+  "ad_details": {
+    "advertiser": {
+      "page": {
+        "about": {
+          "text": "Ray White is the largest real estate and property group in Australasia."
+        },
+        "is_delegate_page_with_linked_primary_profile": false,
+        "id": "482032085149002"
+      },
+      "ad_library_page_info": {
+        "page_spend": {
+          "current_week": null,
+          "lifetime_by_disclaimer": [],
+          "weekly_by_disclaimer": [],
+          "is_political_page": false
+        },
+        "page_info": {
+          "entity_type": "PERSON_PROFILE",
+          "ig_followers": 39598,
+          "ig_username": "raywhitegroup",
+          "ig_verification": true,
+          "likes": 27449,
+          "page_alias": "raywhitegroup",
+          "page_category": "Real Estate Company",
+          "page_cover_photo": "https://scontent-sea5-1.xx.fbcdn.net/v/t39.30808-6/625178263_1356652739829679_1371543006100066523_n.png?_nc_cat=110&ccb=1-7&_nc_sid=957871&_nc_ohc=GmghkJTBeVEQ7kNvwGhjyCQ&_nc_oc=AdpBDnTBQquLKvfccmPVRN0KcB4DrQCQ8cqdg70VZgxgpmC75ZGWiwOHJ3jJR--syhI&_nc_zt=23&_nc_ht=scontent-sea5-1.xx&_nc_gid=vwcXOuvwh_SHMSfDtcTQ3Q&_nc_ss=72289&oh=00_Af7BofTjYTlyL5YR_lpKvkIWBI7DYAbyPnWYElHpppfHaA&oe=6A1DDF0C",
+          "page_id": "482032085149002",
+          "page_is_deleted": false,
+          "page_is_restricted": false,
+          "page_name": "Ray White",
+          "page_profile_uri": "https://www.facebook.com/raywhitegroup/",
+          "page_verification": "NOT_VERIFIED",
+          "profile_photo": "https://scontent-sea5-1.xx.fbcdn.net/v/t39.30808-1/327339711_701036408159198_8996843273506489758_n.jpg?stp=dst-jpg_s148x148_tt6&_nc_cat=111&ccb=1-7&_nc_sid=418b77&_nc_ohc=kY2JvWH3mRoQ7kNvwFgnv1l&_nc_oc=Adp7jGr2k1YNqIaSt4Vpy7evumMoG931fB34uWqFMCrQNnhWZqtsUg9h9eQ6WwRXTyc&_nc_zt=24&_nc_ht=scontent-sea5-1.xx&_nc_gid=vwcXOuvwh_SHMSfDtcTQ3Q&_nc_ss=72289&oh=00_Af6TNs_8J0v-_xk5yvbtDW4p1GpyQrs2HThD_Cx1JKdYrg&oe=6A1DDB15",
+          "is_profile_page": false
+        }
+      }
+    },
+    "violation_types": [],
+    "verified_voice_context": null
+  }
+},
+{
+  "inputUrl": "https://www.facebook.com/raywhitegroup",
+  "pageInfo": {
+    "adLibrarySystemStatus": {
+      "systemStatus": {
+        "status": "NO_KNOWN_ISSUES",
+        "activeIssues": [
+          {
+            "product": "Ad Library",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library Report",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library API",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Branded Content",
+            "status": "NO_KNOWN_ISSUES"
+          }
+        ]
+      }
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+      "pageInfo": {
+        "relatedPages": [],
+        "hasBlankAds": false,
+        "hiddenAds": 0,
+        "pageIsDeleted": false
+      }
+    },
+    "page": {
+      "name": "Ray White",
+      "id": "482032085149002"
+    },
+    "adLibraryUser": null
+  },
+  "pageID": "482032085149002",
+  "adArchiveID": "1526698942398536",
+  "startDateFormatted": "2026-05-20T07:00:00.000Z",
+  "endDateFormatted": "2026-05-28T07:00:00.000Z",
+  "adArchiveId": "1526698942398536",
+  "collationCount": 2,
+  "collationId": "1300960884810296",
+  "pageId": "482032085149002",
+  "snapshot": {
+    "brandedContent": null,
+    "pageId": "482032085149002",
+    "pageIsDeleted": false,
+    "pageProfileUri": "https://www.facebook.com/raywhitegroup/",
+    "rootResharedPost": null,
+    "byline": null,
+    "disclaimerLabel": null,
+    "pageName": "Ray White",
+    "pageProfilePictureUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/702494846_1971642390409335_8519999065908458112_n.jpg?stp=dst-jpg_s60x60_tt6&_nc_cat=109&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=dUflyhrv7BQQ7kNvwErZpNi&_nc_oc=Adrh3dr3Qk6NkqMxTm5wlFkqxlUZvKCG3QR926KUy5A6AoG4Gc_t90vMoKUdO51da3k&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7wYnSAQfbZCXMPTPl3qzD-AukWxALGujz5uiL3OqjczQ&oe=6A1DC7F0",
+    "event": null,
+    "caption": "fb.me",
+    "ctaText": "Download",
+    "cards": [
+      {
+        "body": "Discover the trends shaping Australia’s luxury property market in our latest Luxury Outlook.",
+        "ctaType": "DOWNLOAD",
+        "caption": "",
+        "linkDescription": "Download now",
+        "linkUrl": "http://fb.me/",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": null,
+        "videoPreviewImageUrl": null,
+        "videoSdUrl": null,
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/701681688_2840934126259438_2084772906449235352_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=TtMO7fiTppwQ7kNvwEs2Fco&_nc_oc=AdrMbTwkowUqD-_XR8bQSqZuaBIIP5yrmse6zlDESd14yICDNWVfj5uh210mZomZKhs&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7SRxLlL6XCIQw1Prn7qg50wO0xT-ToD-4R2aXoOSUicQ&oe=6A1DE51D",
+        "resizedImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/702570519_26799978386331158_555089149454237749_n.jpg?stp=dst-jpg_s600x600_tt6&_nc_cat=102&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ju8Y63MPJdkQ7kNvwEoURIf&_nc_oc=AdqjCFQhsI96LPfci8jJsUW6oulNQ7EHHu2TdhTU693mBoHnoYP2NGfanXXx7FD0c3s&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6vU3HP8_E0xrWZnmrZEvLs8kNOSQccYUSw3SVotmkdlQ&oe=6A1DE9E6",
+        "watermarkedResizedImageUrl": ""
+      },
+      {
+        "body": "Discover the trends shaping Australia’s luxury property market in our latest Luxury Outlook.",
+        "ctaType": "DOWNLOAD",
+        "caption": "",
+        "linkDescription": "Download now",
+        "linkUrl": "http://fb.me/",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": null,
+        "videoPreviewImageUrl": null,
+        "videoSdUrl": null,
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/702466702_956846213815807_6047140107650184757_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=cUBcyace0CoQ7kNvwEP94d4&_nc_oc=AdqXrSPOJ6iLKFyUM0SQKfs_lugg-19yD0MLsHQXVWJ6nUJSbF3AxOBTVOKBQYjZiGI&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7x1U12rqGq35Ov4jLLSj5hoibv3Hk9x3nlSvsSBhk0GA&oe=6A1DBF87",
+        "resizedImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/702309464_1741257570646414_8787783604856692155_n.jpg?stp=dst-jpg_s600x600_tt6&_nc_cat=102&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=xpMRIwU6irYQ7kNvwFHgPWY&_nc_oc=AdonXfrdT-5YOOKzAvEoZtKcpWmH9KwpFapXIrBLR162z5nEKDPbp40mTP0NtVV6BXI&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af5yQjV40n0p4vDM_3AdTFUutZv0Iin6lHWuN1obg4fJ6w&oe=6A1DE706",
+        "watermarkedResizedImageUrl": ""
+      },
+      {
+        "body": "Get your exclusive luxury market insights and learn how the luxury market is shaping property across Australia.",
+        "ctaType": "DOWNLOAD",
+        "caption": "",
+        "linkDescription": "Download now",
+        "linkUrl": "http://fb.me/",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": null,
+        "videoPreviewImageUrl": null,
+        "videoSdUrl": null,
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/702571257_1852273602104946_3211861256975961961_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=usg-MoIMjksQ7kNvwEahmj-&_nc_oc=AdoArOqyuGlGFlQCtFTw0W7_KC0lKFsnATb4cC4OulZ1RDQlx3QPG4VqyrQHU0Vv7b0&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af531wyObibjcGsDKpuFMgEkRaGCERQmY597t4kzjeYDyQ&oe=6A1DD160",
+        "resizedImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/702241258_2411201485959868_8655078166298009895_n.jpg?stp=dst-jpg_s600x600_tt6&_nc_cat=104&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ojKUeaLLXyEQ7kNvwGD5LNv&_nc_oc=AdqdM3jbhoGJ8N9oWWX65bTVAtGzbpha4Kl-zScgVdWwrVtGWVXo6zyXwdii93_jxBA&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af538fuz31eBRNAGyOJbkyLR6gGW5NXVRptnyX278PNQlA&oe=6A1DF02E",
+        "watermarkedResizedImageUrl": ""
+      }
+    ],
+    "body": {
+      "text": "{{product.brand}}"
+    },
+    "ctaType": "DOWNLOAD",
+    "displayFormat": "DCO",
+    "linkDescription": "{{product.description}}",
+    "linkUrl": "http://fb.me/",
+    "images": [],
+    "pageCategories": [
+      "Real Estate"
+    ],
+    "pageLikeCount": 27449,
+    "title": "{{product.name}}",
+    "videos": [],
+    "isReshared": false,
+    "extraLinks": [
+      "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+      "https://www.raywhite.com/contact/privacy-policy",
+      "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026"
+    ],
+    "extraTexts": [
+      {
+        "text": "Luxury Outlook Report"
+      },
+      {
+        "text": "Discover the trends and buyer behaviours shaping Australia’s evolving luxury property market in our latest Ray White Luxury Outlook."
+      },
+      {
+        "text": "We’ll use your information for advertising and our monthly newsletters."
+      },
+      {
+        "text": "Email"
+      },
+      {
+        "text": "First name"
+      },
+      {
+        "text": "Last name"
+      },
+      {
+        "text": "Post code"
+      },
+      {
+        "text": "Phone number"
+      },
+      {
+        "text": "Terms and Conditions for Ray White"
+      },
+      {
+        "text": "Visit Ray White's Privacy Policy."
+      },
+      {
+        "text": "Luxury Outlook Report"
+      },
+      {
+        "text": "You can visit our website or exit the form now."
+      }
+    ],
+    "extraImages": [
+      {
+        "originalImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/701312368_2144540859756626_8647042092788213539_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=DQp2Acko8csQ7kNvwHZZH3s&_nc_oc=Adqmj6z9PlQsnmHVnsnNrfP4BgTD-fqD3-Y5QWgWatgEullVo_FsfHfVCfU1KB5i1gc&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6kOWRFYjyTZgG2QuMyhCmvKzAJ2-IflOw8i1AOu9tPrg&oe=6A1DC9B9",
+        "resizedImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/701312368_2144540859756626_8647042092788213539_n.jpg?stp=dst-jpg_s600x600_tt6&_nc_cat=103&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=DQp2Acko8csQ7kNvwHZZH3s&_nc_oc=Adqmj6z9PlQsnmHVnsnNrfP4BgTD-fqD3-Y5QWgWatgEullVo_FsfHfVCfU1KB5i1gc&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af4e8-OvVdHTKPp-phdlyJ-o5xBZoMYh6d7y1fDPoubszw&oe=6A1DC9B9",
+        "imageCrops": []
+      }
+    ],
+    "extraVideos": [],
+    "countryIsoCode": null,
+    "brazilTaxId": null,
+    "additionalInfo": null,
+    "ecCertificates": []
+  },
+  "isActive": true,
+  "hasUserReported": false,
+  "reportCount": null,
+  "menuItems": [],
+  "stateMediaRunLabel": null,
+  "pageIsDeleted": false,
+  "pageName": "Ray White",
+  "impressionsWithIndex": {
+    "impressionsText": null,
+    "impressionsIndex": -1
+  },
+  "gatedType": "ELIGIBLE",
+  "categories": [
+    "UNKNOWN"
+  ],
+  "isAaaEligible": false,
+  "containsDigitalCreatedMedia": false,
+  "reachEstimate": null,
+  "currency": "",
+  "spend": null,
+  "endDate": 1779951600,
+  "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK"
+  ],
+  "startDate": 1779260400,
+  "containsSensitiveContent": false,
+  "totalActiveTime": null,
+  "regionalRegulationData": {
+    "finserv": {
+      "isDeemedFinserv": false,
+      "isLimitedDelivery": false
+    },
+    "twAntiScam": {
+      "isLimitedDelivery": false
+    }
+  },
+  "hideDataStatus": "NONE",
+  "fevInfo": null,
+  "adId": null,
+  "targetedOrReachedCountries": [],
+  "ad_details": {
+    "advertiser": {
+      "page": {
+        "about": {
+          "text": "Ray White is the largest real estate and property group in Australasia."
+        },
+        "is_delegate_page_with_linked_primary_profile": false,
+        "id": "482032085149002"
+      },
+      "ad_library_page_info": {
+        "page_spend": {
+          "current_week": null,
+          "lifetime_by_disclaimer": [],
+          "weekly_by_disclaimer": [],
+          "is_political_page": false
+        },
+        "page_info": {
+          "entity_type": "PERSON_PROFILE",
+          "ig_followers": 39598,
+          "ig_username": "raywhitegroup",
+          "ig_verification": true,
+          "likes": 27449,
+          "page_alias": "raywhitegroup",
+          "page_category": "Real Estate Company",
+          "page_cover_photo": "https://scontent-phx1-1.xx.fbcdn.net/v/t39.30808-6/625178263_1356652739829679_1371543006100066523_n.png?_nc_cat=110&ccb=1-7&_nc_sid=957871&_nc_ohc=GmghkJTBeVEQ7kNvwGF9Bhp&_nc_oc=Adon2sK9uBwwSf3UKJsCkRGntOX8NlGfY8cwNhAeeTEoBc2PiISasVWNnmMK82MJmeE&_nc_zt=23&_nc_ht=scontent-phx1-1.xx&_nc_gid=G1-MxSV4wbVfR4Ii6ip96w&_nc_ss=72289&oh=00_Af7OuFRFsf5K9fwTc6TLp3WuM54b4HI6Nb0-ov531IA-KQ&oe=6A1DDF0C",
+          "page_id": "482032085149002",
+          "page_is_deleted": false,
+          "page_is_restricted": false,
+          "page_name": "Ray White",
+          "page_profile_uri": "https://www.facebook.com/raywhitegroup/",
+          "page_verification": "NOT_VERIFIED",
+          "profile_photo": "https://scontent-phx1-1.xx.fbcdn.net/v/t39.30808-1/327339711_701036408159198_8996843273506489758_n.jpg?stp=dst-jpg_s148x148_tt6&_nc_cat=111&ccb=1-7&_nc_sid=418b77&_nc_ohc=kY2JvWH3mRoQ7kNvwE4vKzH&_nc_oc=AdriK6DRT6HcbNibS9WsoiQa2APqc4dp9lesV-ruBd7cR3wR5UIwcGjhDzL3xQYGvlg&_nc_zt=24&_nc_ht=scontent-phx1-1.xx&_nc_gid=G1-MxSV4wbVfR4Ii6ip96w&_nc_ss=72289&oh=00_Af4NPy_Oe0L3J6WVqTzwy7Up9ng9m1wye2mdTL4TCVjK5A&oe=6A1DDB15",
+          "is_profile_page": false
+        }
+      }
+    },
+    "violation_types": [],
+    "verified_voice_context": null
+  }
+},
+{
+  "inputUrl": "https://www.facebook.com/raywhitegroup",
+  "pageInfo": {
+    "adLibrarySystemStatus": {
+      "systemStatus": {
+        "status": "NO_KNOWN_ISSUES",
+        "activeIssues": [
+          {
+            "product": "Ad Library",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library Report",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library API",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Branded Content",
+            "status": "NO_KNOWN_ISSUES"
+          }
+        ]
+      }
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+      "pageInfo": {
+        "relatedPages": [],
+        "hasBlankAds": false,
+        "hiddenAds": 0,
+        "pageIsDeleted": false
+      }
+    },
+    "page": {
+      "name": "Ray White",
+      "id": "482032085149002"
+    },
+    "adLibraryUser": null
+  },
+  "pageID": "482032085149002",
+  "adArchiveID": "2081446692801231",
+  "startDateFormatted": "2026-05-17T07:00:00.000Z",
+  "endDateFormatted": "2026-05-28T07:00:00.000Z",
+  "adArchiveId": "2081446692801231",
+  "collationCount": null,
+  "collationId": "996672602798406",
+  "pageId": "482032085149002",
+  "snapshot": {
+    "brandedContent": null,
+    "pageId": "482032085149002",
+    "pageIsDeleted": false,
+    "pageProfileUri": "https://www.facebook.com/raywhitegroup/",
+    "rootResharedPost": null,
+    "byline": null,
+    "disclaimerLabel": null,
+    "pageName": "Ray White",
+    "pageProfilePictureUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/701369445_961690536715283_4734960483638685959_n.jpg?stp=dst-jpg_s60x60_tt6&_nc_cat=108&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=KpbxRxLzuoQQ7kNvwFPdbq6&_nc_oc=AdpefPR81tXBNQFlF5zkX5oguB0TAZPSBXMmefGN9WvMHQNAj_uzXFzAcdBzb4lP9lc&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6J7I_s-2yKtWS0gG6G0yQ_dX4YJMshWHM6kyWcnMLUag&oe=6A1DE39F",
+    "event": null,
+    "caption": "www.raywhite.com",
+    "ctaText": "Download",
+    "cards": [
+      {
+        "body": "Explore trends in the luxury property market.",
+        "ctaType": "DOWNLOAD",
+        "caption": "www.raywhite.com",
+        "linkDescription": "Luxury Outlook Report",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQO2WaaizJPQYPKoxgxO1aYJ3RQpXtqJefMbMN8zcfUKswcugCFtrtuNDgQIh27PqMFbc9nFRitOsEEHfka1dvL5KOGMANHLMVte7SoId09YWg.mp4?_nc_cat=104&_nc_oc=AdqTxdBHrrhscwfxMPkj2aFBSt179wD0rUVww_Px38PyAmZC_lRe7MiZRbArei6H6PU&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=cWWI4qvmFbMQ7kNvwF0Za2Z&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjE1NTAyNTQ0Nzk5OTIyMTgsImFzc2V0X2FnZV9kYXlzIjoyMiwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjEwMiwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=3ae58b6987b3067c&_nc_vs=HBksFQIYRWZiX2VwaGVtZXJhbC8zQjQ4RjkxRkFCRTMyQjQxMTM1RkJBMDVFRUE3MTY4Q19tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAVAhhAZmJfcGVybWFuZW50LzIzNDQ2OTZEOUJCNzgwOEI5QjM3REQzNEE2MzZCMDlCX2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACa0lrv51_zABRUCKAJDMywXQFmzMzMzMzMYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4PcJ54_teCK-kWwnK4qvFzyz54fPbN4TJVDlnkIu-VLQ&oe=6A1DE92C",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/700826893_967579206183103_4716437889881111303_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=IzFVURowVAMQ7kNvwFToJGz&_nc_oc=AdqnJl1JKACW5K42G4J2t8I_HFHJAMcFhbbtAtw-cQ0_Pb2T0B3JHgFwQz7_57MNflg&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7pUGHH-VNHwWsD79CfgGykTGXf4SrzDqSLNJNLt2urGQ&oe=6A1DCE52",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQPRTyG5pi90nh4mZEFyNmrk-mKraTo0Z7jKRWF5wDjsf-COomfCVXtLpyo9e606iI5JQZ9Sx0i_OBB88zjfrG9nRenkbcmtCM9bp0Mmeg.mp4?_nc_cat=103&_nc_oc=AdoQwd8d3SvuZsfxLAaPl7d1K7SHxwTlsLcdj5hKkV4w0MUeCEzzJjJ-s4hBfP-L1HI&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=DRsgrGuTJCYQ7kNvwHF-Uhb&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTU1MDI1NDQ3OTk5MjIxOCwiYXNzZXRfYWdlX2RheXMiOjIyLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6MTAyLCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7xGda_UIMND1L9OoZfIOcgFzqk7C9MPgLovM5cRvHkXw&oe=6A1DDB1B",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Explore trends in the luxury property market.",
+        "ctaType": "DOWNLOAD",
+        "caption": "www.raywhite.com",
+        "linkDescription": "Luxury Outlook Report",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook Report",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQMTFbCTr-jnzL4wmzHAcxK0jLRqOMnb2Z0GnxhidIk73MD3XxNs5lkLSbynkIW-ikaz95ZJAl4InekpX7FsQHa_mujgd9vCW69v0hM26L2evg.mp4?_nc_cat=105&_nc_oc=Adpk6o7oh1UpY8zDa412vbHT8LOi-XQkmYVaC0BNKSEbV_o8rz5S-MYjppU01Sy80-w&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=1BpdGeMNBz8Q7kNvwGADV9f&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjI2MDc3MTA5NDQ4NjM0OTQ5LCJhc3NldF9hZ2VfZGF5cyI6MjIsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjoxNSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=190374a4a2a0b01e&_nc_vs=HBksFQIYRWZiX2VwaGVtZXJhbC9DMzQyM0JGQTM1RUEyQkFFOTdEMUQxNkE4QzU3RDRCOF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAVAhhAZmJfcGVybWFuZW50L0E4NDFGOTQwNjJEOTMyMjNFMjhERUVFREJGMEEyQzk1X2F1ZGlvX2Rhc2hpbml0Lm1wNBUCAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACaKyaPXxb_SXBUCKAJDMywXQC4Q5WBBiTcYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4tjEeLfx_nYLLJ-RV-mzC8EgEJwchWdk8LQWIfa5x2Sg&oe=6A1DE95F",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/700466962_2087883212104829_1334334158200636785_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ogMkkdPsYmMQ7kNvwGSRAqX&_nc_oc=AdqfwEMh3BCoEomy8YL_MxnCbUU1ZKDrH8OWrlNsJ_M529aI9LT3bu46tCzfsRN2trM&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7Rwk6-6o8zduZ7E14_TA4ufgXOljGnRIsDIS0aQbP58w&oe=6A1DF3B4",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQOFiBY4gs7Qls0UyYACINAb-af5ZbSPxxy7KPF_oDpcMatycj6n-8TIohJWWEajtHXE2muGka1CXX7-sDZeykNSFcJ3Kpx5swC8IifGZw.mp4?_nc_cat=102&_nc_oc=AdpuK4F4cxYnwIRBxYGMgguGF6vrmssf2KBNHixibOsaJgV1j8QGEZJZG6r8--ari2E&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=h2qeclNJOXMQ7kNvwE0v3d0&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MjYwNzcxMDk0NDg2MzQ5NDksImFzc2V0X2FnZV9kYXlzIjoyMiwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjE1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af75cv_o2tlSUZQHecqCaTNw1MY9TO-Gfmpn_8TXzTnkEQ&oe=6A1DC150",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      }
+    ],
+    "body": {
+      "text": "{{product.brand}}"
+    },
+    "ctaType": "DOWNLOAD",
+    "displayFormat": "DCO",
+    "linkDescription": "{{product.description}}",
+    "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=meta&utm_medium=social_cpc&utm_campaign=luxury_report_2026",
+    "images": [],
+    "pageCategories": [
+      "Real Estate"
+    ],
+    "pageLikeCount": 27449,
+    "title": "{{product.name}}",
+    "videos": [],
+    "isReshared": false,
+    "extraLinks": [],
+    "extraTexts": [],
+    "extraImages": [],
+    "extraVideos": [],
+    "countryIsoCode": null,
+    "brazilTaxId": null,
+    "additionalInfo": null,
+    "ecCertificates": []
+  },
+  "isActive": true,
+  "hasUserReported": false,
+  "reportCount": null,
+  "menuItems": [],
+  "stateMediaRunLabel": null,
+  "pageIsDeleted": false,
+  "pageName": "Ray White",
+  "impressionsWithIndex": {
+    "impressionsText": null,
+    "impressionsIndex": -1
+  },
+  "gatedType": "ELIGIBLE",
+  "categories": [
+    "UNKNOWN"
+  ],
+  "isAaaEligible": false,
+  "containsDigitalCreatedMedia": false,
+  "reachEstimate": null,
+  "currency": "",
+  "spend": null,
+  "endDate": 1779951600,
+  "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK",
+    "WHATSAPP",
+    "THREADS"
+  ],
+  "startDate": 1779001200,
+  "containsSensitiveContent": false,
+  "totalActiveTime": null,
+  "regionalRegulationData": {
+    "finserv": {
+      "isDeemedFinserv": false,
+      "isLimitedDelivery": false
+    },
+    "twAntiScam": {
+      "isLimitedDelivery": false
+    }
+  },
+  "hideDataStatus": "NONE",
+  "fevInfo": null,
+  "adId": null,
+  "targetedOrReachedCountries": [],
+  "ad_details": {
+    "advertiser": {
+      "page": {
+        "about": {
+          "text": "Ray White is the largest real estate and property group in Australasia."
+        },
+        "is_delegate_page_with_linked_primary_profile": false,
+        "id": "482032085149002"
+      },
+      "ad_library_page_info": {
+        "page_spend": {
+          "current_week": null,
+          "lifetime_by_disclaimer": [],
+          "weekly_by_disclaimer": [],
+          "is_political_page": false
+        },
+        "page_info": {
+          "entity_type": "PERSON_PROFILE",
+          "ig_followers": 39598,
+          "ig_username": "raywhitegroup",
+          "ig_verification": true,
+          "likes": 27449,
+          "page_alias": "raywhitegroup",
+          "page_category": "Real Estate Company",
+          "page_cover_photo": "https://scontent-ord5-3.xx.fbcdn.net/v/t39.30808-6/625178263_1356652739829679_1371543006100066523_n.png?_nc_cat=110&ccb=1-7&_nc_sid=957871&_nc_ohc=GmghkJTBeVEQ7kNvwECASAH&_nc_oc=AdrjlplajVU8L8iYscZ2ZDHK6gVSmZznIHFs_Tv4L2coYALrJRtVbOENWUJX3wNmD8zOL0X-5FiOSQjtg6a09Ru2&_nc_zt=23&_nc_ht=scontent-ord5-3.xx&_nc_gid=uFlJR7ZfNYKZscWj98Wgog&_nc_ss=72289&oh=00_Af5eEaZ5DQIAysIyQm1cZjVykhJ35nIlBeAEGBrLaWuLmw&oe=6A1DDF0C",
+          "page_id": "482032085149002",
+          "page_is_deleted": false,
+          "page_is_restricted": false,
+          "page_name": "Ray White",
+          "page_profile_uri": "https://www.facebook.com/raywhitegroup/",
+          "page_verification": "NOT_VERIFIED",
+          "profile_photo": "https://scontent-ord5-2.xx.fbcdn.net/v/t39.30808-1/327339711_701036408159198_8996843273506489758_n.jpg?stp=dst-jpg_s148x148_tt6&_nc_cat=111&ccb=1-7&_nc_sid=418b77&_nc_ohc=kY2JvWH3mRoQ7kNvwFZeY2b&_nc_oc=Adqb2c0i4RxwD4r0hPmSM1DQvCmpoT86UK6KqCxxLElhCZdxQ2jdIDJoDmrsnvejaKR94v2AoIWjYeF8gwvWghy0&_nc_zt=24&_nc_ht=scontent-ord5-2.xx&_nc_gid=uFlJR7ZfNYKZscWj98Wgog&_nc_ss=72289&oh=00_Af52uM-vH6h7uNNZRSdDvA5oiIgdW4GOBrAfeEGpLu44bg&oe=6A1DDB15",
+          "is_profile_page": false
+        }
+      }
+    },
+    "violation_types": [],
+    "verified_voice_context": null
+  }
+},
+{
+  "inputUrl": "https://www.facebook.com/raywhitegroup",
+  "pageInfo": {
+    "adLibrarySystemStatus": {
+      "systemStatus": {
+        "status": "NO_KNOWN_ISSUES",
+        "activeIssues": [
+          {
+            "product": "Ad Library",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library Report",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library API",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Branded Content",
+            "status": "NO_KNOWN_ISSUES"
+          }
+        ]
+      }
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+      "pageInfo": {
+        "relatedPages": [],
+        "hasBlankAds": false,
+        "hiddenAds": 0,
+        "pageIsDeleted": false
+      }
+    },
+    "page": {
+      "name": "Ray White",
+      "id": "482032085149002"
+    },
+    "adLibraryUser": null
+  },
+  "pageID": "482032085149002",
+  "adArchiveID": "35545424391772489",
+  "startDateFormatted": "2026-05-14T07:00:00.000Z",
+  "endDateFormatted": "2026-05-28T07:00:00.000Z",
+  "adArchiveId": "35545424391772489",
+  "collationCount": 3,
+  "collationId": "1688548865507854",
+  "pageId": "482032085149002",
+  "snapshot": {
+    "brandedContent": null,
+    "pageId": "482032085149002",
+    "pageIsDeleted": false,
+    "pageProfileUri": "https://www.facebook.com/raywhitegroup/",
+    "rootResharedPost": null,
+    "byline": null,
+    "disclaimerLabel": null,
+    "pageName": "Ray White",
+    "pageProfilePictureUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/697792785_1513656910351164_7657395879362359572_n.jpg?stp=dst-jpg_s60x60_tt6&_nc_cat=100&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ZglOnC9ofW4Q7kNvwGGxGMK&_nc_oc=Adpf5Z0ygDxpozv09kzZ9XDrkSTu3i2TlOq0Xfs321sSQQ-0mYNrJBaRaQD_k8RZXAw&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af71Xe6CFiXyTR73rWEech7X6yxLw9FlRKyUSAYwFRYuzA&oe=6A1DED97",
+    "event": null,
+    "caption": "www.raywhite.com",
+    "ctaText": "Download",
+    "cards": [
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQP3y3zZsiK454JTI-2wwtihzkL7NzfXY6vjA6rDDLRFWq3JPBnlJURVdTCWsQHG7UZ7JPTf6RVscgGj37ZyGCDa1m1BUk1BsXLxJjj-qvUHDw.mp4?_nc_cat=102&_nc_oc=AdpqJtUjmRKSvpt-7alCUGxzE1MG3gADGXSoavjK5yJKImk-_CPRw3yNZixwc1k06uY&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=rH1oXQKzc6UQ7kNvwFdTacL&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjk2MTkwNTk5OTc2ODg5MSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=ade11955c4cd726a&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC9GMDQyQjJFRTEyN0E4OTc1OTg1QzhENjU4NEIyRjM4Rl9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACb2tOOWpra1AxUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af79zdE4hQHsVTP7FwQCwOlxYNtwL2-ro1Qhkhj_uCQ53Q&oe=6A1DCE5A",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/698912973_1634286081175839_2317432008783943814_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=lpkkrpfKuaIQ7kNvwF3LhZm&_nc_oc=AdrxHZ3lkqAI21VB4cKUzfULNcMqIyp9AnDdlzSwPeeTNabQsgcn1oC2x82R8MPuzGY&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6X_0o5IvOgHPW1hkuUjHnrWRSa4_-5NVZJ0uARmTyQNg&oe=6A1DE44F",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQM1sPsVr_jEXKaGxl9MWWU7jhnFaC6tPO5YGinq8Idaao-K26veQGSqZt5kR9PvVhXtqiFPw_-WFZvU4huT5LtxAJsAPaDn_szKAmE9Eg.mp4?_nc_cat=103&_nc_oc=AdocZaOms4WyXp1Vj33i5hE4Xy90u8fszUm_ZZyuCU14D--WnxKmggUSh2ClbInYInE&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=lQ_FEP1BKbwQ7kNvwF1tzKh&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6OTYxOTA1OTk5NzY4ODkxLCJhc3NldF9hZ2VfZGF5cyI6MjAsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjo1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af49I6r85twS4q2vXv1P1ZYrDNYnOJ3pC1lHSuZ6De1hrA&oe=6A1DC233",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQPwsYOXZr6M9JHC--kt1fayJnLOXUgAIyBZB1GOUP_SvIpJV01ix1klOAp-GJZkdtS8jA0nJ2w48iEccJ-Acnh8ngo8G0cIlH-D6tSccuCfmw.mp4?_nc_cat=108&_nc_oc=AdoDr6crTgfRDsyVRtAC6xF3X44kcwcLxf0duhrf4e4CEG-yfSQg7B34oRQ09YBoUK8&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=DQ0V_WLj_vEQ7kNvwHfWOJm&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjk2NzI3MDA1MjUxNzc0NSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=e5691357a494ae20&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC80QjQzOEVFNjM0RTY2MEFFRUVFMEIxQUNGQ0Y4RTA5Rl9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbi3Y6-w-63AxUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4WI800v8Eq1zuRXmnzXq3fmJ1gTJtkRv7Syuz0pSr0Yg&oe=6A1DD1AC",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/697792836_1294175502235255_3721140439158466333_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=c3tjTh279rQQ7kNvwFh4320&_nc_oc=AdqIL9j95JXhSi9U04xsGCv7DirFsdp3bn3JaIlaUFC1g27oczNBJZbs4pbJz6u8cos&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6pw31_RP9y7aufaNy06bjlEIdAOyoD5YDCdQop8gufiw&oe=6A1DC370",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNa3iM34ReScTVo7vkjSIsvqxKJdzDDuUikx3GBn1W602KgNdXQC9y1dR9GbX5Wf-fx-F5JUN3ugnB31IIq-J3PCJumh93qtkHPJMu6TA.mp4?_nc_cat=108&_nc_oc=AdrQ0xCZVu071wgtB6Vpxr-chlXAffI11PRECgCPoF82JuBSVoQV_96k1SVe0YtyOJg&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=ZAeYnf_67WMQ7kNvwHqRL_M&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6OTY3MjcwMDUyNTE3NzQ1LCJhc3NldF9hZ2VfZGF5cyI6MjAsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjo1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4kXwDOLgHnyuvzydUIUFzl_tBZVlfwIotwbvoLU49F9w&oe=6A1DE646",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQNOPo7Jmt1VrI8bL4OiWqoiu7YP29vASXqvsKLvWz4Zt5tPHCsX74hlEuMcWl3fVqSrrthuckkkVNOhhE6KzSNc2jt_FV81vvaOEh5eKLpMFw.mp4?_nc_cat=104&_nc_oc=AdqCdh3lLRgTzy_srhTpnQB3QMkUOx4cnita3UcxpqX8jMyd_z0VdnKzl_W97AhLc1k&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=kRAQLBksAMgQ7kNvwHInG9b&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjE0ODc1NTcyNjY0ODAzMTcsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&vs=e2188426fa2a3211&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC8yRjRCQjUwRUFGRURENzM0RUVDRDkxNDg1QzQxMTRCQ19tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACb68pynnbukBRUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7lngAX8eYFPVsfOWxSnmHIEAUo-LBiBZDJRvWT_1w8xg&oe=6A1DE948",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/700987982_2054706102093139_7366281406090454562_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=roA8yCFQOecQ7kNvwGSEMuE&_nc_oc=Adq7KQNG4sU_9WdwWWY8wI_U_h7QcLaCPf03bFWjmqMTnnH3k9QT3-63jyIpjmhoTiM&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af5xnZ9Yj4kkZJo0i1e6-TYjrmeIYckNy0c2sB4eBqwoNw&oe=6A1DD223",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQO5kQrc8tsTjnDKwJX6Vk3gvj3xmVnT8ECabFONqVnBNPdLiMCheB6LZvyNVpnHwgknYRSU-DUL4k9bM_DtAyYKl2IlSOk2xYLy6OgYbA.mp4?_nc_cat=105&_nc_oc=AdqmOJ4F-4WgN97l629onD3f3Evgjd8hjVq-3lQymic-yE7sITKqjrJqmxrE9tNzAm0&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=U7KA0EPeuSkQ7kNvwETMEuZ&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTQ4NzU1NzI2NjQ4MDMxNywiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4fWWmQisN5Z33Ie7CsGIZodZxgTcNSAe-_080YyFdd6Q&oe=6A1DBEC1",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQOYDjzrSkIPkKZVxAW6zHDbrc4uuQVGJn3Nb0ptWLxjWOpQrqFd1APzJFdqBW_7yY-cs0auuohoIRsR8haE0frj8K7AjDKleG6QvaOyidmclQ.mp4?_nc_cat=100&_nc_oc=Adq_cky3LUJZ2GAkFGzOhTaekQHTJ1jzdsjFMPnI1qmU4V3noNjTor-ASthQvKsW4TU&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=Haa-544IQ-cQ7kNvwGt-eYx&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjEzMzI0MDk0NTg3NjQ2NDUsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&vs=bda3750c9911fb0f&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC81NjQ5MEREMzNGRTU4N0UxMzJBODEwNDNBNUVFNkU4OF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbKreGHuPTdBBUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4gMcEyWzO9piIjqRdB3QtHZP6UhumNg9-lg02FmCJYOg&oe=6A1DCAE0",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/697793071_978439881439268_7354324905589308828_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ZNShfXl1VW4Q7kNvwHWTZXA&_nc_oc=Adq9f-Mij-MzSpNNmk8P03qOItXlFFKUNI91HRtp3iIRRLJUpf1sywYNuYHfGrV6rMk&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af60DWjw_t6NYoTMxhw4MkfFHINxxgZ5_tuS8XkPUALebw&oe=6A1DE8A8",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQP2dZTDwZ2KXI91LpbciFrTf57QS5BL01ghyWnVTD3K4U6Tl8EugqJAszrAES-XJ09HTL_KBHM_X5nkVM4xU4I1ZmJz33c9cw2QKn3FOg.mp4?_nc_cat=105&_nc_oc=AdpkdBBTz4qqmPd_cPZldMc_zVnSkf76i1qen2LJoRat2Aii9RZYhZc9qFDyHotmPyw&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=-TAHZFki70oQ7kNvwFCgM9a&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTMzMjQwOTQ1ODc2NDY0NSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4Jv1oyllFXqJ1btarsZ13mTUFP5MtIEflAxtNeoqXStg&oe=6A1DCCF5",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQNDXZxt8uc31fCHBf1z9GltxyILKgd_FkMHFP8UlmUyW6NLvAc9D0eZAT5n4P0O9R5P4_bS_IEotUGEMzv-Ywv5Zd7BwyvvkvBPKe7wlx6GAg.mp4?_nc_cat=105&_nc_oc=AdpIOPrcx4yTRyLa8FVKXFXHzutaDioSKtmKpXMuLlCC0XtjCceuoGYbB-TtstyYxv4&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=4_r4ZtleqKQQ7kNvwHTK-8w&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjIxODI4NTMwMTI0OTMxMDAsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjE1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&vs=5be2e8a812a99e86&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC9ENTRGRDRBODZBQjkxMThBNzhGM0JGMkQ3NjU0RTA5OF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbYzMCm4tLgBxUCKAJDMywXQC4Q5WBBiTcYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af555o2h10AYltkLALaT1popzGztGw9b2tot9yVYTyuGaw&oe=6A1DCAA7",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/700670053_914366384984461_1989143170625494502_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=0dyPoYUtSskQ7kNvwEjCZbw&_nc_oc=AdpbASZ1xKiLRlG0k-FOS3K-MEvP7ztz_UP2ryo7zYoLLuWPzkEmBseibxppurulgBI&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af7b14_ibK5mwrSfTE5QCv4OyuAj0aIeTQm0i1HbVgKlYQ&oe=6A1DD6A2",
+        "videoSdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m412/AQPeEDRy6IFhtgT3YAv32STuWfIdoqOUAeNuQkuivAunIMAg6LzTFbq_2o9IypoWVnmc7tEgpZkgIRGus_JcGNAzRaZIVhL0AB1Bwtdv1w.mp4?_nc_cat=107&_nc_oc=AdoFfGLago463vxX-sAZqA-9Oj1aYwKast50ZtSu7B0xnz1jSwUJKadQxBseo9_mX3A&_nc_sid=8bf8fe&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=BPsGOAscgWUQ7kNvwH0sFyZ&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MjE4Mjg1MzAxMjQ5MzEwMCwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6MTUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7tL8nry-Q6lpHTOvA82sHY2I2TmSxExLEvu3j0QUy4oA&oe=6A1DCAF7",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      }
+    ],
+    "body": {
+      "text": "What’s happening in the luxury property market? From city mansions to coastal retreats, buyers are prioritising lifestyle, ease and time. Explore our Luxury Outlook Report."
+    },
+    "ctaType": "DOWNLOAD",
+    "displayFormat": "CAROUSEL",
+    "linkDescription": null,
+    "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+    "images": [],
+    "pageCategories": [
+      "Real Estate"
+    ],
+    "pageLikeCount": 27449,
+    "title": "Ray White",
+    "videos": [],
+    "isReshared": false,
+    "extraLinks": [],
+    "extraTexts": [],
+    "extraImages": [],
+    "extraVideos": [],
+    "countryIsoCode": null,
+    "brazilTaxId": null,
+    "additionalInfo": null,
+    "ecCertificates": []
+  },
+  "isActive": true,
+  "hasUserReported": false,
+  "reportCount": null,
+  "menuItems": [],
+  "stateMediaRunLabel": null,
+  "pageIsDeleted": false,
+  "pageName": "Ray White",
+  "impressionsWithIndex": {
+    "impressionsText": null,
+    "impressionsIndex": -1
+  },
+  "gatedType": "ELIGIBLE",
+  "categories": [
+    "UNKNOWN"
+  ],
+  "isAaaEligible": false,
+  "containsDigitalCreatedMedia": false,
+  "reachEstimate": null,
+  "currency": "",
+  "spend": null,
+  "endDate": 1779951600,
+  "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK",
+    "MESSENGER",
+    "THREADS"
+  ],
+  "startDate": 1778742000,
+  "containsSensitiveContent": false,
+  "totalActiveTime": null,
+  "regionalRegulationData": {
+    "finserv": {
+      "isDeemedFinserv": false,
+      "isLimitedDelivery": false
+    },
+    "twAntiScam": {
+      "isLimitedDelivery": false
+    }
+  },
+  "hideDataStatus": "NONE",
+  "fevInfo": null,
+  "adId": null,
+  "targetedOrReachedCountries": [],
+  "ad_details": {
+    "advertiser": {
+      "page": {
+        "about": {
+          "text": "Ray White is the largest real estate and property group in Australasia."
+        },
+        "is_delegate_page_with_linked_primary_profile": false,
+        "id": "482032085149002"
+      },
+      "ad_library_page_info": {
+        "page_spend": {
+          "current_week": null,
+          "lifetime_by_disclaimer": [],
+          "weekly_by_disclaimer": [],
+          "is_political_page": false
+        },
+        "page_info": {
+          "entity_type": "PERSON_PROFILE",
+          "ig_followers": 39598,
+          "ig_username": "raywhitegroup",
+          "ig_verification": true,
+          "likes": 27449,
+          "page_alias": "raywhitegroup",
+          "page_category": "Real Estate Company",
+          "page_cover_photo": "https://scontent-iad3-1.xx.fbcdn.net/v/t39.30808-6/625178263_1356652739829679_1371543006100066523_n.png?_nc_cat=110&ccb=1-7&_nc_sid=957871&_nc_ohc=GmghkJTBeVEQ7kNvwHtpThY&_nc_oc=AdqYEQ3nQqpGCpIFOXkg40G7UbWcP7NozyJFndo3MTjsPHaS3ETONDmfeH1taqEoTWY&_nc_zt=23&_nc_ht=scontent-iad3-1.xx&_nc_gid=qUJ5IA-ljyju52AjeTCxaQ&_nc_ss=72289&oh=00_Af5ys1C6p1JXKIEM5atkHWNA1oqOY-1KYd7DWbwR7xzQvA&oe=6A1DDF0C",
+          "page_id": "482032085149002",
+          "page_is_deleted": false,
+          "page_is_restricted": false,
+          "page_name": "Ray White",
+          "page_profile_uri": "https://www.facebook.com/raywhitegroup/",
+          "page_verification": "NOT_VERIFIED",
+          "profile_photo": "https://scontent-iad3-2.xx.fbcdn.net/v/t39.30808-1/327339711_701036408159198_8996843273506489758_n.jpg?stp=dst-jpg_s148x148_tt6&_nc_cat=111&ccb=1-7&_nc_sid=418b77&_nc_ohc=kY2JvWH3mRoQ7kNvwFLhJqE&_nc_oc=AdqJaeFCZu3dgcjSkM_8YOx2r8PtJa0OyTYB2hu4TaUL6ckQt8Oewul14NVC4XQJ4_M&_nc_zt=24&_nc_ht=scontent-iad3-2.xx&_nc_gid=qUJ5IA-ljyju52AjeTCxaQ&_nc_ss=72289&oh=00_Af7yKl-SdpEaLAtY91JHjjM2-QQVSo5DocOlQFDB5urU6g&oe=6A1DDB15",
+          "is_profile_page": false
+        }
+      }
+    },
+    "violation_types": [],
+    "verified_voice_context": null
+  }
+},
+{
+  "inputUrl": "https://www.facebook.com/raywhitegroup",
+  "pageInfo": {
+    "adLibrarySystemStatus": {
+      "systemStatus": {
+        "status": "NO_KNOWN_ISSUES",
+        "activeIssues": [
+          {
+            "product": "Ad Library",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library Report",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Ad Library API",
+            "status": "NO_KNOWN_ISSUES"
+          },
+          {
+            "product": "Branded Content",
+            "status": "NO_KNOWN_ISSUES"
+          }
+        ]
+      }
+    },
+    "xfbAdLibraryIsCaptchaRequired": false,
+    "adLibraryPageInfo": {
+      "pageInfo": {
+        "relatedPages": [],
+        "hasBlankAds": false,
+        "hiddenAds": 0,
+        "pageIsDeleted": false
+      }
+    },
+    "page": {
+      "name": "Ray White",
+      "id": "482032085149002"
+    },
+    "adLibraryUser": null
+  },
+  "pageID": "482032085149002",
+  "adArchiveID": "835483255812465",
+  "startDateFormatted": "2026-05-14T07:00:00.000Z",
+  "endDateFormatted": "2026-05-28T07:00:00.000Z",
+  "adArchiveId": "835483255812465",
+  "collationCount": null,
+  "collationId": "1688548865507854",
+  "pageId": "482032085149002",
+  "snapshot": {
+    "brandedContent": null,
+    "pageId": "482032085149002",
+    "pageIsDeleted": false,
+    "pageProfileUri": "https://www.facebook.com/raywhitegroup/",
+    "rootResharedPost": null,
+    "byline": null,
+    "disclaimerLabel": null,
+    "pageName": "Ray White",
+    "pageProfilePictureUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/699533181_849790758167827_3585911548465718944_n.jpg?stp=dst-jpg_s60x60_tt6&_nc_cat=110&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ysJAzyi_5LQQ7kNvwFYWbYj&_nc_oc=AdqMXRQpPrJ1pi7g6r-g_HSF6iLr6zFezXeYmpMcmoCrYckwU0hg6L7ZyjOJvySeBXs&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af4ya97c2bLRosxd_4NS-tTQGLHAuJ2pFsXZVWCepWPYNw&oe=6A1DC36C",
+    "event": null,
+    "caption": "www.raywhite.com",
+    "ctaText": "Download",
+    "cards": [
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQP3y3zZsiK454JTI-2wwtihzkL7NzfXY6vjA6rDDLRFWq3JPBnlJURVdTCWsQHG7UZ7JPTf6RVscgGj37ZyGCDa1m1BUk1BsXLxJjj-qvUHDw.mp4?_nc_cat=102&_nc_oc=AdpqJtUjmRKSvpt-7alCUGxzE1MG3gADGXSoavjK5yJKImk-_CPRw3yNZixwc1k06uY&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=rH1oXQKzc6UQ7kNvwFdTacL&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjk2MTkwNTk5OTc2ODg5MSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=ade11955c4cd726a&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC9GMDQyQjJFRTEyN0E4OTc1OTg1QzhENjU4NEIyRjM4Rl9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACb2tOOWpra1AxUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af79zdE4hQHsVTP7FwQCwOlxYNtwL2-ro1Qhkhj_uCQ53Q&oe=6A1DCE5A",
+        "videoPreviewImageUrl": "https://scontent.fhio2-2.fna.fbcdn.net/v/t39.35426-6/699035604_1298230595097484_3456762515223772796_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=EyDWLnpNXiUQ7kNvwE1vFHQ&_nc_oc=AdpSC3SmJ5lk_gNRaDIZ1QxmcH9g1za09U43V4hYaH2zLvWep6X_pJOOq1u-cU-MFNs&_nc_zt=14&_nc_ht=scontent.fhio2-2.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af5zZri5LeZaTem1_S8TX8LVicoKqkG45QVM_0PHA4DWTQ&oe=6A1DCC42",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQM1sPsVr_jEXKaGxl9MWWU7jhnFaC6tPO5YGinq8Idaao-K26veQGSqZt5kR9PvVhXtqiFPw_-WFZvU4huT5LtxAJsAPaDn_szKAmE9Eg.mp4?_nc_cat=103&_nc_oc=AdocZaOms4WyXp1Vj33i5hE4Xy90u8fszUm_ZZyuCU14D--WnxKmggUSh2ClbInYInE&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=lQ_FEP1BKbwQ7kNvwF1tzKh&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6OTYxOTA1OTk5NzY4ODkxLCJhc3NldF9hZ2VfZGF5cyI6MjAsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjo1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af49I6r85twS4q2vXv1P1ZYrDNYnOJ3pC1lHSuZ6De1hrA&oe=6A1DC233",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQPwsYOXZr6M9JHC--kt1fayJnLOXUgAIyBZB1GOUP_SvIpJV01ix1klOAp-GJZkdtS8jA0nJ2w48iEccJ-Acnh8ngo8G0cIlH-D6tSccuCfmw.mp4?_nc_cat=108&_nc_oc=AdoDr6crTgfRDsyVRtAC6xF3X44kcwcLxf0duhrf4e4CEG-yfSQg7B34oRQ09YBoUK8&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=DQ0V_WLj_vEQ7kNvwHfWOJm&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjk2NzI3MDA1MjUxNzc0NSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&vs=e5691357a494ae20&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC80QjQzOEVFNjM0RTY2MEFFRUVFMEIxQUNGQ0Y4RTA5Rl9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbi3Y6-w-63AxUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4WI800v8Eq1zuRXmnzXq3fmJ1gTJtkRv7Syuz0pSr0Yg&oe=6A1DD1AC",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/700446059_1319290650342814_6132164128197372985_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=WTLvkL4Uu1wQ7kNvwFkKxN1&_nc_oc=AdoCSkTSU8X0z79Q2cvXgUtnUSOdc59TadG3fow4ljFsOs4ZC_KgibYuL0TAlefrOms&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af6KqOB_Z3RZUGqZkhan1ASA1UX2l22CnCzVdqc3nDCvOw&oe=6A1DC987",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQNa3iM34ReScTVo7vkjSIsvqxKJdzDDuUikx3GBn1W602KgNdXQC9y1dR9GbX5Wf-fx-F5JUN3ugnB31IIq-J3PCJumh93qtkHPJMu6TA.mp4?_nc_cat=108&_nc_oc=AdrQ0xCZVu071wgtB6Vpxr-chlXAffI11PRECgCPoF82JuBSVoQV_96k1SVe0YtyOJg&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=ZAeYnf_67WMQ7kNvwHqRL_M&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6OTY3MjcwMDUyNTE3NzQ1LCJhc3NldF9hZ2VfZGF5cyI6MjAsInZpX3VzZWNhc2VfaWQiOjEwNzk5LCJkdXJhdGlvbl9zIjo1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4kXwDOLgHnyuvzydUIUFzl_tBZVlfwIotwbvoLU49F9w&oe=6A1DE646",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQNOPo7Jmt1VrI8bL4OiWqoiu7YP29vASXqvsKLvWz4Zt5tPHCsX74hlEuMcWl3fVqSrrthuckkkVNOhhE6KzSNc2jt_FV81vvaOEh5eKLpMFw.mp4?_nc_cat=104&_nc_oc=AdqCdh3lLRgTzy_srhTpnQB3QMkUOx4cnita3UcxpqX8jMyd_z0VdnKzl_W97AhLc1k&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=kRAQLBksAMgQ7kNvwHInG9b&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjE0ODc1NTcyNjY0ODAzMTcsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&vs=e2188426fa2a3211&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC8yRjRCQjUwRUFGRURENzM0RUVDRDkxNDg1QzQxMTRCQ19tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACb68pynnbukBRUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7lngAX8eYFPVsfOWxSnmHIEAUo-LBiBZDJRvWT_1w8xg&oe=6A1DE948",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/698283479_1777924583374625_542334110749880359_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=J3ui_X5NCNgQ7kNvwEVe5uh&_nc_oc=AdobxSkebx4vihWaDhDqlvDrZtL8aUusMetI25SyXdU3GnslBx6Ef22A_aKJ3-ra5qI&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af4c_WtEE-Bri5yf5p_rLpE6njglf9Nv2wkrpjjHg490Jg&oe=6A1DE911",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQO5kQrc8tsTjnDKwJX6Vk3gvj3xmVnT8ECabFONqVnBNPdLiMCheB6LZvyNVpnHwgknYRSU-DUL4k9bM_DtAyYKl2IlSOk2xYLy6OgYbA.mp4?_nc_cat=105&_nc_oc=AdqmOJ4F-4WgN97l629onD3f3Evgjd8hjVq-3lQymic-yE7sITKqjrJqmxrE9tNzAm0&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=U7KA0EPeuSkQ7kNvwETMEuZ&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTQ4NzU1NzI2NjQ4MDMxNywiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4fWWmQisN5Z33Ie7CsGIZodZxgTcNSAe-_080YyFdd6Q&oe=6A1DBEC1",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m366/AQOYDjzrSkIPkKZVxAW6zHDbrc4uuQVGJn3Nb0ptWLxjWOpQrqFd1APzJFdqBW_7yY-cs0auuohoIRsR8haE0frj8K7AjDKleG6QvaOyidmclQ.mp4?_nc_cat=100&_nc_oc=Adq_cky3LUJZ2GAkFGzOhTaekQHTJ1jzdsjFMPnI1qmU4V3noNjTor-ASthQvKsW4TU&_nc_sid=5e9851&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=Haa-544IQ-cQ7kNvwGt-eYx&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjEzMzI0MDk0NTg3NjQ2NDUsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&vs=bda3750c9911fb0f&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC81NjQ5MEREMzNGRTU4N0UxMzJBODEwNDNBNUVFNkU4OF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbKreGHuPTdBBUCKAJDMywXQBQAAAAAAAAYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4gMcEyWzO9piIjqRdB3QtHZP6UhumNg9-lg02FmCJYOg&oe=6A1DCAE0",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/699946866_1459125822630609_2411203737234563515_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=mFB-GIiGXgkQ7kNvwHMCQEd&_nc_oc=Ado9Rom5ho5t5Bh0xPPQfIiKrdUYoZRSiK43Yw2FbcJK-QMe5VbEWoEutNe9sibFBuo&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af5PJ_xOb_TFGhXi5SWPv60tbmGrUk8XUfiGghE_qreoIA&oe=6A1DEC74",
+        "videoSdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m412/AQP2dZTDwZ2KXI91LpbciFrTf57QS5BL01ghyWnVTD3K4U6Tl8EugqJAszrAES-XJ09HTL_KBHM_X5nkVM4xU4I1ZmJz33c9cw2QKn3FOg.mp4?_nc_cat=105&_nc_oc=AdpkdBBTz4qqmPd_cPZldMc_zVnSkf76i1qen2LJoRat2Aii9RZYhZc9qFDyHotmPyw&_nc_sid=8bf8fe&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=-TAHZFki70oQ7kNvwFCgM9a&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MTMzMjQwOTQ1ODc2NDY0NSwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6NSwidXJsZ2VuX3NvdXJjZSI6Ind3dyJ9&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af4Jv1oyllFXqJ1btarsZ13mTUFP5MtIEflAxtNeoqXStg&oe=6A1DCCF5",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      },
+      {
+        "body": "Download now",
+        "ctaType": "DOWNLOAD",
+        "caption": "raywhite.com",
+        "linkDescription": "Download now",
+        "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+        "title": "Luxury Outlook",
+        "ctaText": "Download",
+        "videoHdUrl": "https://video.fhio2-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQNDXZxt8uc31fCHBf1z9GltxyILKgd_FkMHFP8UlmUyW6NLvAc9D0eZAT5n4P0O9R5P4_bS_IEotUGEMzv-Ywv5Zd7BwyvvkvBPKe7wlx6GAg.mp4?_nc_cat=105&_nc_oc=AdpIOPrcx4yTRyLa8FVKXFXHzutaDioSKtmKpXMuLlCC0XtjCceuoGYbB-TtstyYxv4&_nc_sid=5e9851&_nc_ht=video.fhio2-1.fna.fbcdn.net&_nc_ohc=4_r4ZtleqKQQ7kNvwHTK-8w&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuNzIwLmRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHAiLCJ4cHZfYXNzZXRfaWQiOjIxODI4NTMwMTI0OTMxMDAsImFzc2V0X2FnZV9kYXlzIjoyMCwidmlfdXNlY2FzZV9pZCI6MTA3OTksImR1cmF0aW9uX3MiOjE1LCJ1cmxnZW5fc291cmNlIjoid3d3In0%3D&ccb=17-1&vs=5be2e8a812a99e86&_nc_vs=HBkcFQIYRWZiX2VwaGVtZXJhbC9ENTRGRDRBODZBQjkxMThBNzhGM0JGMkQ3NjU0RTA5OF9tdF8xX3ZpZGVvX2Rhc2hpbml0Lm1wNBUAAsgBEgAoABgAGwKIB3VzZV9vaWwBMRJwcm9ncmVzc2l2ZV9yZWNpcGUBMRUAACbYzMCm4tLgBxUCKAJDMywXQC4Q5WBBiTcYGWRhc2hfaDI2NC1iYXNpYy1nZW4yXzcyMHARAHUAZd6oAQA&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af555o2h10AYltkLALaT1popzGztGw9b2tot9yVYTyuGaw&oe=6A1DCAA7",
+        "videoPreviewImageUrl": "https://scontent.fhio2-1.fna.fbcdn.net/v/t39.35426-6/699946706_1613661966526405_6496638590232921997_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=c53f8f&_nc_ohc=ZWcMViOLCLcQ7kNvwE48hXu&_nc_oc=Adp2Dt2cMXff_bEGMERgpzEk5Ol7obirecYDmKcpO6rRLYv2BkqtdM1M_eFy-5ZsvWE&_nc_zt=14&_nc_ht=scontent.fhio2-1.fna&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&oh=00_Af4BAR_DUEA-7plPBHkEJasUrc1hMUzrJ-xLzT26M7RjHg&oe=6A1DEEFC",
+        "videoSdUrl": "https://video.fhio2-2.fna.fbcdn.net/o1/v/t2/f2/m412/AQPeEDRy6IFhtgT3YAv32STuWfIdoqOUAeNuQkuivAunIMAg6LzTFbq_2o9IypoWVnmc7tEgpZkgIRGus_JcGNAzRaZIVhL0AB1Bwtdv1w.mp4?_nc_cat=107&_nc_oc=AdoFfGLago463vxX-sAZqA-9Oj1aYwKast50ZtSu7B0xnz1jSwUJKadQxBseo9_mX3A&_nc_sid=8bf8fe&_nc_ht=video.fhio2-2.fna.fbcdn.net&_nc_ohc=BPsGOAscgWUQ7kNvwH0sFyZ&efg=eyJ2ZW5jb2RlX3RhZyI6Inhwdl9wcm9ncmVzc2l2ZS5WSV9VU0VDQVNFX1BST0RVQ1RfVFlQRS4uQzMuMzYwLnN2ZV9zZCIsInhwdl9hc3NldF9pZCI6MjE4Mjg1MzAxMjQ5MzEwMCwiYXNzZXRfYWdlX2RheXMiOjIwLCJ2aV91c2VjYXNlX2lkIjoxMDc5OSwiZHVyYXRpb25fcyI6MTUsInVybGdlbl9zb3VyY2UiOiJ3d3cifQ%3D%3D&ccb=17-1&_nc_gid=viVCAkQ5pYqr5TrnWfLuaA&_nc_ss=72289&_nc_zt=28&oh=00_Af7tL8nry-Q6lpHTOvA82sHY2I2TmSxExLEvu3j0QUy4oA&oe=6A1DCAF7",
+        "watermarkedVideoHdUrl": null,
+        "watermarkedVideoSdUrl": null,
+        "imageCrops": [],
+        "originalImageUrl": null,
+        "resizedImageUrl": null,
+        "watermarkedResizedImageUrl": null
+      }
+    ],
+    "body": {
+      "text": "What’s happening in the luxury property market? From city mansions to coastal retreats, buyers are prioritising lifestyle, ease and time. Explore our Luxury Outlook Report."
+    },
+    "ctaType": "DOWNLOAD",
+    "displayFormat": "CAROUSEL",
+    "linkDescription": null,
+    "linkUrl": "https://www.raywhite.com/ray-white-luxury-outlook?utm_source=social_cpc&utm_medium=social&utm_campaign=luxury_report_2026",
+    "images": [],
+    "pageCategories": [
+      "Real Estate"
+    ],
+    "pageLikeCount": 27449,
+    "title": "Ray White",
+    "videos": [],
+    "isReshared": false,
+    "extraLinks": [],
+    "extraTexts": [],
+    "extraImages": [],
+    "extraVideos": [],
+    "countryIsoCode": null,
+    "brazilTaxId": null,
+    "additionalInfo": null,
+    "ecCertificates": []
+  },
+  "isActive": true,
+  "hasUserReported": false,
+  "reportCount": null,
+  "menuItems": [],
+  "stateMediaRunLabel": null,
+  "pageIsDeleted": false,
+  "pageName": "Ray White",
+  "impressionsWithIndex": {
+    "impressionsText": null,
+    "impressionsIndex": -1
+  },
+  "gatedType": "ELIGIBLE",
+  "categories": [
+    "UNKNOWN"
+  ],
+  "isAaaEligible": false,
+  "containsDigitalCreatedMedia": false,
+  "reachEstimate": null,
+  "currency": "",
+  "spend": null,
+  "endDate": 1779951600,
+  "publisherPlatform": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK",
+    "MESSENGER",
+    "THREADS"
+  ],
+  "startDate": 1778742000,
+  "containsSensitiveContent": false,
+  "totalActiveTime": null,
+  "regionalRegulationData": {
+    "finserv": {
+      "isDeemedFinserv": false,
+      "isLimitedDelivery": false
+    },
+    "twAntiScam": {
+      "isLimitedDelivery": false
+    }
+  },
+  "hideDataStatus": "NONE",
+  "fevInfo": null,
+  "adId": null,
+  "targetedOrReachedCountries": [],
+  "ad_details": {
+    "advertiser": {
+      "page": {
+        "about": {
+          "text": "Ray White is the largest real estate and property group in Australasia."
+        },
+        "is_delegate_page_with_linked_primary_profile": false,
+        "id": "482032085149002"
+      },
+      "ad_library_page_info": {
+        "page_spend": {
+          "current_week": null,
+          "lifetime_by_disclaimer": [],
+          "weekly_by_disclaimer": [],
+          "is_political_page": false
+        },
+        "page_info": {
+          "entity_type": "PERSON_PROFILE",
+          "ig_followers": 39598,
+          "ig_username": "raywhitegroup",
+          "ig_verification": true,
+          "likes": 27449,
+          "page_alias": "raywhitegroup",
+          "page_category": "Real Estate Company",
+          "page_cover_photo": "https://scontent-mia3-3.xx.fbcdn.net/v/t39.30808-6/625178263_1356652739829679_1371543006100066523_n.png?_nc_cat=110&ccb=1-7&_nc_sid=957871&_nc_ohc=GmghkJTBeVEQ7kNvwEHxS5o&_nc_oc=AdrnZsw16k5MYqMM319GQTiP4680hd8siIEvifBjXA-UNJcYJ6mvkr_QiIb3tR4dtXs&_nc_zt=23&_nc_ht=scontent-mia3-3.xx&_nc_gid=jZBUQ4yGRQiSl1uxo3KXXw&_nc_ss=72289&oh=00_Af6rE6lW6U4JhS74mFKR7vdpGxD3GzsDDRBg7TNKTp_nVg&oe=6A1DDF0C",
+          "page_id": "482032085149002",
+          "page_is_deleted": false,
+          "page_is_restricted": false,
+          "page_name": "Ray White",
+          "page_profile_uri": "https://www.facebook.com/raywhitegroup/",
+          "page_verification": "NOT_VERIFIED",
+          "profile_photo": "https://scontent-mia3-1.xx.fbcdn.net/v/t39.30808-1/327339711_701036408159198_8996843273506489758_n.jpg?stp=dst-jpg_s148x148_tt6&_nc_cat=111&ccb=1-7&_nc_sid=418b77&_nc_ohc=kY2JvWH3mRoQ7kNvwEvFHQk&_nc_oc=Adq6YBryTBavIUIxl7Yetzthpw-CeBs0up1SfJCiIngK1TVyMs6_EqprRsg_rmG3Xas&_nc_zt=24&_nc_ht=scontent-mia3-1.xx&_nc_gid=jZBUQ4yGRQiSl1uxo3KXXw&_nc_ss=72289&oh=00_Af7PlY54lxtbA3DVc3QPYv26VWvse-zTrujCc4CBsbbhRw&oe=6A1DDB15",
+          "is_profile_page": false
+        }
+      }
+    },
+    "violation_types": [],
+    "verified_voice_context": null
+  }
+}]

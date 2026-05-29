@@ -69,6 +69,7 @@ export function AdStudioWorkbench({
   const [liveEvents, setLiveEvents] = useState<string[]>([
     "Ready: paste an agency website, extract a brand kit, approve it, generate variants, then export.",
   ]);
+  const [lastMetaPlanId, setLastMetaPlanId] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const selectedVariant = campaignPack.variants.find((variant) => variant.variantId === selectedVariantId) ?? campaignPack.variants[0];
   const selectedCopy = campaignPack.copyPacks.find((copy) => copy.variantId === selectedVariant?.variantId) ?? campaignPack.copyPacks[0];
@@ -279,10 +280,15 @@ export function AdStudioWorkbench({
     pushLiveEvent(`Preparing publish payload for ${campaignPack.campaign.name}...`);
 
     try {
-      const payload = await requestJson<{ publishReady: boolean; blockers: string[] }>(
+      const payload = await requestJson<{
+        publishReady: boolean;
+        blockers: string[];
+        metaPublishPlan?: { id?: string; approvalRequestId?: string | null } | null;
+      }>(
         `/api/adstudio/export-packages/${campaignPack.campaign.campaignId}/publish`,
         { campaignPack },
       );
+      setLastMetaPlanId(payload.metaPublishPlan?.id ?? null);
       setLiveStatus({
         tone: payload.publishReady ? "green" : "amber",
         text: payload.publishReady
@@ -291,12 +297,40 @@ export function AdStudioWorkbench({
       });
       pushLiveEvent(
         payload.publishReady
-          ? "Publish payload is ready."
+          ? `Publish payload is ready${payload.metaPublishPlan?.id ? ` as plan ${payload.metaPublishPlan.id}` : ""}.`
           : `Publish payload created but blocked: ${payload.blockers.join(", ")}`,
       );
     } catch (error) {
       setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
       pushLiveEvent(`Publish payload preparation failed: ${getErrorMessage(error)}`);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function requestMetaPlanMutation(action: "activate" | "pause" | "increase_budget") {
+    if (!lastMetaPlanId) {
+      setLiveStatus({ tone: "amber", text: "Prepare a Meta publish payload before requesting live changes." });
+      setActiveTab("Export");
+      return;
+    }
+
+    setIsBusy(true);
+    setLiveStatus({ tone: "blue", text: "Creating approval request..." });
+
+    try {
+      const payload = await requestJson<{ approval?: { id?: string; risk_summary?: string } }>(
+        `/api/integrations/meta/publish-plans/${lastMetaPlanId}/mutations`,
+        {
+          action,
+          payload: {},
+        },
+      );
+      setLiveStatus({ tone: "amber", text: "Approval request created for Meta live change." });
+      pushLiveEvent(`Requested ${action.replace("_", " ")} approval${payload.approval?.id ? ` ${payload.approval.id}` : ""}.`);
+    } catch (error) {
+      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
+      pushLiveEvent(`Meta live-change request failed: ${getErrorMessage(error)}`);
     } finally {
       setIsBusy(false);
     }
@@ -687,6 +721,15 @@ export function AdStudioWorkbench({
             </button>
             <button className="button secondary" type="button" onClick={preparePublishPayload} disabled={isBusy}>
               Prepare publish payload
+            </button>
+            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("activate")} disabled={isBusy || !lastMetaPlanId}>
+              Request activation
+            </button>
+            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("pause")} disabled={isBusy || !lastMetaPlanId}>
+              Request pause
+            </button>
+            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("increase_budget")} disabled={isBusy || !lastMetaPlanId}>
+              Request budget
             </button>
           </aside>
         </section>

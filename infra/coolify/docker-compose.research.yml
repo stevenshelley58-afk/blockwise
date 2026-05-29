@@ -1,0 +1,107 @@
+# Coolify-managed stack for the Hermes Research Engine.
+# Deploy from feature/hermes-research-engine via Coolify's GitHub integration.
+#
+# Required env (set in Coolify dashboard, NOT in this file):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+#   APIFY_API_TOKEN
+#   OPENROUTER_API_KEY, MEM0_API_KEY
+#   BROWSERBASE_API_KEY, BROWSERBASE_PROJECT_ID
+#   HERMES_WEBHOOK_SECRET
+#
+# All services bind only to localhost; Cloudflare Tunnel forwards
+# hermes.blockwise.sale, aion.blockwise.sale, etc.
+
+version: "3.9"
+
+services:
+  research-orchestrator:
+    build:
+      context: ../..
+      dockerfile: workers/research-orchestrator/Dockerfile
+    container_name: research-orchestrator
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
+      APIFY_DEFAULT_ACTOR: apify/facebook-ads-scraper
+      APIFY_DAILY_SPEND_LIMIT_USD: "10"
+      APIFY_RESULTS_LIMIT_PER_PAGE: "50"
+      RESEARCH_RAW_EVIDENCE_BUCKET: research-raw-evidence
+      ORCHESTRATOR_MODE: loop
+      ORCHESTRATOR_LOOP_INTERVAL_MS: "300000"
+      ORCHESTRATOR_MAX_PAGES_PER_TICK: "20"
+      ORCHESTRATOR_DRY_RUN: "false"
+    networks: [research]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  hermes:
+    image: ghcr.io/nousresearch/hermes-agent:latest
+    container_name: hermes
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      MEM0_API_KEY: ${MEM0_API_KEY}
+      BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
+      BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
+      HERMES_PORT: "8080"
+    volumes:
+      - hermes-data:/data
+      - ../../hermes/skills:/app/skills:ro
+    networks: [research]
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  scrapling:
+    build:
+      context: ../scrapling
+      dockerfile: Dockerfile
+    container_name: scrapling
+    restart: unless-stopped
+    environment:
+      SCRAPLING_MCP_PORT: "9000"
+    ports:
+      - "127.0.0.1:9000:9000"
+    networks: [research]
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime-data:/app/data
+    networks: [research]
+
+  aionui:
+    image: iofficeai/aionui:latest
+    container_name: aionui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7000:7000"
+    environment:
+      AION_HERMES_URL: http://hermes:8080
+      AION_SCRAPLING_URL: http://scrapling:9000
+    volumes:
+      - aion-data:/data
+    networks: [research]
+    depends_on: [hermes]
+
+volumes:
+  hermes-data:
+  uptime-data:
+  aion-data:
+
+networks:
+  research:
+    driver: bridge

@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   Clipboard,
   Link2,
   RefreshCw,
@@ -41,6 +42,36 @@ type MonitorDashboardProps = {
 };
 
 type TabKey = "overview" | "ads" | "leads";
+type MetaSetup = {
+  metaAdAccountId: string;
+  pageId: string;
+  instagramActorId?: string | null;
+  pixelId?: string | null;
+  leadDestination: {
+    type: "webhook" | "crm" | "email" | "manual";
+    label: string;
+    config: {
+      endpoint?: string;
+    };
+  };
+  privacyPolicyUrl: string;
+  currency: string;
+  timezone: string;
+};
+
+type MetaSetupResponse = {
+  connected: boolean;
+  setup: MetaSetup | null;
+  blockers: string[];
+  ready?: boolean;
+  health?: { status: string; message: string | null } | null;
+  assets?: {
+    adAccounts: Array<{ id: string; name: string; currency: string; timezone: string }>;
+    pages: Array<{ id: string; name: string }>;
+    instagramActors: Array<{ id: string; username: string; pageId?: string }>;
+    pixels: Array<{ id: string; name: string }>;
+  } | null;
+};
 
 const RANGE_OPTIONS: Array<{ value: MonitorRange; label: string }> = [
   { value: "today", label: "Today" },
@@ -236,6 +267,90 @@ function OverviewTab({ bundle }: { bundle: MonitorDashboardBundle }) {
 }
 
 function AdsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
+  const [metaSetupResponse, setMetaSetupResponse] = useState<MetaSetupResponse | null>(null);
+  const [metaSetup, setMetaSetup] = useState<MetaSetup | null>(null);
+  const [metaSetupMessage, setMetaSetupMessage] = useState("");
+  const [metaSetupTone, setMetaSetupTone] = useState<"info" | "success" | "error">("info");
+  const [isSavingMetaSetup, setIsSavingMetaSetup] = useState(false);
+
+  useEffect(() => {
+    void refreshMetaSetup();
+  }, []);
+
+  async function refreshMetaSetup() {
+    try {
+      const response = await fetch("/api/integrations/meta/setup", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as MetaSetupResponse | { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload && "error" in payload ? payload.error : `Meta setup failed with ${response.status}.`);
+      }
+
+      const setupPayload = payload as MetaSetupResponse;
+      setMetaSetupResponse(setupPayload);
+      setMetaSetup(setupPayload.setup);
+      setMetaSetupTone("info");
+      setMetaSetupMessage(setupPayload.connected ? "" : "Connect Meta before configuring publish assets.");
+    } catch (error) {
+      setMetaSetupTone("error");
+      setMetaSetupMessage(error instanceof Error ? error.message : "Meta setup could not be loaded.");
+    }
+  }
+
+  async function saveMetaSetup() {
+    if (!metaSetup) return;
+
+    setIsSavingMetaSetup(true);
+    setMetaSetupTone("info");
+    setMetaSetupMessage("Saving Meta setup...");
+
+    try {
+      const response = await fetch("/api/integrations/meta/setup", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ setup: metaSetup }),
+      });
+      const payload = (await response.json().catch(() => null)) as MetaSetupResponse | { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload && "error" in payload ? payload.error : `Meta setup save failed with ${response.status}.`);
+      }
+
+      const saved = payload as MetaSetupResponse;
+      setMetaSetup(saved.setup);
+      setMetaSetupResponse((current) => ({ ...(current ?? saved), ...saved }));
+      setMetaSetupTone(saved.blockers.length ? "info" : "success");
+      setMetaSetupMessage(saved.blockers.length ? `Saved with blockers: ${saved.blockers.join(", ")}` : "Meta setup saved and ready.");
+    } catch (error) {
+      setMetaSetupTone("error");
+      setMetaSetupMessage(error instanceof Error ? error.message : "Meta setup save failed.");
+    } finally {
+      setIsSavingMetaSetup(false);
+    }
+  }
+
+  function patchMetaSetup(patch: Partial<MetaSetup>) {
+    setMetaSetup((current) => (current ? { ...current, ...patch } : current));
+  }
+
+  function patchLeadDestination(patch: Partial<MetaSetup["leadDestination"]>) {
+    setMetaSetup((current) =>
+      current
+        ? {
+            ...current,
+            leadDestination: {
+              ...current.leadDestination,
+              ...patch,
+              config: {
+                ...(current.leadDestination.config ?? {}),
+                ...(patch.config ?? {}),
+              },
+            },
+          }
+        : current,
+    );
+  }
+
   return (
     <div className="monitor-tab-panel">
       <section className="monitor-provider-grid" aria-label="Provider connections">
@@ -255,6 +370,108 @@ function AdsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="panel monitor-panel">
+        <SectionTitle title="Meta publish setup" detail="Required before campaign generation and publishing" />
+        {metaSetup ? (
+          <div className="adstudio-form-grid">
+            <label>
+              <span>Ad account</span>
+              <select value={metaSetup.metaAdAccountId} onChange={(event) => patchMetaSetup({ metaAdAccountId: event.target.value })}>
+                <option value={metaSetup.metaAdAccountId}>{metaSetup.metaAdAccountId || "Select ad account"}</option>
+                {metaSetupResponse?.assets?.adAccounts.map((account) => (
+                  <option value={account.id} key={account.id}>
+                    {account.name} ({account.id})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Facebook Page</span>
+              <select value={metaSetup.pageId} onChange={(event) => patchMetaSetup({ pageId: event.target.value })}>
+                <option value={metaSetup.pageId}>{metaSetup.pageId || "Select Page"}</option>
+                {metaSetupResponse?.assets?.pages.map((page) => (
+                  <option value={page.id} key={page.id}>
+                    {page.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Instagram account</span>
+              <select value={metaSetup.instagramActorId ?? ""} onChange={(event) => patchMetaSetup({ instagramActorId: event.target.value || null })}>
+                <option value="">None selected</option>
+                {metaSetupResponse?.assets?.instagramActors.map((actor) => (
+                  <option value={actor.id} key={actor.id}>
+                    @{actor.username}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Pixel / dataset</span>
+              <select value={metaSetup.pixelId ?? ""} onChange={(event) => patchMetaSetup({ pixelId: event.target.value || null })}>
+                <option value="">None selected</option>
+                {metaSetupResponse?.assets?.pixels.map((pixel) => (
+                  <option value={pixel.id} key={pixel.id}>
+                    {pixel.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Lead destination</span>
+              <select
+                value={metaSetup.leadDestination.type}
+                onChange={(event) => patchLeadDestination({ type: event.target.value as MetaSetup["leadDestination"]["type"] })}
+              >
+                <option value="manual">Manual review</option>
+                <option value="webhook">Webhook</option>
+                <option value="crm">CRM</option>
+                <option value="email">Email</option>
+              </select>
+            </label>
+            <label>
+              <span>Destination label</span>
+              <input value={metaSetup.leadDestination.label} onChange={(event) => patchLeadDestination({ label: event.target.value })} />
+            </label>
+            <label>
+              <span>Destination endpoint</span>
+              <input
+                value={metaSetup.leadDestination.config.endpoint ?? ""}
+                onChange={(event) => patchLeadDestination({ config: { endpoint: event.target.value } })}
+                placeholder="https://crm.example.com/leads"
+              />
+            </label>
+            <label>
+              <span>Privacy policy URL</span>
+              <input value={metaSetup.privacyPolicyUrl} onChange={(event) => patchMetaSetup({ privacyPolicyUrl: event.target.value })} />
+            </label>
+            <label>
+              <span>Currency</span>
+              <input value={metaSetup.currency} onChange={(event) => patchMetaSetup({ currency: event.target.value })} />
+            </label>
+            <label>
+              <span>Timezone</span>
+              <input value={metaSetup.timezone} onChange={(event) => patchMetaSetup({ timezone: event.target.value })} />
+            </label>
+          </div>
+        ) : (
+          <p className="item-meta">{metaSetupMessage || "Meta setup is loading."}</p>
+        )}
+        <div className="actions">
+          <button className="button secondary" type="button" onClick={() => void refreshMetaSetup()}>
+            <RefreshCw aria-hidden size={17} />
+            Refresh Meta assets
+          </button>
+          <button className="button" type="button" onClick={() => void saveMetaSetup()} disabled={!metaSetup || isSavingMetaSetup}>
+            Save Meta setup
+          </button>
+        </div>
+        <p className={`monitor-setup-status ${metaSetupTone}`} role="status" aria-live="polite">
+          {metaSetupMessage}
+        </p>
       </section>
 
       <section className="monitor-kpi-grid provider" aria-label="Provider KPIs">
@@ -473,6 +690,9 @@ function PerformanceTable({ rows, compact = false }: { rows: MonitorPerformanceR
                   )}
                 </th>
               ))}
+              <th className="monitor-expand-col">
+                <span className="sr-only">Expand row</span>
+              </th>
             </tr>
           ))}
         </thead>
@@ -483,12 +703,24 @@ function PerformanceTable({ rows, compact = false }: { rows: MonitorPerformanceR
             return (
               <tr
                 key={row.id}
-                className={isExpanded ? "expanded" : ""}
+                className={isExpanded ? "monitor-expandable expanded" : "monitor-expandable"}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
                 onClick={() => setExpandedRowId(isExpanded ? null : row.original.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setExpandedRowId(isExpanded ? null : row.original.id);
+                  }
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                 ))}
+                <td className="monitor-expand-toggle" aria-hidden="true">
+                  <ChevronDown size={16} className="monitor-expand-chevron" />
+                </td>
                 <td className="monitor-mobile-details">
                   <span>{formatNumber(row.original.impressions)} impressions</span>
                   <span>{formatPercent(row.original.ctr)} CTR</span>
@@ -508,10 +740,12 @@ function ProviderStatusStrip({ bundle }: { bundle: MonitorDashboardBundle }) {
   return (
     <section className="monitor-provider-strip" aria-label="Provider sync status">
       {bundle.providers.map((provider) => (
-        <div className="monitor-provider-status" key={provider.provider}>
-          <span>{formatProvider(provider.provider)}</span>
+        <div className={`monitor-provider-status ${statusTone(provider.status)}`} key={provider.provider}>
+          <div className="monitor-provider-status-meta">
+            <span>{formatProvider(provider.provider)}</span>
+            <small>{provider.lastSyncAt ? formatDateTime(provider.lastSyncAt) : "No live sync"}</small>
+          </div>
           <StatusBadge status={provider.status} source={provider.source} />
-          <small>{provider.lastSyncAt ? formatDateTime(provider.lastSyncAt) : "No live sync"}</small>
         </div>
       ))}
     </section>
@@ -537,11 +771,14 @@ function SectionTitle({ title, detail }: { title: string; detail?: string }) {
   );
 }
 
+function statusTone(status: string) {
+  return status === "connected" ? "green" : status === "not_connected" ? "blue" : "amber";
+}
+
 function StatusBadge({ status, source }: { status: string; source: string }) {
-  const tone = status === "connected" ? "green" : status === "not_connected" ? "blue" : "amber";
   const label = status === "not_connected" && source === "demo" ? "Sample data" : status.replace("_", " ");
 
-  return <span className={`status ${tone}`}>{label}</span>;
+  return <span className={`status ${statusTone(status)}`}>{label}</span>;
 }
 
 function buildReportText(bundle: MonitorDashboardBundle): string {

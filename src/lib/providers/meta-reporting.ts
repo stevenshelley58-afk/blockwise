@@ -161,17 +161,23 @@ export async function fetchMetaReporting(input: {
   };
 }
 
-export async function fetchMetaAdAccounts(accessToken: string): Promise<Array<{ id: string; name: string }>> {
-  const accounts = await fetchMetaList<{ id?: string; account_id?: string; name?: string | null }>("/me/adaccounts", accessToken, {
-    fields: "id,account_id,name,currency",
+export async function fetchMetaAdAccounts(accessToken: string): Promise<Array<{ id: string; name: string; currency?: string; timezone?: string }>> {
+  const accounts = await fetchMetaList<{ id?: string; account_id?: string; name?: string | null; currency?: string; timezone_name?: string }>(
+    "/me/adaccounts",
+    accessToken,
+    {
+    fields: "id,account_id,name,currency,timezone_name",
     limit: "25",
-  });
+    },
+  );
 
   return accounts
     .filter((account) => account.id || account.account_id)
     .map((account) => ({
       id: account.id ?? `act_${account.account_id}`,
       name: account.name ?? account.id ?? "Meta ad account",
+      currency: account.currency,
+      timezone: account.timezone_name,
     }));
 }
 

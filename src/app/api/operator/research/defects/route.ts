@@ -1,0 +1,22 @@
+import { NextResponse } from "next/server";
+
+import { requireOperator } from "@/lib/operator/auth";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const guard = await requireOperator();
+  if (!guard.ok) return guard.response;
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") ?? "open,investigating";
+  // @ts-expect-error supabase-js types
+  const { data, error } = await guard.supabase
+    .schema("research")
+    .from("coverage_defects")
+    .select("*")
+    .in("status", status.split(","))
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ defects: data ?? [] });
+}

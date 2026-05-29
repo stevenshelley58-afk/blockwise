@@ -63,6 +63,8 @@ async function handleCallback(request: NextRequest) {
       externalAccountName: exchanged.externalAccountName,
       accessToken: exchanged.accessToken,
       refreshToken: exchanged.refreshToken,
+      metadata: exchanged.metadata,
+      tokenExpiresAt: exchanged.tokenExpiresAt,
     });
   } catch (error) {
     const message = encodeURIComponent(error instanceof Error ? error.message : "Meta connection failed.");

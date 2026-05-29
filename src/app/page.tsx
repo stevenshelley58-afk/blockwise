@@ -1,149 +1,376 @@
-import { ArrowRight, Building2, CheckCircle2, Gauge, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
+"use client";
+
+import { ArrowRight, ArrowUpRight, MapPin } from "lucide-react";
 import Link from "next/link";
 
-const proofPoints = [
-  "Workspace-isolated client data",
-  "Human approval before publishing",
-  "AI spend and model controls",
-  "Lead dedupe and export audits",
+import { BlockwiseLogo } from "@/components/blockwise-logo";
+
+type AdProps = {
+  agency: string;
+  initial: string;
+  brand: string;
+  suburb: string;
+  status: string;
+  price: string;
+  headline: string;
+  copy: string;
+  scene: 1 | 2 | 3 | 4 | 5 | 6;
+};
+
+function FacebookAd({ agency, initial, brand, suburb, status, price, headline, copy, scene }: AdProps) {
+  return (
+    <article className="mock-ad mock-ad-feed">
+      <header className="mock-ad-head">
+        <span className="mock-ad-avatar" style={{ background: brand }}>
+          {initial}
+        </span>
+        <div className="mock-ad-meta">
+          <strong>{agency}</strong>
+          <span>Sponsored</span>
+        </div>
+        <span className="mock-ad-tag">Ad</span>
+      </header>
+      <p className="mock-ad-copy">{copy}</p>
+      <div className={`mock-ad-image scene-${scene}`} aria-hidden>
+        <span className="mock-ad-status">{status}</span>
+        <span className="mock-ad-price">{price}</span>
+        <span className="mock-ad-pin">
+          <MapPin aria-hidden size={12} />
+          {suburb}
+        </span>
+      </div>
+      <footer className="mock-ad-foot">
+        <div>
+          <strong>{headline}</strong>
+          <span>blockwise.sale</span>
+        </div>
+        <button type="button" className="mock-ad-cta">
+          Book appraisal
+        </button>
+      </footer>
+    </article>
+  );
+}
+
+function InstagramStory({ agency, brand, suburb, price, headline, scene }: AdProps) {
+  return (
+    <article className="mock-ad mock-ad-story">
+      <div className={`mock-ad-story-bg scene-${scene}`} aria-hidden />
+      <div className="mock-ad-story-overlay">
+        <header className="mock-ad-story-head">
+          <span className="mock-ad-story-bar" />
+          <span className="mock-ad-story-bar" />
+          <span className="mock-ad-story-bar dim" />
+        </header>
+        <div className="mock-ad-story-agency">
+          <span className="mock-ad-avatar sm" style={{ background: brand }}>
+            ●
+          </span>
+          <strong>{agency}</strong>
+          <span className="mock-ad-tag light">Sponsored</span>
+        </div>
+        <div className="mock-ad-story-body">
+          <span className="mock-ad-story-suburb">{suburb}</span>
+          <h4>{headline}</h4>
+          <strong className="mock-ad-story-price">{price}</strong>
+        </div>
+        <div className="mock-ad-story-cta">
+          <span>Swipe up</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function GoogleAd({ agency, suburb, headline, copy }: AdProps) {
+  return (
+    <article className="mock-ad mock-ad-google">
+      <header className="mock-ad-google-head">
+        <span className="mock-ad-google-tag">Sponsored</span>
+        <div className="mock-ad-google-id">
+          <span className="mock-ad-google-favicon">B</span>
+          <div>
+            <strong>{agency}</strong>
+            <span>blockwise.sale › {suburb.toLowerCase().replace(/\s+/g, "-")}</span>
+          </div>
+        </div>
+      </header>
+      <h4 className="mock-ad-google-title">{headline}</h4>
+      <p className="mock-ad-google-copy">{copy}</p>
+      <div className="mock-ad-google-links">
+        <span>Free appraisal</span>
+        <span>Recently sold</span>
+        <span>Why us</span>
+      </div>
+    </article>
+  );
+}
+
+const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
+  {
+    format: "facebook",
+    agency: "Northstar Realty",
+    initial: "N",
+    brand: "#1a3a55",
+    suburb: "Mount Lawley",
+    status: "Just listed",
+    price: "$1.4M",
+    headline: "Federation home, 3 streets back from Beaufort St",
+    copy: "Mt Lawley owners — three homes like yours sold above reserve this month. Free 15-min appraisal.",
+    scene: 1,
+  },
+  {
+    format: "instagram",
+    agency: "Coastline Property",
+    initial: "C",
+    brand: "#2c4773",
+    suburb: "Cottesloe",
+    status: "Off-market",
+    price: "Guide $2.8M",
+    headline: "Ocean glimpse. 4 bed, 2 bath.",
+    copy: "",
+    scene: 4,
+  },
+  {
+    format: "google",
+    agency: "Eastland Homes",
+    initial: "E",
+    brand: "#4a5670",
+    suburb: "Inglewood",
+    status: "Appraisals",
+    price: "",
+    headline: "Inglewood appraisals — free, no obligation",
+    copy: "11 sales in Inglewood last quarter. Average days on market: 19. Free 15-min appraisal.",
+    scene: 2,
+  },
+  {
+    format: "facebook",
+    agency: "Hill & Co.",
+    initial: "H",
+    brand: "#0a0a0a",
+    suburb: "South Perth",
+    status: "Auction Sat",
+    price: "$2.1M+",
+    headline: "Riverside terrace. Wide block. 1pm Saturday.",
+    copy: "Saturday auction, 1pm. Three bidders registered. Inspections Thursday 5:30pm.",
+    scene: 3,
+  },
+  {
+    format: "instagram",
+    agency: "Hillview Agents",
+    initial: "H",
+    brand: "#3a4763",
+    suburb: "Subiaco",
+    status: "New listing",
+    price: "Guide $1.6M",
+    headline: "Subi cottage. Walk to Rokeby Rd.",
+    copy: "",
+    scene: 5,
+  },
+  {
+    format: "google",
+    agency: "Northstar Realty",
+    initial: "N",
+    brand: "#1a3a55",
+    suburb: "Mount Lawley",
+    status: "Appraisals",
+    price: "",
+    headline: "Selling in Mt Lawley? See what your home is worth.",
+    copy: "14 sales on Beaufort St in 12 months. Free written appraisal in 48 hours.",
+    scene: 6,
+  },
 ];
 
-const clientPaths = [
-  {
-    icon: Gauge,
-    title: "Monitor",
-    copy: "Connect ad accounts, watch lead quality, and see sync health without changing campaigns.",
-  },
-  {
-    icon: Sparkles,
-    title: "Self-Serve",
-    copy: "Turn suburb signals, offers, and brand rules into reviewable lead-generation campaigns.",
-  },
-  {
-    icon: UsersRound,
-    title: "Managed Operator",
-    copy: "Let an operator review blocked outputs, approvals, and agent work before anything leaves Blockwise.",
-  },
-];
+function HowItWorksFlow() {
+  return (
+    <div className="flow" aria-label="How Blockwise works">
+      <div className="flow-step">
+        <div className="flow-art flow-art-suburb">
+          <div className="flow-pill">
+            <MapPin aria-hidden size={14} />
+            <span>Mount Lawley</span>
+          </div>
+          <span className="flow-cursor" aria-hidden>|</span>
+        </div>
+        <span className="flow-num">01</span>
+        <strong className="flow-label">Pick a suburb</strong>
+      </div>
+
+      <svg className="flow-arrow" viewBox="0 0 80 14" aria-hidden>
+        <line x1="0" y1="7" x2="72" y2="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 4" />
+        <polyline points="66,2 74,7 66,12" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      </svg>
+
+      <div className="flow-step">
+        <div className="flow-art flow-art-ads">
+          <span className="flow-ad-mini m1" />
+          <span className="flow-ad-mini m2" />
+          <span className="flow-ad-mini m3" />
+          <span className="flow-ad-mini m4" />
+          <span className="flow-ad-mini m5" />
+          <span className="flow-ad-mini m6" />
+        </div>
+        <span className="flow-num">02</span>
+        <strong className="flow-label">Approve the ads</strong>
+      </div>
+
+      <svg className="flow-arrow" viewBox="0 0 80 14" aria-hidden>
+        <line x1="0" y1="7" x2="72" y2="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 4" />
+        <polyline points="66,2 74,7 66,12" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      </svg>
+
+      <div className="flow-step">
+        <div className="flow-art flow-art-leads">
+          <div className="flow-lead-row">
+            <span className="flow-lead-dot" />
+            <span className="flow-lead-bar" />
+          </div>
+          <div className="flow-lead-row">
+            <span className="flow-lead-dot" />
+            <span className="flow-lead-bar short" />
+          </div>
+          <div className="flow-lead-row">
+            <span className="flow-lead-dot" />
+            <span className="flow-lead-bar" />
+          </div>
+          <div className="flow-lead-row">
+            <span className="flow-lead-dot" />
+            <span className="flow-lead-bar short" />
+          </div>
+        </div>
+        <span className="flow-num">03</span>
+        <strong className="flow-label">Watch the leads land</strong>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
     <main className="site-shell">
       <header className="site-nav" aria-label="Primary">
         <Link className="site-brand" href="/" aria-label="Blockwise home">
-          <span className="brand-mark">B</span>
-          <span>Blockwise</span>
+          <BlockwiseLogo />
         </Link>
+        <nav className="site-links" aria-label="Landing page">
+          <a href="#ads">See the ads</a>
+          <a href="#how">How it works</a>
+        </nav>
         <nav className="site-nav-actions" aria-label="Account">
           <Link href="/login">Client sign in</Link>
-          <a className="button" href="mailto:hello@blockwise.sale?subject=Blockwise%20access%20request">
+          <a className="button" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
             Request access
           </a>
         </nav>
       </header>
 
-      <section className="home-hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Real estate lead generation control plane</p>
-          <h1>Blockwise</h1>
-          <p className="hero-lead">
-            Secure campaign monitoring, self-serve drafting, lead handling, and agent approvals for real estate teams
-            that cannot afford client-data leakage.
+      <section className="hero">
+        <div className="hero-left">
+          <p className="eyebrow">For real estate agents</p>
+          <h1>
+            More listings.
+            <br />
+            Nothing hidden.
+          </h1>
+          <p className="hero-sub">
+            Selling isn&apos;t the hard bit. Getting the listing is. We run the ads. You watch every cent.
           </p>
-          <div className="actions">
-            <a className="button" href="mailto:hello@blockwise.sale?subject=Blockwise%20access%20request">
-              Request access
+          <div className="hero-cta">
+            <a className="button primary" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
+              Book a demo
               <ArrowRight aria-hidden size={18} />
             </a>
-            <Link className="button secondary" href="/login">
-              Client sign in
-            </Link>
+            <a className="button ghost" href="#ads">
+              See the ads
+            </a>
           </div>
         </div>
 
-        <div className="hero-product" aria-label="Blockwise security and campaign dashboard preview">
-          <div className="hero-product-topbar">
-            <span>Northstar Realty</span>
-            <span>AU workspace</span>
-          </div>
-          <div className="hero-product-grid">
-            <div className="hero-product-panel wide">
-              <div>
-                <span className="mini-label">Approval Queue</span>
-                <strong>6 gated actions</strong>
-              </div>
-              <span className="status amber">Human review</span>
+        <aside className="hero-right" aria-label="Sample Blockwise ad">
+          <div className="hero-ad-stack">
+            <div className="hero-ad-card hero-ad-back" aria-hidden>
+              <span className="hero-ad-mini">Instagram</span>
             </div>
-            <div className="hero-product-panel">
-              <span className="mini-label">AI spend</span>
-              <strong>$184</strong>
-              <span className="trend-line" aria-hidden />
+            <div className="hero-ad-card hero-ad-mid" aria-hidden>
+              <span className="hero-ad-mini">Google</span>
             </div>
-            <div className="hero-product-panel">
-              <span className="mini-label">Leads</span>
-              <strong>122</strong>
-              <span className="status green">Dedupe on</span>
-            </div>
-            <div className="hero-product-panel wide">
-              <span className="mini-label">Agent run</span>
-              <strong>Campaign Draft Agent</strong>
-              <p>Workspace policy checked, provider tokens withheld, output stored for review.</p>
+            <div className="hero-ad-card hero-ad-front">
+              <FacebookAd {...ads[0]} />
             </div>
           </div>
-        </div>
+        </aside>
       </section>
 
-      <section className="home-band" aria-labelledby="security-heading">
-        <div>
-          <p className="eyebrow">Built for client isolation</p>
-          <h2 id="security-heading">Every account gets a hard workspace boundary.</h2>
+      <section id="ads" className="ads-section" aria-labelledby="ads-heading">
+        <div className="ads-head">
+          <p className="eyebrow">What you get</p>
+          <h2 id="ads-heading">Ads worth running. Numbers worth watching.</h2>
         </div>
-        <div className="proof-grid">
-          {proofPoints.map((point) => (
-            <div className="proof-item" key={point}>
-              <CheckCircle2 aria-hidden size={18} />
-              <span>{point}</span>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section className="home-section" aria-labelledby="paths-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Choose the right start</p>
-            <h2 id="paths-heading">Simple paths for new clients.</h2>
-          </div>
-          <a className="button secondary" href="mailto:hello@blockwise.sale?subject=Blockwise%20setup%20call">
-            Book setup
-          </a>
-        </div>
-        <div className="grid cols-3">
-          {clientPaths.map((path) => {
-            const Icon = path.icon;
-
-            return (
-              <article className="item-card home-card" key={path.title}>
-                <Icon aria-hidden color="#087f7a" size={24} />
-                <h3>{path.title}</h3>
-                <p className="item-meta">{path.copy}</p>
-              </article>
-            );
+        <div className="ads-gallery">
+          {ads.map((ad, index) => {
+            if (ad.format === "facebook") return <FacebookAd key={index} {...ad} />;
+            if (ad.format === "instagram") return <InstagramStory key={index} {...ad} />;
+            return <GoogleAd key={index} {...ad} />;
           })}
         </div>
+
+        <div className="live-strip" aria-label="Live campaign performance">
+          <div className="live-head">
+            <span className="live-dot" aria-hidden />
+            <span>Live · Mt Lawley campaign · day 6 of 14</span>
+          </div>
+          <div className="live-metrics">
+            <div className="live-metric">
+              <strong>12,847</strong>
+              <span>Impressions</span>
+            </div>
+            <div className="live-metric">
+              <strong>247</strong>
+              <span>Clicks</span>
+            </div>
+            <div className="live-metric live-metric-highlight">
+              <strong>18</strong>
+              <span>Appraisal requests</span>
+            </div>
+            <div className="live-metric">
+              <strong>$324 / $500</strong>
+              <span>Week spend</span>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="home-final" aria-labelledby="ready-heading">
-        <Building2 aria-hidden color="#2364aa" size={28} />
-        <div>
-          <h2 id="ready-heading">Ready for private onboarding.</h2>
-          <p>
-            New clients can request access, then sign in after their workspace, role, region, and provider connections
-            are provisioned.
-          </p>
+      <section id="how" className="how-section" aria-labelledby="how-heading">
+        <div className="how-head">
+          <p className="eyebrow">How it works</p>
+          <h2 id="how-heading" className="sr-only">Three steps</h2>
         </div>
-        <ShieldCheck aria-hidden color="#2f7d32" size={28} />
+        <HowItWorksFlow />
       </section>
+
+      <section className="final-cta" aria-labelledby="final-heading">
+        <div className="final-cta-inner">
+          <h2 id="final-heading">See it in 15 minutes.</h2>
+          <a className="button primary big" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
+            Book a demo
+            <ArrowUpRight aria-hidden size={20} />
+          </a>
+        </div>
+      </section>
+
+      <footer className="site-footer" aria-label="Footer">
+        <BlockwiseLogo />
+        <nav
+          aria-label="Legal"
+          style={{ display: "flex", gap: 18, fontSize: 13, color: "#707470", flexWrap: "wrap" }}
+        >
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/data-deletion">Data deletion</Link>
+        </nav>
+        <span className="footer-fine">hello@blockwise.sale · © {new Date().getFullYear()}</span>
+      </footer>
     </main>
   );
 }
