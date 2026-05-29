@@ -374,14 +374,3 @@ export default function HomePage() {
     </main>
   );
 }
-" }}
-        >
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/data-deletion">Data deletion</Link>
-        </nav>
-        <span className="footer-fine">hello@blockwise.sale - (c) {new Date().getFullYear()}</span>
-      </footer>
-    </main>
-  );
-}
