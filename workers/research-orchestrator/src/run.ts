@@ -225,57 +225,29 @@ export async function refreshAdvertiserPage(args: {
         language: normalised.creative.language,
         creativeHash: normalised.creative.creativeHash,
       });
-    } catch (err) {
-      warnings.push(`ingest ${extractExternalAdId(ad)}: ${(err as Error).message}`);
-    }
-  }
 
-  const absence = await applyAbsence(writer, {
-    advertiserPageId: page.advertiserPageId,
-    seenExternalAdIds: seenExternalIds,
-    adFetchRunId,
-    sourceProvider: "apify_scrapers",
-    now,
-  });
-
-  const summary = summariseOutcomes(outcomes, absence, {
-    creditsSpent: apifyOutcome.costUsd,
-    warnings,
-    errorCount: warnings.length,
-  });
-
-  const status = warnings.length === 0 ? "success" : "partial";
-
-  await research
-    .from("ad_fetch_runs")
-    .update({
-      status,
-      completed_at: new Date().toISOString(),
-      cost_usd: apifyOutcome.costUsd,
-      result_summary: summary,
-      source_document_id: sourceDocumentId,
-    })
-    .eq("id", adFetchRunId);
-
-  // Only on success: bump last_checked_at + last_successful_check_at, reset
-  // consecutive_failed_checks.
-  await research
-    .from("advertiser_pages")
-    .update({
-      last_checked_at: now,
-      last_successful_check_at: now,
-      consecutive_failed_checks: 0,
-    })
-    .eq("id", page.advertiserPageId);
-
-  return {
-    fetchRunId: adFetchRunId,
-    status,
-    observed: summary.adsObserved,
-    inserted: summary.adsNew,
-    updated: summary.adsUpdated,
-    unchanged: summary.adsUnchanged,
-    missing: absence.incremented,
-    costUsd: apifyOutcome.costUsd,
-  };
-}
+      // Auto-derive ad_area_matches from the page's agency/agent service areas.
+      // This is what surfaces the ad in research.v_active_ads_by_postcode.
+      try {
+        // @ts-expect-error supabase-js types
+        const areaQ = await supabase
+          .schema("research")
+          .from("agent_service_areas")
+          .select("postcode,suburb,state,confidence")
+          .or(`agency_id.eq.${page.agencyIdForMatches ?? "00000000-0000-0000-0000-000000000000"},agent_id.eq.${page.agentIdForMatches ?? "00000000-0000-0000-0000-000000000000"}`)
+          .limit(50);
+        const areas = (areaQ.data ?? []) as Array<{ postcode: string; suburb: string; state: string; confidence: number }>;
+        if (areas.length === 0 && page.postcode) {
+          areas.push({ postcode: page.postcode, suburb: page.suburb ?? "Unknown", state: page.state, confidence: 50 });
+        }
+        if (areas.length > 0) {
+          await writer.insertAreaMatches(areas.map((a) => ({
+            id: randomUUID(),
+            observedAdId: outcome.observedAd.id,
+            postcode: a.postcode,
+            suburb: a.suburb || page.suburb || "Unknown",
+            state: a.state || page.state,
+            matchType: "agency_service_area",
+            confidence: Number(a.confidence) || 50,
+            evidence: { source: "orchestrator_auto", apifyRunId: apifyOutcome.runId },
+          })
