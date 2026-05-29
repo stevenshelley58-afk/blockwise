@@ -1,32 +1,13 @@
-import {
-  Bot,
-  Building2,
-  ClipboardCheck,
-  FileSearch,
-  Gauge,
-  Images,
-  LayoutDashboard,
-  Megaphone,
-  Settings2,
-  Sparkles,
-  UsersRound,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AccountMenu } from "@/components/account-menu";
+import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AppShellProps = {
   children: React.ReactNode;
   requiredAccess?: "authenticated" | "operator";
-};
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
 };
 
 type WorkspaceSummary = {
@@ -39,37 +20,6 @@ type MembershipRow = {
   role: string;
   workspaces: WorkspaceSummary | WorkspaceSummary[] | null;
 };
-
-const operatorNavItems: NavItem[] = [
-  { href: "/operator", label: "Operator", icon: LayoutDashboard },
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/self-serve", label: "Self-Serve", icon: Sparkles },
-  { href: "/research", label: "Research", icon: FileSearch },
-  { href: "/ad-studio", label: "Ad Studio", icon: Images },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
-  { href: "/agents", label: "Agent Workforce", icon: Bot },
-  { href: "/model-control", label: "Model Control", icon: Settings2 },
-];
-
-const selfServeNavItems: NavItem[] = [
-  { href: "/self-serve", label: "Self-Serve", icon: Sparkles },
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/research", label: "Research", icon: FileSearch },
-  { href: "/ad-studio", label: "Ad Studio", icon: Images },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
-];
-
-const monitorNavItems: NavItem[] = [
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/research", label: "Research", icon: FileSearch },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
-];
 
 function normalizeWorkspace(workspace: MembershipRow["workspaces"]) {
   return Array.isArray(workspace) ? workspace[0] : workspace;
@@ -104,7 +54,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
     redirect(workspaceMode === "self_serve" ? "/self-serve" : "/monitor");
   }
 
-  const navItems = isOperator ? operatorNavItems : workspaceMode === "self_serve" ? selfServeNavItems : monitorNavItems;
+  const variant: SidebarVariant = isOperator ? "operator" : workspaceMode === "self_serve" ? "self_serve" : "monitor";
   const homeHref = isOperator ? "/operator" : workspaceMode === "self_serve" ? "/self-serve" : "/monitor";
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
   const accountName = profile?.full_name ?? user.email ?? "Signed in";
@@ -117,18 +67,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
           <span className="brand-mark">B</span>
           <span>Blockwise</span>
         </Link>
-        <nav className="nav-group">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link className="nav-link" href={item.href} key={item.href}>
-                <Icon aria-hidden size={18} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <SidebarNav variant={variant} />
       </aside>
       <div className="main">
         <header className="topbar">

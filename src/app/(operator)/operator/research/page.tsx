@@ -142,7 +142,7 @@ export default async function OperatorResearchPage() {
           <h2>Coverage status</h2>
           <form method="post" action="/api/operator/research/kill-switch">
             <input type="hidden" name="paused" value="true" />
-            <button className="btn-secondary" type="submit">
+            <button className="button secondary" type="submit">
               <PauseOctagon size={14} /> Pause scheduler
             </button>
           </form>
@@ -180,7 +180,7 @@ export default async function OperatorResearchPage() {
                   <form method="post" action="/api/operator/research/refresh-now">
                     <input type="hidden" name="scope" value="postcode" />
                     <input type="hidden" name="value" value={row.postcode} />
-                    <button className="btn-secondary" type="submit">
+                    <button className="button secondary" type="submit">
                       <RefreshCcw size={14} /> Run
                     </button>
                   </form>
@@ -273,7 +273,7 @@ export default async function OperatorResearchPage() {
                   <StatusPill tone={d.status === "open" ? "rose" : "amber"}>{d.status}</StatusPill>
                 </td>
                 <td>
-                  <a className="btn-secondary" href={`/operator/research/defects/${d.id}`}>
+                  <a className="button secondary" href={`/operator/research/defects/${d.id}`}>
                     Investigate <ChevronRight size={14} />
                   </a>
                 </td>

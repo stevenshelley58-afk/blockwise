@@ -20,6 +20,10 @@ export type ProviderConnectionMetadata = {
   scopes: string[];
   externalAccountId: string | null;
   externalAccountName: string | null;
+  metadata: Record<string, unknown>;
+  tokenExpiresAt: string | null;
+  healthStatus: string;
+  healthCheckedAt: string | null;
   lastSyncAt: string | null;
 };
 
@@ -36,6 +40,10 @@ type ProviderConnectionRow = {
   scopes: string[] | null;
   external_account_id: string | null;
   external_account_name: string | null;
+  metadata_json: Record<string, unknown> | null;
+  token_expires_at: string | null;
+  health_status: string | null;
+  health_checked_at: string | null;
   last_sync_at: string | null;
 };
 
@@ -51,7 +59,9 @@ export async function listProviderConnections(
 ): Promise<ProviderConnectionMetadata[]> {
   const { data, error } = await supabase
     .from("provider_connections")
-    .select("id, workspace_id, provider, status, scopes, external_account_id, external_account_name, last_sync_at")
+    .select(
+      "id, workspace_id, provider, status, scopes, external_account_id, external_account_name, metadata_json, token_expires_at, health_status, health_checked_at, last_sync_at",
+    )
     .eq("workspace_id", workspaceId);
 
   if (error || !data) {
@@ -95,6 +105,8 @@ export async function upsertProviderConnectionWithTokens(input: {
   externalAccountName: string;
   accessToken: string;
   refreshToken?: string | null;
+  metadata?: Record<string, unknown>;
+  tokenExpiresAt?: string | null;
 }): Promise<ProviderConnectionMetadata> {
   const encryptedAccessToken = encryptToken(input.accessToken);
   const encryptedRefreshToken = input.refreshToken ? encryptToken(input.refreshToken) : null;
@@ -108,13 +120,19 @@ export async function upsertProviderConnectionWithTokens(input: {
         scopes: input.scopes,
         external_account_id: input.externalAccountId,
         external_account_name: input.externalAccountName,
+        metadata_json: input.metadata ?? {},
+        token_expires_at: input.tokenExpiresAt ?? null,
+        health_status: input.status === "connected" ? "healthy" : "unknown",
+        health_checked_at: new Date().toISOString(),
         last_sync_at: new Date().toISOString(),
         created_by: input.userId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "workspace_id,provider,external_account_id" },
     )
-    .select("id, workspace_id, provider, status, scopes, external_account_id, external_account_name, last_sync_at")
+    .select(
+      "id, workspace_id, provider, status, scopes, external_account_id, external_account_name, metadata_json, token_expires_at, health_status, health_checked_at, last_sync_at",
+    )
     .single();
 
   if (error || !connection) {
@@ -198,6 +216,10 @@ function normalizeProviderConnectionRow(row: ProviderConnectionRow): ProviderCon
     scopes: row.scopes ?? [],
     externalAccountId: row.external_account_id,
     externalAccountName: row.external_account_name,
+    metadata: row.metadata_json ?? {},
+    tokenExpiresAt: row.token_expires_at,
+    healthStatus: row.health_status ?? "unknown",
+    healthCheckedAt: row.health_checked_at,
     lastSyncAt: row.last_sync_at,
   };
 }

@@ -1,5 +1,6 @@
 import { ClipboardCheck, MailCheck, ShieldAlert, WalletCards } from "lucide-react";
 
+import { ApprovalActions } from "@/components/approvals/approval-actions";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
@@ -37,16 +38,20 @@ export default async function ApprovalsPage() {
               <th>Workspace</th>
               <th>Risk</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {approvalQueue.map((item) => (
-              <tr key={item.title}>
+              <tr key={item.id}>
                 <td>{item.title}</td>
                 <td>{item.workspace}</td>
                 <td>{item.risk}</td>
                 <td>
                   <StatusPill tone="amber">{item.status}</StatusPill>
+                </td>
+                <td>
+                  <ApprovalActions approvalId={item.id} workspaceId={access.workspaceId} status={item.status} />
                 </td>
               </tr>
             ))}

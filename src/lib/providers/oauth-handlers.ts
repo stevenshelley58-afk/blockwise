@@ -11,9 +11,28 @@ export type OAuthTokenExchange = {
   externalAccountId: string;
   externalAccountName: string;
   status: "connected" | "needs_attention";
+  metadata?: Record<string, unknown>;
+  tokenExpiresAt?: string | null;
 };
 
-const META_SCOPES = ["ads_read", "business_management", "leads_retrieval"];
+// Scopes requested at OAuth consent. Ordering and membership matter for
+// Meta App Review:
+//   - pages_manage_ads is a documented dependency of leads_retrieval
+//   - pages_show_list + pages_read_engagement are documented dependencies of
+//     ads_management and business_management
+//   - business_management is requested only as a documented dependency of
+//     leads_retrieval; Blockwise does not call Business Manager write endpoints
+//   - instagram_basic is intentionally NOT requested in the v1 review; add it
+//     back only when the screencast can demo Instagram identity end-to-end
+const META_SCOPES = [
+  "ads_read",
+  "ads_management",
+  "business_management",
+  "leads_retrieval",
+  "pages_manage_ads",
+  "pages_show_list",
+  "pages_read_engagement",
+];
 const GOOGLE_SCOPES = ["https://www.googleapis.com/auth/adwords"];
 const META_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 
@@ -86,7 +105,7 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   tokenUrl.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "meta"));
   tokenUrl.searchParams.set("code", code);
 
-  const shortLived = await fetchJson<{ access_token?: string; error?: { message?: string } }>(tokenUrl.toString());
+  const shortLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(tokenUrl.toString());
 
   if (!shortLived.access_token) {
     throw new Error(shortLived.error?.message ?? "Meta OAuth did not return an access token.");
@@ -98,8 +117,9 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   longLivedUrl.searchParams.set("client_secret", appSecret);
   longLivedUrl.searchParams.set("fb_exchange_token", shortLived.access_token);
 
-  const longLived = await fetchJson<{ access_token?: string; error?: { message?: string } }>(longLivedUrl.toString()).catch(() => shortLived);
+  const longLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(longLivedUrl.toString()).catch(() => shortLived);
   const accessToken = longLived.access_token ?? shortLived.access_token;
+  const tokenExpiresAt = expiresInToIso(longLived.expires_in ?? shortLived.expires_in);
   const accounts = await fetchMetaAdAccounts(accessToken).catch(() => []);
   const account = accounts[0];
 
@@ -110,6 +130,20 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     externalAccountId: account?.id ?? "meta_account_pending",
     externalAccountName: account?.name ?? "Meta Ads account",
     status: account ? "connected" : "needs_attention",
+    tokenExpiresAt,
+    metadata: {
+      meta: {
+        metaAdAccountId: account?.id ?? "",
+        pageId: "",
+        instagramActorId: null,
+        pixelId: null,
+        leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },
+        privacyPolicyUrl: "",
+        currency: account?.currency ?? "AUD",
+        timezone: account?.timezone ?? "Australia/Perth",
+        tokenExpiresAt,
+      },
+    },
   };
 }
 
@@ -154,6 +188,12 @@ async function exchangeGoogleCode(request: NextRequest, code: string): Promise<O
     externalAccountName: account?.name ?? "Google Ads account",
     status: account ? "connected" : "needs_attention",
   };
+}
+
+function expiresInToIso(expiresIn: number | undefined): string | null {
+  return typeof expiresIn === "number" && Number.isFinite(expiresIn) && expiresIn > 0
+    ? new Date(Date.now() + expiresIn * 1000).toISOString()
+    : null;
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
