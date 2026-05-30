@@ -24,7 +24,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { paused, reason } = parsed.data;
 
-  // @ts-expect-error supabase-js types
   const research = guard.supabase.schema("research");
   const { error } = await research
     .from("refresh_policies")

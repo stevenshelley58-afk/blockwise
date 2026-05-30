@@ -29,7 +29,8 @@ export type JsonbValue =
   | boolean
   | null
   | JsonbValue[]
-  | { [key: string]: JsonbValue };
+  | { [key: string]: JsonbValue }
+  | Record<string, unknown>;
 
 export const australianStateSchema = z.enum(["WA", "NSW", "VIC", "QLD", "SA", "TAS", "ACT", "NT"]);
 export const postcodeSchema = z.string().regex(/^\d{4}$/u, "Expected 4-digit postcode");
@@ -50,21 +51,18 @@ export const activeStatusSchema = z.enum(["active", "inactive", "unknown"]);
  * constraint conversation in docs/research-engine/README.md.
  */
 export const sourceProviderSchema = z.enum([
-  "apify_leadsbrary",
-  "apify_automly",
-  "apify_curious_coder",
-  "apify_harvestlab",
-  "apify_happitap",
-  "apify_scrapers",
-  "scrapling_self",
+  "self_hosted_meta",
+  "searchapi_meta",
+  "official_meta_archive",
   "browserbase",
+  "hermes_meta_page_capture",
+  "structured_meta_page_provider",
   "metapi",
   "demirs_register",
   "reiwa",
   "domain",
   "rea",
   "google_business_profile",
-  "meta_ad_library_ui",
   "operator_upload",
 ]);
 export type SourceProvider = z.infer<typeof sourceProviderSchema>;

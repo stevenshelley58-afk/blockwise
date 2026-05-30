@@ -1,106 +1,76 @@
-# Coolify-managed stack for the Hermes Research Engine.
-# Deploy from feature/hermes-research-engine via Coolify's GitHub integration.
-#
-# Required env (set in Coolify dashboard, NOT in this file):
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-#   APIFY_API_TOKEN
-#   OPENROUTER_API_KEY, MEM0_API_KEY
-#   BROWSERBASE_API_KEY, BROWSERBASE_PROJECT_ID
-#   HERMES_WEBHOOK_SECRET
-#
-# All services bind only to localhost; Cloudflare Tunnel forwards
-# hermes.blockwise.sale, aion.blockwise.sale, etc.
-
 version: "3.9"
 
+x-blockwise-research-reset:
+  owner: "hermes"
+  status: "hard-reset-runtime"
+  removed_active_services_count: 2
+  notes:
+    - "Legacy worker code is archived, not mounted into the active runtime."
+    - "Hermes owns research execution; build and collection adapters are placeholders until enabled by the operator."
+    - "Pinned images are required. Do not deploy with floating tags."
+
 services:
-  research-orchestrator:
+  hermes:
     build:
       context: ../..
-      dockerfile: workers/research-orchestrator/Dockerfile
-    container_name: research-orchestrator
-    restart: unless-stopped
-    environment:
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
-      APIFY_DEFAULT_ACTOR: apify/facebook-ads-scraper
-      APIFY_DAILY_SPEND_LIMIT_USD: "10"
-      APIFY_RESULTS_LIMIT_PER_PAGE: "50"
-      RESEARCH_RAW_EVIDENCE_BUCKET: research-raw-evidence
-      ORCHESTRATOR_MODE: loop
-      ORCHESTRATOR_LOOP_INTERVAL_MS: "300000"
-      ORCHESTRATOR_MAX_PAGES_PER_TICK: "20"
-      ORCHESTRATOR_DRY_RUN: "false"
-    networks: [research]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-  hermes:
-    image: ghcr.io/nousresearch/hermes-agent:latest
-    container_name: hermes
+      dockerfile: infra/hermes/Dockerfile
+      args:
+        HERMES_BASE_IMAGE: "${HERMES_BASE_IMAGE:?Set HERMES_BASE_IMAGE to a pinned Hermes image tag or digest}"
+    image: "${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:2026-05-30}"
+    container_name: blockwise-hermes
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
     environment:
+      HERMES_CONFIG: /app/hermes.toml
+      HERMES_HOME: /data
+      HERMES_PORT: "8080"
+      HERMES_PROVIDER: ${HERMES_PROVIDER:-openrouter}
+      HERMES_DEFAULT_MODEL: ${HERMES_DEFAULT_MODEL:?Set HERMES_DEFAULT_MODEL to an OpenRouter model slug}
+      HERMES_ESCALATION_MODEL: ${HERMES_ESCALATION_MODEL:?Set HERMES_ESCALATION_MODEL to an OpenRouter model slug}
+      HERMES_RESEARCH_MODE: ${HERMES_RESEARCH_MODE:-maintain}
+      HERMES_BUILD_CONCURRENCY: ${HERMES_BUILD_CONCURRENCY:-4}
+      HERMES_MAINTAIN_CONCURRENCY: ${HERMES_MAINTAIN_CONCURRENCY:-1}
+      HERMES_COLLECTION_INTERVAL_SECONDS: ${HERMES_COLLECTION_INTERVAL_SECONDS:-900}
+      HERMES_DAILY_SPEND_LIMIT_USD: ${HERMES_DAILY_SPEND_LIMIT_USD:-25}
+      HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       MEM0_API_KEY: ${MEM0_API_KEY}
+      MEM0_PROJECT_ID: ${MEM0_PROJECT_ID:-blockwise-research}
       BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
       BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
-      APIFY_API_TOKEN: ${APIFY_API_TOKEN}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
-      HERMES_PORT: "8080"
+      HERMES_SUPABASE_URL: ${SUPABASE_URL}
+      HERMES_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      HERMES_RESEARCH_AD_CREATIVES_BUCKET: ${HERMES_RESEARCH_AD_CREATIVES_BUCKET:-research-ad-creatives}
+      HERMES_RESEARCH_SCREENSHOTS_BUCKET: ${HERMES_RESEARCH_SCREENSHOTS_BUCKET:-research-screenshots}
+      HERMES_RESEARCH_RAW_EVIDENCE_BUCKET: ${HERMES_RESEARCH_RAW_EVIDENCE_BUCKET:-research-raw-evidence}
+      BLOCKWISE_RESEARCH_RUNTIME_OWNER: hermes
+      BLOCKWISE_RESEARCH_RUNTIME_ENABLED: ${BLOCKWISE_RESEARCH_RUNTIME_ENABLED:-false}
     volumes:
       - hermes-data:/data
-      - ../../hermes/skills:/app/skills:ro
     networks: [research]
     logging:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
-  scrapling:
-    build:
-      context: ../scrapling
-      dockerfile: Dockerfile
-    container_name: scrapling
-    restart: unless-stopped
-    environment:
-      SCRAPLING_MCP_PORT: "9000"
-    ports:
-      - "127.0.0.1:9000:9000"
-    networks: [research]
-
   uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
+    image: "${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1.23.16}"
+    container_name: blockwise-uptime-kuma
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3001"
     volumes:
       - uptime-data:/app/data
     networks: [research]
-
-  aionui:
-    image: iofficeai/aionui:latest
-    container_name: aionui
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:7000:7000"
-    environment:
-      AION_HERMES_URL: http://hermes:8080
-      AION_SCRAPLING_URL: http://scrapling:9000
-    volumes:
-      - aion-data:/data
-    networks: [research]
-    depends_on: [hermes]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
 volumes:
   hermes-data:
   uptime-data:
-  aion-data:
 
 networks:
   research:

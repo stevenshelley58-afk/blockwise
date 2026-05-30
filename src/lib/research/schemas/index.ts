@@ -5,4 +5,4 @@ export * from "./ads.ts";
 export * from "./runs.ts";
 export * from "./coverage.ts";
 export * from "./decisions.ts";
-export * from "./apify.ts";
+export * from "./meta-ad-library.ts";

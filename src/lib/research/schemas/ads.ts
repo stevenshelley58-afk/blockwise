@@ -88,34 +88,70 @@ export const adFormatSchema = z.enum(["image", "video", "carousel", "dco", "unkn
 export type AdFormat = z.infer<typeof adFormatSchema>;
 
 export const adClassificationSchema = z.object({
-  type: z
+  isRealEstateAd: z.boolean().default(false),
+  realEstateRelevance: z
     .enum([
-      "listing",
-      "brand",
-      "just_sold",
-      "open_home",
-      "recruitment",
-      "lead_magnet",
+      "agent_brand",
       "appraisal",
-      "other",
-      "unknown",
+      "listing",
+      "sold",
+      "rental",
+      "recruitment",
+      "irrelevant",
     ])
-    .default("unknown"),
+    .default("irrelevant"),
+  adType: z
+    .enum([
+      "appraisal",
+      "just_listed",
+      "just_sold",
+      "agent_brand",
+      "market_update",
+      "suburb_report",
+      "recruitment",
+      "rental",
+      "other",
+    ])
+    .default("other"),
+  primaryIntent: z
+    .enum([
+      "generate_appraisals",
+      "win_listings",
+      "promote_listing",
+      "build_agent_brand",
+      "recruit_staff",
+      "lease_property",
+      "other",
+    ])
+    .default("other"),
+  propertyOrAgentFocus: z.enum(["property", "agent", "agency", "suburb", "unknown"]).default("unknown"),
   hooks: z.array(z.string()).default([]),
-  tone: z.string().nullable().optional(),
-  style: z.string().nullable().optional(),
-  targetSignal: z
-    .object({
-      suburb: z.string().nullable().optional(),
-      postcode: postcodeSchema.nullable().optional(),
-      priceBand: z.string().nullable().optional(),
-      audience: z.string().nullable().optional(),
-    })
-    .partial()
-    .default({}),
+  tone: z.string().default(""),
+  style: z.string().default(""),
+  audience: z.string().default(""),
+  suburbSignals: z.array(z.string()).default([]),
   confidence: confidenceSchema.default(0),
-});
+  rejectionReason: z.string().nullable().default(null),
+}).strict();
 export type AdClassification = z.infer<typeof adClassificationSchema>;
+
+export const mediaAssetSchema = z.object({
+  id: z.string().nullable().optional(),
+  kind: z.enum(["image", "video", "thumbnail", "carousel_card", "document", "unknown"]).default("unknown"),
+  sourceUrl: z.string().url().nullable().optional(),
+  storageBucket: z.string().nullable().optional(),
+  storagePath: z.string().nullable().optional(),
+  contentType: z.string().nullable().optional(),
+  mimeType: z.string().nullable().optional(),
+  width: z.number().int().positive().nullable().optional(),
+  height: z.number().int().positive().nullable().optional(),
+  durationSeconds: z.number().nonnegative().nullable().optional(),
+  sha256: z.string().nullable().optional(),
+  downloadStatus: z.enum(["pending", "captured", "failed", "blocked", "missing"]).default("pending"),
+  failureReason: z.string().nullable().optional(),
+  capturedAt: isoTimestampSchema.nullable().optional(),
+}).strict();
+export type MediaAsset = z.infer<typeof mediaAssetSchema>;
 
 export const adCreativeSchema = z.object({
   id: uuidSchema,
@@ -128,8 +164,11 @@ export const adCreativeSchema = z.object({
   ctaUrl: z.string().url().nullable().optional(),
   primaryImageUrl: z.string().url().nullable().optional(),
   imageUrls: z.array(z.string().url()).default([]),
+  imageStoragePath: z.string().nullable().optional(),
   videoUrl: z.string().url().nullable().optional(),
+  videoStoragePath: z.string().nullable().optional(),
   videoThumbnailUrl: z.string().url().nullable().optional(),
+  mediaAssets: z.array(mediaAssetSchema).default([]),
   landingUrl: z.string().url().nullable().optional(),
   locale: z.string().nullable().optional(),
   language: z.string().nullable().optional(),

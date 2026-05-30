@@ -39,17 +39,6 @@ begin
     (demo_workspace_id, 'google', 'needs_attention', array['adwords'], 'customers/demo_google', 'Northstar Google Ads', now() - interval '18 hours', operator_user_id)
   on conflict do nothing;
 
-  insert into public.competitors (workspace_id, name, website_url, notes)
-  values
-    (demo_workspace_id, 'Perth Appraisal Co.', 'https://example.com/perth-appraisal', 'Seller guide ads and suburb appraisal CTAs.'),
-    (demo_workspace_id, 'Urban Door Realty', 'https://example.com/urban-door', 'Carousel creative patterns.'),
-    (demo_workspace_id, 'Westside Agents', 'https://example.com/westside', 'Urgency claims require review.');
-
-  insert into public.campaign_ideas (workspace_id, title, channel, hook, status)
-  values
-    (demo_workspace_id, 'Suburb appraisal pulse', 'Meta + Google', 'See how buyer demand shifted in your suburb this month.', 'draft'),
-    (demo_workspace_id, 'Downsizer decision guide', 'Meta lead form', 'A practical checklist for owners weighing a 2026 sale.', 'draft');
-
   insert into public.campaigns (id, workspace_id, provider, name, status, draft_payload, created_by)
   values (
     demo_campaign_id,

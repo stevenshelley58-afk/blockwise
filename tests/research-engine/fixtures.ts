@@ -1,12 +1,12 @@
-import type { ApifyMetaAd } from "../../src/lib/research/schemas/index.ts";
+import type { MetaAdLibraryAd } from "../../src/lib/research/schemas/index.ts";
 
 /**
- * Hand-built Apify payloads that look like real Meta Ad Library responses,
+ * Hand-built Meta Ad Library payloads that look like real Meta Ad Library responses,
  * pared down to the fields the normaliser cares about. Used by every Phase 1
- * test so behaviour is deterministic and we never call the real Apify API
+ * test so behaviour is deterministic and we never call the real collector
  * during unit tests.
  */
-export const adAlpha: ApifyMetaAd = {
+export const adAlpha: MetaAdLibraryAd = {
   ad_archive_id: "1101010101010101",
   page_id: "20001",
   page_name: "Acton Cottesloe",
@@ -24,7 +24,7 @@ export const adAlpha: ApifyMetaAd = {
   locales: ["en_AU"],
 };
 
-export const adAlphaBodyChanged: ApifyMetaAd = {
+export const adAlphaBodyChanged: MetaAdLibraryAd = {
   ...adAlpha,
   snapshot: {
     ...adAlpha.snapshot!,
@@ -32,7 +32,7 @@ export const adAlphaBodyChanged: ApifyMetaAd = {
   },
 };
 
-export const adBeta: ApifyMetaAd = {
+export const adBeta: MetaAdLibraryAd = {
   ad_archive_id: "2202020202020202",
   page_id: "20001",
   page_name: "Acton Cottesloe",
@@ -48,7 +48,7 @@ export const adBeta: ApifyMetaAd = {
   },
 };
 
-export const adGammaVideo: ApifyMetaAd = {
+export const adGammaVideo: MetaAdLibraryAd = {
   ad_archive_id: "3303030303030303",
   page_id: "20001",
   is_active: true,

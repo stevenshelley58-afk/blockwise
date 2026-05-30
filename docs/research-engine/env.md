@@ -1,68 +1,74 @@
-# Research Engine — environment variables
+# Research Engine Environment Variables
 
-These are NOT in `.env.example` (deliberately — main `.env.example` is for
-Blockwise app vars). Add them to `.env.local` for local development and to
-Coolify env vars on the VPS deployment. Never commit real values.
+Date: 2026-05-30
+
+These variables describe the hard-reset runtime in
+`infra/coolify/docker-compose.research.yml`. Do not print real secret values in
+logs or docs.
+
+## Image Pins
 
 ```bash
-# ---------------------------------------------------------------------------
-# Apify — primary ad data source for Meta Ad Library
-# ---------------------------------------------------------------------------
-APIFY_API_TOKEN=
-APIFY_DEFAULT_ACTOR=apify/facebook-ads-scraper
-APIFY_DAILY_SPEND_LIMIT_USD=50
-
-# ---------------------------------------------------------------------------
-# Hermes agent runtime (deployed on VPS, called via signed webhook from app)
-# ---------------------------------------------------------------------------
-HERMES_BASE_URL=https://hermes.blockwise.sale
-HERMES_API_TOKEN=
-HERMES_WEBHOOK_SECRET=
-
-# ---------------------------------------------------------------------------
-# OpenRouter — Hermes model gateway
-# ---------------------------------------------------------------------------
-OPENROUTER_API_KEY=
-
-# ---------------------------------------------------------------------------
-# OpenAI — embeddings only (search-by-style, similarity)
-# ---------------------------------------------------------------------------
-# Already in main env if other Blockwise features need it. We reuse it.
-
-# ---------------------------------------------------------------------------
-# mem0 — fuzzy memory layer
-# ---------------------------------------------------------------------------
-MEM0_API_KEY=
-MEM0_PROJECT_ID=blockwise-research
-
-# ---------------------------------------------------------------------------
-# Browserbase — managed headless browser fallback for Hermes
-# ---------------------------------------------------------------------------
-BROWSERBASE_API_KEY=
-BROWSERBASE_PROJECT_ID=
-
-# ---------------------------------------------------------------------------
-# Storage bucket names (created in Supabase Storage)
-# ---------------------------------------------------------------------------
-RESEARCH_RAW_EVIDENCE_BUCKET=research-raw-evidence
-RESEARCH_AD_CREATIVES_BUCKET=research-ad-creatives
-RESEARCH_SCREENSHOTS_BUCKET=research-screenshots
+HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:<pinned-version-or-digest>
+BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-05-30
+UPTIME_KUMA_IMAGE=louislam/uptime-kuma:1.23.16
 ```
 
-## Where each lives
+`HERMES_BASE_IMAGE` must not be `:latest`.
 
-| Variable                  | Local `.env.local` | Coolify VPS env | Vercel env |
-| ------------------------- | ------------------ | --------------- | ---------- |
-| APIFY_API_TOKEN           | yes                | yes (Hermes)    | no         |
-| HERMES_BASE_URL           | yes                | no              | yes        |
-| HERMES_API_TOKEN          | yes                | no              | yes        |
-| HERMES_WEBHOOK_SECRET     | yes                | yes (Hermes)    | yes        |
-| OPENROUTER_API_KEY        | yes                | yes (Hermes)    | no         |
-| MEM0_API_KEY              | yes                | yes (Hermes)    | no         |
-| BROWSERBASE_API_KEY       | yes                | yes (Hermes)    | no         |
-| RESEARCH_*_BUCKET         | yes                | yes (Hermes)    | yes        |
-| SUPABASE_SERVICE_ROLE_KEY | yes                | yes (Hermes)    | yes        |
+## Hermes Runtime
 
-The signed webhook secret is the only secret shared between Hermes (server)
-and Blockwise (client of Hermes). Everything else is consumed only on the
-VPS side.
+```bash
+HERMES_CONFIG=/app/hermes.toml
+HERMES_HOME=/data
+HERMES_PORT=8080
+HERMES_WEBHOOK_SECRET=<secret>
+HERMES_PROVIDER=openrouter
+HERMES_DEFAULT_MODEL=<cheap-openrouter-model>
+HERMES_ESCALATION_MODEL=<stronger-openrouter-model>
+HERMES_RESEARCH_MODE=maintain
+HERMES_BUILD_CONCURRENCY=4
+HERMES_MAINTAIN_CONCURRENCY=1
+HERMES_COLLECTION_INTERVAL_SECONDS=900
+HERMES_DAILY_SPEND_LIMIT_USD=25
+OPENROUTER_API_KEY=<key>
+MEM0_API_KEY=<key>
+MEM0_PROJECT_ID=blockwise-research
+BROWSERBASE_API_KEY=<key>
+BROWSERBASE_PROJECT_ID=<project-id>
+```
+
+## Research Runtime Placeholders
+
+```bash
+BLOCKWISE_RESEARCH_RUNTIME_OWNER=hermes
+BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false
+```
+
+`BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false` is the safe deploy default.
+
+## Supabase And Storage
+
+```bash
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+HERMES_SUPABASE_URL=https://<ref>.supabase.co
+HERMES_SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+HERMES_RESEARCH_RAW_EVIDENCE_BUCKET=research-raw-evidence
+HERMES_RESEARCH_AD_CREATIVES_BUCKET=research-ad-creatives
+HERMES_RESEARCH_SCREENSHOTS_BUCKET=research-screenshots
+```
+
+## Removed From Active Runtime
+
+Do not configure these for the active reset runtime:
+
+1. `ORCHESTRATOR_*`
+2. `AD_COLLECTOR_PROVIDER`
+3. `SELF_HOSTED_META_COLLECTOR_URL`
+4. `META_AD_LIBRARY_COLLECTOR_URL`
+5. `META_COLLECTOR_*`
+6. `SEARCHAPI_*`
+7. `META_AD_LIBRARY_API_TOKEN`
+8. `META_GRAPH_VERSION`
+9. `AD_COLLECTOR_*`

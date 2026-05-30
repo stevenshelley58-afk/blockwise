@@ -63,13 +63,11 @@ type DefectRow = {
 };
 
 async function loadCoverage(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
   return (data ?? []) as CoverageRow[];
 }
 
 async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase
     .schema("research")
     .from("ad_fetch_runs")
@@ -80,7 +78,6 @@ async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAc
 }
 
 async function loadDefects(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
-  // @ts-expect-error supabase-js types
   const { data } = await supabase.schema("research").from("v_missing_competitors").select("*").limit(30);
   return (data ?? []) as DefectRow[];
 }
@@ -120,7 +117,7 @@ export default async function OperatorResearchPage() {
         <MetricCard icon={Signal} label="Live active ads" value={String(liveAds)} note="Across all covered postcodes" />
         <MetricCard icon={Activity} label="Known agents" value={String(liveAgents)} note="From census + page resolution" />
         <MetricCard icon={AlertOctagon} label="Open defects" value={String(openDefects)} note="Gaps awaiting investigation" />
-        <MetricCard icon={Timer} label="24h Apify spend" value={`$${totalCost24h.toFixed(2)}`} note={`${failedRunsLast20} failed in last 20 runs`} />
+        <MetricCard icon={Timer} label="24h collector spend" value={`$${totalCost24h.toFixed(2)}`} note={`${failedRunsLast20} failed in last 20 runs`} />
       </section>
 
       <section className="panel">

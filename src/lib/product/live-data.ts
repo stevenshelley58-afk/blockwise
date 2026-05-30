@@ -86,6 +86,13 @@ type ResearchSignalRow = {
   signal?: string | null;
   evidence?: string | null;
   confidence?: number | string | null;
+  page_name?: string | null;
+  library_id?: string | null;
+  headline?: string | null;
+  body?: string | null;
+  active_status?: string | null;
+  last_seen_at?: string | null;
+  postcodes?: string[] | null;
 };
 
 export function buildCampaignReadinessRows(input: {
@@ -315,15 +322,27 @@ export async function listAiLedgerRows(supabase: SupabaseServerClient, workspace
   return buildAiLedgerRows((data ?? []) as AiLedgerRow[]);
 }
 
-// listResearchSignals is intentionally stubbed during the Hermes research engine rebuild.
-// The old implementation read from public.observed_ads + pattern_classifications, which were
-// part of the v1 research feature. The replacement reads from research.v_recent_creative_patterns
-// once the new schema is migrated and Hermes has ingested data.
-//
-// See: docs/research-engine/README.md and supabase/migrations/<date>_research_engine.sql
-// Tracking: feature/hermes-research-engine
-export async function listResearchSignals(_supabase: SupabaseServerClient, _workspaceId: string) {
-  return buildResearchSignals([]);
+export async function listResearchSignals(supabase: SupabaseServerClient, _workspaceId: string) {
+  const { data } = await supabase
+    .schema("research")
+    .from("v_customer_meta_ad_library_cards")
+    .select("page_name,library_id,headline,body,active_status,last_seen_at,postcodes")
+    .order("last_seen_at", { ascending: false })
+    .limit(30);
+
+  return buildResearchSignals(((data ?? []) as ResearchSignalRow[]).map(toResearchSignalRow));
+}
+
+function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
+  const summary = row.headline ?? firstSentence(row.body) ?? "Creative captured";
+  const postcodes = Array.isArray(row.postcodes) && row.postcodes.length > 0 ? `Postcodes ${row.postcodes.join(", ")}` : "Postcode match pending";
+
+  return {
+    competitor: row.page_name ?? "Unknown competitor",
+    signal: summary,
+    evidence: `${postcodes}${row.last_seen_at ? `, last seen ${new Date(row.last_seen_at).toLocaleDateString("en-AU")}` : ""}`,
+    confidence: row.confidence ?? (row.active_status === "active" ? 80 : 50),
+  };
 }
 
 function normalizeProvider(provider: CampaignRow["provider"]): ProviderKey {
@@ -366,6 +385,20 @@ function normalizeProviderConnectionStatus(value: string | null | undefined): Pr
 
 function extractAttributionLabel(source: Record<string, unknown> | null | undefined): string {
   return String(source?.campaignName ?? source?.campaign_name ?? source?.utm_campaign ?? "Direct");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringField(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function firstSentence(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const sentence = value.split(/[.!?]\s/)[0] ?? value;
+  return sentence.length > 96 ? `${sentence.slice(0, 95).trim()}...` : sentence;
 }
 
 function formatAgentStatus(status: string | null | undefined): string {

@@ -604,9 +604,7 @@ h3 {
   text-transform: none;
 }
 
-.research-freshness,
-.research-page-row,
-.research-match-row {
+.research-freshness {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -619,9 +617,7 @@ h3 {
   font-weight: 700;
 }
 
-.section-title-row,
-.research-advertiser-header,
-.research-ad-row {
+.section-title-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -632,14 +628,10 @@ h3 {
   margin-bottom: 16px;
 }
 
-.section-title-row h2,
-.research-advertiser-header h3,
-.research-ad-row h4 {
+.section-title-row h2 {
   margin-top: 0;
 }
 
-.research-advertiser-list,
-.research-ad-list,
 .research-unmatched-list {
   display: grid;
   gap: 12px;
@@ -655,9 +647,15 @@ h3 {
   margin: 0;
 }
 
-.research-advertiser-card {
+.research-results-section,
+.research-results-grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+}
+
+.research-results-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  align-items: start;
 }
 
 .research-blocker-card {
@@ -675,26 +673,271 @@ h3 {
   color: var(--muted);
 }
 
-.research-source-chip {
+.meta-ad-card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.meta-ad-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+}
+
+.meta-ad-page {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-ad-page-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  color: var(--accent-strong);
+  font-weight: 850;
+  object-fit: cover;
+}
+
+.meta-ad-page-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.meta-ad-page-copy a,
+.meta-ad-page-copy strong {
   display: inline-flex;
-  min-height: 28px;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.meta-ad-page-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.meta-ad-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid var(--line);
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.meta-ad-platform-chip {
+  display: inline-flex;
+  min-height: 24px;
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface-subtle);
-  color: var(--muted);
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 800;
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 850;
 }
 
-.research-ad-row {
+.meta-ad-card-body {
+  display: grid;
+  gap: 12px;
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  padding: 14px;
 }
 
-.research-ad-row p {
-  max-width: 840px;
+.meta-ad-primary-text,
+.meta-ad-copy-details p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.meta-ad-copy-details summary {
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.meta-ad-copy-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.meta-ad-copy-details[open] .meta-ad-copy-preview,
+.meta-ad-copy-details .meta-ad-copy-toggle-open {
+  display: none;
+}
+
+.meta-ad-copy-details[open] .meta-ad-copy-toggle-open {
+  display: inline;
+}
+
+.meta-ad-copy-details[open] .meta-ad-copy-toggle-closed {
+  display: none;
+}
+
+.meta-ad-copy-preview {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.meta-ad-copy-toggle {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.meta-ad-link-preview {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 12px;
+}
+
+.meta-ad-link-preview h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.meta-ad-link-preview p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.meta-ad-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meta-ad-card-cta {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.meta-ad-destination-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.meta-ad-media-frame {
+  overflow: hidden;
+  background: #0b0f0e;
+  aspect-ratio: 1 / 1;
+}
+
+.meta-ad-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000000;
+}
+
+.meta-ad-carousel {
+  display: grid;
+  grid-auto-columns: minmax(260px, 82%);
+  grid-auto-flow: column;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 14px 14px;
+  scroll-snap-type: x mandatory;
+}
+
+.meta-ad-carousel-item {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  scroll-snap-align: start;
+}
+
+.meta-ad-carousel-item .meta-ad-media-frame {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.meta-ad-carousel-item figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.meta-ad-text-only {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  border-top: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--muted);
+  padding: 16px;
+  text-align: center;
+}
+
+.meta-ad-text-only span {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.research-empty-state {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  color: var(--muted);
+  padding: 16px;
+  text-align: center;
+}
+
+.research-empty-state {
+  min-height: 180px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
 }
 
 .research-gap-list {
@@ -2039,9 +2282,12 @@ h3 {
   .monitor-setup-actions,
   .research-search-panel,
   .section-title-row,
-  .research-advertiser-header,
-  .research-ad-row {
+  .meta-ad-card-header {
     flex-direction: column;
+  }
+
+  .meta-ad-card-header {
+    align-items: stretch;
   }
 
   .monitor-controls,

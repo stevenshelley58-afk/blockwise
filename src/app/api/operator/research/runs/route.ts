@@ -17,7 +17,6 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
   const since = url.searchParams.get("since");
 
-  // @ts-expect-error supabase-js types
   let q = guard.supabase
     .schema("research")
     .from("ad_fetch_runs")

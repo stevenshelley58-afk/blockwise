@@ -51,14 +51,15 @@ comment on schema research is
 -- ---------------------------------------------------------------------------
 -- Source documents (raw evidence)
 -- ---------------------------------------------------------------------------
--- Every external fetch (Apify run, Scrapling crawl, REIWA scrape, etc.) that
+-- Every external fetch (Meta collector run, hosted search-provider run,
+-- REIWA census scrape, etc.) that
 -- returns a payload we care about is recorded here with a content hash and
 -- a Supabase Storage path to the raw blob. Higher-level rows reference this.
 create table research.source_documents (
   id uuid primary key default gen_random_uuid(),
   source text not null,
-  -- source examples: 'apify_leadsbrary', 'apify_automly', 'scrapling_self',
-  -- 'browserbase', 'metapi', 'demirs_register', 'reiwa', 'domain', 'rea',
+  -- source examples: 'self_hosted_meta', 'searchapi_meta',
+  -- 'official_meta_archive', 'demirs_register', 'reiwa', 'domain', 'rea',
   -- 'google_business_profile', 'meta_ad_library_ui', 'operator_upload'
   source_url text,
   source_external_id text,

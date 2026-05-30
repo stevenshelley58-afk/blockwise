@@ -36,7 +36,7 @@ Natural-language interface from Blockwise `/operator` over the
   research.* tables.
 - It can call the embedding service to find "similar" creatives once
   pgvector is enabled (Phase 8+).
-- It cannot trigger paid actions (Apify runs, Browserbase sessions)
+- It cannot trigger paid actions or Browserbase sessions
   without operator confirmation in the chat.
 
 ## Tools

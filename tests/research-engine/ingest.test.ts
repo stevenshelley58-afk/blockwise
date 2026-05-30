@@ -6,7 +6,7 @@ import {
   applyObservation,
   summariseOutcomes,
 } from "../../src/lib/research/ingest.ts";
-import { normaliseApifyAd } from "../../src/lib/research/normalise.ts";
+import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
 
 import {
   adAlpha,
@@ -18,17 +18,17 @@ import { InMemoryWriter } from "./in-memory-writer.ts";
 
 test("first observation inserts and writes exactly one snapshot", async () => {
   const writer = new InMemoryWriter();
-  const { observation, payloadHash } = normaliseApifyAd({
+  const { observation, payloadHash } = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
 
   const outcome = await applyObservation(writer, {
     observation,
     payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -41,17 +41,17 @@ test("first observation inserts and writes exactly one snapshot", async () => {
 
 test("re-observing an unchanged payload upserts as 'unchanged' with NO new snapshot", async () => {
   const writer = new InMemoryWriter();
-  const norm = normaliseApifyAd({
+  const norm = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
 
   await applyObservation(writer, {
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -59,7 +59,7 @@ test("re-observing an unchanged payload upserts as 'unchanged' with NO new snaps
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
 
@@ -78,29 +78,29 @@ test("re-observing an unchanged payload upserts as 'unchanged' with NO new snaps
 
 test("re-observing with a changed payload writes a new snapshot and records a diff", async () => {
   const writer = new InMemoryWriter();
-  const first = normaliseApifyAd({
+  const first = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   await applyObservation(writer, {
     observation: first.observation,
     payloadHash: first.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
-  const second = normaliseApifyAd({
+  const second = normaliseMetaAdLibraryAd({
     ad: adAlphaBodyChanged,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   const outcome = await applyObservation(writer, {
     observation: second.observation,
     payloadHash: second.payloadHash,
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
 
@@ -112,21 +112,22 @@ test("re-observing with a changed payload writes a new snapshot and records a di
   )[1]!;
   // The diff between snapshots should include the changed snapshot.body field
   // (which lives nested under "snapshot" in the raw payload).
-  assert.ok(latest.changesFromPrior.snapshot, "expected snapshot.* diff entry");
+  const changes = latest.changesFromPrior as { snapshot?: unknown };
+  assert.ok(changes.snapshot, "expected snapshot.* diff entry");
 });
 
 test("absence confirmation: one missing run increments counter, does NOT mark inactive", async () => {
   const writer = new InMemoryWriter();
-  const norm = normaliseApifyAd({
+  const norm = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   await applyObservation(writer, {
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -134,7 +135,7 @@ test("absence confirmation: one missing run increments counter, does NOT mark in
     advertiserPageId: advertiserPageAlphaId,
     seenExternalAdIds: ["3303030303030303"], // adAlpha is NOT in this list
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
 
@@ -147,16 +148,16 @@ test("absence confirmation: one missing run increments counter, does NOT mark in
 
 test("absence confirmation: two consecutive missing runs DOES mark inactive", async () => {
   const writer = new InMemoryWriter();
-  const norm = normaliseApifyAd({
+  const norm = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   await applyObservation(writer, {
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -164,14 +165,14 @@ test("absence confirmation: two consecutive missing runs DOES mark inactive", as
     advertiserPageId: advertiserPageAlphaId,
     seenExternalAdIds: [],
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
   const second = await applyAbsence(writer, {
     advertiserPageId: advertiserPageAlphaId,
     seenExternalAdIds: [],
     adFetchRunId: "run-3",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-30T10:00:00Z",
   });
 
@@ -185,16 +186,16 @@ test("absence confirmation: two consecutive missing runs DOES mark inactive", as
 
 test("absence confirmation: a re-sighting after one missing run resets the counter", async () => {
   const writer = new InMemoryWriter();
-  const norm = normaliseApifyAd({
+  const norm = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   await applyObservation(writer, {
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -202,7 +203,7 @@ test("absence confirmation: a re-sighting after one missing run resets the count
     advertiserPageId: advertiserPageAlphaId,
     seenExternalAdIds: [],
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
 
@@ -210,7 +211,7 @@ test("absence confirmation: a re-sighting after one missing run resets the count
     observation: norm.observation,
     payloadHash: norm.payloadHash,
     adFetchRunId: "run-3",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-30T10:00:00Z",
   });
 
@@ -221,28 +222,28 @@ test("absence confirmation: a re-sighting after one missing run resets the count
 
 test("multiple ads on one page: only the missing one increments, the seen one resets", async () => {
   const writer = new InMemoryWriter();
-  const alpha = normaliseApifyAd({
+  const alpha = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
-  const beta = normaliseApifyAd({
+  const beta = normaliseMetaAdLibraryAd({
     ad: adBeta,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   await applyObservation(writer, {
     observation: alpha.observation,
     payloadHash: alpha.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
   await applyObservation(writer, {
     observation: beta.observation,
     payloadHash: beta.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
 
@@ -251,14 +252,14 @@ test("multiple ads on one page: only the missing one increments, the seen one re
     observation: beta.observation,
     payloadHash: beta.payloadHash,
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
   const absence = await applyAbsence(writer, {
     advertiserPageId: advertiserPageAlphaId,
     seenExternalAdIds: ["2202020202020202"],
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
 
@@ -272,47 +273,47 @@ test("multiple ads on one page: only the missing one increments, the seen one re
 
 test("summariseOutcomes counts inserts, updates, unchanged, and missing correctly", async () => {
   const writer = new InMemoryWriter();
-  const alpha = normaliseApifyAd({
+  const alpha = normaliseMetaAdLibraryAd({
     ad: adAlpha,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
-  const beta = normaliseApifyAd({
+  const beta = normaliseMetaAdLibraryAd({
     ad: adBeta,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   const inserted = await applyObservation(writer, {
     observation: alpha.observation,
     payloadHash: alpha.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
   const insertedBeta = await applyObservation(writer, {
     observation: beta.observation,
     payloadHash: beta.payloadHash,
     adFetchRunId: "run-1",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-28T10:00:00Z",
   });
   const unchanged = await applyObservation(writer, {
     observation: alpha.observation,
     payloadHash: alpha.payloadHash,
     adFetchRunId: "run-2",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-29T10:00:00Z",
   });
-  const changedAlpha = normaliseApifyAd({
+  const changedAlpha = normaliseMetaAdLibraryAd({
     ad: adAlphaBodyChanged,
     advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "apify_leadsbrary",
+    observedByProvider: "self_hosted_meta",
   });
   const updated = await applyObservation(writer, {
     observation: changedAlpha.observation,
     payloadHash: changedAlpha.payloadHash,
     adFetchRunId: "run-3",
-    sourceProvider: "apify_leadsbrary",
+    sourceProvider: "self_hosted_meta",
     now: "2026-05-30T10:00:00Z",
   });
 

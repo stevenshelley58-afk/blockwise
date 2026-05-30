@@ -1,31 +1,19 @@
 "use client";
 
 import {
-  BadgeCheck,
-  ClipboardCheck,
   Download,
-  FileText,
-  Image,
-  Layers,
-  Lock,
-  Megaphone,
-  MousePointer2,
-  RefreshCw,
-  ShieldCheck,
+  Image as ImageIcon,
+  Pencil,
+  Send,
   Sparkles,
-  Unlock,
+  Wand2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { StatusPill } from "@/components/status-pill";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
-  AdStudioCanvasObject,
-  AdStudioCreative,
-  AdStudioFormat,
   AdStudioOfferTemplate,
-  AdStudioPersistenceStatus,
 } from "@/lib/adstudio";
 
 type AdStudioWorkbenchProps = {
@@ -41,895 +29,1125 @@ type AdStudioWorkbenchProps = {
   };
 };
 
-const TABS = ["Dashboard", "Brand Kit", "Brief", "Offers", "Variants", "Editor", "Copy Pack", "Compliance", "Export", "Performance"] as const;
-type Tab = (typeof TABS)[number];
+type Mode = "ai" | "assist" | "manual";
+type Platform = "meta" | "google";
+type FormatId =
+  | "feed-1x1"
+  | "feed-4x5"
+  | "story-9x16"
+  | "land-191"
+  | "g-search"
+  | "g-leadform"
+  | "g-maps"
+  | "g-demand";
+type FieldKey = "primary" | "headline" | "body" | "cta" | "gh1" | "gh2" | "gh3" | "gdesc";
 
-const FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
+type CopyState = Record<FieldKey, string>;
+
+type Fx = {
+  bright: number;
+  contrast: number;
+  sat: number;
+  warm: number;
+  zoom: number;
+  panX: number;
+  panY: number;
+};
+
+type ImageState = { src?: string; grad?: string; label?: string; gen?: boolean } | null;
+
+const MODES: Record<Mode, { label: string; helper: string; btn: string }> = {
+  ai: {
+    label: "AI generated",
+    helper: "Describe the ad and AI builds the image and copy for you.",
+    btn: "Generate complete ad",
+  },
+  assist: {
+    label: "AI helps",
+    helper: "You steer; AI drafts options and rewrites copy. Edit anything on the right.",
+    btn: "Draft 3 directions",
+  },
+  manual: {
+    label: "Create your own",
+    helper: "Add your image on the left, write your copy on the right.",
+    btn: "Ask AI for help",
+  },
+};
+
+const PLACEMENTS: Record<Platform, Array<{ id: FormatId; lbl: string; sub: string }>> = {
+  meta: [
+    { id: "feed-1x1", lbl: "1:1", sub: "Square" },
+    { id: "feed-4x5", lbl: "4:5", sub: "Feed" },
+    { id: "story-9x16", lbl: "9:16", sub: "Story" },
+    { id: "land-191", lbl: "1.91", sub: "Link" },
+  ],
+  google: [
+    { id: "g-search", lbl: "Search", sub: "Text" },
+    { id: "g-leadform", lbl: "Lead form", sub: "Asset" },
+    { id: "g-maps", lbl: "Maps", sub: "Local" },
+    { id: "g-demand", lbl: "Demand", sub: "Native" },
+  ],
+};
+
+type FormatMeta = {
+  plat: Platform;
+  kind: "feed" | "story" | "land" | "g-search" | "g-leadform" | "g-maps" | "g-demand";
+  name: string;
+  spec: string;
+  w: number;
+  ar: string;
+  ctr: string;
+  cpc: string;
+  cpl: string;
+  aspect: string;
+};
+
+const FMT: Record<FormatId, FormatMeta> = {
+  "feed-1x1": { plat: "meta", kind: "feed", name: "Feed 1:1", spec: "1080×1080 · square", w: 340, ar: "1 / 1", ctr: "4.3%", cpc: "A$0.24", cpl: "A$49", aspect: "1:1" },
+  "feed-4x5": { plat: "meta", kind: "feed", name: "Feed 4:5", spec: "1080×1350 · recommended for Feed", w: 340, ar: "4 / 5", ctr: "5.5%", cpc: "A$0.24", cpl: "A$49", aspect: "4:5" },
+  "story-9x16": { plat: "meta", kind: "story", name: "Story/Reel 9:16", spec: "1080×1920 · full screen", w: 250, ar: "9 / 16", ctr: "4.7%", cpc: "A$0.26", cpl: "A$52", aspect: "9:16" },
+  "land-191": { plat: "meta", kind: "land", name: "Link 1.91", spec: "1200×628 · landscape", w: 470, ar: "1.91 / 1", ctr: "3.9%", cpc: "A$0.25", cpl: "A$55", aspect: "1.91:1" },
+  "g-search": { plat: "google", kind: "g-search", name: "Search text ad", spec: "High-intent search capture", w: 560, ar: "1 / 1", ctr: "8.4%", cpc: "A$2.53", cpl: "A$100", aspect: "1:1" },
+  "g-leadform": { plat: "google", kind: "g-leadform", name: "Lead-form asset", spec: "In-SERP form · privacy URL required", w: 420, ar: "1 / 1", ctr: "7.1%", cpc: "A$2.53", cpl: "A$88", aspect: "1:1" },
+  "g-maps": { plat: "google", kind: "g-maps", name: "Maps / local", spec: "Search, Maps & Waze", w: 380, ar: "1 / 1", ctr: "—", cpc: "A$1.90", cpl: "A$74", aspect: "1:1" },
+  "g-demand": { plat: "google", kind: "g-demand", name: "Demand Gen", spec: "YouTube, Discover & Gmail", w: 330, ar: "1.91 / 1", ctr: "1.2%", cpc: "A$0.40", cpl: "A$62", aspect: "1.91:1" },
+};
+
+const LIMITS: Record<FieldKey, number> = {
+  headline: 40,
+  primary: 125,
+  body: 30,
+  cta: 20,
+  gh1: 30,
+  gh2: 30,
+  gh3: 30,
+  gdesc: 90,
+};
+
+const FIELDSETS: Record<FormatMeta["kind"], Array<[FieldKey, string]>> = {
+  feed: [["primary", "Primary text"], ["headline", "Headline"], ["body", "Description"], ["cta", "Button"]],
+  land: [["primary", "Primary text"], ["headline", "Headline"], ["body", "Description"], ["cta", "Button"]],
+  story: [["headline", "Headline"], ["body", "Body"], ["cta", "CTA sticker"]],
+  "g-search": [["gh1", "Headline 1"], ["gh2", "Headline 2"], ["gh3", "Headline 3"], ["gdesc", "Description"]],
+  "g-leadform": [["gh1", "Form headline"], ["gdesc", "Form subtext"], ["cta", "Submit button"]],
+  "g-maps": [["headline", "Tagline"], ["cta", "Button"]],
+  "g-demand": [["headline", "Headline"], ["gdesc", "Description"], ["cta", "Button"]],
+};
+
+const CTA_LABELS: Record<string, string> = {
+  LEARN_MORE: "Learn more",
+  SIGN_UP: "Sign up",
+  DOWNLOAD: "Download",
+  CONTACT_US: "Contact us",
+};
+
+const DEFAULT_FX: Fx = { bright: 100, contrast: 100, sat: 100, warm: 0, zoom: 100, panX: 50, panY: 50 };
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  }
+}
+
+function seedCopy(pack: AdStudioCampaignPack): CopyState {
+  const cp = pack.copyPacks[0];
+  const meta = cp?.meta;
+  const gs = cp?.googleSearch;
+  return {
+    primary: meta?.primaryText?.[0] ?? "",
+    headline: meta?.headlines?.[0] ?? pack.variants[0]?.headline ?? "",
+    body: meta?.descriptions?.[0] ?? "",
+    cta: CTA_LABELS[meta?.cta ?? "LEARN_MORE"] ?? "Learn more",
+    gh1: gs?.headlines?.[0] ?? "",
+    gh2: gs?.headlines?.[1] ?? "",
+    gh3: gs?.headlines?.[2] ?? "",
+    gdesc: gs?.descriptions?.[0] ?? "",
+  };
+}
 
 export function AdStudioWorkbench({
-  brandKit: initialBrandKit,
-  campaignPack: initialCampaignPack,
+  brandKit,
+  campaignPack: initialPack,
   offers,
   performance,
 }: AdStudioWorkbenchProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("Dashboard");
-  const [brandKit, setBrandKit] = useState(initialBrandKit);
-  const [campaignPack, setCampaignPack] = useState(initialCampaignPack);
-  const [websiteUrl, setWebsiteUrl] = useState(initialBrandKit.source.url);
-  const [suburb, setSuburb] = useState(initialCampaignPack.campaign.market.suburb);
-  const [selectedVariantId, setSelectedVariantId] = useState(campaignPack.variants[0]?.variantId ?? "");
-  const [selectedFormat, setSelectedFormat] = useState<AdStudioFormat>("4:5");
-  const [selectedObjectId, setSelectedObjectId] = useState("headline");
-  const [advanced, setAdvanced] = useState(false);
-  const [creatives, setCreatives] = useState(campaignPack.creatives);
-  const [liveStatus, setLiveStatus] = useState<{ tone: "green" | "amber" | "rose" | "blue"; text: string }>({
-    tone: "blue",
-    text: "Live API mode",
-  });
-  const [liveEvents, setLiveEvents] = useState<string[]>([
-    "Ready: paste an agency website, extract a brand kit, approve it, generate variants, then export.",
-  ]);
-  const [lastMetaPlanId, setLastMetaPlanId] = useState<string | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
-  const selectedVariant = campaignPack.variants.find((variant) => variant.variantId === selectedVariantId) ?? campaignPack.variants[0];
-  const selectedCopy = campaignPack.copyPacks.find((copy) => copy.variantId === selectedVariant?.variantId) ?? campaignPack.copyPacks[0];
-  const selectedCreative =
-    creatives.find((creative) => creative.variantId === selectedVariant?.variantId && creative.format === selectedFormat) ??
-    creatives[0];
-  const selectedObject = selectedCreative?.canvas.objects.find((object) => object.objectId === selectedObjectId);
-  const approvedVariants = campaignPack.variants.filter((variant) => variant.status === "approved").length;
-  const metricCards = [
-    { label: "Variants", value: String(campaignPack.variants.length), note: `${approvedVariants} approved`, icon: Sparkles },
-    { label: "Formats", value: String(campaignPack.campaign.creativeFormats.length), note: "Meta + Google ratios", icon: Image },
-    { label: "Compliance", value: campaignPack.compliance.status, note: `${campaignPack.compliance.issues.length} issues`, icon: ShieldCheck },
-    { label: "Export Pack", value: "Ready", note: "Images, copy, CSV, PDF", icon: Download },
-  ];
+  const [mode, setMode] = useState<Mode>("ai");
+  const [showModeScreen, setShowModeScreen] = useState(true);
+  const [platform, setPlatform] = useState<Platform>("meta");
+  const [format, setFormat] = useState<FormatId>("feed-4x5");
+  const [pack, setPack] = useState(initialPack);
+  const [copy, setCopy] = useState<CopyState>(() => seedCopy(initialPack));
+  const [selectedOfferId, setSelectedOfferId] = useState(offers[0]?.offerId ?? "");
+  const [selected, setSelected] = useState<FieldKey | "image" | null>(null);
+  const [image, setImage] = useState<ImageState>(null);
+  const [fx, setFx] = useState<Fx>(DEFAULT_FX);
+  const [accent, setAccent] = useState(brandKit.colours.primary || "#087f7a");
+  const [busy, setBusy] = useState(false);
+  const [busyMsg, setBusyMsg] = useState("Generating…");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState(
+    `${offers[0]?.name ?? "Free appraisal"} for ${initialPack.campaign.market.suburb} homeowners. Premium, direct and transparent — use real local proof, no over-claiming.`,
+  );
+  const [variantCursor, setVariantCursor] = useState(0);
 
-  function updateSelectedObject(patch: Partial<AdStudioCanvasObject>) {
-    if (!selectedCreative || !selectedObject) {
-      return;
-    }
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-    setCreatives((current) =>
-      current.map((creative) =>
-        creative.creativeId === selectedCreative.creativeId
-          ? {
-              ...creative,
-              canvas: {
-                ...creative.canvas,
-                objects: creative.canvas.objects.map((object) =>
-                  object.objectId === selectedObject.objectId ? { ...object, ...patch } : object,
-                ),
-              },
-            }
-          : creative,
-      ),
-    );
+  const brand = brandKit.identity.businessName || "Northstar Realty";
+  const domain = hostOf(brandKit.source.url);
+  const meta = FMT[format];
+  const accentColours = useMemo(() => {
+    const c = brandKit.colours;
+    return [c.primary, c.secondary, c.accent, c.text].filter(Boolean);
+  }, [brandKit.colours]);
+
+  function toast(message: string) {
+    setToastMsg(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 2200);
   }
 
-  function moveSelectedObject(deltaX: number, deltaY: number) {
-    if (!selectedObject || selectedObject.locked) {
-      return;
-    }
+  function setField(key: FieldKey, value: string) {
+    setCopy((c) => ({ ...c, [key]: value }));
+  }
 
-    updateSelectedObject({
-      x: Math.max(0, selectedObject.x + deltaX),
-      y: Math.max(0, selectedObject.y + deltaY),
+  function selectField(key: FieldKey | "image") {
+    setSelected(key);
+    if (key !== "image") {
+      const el = document.getElementById(`ef_${key}`);
+      el?.focus();
+      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+
+  function chooseMode(next: Mode) {
+    setMode(next);
+    setShowModeScreen(false);
+    toast(`${MODES[next].label} mode`);
+  }
+
+  function applyVariant(index: number) {
+    const v = pack.variants[index];
+    if (!v) return;
+    setCopy((c) => ({ ...c, headline: v.headline, primary: v.offer || c.primary, cta: v.cta || c.cta }));
+    toast("Applied to ad");
+  }
+
+  function fxStyle(): React.CSSProperties {
+    return {
+      filter: `brightness(${fx.bright}%) contrast(${fx.contrast}%) saturate(${fx.sat}%) sepia(${fx.warm}%)`,
+      transform: `scale(${fx.zoom / 100})`,
+      objectPosition: `${fx.panX}% ${fx.panY}%`,
+    };
+  }
+
+  async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
     });
-  }
-
-  function pushLiveEvent(message: string) {
-    setLiveEvents((current) => [message, ...current].slice(0, 6));
-  }
-
-  async function extractLiveBrandKit() {
-    if (!websiteUrl.trim()) {
-      setLiveStatus({ tone: "rose", text: "Enter a website URL first." });
-      return;
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error ?? `Request failed with ${response.status}.`);
     }
+    return payload as T;
+  }
 
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Extracting website brand kit..." });
-    pushLiveEvent(`Extracting brand kit from ${websiteUrl.trim()}...`);
+  function imagePrompt(): string {
+    const offer = offers.find((o) => o.offerId === selectedOfferId)?.name ?? "ad";
+    return `${prompt} Real-estate scene for a ${offer} ad.`;
+  }
 
+  async function generateCopyAndPack() {
+    setBusy(true);
+    setBusyMsg("Generating campaign with AI…");
     try {
-      const payload = await requestJson<{ brandKit: AdStudioBrandKit; persistence: AdStudioPersistenceStatus }>("/api/adstudio/brand-kits/extract", {
-        websiteUrl,
-        marketCountry: "AU",
-        marketRegion: "WA",
-      });
-      setBrandKit(payload.brandKit);
-      setLiveStatus({
-        tone: payload.persistence.status === "persisted" ? "amber" : "rose",
-        text:
-          payload.persistence.status === "persisted"
-            ? "Brand kit extracted and saved. Review and approve it before generation."
-            : `Brand kit extracted but not saved: ${payload.persistence.warning}`,
-      });
-      pushLiveEvent(
-        payload.persistence.status === "persisted"
-          ? `Extracted and saved brand kit for ${payload.brandKit.identity.businessName}.`
-          : `Extracted ${payload.brandKit.identity.businessName}, but persistence failed: ${payload.persistence.warning}`,
-      );
-      setActiveTab("Brand Kit");
-    } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Brand extraction failed: ${getErrorMessage(error)}`);
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  async function approveLiveBrandKit() {
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Approving brand kit..." });
-    pushLiveEvent(`Approving brand kit for ${brandKit.identity.businessName}...`);
-
-    try {
-      const payload = await requestJson<{ brandKit: AdStudioBrandKit; persistence: AdStudioPersistenceStatus }>(
-        `/api/adstudio/brand-kits/${brandKit.brandKitId}/approve`,
-        { brandKit },
-      );
-      setBrandKit(payload.brandKit);
-      setLiveStatus({
-        tone: payload.persistence.status === "persisted" ? "green" : "amber",
-        text:
-          payload.persistence.status === "persisted"
-            ? "Brand kit approved, locked, and saved for generation."
-            : `Brand kit approved for this session but not saved: ${payload.persistence.warning}`,
-      });
-      pushLiveEvent(
-        payload.persistence.status === "persisted"
-          ? `Approved and saved brand kit ${payload.brandKit.brandKitId}.`
-          : `Approved brand kit for this session; persistence failed: ${payload.persistence.warning}`,
-      );
-    } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Brand approval failed: ${getErrorMessage(error)}`);
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  async function generateLiveCampaign() {
-    if (brandKit.reviewStatus !== "approved") {
-      setLiveStatus({ tone: "rose", text: "Approve the brand kit before generating campaign variants." });
-      setActiveTab("Brand Kit");
-      return;
-    }
-
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Generating campaign variants..." });
-    pushLiveEvent(`Generating seller-lead variants for ${suburb.trim() || "Scarborough"}...`);
-
-    try {
-      const payload = await requestJson<{ campaignPack: AdStudioCampaignPack; persistence: AdStudioPersistenceStatus }>("/api/adstudio/campaigns", {
+      const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
         brandKit,
         goal: "seller_leads",
-        suburb: suburb.trim() || "Scarborough",
-        city: "Perth",
-        state: "WA",
-        offerId: "seller_prep_checklist",
+        suburb: pack.campaign.market.suburb,
+        city: pack.campaign.market.city,
+        state: pack.campaign.market.state,
+        offerId: selectedOfferId || "seller_prep_checklist",
         platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
         variantCount: 5,
       });
-      setCampaignPack(payload.campaignPack);
-      setCreatives(payload.campaignPack.creatives);
-      setSelectedVariantId(payload.campaignPack.variants[0]?.variantId ?? "");
-      setSelectedObjectId("headline");
-      setLiveStatus({
-        tone: payload.persistence.status === "persisted" ? "green" : "amber",
-        text:
-          payload.persistence.status === "persisted"
-            ? "Generated 5 live campaign variants and saved the pack."
-            : `Generated 5 variants for this session but did not save them: ${payload.persistence.warning}`,
-      });
-      pushLiveEvent(
-        payload.persistence.status === "persisted"
-          ? `Generated and saved ${payload.campaignPack.variants.length} variants for ${payload.campaignPack.campaign.market.suburb}.`
-          : `Generated ${payload.campaignPack.variants.length} variants for this session; persistence failed: ${payload.persistence.warning}`,
-      );
-      setActiveTab("Variants");
+      setPack(payload.campaignPack);
+      setCopy(seedCopy(payload.campaignPack));
+      setVariantCursor(0);
+      toast("Ad generated — edit anything on the right");
     } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Campaign generation failed: ${getErrorMessage(error)}`);
+      toast(getMessage(error));
     } finally {
-      setIsBusy(false);
+      setBusy(false);
     }
   }
 
-  async function downloadLiveExport() {
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Building export ZIP..." });
-    pushLiveEvent(`Building ZIP for ${campaignPack.campaign.name}...`);
-
+  async function generateImage(editPrompt?: string) {
+    setBusy(true);
+    setBusyMsg(editPrompt ? "Applying AI image change…" : "Generating image with AI…");
     try {
-      const response = await fetch(`/api/adstudio/export-packages/${campaignPack.campaign.campaignId}/download`, {
+      const payload = await postJson<{ image: string }>("/api/adstudio/generate-image", {
+        prompt: editPrompt ? `${imagePrompt()} ${editPrompt}` : imagePrompt(),
+        aspectRatio: meta.aspect,
+      });
+      setImage({ src: payload.image, gen: true });
+      setFx(DEFAULT_FX);
+      toast(editPrompt ? "AI image change applied" : "Image generated");
+    } catch (error) {
+      toast(getMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPrimaryAction() {
+    if (mode === "manual") {
+      toast("Write your copy on the right, add an image on the left.");
+      return;
+    }
+    await generateCopyAndPack();
+  }
+
+  function rewriteField(key: FieldKey) {
+    const next = (variantCursor + 1) % Math.max(pack.variants.length, 1);
+    const v = pack.variants[next];
+    setVariantCursor(next);
+    if (!v) {
+      toast("No more variants to draw from");
+      return;
+    }
+    if (key === "headline") setField("headline", v.headline);
+    else if (key === "primary") setField("primary", v.offer || copy.primary);
+    else if (key === "cta") setField("cta", v.cta || copy.cta);
+    else setField(key, `${copy[key]}`.trim());
+    toast("Rewritten from next variant");
+  }
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImage({ src: String(event.target?.result ?? "") });
+        setFx(DEFAULT_FX);
+        toast("Image applied to ad");
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function exportPack() {
+    setBusy(true);
+    setBusyMsg("Building export ZIP…");
+    try {
+      const response = await fetch(`/api/adstudio/export-packages/${pack.campaign.campaignId}/download`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ campaignPack }),
+        body: JSON.stringify({ campaignPack: pack }),
       });
-
       if (!response.ok) {
         const payload = await response.json().catch(() => ({ error: "Export failed." }));
         throw new Error(payload.error ?? "Export failed.");
       }
-
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${campaignPack.campaign.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-adstudio.zip`;
+      link.download = `${pack.campaign.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-adstudio.zip`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setLiveStatus({ tone: "green", text: "Export ZIP generated from the active campaign pack." });
-      pushLiveEvent("Downloaded export ZIP with images, copy, CSV, follow-up, manifest, and compliance files.");
+      toast("Export ZIP downloaded");
     } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Export failed: ${getErrorMessage(error)}`);
+      toast(getMessage(error));
     } finally {
-      setIsBusy(false);
+      setBusy(false);
     }
   }
 
-  async function preparePublishPayload() {
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Preparing approval-gated publish payload..." });
-    pushLiveEvent(`Preparing publish payload for ${campaignPack.campaign.name}...`);
+  const fields = FIELDSETS[meta.kind];
+  const usesImage = ["feed", "land", "story", "g-demand"].includes(meta.kind);
+  const initials = brand.charAt(0).toUpperCase();
 
-    try {
-      const payload = await requestJson<{
-        publishReady: boolean;
-        blockers: string[];
-        metaPublishPlan?: { id?: string; approvalRequestId?: string | null } | null;
-      }>(
-        `/api/adstudio/export-packages/${campaignPack.campaign.campaignId}/publish`,
-        { campaignPack },
-      );
-      setLastMetaPlanId(payload.metaPublishPlan?.id ?? null);
-      setLiveStatus({
-        tone: payload.publishReady ? "green" : "amber",
-        text: payload.publishReady
-          ? "Publish payload is ready."
-          : `Publish payload prepared but blocked: ${payload.blockers.join(", ")}`,
-      });
-      pushLiveEvent(
-        payload.publishReady
-          ? `Publish payload is ready${payload.metaPublishPlan?.id ? ` as plan ${payload.metaPublishPlan.id}` : ""}.`
-          : `Publish payload created but blocked: ${payload.blockers.join(", ")}`,
-      );
-    } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Publish payload preparation failed: ${getErrorMessage(error)}`);
-    } finally {
-      setIsBusy(false);
-    }
-  }
+  const imageNode = (className: string) => {
+    if (image?.src) return <img className={className} src={image.src} style={fxStyle()} alt="" />;
+    if (image?.grad) return <div className={className} style={{ background: image.grad, ...fxStyle() }} />;
+    return (
+      <div className="as2-vis-ph">
+        <ImageIcon aria-hidden size={26} />
+        Add or generate an image on the left — it appears here exactly as it will publish.
+      </div>
+    );
+  };
 
-  async function requestMetaPlanMutation(action: "activate" | "pause" | "increase_budget") {
-    if (!lastMetaPlanId) {
-      setLiveStatus({ tone: "amber", text: "Prepare a Meta publish payload before requesting live changes." });
-      setActiveTab("Export");
-      return;
-    }
-
-    setIsBusy(true);
-    setLiveStatus({ tone: "blue", text: "Creating approval request..." });
-
-    try {
-      const payload = await requestJson<{ approval?: { id?: string; risk_summary?: string } }>(
-        `/api/integrations/meta/publish-plans/${lastMetaPlanId}/mutations`,
-        {
-          action,
-          payload: {},
-        },
-      );
-      setLiveStatus({ tone: "amber", text: "Approval request created for Meta live change." });
-      pushLiveEvent(`Requested ${action.replace("_", " ")} approval${payload.approval?.id ? ` ${payload.approval.id}` : ""}.`);
-    } catch (error) {
-      setLiveStatus({ tone: "rose", text: getErrorMessage(error) });
-      pushLiveEvent(`Meta live-change request failed: ${getErrorMessage(error)}`);
-    } finally {
-      setIsBusy(false);
-    }
-  }
+  const Layer = ({
+    field,
+    className,
+    children,
+    style,
+  }: {
+    field: FieldKey | "image";
+    className?: string;
+    children?: React.ReactNode;
+    style?: React.CSSProperties;
+  }) => (
+    <div
+      className={`as2-layer ${className ?? ""} ${selected === field ? "sel" : ""}`}
+      style={style}
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation();
+        selectField(field);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          selectField(field);
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
 
   return (
-    <div className="adstudio-shell">
-      <section className="panel adstudio-live-panel" id="adstudio-live-controls">
-        <div>
-          <p className="eyebrow">Live workflow</p>
-          <h2>Extract, approve, generate, export</h2>
-          <p className="item-meta">
-            These controls call the production AdStudio APIs and persist generated records under the current workspace.
-          </p>
+    <div className="as2">
+      <style>{STYLES}</style>
+
+      <div className="as2-topbar">
+        <div className="as2-brandline">
+          <span className="as2-wordmark">{brand}</span>
+          <span className="as2-vline" />
+          <span className="as2-mode-pill">
+            {MODES[mode].label}
+            <button type="button" onClick={() => setShowModeScreen(true)}>
+              Change
+            </button>
+          </span>
         </div>
-        <label>
-          <span>Agency website</span>
-          <input value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://exampleagency.com.au" />
-        </label>
-        <label>
-          <span>Suburb focus</span>
-          <input value={suburb} onChange={(event) => setSuburb(event.target.value)} placeholder="Scarborough" />
-        </label>
-        <div className="adstudio-live-actions">
-          <button className="button secondary" type="button" onClick={extractLiveBrandKit} disabled={isBusy}>
-            <Sparkles aria-hidden size={17} />
-            Extract brand
-          </button>
-          <button className="button secondary" type="button" onClick={approveLiveBrandKit} disabled={isBusy}>
-            <ShieldCheck aria-hidden size={17} />
-            Approve kit
-          </button>
-          <button className="button" type="button" onClick={generateLiveCampaign} disabled={isBusy}>
-            <RefreshCw aria-hidden size={17} />
-            Generate 5 variants
-          </button>
-          <button className="button secondary" type="button" onClick={downloadLiveExport} disabled={isBusy}>
-            <Download aria-hidden size={17} />
-            Download ZIP
+        <div className="as2-top-actions">
+          <span className="as2-provider">
+            <span className="as2-dot" />
+            Engine: OpenAI · gpt-image-1
+          </span>
+          <button className="as2-btn primary" type="button" onClick={exportPack}>
+            <Download aria-hidden size={15} />
+            Export pack
           </button>
         </div>
-        <StatusPill tone={liveStatus.tone}>{liveStatus.text}</StatusPill>
-        <div className="adstudio-live-log" aria-label="AdStudio live activity">
-          {liveEvents.map((event) => (
-            <p key={event}>{event}</p>
-          ))}
-        </div>
-      </section>
+      </div>
 
-      <nav className="adstudio-tabs" aria-label="Ad Studio sections">
-        {TABS.map((tab) => (
-          <button
-            className={tab === activeTab ? "active" : ""}
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
-
-      {activeTab === "Dashboard" ? (
-        <section className="adstudio-section">
-          <div className="grid cols-4">
-            {metricCards.map((metric) => {
-              const Icon = metric.icon;
-
-              return (
-                <article className="metric-card" key={metric.label}>
-                  <div className="metric-label">
-                    <span>{metric.label}</span>
-                    <Icon aria-hidden size={18} />
-                  </div>
-                  <div className="metric-value">{metric.value}</div>
-                  <p className="metric-note">{metric.note}</p>
-                </article>
-              );
-            })}
+      <div className="as2-work">
+        {/* LEFT */}
+        <aside className="as2-pane left">
+          <div className="as2-pane-hd">
+            <div>
+              <div className="as2-label">Set up</div>
+              <h2>Brief &amp; assets</h2>
+            </div>
           </div>
-          <div className="adstudio-dashboard">
-            <section className="panel adstudio-primary-action">
-              <div>
-                <p className="eyebrow">Guided generation</p>
-                <h2>Seller lead campaign pack</h2>
-                <p className="item-meta">
-                  Paste a website, approve the brand kit, choose the seller checklist offer, edit the strongest variant, and export platform-ready files.
+          <div className="as2-pane-body">
+            <p className="as2-helper">{MODES[mode].helper}</p>
+            <textarea
+              className="as2-prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+            <button
+              className={`as2-btn block ${mode === "manual" ? "" : "accent"}`}
+              type="button"
+              disabled={busy}
+              onClick={onPrimaryAction}
+            >
+              <Sparkles aria-hidden size={15} />
+              {MODES[mode].btn}
+            </button>
+
+            <div>
+              <div className="as2-mini-label">Seller offer</div>
+              <div className="as2-quickstarts">
+                {offers.map((offer) => (
+                  <button
+                    key={offer.offerId}
+                    type="button"
+                    className={`as2-qs ${selectedOfferId === offer.offerId ? "sel" : ""}`}
+                    onClick={() => {
+                      setSelectedOfferId(offer.offerId);
+                      toast(`${offer.name} selected`);
+                    }}
+                  >
+                    <span className="as2-qs-ic">
+                      <Sparkles aria-hidden size={15} />
+                    </span>
+                    <span>
+                      <span className="as2-qs-t">{offer.name}</span>
+                      <span className="as2-qs-d">{offer.expectedLeadIntent}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="as2-mini-label">Image</div>
+              <button className="as2-btn block" type="button" disabled={busy} onClick={() => generateImage()}>
+                <Sparkles aria-hidden size={15} />
+                Generate image with AI
+              </button>
+              <button className="as2-dropzone" type="button" onClick={() => fileInput.current?.click()}>
+                <ImageIcon aria-hidden size={20} />
+                <div className="as2-dz-t">Click to upload</div>
+                <div className="as2-sm">PNG, JPG</div>
+              </button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </div>
+
+            <details className="as2-acc" open>
+              <summary>
+                Expected performance <span className="as2-chev">›</span>
+              </summary>
+              <div className="as2-acc-body">
+                <div className="as2-kpis">
+                  <div className="as2-kpi">
+                    <div className="v">{meta.ctr}</div>
+                    <div className="k">CTR</div>
+                  </div>
+                  <div className="as2-kpi">
+                    <div className="v">{meta.cpc}</div>
+                    <div className="k">CPC</div>
+                  </div>
+                  <div className="as2-kpi">
+                    <div className="v">{meta.cpl}</div>
+                    <div className="k">CPL</div>
+                  </div>
+                </div>
+                <p className="as2-helper">
+                  {performance.leads} leads · A${performance.costPerLeadAud}/lead · best format {performance.bestFormat}. AU benchmark, directional only.
                 </p>
               </div>
-              <button className="button" type="button" onClick={() => setActiveTab("Brand Kit")}>
-                <Sparkles aria-hidden size={18} />
-                Start workflow
-              </button>
-            </section>
-            <section className="panel">
-              <h2>Recent campaign work</h2>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Campaign</th>
-                    <th>Goal</th>
-                    <th>Offer</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>{campaignPack.campaign.name}</td>
-                    <td>{campaignPack.campaign.goal}</td>
-                    <td>{selectedVariant?.offer}</td>
-                    <td>
-                      <StatusPill tone="green">ready</StatusPill>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
-          </div>
-        </section>
-      ) : null}
+            </details>
 
-      {activeTab === "Brand Kit" ? (
-        <section className="adstudio-section adstudio-brand-grid">
-          <BrandPanel title="Logo" status={brandKit.logos.primaryLogoUrl ? "Accepted" : "Needs upload"}>
-            <div className="adstudio-logo-preview">{brandKit.identity.businessName.slice(0, 2).toUpperCase()}</div>
-            <p>{brandKit.logos.primaryLogoUrl ?? "Upload a primary logo"}</p>
-          </BrandPanel>
-          <BrandPanel title="Colours" status="Locked">
-            <div className="adstudio-swatches">
-              {[brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent, brandKit.colours.text].map((colour) => (
-                <span style={{ background: colour }} key={colour} title={colour} />
-              ))}
-            </div>
-          </BrandPanel>
-          <BrandPanel title="Fonts" status="Accepted">
-            <p>{brandKit.typography.headingFont} headings</p>
-            <p>{brandKit.typography.bodyFont} body</p>
-          </BrandPanel>
-          <BrandPanel title="Voice" status="Accepted">
-            <p>{brandKit.tone.voice}</p>
-            <p>Avoid: {brandKit.tone.avoid.join(", ")}</p>
-          </BrandPanel>
-          <BrandPanel title="Compliance" status={brandKit.compliance.disclaimers.length ? "Accepted" : "Needs review"}>
-            {brandKit.compliance.disclaimers.map((disclaimer) => (
-              <p key={disclaimer}>{disclaimer}</p>
-            ))}
-          </BrandPanel>
-          <BrandPanel title="Review locks" status="Protected">
-            {brandKit.lockedFields.map((field) => (
-              <p key={field}>
-                <Lock aria-hidden size={14} /> {field}
-              </p>
-            ))}
-          </BrandPanel>
-        </section>
-      ) : null}
+            <details className="as2-acc">
+              <summary>
+                Compliance <span className="as2-chev">›</span>
+              </summary>
+              <div className="as2-acc-body">
+                {pack.compliance.issues.length === 0 ? (
+                  <div className="as2-gate ok">
+                    <span className="as2-gate-dot">✓</span>
+                    <div>
+                      <b>No issues found</b>
+                      <div className="as2-sm">Compliance review passed for this pack.</div>
+                    </div>
+                  </div>
+                ) : (
+                  pack.compliance.issues.map((issue) => (
+                    <div className={`as2-gate ${issue.severity === "blocking" ? "warn" : "ok"}`} key={issue.code}>
+                      <span className="as2-gate-dot">{issue.severity === "blocking" ? "!" : "✓"}</span>
+                      <div>
+                        <b>{issue.code.replace(/_/g, " ")}</b>
+                        <div className="as2-sm">{issue.message}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </details>
 
-      {activeTab === "Brief" ? (
-        <section className="adstudio-section adstudio-brief">
-          <div className="panel">
-            <h2>Campaign Brief</h2>
-            <div className="adstudio-form-grid">
-              {[
-                ["Campaign goal", "Seller leads"],
-                ["Market", `${campaignPack.campaign.market.city}, ${campaignPack.campaign.market.state}`],
-                ["Suburb focus", campaignPack.campaign.market.suburb],
-                ["Audience intent", "Thinking of selling in the next 3 to 12 months"],
-                ["Offer type", selectedVariant?.offer ?? "Seller checklist"],
-                ["Tone", "Direct, premium, helpful"],
-              ].map(([label, value]) => (
-                <label key={label}>
-                  <span>{label}</span>
-                  <input readOnly value={value} />
-                </label>
-              ))}
-            </div>
-          </div>
-          <aside className="panel adstudio-preview-card">
-            <span className="status blue">Step 1 of 5</span>
-            <h2>{campaignPack.campaign.name}</h2>
-            <p>{campaignPack.campaign.audienceIntent}</p>
-            <p className="item-meta">Strategy modules stay hidden unless advanced controls are enabled.</p>
-            <label className="adstudio-toggle">
-              <input type="checkbox" checked={advanced} onChange={(event) => setAdvanced(event.target.checked)} />
-              <span>Advanced controls</span>
-            </label>
-          </aside>
-        </section>
-      ) : null}
-
-      {activeTab === "Offers" ? (
-        <section className="adstudio-section">
-          <div className="adstudio-offer-grid">
-            {offers.slice(0, 8).map((offer) => (
-              <article className="item-card adstudio-offer-card" key={offer.offerId}>
-                <StatusPill tone={offer.offerId === campaignPack.campaign.offerId ? "green" : "blue"}>
-                  {offer.offerId === campaignPack.campaign.offerId ? "Recommended" : offer.goal}
-                </StatusPill>
-                <h3>{offer.name}</h3>
-                <p className="item-meta">{offer.expectedLeadIntent}</p>
-                <button className="button secondary" type="button" onClick={() => setActiveTab("Variants")}>
-                  Use offer
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {activeTab === "Variants" ? (
-        <section className="adstudio-section adstudio-variant-layout">
-          <aside className="panel">
-            <h2>Locked inputs</h2>
-            <p className="item-meta">Goal: {campaignPack.campaign.goal}</p>
-            <p className="item-meta">Market: {campaignPack.campaign.market.suburb}</p>
-            <p className="item-meta">Platforms: {campaignPack.campaign.platforms.join(", ")}</p>
-          </aside>
-          <div className="adstudio-variant-grid">
-            {campaignPack.variants.map((variant) => (
-              <button
-                className={`adstudio-variant-card ${variant.variantId === selectedVariantId ? "active" : ""}`}
-                key={variant.variantId}
-                type="button"
-                onClick={() => setSelectedVariantId(variant.variantId)}
-              >
-                <div className="adstudio-thumb">
-                  <strong>{variant.headline}</strong>
+            <details className="as2-acc">
+              <summary>
+                Brand <span className="as2-chev">›</span>
+              </summary>
+              <div className="as2-acc-body">
+                <div className="as2-row">
+                  <span className="as2-sm as2-muted">Accent colour</span>
+                  <div className="as2-swatches">
+                    {accentColours.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`as2-sw ${accent === c ? "sel" : ""}`}
+                        style={{ background: c }}
+                        onClick={() => {
+                          setAccent(c);
+                          toast("Accent updated");
+                        }}
+                        aria-label={`Use ${c}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <span className="status green">{variant.score.score}</span>
-                <h3>{variant.angle}</h3>
-                <p>{variant.cta}</p>
-              </button>
-            ))}
+              </div>
+            </details>
           </div>
-        </section>
-      ) : null}
+        </aside>
 
-      {activeTab === "Editor" ? (
-        <section className="adstudio-section adstudio-editor">
-          <aside className="panel adstudio-tool-panel">
-            <h2>Layers</h2>
-            {selectedCreative?.canvas.objects.map((object) => (
+        {/* CENTER */}
+        <div className="as2-center">
+          <div className="as2-canvas-head">
+            <div className="as2-plat">
               <button
-                className={object.objectId === selectedObjectId ? "active" : ""}
-                key={object.objectId}
                 type="button"
-                onClick={() => setSelectedObjectId(object.objectId)}
+                className={platform === "meta" ? "active" : ""}
+                onClick={() => {
+                  setPlatform("meta");
+                  setFormat("feed-4x5");
+                  setSelected(null);
+                }}
               >
-                <Layers aria-hidden size={15} />
-                {object.role}
-                {object.locked ? <Lock aria-hidden size={14} /> : null}
+                Meta
               </button>
-            ))}
-            <h2>Ratios</h2>
-            <div className="adstudio-ratio-row">
-              {FORMATS.map((format) => (
-                <button className={format === selectedFormat ? "active" : ""} key={format} type="button" onClick={() => setSelectedFormat(format)}>
-                  {format}
+              <button
+                type="button"
+                className={platform === "google" ? "active" : ""}
+                onClick={() => {
+                  setPlatform("google");
+                  setFormat("g-search");
+                  setSelected(null);
+                }}
+              >
+                Google
+              </button>
+            </div>
+            <div className="as2-seg">
+              {PLACEMENTS[platform].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={format === p.id ? "active" : ""}
+                  onClick={() => {
+                    setFormat(p.id);
+                    setSelected(null);
+                  }}
+                >
+                  {p.lbl}
+                  <span className="sub">{p.sub}</span>
                 </button>
               ))}
             </div>
-          </aside>
-
-          <div className="panel adstudio-canvas-panel">
-            <div className="adstudio-editor-bar">
-              <div>
-                <MousePointer2 aria-hidden size={16} />
-                <span>Safe zones visible</span>
-              </div>
-              <StatusPill tone="green">Compliant</StatusPill>
-            </div>
-            {selectedCreative ? (
-              <EditableCanvas
-                creative={selectedCreative}
-                selectedObjectId={selectedObjectId}
-                onSelect={setSelectedObjectId}
-                onMove={moveSelectedObject}
-              />
-            ) : null}
+            <span className="as2-placement-name">{meta.spec}</span>
           </div>
 
-          <aside className="panel adstudio-tool-panel">
-            <h2>Properties</h2>
-            {selectedObject ? (
-              <ObjectControls object={selectedObject} onChange={updateSelectedObject} />
-            ) : (
-              <p className="item-meta">Select an object to edit it.</p>
+          <div className="as2-stage">
+            <div className="as2-edit-hint">Click any part of the ad to edit it on the right</div>
+
+            {(meta.kind === "feed" || meta.kind === "land") && (
+              <div className="as2-device">
+                <div className={meta.kind === "feed" ? "as2-feed-card" : "as2-land-card"} style={{ ["--w" as string]: `${meta.w}px` }}>
+                  <div className="as2-fc-top">
+                    <div className="as2-fc-id">
+                      <span className="as2-fc-av" style={{ background: accent }}>{initials}</span>
+                      <div>
+                        <div className="as2-fc-name">{brand}</div>
+                        <div className="as2-fc-sub">Sponsored</div>
+                      </div>
+                    </div>
+                    <span className="as2-fc-dots">···</span>
+                  </div>
+                  <Layer field="primary" className="as2-fc-primary">{copy.primary}</Layer>
+                  <Layer field="image" className="as2-fc-visual" style={{ ["--ar" as string]: meta.ar }}>
+                    {imageNode("as2-vis-img")}
+                  </Layer>
+                  <div className="as2-fc-link">
+                    <div>
+                      <div className="as2-fc-domain">{domain}</div>
+                      <Layer field="headline" className="as2-fc-headline">{copy.headline}</Layer>
+                      <Layer field="body" className="as2-fc-desc">{copy.body}</Layer>
+                    </div>
+                    <Layer field="cta" className="as2-fc-cta" style={{ background: accent }}>{copy.cta}</Layer>
+                  </div>
+                </div>
+              </div>
             )}
-            {advanced ? (
-              <div className="adstudio-advanced">
-                <h3>Power controls</h3>
-                <p className="item-meta">Provider: deterministic_local</p>
-                <p className="item-meta">Seed: 27</p>
-                <button className="button secondary" type="button">
-                  <RefreshCw aria-hidden size={16} />
-                  Regenerate selected
+
+            {meta.kind === "story" && (
+              <div className="as2-device">
+                <div className="as2-story" style={{ ["--w" as string]: `${meta.w}px` }}>
+                  {image?.src ? (
+                    <img className="as2-story-img" src={image.src} style={fxStyle()} alt="" />
+                  ) : (
+                    <div className="as2-story-img as2-story-fallback" />
+                  )}
+                  <div className="as2-story-grad" />
+                  <div className="as2-story-top">
+                    <span className="as2-story-av" style={{ borderColor: "#fff" }}>{initials}</span>
+                    <div>
+                      <div className="as2-story-name">{brand}</div>
+                      <div className="as2-story-sub">Sponsored</div>
+                    </div>
+                  </div>
+                  <Layer field="image" style={{ position: "absolute", inset: 0, zIndex: 2 }} />
+                  <div className="as2-story-content">
+                    <Layer field="headline" className="as2-story-headline">{copy.headline}</Layer>
+                    <Layer field="body" className="as2-story-body">{copy.body}</Layer>
+                  </div>
+                  <Layer field="cta" className="as2-story-cta">{copy.cta}</Layer>
+                </div>
+              </div>
+            )}
+
+            {meta.kind === "g-search" && (
+              <div className="as2-device">
+                <div className="as2-g-search">
+                  <div className="as2-g-label">Sponsored</div>
+                  <div className="as2-g-site">
+                    <span className="as2-g-fav">{initials}</span>
+                    <div>
+                      <div className="as2-g-name">{brand}</div>
+                      <div className="as2-g-url">{domain} › appraisal</div>
+                    </div>
+                  </div>
+                  <div className="as2-g-titleline">
+                    <Layer field="gh1" className="as2-gh">{copy.gh1}</Layer>
+                    <span className="as2-sep"> | </span>
+                    <Layer field="gh2" className="as2-gh">{copy.gh2}</Layer>
+                    <span className="as2-sep"> | </span>
+                    <Layer field="gh3" className="as2-gh">{copy.gh3}</Layer>
+                  </div>
+                  <Layer field="gdesc" className="as2-g-desc">{copy.gdesc}</Layer>
+                </div>
+              </div>
+            )}
+
+            {meta.kind === "g-leadform" && (
+              <div className="as2-device">
+                <div className="as2-g-form">
+                  <div className="as2-g-form-hd" style={{ background: accent }}>
+                    <Layer field="gh1" className="as2-h">{copy.gh1}</Layer>
+                    <Layer field="gdesc" className="as2-s">{copy.gdesc}</Layer>
+                  </div>
+                  <div className="as2-g-form-body">
+                    <div className="as2-g-field">Full name</div>
+                    <div className="as2-g-field">Email address</div>
+                    <div className="as2-g-field">Property address</div>
+                    <Layer field="cta" className="as2-g-form-cta" style={{ background: accent }}>{copy.cta}</Layer>
+                    <div className="as2-sm as2-muted" style={{ textAlign: "center" }}>Privacy policy required · data expires in 60 days</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {meta.kind === "g-maps" && (
+              <div className="as2-device">
+                <div className="as2-g-maps">
+                  <div className="as2-g-map-strip" />
+                  <div className="as2-g-biz">
+                    <div className="as2-g-badge">Sponsored</div>
+                    <div className="as2-g-nm">{brand}</div>
+                    <div className="as2-g-stars">★★★★★ <span>4.9 (212) · Real estate agency</span></div>
+                    <Layer field="headline" className="as2-g-tagline">{copy.headline}</Layer>
+                    <div className="as2-g-biz-actions">
+                      <div className="b">Call</div>
+                      <div className="b">Directions</div>
+                      <Layer field="cta" className="b">{copy.cta}</Layer>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {meta.kind === "g-demand" && (
+              <div className="as2-device">
+                <div className="as2-g-demand">
+                  <Layer field="image" className="as2-dg-vis">{imageNode("as2-vis-img")}</Layer>
+                  <div className="as2-dg-body">
+                    <div className="as2-dg-spon">Sponsored</div>
+                    <Layer field="headline" className="as2-dg-h">{copy.headline}</Layer>
+                    <Layer field="gdesc" className="as2-dg-d">{copy.gdesc}</Layer>
+                    <Layer field="cta" className="as2-dg-cta" style={{ background: accent }}>{copy.cta}</Layer>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {busy && (
+              <div className="as2-gen-loading">
+                <div className="as2-gen-card">
+                  <div className="as2-spinner" />
+                  <div className="as2-gen-msg">{busyMsg}</div>
+                  <div className="as2-bar"><i /></div>
+                  <div className="as2-sm as2-muted">Live output — not a placeholder render.</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <aside className="as2-pane right">
+          <div className="as2-pane-hd">
+            <div>
+              <div className="as2-label">Edit</div>
+              <h2>Copy &amp; image</h2>
+            </div>
+          </div>
+          <div className="as2-pane-body">
+            <div className="as2-mini-label">Edit copy</div>
+            <div className="as2-copy-fields">
+              {fields.map(([key, label]) => {
+                const value = copy[key];
+                const limit = LIMITS[key];
+                return (
+                  <div className={`as2-efield ${selected === key ? "flash" : ""}`} key={key}>
+                    <div className="as2-efield-h">
+                      <span className="as2-mini-label">{label}</span>
+                      <span className="as2-ef-right">
+                        <button className="as2-rw" type="button" title="AI rewrite" onClick={() => rewriteField(key)}>
+                          <Wand2 aria-hidden size={12} />
+                        </button>
+                        <span className={`as2-counter ${value.length > limit ? "over" : ""}`}>
+                          {value.length} / {limit}
+                        </span>
+                      </span>
+                    </div>
+                    <textarea
+                      id={`ef_${key}`}
+                      className="as2-ef"
+                      rows={2}
+                      value={value}
+                      onFocus={() => setSelected(key)}
+                      onChange={(e) => setField(key, e.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {pack.variants.length > 0 && (
+              <details className="as2-acc">
+                <summary>
+                  Variants ({pack.variants.length}) <span className="as2-chev">›</span>
+                </summary>
+                <div className="as2-acc-body">
+                  {pack.variants.map((v, i) => (
+                    <button key={v.variantId} type="button" className="as2-variant" onClick={() => applyVariant(i)}>
+                      <div className="v-h">{v.headline}</div>
+                      <div className="v-b">{v.offer}</div>
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {usesImage && (
+              <details className="as2-acc" open={selected === "image"}>
+                <summary>
+                  Edit image <span className="as2-chev">›</span>
+                </summary>
+                <div className="as2-acc-body">
+                  <div className="as2-row">
+                    <span className="as2-sm as2-muted">
+                      {!image ? "no image yet" : image.gen ? "AI generated" : "uploaded"}
+                    </span>
+                    <button className="as2-btn ghost sm" type="button" onClick={() => setFx(DEFAULT_FX)}>
+                      Reset
+                    </button>
+                  </div>
+                  <FxSlider label="Brightness" min={50} max={150} value={fx.bright} suffix="%" onChange={(v) => setFx((f) => ({ ...f, bright: v }))} />
+                  <FxSlider label="Contrast" min={50} max={150} value={fx.contrast} suffix="%" onChange={(v) => setFx((f) => ({ ...f, contrast: v }))} />
+                  <FxSlider label="Saturation" min={0} max={200} value={fx.sat} suffix="%" onChange={(v) => setFx((f) => ({ ...f, sat: v }))} />
+                  <FxSlider label="Warmth" min={0} max={80} value={fx.warm} suffix="%" onChange={(v) => setFx((f) => ({ ...f, warm: v }))} />
+                  <FxSlider label="Zoom / crop" min={100} max={180} value={fx.zoom} suffix="%" onChange={(v) => setFx((f) => ({ ...f, zoom: v }))} />
+                  <AiEditRow disabled={busy || !image?.src} onRun={(p) => generateImage(p)} />
+                </div>
+              </details>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {/* MODE SCREEN */}
+      {showModeScreen && (
+        <div className="as2-modescreen">
+          <div className="as2-ms-wrap">
+            <div className="as2-ms-logo" style={{ background: accent }}>{initials}</div>
+            <h1>How do you want to build this ad?</h1>
+            <p className="as2-ms-sub">For homeowners thinking about selling. Pick a starting point — you can change anything later.</p>
+            <div className="as2-modes">
+              {(Object.keys(MODES) as Mode[]).map((m, i) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`as2-mode ${i === 0 ? "feature" : ""}`}
+                  onClick={() => chooseMode(m)}
+                >
+                  <span className="as2-m-ic"><Sparkles aria-hidden size={20} /></span>
+                  <span className="as2-tagbar">{i === 0 ? "Fastest" : i === 1 ? "Guided" : "Full control"}</span>
+                  <h3>{m === "ai" ? "AI generates it" : m === "assist" ? "AI helps you" : "Create your own"}</h3>
+                  <p>{MODES[m].helper}</p>
+                  <span className="as2-m-go">
+                    Start <Send aria-hidden size={13} />
+                  </span>
                 </button>
-              </div>
-            ) : null}
-          </aside>
-        </section>
-      ) : null}
-
-      {activeTab === "Copy Pack" && selectedCopy ? (
-        <section className="adstudio-section adstudio-copy-layout">
-          <div className="panel">
-            <div className="adstudio-copy-tabs">
-              <span>Meta</span>
-              <span>Google Search</span>
-              <span>PMax</span>
-              <span>Follow-up</span>
+              ))}
             </div>
-            <CopyBlock title="Meta primary text" text={selectedCopy.meta.primaryText.join("\n\n")} />
-            <CopyBlock title="Google Search headlines" text={selectedCopy.googleSearch.headlines.join(" | ")} />
-            <CopyBlock title="Landing page" text={`${selectedCopy.landingPage.headline}\n${selectedCopy.landingPage.subheadline}`} />
           </div>
-          <aside className="panel">
-            <h2>Lead form preview</h2>
-            {selectedCopy.meta.leadForm.questions.map((question, index) => (
-              <div className="adstudio-question" key={question}>
-                <span>Question {index + 1}</span>
-                <strong>{question}</strong>
-              </div>
-            ))}
-          </aside>
-        </section>
-      ) : null}
+        </div>
+      )}
 
-      {activeTab === "Compliance" ? (
-        <section className="adstudio-section adstudio-compliance">
-          <div className="panel">
-            <h2>Compliance Review</h2>
-            <StatusPill tone={campaignPack.compliance.status === "approved" ? "green" : "rose"}>
-              {campaignPack.compliance.status}
-            </StatusPill>
-            {campaignPack.compliance.issues.length === 0 ? (
-              <div className="adstudio-checklist">
-                {[
-                  "Meta housing category set",
-                  "No discriminatory audience wording",
-                  "No guaranteed sale price claim",
-                  "Privacy policy provided",
-                  "Platform limits checked",
-                ].map((item) => (
-                  <p key={item}>
-                    <BadgeCheck aria-hidden size={17} />
-                    {item}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              campaignPack.compliance.issues.map((issue) => <p key={issue.code}>{issue.message}</p>)
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {activeTab === "Export" ? (
-        <section className="adstudio-section adstudio-export">
-          <div className="panel">
-            <h2>Export contents</h2>
-            <table className="table">
-              <tbody>
-                {[
-                  ["Creative images", "Meta, Google PMax, Demand Gen ratios"],
-                  ["Meta ad copy", "Primary text, headline, description, lead form"],
-                  ["Google Search CSV", "Responsive Search Ad fields and keywords"],
-                  ["Compliance report", "JSON and PDF"],
-                  ["Follow-up sequence", "SMS and email"],
-                ].map(([name, detail]) => (
-                  <tr key={name}>
-                    <td>{name}</td>
-                    <td>{detail}</td>
-                    <td>
-                      <StatusPill tone="green">ready</StatusPill>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <aside className="panel adstudio-download-panel">
-            <Download aria-hidden size={28} />
-            <h2>Campaign pack ready</h2>
-            <p className="item-meta">Download ZIP, prepare approval link, or prepare provider payloads after approval.</p>
-            <button className="button" type="button" onClick={downloadLiveExport} disabled={isBusy}>
-              Download ZIP
-            </button>
-            <button className="button secondary" type="button" onClick={preparePublishPayload} disabled={isBusy}>
-              Prepare publish payload
-            </button>
-            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("activate")} disabled={isBusy || !lastMetaPlanId}>
-              Request activation
-            </button>
-            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("pause")} disabled={isBusy || !lastMetaPlanId}>
-              Request pause
-            </button>
-            <button className="button secondary" type="button" onClick={() => void requestMetaPlanMutation("increase_budget")} disabled={isBusy || !lastMetaPlanId}>
-              Request budget
-            </button>
-          </aside>
-        </section>
-      ) : null}
-
-      {activeTab === "Performance" ? (
-        <section className="adstudio-section">
-          <div className="grid cols-4">
-            <article className="metric-card">
-              <div className="metric-label">
-                <span>Leads</span>
-                <Megaphone aria-hidden size={18} />
-              </div>
-              <div className="metric-value">{performance.leads}</div>
-              <p className="metric-note">Imported from provider reports</p>
-            </article>
-            <article className="metric-card">
-              <div className="metric-label">
-                <span>CPL</span>
-                <ClipboardCheck aria-hidden size={18} />
-              </div>
-              <div className="metric-value">${performance.costPerLeadAud}</div>
-              <p className="metric-note">Target under $25</p>
-            </article>
-            <article className="metric-card">
-              <div className="metric-label">
-                <span>Bookings</span>
-                <FileText aria-hidden size={18} />
-              </div>
-              <div className="metric-value">{performance.bookedAppraisals}</div>
-              <p className="metric-note">Lead-to-booking feedback</p>
-            </article>
-            <article className="metric-card">
-              <div className="metric-label">
-                <span>Best format</span>
-                <Image aria-hidden size={18} />
-              </div>
-              <div className="metric-value">{performance.bestFormat}</div>
-              <p className="metric-note">Feeds next generation run</p>
-            </article>
-          </div>
-          <section className="panel">
-            <h2>Recommended next variants</h2>
-            {performance.recommendations.map((recommendation) => (
-              <p className="adstudio-recommendation" key={recommendation}>
-                <Sparkles aria-hidden size={17} />
-                {recommendation}
-              </p>
-            ))}
-          </section>
-        </section>
-      ) : null}
+      {toastMsg && <div className="as2-toast show">{toastMsg}</div>}
     </div>
   );
 }
 
-async function requestJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(payload?.error ?? `Request failed with ${response.status}.`);
-  }
-
-  return payload as T;
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "AdStudio live request failed.";
-}
-
-function BrandPanel({ title, status, children }: { title: string; status: string; children: React.ReactNode }) {
-  return (
-    <article className="panel adstudio-brand-panel">
-      <div className="section-heading">
-        <h2>{title}</h2>
-        <StatusPill tone={status.includes("Needs") ? "amber" : "green"}>{status}</StatusPill>
-      </div>
-      {children}
-      <div className="actions">
-        <button className="button secondary" type="button">Edit</button>
-        <button className="button secondary" type="button">Lock</button>
-      </div>
-    </article>
-  );
-}
-
-function EditableCanvas({
-  creative,
-  selectedObjectId,
-  onSelect,
-  onMove,
-}: {
-  creative: AdStudioCreative;
-  selectedObjectId: string;
-  onSelect: (objectId: string) => void;
-  onMove: (deltaX: number, deltaY: number) => void;
-}) {
-  const scale = useMemo(() => Math.min(1, 520 / creative.canvas.height, 520 / creative.canvas.width), [creative]);
-
-  return (
-    <div className="adstudio-canvas-wrap">
-      <div
-        className="adstudio-canvas"
-        style={{
-          width: creative.canvas.width * scale,
-          height: creative.canvas.height * scale,
-        }}
-      >
-        {creative.canvas.objects.map((object) => (
-          <button
-            className={`adstudio-canvas-object ${object.type} ${object.objectId === selectedObjectId ? "selected" : ""}`}
-            key={object.objectId}
-            type="button"
-            style={{
-              left: object.x * scale,
-              top: object.y * scale,
-              width: object.width * scale,
-              height: (object.height ?? 80) * scale,
-              background: object.type === "shape" ? object.fill : undefined,
-              color: object.fill && object.fill === "#FFFFFF" ? "#18201f" : object.fill,
-              fontSize: (object.size ?? 28) * scale,
-            }}
-            onClick={() => onSelect(object.objectId)}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") onMove(-12, 0);
-              if (event.key === "ArrowRight") onMove(12, 0);
-              if (event.key === "ArrowUp") onMove(0, -12);
-              if (event.key === "ArrowDown") onMove(0, 12);
-            }}
-          >
-            {object.type === "text" || object.role === "cta_text" ? object.content : null}
-            {object.type === "logo" ? "BRAND" : null}
-            {object.type === "image" ? "" : null}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ObjectControls({
-  object,
+function FxSlider({
+  label,
+  min,
+  max,
+  value,
+  suffix,
   onChange,
 }: {
-  object: AdStudioCanvasObject;
-  onChange: (patch: Partial<AdStudioCanvasObject>) => void;
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  suffix: string;
+  onChange: (value: number) => void;
 }) {
   return (
-    <div className="adstudio-object-controls">
-      <label>
-        <span>Content</span>
-        <textarea
-          disabled={object.locked}
-          value={object.content ?? ""}
-          onChange={(event) => onChange({ content: event.target.value })}
-        />
-      </label>
-      <div className="adstudio-stepper-row">
-        <button type="button" onClick={() => onChange({ x: Math.max(0, object.x - 16) })} disabled={object.locked}>Left</button>
-        <button type="button" onClick={() => onChange({ x: object.x + 16 })} disabled={object.locked}>Right</button>
-        <button type="button" onClick={() => onChange({ y: Math.max(0, object.y - 16) })} disabled={object.locked}>Up</button>
-        <button type="button" onClick={() => onChange({ y: object.y + 16 })} disabled={object.locked}>Down</button>
+    <div className="as2-ctrl">
+      <div className="as2-row">
+        <span className="as2-sm as2-muted">{label}</span>
+        <span className="as2-sm">{value}{suffix}</span>
       </div>
-      <label>
-        <span>Size</span>
-        <input
-          type="range"
-          min="18"
-          max="92"
-          value={object.size ?? 32}
-          disabled={object.locked}
-          onChange={(event) => onChange({ size: Number(event.target.value) })}
-        />
-      </label>
-      <button className="button secondary" type="button" onClick={() => onChange({ locked: !object.locked })}>
-        {object.locked ? <Unlock aria-hidden size={16} /> : <Lock aria-hidden size={16} />}
-        {object.locked ? "Unlock" : "Lock"}
-      </button>
+      <input type="range" className="as2-rng" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} />
     </div>
   );
 }
 
-function CopyBlock({ title, text }: { title: string; text: string }) {
+function AiEditRow({ disabled, onRun }: { disabled: boolean; onRun: (prompt: string) => void }) {
+  const [value, setValue] = useState("");
   return (
-    <article className="adstudio-copy-block">
-      <div>
-        <h3>{title}</h3>
-        <span>{text.length} chars</span>
-      </div>
-      <p>{text}</p>
-      <div className="actions">
-        <button className="button secondary" type="button">Shorten</button>
-        <button className="button secondary" type="button">Make local</button>
-        <button className="button secondary" type="button">Lock</button>
-      </div>
-    </article>
+    <>
+      <input
+        className="as2-t"
+        placeholder="AI change: e.g. brighter sky, warmer light"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <button
+        className="as2-btn accent block sm"
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (!value.trim()) return;
+          onRun(value.trim());
+        }}
+      >
+        <Pencil aria-hidden size={13} />
+        Apply AI change
+      </button>
+    </>
   );
 }
+
+function getMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "AdStudio request failed.";
+}
+
+const STYLES = `
+.as2{position:relative;display:flex;flex-direction:column;min-height:720px;height:calc(100vh - 180px);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);color:var(--ink);font-size:14px}
+.as2 *{box-sizing:border-box}
+.as2 button{font-family:inherit;cursor:pointer}
+.as2-topbar{height:54px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.as2-brandline{display:flex;align-items:center;gap:12px;min-width:0}
+.as2-wordmark{font-weight:800;letter-spacing:-.03em;font-size:16px}
+.as2-vline{width:1px;height:20px;background:var(--line)}
+.as2-mode-pill{display:inline-flex;align-items:center;gap:7px;background:var(--surface-subtle);color:var(--accent-strong);border:1px solid var(--line);border-radius:99px;padding:4px 6px 4px 11px;font-size:12px;font-weight:700}
+.as2-mode-pill button{border:0;background:var(--surface);border-radius:99px;font-size:10.5px;font-weight:700;color:var(--accent-strong);padding:3px 8px}
+.as2-top-actions{display:flex;align-items:center;gap:9px}
+.as2-provider{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface-subtle);border:1px solid var(--line);border-radius:99px;padding:6px 11px}
+.as2-dot{width:7px;height:7px;border-radius:99px;background:var(--accent)}
+.as2-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;transition:.12s}
+.as2-btn:hover{background:var(--surface-subtle)}
+.as2-btn:disabled{opacity:.55;cursor:not-allowed}
+.as2-btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.as2-btn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.as2-btn.accent:hover{background:var(--accent-strong)}
+.as2-btn.ghost{background:transparent;border-color:transparent;color:var(--accent-strong)}
+.as2-btn.sm{height:30px;padding:0 11px;font-size:12px;border-radius:8px}
+.as2-btn.block{width:100%;justify-content:center}
+.as2-work{flex:1;min-height:0;display:grid;grid-template-columns:330px 1fr 320px}
+.as2-pane{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--surface)}
+.as2-pane.left{border-right:1px solid var(--line)}
+.as2-pane.right{border-left:1px solid var(--line)}
+.as2-pane-hd{padding:13px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.as2-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800}
+.as2-pane-hd h2{margin:1px 0 0;font-size:16px;letter-spacing:-.02em}
+.as2-pane-body{padding:15px 16px;display:flex;flex-direction:column;gap:13px;overflow-y:auto;min-height:0}
+.as2 textarea,.as2 input.as2-t{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);resize:vertical;outline:none;transition:.12s}
+.as2 textarea:focus,.as2 input.as2-t:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--surface-subtle)}
+.as2-prompt{min-height:84px}
+.as2-helper{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+.as2-mini-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800;display:block;margin-bottom:8px}
+.as2-quickstarts{display:flex;flex-direction:column;gap:7px}
+.as2-qs{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 11px;text-align:left;transition:.12s;width:100%}
+.as2-qs:hover{border-color:var(--accent)}
+.as2-qs.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.as2-qs-ic{width:26px;height:26px;border-radius:8px;background:var(--surface-subtle);color:var(--accent-strong);display:grid;place-items:center;flex:0 0 auto}
+.as2-qs-t{font-size:13px;font-weight:700;letter-spacing:-.01em;display:block}
+.as2-qs-d{font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:1px;display:block}
+.as2-dropzone{display:block;width:100%;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface);padding:13px;text-align:center;color:var(--muted);transition:.12s;margin-top:8px}
+.as2-dropzone:hover{border-color:var(--accent);color:var(--accent-strong)}
+.as2-dropzone svg{display:block;margin:0 auto 6px}
+.as2-dz-t{font-weight:700;font-size:12.5px;color:var(--ink)}
+.as2-sm{font-size:12px}
+.as2-muted{color:var(--muted)}
+.as2-acc{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.as2-acc>summary{list-style:none;cursor:pointer;padding:11px 13px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.as2-acc>summary::-webkit-details-marker{display:none}
+.as2-chev{transition:transform .15s;color:var(--muted)}
+.as2-acc[open]>summary .as2-chev{transform:rotate(90deg)}
+.as2-acc-body{padding:0 13px 13px;display:flex;flex-direction:column;gap:10px}
+.as2-kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.as2-kpi{border:1px solid var(--line);border-radius:11px;background:var(--surface-subtle);padding:9px;text-align:center}
+.as2-kpi .v{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.as2-kpi .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;margin-top:1px}
+.as2-gate{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:10px;background:var(--surface-subtle)}
+.as2-gate-dot{width:20px;height:20px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:900;flex:0 0 auto}
+.as2-gate.ok .as2-gate-dot{background:#e3f4ee;color:var(--accent-strong)}
+.as2-gate.warn .as2-gate-dot{background:#fff2da;color:#8a5b10}
+.as2-gate b{font-size:12.5px;text-transform:capitalize}
+.as2-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.as2-swatches{display:flex;gap:8px}
+.as2-sw{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);cursor:pointer}
+.as2-sw.sel{outline:2px solid var(--accent);outline-offset:1px}
+.as2-rng{width:100%;accent-color:var(--accent)}
+.as2-ctrl{display:flex;flex-direction:column;gap:4px}
+.as2-counter{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+.as2-counter.over{color:#8a5b10}
+.as2-copy-fields{display:flex;flex-direction:column;gap:9px}
+.as2-efield{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 11px;transition:box-shadow .15s,border-color .15s}
+.as2-efield.flash{border-color:var(--accent);box-shadow:0 0 0 3px var(--surface-subtle)}
+.as2-efield-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.as2-ef-right{display:flex;align-items:center;gap:7px}
+.as2-ef{min-height:42px;background:var(--surface-subtle)}
+.as2-rw{border:1px solid var(--line);background:var(--surface);border-radius:7px;width:24px;height:22px;display:grid;place-items:center;color:var(--accent-strong);padding:0}
+.as2-rw:hover{background:var(--surface-subtle)}
+.as2-variant{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 11px;transition:.12s}
+.as2-variant:hover{border-color:var(--accent)}
+.as2-variant .v-h{font-weight:700;font-size:13px;margin-bottom:2px}
+.as2-variant .v-b{font-size:12px;color:var(--muted);line-height:1.4}
+.as2-center{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface-subtle)}
+.as2-canvas-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;flex:0 0 auto;flex-wrap:wrap}
+.as2-plat{display:flex;gap:4px}
+.as2-plat button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 13px;font-size:12px;font-weight:700;color:var(--muted)}
+.as2-plat button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.as2-seg{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px;flex-wrap:wrap}
+.as2-seg button{border:0;background:transparent;border-radius:7px;padding:5px 9px;font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;line-height:1.12;gap:1px}
+.as2-seg button .sub{font-size:8.5px;font-weight:600;color:var(--muted)}
+.as2-seg button.active{background:var(--surface-subtle);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.as2-placement-name{font-size:12px;font-weight:700;color:var(--muted)}
+.as2-stage{flex:1;min-height:0;display:grid;place-items:center;padding:22px;overflow:auto;position:relative}
+.as2-edit-hint{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(24,32,31,.72);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;opacity:0;transition:opacity .15s;pointer-events:none;z-index:6}
+.as2-stage:hover .as2-edit-hint{opacity:1}
+.as2-device{filter:drop-shadow(0 18px 50px rgba(24,32,31,.16))}
+.as2-layer{cursor:pointer;position:relative;transition:box-shadow .12s;border-radius:6px}
+.as2-layer:hover{box-shadow:0 0 0 2px rgba(8,127,122,.45)}
+.as2-layer.sel{box-shadow:0 0 0 2px var(--accent)}
+.as2-feed-card{width:var(--w,340px);background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6ebe8}
+.as2-fc-top{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
+.as2-fc-id{display:flex;align-items:center;gap:9px}
+.as2-fc-av{width:34px;height:34px;border-radius:99px;color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+.as2-fc-name{font-size:13px;font-weight:700;line-height:1.15}
+.as2-fc-sub{font-size:11px;color:#8893a4;font-weight:600}
+.as2-fc-dots{color:#aab3c1;font-weight:800}
+.as2-fc-primary{padding:0 12px 10px;font-size:13px;line-height:1.4;color:var(--ink)}
+.as2-fc-visual{width:100%;aspect-ratio:var(--ar,1/1);background:var(--surface-subtle);overflow:hidden;position:relative;display:grid;place-items:center}
+.as2-fc-link{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface-subtle);padding:11px 12px}
+.as2-fc-domain{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:#8893a4;font-weight:700}
+.as2-fc-headline{font-size:15px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin-top:1px}
+.as2-fc-desc{font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:2px}
+.as2-fc-cta{flex:0 0 auto;color:#fff;border-radius:7px;padding:9px 13px;font-size:12.5px;font-weight:700}
+.as2-land-card{width:var(--w,470px);background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6ebe8}
+.as2-vis-img{width:100%;height:100%;object-fit:cover;display:block}
+.as2-vis-ph{text-align:center;color:var(--muted);font-size:12px;font-weight:600;padding:18px;max-width:230px}
+.as2-vis-ph svg{display:block;margin:0 auto 8px}
+.as2-story{width:var(--w,250px);aspect-ratio:9/16;border-radius:20px;overflow:hidden;position:relative;background:#1c2c40;color:#fff}
+.as2-story-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.as2-story-fallback{background:linear-gradient(160deg,#2f4a47,#13211f)}
+.as2-story-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.38) 0%,rgba(0,0,0,0) 24%,rgba(0,0,0,0) 50%,rgba(0,0,0,.62) 100%)}
+.as2-story-top{position:absolute;top:18px;left:12px;right:12px;display:flex;align-items:center;gap:8px;z-index:3}
+.as2-story-av{width:28px;height:28px;border-radius:99px;border:1.5px solid #fff;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:rgba(255,255,255,.18)}
+.as2-story-name{font-size:12px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.as2-story-sub{font-size:10px;opacity:.85;font-weight:600}
+.as2-story-content{position:absolute;left:18px;right:18px;bottom:74px;z-index:5;display:flex;flex-direction:column;gap:6px}
+.as2-story-headline{font-size:21px;font-weight:800;letter-spacing:-.025em;line-height:1.04;text-shadow:0 2px 10px rgba(0,0,0,.5);margin:0}
+.as2-story-body{font-size:12px;line-height:1.35;opacity:.95;text-shadow:0 1px 6px rgba(0,0,0,.55);margin:0}
+.as2-story-cta{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;z-index:5;background:#fff;color:var(--ink);border-radius:99px;padding:10px 18px;font-size:12.5px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.as2-g-search{width:560px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;padding:18px 20px}
+.as2-g-label{display:inline-block;font-size:12px;font-weight:800;color:#202124;margin-bottom:6px}
+.as2-g-site{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.as2-g-fav{width:26px;height:26px;border-radius:99px;background:#f1f3f4;display:grid;place-items:center;font-weight:800;font-size:12px;color:#5f6368}
+.as2-g-name{font-size:14px;color:#202124;font-weight:600;line-height:1.1}
+.as2-g-url{font-size:12px;color:#5f6368}
+.as2-g-titleline{font-size:20px;line-height:1.3;color:#1a0dab;font-weight:500;margin:2px 0 3px;display:flex;flex-wrap:wrap;gap:2px}
+.as2-g-titleline .as2-gh{cursor:pointer;border-radius:4px}
+.as2-g-titleline .as2-sep{color:#5f6368;font-weight:400}
+.as2-g-desc{font-size:14px;color:#4d5156;line-height:1.45}
+.as2-g-form{width:420px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;overflow:hidden}
+.as2-g-form-hd{color:#fff;padding:14px 16px}
+.as2-g-form-hd .as2-h{font-size:16px;font-weight:700;line-height:1.2}
+.as2-g-form-hd .as2-s{font-size:12px;opacity:.92;margin-top:3px}
+.as2-g-form-body{padding:14px 16px;display:flex;flex-direction:column;gap:9px}
+.as2-g-field{border:1px solid #dadce0;border-radius:8px;padding:9px 11px;font-size:13px;color:#80868b}
+.as2-g-form-cta{color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:700;font-size:13.5px}
+.as2-g-maps{width:380px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;overflow:hidden}
+.as2-g-map-strip{height:120px;background:linear-gradient(135deg,#d9e6cf,#cfe0ea);position:relative}
+.as2-g-biz{padding:13px 15px}
+.as2-g-nm{font-size:15px;font-weight:700;color:#202124}
+.as2-g-badge{font-size:10px;font-weight:800;color:#5f6368;letter-spacing:.04em;text-transform:uppercase}
+.as2-g-stars{color:#fbbc04;font-size:13px;margin:3px 0}
+.as2-g-stars span{color:#5f6368}
+.as2-g-tagline{font-size:12.5px;color:#5f6368;margin-top:2px}
+.as2-g-biz-actions{display:flex;gap:8px;margin-top:11px}
+.as2-g-biz-actions .b{flex:1;text-align:center;border:1px solid #dadce0;border-radius:99px;padding:8px;font-size:12.5px;font-weight:600;color:#1a73e8}
+.as2-g-demand{width:330px;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6ebe8}
+.as2-dg-vis{width:100%;aspect-ratio:1.91/1;background:var(--surface-subtle);overflow:hidden;position:relative;display:grid;place-items:center}
+.as2-dg-body{padding:12px 13px}
+.as2-dg-spon{font-size:10.5px;color:#5f6368;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.as2-dg-h{font-size:15px;font-weight:800;letter-spacing:-.015em;color:#202124;margin-top:2px;line-height:1.2}
+.as2-dg-d{font-size:12.5px;color:#5f6368;line-height:1.35;margin-top:3px}
+.as2-dg-cta{display:inline-block;margin-top:10px;color:#fff;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700}
+.as2-gen-loading{position:absolute;inset:0;background:rgba(241,245,242,.85);display:grid;place-items:center;z-index:9}
+.as2-gen-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 22px;box-shadow:0 14px 40px rgba(24,32,31,.12);display:flex;flex-direction:column;align-items:center;gap:10px;width:270px;text-align:center}
+.as2-spinner{width:26px;height:26px;border-radius:99px;border:3px solid var(--surface-subtle);border-top-color:var(--accent);animation:as2spin .8s linear infinite}
+@keyframes as2spin{to{transform:rotate(360deg)}}
+.as2-gen-msg{font-weight:700;font-size:13px}
+.as2-bar{width:100%;height:6px;border-radius:99px;background:var(--surface-subtle);overflow:hidden}
+.as2-bar i{display:block;height:100%;width:40%;background:var(--accent);border-radius:99px;animation:as2fill 1.4s ease-in-out infinite}
+@keyframes as2fill{0%{margin-left:-40%}100%{margin-left:100%}}
+.as2-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 14px 40px rgba(24,32,31,.2);opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.as2-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.as2-modescreen{position:absolute;inset:0;z-index:90;background:linear-gradient(180deg,var(--surface),var(--surface-subtle));display:grid;place-items:center;padding:24px}
+.as2-ms-wrap{width:min(900px,96%);text-align:center}
+.as2-ms-logo{width:46px;height:46px;border-radius:13px;color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px;margin:0 auto 16px}
+.as2-ms-wrap h1{font-size:28px;letter-spacing:-.035em;margin:0 0 8px}
+.as2-ms-sub{color:var(--muted);font-size:14px;margin:0 auto 26px;max-width:520px}
+.as2-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.as2-mode{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;text-align:left;transition:.14s;display:flex;flex-direction:column;gap:10px}
+.as2-mode:hover{border-color:var(--accent);box-shadow:0 14px 40px rgba(24,32,31,.1);transform:translateY(-2px)}
+.as2-m-ic{width:42px;height:42px;border-radius:12px;background:var(--surface-subtle);color:var(--accent-strong);display:grid;place-items:center}
+.as2-mode.feature .as2-m-ic{background:var(--ink);color:#fff}
+.as2-mode h3{margin:0;font-size:17px;letter-spacing:-.02em}
+.as2-mode p{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+.as2-m-go{margin-top:auto;font-size:12.5px;font-weight:700;color:var(--accent-strong);display:flex;align-items:center;gap:6px}
+.as2-tagbar{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-strong)}
+@media(max-width:1100px){.as2-work{grid-template-columns:1fr}.as2-pane.left,.as2-pane.right{border:0;border-bottom:1px solid var(--line)}}
+@media(max-width:760px){.as2-modes{grid-template-columns:1fr}}
+`;

@@ -39,7 +39,6 @@ export class SupabaseIngestWriter implements IngestWriter {
   }
 
   private get researchSchema() {
-    // @ts-expect-error supabase-js types don't expose schema() on root
     return this.client.schema("research");
   }
 
@@ -121,8 +120,11 @@ export class SupabaseIngestWriter implements IngestWriter {
       cta_url: input.ctaUrl,
       primary_image_url: input.primaryImageUrl,
       image_urls: input.imageUrls,
+      image_storage_path: input.imageStoragePath,
       video_url: input.videoUrl,
+      video_storage_path: input.videoStoragePath,
       video_thumbnail_url: input.videoThumbnailUrl,
+      media_assets: input.mediaAssets,
       landing_url: input.landingUrl,
       locale: input.locale,
       language: input.language,
@@ -296,8 +298,11 @@ function mapCreative(row: Record<string, unknown>): AdCreative {
     ctaUrl: (row.cta_url ?? null) as string | null,
     primaryImageUrl: (row.primary_image_url ?? null) as string | null,
     imageUrls: (row.image_urls ?? []) as string[],
+    imageStoragePath: (row.image_storage_path ?? null) as string | null,
     videoUrl: (row.video_url ?? null) as string | null,
+    videoStoragePath: (row.video_storage_path ?? null) as string | null,
     videoThumbnailUrl: (row.video_thumbnail_url ?? null) as string | null,
+    mediaAssets: (row.media_assets ?? []) as AdCreative["mediaAssets"],
     landingUrl: (row.landing_url ?? null) as string | null,
     locale: (row.locale ?? null) as string | null,
     language: (row.language ?? null) as string | null,

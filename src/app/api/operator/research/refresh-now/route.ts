@@ -27,7 +27,6 @@ export async function POST(req: Request) {
   }
   const { scope, value } = parsed.data;
 
-  // @ts-expect-error supabase-js types
   const research = guard.supabase.schema("research");
 
   if (scope === "postcode") {
