@@ -1,6 +1,14 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import type { AdStudioBrandKit, AdStudioCampaignPack } from "./types.ts";
+import type {
+  AdStudioBrandKit,
+  AdStudioCampaign,
+  AdStudioCampaignPack,
+  AdStudioCampaignVariant,
+  AdStudioComplianceReport,
+  AdStudioCreative,
+  AdStudioPlatformCopyPack,
+} from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -171,5 +179,120 @@ export function rowToBrandKit(row: Record<string, unknown>): AdStudioBrandKit {
         ? row.review_status
         : "pending_user_review",
     lockedFields: Array.isArray(row.locked_fields_json) ? (row.locked_fields_json as string[]) : [],
+  };
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function rowToVariant(row: Record<string, unknown>): AdStudioCampaignVariant {
+  return {
+    variantId: String(row.id),
+    campaignId: String(row.campaign_id),
+    angle: String(row.angle ?? ""),
+    headline: String(row.headline ?? ""),
+    offer: String(row.offer ?? ""),
+    cta: String(row.cta ?? ""),
+    score: row.score_json as AdStudioCampaignVariant["score"],
+    status: row.status === "approved" ? "approved" : "draft",
+    lockedFields: asStringArray(row.locked_fields_json),
+  };
+}
+
+function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
+  const canvas = (row.canvas_json as AdStudioCreative["canvas"] | null) ?? {
+    width: Number(row.width ?? 0),
+    height: Number(row.height ?? 0),
+    backgroundAssetId: null,
+    objects: [],
+  };
+
+  return {
+    creativeId: String(row.id),
+    campaignId: String(row.campaign_id),
+    variantId: String(row.variant_id),
+    format: row.format as AdStudioCreative["format"],
+    canvas,
+    safeZones: {
+      metaStory: canvas.height >= canvas.width,
+      googleDemandGen: true,
+    },
+    previewSvg: String(row.preview_svg ?? ""),
+  };
+}
+
+function rowToCopyPack(row: Record<string, unknown>): AdStudioPlatformCopyPack {
+  return {
+    copyPackId: String(row.id),
+    campaignId: String(row.campaign_id),
+    variantId: String(row.variant_id),
+    meta: row.meta_json as AdStudioPlatformCopyPack["meta"],
+    googleSearch: row.google_search_json as AdStudioPlatformCopyPack["googleSearch"],
+    googlePmax: row.google_pmax_json as AdStudioPlatformCopyPack["googlePmax"],
+    googleDemandGen: row.google_demand_gen_json as AdStudioPlatformCopyPack["googleDemandGen"],
+    landingPage: row.landing_page_json as AdStudioPlatformCopyPack["landingPage"],
+    followUp: row.followup_json as AdStudioPlatformCopyPack["followUp"],
+    lockedFields: asStringArray(row.locked_fields_json),
+  };
+}
+
+function rowToCompliance(row: Record<string, unknown> | null, campaignId: string): AdStudioComplianceReport {
+  if (!row) {
+    return {
+      reportId: `compliance_${campaignId}`,
+      campaignId,
+      status: "needs_review",
+      issues: [],
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  return {
+    reportId: String(row.id),
+    campaignId: String(row.campaign_id ?? campaignId),
+    status:
+      row.status === "approved" || row.status === "blocked" ? row.status : "needs_review",
+    issues: Array.isArray(row.issues_json)
+      ? (row.issues_json as AdStudioComplianceReport["issues"])
+      : [],
+    checkedAt: String(row.checked_at ?? new Date().toISOString()),
+  };
+}
+
+/**
+ * Reconstruct a full, typed campaign pack from persisted Supabase rows so the
+ * studio can resume real saved work instead of demo data.
+ */
+export function rowToCampaignPack(input: {
+  brandKit: AdStudioBrandKit;
+  campaign: Record<string, unknown>;
+  variants: Array<Record<string, unknown>>;
+  creatives: Array<Record<string, unknown>>;
+  copy: Array<Record<string, unknown>>;
+  compliance: Record<string, unknown> | null;
+}): AdStudioCampaignPack {
+  const campaignId = String(input.campaign.id);
+  const campaign: AdStudioCampaign = {
+    campaignId,
+    workspaceId: String(input.campaign.workspace_id),
+    brandKitId: String(input.campaign.brand_kit_id),
+    name: String(input.campaign.name ?? "Campaign"),
+    goal: input.campaign.goal as AdStudioCampaign["goal"],
+    market: input.campaign.market_json as AdStudioCampaign["market"],
+    audienceIntent: String(input.campaign.audience_intent ?? ""),
+    offerId: String(input.campaign.offer_id ?? ""),
+    platforms: (input.campaign.platforms_json as AdStudioCampaign["platforms"]) ?? [],
+    creativeFormats: (input.campaign.creative_formats_json as AdStudioCampaign["creativeFormats"]) ?? [],
+    status: (input.campaign.status as AdStudioCampaign["status"]) ?? "ready",
+  };
+
+  return {
+    brandKit: input.brandKit,
+    campaign,
+    variants: input.variants.map(rowToVariant),
+    creatives: input.creatives.map(rowToCreative),
+    copyPacks: input.copy.map(rowToCopyPack),
+    compliance: rowToCompliance(input.compliance, campaignId),
   };
 }
