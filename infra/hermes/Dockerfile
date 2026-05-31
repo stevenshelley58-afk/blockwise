@@ -14,8 +14,14 @@ LABEL org.opencontainers.image.title="Blockwise Hermes Research"
 LABEL org.opencontainers.image.description="Hermes runtime wrapper for the Blockwise research engine hard reset"
 
 COPY hermes/skills /app/skills
+COPY hermes/tools/research-runtime /app/research-runtime
 COPY infra/hermes/hermes.toml /app/hermes.toml
+COPY infra/hermes/start-hermes-research.sh /app/start-hermes-research.sh
+
+RUN chmod +x /app/start-hermes-research.sh /app/research-runtime/bin/supabase-supervisor.mjs
 
 EXPOSE 8080
 
-# The base image owns the default command.
+# The base image owns Hermes; this wrapper starts the deterministic Blockwise
+# research supervisor before handing off to Hermes.
+ENTRYPOINT ["/app/start-hermes-research.sh"]
