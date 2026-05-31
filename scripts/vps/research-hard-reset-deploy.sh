@@ -124,10 +124,18 @@ cd /opt/blockwise
 git fetch origin --tags
 git checkout "$DEPLOY_REF"
 
+if ! grep -Eq "^\\s*HERMES_API_SERVER_KEY=" .env 2>/dev/null && grep -Eq "^\\s*HERMES_WEBHOOK_SECRET=" .env 2>/dev/null; then
+  set -a
+  . ./.env
+  set +a
+  printf '\nHERMES_API_SERVER_KEY=%s\n' "\$HERMES_WEBHOOK_SECRET" >> .env
+fi
+
 missing_env=0
 for name in \
   HERMES_BASE_IMAGE \
   BLOCKWISE_HERMES_IMAGE \
+  HERMES_API_SERVER_KEY \
   HERMES_DEFAULT_MODEL \
   HERMES_ESCALATION_MODEL \
   OPENROUTER_API_KEY \
@@ -162,7 +170,7 @@ if docker ps --format '{{.Names}}' | grep -E "${legacy_orchestrator}|${legacy_co
   exit 1
 fi
 
-curl -fsS http://127.0.0.1:8080/health >/dev/null
+curl -fsS "http://127.0.0.1:${HERMES_GATEWAY_HOST_PORT:-8642}/health" >/dev/null
 echo "[smoke] Hermes health endpoint responded"
 REMOTE_SMOKE
 

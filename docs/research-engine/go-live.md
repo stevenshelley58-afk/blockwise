@@ -30,7 +30,8 @@ Operator-only checks:
 
 ```bash
 docker compose -f infra/coolify/docker-compose.research.yml ps
-curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8642/health
+curl -fsSI http://127.0.0.1:9119/
 curl -fsS http://127.0.0.1:3001
 ```
 

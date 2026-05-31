@@ -11,7 +11,7 @@ The active compose stack contains:
 
 | Service | Container name | Port binding |
 | --- | --- | --- |
-| `hermes` | `blockwise-hermes` | `127.0.0.1:8080:8080` |
+| `hermes` | `blockwise-hermes` | `127.0.0.1:8642:8642`, `127.0.0.1:9119:9119` |
 | `uptime-kuma` | `blockwise-uptime-kuma` | `127.0.0.1:3001:3001` |
 
 The stack does not include `research-orchestrator` or
@@ -37,6 +37,9 @@ SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 OPENROUTER_API_KEY=<key>
 HERMES_PROVIDER=openrouter
+HERMES_API_SERVER_KEY=<secret>
+HERMES_GATEWAY_HOST_PORT=8642
+HERMES_DASHBOARD_HOST_PORT=9119
 HERMES_DEFAULT_MODEL=<cheap-openrouter-model>
 HERMES_ESCALATION_MODEL=<stronger-openrouter-model>
 HERMES_RESEARCH_MODE=maintain
@@ -94,7 +97,8 @@ Operator-only checks:
 
 ```bash
 docker compose -f infra/coolify/docker-compose.research.yml ps
-curl -fsS http://127.0.0.1:8080/health
+curl -fsS http://127.0.0.1:8642/health
+curl -fsSI http://127.0.0.1:9119/
 curl -fsS http://127.0.0.1:3001
 ```
 
