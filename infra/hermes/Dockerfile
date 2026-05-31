@@ -22,6 +22,5 @@ RUN chmod +x /app/start-hermes-research.sh /app/research-runtime/bin/supabase-su
 
 EXPOSE 8080
 
-# The base image owns Hermes; this wrapper starts the deterministic Blockwise
-# research supervisor before handing off to Hermes.
-ENTRYPOINT ["/app/start-hermes-research.sh"]
+# The base image owns the entrypoint (/init). Compose runs the Blockwise
+# wrapper as the command so Hermes' s6 environment stays intact.

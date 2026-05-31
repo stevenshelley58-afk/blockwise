@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/command/with-contenv sh
 set -eu
 
 if [ -n "${HERMES_DEFAULT_MODEL:-}" ]; then
