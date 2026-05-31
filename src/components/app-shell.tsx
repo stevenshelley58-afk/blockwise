@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AccountMenu } from "@/components/account-menu";
+import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
+import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AppShellProps = {
@@ -64,8 +66,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
     <div className="app-shell">
       <aside className="sidebar" aria-label="Primary">
         <Link className="brand" href={homeHref} aria-label="Blockwise">
-          <span className="brand-mark">B</span>
-          <span>Blockwise</span>
+          <BlockwiseLogo />
         </Link>
         <SidebarNav variant={variant} />
       </aside>
@@ -74,7 +75,10 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
           <span className="workspace-chip">
             {workspaceName} - {workspace?.region ?? "AU"}
           </span>
-          <AccountMenu email={user.email ?? ""} name={accountName} role={roleLabel} />
+          <div className="topbar-actions">
+            <SidebarThemeToggle />
+            <AccountMenu email={user.email ?? ""} name={accountName} role={roleLabel} />
+          </div>
         </header>
         {children}
       </div>

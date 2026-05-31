@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const META_PIXEL_ID = "1699948581050851";
 
@@ -12,7 +19,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-AU">
+    <html lang="en-AU" className={inter.variable} data-sidebar-theme="dark" suppressHydrationWarning>
+      <head>
+        {/* Set sidebar theme before paint to avoid a flash */}
+        <Script id="sidebar-theme-init" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem('bw-sidebar')||'dark';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
+        </Script>
+      </head>
       <body>
         {/* Meta Pixel Code */}
         <Script id="meta-pixel" strategy="afterInteractive">

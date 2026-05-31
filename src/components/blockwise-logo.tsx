@@ -28,7 +28,7 @@ export function BlockwiseLogo({ className = "", showWordmark = true }: Blockwise
               y={y * 34}
               width={28}
               height={28}
-              rx={3}
+              rx={4.5}
               fill="currentColor"
             />
           ))}
