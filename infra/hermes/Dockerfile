@@ -16,11 +16,12 @@ LABEL org.opencontainers.image.description="Hermes runtime wrapper for the Block
 COPY hermes/skills /app/skills
 COPY hermes/tools/research-runtime /app/research-runtime
 COPY infra/hermes/hermes.toml /app/hermes.toml
-COPY infra/hermes/start-hermes-research.sh /app/start-hermes-research.sh
+COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh
 
-RUN chmod +x /app/start-hermes-research.sh /app/research-runtime/bin/supabase-supervisor.mjs
+RUN chmod +x /opt/hermes/docker/main-wrapper.sh /app/research-runtime/bin/supabase-supervisor.mjs
 
 EXPOSE 8080
 
-# The base image owns the entrypoint (/init). Compose runs the Blockwise
-# wrapper as the command so Hermes' s6 environment stays intact.
+# The base image owns the entrypoint and command routing. Blockwise replaces
+# Hermes' main-wrapper with an equivalent wrapper that starts the deterministic
+# research supervisor before handing off to Hermes.

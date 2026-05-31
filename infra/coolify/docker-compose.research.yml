@@ -18,7 +18,7 @@ services:
         HERMES_BASE_IMAGE: "${HERMES_BASE_IMAGE:?Set HERMES_BASE_IMAGE to a pinned Hermes image tag or digest}"
     image: "${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:2026-05-30}"
     container_name: blockwise-hermes
-    command: ["/app/start-hermes-research.sh", "gateway", "run", "--replace", "--accept-hooks"]
+    command: ["gateway", "run", "--replace", "--accept-hooks"]
     restart: unless-stopped
     ports:
       - "127.0.0.1:${HERMES_GATEWAY_HOST_PORT:-8642}:8642"
