@@ -1,51 +1,51 @@
 # Research Engine Go-Live Runbook
 
-Deploy the hosted-provider orchestrator and the self-hosted collector verifier
-on the VPS. Use `searchapi_meta` as the primary source when the key is present.
+Date: 2026-05-30
 
-## Required VPS Env
+This go-live path deploys the hard-reset runtime. This cleanup agent did not run
+any live VPS commands.
 
-```bash
-SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-AD_COLLECTOR_PROVIDER=searchapi_meta
-SELF_HOSTED_META_COLLECTOR_URL=http://meta-ad-library-collector:9100
-META_AD_LIBRARY_COLLECTOR_URL=http://meta-ad-library-collector:9100
-SEARCHAPI_API_KEY=<key>
-META_AD_LIBRARY_API_TOKEN=<optional-official-meta-token>
-AD_COLLECTOR_DAILY_SPEND_LIMIT_USD=0
-OPENROUTER_API_KEY=<key>
-MEM0_API_KEY=<key>
-BROWSERBASE_API_KEY=<key>
-BROWSERBASE_PROJECT_ID=<project-id>
-HERMES_WEBHOOK_SECRET=<secret>
-META_COLLECTOR_COOKIE_JSON=
-```
+## Preflight
+
+1. Confirm `HERMES_BASE_IMAGE` is pinned to a concrete tag or digest.
+2. Confirm `UPTIME_KUMA_IMAGE` is pinned.
+3. Confirm the active compose file has no `research-orchestrator` service.
+4. Confirm the active compose file has no `meta-ad-library-collector` service.
+5. Confirm no active service mounts `workers/**`.
+6. Confirm legacy worker env vars are absent.
 
 ## Deploy
 
+Operator-only sequence:
+
 ```bash
 cd /opt/blockwise
-docker compose config --quiet
-docker compose up -d --build meta-ad-library-collector hermes
+docker compose -f infra/coolify/docker-compose.research.yml config --quiet
+docker compose -f infra/coolify/docker-compose.research.yml up -d --build hermes uptime-kuma
 ```
-
-The old collection services must stay stopped unless explicitly run under the
-manual profile.
 
 ## Verify
 
+Operator-only checks:
+
 ```bash
-curl -s http://127.0.0.1:9100/health
-docker exec blockwise-hermes /usr/bin/python3 \
-  /opt/data/skills/blockwise-ad-collector/scripts/collector_client.py health
-docker compose ps
+docker compose -f infra/coolify/docker-compose.research.yml ps
+curl -fsS http://127.0.0.1:8642/health
+curl -fsSI http://127.0.0.1:9119/
+curl -fsS http://127.0.0.1:3001
 ```
 
 Expected:
 
-- collector is healthy
-- Hermes can call the collector
-- `blockwise-orchestrator` is not running by default
-- routine runs record the configured `source_provider`; failed runs never mark
-  ads absent
+1. `blockwise-hermes` is running.
+2. `blockwise-uptime-kuma` is running.
+3. `research-orchestrator` is absent.
+4. `meta-ad-library-collector` is absent.
+5. Hermes owns all research execution credentials.
+
+## Rollback
+
+Rollback requires an explicit change. Use `_archive/MANIFEST.md` and
+`docs/research-engine/reset-backup-manifest.md` to identify legacy sources.
+Do not re-enable legacy workers through unmanaged containers or hidden bind
+mounts.

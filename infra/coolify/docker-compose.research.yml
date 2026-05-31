@@ -1,105 +1,98 @@
 version: "3.9"
 
+x-blockwise-research-reset:
+  owner: "hermes"
+  status: "hard-reset-runtime"
+  removed_active_services_count: 2
+  notes:
+    - "Legacy worker code is archived, not mounted into the active runtime."
+    - "Hermes owns research execution; build and collection adapters are placeholders until enabled by the operator."
+    - "Pinned images are required. Do not deploy with floating tags."
+
 services:
-  research-orchestrator:
-    build:
-      context: ../..
-      dockerfile: workers/research-orchestrator/Dockerfile
-    container_name: research-orchestrator
-    restart: unless-stopped
-    environment:
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      AD_COLLECTOR_PROVIDER: ${AD_COLLECTOR_PROVIDER:-self_hosted_meta}
-      SELF_HOSTED_META_COLLECTOR_URL: http://meta-ad-library-collector:9100
-      SEARCHAPI_API_KEY: ${SEARCHAPI_API_KEY:-}
-      SEARCHAPI_BASE_URL: ${SEARCHAPI_BASE_URL:-https://www.searchapi.io/api/v1/search}
-      SEARCHAPI_ESTIMATED_COST_PER_RUN_USD: ${SEARCHAPI_ESTIMATED_COST_PER_RUN_USD:-0.004}
-      META_AD_LIBRARY_API_TOKEN: ${META_AD_LIBRARY_API_TOKEN:-}
-      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v20.0}
-      AD_COLLECTOR_COUNTRY: AU
-      AD_COLLECTOR_ACTIVE_STATUS: active
-      AD_COLLECTOR_DAILY_SPEND_LIMIT_USD: ${AD_COLLECTOR_DAILY_SPEND_LIMIT_USD:-5}
-      AD_COLLECTOR_RESULTS_LIMIT_PER_PAGE: "50"
-      RESEARCH_RAW_EVIDENCE_BUCKET: research-raw-evidence
-      RESEARCH_AD_CREATIVES_BUCKET: research-ad-creatives
-      ORCHESTRATOR_MODE: loop
-      ORCHESTRATOR_LOOP_INTERVAL_MS: ${ORCHESTRATOR_LOOP_INTERVAL_MS:-300000}
-      ORCHESTRATOR_MAX_PAGES_PER_TICK: ${ORCHESTRATOR_MAX_PAGES_PER_TICK:-5}
-      ORCHESTRATOR_DRY_RUN: "false"
-    networks: [research]
-    depends_on: [meta-ad-library-collector]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-  meta-ad-library-collector:
-    build:
-      context: ../..
-      dockerfile: workers/meta-ad-library-collector/Dockerfile
-    container_name: meta-ad-library-collector
-    restart: unless-stopped
-    environment:
-      META_COLLECTOR_PORT: "9100"
-      META_COLLECTOR_TIMEOUT_MS: "45000"
-      META_COLLECTOR_WAIT_MS: "9000"
-      META_COLLECTOR_COOKIE_JSON: ${META_COLLECTOR_COOKIE_JSON:-}
-      META_COLLECTOR_PROFILE_DIR: /data/profile
-      PYTHONUNBUFFERED: "1"
-    volumes:
-      - ../../workers/meta-ad-library-collector:/app:rw
-      - collector-profile:/data
-    ports:
-      - "127.0.0.1:9100:9100"
-    networks: [research]
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
   hermes:
-    image: ghcr.io/nousresearch/hermes-agent:latest
-    container_name: hermes
+    build:
+      context: ../..
+      dockerfile: infra/hermes/Dockerfile
+      args:
+        HERMES_BASE_IMAGE: "${HERMES_BASE_IMAGE:?Set HERMES_BASE_IMAGE to a pinned Hermes image tag or digest}"
+    image: "${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:2026-05-30}"
+    container_name: blockwise-hermes
+    command: ["gateway", "run", "--replace", "--accept-hooks"]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${HERMES_GATEWAY_HOST_PORT:-8642}:8642"
+      - "127.0.0.1:${HERMES_DASHBOARD_HOST_PORT:-9119}:9119"
     environment:
+      HERMES_CONFIG: /app/hermes.toml
+      HERMES_HOME: /opt/data
+      HERMES_ACCEPT_HOOKS: "1"
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_PORT: "8642"
+      API_SERVER_KEY: ${HERMES_API_SERVER_KEY:?Set HERMES_API_SERVER_KEY}
+      API_SERVER_CORS_ORIGINS: ${HERMES_API_SERVER_CORS_ORIGINS:-https://hermes.blockwise.sale}
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: "0.0.0.0"
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_DASHBOARD_INSECURE: ${HERMES_DASHBOARD_INSECURE:-1}
+      HERMES_PROVIDER: ${HERMES_PROVIDER:-openrouter}
+      HERMES_DEFAULT_MODEL: ${HERMES_DEFAULT_MODEL:?Set HERMES_DEFAULT_MODEL to an OpenRouter model slug}
+      HERMES_ESCALATION_MODEL: ${HERMES_ESCALATION_MODEL:?Set HERMES_ESCALATION_MODEL to an OpenRouter model slug}
+      HERMES_RESEARCH_MODE: ${HERMES_RESEARCH_MODE:-maintain}
+      HERMES_BUILD_CONCURRENCY: ${HERMES_BUILD_CONCURRENCY:-4}
+      HERMES_MAINTAIN_CONCURRENCY: ${HERMES_MAINTAIN_CONCURRENCY:-1}
+      HERMES_COLLECTION_INTERVAL_SECONDS: ${HERMES_COLLECTION_INTERVAL_SECONDS:-900}
+      HERMES_DAILY_SPEND_LIMIT_USD: ${HERMES_DAILY_SPEND_LIMIT_USD:-25}
+      HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       MEM0_API_KEY: ${MEM0_API_KEY}
+      MEM0_PROJECT_ID: ${MEM0_PROJECT_ID:-blockwise-research}
       BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
       BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      SELF_HOSTED_META_COLLECTOR_URL: http://meta-ad-library-collector:9100
-      META_AD_LIBRARY_COLLECTOR_URL: http://meta-ad-library-collector:9100
-      AD_COLLECTOR_PROVIDER: ${AD_COLLECTOR_PROVIDER:-self_hosted_meta}
-      SEARCHAPI_API_KEY: ${SEARCHAPI_API_KEY:-}
-      META_AD_LIBRARY_API_TOKEN: ${META_AD_LIBRARY_API_TOKEN:-}
-      AD_COLLECTOR_DAILY_SPEND_LIMIT_USD: ${AD_COLLECTOR_DAILY_SPEND_LIMIT_USD:-5}
-      HERMES_WEBHOOK_SECRET: ${HERMES_WEBHOOK_SECRET}
-      HERMES_PORT: "8080"
+      HERMES_SUPABASE_URL: ${SUPABASE_URL}
+      HERMES_SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      HERMES_RESEARCH_AD_CREATIVES_BUCKET: ${HERMES_RESEARCH_AD_CREATIVES_BUCKET:-research-ad-creatives}
+      HERMES_RESEARCH_SCREENSHOTS_BUCKET: ${HERMES_RESEARCH_SCREENSHOTS_BUCKET:-research-screenshots}
+      HERMES_RESEARCH_RAW_EVIDENCE_BUCKET: ${HERMES_RESEARCH_RAW_EVIDENCE_BUCKET:-research-raw-evidence}
+      BLOCKWISE_RESEARCH_RUNTIME_OWNER: hermes
+      BLOCKWISE_RESEARCH_RUNTIME_ENABLED: ${BLOCKWISE_RESEARCH_RUNTIME_ENABLED:-true}
+      HERMES_RESEARCH_TARGET_POSTCODES: ${HERMES_RESEARCH_TARGET_POSTCODES:-6008,6000,6005,6006,6007,6009,6010,6011,6014,6015,6016,6017,6018,6019,6020,6050,6051,6052,6151,6152,6153,6158,6159,6160}
+      HERMES_RESEARCH_SUPERVISOR_POLICY_LIMIT: ${HERMES_RESEARCH_SUPERVISOR_POLICY_LIMIT:-50}
     volumes:
-      - hermes-data:/data
-      - ../../hermes/skills:/app/skills:rw
-      - ../../workers/meta-ad-library-collector:/opt/blockwise/meta-ad-library-collector:rw
+      - hermes-data:/opt/data
     networks: [research]
-    depends_on: [meta-ad-library-collector]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/hermes/.venv/bin/python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8642/health', timeout=5).read()\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
     logging:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
   uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
+    image: "${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1.23.16}"
+    container_name: blockwise-uptime-kuma
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3001"
     volumes:
       - uptime-data:/app/data
     networks: [research]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
 volumes:
   hermes-data:
-  collector-profile:
   uptime-data:
 
 networks:

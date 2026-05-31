@@ -1,70 +1,73 @@
 # blockwise-ad-classifier
 
-**Status:** stub — to be implemented in Phase 8.
-
 ## Purpose
 
-Read each new `ad_creative` and write a structured classification into
-`ad_creatives.classification`. This is what powers:
+Classify each captured real-estate creative so the app can filter by ad type,
+hook, style, audience, and local target signal.
 
-- "show me all 'just sold' ads in 6020"
-- "what hooks are working in Cottesloe this month"
-- "find ads similar to this one"
-- "generate me a fresh listing ad in the style this agent uses"
-
-## Inputs
+## Input
 
 ```json
 {
-  "ad_creative_id": "<uuid>",
+  "adCreativeId": "<research.ad_creatives.id>",
+  "sourceDocumentId": "<source_documents.id>",
   "force": false
 }
 ```
 
-Default trigger: a new `ad_creative` row is inserted by the ingestion
-worker; a Postgres trigger or polling job picks it up and runs this skill.
+## Model Config
 
-## Outputs
+Use `hermes/tools/research-runtime` OpenRouter support. Model names must come
+from env only:
 
-- `research.ad_creatives.classification` (jsonb) — written via the
-  ingestion worker.
-- `research.agent_decisions` — one `ad_classification` decision per
-  creative classified.
+```bash
+OPENROUTER_API_KEY=<key>
+HERMES_DEFAULT_MODEL=<cheap-default-model>
+HERMES_ESCALATION_MODEL=<stronger-escalation-model>
+HERMES_OPENROUTER_MODELS_JSON={"ad_classification":"<model-from-operator-config>"}
+```
 
-## Classification shape
+Do not hardcode model names in prompts, scripts, or skill config.
 
-```jsonc
+## Classification Shape
+
+Return only JSON matching the supplied schema. No Markdown, comments, JSONC, or
+extra keys. If parsing fails, repair_once_then_fail and open a defect if the
+second attempt is invalid.
+
+```json
 {
-  "type": "listing" | "brand" | "just_sold" | "open_home"
-        | "recruitment" | "lead_magnet" | "appraisal" | "other",
-  "hooks": ["scarcity", "social_proof", "fomo", "local_market", "..."],
-  "tone": "professional" | "casual" | "urgent" | "aspirational" | "...",
-  "style": "photo_focused" | "video_walkthrough" | "graphic_text"
-         | "drone_shot" | "lifestyle" | "...",
-  "target_signal": {
-    "suburb": "Cottesloe" | null,
-    "postcode": "6011" | null,
-    "price_band": "1m-2m" | "2m+" | "sub-1m" | "rental" | null,
-    "audience": "first_home_buyer" | "downsizer" | "investor"
-              | "vendor" | "seller_lead" | null
-  },
-  "confidence": 0-100
+  "isRealEstateAd": true,
+  "realEstateRelevance": "agent_brand",
+  "adType": "appraisal",
+  "primaryIntent": "generate_appraisals",
+  "propertyOrAgentFocus": "agency",
+  "hooks": [],
+  "tone": "",
+  "style": "",
+  "audience": "",
+  "suburbSignals": [],
+  "confidence": 0,
+  "rejectionReason": null
 }
 ```
 
-## Prompt sketch
+## Output Rules
 
-A small model (Haiku / GPT-4o-mini / Gemini Flash) is enough. The skill
-takes the creative's headline, body, CTA, and primary image URL (the
-model sees the image directly), plus the agency name and known postcode
-service area, and returns the structured classification.
-
-If confidence < 60, the skill writes the classification with status
-flagged for re-classification next pass, and uses a stronger model on
-retry.
+- Write `research.ad_creatives.classification`, `ad_type`, and
+  `primary_intent` through the ingestion API.
+- Write one `ad_classification` decision per creative with prompt version,
+  configured model id, cost trace, evidence, and confidence.
+- If relevance is `not_real_estate` or confidence is below the threshold, flag
+  the creative for review and open a defect against the upstream resolver or
+  census path.
+- Do not delete or hide ads directly; classification only supplies a secondary
+  relevance signal.
 
 ## Tools
 
-- `hermes.llm.complete` (model picker)
+- `hermes/tools/research-runtime`
+- `hermes.openrouter.complete`
 - `blockwise.ingest.upsert_classification`
+- `blockwise.ingest.open_defect`
 - `hermes.write_decision`

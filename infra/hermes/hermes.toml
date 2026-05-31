@@ -1,5 +1,5 @@
 # Hermes runtime config for the Blockwise research engine.
-# Overridden by env vars where applicable.
+# Environment variables provide secrets and deployment-specific values.
 
 [agent]
 name = "blockwise-research"
@@ -11,15 +11,14 @@ host = "0.0.0.0"
 port = 8080
 
 [agent.model]
-# Default routes to OpenRouter; per-skill overrides in each SKILL.md if needed.
-provider = "openrouter"
-model = "anthropic/claude-sonnet-4"
-# Cheaper model for high-volume classification skills:
-classifier_model = "openai/gpt-4o-mini"
+provider_env = "HERMES_PROVIDER"
+default_model_env = "HERMES_DEFAULT_MODEL"
+escalation_model_env = "HERMES_ESCALATION_MODEL"
+task_models_json_env = "HERMES_OPENROUTER_MODELS_JSON"
 
 [agent.memory]
-# Postgres (Supabase) is the system of record for decisions.
-# mem0 is the fuzzy recall layer.
+# Postgres is the system of record for decisions. mem0 is fuzzy recall only.
+
 [agent.memory.mem0]
 enabled = true
 
@@ -33,7 +32,6 @@ directory = "/app/skills"
 auto_reload = true
 
 [agent.skills.allowed]
-# Whitelist — Hermes will not load other skills found on disk.
 names = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
@@ -48,17 +46,16 @@ names = [
 enabled = true
 
 [agent.scheduling]
-# Cron expressions in TZ Australia/Perth.
 timezone = "Australia/Perth"
 
 [[agent.scheduling.jobs]]
 name = "weekly-census-priority-1"
 skill = "blockwise-agent-census"
-cron = "0 3 * * 1"            # 3am Monday Perth time
+cron = "0 3 * * 1"
 input = { state = "WA", priority_max = 1 }
 
 [[agent.scheduling.jobs]]
 name = "weekly-coverage-audit"
 skill = "blockwise-coverage-auditor"
-cron = "0 5 * * 1"            # 5am Monday Perth time
+cron = "0 5 * * 1"
 input = { method = "sampled_manual_browse", state = "WA" }

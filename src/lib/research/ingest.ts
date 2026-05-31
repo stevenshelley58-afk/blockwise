@@ -150,7 +150,7 @@ export type PendingCreativeUpsert = {
   videoUrl: string | null;
   videoStoragePath: string | null;
   videoThumbnailUrl: string | null;
-  mediaAssets: Record<string, unknown>[];
+  mediaAssets: AdCreative["mediaAssets"];
   landingUrl: string | null;
   locale: string | null;
   language: string | null;

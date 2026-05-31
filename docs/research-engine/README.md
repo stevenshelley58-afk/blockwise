@@ -1,50 +1,44 @@
-# Research Engine Runbook
+# Research Engine
 
-The research engine builds the Blockwise real-estate ad database. It discovers
-agents/agencies, resolves their Meta pages, collects public Meta Ad Library ads,
-stores raw evidence, and exposes searchable `research.v_*` views to the app.
+Date: 2026-05-30
 
-Default ad collector:
+The research engine is in hard-reset runtime mode. Hermes is the active runtime
+owner. The legacy TypeScript orchestrator and standalone Meta collector are
+archived and removed from the active compose stack.
 
-```bash
-AD_COLLECTOR_PROVIDER=searchapi_meta
-SELF_HOSTED_META_COLLECTOR_URL=http://meta-ad-library-collector:9100
-SEARCHAPI_API_KEY=<key>
-META_AD_LIBRARY_API_TOKEN=<optional-official-meta-token>
-META_AD_LIBRARY_COLLECTOR_URL=http://meta-ad-library-collector:9100
-AD_COLLECTOR_DAILY_SPEND_LIMIT_USD=0
-```
+## Start Here
 
-Use `searchapi_meta` as the hosted primary collector when `SEARCHAPI_API_KEY`
-is configured. Keep `self_hosted_meta` as a verifier/debug path, not the
-primary completeness source.
+| Document | Purpose |
+| --- | --- |
+| `pre-reset-inventory.md` | What existed before the cleanup |
+| `deletion-plan.md` | What was removed from active runtime and what stayed out of scope |
+| `reset-backup-manifest.md` | Archive and backup references |
+| `pipeline-architecture.md` | Target Hermes-owned architecture |
+| `hermes-vps-deployment.md` | VPS deployment contract |
+| `env.md` | Environment variables for the reset runtime |
+| `data-contracts.md` | Data and quality contracts |
+| `build-vs-maintain-mode.md` | Operating modes |
+| `operator-runbook.md` | Routine operator checks and stop procedure |
+| `removing-old-research-workers.md` | Legacy worker removal details |
+| `meta-ad-library-card.md` | App-facing card data contract |
 
-## VPS Services
+## Active Runtime
 
-- `blockwise-meta-ad-library-collector`: Playwright-based collector exposed only
-  on `127.0.0.1:9100` and the private Docker network.
-- `blockwise-hermes`: receives the collector URL and has the collector source
-  mounted at `/opt/blockwise/meta-ad-library-collector` for inspection/refinement.
-- `blockwise-orchestrator`: manual profile only; uses `AD_COLLECTOR_PROVIDER`
-  and records the matching `source_provider`.
+Active services in `infra/coolify/docker-compose.research.yml`:
 
-## Integrity Rules
+1. `blockwise-hermes`
+2. `blockwise-uptime-kuma`
 
-- Failed provider runs never mean "no ads."
-- Login walls, checkpoints, timeouts, and blocked pages are failed runs.
-- Raw payloads are stored in `research-raw-evidence`.
-- Ads are idempotent on `(advertiser_page_id, external_ad_id)`.
-- Absence is applied only after a successful run and still requires repeated
-  misses before an ad is marked inactive.
-- The app reads through `research.v_*` views only.
+Not active:
 
-## Smoke Tests
+1. `research-orchestrator`
+2. `meta-ad-library-collector`
 
-```bash
-curl -s http://127.0.0.1:9100/health
-docker exec blockwise-hermes /usr/bin/python3 \
-  /opt/data/skills/blockwise-ad-collector/scripts/collector_client.py health
-```
+## Safety Rules
 
-If a status check returns zero after prior ads existed, file a coverage defect
-instead of silently treating the page as inactive.
+1. Do not use `:latest` images in the research stack.
+2. Do not mount `workers/**` into active runtime containers.
+3. Do not treat failed provider runs as zero ads.
+4. Do not use broad location discovery, postcode search, suburb search, or
+   ad-first discovery in the v1 research build.
+5. Keep archived worker copies read-only unless an explicit rollback is planned.

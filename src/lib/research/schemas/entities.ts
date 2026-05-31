@@ -25,6 +25,7 @@ export const agencySchema = z.object({
   primarySuburb: z.string().nullable().optional(),
   primaryPostcode: postcodeSchema.nullable().optional(),
   websiteUrl: z.string().url().nullable().optional(),
+  isRealEstate: z.boolean().default(false),
   status: entityStatusSchema.default("market_seen_unverified"),
   reviewStatus: reviewStatusSchema.default("ready"),
   confidence: confidenceSchema.default(0),

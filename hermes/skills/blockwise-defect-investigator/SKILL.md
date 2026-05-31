@@ -1,55 +1,55 @@
 # blockwise-defect-investigator
 
-**Status:** stub — to be implemented in Phase 7.
-
 ## Purpose
 
-Operator-triggered. Picks up an open `coverage_defect` and figures out
-what went wrong: was it a missing agent, an unresolved page, a wrong
-provider response, or a real Meta-side change?
+Operator-triggered investigation for an open coverage defect. It determines
+whether the issue belongs to census, page resolution, collection, provider
+quality, classification, or stale public data.
 
-## Inputs
+## Input
 
 ```json
 {
-  "coverage_defect_id": "<uuid>"
+  "coverageDefectId": "<research.coverage_defects.id>",
+  "operatorDecisionId": "<optional agent_decisions.id>"
 }
 ```
 
-## Outputs
+## Investigation Flow
 
-- Updates the defect's `status` to `investigating` while running, then
-  `resolved` or `dismissed` when finished.
-- Writes the resolution into `coverage_defects.resolution` (jsonb) AND
-  `coverage_defects.resolution_decision_id` (the agent_decision row).
-- If the root cause is a missing agent/agency, also calls
-  `blockwise-agent-census` for that postcode.
-- If the root cause is a wrong page resolution, supersedes the bad
-  decision via `agent_decisions.superseded_by` and triggers
-  `blockwise-page-resolver` for the subject.
+1. Mark the defect `investigating`.
+2. Read the defect, linked evidence, roster subject, advertiser page, fetch run,
+   and source documents.
+3. Replay only the scoped failing path:
+   - Missing or unverified agency: queue `blockwise-agent-census`.
+   - Known subject without a page: queue `blockwise-page-resolver`.
+   - Resolved page with failed or stale fetch: queue `blockwise-ad-collector`.
+   - Captured creative with weak labels: queue `blockwise-ad-classifier`.
+4. Use Browserbase/manual Meta Ad Library browsing only for evidence capture.
+5. Resolve or dismiss the defect with a decision row and source evidence.
 
-## Investigation flow
+## Output Rules
 
-1. Read the defect; capture context (postcode, agent_name, evidence_url).
-2. Replay the failing path:
-   - If the defect names an agency that isn't in `research.agencies`,
-     hand off to `blockwise-agent-census`.
-   - If it names an advertiser_page we don't have, hand off to
-     `blockwise-page-resolver`.
-   - If we have the page but didn't have the ad it mentions, replay
-     the most recent `ad_fetch_runs` for that page. Inspect raw payload.
-3. Decide:
-   - **Genuine gap** (we never knew): resolved, with the entity now linked.
-   - **Collector blind spot** (the self-hosted collector missed it; we see
-     it on Meta UI): mark collector quality issue in `result_summary`;
-     queue a skill improvement for `blockwise-ad-collector`; resolved with notes.
-   - **Stale data** (ad just ended; we hadn't noticed): not a defect; dismissed.
-   - **Mis-reported by customer**: dismissed with notes.
+- Update `coverage_defects.status`, `resolution`, and
+  `resolution_decision_id` through the ingestion API.
+- Supersede bad page-resolution decisions when a replacement is found.
+- Do not ingest public browsing samples as ads. Hand off to the owning skill.
+- If the collector missed a visible ad on a resolved page, record a provider
+  quality issue and queue collector work for that exact page.
+
+## Model Config
+
+If an LLM is needed for evidence summarisation, use OpenRouter through
+`hermes/tools/research-runtime`. Model names must come from
+`HERMES_DEFAULT_MODEL`, `HERMES_ESCALATION_MODEL`, or
+`HERMES_OPENROUTER_MODELS_JSON`.
 
 ## Tools
 
-- `browserbase.session` — to manually browse Meta Ad Library for proof
-- `supabase.query` — read fetch run history, raw payloads
+- `hermes/tools/research-runtime`
+- `browserbase.session`
+- scoped read-only research queries
 - `blockwise.ingest.update_defect`
-- `blockwise.ingest.skill_handoff` (calls another skill in this directory)
+- `blockwise.ingest.skill_handoff`
+- `blockwise.ingest.open_defect`
 - `hermes.write_decision`

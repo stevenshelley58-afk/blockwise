@@ -55,13 +55,14 @@ export const sourceProviderSchema = z.enum([
   "searchapi_meta",
   "official_meta_archive",
   "browserbase",
+  "hermes_meta_page_capture",
+  "structured_meta_page_provider",
   "metapi",
   "demirs_register",
   "reiwa",
   "domain",
   "rea",
   "google_business_profile",
-  "meta_ad_library_ui",
   "operator_upload",
 ]);
 export type SourceProvider = z.infer<typeof sourceProviderSchema>;

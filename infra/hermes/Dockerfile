@@ -1,20 +1,27 @@
-# Hermes Agent — image is published by Nous Research; we ship a thin
-# wrapper that mounts our blockwise-* skills and bakes in a starter
-# hermes.toml.
+# Blockwise Hermes research wrapper.
 #
-# If the upstream image moves, change the FROM. The skill mount is what
-# makes this "ours."
+# HERMES_BASE_IMAGE must be a pinned Hermes image tag or digest supplied by the
+# operator, for example:
+#   ghcr.io/nousresearch/hermes-agent:<version>
+#   ghcr.io/nousresearch/hermes-agent@sha256:<digest>
+#
+# Do not use a floating latest tag in production.
 
-FROM ghcr.io/nousresearch/hermes-agent:latest
+ARG HERMES_BASE_IMAGE
+FROM ${HERMES_BASE_IMAGE}
 
-# Our skills live in /app/skills (read-only at runtime via compose mount,
-# baked-in at build time for the container's own files).
+LABEL org.opencontainers.image.title="Blockwise Hermes Research"
+LABEL org.opencontainers.image.description="Hermes runtime wrapper for the Blockwise research engine hard reset"
+
 COPY hermes/skills /app/skills
-
-# Default hermes.toml; the operator can override via Coolify env or
-# bind-mount.
+COPY hermes/tools/research-runtime /app/research-runtime
 COPY infra/hermes/hermes.toml /app/hermes.toml
+COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh
+
+RUN chmod +x /opt/hermes/docker/main-wrapper.sh /app/research-runtime/bin/supabase-supervisor.mjs
 
 EXPOSE 8080
 
-# The base image runs `hermes start` by default.
+# The base image owns the entrypoint and command routing. Blockwise replaces
+# Hermes' main-wrapper with an equivalent wrapper that starts the deterministic
+# research supervisor before handing off to Hermes.

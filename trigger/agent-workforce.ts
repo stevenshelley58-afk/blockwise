@@ -1,4 +1,4 @@
-import { schedules, task } from "@trigger.dev/sdk/v3";
+import { task } from "@trigger.dev/sdk/v3";
 
 import { buildAgentRuntimePolicy } from "../src/lib/agents/runtime-policy.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
@@ -19,29 +19,6 @@ type AgentRunPayload = {
   actorProfileId?: string;
   approvalIds?: string[];
 };
-
-export const scheduledCompetitorResearch = schedules.task({
-  id: "scheduled-competitor-research",
-  cron: "0 9 * * 1",
-  run: async () => {
-    const serviceSupabase = createSupabaseServiceClient();
-    const { data: workspaces, error } = await serviceSupabase
-      .from("workspaces")
-      .select("id")
-      .limit(100);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return {
-      scheduled: true,
-      queuedWorkspaces: (workspaces ?? []).length,
-      agentKey: "research_agent",
-      safety: "Workers call Blockwise APIs only; raw provider tokens and service-role keys are never passed to agents.",
-    };
-  },
-});
 
 export const runAgentWorkflow = task({
   id: "run-agent-workflow",

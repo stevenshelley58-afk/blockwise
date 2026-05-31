@@ -87,16 +87,12 @@ type ResearchSignalRow = {
   evidence?: string | null;
   confidence?: number | string | null;
   page_name?: string | null;
-  agency_name?: string | null;
-  agent_name?: string | null;
+  library_id?: string | null;
   headline?: string | null;
   body?: string | null;
   active_status?: string | null;
   last_seen_at?: string | null;
   postcodes?: string[] | null;
-  classification?: unknown;
-  ad_type?: string | null;
-  primary_intent?: string | null;
 };
 
 export function buildCampaignReadinessRows(input: {
@@ -329,8 +325,8 @@ export async function listAiLedgerRows(supabase: SupabaseServerClient, workspace
 export async function listResearchSignals(supabase: SupabaseServerClient, _workspaceId: string) {
   const { data } = await supabase
     .schema("research")
-    .from("v_recent_creative_patterns")
-    .select("*")
+    .from("v_customer_meta_ad_library_cards")
+    .select("page_name,library_id,headline,body,active_status,last_seen_at,postcodes")
     .order("last_seen_at", { ascending: false })
     .limit(30);
 
@@ -338,22 +334,14 @@ export async function listResearchSignals(supabase: SupabaseServerClient, _works
 }
 
 function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
-  const classification = isRecord(row.classification) ? row.classification : {};
-  const intent =
-    row.primary_intent ??
-    row.ad_type ??
-    stringField(classification.primary_intent) ??
-    stringField(classification.ad_type) ??
-    stringField(classification.type) ??
-    "active ad";
   const summary = row.headline ?? firstSentence(row.body) ?? "Creative captured";
   const postcodes = Array.isArray(row.postcodes) && row.postcodes.length > 0 ? `Postcodes ${row.postcodes.join(", ")}` : "Postcode match pending";
 
   return {
-    competitor: row.agency_name ?? row.page_name ?? row.agent_name ?? "Unknown competitor",
-    signal: `${intent}: ${summary}`,
+    competitor: row.page_name ?? "Unknown competitor",
+    signal: summary,
     evidence: `${postcodes}${row.last_seen_at ? `, last seen ${new Date(row.last_seen_at).toLocaleDateString("en-AU")}` : ""}`,
-    confidence: stringField(classification.confidence) ?? row.confidence ?? (row.active_status === "active" ? 80 : 50),
+    confidence: row.confidence ?? (row.active_status === "active" ? 80 : 50),
   };
 }
 
