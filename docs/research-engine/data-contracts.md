@@ -19,8 +19,10 @@ database schema remains owned by Supabase migrations outside this task.
 ## Eligibility Contract
 
 Only pages linked to verified real-estate agencies or agents are eligible for
-routine collection and display. Broad location discovery may create defects or
-leads, but must not directly create displayable ads.
+routine collection and display. V1 does not use location search, postcode
+search, suburb search, ad-first search, or generic advertiser discovery as a
+hint source. The only allowed path is verified roster to verified Meta page to
+collection by page id.
 
 ## Collection Contract
 

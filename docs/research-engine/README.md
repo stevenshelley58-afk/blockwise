@@ -39,5 +39,6 @@ Not active:
 1. Do not use `:latest` images in the research stack.
 2. Do not mount `workers/**` into active runtime containers.
 3. Do not treat failed provider runs as zero ads.
-4. Do not let broad location discovery create displayable ads.
+4. Do not use broad location discovery, postcode search, suburb search, or
+   ad-first discovery in the v1 research build.
 5. Keep archived worker copies read-only unless an explicit rollback is planned.
