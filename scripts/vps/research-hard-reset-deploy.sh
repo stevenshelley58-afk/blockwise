@@ -111,8 +111,13 @@ ssh "$VPS_SSH_TARGET" 'bash -s' <<REMOTE_DEPLOY
 set -euo pipefail
 
 if [ ! -d /opt/blockwise/.git ]; then
-  mv /opt/blockwise "/opt/blockwise.manual-backup-\$(date +%Y%m%d-%H%M%S)"
+  previous="/opt/blockwise.manual-backup-\$(date +%Y%m%d-%H%M%S)"
+  mv /opt/blockwise "\$previous"
   git clone "$BLOCKWISE_GIT_URL" /opt/blockwise
+  if [ -f "\$previous/.env" ]; then
+    cp -a "\$previous/.env" /opt/blockwise/.env
+    chmod 600 /opt/blockwise/.env
+  fi
 fi
 
 cd /opt/blockwise
