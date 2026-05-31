@@ -189,15 +189,15 @@ async function runWatchdogs() {
   });
   const zeroAds = await rpc("watchdog_record_zero_ad_anomalies", {
     p_since: "48 hours",
-    p_zero_threshold: 3,
+    p_limit: 100,
   });
   const missingMedia = await rpc("watchdog_record_missing_media", {
     p_since: "24 hours",
-    p_missing_threshold: 1,
+    p_limit: 100,
   });
   const unclassified = await rpc("watchdog_record_unclassified_creatives", {
     p_since: "24 hours",
-    p_unclassified_threshold: 1,
+    p_limit: 100,
   });
   return {
     stale: stale.length,
