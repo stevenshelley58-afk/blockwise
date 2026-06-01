@@ -554,7 +554,16 @@ function LeadsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
         <DashboardMetric label="Lead volume" value={formatNumber(bundle.totals.leads)} note={`${bundle.range.label}`} />
         <DashboardMetric label="Valid rate" value={formatPercent(bundle.totals.validLeadRate)} note={`${formatNumber(bundle.totals.validLeads)} valid leads`} />
         <DashboardMetric label="Duplicates" value={formatNumber(bundle.leads.duplicateCount)} note={bundle.leads.dedupeSummary} />
-        <DashboardMetric label="Source count" value={String(bundle.leads.sourceSplit.filter((source) => source.leads > 0).length)} note="Meta, Google, CSV, manual" />
+        <DashboardMetric
+          label="Source count"
+          value={String(bundle.leads.sourceSplit.filter((source) => source.leads > 0).length)}
+          note={
+            bundle.leads.sourceSplit
+              .filter((source) => source.leads > 0)
+              .map((source) => source.source)
+              .join(", ") || "No leads yet"
+          }
+        />
       </section>
 
       <section className="monitor-chart-grid compact">

@@ -5,6 +5,7 @@ import {
   buildDemoMonitorDashboardBundle,
   mergeProviderReportsWithDemo,
   normalizeProviderReport,
+  scopeDemoBundleToProviders,
   type MonitorDashboardBundle,
   type MonitorProvider,
   type MonitorProviderReport,
@@ -20,6 +21,11 @@ import { fetchMetaReporting } from "@/modules/providers/meta-reporting";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
+
+// Google Ads is parked until it is wired up and reviewed. While disabled, a
+// Google connection surfaces no data (live or demo), so clients only ever see
+// providers Blockwise actually supports.
+const GOOGLE_ADS_ENABLED = process.env.GOOGLE_ADS_ENABLED === "true";
 
 export async function buildMonitorDashboardForWorkspace(input: {
   supabase: SupabaseServerClient;
@@ -39,13 +45,30 @@ export async function buildMonitorDashboardForWorkspace(input: {
     return demo;
   }
 
-  const reports = await Promise.all(
-    connections
-      .filter((connection) => connection.provider === "meta" || connection.provider === "google")
-      .map((connection) => buildProviderReport(input.serviceSupabase, connection, demo)),
+  // Only providers the workspace has actually connected (and that are enabled) may
+  // surface any data — including demo/sample fixtures. This prevents a Meta-only
+  // workspace from seeing fake Google cards, leads, or charts.
+  const activeConnections = connections.filter(
+    (connection) => connection.provider === "meta" || (GOOGLE_ADS_ENABLED && connection.provider === "google"),
   );
 
-  return mergeProviderReportsWithDemo(demo, reports.filter((report): report is MonitorProviderReport => Boolean(report)));
+  if (activeConnections.length === 0) {
+    return demo;
+  }
+
+  const connectedProviders: Set<MonitorProvider> = new Set(
+    activeConnections.map((connection) => connection.provider),
+  );
+  const scopedDemo = scopeDemoBundleToProviders(demo, connectedProviders);
+
+  const reports = await Promise.all(
+    activeConnections.map((connection) => buildProviderReport(input.serviceSupabase, connection, demo)),
+  );
+
+  return mergeProviderReportsWithDemo(
+    scopedDemo,
+    reports.filter((report): report is MonitorProviderReport => Boolean(report)),
+  );
 }
 
 async function buildProviderReport(

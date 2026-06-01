@@ -85,6 +85,8 @@ export type MonitorLeadRow = {
   attribution: string;
 };
 
+export type MonitorLeadSource = MonitorLeadRow["source"];
+
 export type MonitorDashboardBundle = {
   workspaceId: string;
   generatedAt: string;
@@ -268,6 +270,38 @@ export function buildDemoMonitorDashboardBundle(options: DemoOptions): MonitorDa
     range,
     providers,
     leadRows: DEMO_LEADS,
+  });
+}
+
+const PROVIDER_LEAD_SOURCE: Record<MonitorProvider, MonitorLeadSource> = {
+  meta: "Meta",
+  google: "Google",
+};
+
+// Lead sources that are not tied to an ad provider and should always be shown.
+const NON_PROVIDER_LEAD_SOURCES: ReadonlySet<MonitorLeadSource> = new Set(["CSV", "Manual"]);
+
+/**
+ * Rebuilds a demo bundle limited to the providers a workspace has actually connected.
+ * Provider cards and provider-sourced demo leads (Meta/Google) are dropped unless that
+ * provider is connected; non-provider leads (CSV/Manual) are always retained. Totals,
+ * top rows, charts and lead source splits are recomputed from the filtered set.
+ */
+export function scopeDemoBundleToProviders(
+  demo: MonitorDashboardBundle,
+  connectedProviders: ReadonlySet<MonitorProvider>,
+): MonitorDashboardBundle {
+  const allowedLeadSources: Set<MonitorLeadSource> = new Set(NON_PROVIDER_LEAD_SOURCES);
+  for (const provider of connectedProviders) {
+    allowedLeadSources.add(PROVIDER_LEAD_SOURCE[provider]);
+  }
+
+  return buildBundleFromProviders({
+    workspaceId: demo.workspaceId,
+    generatedAt: demo.generatedAt,
+    range: demo.range,
+    providers: demo.providers.filter((provider) => connectedProviders.has(provider.provider)),
+    leadRows: demo.leads.rows.filter((lead) => allowedLeadSources.has(lead.source)),
   });
 }
 
@@ -577,17 +611,19 @@ function buildRecommendations(totals: MonitorMetrics, providers: MonitorProvider
 }
 
 function buildLeadSourceSplit(rows: MonitorLeadRow[]) {
-  const sources: MonitorLeadRow["source"][] = ["Meta", "Google", "CSV", "Manual"];
+  const sources: MonitorLeadSource[] = ["Meta", "Google", "CSV", "Manual"];
 
-  return sources.map((source) => {
-    const sourceRows = rows.filter((row) => row.source === source);
+  return sources
+    .map((source) => {
+      const sourceRows = rows.filter((row) => row.source === source);
 
-    return {
-      source,
-      leads: sourceRows.length,
-      validLeads: sourceRows.filter((row) => row.quality === "Valid").length,
-    };
-  });
+      return {
+        source,
+        leads: sourceRows.length,
+        validLeads: sourceRows.filter((row) => row.quality === "Valid").length,
+      };
+    })
+    .filter((entry) => entry.leads > 0);
 }
 
 function toDateKey(date: Date): string {
