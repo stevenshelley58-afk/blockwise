@@ -10,6 +10,19 @@ const bodySchema = z.object({
   value: z.string().min(1),
 });
 
+async function parseBody(req: Request) {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return { body: await req.json(), redirectAfter: false };
+  }
+
+  const formData = await req.formData();
+  return {
+    body: Object.fromEntries(formData.entries()),
+    redirectAfter: true,
+  };
+}
+
 /**
  * POST /api/operator/research/refresh-now
  * Signals the orchestrator to refresh a specific postcode or page on next
@@ -21,7 +34,8 @@ export async function POST(req: Request) {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
 
-  const parsed = bodySchema.safeParse(await req.json());
+  const { body, redirectAfter } = await parseBody(req);
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
@@ -53,6 +67,10 @@ export async function POST(req: Request) {
     confidence: 100,
     hermes_skill: "operator-console",
   });
+
+  if (redirectAfter) {
+    return NextResponse.redirect(new URL("/operator/research", req.url), 303);
+  }
 
   return NextResponse.json({ ok: true });
 }
