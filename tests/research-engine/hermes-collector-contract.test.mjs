@@ -193,6 +193,15 @@ test("Hermes prioritizes ad collection once a verified page is resolved", () => 
   );
 });
 
+test("Hermes prioritizes saved-ad classification before resolver backlog", () => {
+  const followUpSource = `${collector}\n${mediaCollector}`;
+  assert.match(
+    followUpSource,
+    /\bjob_type:\s*["']blockwise-ad-classifier["'][\s\S]*\bpriority:\s*[0-5]\b/,
+    "saved ad classification should run before the remaining page resolver backlog",
+  );
+});
+
 test("Hermes active ad collector ingests the hard-reset ad tables and media assets", () => {
   for (const table of [
     "ad_fetch_runs",
