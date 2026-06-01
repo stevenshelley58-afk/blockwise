@@ -1,6 +1,11 @@
 # Blockwise
 
-Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Operator Console, Agent Workforce, and Model Control surfaces.
+Blockwise is a multi-tenant real-estate lead-generation platform. One Next.js app
+exposes three permission surfaces — **monitor-only client**, **self-serve
+client**, and **operator** — over shared, workspace-isolated data.
+
+New here? Read `CLAUDE.md` (conventions + module map), then
+`docs/architecture/ARCHITECTURE.md`.
 
 ## Stack
 
@@ -24,16 +29,26 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 
 Production-live paths now use Supabase-backed workspace data, live provider sync helpers, OpenAI/OpenRouter provider adapters, and approval-gated provider publish requests. Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google app review, provider account IDs, token vault entries, and human approval flows have been verified in production.
 
-Security hardening docs live in `docs/security/agent-safety.md` and `docs/security/client-data-isolation.md`.
+Security hardening docs live in `docs/security/ai-workforce-safety.md` and `docs/security/client-data-isolation.md`.
+
+## Documentation
+
+- `CLAUDE.md` — developer conventions, module map, the "agent" naming rule
+- `docs/architecture/ARCHITECTURE.md` — system design & runtime boundaries
+- `docs/architecture/capability-model.md` — the three surfaces & capabilities
+- `docs/architecture/DATABASE_SCHEMA.md` — data dictionary
+- `docs/api/API_REFERENCE.md` — HTTP route inventory
+- `docs/research-engine/` — Hermes research engine
+- `docs/archive/` — superseded/historical docs
 
 ## Implemented Product Routes
 
-- `/operator` workspace oversight and agent/approval queues
+- `/operator` workspace oversight and approval queues
 - `/monitor` provider reporting and sync health
 - `/self-serve` idea mine and builder workflow
 - `/research` competitor signals and compliance classifier
 - `/campaigns` publishing readiness and blockers
 - `/leads` lead inbox, quality labels, and dedupe state
 - `/approvals` human approval gates
-- `/agents` agent workforce runs and permissions
+- `/ai-workforce` AI Workforce automation runs and permissions (was `/agents`)
 - `/model-control` grouped model profile dropdowns, OpenRouter readiness, and AI ledger

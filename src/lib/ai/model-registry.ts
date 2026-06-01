@@ -1,4 +1,4 @@
-import type { AgentDataClass } from "../agents/permissions.ts";
+import type { AgentDataClass } from "../ai-workforce/permissions.ts";
 
 export type ModelProvider = "openai" | "openrouter";
 

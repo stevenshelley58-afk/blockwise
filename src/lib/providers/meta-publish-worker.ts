@@ -6,6 +6,7 @@ import {
   type MetaPublishPlan,
 } from "./meta-execution.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { recordAudit } from "../audit/record-audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -14,6 +15,7 @@ export async function executeMetaPublishPlanById(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
   planId: string;
+  actorProfileId?: string | null;
   fetchImpl?: typeof fetch;
 }) {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
@@ -24,6 +26,7 @@ export async function executeMetaPublishPlanById(input: {
   return executeMetaPublishPlan({
     serviceSupabase: input.serviceSupabase,
     plan,
+    actorProfileId: input.actorProfileId,
     fetchImpl: input.fetchImpl,
   });
 }
@@ -31,6 +34,7 @@ export async function executeMetaPublishPlanById(input: {
 export async function executeMetaPublishPlan(input: {
   serviceSupabase: SupabaseServiceClient;
   plan: MetaPublishPlan;
+  actorProfileId?: string | null;
   fetchImpl?: typeof fetch;
 }) {
   if (input.plan.status !== "approved" && input.plan.status !== "publishing") {
@@ -57,19 +61,24 @@ export async function executeMetaPublishPlan(input: {
   const completedPlan = applyMetaPublishExecutionResult(publishingPlan, result);
 
   await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
-  await persistPublishAudit(input.serviceSupabase, completedPlan);
+  await persistPublishAudit(input.serviceSupabase, completedPlan, input.actorProfileId ?? null);
 
   return completedPlan;
 }
 
-async function persistPublishAudit(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {
-  await serviceSupabase.from("audit_logs").insert({
-    workspace_id: plan.workspaceId,
-    actor_profile_id: null,
-    action: `meta_publish_${plan.status}`,
-    target_type: "meta_publish_plan",
-    target_id: plan.planId,
+async function persistPublishAudit(
+  serviceSupabase: SupabaseServiceClient,
+  plan: MetaPublishPlan,
+  actorProfileId: string | null,
+) {
+  await recordAudit(serviceSupabase, {
+    workspaceId: plan.workspaceId,
+    actorProfileId,
+    action: "publish_ads",
+    targetType: "meta_publish_plan",
+    targetId: plan.planId,
     metadata: {
+      status: plan.status,
       adapter: plan.adapter,
       idempotencyKey: plan.idempotencyKey,
       reconciledObjects: plan.reconciledObjects,

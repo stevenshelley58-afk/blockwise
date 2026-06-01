@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     decision_type: "cadence_change",
     subject_type: scope === "postcode" ? "postcode" : "advertiser_page",
     subject_id: value,
-    decision: { action: "refresh_now", operator: guard.email },
+    decision: { action: "refresh_now", operator: guard.email, operatorProfileId: guard.profileId },
     rationale: "Operator triggered immediate refresh",
     confidence: 100,
     hermes_skill: "operator-console",

@@ -13,6 +13,7 @@ type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 type MetaPublishPayload = {
   workspaceId: string;
   planId: string;
+  actorProfileId?: string | null;
 };
 
 type MetaMutationPayload = {
@@ -54,6 +55,7 @@ export const executeMetaPublishPlanTask = task({
       serviceSupabase: createSupabaseServiceClient(),
       workspaceId: payload.workspaceId,
       planId: payload.planId,
+      actorProfileId: payload.actorProfileId,
     }),
 });
 

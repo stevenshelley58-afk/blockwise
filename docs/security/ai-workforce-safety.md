@@ -1,6 +1,9 @@
-# Agent Safety
+# AI Workforce Safety
 
-Blockwise agents are allowed to draft, classify, summarize, recommend, and queue reviewable actions. They are not allowed to publish campaigns, change budgets, send client-facing messages, or export lead PII without a human approval record.
+> "AI Workforce" = the AI automation agents (`src/lib/ai-workforce/`). This is
+> distinct from real-estate agents (`research.agents`). See `CLAUDE.md`.
+
+Blockwise AI Workforce agents are allowed to draft, classify, summarize, recommend, and queue reviewable actions. They are not allowed to publish campaigns, change budgets, send client-facing messages, or export lead PII without a human approval record.
 
 ## Runtime Boundary
 

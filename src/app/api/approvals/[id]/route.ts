@@ -74,7 +74,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       updatedAt: new Date().toISOString(),
     };
     await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
-    const queued = await queueMetaPublishPlanExecution(approvedPlan);
+    const queued = await queueMetaPublishPlanExecution(approvedPlan, access.access.userId);
     triggerRunId = queued.id ?? null;
   } else if (body.status === "approved" && approval.target_type === "lead_delivery_attempt") {
     const queued = await queueLeadDeliveryAttempt({

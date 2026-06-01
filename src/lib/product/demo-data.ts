@@ -1,4 +1,4 @@
-import { AGENT_DEFINITIONS } from "@/lib/agents/permissions";
+import { AGENT_DEFINITIONS } from "@/lib/ai-workforce/permissions";
 import { listModelProfiles } from "@/lib/ai/model-registry";
 import type { StatusTone } from "@/components/status-pill";
 

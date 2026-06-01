@@ -4,7 +4,7 @@ import { ApprovalActions } from "@/components/approvals/approval-actions";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { HUMAN_APPROVAL_ACTIONS } from "@/lib/agents/permissions";
+import { HUMAN_APPROVAL_ACTIONS } from "@/lib/ai-workforce/permissions";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listApprovalRows } from "@/lib/product/live-data";
 

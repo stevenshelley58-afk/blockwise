@@ -1,5 +1,8 @@
 # Product Map
 
+> The canonical architecture doc is now `ARCHITECTURE.md`. This file is kept for
+> its surface/data-flow summary.
+
 Blockwise is organized around a few shared primitives rather than separate products with separate backends.
 
 ## Surfaces
@@ -7,7 +10,7 @@ Blockwise is organized around a few shared primitives rather than separate produ
 - Operator Console: workspace oversight, AI spend, agent queue, approval queue, blocked outputs, sync failures, and managed-service tasks.
 - Monitor: connected account health, reporting snapshots, CPL, lead quality, competitor snapshots, recommendations, and alerts.
 - Self-Serve: research, idea mine, campaign builder, creative studio, ad previews, lead magnets, leads, and reports.
-- Agent Workforce: agent definitions, runs, steps, artifacts, schedules, permissions, and reviews.
+- AI Workforce (was "Agent Workforce"): automation-agent definitions, runs, steps, artifacts, schedules, permissions, and reviews. Code: `src/lib/ai-workforce/`; route `/ai-workforce`.
 - Model Control: grouped model profile dropdowns, OpenRouter-routed model selection, fallbacks, spend policies, kill switches, and usage ledger.
 
 ## Data Flow

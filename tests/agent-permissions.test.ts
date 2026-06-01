@@ -5,12 +5,12 @@ import {
   AGENT_DEFINITIONS,
   canAgentPerformAction,
   requiresHumanApproval,
-} from "../src/lib/agents/permissions.ts";
+} from "../src/lib/ai-workforce/permissions.ts";
 import {
   authorizeAgentOperation,
   buildAgentRuntimePolicy,
   detectSensitiveText,
-} from "../src/lib/agents/runtime-policy.ts";
+} from "../src/lib/ai-workforce/runtime-policy.ts";
 
 test("research agents can capture evidence but cannot publish ads", () => {
   const research = AGENT_DEFINITIONS.find((agent) => agent.key === "research_agent");

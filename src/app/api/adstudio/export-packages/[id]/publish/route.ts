@@ -132,7 +132,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       updatedAt: new Date().toISOString(),
     };
     await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
-    const run = await queueMetaPublishPlanExecution(approvedPlan);
+    const run = await queueMetaPublishPlanExecution(approvedPlan, access.access.userId);
     triggerRunId = run.id ?? null;
   }
 

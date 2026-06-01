@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     decision_type: "cadence_change",
     subject_type: "operator_query",
     subject_id: "kill-switch",
-    decision: { paused, operator: guard.email },
+    decision: { paused, operator: guard.email, operatorProfileId: guard.profileId },
     rationale: reason ?? (paused ? "Operator paused all scheduled scraping" : "Operator resumed all scheduled scraping"),
     confidence: 100,
     hermes_skill: "operator-console",
