@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { runAdStudioComplianceReview } from "@/lib/adstudio";
-import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
-import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { runAdStudioComplianceReview } from "@/modules/adstudio";
+import { getAdStudioDemoBundle } from "@/modules/adstudio/demo-data";
+import { readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

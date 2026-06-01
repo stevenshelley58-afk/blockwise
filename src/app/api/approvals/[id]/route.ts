@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { queueLeadDeliveryAttempt } from "@/lib/providers/lead-delivery-queue";
-import { queueMetaMutationExecution } from "@/lib/providers/meta-mutation-queue";
-import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
-import { loadMetaPublishPlan, persistMetaPublishPlan } from "@/lib/providers/meta-execution";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { queueLeadDeliveryAttempt } from "@/modules/providers/lead-delivery-queue";
+import { queueMetaMutationExecution } from "@/modules/providers/meta-mutation-queue";
+import { queueMetaPublishPlanExecution } from "@/modules/providers/meta-publish-queue";
+import { loadMetaPublishPlan, persistMetaPublishPlan } from "@/modules/providers/meta-execution";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

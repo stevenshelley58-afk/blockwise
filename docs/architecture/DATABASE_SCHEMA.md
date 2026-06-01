@@ -14,7 +14,7 @@ Three Postgres schemas:
 > ## Naming: `public.agent_*` vs `research.agents`
 > `public.agent_definitions / agent_runs / agent_steps / agent_artifacts /
 > agent_schedules / agent_reviews / agent_permissions` belong to the **AI
-> Workforce** (the automation bots; code in `src/lib/ai-workforce/`).
+> Workforce** (the automation bots; code in `src/modules/ai-workforce/`).
 > `research.agents` and `research.agencies` are **real-estate people** (the
 > entities Hermes researches). They are different concepts in different schemas
 > and must never be conflated. See `CLAUDE.md`.

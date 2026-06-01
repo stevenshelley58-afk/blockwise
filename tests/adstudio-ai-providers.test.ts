@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createOpenRouterTextProvider } from "../src/lib/adstudio/ai-providers.ts";
+import { createOpenRouterTextProvider } from "../src/modules/adstudio/ai-providers.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];

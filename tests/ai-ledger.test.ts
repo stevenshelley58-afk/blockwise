@@ -1,7 +1,7 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createAiRunLedgerEntry } from "../src/lib/model-control/run-ledger.ts";
+import { createAiRunLedgerEntry } from "../src/modules/model-control/run-ledger.ts";
 
 test("createAiRunLedgerEntry records completed usage with profile cost estimate", () => {
   const entry = createAiRunLedgerEntry({

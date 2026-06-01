@@ -1,8 +1,8 @@
-import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
-import { PageHeading } from "@/components/page-heading";
-import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
-import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { AdStudioWorkbench } from "@/ui/adstudio/ad-studio-workbench";
+import { PageHeading } from "@/ui/page-heading";
+import { getAdStudioDemoBundle } from "@/modules/adstudio/demo-data";
+import { loadLiveAdStudioBundle } from "@/modules/adstudio/load-live-bundle";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 

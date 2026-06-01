@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createOpenAiImageProvider } from "@/lib/adstudio";
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getInvalidEnvKeys } from "@/lib/config/env";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createOpenAiImageProvider } from "@/modules/adstudio";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
+import { getInvalidEnvKeys } from "@/modules/config/env";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

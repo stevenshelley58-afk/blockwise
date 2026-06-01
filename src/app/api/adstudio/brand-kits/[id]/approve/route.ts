@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { approveAdStudioBrandKitForUse, buildAdStudioLiveResult, type AdStudioBrandKit } from "@/lib/adstudio";
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
+import { approveAdStudioBrandKitForUse, buildAdStudioLiveResult, type AdStudioBrandKit } from "@/modules/adstudio";
+import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
+import { persistAdStudioBrandKit, rowToBrandKit } from "@/modules/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

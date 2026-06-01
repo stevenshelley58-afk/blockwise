@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -1,13 +1,13 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
-import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
-import { verifyOAuthState } from "@/lib/api-control/oauth-state";
-import { upsertProviderConnectionWithTokens } from "@/lib/api-control/provider-connections";
-import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { canManageProviderConnections, requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { resolveMonitorDateRange } from "@/modules/monitor/dashboard-data";
+import { exchangeProviderCode } from "@/modules/providers/oauth-handlers";
+import { verifyOAuthState } from "@/modules/api-control/oauth-state";
+import { upsertProviderConnectionWithTokens } from "@/modules/api-control/provider-connections";
+import { syncProviderWorkspace } from "@/modules/providers/provider-sync";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

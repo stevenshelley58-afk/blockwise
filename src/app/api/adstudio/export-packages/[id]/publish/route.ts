@@ -1,13 +1,13 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
-import type { AdStudioCampaignPack } from "@/lib/adstudio";
-import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/campaigns/publishing";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
+import { persistAdStudioCampaignPack } from "@/modules/adstudio/persistence";
+import type { AdStudioCampaignPack } from "@/modules/adstudio";
+import type { ApprovalStatus, ProviderConnectionStatus } from "@/modules/campaigns/publishing";
 import {
   buildAdStudioPublishRequests,
   resolveAdStudioPublishReadiness,
-} from "@/lib/providers/publishing-adapters";
+} from "@/modules/providers/publishing-adapters";
 import {
   buildMetaPublishPlan,
   persistMetaPublishPlan,
@@ -17,14 +17,14 @@ import {
   type MetaExecutionAdapter,
   type MetaPublishControls,
   type MetaPublishPlan,
-} from "@/lib/providers/meta-execution";
-import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
+} from "@/modules/providers/meta-execution";
+import { queueMetaPublishPlanExecution } from "@/modules/providers/meta-publish-queue";
 import {
   listProviderConnections,
   type ProviderConnectionMetadata,
-} from "@/lib/api-control/provider-connections";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
+} from "@/modules/api-control/provider-connections";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
+import type { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

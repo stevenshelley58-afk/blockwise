@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canAccessSurface } from "../src/lib/auth/access-control.ts";
+import { canAccessSurface } from "../src/modules/auth/access-control.ts";
 
 test("operator surfaces require operator role", () => {
   assert.equal(canAccessSurface({ role: "operator", workspaceMode: "monitor" }, "operator"), true);

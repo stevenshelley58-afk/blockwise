@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { evaluatePublishReadiness } from "../src/lib/campaigns/publishing.ts";
+import { evaluatePublishReadiness } from "../src/modules/campaigns/publishing.ts";
 
 test("evaluatePublishReadiness blocks publishing without approved human review", () => {
   const result = evaluatePublishReadiness({

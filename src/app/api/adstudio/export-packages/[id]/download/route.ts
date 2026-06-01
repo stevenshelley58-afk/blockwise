@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildAdStudioExportPackage } from "@/lib/adstudio";
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import type { AdStudioCampaignPack } from "@/lib/adstudio";
+import { buildAdStudioExportPackage } from "@/modules/adstudio";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
+import type { AdStudioCampaignPack } from "@/modules/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

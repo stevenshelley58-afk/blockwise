@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildAdStudioPublishRequests,
   resolveAdStudioPublishReadiness,
-} from "../src/lib/providers/publishing-adapters.ts";
+} from "../src/modules/providers/publishing-adapters.ts";
 
 test("resolveAdStudioPublishReadiness uses real approval and provider status", () => {
   assert.deepEqual(

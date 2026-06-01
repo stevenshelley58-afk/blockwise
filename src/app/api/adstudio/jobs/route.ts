@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createAdStudioJobRun } from "@/lib/adstudio";
-import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { createAdStudioJobRun } from "@/modules/adstudio";
+import { readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

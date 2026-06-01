@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
-} from "../src/lib/providers/meta-mutations.ts";
+} from "../src/modules/providers/meta-mutations.ts";
 
 test("buildMetaPlanMutation creates a separate approval-gated activation request", () => {
   const mutation = buildMetaPlanMutation({

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildLeadDedupeKey, findDuplicateLeadIds } from "../src/lib/leads/dedupe.ts";
+import { buildLeadDedupeKey, findDuplicateLeadIds } from "../src/modules/leads/dedupe.ts";
 
 test("buildLeadDedupeKey normalizes email and phone", () => {
   assert.equal(

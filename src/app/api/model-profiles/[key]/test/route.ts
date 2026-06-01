@@ -1,11 +1,11 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { validateModelProfileSelection } from "@/lib/model-control/model-control-config";
-import { ensureOperatorSession } from "@/lib/model-control/model-profile-store";
-import { testOpenRouterModel } from "@/lib/model-control/openrouter-client";
-import { resolveModelProfile } from "@/lib/model-control/model-registry";
-import type { ModelProfileKey } from "@/lib/model-control/model-registry";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { validateModelProfileSelection } from "@/modules/model-control/model-control-config";
+import { ensureOperatorSession } from "@/modules/model-control/model-profile-store";
+import { testOpenRouterModel } from "@/modules/model-control/openrouter-client";
+import { resolveModelProfile } from "@/modules/model-control/model-registry";
+import type { ModelProfileKey } from "@/modules/model-control/model-registry";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

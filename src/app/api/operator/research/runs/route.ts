@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireOperator } from "@/lib/operator/auth";
+import { requireOperator } from "@/modules/operator/auth";
 
 export const dynamic = "force-dynamic";
 

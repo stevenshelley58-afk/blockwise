@@ -1,8 +1,8 @@
 import { schedules, task } from "@trigger.dev/sdk/v3";
 
-import { resolveMonitorDateRange } from "../src/lib/monitor/dashboard-data.ts";
-import { syncProviderWorkspace } from "../src/lib/providers/provider-sync.ts";
-import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { resolveMonitorDateRange } from "../src/modules/monitor/dashboard-data.ts";
+import { syncProviderWorkspace } from "../src/modules/providers/provider-sync.ts";
+import { createSupabaseServiceClient } from "../src/modules/supabase/service.ts";
 
 type ProviderSyncPayload = {
   workspaceId: string;

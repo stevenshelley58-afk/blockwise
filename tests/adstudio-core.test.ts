@@ -12,7 +12,7 @@ import {
   validateGoogleSearchPack,
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
-} from "../src/lib/adstudio/index.ts";
+} from "../src/modules/adstudio/index.ts";
 
 const sampleHtml = `
   <html>

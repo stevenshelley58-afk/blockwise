@@ -1,13 +1,13 @@
-﻿import { Gauge, PlugZap, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Gauge, PlugZap, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { ModelControlPanel } from "@/components/model-control-panel";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { getModelControlViewData } from "@/lib/model-control/model-profile-store";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listAiLedgerRows } from "@/lib/product/live-data";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { MetricCard } from "@/ui/metric-card";
+import { ModelControlPanel } from "@/ui/model-control-panel";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { getModelControlViewData } from "@/modules/model-control/model-profile-store";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
+import { listAiLedgerRows } from "@/modules/product/live-data";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const dynamic = "force-dynamic";
 

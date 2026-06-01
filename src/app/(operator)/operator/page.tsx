@@ -1,9 +1,9 @@
 import { AlertTriangle, Bot, CheckCircle2, CircleDollarSign, UsersRound } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { agentRuns, approvalQueue, operatorMetrics, workspaceRows } from "@/lib/product/demo-data";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { agentRuns, approvalQueue, operatorMetrics, workspaceRows } from "@/modules/product/demo-data";
 
 export default function OperatorConsolePage() {
   return (

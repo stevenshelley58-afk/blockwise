@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canonicaliseJson, creativeHash, normaliseName, payloadHash } from "../../src/lib/research/hash.ts";
+import { canonicaliseJson, creativeHash, normaliseName, payloadHash } from "../../src/modules/research/hash.ts";
 
 test("canonicaliseJson produces identical bytes regardless of key order", () => {
   const a = { z: 1, a: 2, m: { y: 1, x: 2 } };

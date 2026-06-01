@@ -5,7 +5,7 @@ code from `(role, workspaceMode, isOperator)` and are never stored in the
 database. This replaces scattered `role === "operator"` checks with a single,
 testable source of truth.
 
-Source of truth: `src/lib/auth/capabilities.ts`.
+Source of truth: `src/modules/auth/capabilities.ts`.
 
 ## The three surfaces
 
@@ -52,10 +52,10 @@ Notes:
 
 | Context | Helper | File |
 | --- | --- | --- |
-| API route handlers | `requireCapability(cap, { requestedWorkspaceId })` | `src/lib/auth/require-capability.ts` |
-| Trigger.dev jobs (bypass RLS) | `assertJobCapability(service, actorProfileId, workspaceId, cap)` | `src/lib/auth/job-capability.ts` |
-| Operator-only routes | `requireOperator()` (sources `profiles.is_operator`) | `src/lib/operator/auth.ts` |
-| Pages (legacy coarse gate) | `requirePageSurfaceAccess(surface)` | `src/lib/auth/page-guards.ts` |
+| API route handlers | `requireCapability(cap, { requestedWorkspaceId })` | `src/modules/auth/require-capability.ts` |
+| Trigger.dev jobs (bypass RLS) | `assertJobCapability(service, actorProfileId, workspaceId, cap)` | `src/modules/auth/job-capability.ts` |
+| Operator-only routes | `requireOperator()` (sources `profiles.is_operator`) | `src/modules/operator/auth.ts` |
+| Pages (legacy coarse gate) | `requirePageSurfaceAccess(surface)` | `src/modules/auth/page-guards.ts` |
 
 `requireCapability` reuses `requireWorkspaceAccess` (membership resolution,
 operator fallback, 401/403/404) with the universally-readable `monitor` surface,
@@ -63,7 +63,7 @@ then enforces the fine-grained capability.
 
 ### Legacy surfaces
 
-`canAccessSurface` / `ProductSurface` (`src/lib/auth/access-control.ts`) is the
+`canAccessSurface` / `ProductSurface` (`src/modules/auth/access-control.ts`) is the
 older coarse gate. It still backs page guards and is being migrated onto
 capabilities. `capabilities.ts` exports `SURFACE_CAPABILITY` /
 `capabilityForSurface` to bridge the two. New code should use capabilities
@@ -72,7 +72,7 @@ directly. Delete the surface gate once no call sites remain.
 ## Auditing operator actions
 
 Sensitive operator actions are recorded via `recordAudit(client, entry)`
-(`src/lib/audit/record-audit.ts`) into `public.audit_logs`:
+(`src/modules/audit/record-audit.ts`) into `public.audit_logs`:
 
 - `actor_profile_id` — **who** performed the action (the operator). Never null
   for operator-initiated actions.

@@ -1,7 +1,7 @@
 import { task } from "@trigger.dev/sdk/v3";
 
-import { buildAgentRuntimePolicy } from "../src/lib/ai-workforce/runtime-policy.ts";
-import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { buildAgentRuntimePolicy } from "../src/modules/ai-workforce/runtime-policy.ts";
+import { createSupabaseServiceClient } from "../src/modules/supabase/service.ts";
 
 type AgentRunPayload = {
   workspaceId: string;

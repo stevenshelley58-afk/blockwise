@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createOpenAiImageProvider } from "@/lib/adstudio";
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { createOpenAiImageProvider } from "@/modules/adstudio";
+import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

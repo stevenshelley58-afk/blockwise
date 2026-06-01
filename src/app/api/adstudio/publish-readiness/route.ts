@@ -1,7 +1,7 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { listProviderConnections } from "@/lib/api-control/provider-connections";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
+import { listProviderConnections } from "@/modules/api-control/provider-connections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

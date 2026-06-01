@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   canManageProviderConnections,
   resolveRequestedWorkspaceAccess,
-} from "../src/lib/auth/workspace-access.ts";
+} from "../src/modules/auth/workspace-access.ts";
 
 test("provider connection management is limited to operators, owners, and admins", () => {
   assert.equal(canManageProviderConnections({ role: "operator", workspaceMode: "monitor" }), true);

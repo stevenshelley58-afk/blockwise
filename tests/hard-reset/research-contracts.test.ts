@@ -7,14 +7,14 @@ const root = process.cwd();
 const migrationsDir = join(root, "supabase", "migrations");
 
 const paths = {
-  adSchema: "src/lib/research/schemas/ads.ts",
+  adSchema: "src/modules/research/schemas/ads.ts",
   classifierSkill: "hermes/skills/blockwise-ad-classifier/SKILL.md",
-  commonSchema: "src/lib/research/schemas/common.ts",
-  entitiesSchema: "src/lib/research/schemas/entities.ts",
+  commonSchema: "src/modules/research/schemas/common.ts",
+  entitiesSchema: "src/modules/research/schemas/entities.ts",
   hardResetMigration: "supabase/migrations/202605300003_blockwise_hard_reset_clean_schema.sql",
-  jsonRules: "src/lib/adstudio/prompts/shared/json_rules.md",
+  jsonRules: "src/modules/adstudio/prompts/shared/json_rules.md",
   metaCapture: "hermes/tools/meta-library-capture/src/capture.ts",
-  metaCard: "src/components/research/meta-ad-library-card.tsx",
+  metaCard: "src/ui/research/meta-ad-library-card.tsx",
   researchPage: "src/app/(customer)/research/page.tsx",
 };
 
@@ -144,7 +144,7 @@ test("media asset contract is strict, durable, and surfaced to the research card
   assert.match(adSchema, /\bmediaAssetSchema\b/, "adCreativeSchema must use a named strict media asset schema");
   assert.doesNotMatch(adSchema, /mediaAssets:\s*z\.array\(\s*jsonbSchema\s*\)/, "mediaAssets must not be an untyped jsonb array");
   assert.match(researchPage, /v_customer_meta_ad_library_cards/, "customer page must read the safe card view");
-  assert.match(read("src/lib/research/customer-meta-card.ts"), /storagePath[\s\S]*sourceUrl|storagePath[\s\S]*url/, "card media resolver must prefer stored media before provider URLs");
+  assert.match(read("src/modules/research/customer-meta-card.ts"), /storagePath[\s\S]*sourceUrl|storagePath[\s\S]*url/, "card media resolver must prefer stored media before provider URLs");
 });
 
 test("ad classifier contract requires strict JSON and a schema-aligned output", () => {

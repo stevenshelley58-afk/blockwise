@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/lib/adstudio";
-import { persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
+import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
+import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/modules/adstudio";
+import { persistAdStudioBrandKit } from "@/modules/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

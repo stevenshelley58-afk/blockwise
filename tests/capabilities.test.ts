@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canAccessSurface } from "../src/lib/auth/access-control.ts";
+import { canAccessSurface } from "../src/modules/auth/access-control.ts";
 import {
   capabilityForSurface,
   deriveCapabilities,
   hasCapability,
   type Capability,
   type CapabilityContext,
-} from "../src/lib/auth/capabilities.ts";
+} from "../src/modules/auth/capabilities.ts";
 
 const operator: CapabilityContext = { role: "operator", workspaceMode: "monitor", isOperator: true };
 const monitorViewer: CapabilityContext = { role: "viewer", workspaceMode: "monitor", isOperator: false };

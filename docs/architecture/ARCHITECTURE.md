@@ -40,8 +40,8 @@ src/
     (workforce)/   ai-workforce, model-control      # operator-only
     (legal)/       privacy, terms, data-deletion    # public
     api/           ~58 route handlers (see API_REFERENCE.md)
-  components/      UI (app-shell, sidebar-nav, adstudio, monitor, approvals, …)
-  lib/             business logic, one folder per domain (see CLAUDE.md module map)
+  ui/              UI components (app-shell, sidebar-nav, adstudio, monitor, approvals, …)
+  modules/         business logic, one folder per domain (see CLAUDE.md module map)
 trigger/           Trigger.dev task definitions
 supabase/migrations/  SQL schema (source of truth for the data model)
 hermes/            remote research supervisor (skills + runtime tools)
@@ -57,7 +57,7 @@ e2e/               Playwright
 
 1. A request hits a server component or API route handler.
 2. Auth + workspace membership resolve via `requireWorkspaceAccess` /
-   `requireCapability` (`src/lib/auth/`). Operator status comes from
+   `requireCapability` (`src/modules/auth/`). Operator status comes from
    `profiles.is_operator`.
 3. The handler reads/writes Supabase under RLS (client/server key) or enqueues a
    Trigger.dev job for durable work.

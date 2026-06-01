@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import {
   getDeploymentReadiness,
   parseEnvFile,
-} from "../src/lib/config/env.ts";
+} from "../src/modules/config/env.ts";
 
 const dotenvFiles = [".env.local", ".env"];
 const fileEnv = {};

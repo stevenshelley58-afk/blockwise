@@ -9,7 +9,7 @@ import {
   getMissingRecommendedSecurityEnvKeys,
   getProviderReadiness,
   parseEnvFile,
-} from "../src/lib/config/env.ts";
+} from "../src/modules/config/env.ts";
 
 test("required environment keys include OpenRouter for live model routing", () => {
   assert.equal(REQUIRED_ENV_KEYS.includes("OPENROUTER_API_KEY"), true);

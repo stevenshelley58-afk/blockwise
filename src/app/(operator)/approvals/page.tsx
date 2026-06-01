@@ -1,12 +1,12 @@
 import { ClipboardCheck, MailCheck, ShieldAlert, WalletCards } from "lucide-react";
 
-import { ApprovalActions } from "@/components/approvals/approval-actions";
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { HUMAN_APPROVAL_ACTIONS } from "@/lib/ai-workforce/permissions";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listApprovalRows } from "@/lib/product/live-data";
+import { ApprovalActions } from "@/ui/approvals/approval-actions";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { HUMAN_APPROVAL_ACTIONS } from "@/modules/ai-workforce/permissions";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
+import { listApprovalRows } from "@/modules/product/live-data";
 
 export const dynamic = "force-dynamic";
 

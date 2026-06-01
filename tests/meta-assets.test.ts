@@ -5,7 +5,7 @@ import {
   checkMetaConnectionHealth,
   fetchMetaAssetCatalog,
   pickDefaultMetaSetupFromAssets,
-} from "../src/lib/providers/meta-assets.ts";
+} from "../src/modules/providers/meta-assets.ts";
 
 test("fetchMetaAssetCatalog returns selectable ad accounts, pages, instagram actors, pixels, and lead forms", async () => {
   const requested: string[] = [];

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { normaliseHostedMetaItems } from "../../hermes/tools/meta-library-capture/src/normalise.ts";
-import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
+import { normaliseMetaAdLibraryAd } from "../../src/modules/research/normalise.ts";
 import { adAlpha, adGammaVideo, advertiserPageAlphaId } from "./fixtures.ts";
 
 test("normaliseMetaAdLibraryAd extracts the canonical external_ad_id", () => {

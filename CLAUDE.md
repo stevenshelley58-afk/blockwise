@@ -20,9 +20,9 @@ It is **one app with permission surfaces**, not three apps. See
 ## Stack
 
 - Next.js 16 App Router (React 19) on Vercel — `src/app/`
-- Supabase: Auth, Postgres, RLS, Storage — `src/lib/supabase/`, `supabase/migrations/`
+- Supabase: Auth, Postgres, RLS, Storage — `src/modules/supabase/`, `supabase/migrations/`
 - Trigger.dev durable jobs & schedules — `trigger/`
-- OpenAI direct + OpenRouter-routed model profiles — `src/lib/model-control/`
+- OpenAI direct + OpenRouter-routed model profiles — `src/modules/model-control/`
 - Hermes: a remote research supervisor (separate deploy) — `hermes/`
 
 ## Commands
@@ -44,7 +44,7 @@ Always run `npm run check` before considering a change done.
 The word "agent" is overloaded. Use these precise terms instead:
 
 - **AI Workforce** — the AI automation agents (research/compliance/reporting
-  bots). Code lives in `src/lib/ai-workforce/` (formerly `src/lib/agents/`);
+  bots). Code lives in `src/modules/ai-workforce/` (formerly `src/modules/agents/`);
   route is `/ai-workforce`. **Do not call this "agents."**
 - **Real-estate agents / agencies** — domain entities (the people we research).
   They live in the Postgres `research` schema: `research.agents`,
@@ -61,23 +61,23 @@ disambiguated from `research.agents` purely by Postgres schema. When in doubt:
 
 Access is **capability-based**, derived in code from `(role, workspaceMode,
 isOperator)` — never stored in the DB. The source of truth is
-`src/lib/auth/capabilities.ts`.
+`src/modules/auth/capabilities.ts`.
 
 - **Server is the gate.** Route handlers call `requireCapability(cap, …)`
-  (`src/lib/auth/require-capability.ts`). Jobs call `assertJobCapability(…)`
-  (`src/lib/auth/job-capability.ts`) because they bypass RLS with the
+  (`src/modules/auth/require-capability.ts`). Jobs call `assertJobCapability(…)`
+  (`src/modules/auth/job-capability.ts`) because they bypass RLS with the
   service-role key.
 - UI may hide actions for UX, but that is cosmetic — never the only gate.
 - Operator status comes **only** from `profiles.is_operator` (the legacy
   `OPERATOR_EMAILS` allowlist was removed).
 - Sensitive operator actions are audited via `recordAudit(…)`
-  (`src/lib/audit/record-audit.ts`). Run-for-client writes the operator as
+  (`src/modules/audit/record-audit.ts`). Run-for-client writes the operator as
   `actor_profile_id` and the affected workspace in `metadata`.
 
 The legacy `canAccessSurface` / `ProductSurface` coarse gate still exists and is
 being migrated onto capabilities; prefer `requireCapability` in new code.
 
-## Module map (`src/lib/`)
+## Module map (`src/modules/`)
 
 | Module | Responsibility |
 | --- | --- |

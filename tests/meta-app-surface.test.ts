@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("approvals page exposes human approve and reject actions", () => {
   const page = readFileSync("src/app/(operator)/approvals/page.tsx", "utf8");
-  const actions = readFileSync("src/components/approvals/approval-actions.tsx", "utf8");
+  const actions = readFileSync("src/ui/approvals/approval-actions.tsx", "utf8");
 
   assert.match(page, /ApprovalActions/);
   assert.match(page, /<th>Actions<\/th>/);
@@ -15,7 +15,7 @@ test("approvals page exposes human approve and reject actions", () => {
 });
 
 test("Meta setup UI captures concrete lead delivery endpoint config", () => {
-  const monitor = readFileSync("src/components/monitor/monitor-dashboard.tsx", "utf8");
+  const monitor = readFileSync("src/ui/monitor/monitor-dashboard.tsx", "utf8");
 
   assert.match(monitor, /Destination endpoint/);
   assert.match(monitor, /leadDestination\.config\.endpoint/);
@@ -23,7 +23,7 @@ test("Meta setup UI captures concrete lead delivery endpoint config", () => {
 });
 
 test("Ad Studio UI can create approval requests for live Meta mutations", () => {
-  const adstudio = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const adstudio = readFileSync("src/ui/adstudio/ad-studio-workbench.tsx", "utf8");
 
   assert.match(adstudio, /requestMetaPlanMutation/);
   assert.match(adstudio, /\/api\/integrations\/meta\/publish-plans\/\$\{lastMetaPlanId\}\/mutations/);

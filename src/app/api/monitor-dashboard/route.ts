@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { buildMonitorDashboardForWorkspace } from "@/lib/monitor/live-dashboard";
-import { parseMonitorRange } from "@/lib/monitor/dashboard-data";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { buildMonitorDashboardForWorkspace } from "@/modules/monitor/live-dashboard";
+import { parseMonitorRange } from "@/modules/monitor/dashboard-data";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

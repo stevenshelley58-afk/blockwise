@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { evaluateRealEstateCompliance } from "../src/lib/compliance/real-estate-policy.ts";
+import { evaluateRealEstateCompliance } from "../src/modules/compliance/real-estate-policy.ts";
 
 test("evaluateRealEstateCompliance flags unsupported performance and urgency claims", () => {
   const result = evaluateRealEstateCompliance({

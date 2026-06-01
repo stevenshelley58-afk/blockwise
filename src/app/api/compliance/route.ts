@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { evaluateRealEstateCompliance } from "@/lib/compliance/real-estate-policy";
+import { evaluateRealEstateCompliance } from "@/modules/compliance/real-estate-policy";
 
 export const runtime = "nodejs";
 

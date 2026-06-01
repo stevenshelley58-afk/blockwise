@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { listAgentRunRows } from "@/lib/product/live-data";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { listAgentRunRows } from "@/modules/product/live-data";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

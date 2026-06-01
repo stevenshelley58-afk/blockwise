@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   createMockProviderAdapter,
   listProviderSyncSummaries,
-} from "../src/lib/providers/mock-adapters.ts";
+} from "../src/modules/providers/mock-adapters.ts";
 
 test("mock provider adapters return deterministic reporting snapshots", async () => {
   const meta = createMockProviderAdapter("meta");

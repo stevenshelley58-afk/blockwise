@@ -1,11 +1,11 @@
 import { Bot, ShieldAlert, TimerReset, Workflow } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { AGENT_DEFINITIONS, HUMAN_APPROVAL_ACTIONS } from "@/lib/ai-workforce/permissions";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listAgentRunRows } from "@/lib/product/live-data";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { AGENT_DEFINITIONS, HUMAN_APPROVAL_ACTIONS } from "@/modules/ai-workforce/permissions";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
+import { listAgentRunRows } from "@/modules/product/live-data";
 
 export const dynamic = "force-dynamic";
 

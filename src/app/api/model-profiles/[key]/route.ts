@@ -1,7 +1,7 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { ensureOperatorSession, saveModelProfileSelection } from "@/lib/model-control/model-profile-store";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureOperatorSession, saveModelProfileSelection } from "@/modules/model-control/model-profile-store";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

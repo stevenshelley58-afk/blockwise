@@ -7,7 +7,7 @@ import {
   calculateValidLeadRate,
   mergeProviderReportsWithDemo,
   resolveMonitorDateRange,
-} from "../src/lib/monitor/dashboard-data.ts";
+} from "../src/modules/monitor/dashboard-data.ts";
 
 test("resolveMonitorDateRange returns inclusive AU dashboard periods", () => {
   const now = new Date("2026-05-27T05:30:00.000Z");

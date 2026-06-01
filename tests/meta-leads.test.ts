@@ -5,7 +5,7 @@ import {
   buildLeadDeliveryActions,
   fetchMetaLeadFormLeads,
   normalizeMetaLead,
-} from "../src/lib/providers/meta-leads.ts";
+} from "../src/modules/providers/meta-leads.ts";
 
 test("normalizeMetaLead maps Meta field_data into Blockwise lead identity", () => {
   const lead = normalizeMetaLead({

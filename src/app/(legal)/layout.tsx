@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { BlockwiseLogo } from "@/ui/blockwise-logo";
 
 export default function LegalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

@@ -10,10 +10,10 @@ import {
   Timer,
 } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 

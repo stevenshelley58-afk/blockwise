@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { LoginForm } from "@/components/login-form";
-import { getRedirectForEmail } from "@/lib/auth/test-users";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { LoginForm } from "@/ui/login-form";
+import { getRedirectForEmail } from "@/modules/auth/test-users";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const dynamic = "force-dynamic";
 

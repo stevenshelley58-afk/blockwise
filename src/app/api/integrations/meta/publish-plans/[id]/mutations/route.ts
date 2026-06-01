@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { hasCapability } from "@/lib/auth/capabilities";
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
+import { hasCapability } from "@/modules/auth/capabilities";
+import { requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { loadMetaPublishPlan } from "@/modules/providers/meta-execution";
 import {
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
   type MetaPlanMutationPayload,
-} from "@/lib/providers/meta-mutations";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+} from "@/modules/providers/meta-mutations";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

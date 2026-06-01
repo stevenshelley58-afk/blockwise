@@ -8,7 +8,7 @@ import {
   buildCampaignReadinessRows,
   buildLeadRowsWithDedupe,
   buildResearchSignals,
-} from "../src/lib/product/live-data.ts";
+} from "../src/modules/product/live-data.ts";
 
 test("buildCampaignReadinessRows uses Supabase rows, approvals, compliance reports, and provider health", () => {
   const rows = buildCampaignReadinessRows({

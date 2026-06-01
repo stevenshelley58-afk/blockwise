@@ -5,7 +5,7 @@ import {
   approveAdStudioBrandKitForUse,
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
-} from "../src/lib/adstudio/index.ts";
+} from "../src/modules/adstudio/index.ts";
 import {
   buildMetaPublishTaskOptions,
   buildMetaPlanIdempotencyKey,
@@ -16,7 +16,7 @@ import {
   type MetaCreativeAssetPlan,
   type MetaConnectionSetup,
   type MetaPublishControls,
-} from "../src/lib/providers/meta-execution.ts";
+} from "../src/modules/providers/meta-execution.ts";
 
 const sampleHtml = `
   <html>

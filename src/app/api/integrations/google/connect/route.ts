@@ -1,9 +1,9 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { buildProviderAuthorizationUrl } from "@/lib/providers/oauth-handlers";
-import { createOAuthStatePayload, signOAuthState } from "@/lib/api-control/oauth-state";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { canManageProviderConnections, requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { buildProviderAuthorizationUrl } from "@/modules/providers/oauth-handlers";
+import { createOAuthStatePayload, signOAuthState } from "@/modules/api-control/oauth-state";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

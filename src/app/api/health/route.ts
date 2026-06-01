@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getDeploymentReadiness } from "@/lib/config/env";
+import { getDeploymentReadiness } from "@/modules/config/env";
 
 export const runtime = "nodejs";
 

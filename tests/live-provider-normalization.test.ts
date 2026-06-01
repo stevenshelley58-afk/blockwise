@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { extractMetaLeadCount, normalizeMetaInsightRows } from "../src/lib/providers/meta-reporting.ts";
-import { normalizeGoogleAdsRows } from "../src/lib/providers/google-reporting.ts";
+import { extractMetaLeadCount, normalizeMetaInsightRows } from "../src/modules/providers/meta-reporting.ts";
+import { normalizeGoogleAdsRows } from "../src/modules/providers/google-reporting.ts";
 
 test("Meta lead actions are normalized into lead counts", () => {
   assert.equal(

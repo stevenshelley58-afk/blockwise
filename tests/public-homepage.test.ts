@@ -12,7 +12,7 @@ test("public homepage does not redirect anonymous visitors to the login screen",
 
 test("production login page does not expose development test profiles or passwords", () => {
   const loginPage = readFileSync("src/app/login/page.tsx", "utf8");
-  const loginForm = readFileSync("src/components/login-form.tsx", "utf8");
+  const loginForm = readFileSync("src/ui/login-form.tsx", "utf8");
 
   assert.match(loginPage, /showTestProfiles=\{process\.env\.NODE_ENV !== "production"\}/);
   assert.match(loginForm, /showTestProfiles/);

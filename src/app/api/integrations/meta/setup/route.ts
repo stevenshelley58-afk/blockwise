@@ -1,19 +1,19 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections, requireWorkspaceAccess } from "@/modules/auth/workspace-access";
 import {
   checkMetaConnectionHealth,
   fetchMetaAssetCatalog,
   pickDefaultMetaSetupFromAssets,
-} from "@/lib/providers/meta-assets";
+} from "@/modules/providers/meta-assets";
 import {
   resolveMetaConnectionSetup,
   validateMetaConnectionSetup,
   type MetaConnectionSetup,
-} from "@/lib/providers/meta-execution";
-import { loadStoredProviderTokens } from "@/lib/api-control/provider-connections";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+} from "@/modules/providers/meta-execution";
+import { loadStoredProviderTokens } from "@/modules/api-control/provider-connections";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

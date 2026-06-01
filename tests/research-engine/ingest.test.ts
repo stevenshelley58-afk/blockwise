@@ -5,8 +5,8 @@ import {
   applyAbsence,
   applyObservation,
   summariseOutcomes,
-} from "../../src/lib/research/ingest.ts";
-import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
+} from "../../src/modules/research/ingest.ts";
+import { normaliseMetaAdLibraryAd } from "../../src/modules/research/normalise.ts";
 
 import {
   adAlpha,

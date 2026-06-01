@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { scoreAdStudioVariant } from "@/lib/adstudio";
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import { scoreAdStudioVariant } from "@/modules/adstudio";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

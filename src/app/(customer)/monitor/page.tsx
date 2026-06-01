@@ -1,7 +1,7 @@
-import { MonitorDashboard } from "@/components/monitor/monitor-dashboard";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { buildMonitorDashboardForWorkspace } from "@/lib/monitor/live-dashboard";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { MonitorDashboard } from "@/ui/monitor/monitor-dashboard";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
+import { buildMonitorDashboardForWorkspace } from "@/modules/monitor/live-dashboard";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const dynamic = "force-dynamic";
 

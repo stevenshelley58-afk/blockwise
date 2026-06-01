@@ -5,7 +5,7 @@ import {
   type AdCreative,
   type AdSnapshot,
   type ObservedAd,
-} from "../../src/lib/research/schemas/index.ts";
+} from "../../src/modules/research/schemas/index.ts";
 import {
   type IngestWriter,
   type PendingAreaMatch,
@@ -14,7 +14,7 @@ import {
   type PendingObservedAdInsert,
   type PendingObservedAdPatch,
   type PendingSnapshotInsert,
-} from "../../src/lib/research/ingest.ts";
+} from "../../src/modules/research/ingest.ts";
 
 /**
  * In-memory IngestWriter used by Phase 1 unit tests.

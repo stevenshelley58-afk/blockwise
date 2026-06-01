@@ -1,4 +1,4 @@
-import type { MetaAdLibraryAd } from "../../src/lib/research/schemas/index.ts";
+import type { MetaAdLibraryAd } from "../../src/modules/research/schemas/index.ts";
 
 /**
  * Hand-built Meta Ad Library payloads that look like real Meta Ad Library responses,

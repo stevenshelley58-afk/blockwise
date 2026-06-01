@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { rowToBrandKit } from "@/lib/adstudio/persistence";
+import { requireAdStudioRequest } from "@/modules/adstudio/http";
+import { rowToBrandKit } from "@/modules/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

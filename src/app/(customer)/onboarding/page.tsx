@@ -1,11 +1,11 @@
 import { ArrowRight, BadgeCheck, BarChart3, Link2, MapPinned, Palette, ShieldCheck, Sparkles, UserRoundCog } from "lucide-react";
 import Link from "next/link";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { onboardingSteps, workspace } from "@/lib/product/demo-data";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { StatusPill } from "@/ui/status-pill";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
+import { onboardingSteps, workspace } from "@/modules/product/demo-data";
 
 const activationTasks = [
   {

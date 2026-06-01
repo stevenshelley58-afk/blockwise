@@ -1,15 +1,15 @@
 import { Clock3, FileSearch, ImageIcon, MapPin, Search, Users } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
-import { MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
-import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { MetricCard } from "@/ui/metric-card";
+import { PageHeading } from "@/ui/page-heading";
+import { MetaAdLibraryCard } from "@/ui/research/meta-ad-library-card";
+import { requirePageSurfaceAccess } from "@/modules/auth/page-guards";
 import {
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
-} from "@/lib/research/customer-meta-card";
+} from "@/modules/research/customer-meta-card";
 
 export const dynamic = "force-dynamic";
 

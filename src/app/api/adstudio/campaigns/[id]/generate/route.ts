@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildAdStudioLiveResult, generateAdStudioCampaignPack } from "@/lib/adstudio";
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
-import type { AdStudioBrandKit } from "@/lib/adstudio";
+import { buildAdStudioLiveResult, generateAdStudioCampaignPack } from "@/modules/adstudio";
+import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/modules/adstudio/http";
+import { persistAdStudioCampaignPack } from "@/modules/adstudio/persistence";
+import type { AdStudioBrandKit } from "@/modules/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
-import { metaAdLibraryDatasetSchema } from "../../src/lib/research/schemas/index.ts";
+import { normaliseMetaAdLibraryAd } from "../../src/modules/research/normalise.ts";
+import { metaAdLibraryDatasetSchema } from "../../src/modules/research/schemas/index.ts";
 
 const REAL_FIXTURE = "tests/research-engine/fixtures-meta-ad-library-real.json";
 

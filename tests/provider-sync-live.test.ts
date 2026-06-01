@@ -5,7 +5,7 @@ import {
   buildReportingSnapshotInsert,
   buildSyncRunInsert,
   buildSyncRunUpdate,
-} from "../src/lib/providers/provider-sync.ts";
+} from "../src/modules/providers/provider-sync.ts";
 
 test("provider sync writes reporting snapshots in production table shape", () => {
   const insert = buildReportingSnapshotInsert("workspace_1", {

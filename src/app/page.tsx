@@ -3,7 +3,7 @@
 import { ArrowRight, ArrowUpRight, MapPin } from "lucide-react";
 import Link from "next/link";
 
-import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { BlockwiseLogo } from "@/ui/blockwise-logo";
 
 type AdProps = {
   agency: string;

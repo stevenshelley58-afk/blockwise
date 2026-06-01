@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { parseMonitorRange, resolveMonitorDateRange, type MonitorProvider } from "@/lib/monitor/dashboard-data";
+import { requireWorkspaceAccess } from "@/modules/auth/workspace-access";
+import { parseMonitorRange, resolveMonitorDateRange, type MonitorProvider } from "@/modules/monitor/dashboard-data";
 import {
   listProviderSyncSummariesForWorkspace,
   listReportingSnapshotsForWorkspace,
   syncProviderWorkspace,
-} from "@/lib/providers/provider-sync";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+} from "@/modules/providers/provider-sync";
+import { createSupabaseServerClient } from "@/modules/supabase/server";
+import { createSupabaseServiceClient } from "@/modules/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
