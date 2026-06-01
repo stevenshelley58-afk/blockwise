@@ -1,9 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { hasCapability, type Capability } from "@/lib/auth/capabilities";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function requireAdStudioRequest(request: NextRequest) {
+/**
+ * Gate an AdStudio API request. Every AdStudio route requires at least the
+ * `adstudio` surface (capability `create_ads`). Pass `capability` to require a
+ * stronger capability for sensitive mutations — e.g. `approve_ads` for approval
+ * routes, `publish_ads` for publishing — so an authoring-only member cannot
+ * approve or publish.
+ */
+export async function requireAdStudioRequest(request: NextRequest, capability?: Capability) {
   const supabase = await createSupabaseServerClient();
   const access = await requireWorkspaceAccess(supabase, {
     surface: "adstudio",
@@ -15,6 +23,23 @@ export async function requireAdStudioRequest(request: NextRequest) {
       ok: false as const,
       response: NextResponse.json({ error: access.error }, { status: access.status }),
     };
+  }
+
+  if (capability) {
+    const ctx = {
+      role: access.access.role,
+      workspaceMode: access.access.workspaceMode,
+      isOperator: access.access.isOperator,
+    };
+    if (!hasCapability(ctx, capability)) {
+      return {
+        ok: false as const,
+        response: NextResponse.json(
+          { error: `The "${capability}" capability is required for this action.` },
+          { status: 403 },
+        ),
+      };
+    }
   }
 
   return {

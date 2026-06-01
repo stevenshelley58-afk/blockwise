@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { hasCapability } from "@/lib/auth/capabilities";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
 import {
@@ -39,6 +40,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  // Live Meta campaign mutations (activate/pause/budget/export) are publishing
+  // actions — require publish_ads, not just authoring.
+  if (
+    !hasCapability(
+      {
+        role: access.access.role,
+        workspaceMode: access.access.workspaceMode,
+        isOperator: access.access.isOperator,
+      },
+      "publish_ads",
+    )
+  ) {
+    return NextResponse.json({ error: "The \"publish_ads\" capability is required." }, { status: 403 });
   }
 
   const serviceSupabase = createSupabaseServiceClient();

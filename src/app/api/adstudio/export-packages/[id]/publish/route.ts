@@ -51,7 +51,7 @@ const WRITES_ENABLED = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
-  const access = await requireAdStudioRequest(request);
+  const access = await requireAdStudioRequest(request, "publish_ads");
 
   if (!access.ok) {
     return access.response;

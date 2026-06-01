@@ -2,6 +2,7 @@ import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAc
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { recordAudit } from "../audit/record-audit.ts";
+import { assertJobCapability } from "../auth/job-capability.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../campaigns/publishing.ts";
 
@@ -29,6 +30,8 @@ export async function executeMetaMutationById(input: {
   mutationId: string;
 }) {
   const mutation = await loadMutation(input.serviceSupabase, input.workspaceId, input.mutationId);
+  // Jobs bypass RLS — enforce publish_ads in code using the requester identity.
+  await assertJobCapability(input.serviceSupabase, mutation.requestedBy, input.workspaceId, "publish_ads");
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     planId: mutation.planId,

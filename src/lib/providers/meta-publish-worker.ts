@@ -7,6 +7,7 @@ import {
 } from "./meta-execution.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { recordAudit } from "../audit/record-audit.ts";
+import { assertJobCapability } from "../auth/job-capability.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -18,6 +19,15 @@ export async function executeMetaPublishPlanById(input: {
   actorProfileId?: string | null;
   fetchImpl?: typeof fetch;
 }) {
+  // Jobs bypass RLS — enforce the capability in code (defence in depth; the
+  // HTTP publish route already requires publish_ads before enqueuing).
+  await assertJobCapability(
+    input.serviceSupabase,
+    input.actorProfileId ?? null,
+    input.workspaceId,
+    "publish_ads",
+  );
+
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     planId: input.planId,
