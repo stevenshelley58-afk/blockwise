@@ -7,6 +7,7 @@ import {
   calculateValidLeadRate,
   mergeProviderReportsWithDemo,
   resolveMonitorDateRange,
+  scopeDemoBundleToProviders,
 } from "../src/lib/monitor/dashboard-data.ts";
 
 test("resolveMonitorDateRange returns inclusive AU dashboard periods", () => {
@@ -54,6 +55,31 @@ test("demo dashboard bundle is deterministic and led by valid leads", () => {
   assert.equal(bundle.providers.map((provider) => provider.provider).join(","), "meta,google");
   assert.equal(bundle.topRows[0].name, "Suburb appraisal pulse");
   assert.equal(bundle.leads.rows.length, 6);
+});
+
+test("a Meta-only workspace never surfaces Google demo data", () => {
+  const demo = buildDemoMonitorDashboardBundle({
+    workspaceId: "workspace_demo",
+    range: "last_7",
+    now: new Date("2026-05-27T05:30:00.000Z"),
+  });
+
+  const scoped = scopeDemoBundleToProviders(demo, new Set(["meta"]));
+
+  // No Google provider card, rows, or spend.
+  assert.deepEqual(scoped.providers.map((provider) => provider.provider), ["meta"]);
+  assert.ok(scoped.topRows.every((row) => row.provider === "meta"));
+  assert.ok(scoped.spendByCampaign.every((entry) => entry.provider === "meta"));
+
+  // No Google demo leads, but non-provider leads (CSV/Manual) stay.
+  assert.ok(scoped.leads.rows.every((lead) => lead.source !== "Google"));
+  assert.ok(scoped.leads.rows.some((lead) => lead.source === "CSV"));
+  assert.ok(scoped.leads.rows.some((lead) => lead.source === "Manual"));
+  assert.ok(scoped.leads.sourceSplit.every((entry) => entry.source !== "Google"));
+
+  // Totals reflect Meta + non-provider leads only (Google spend excluded).
+  const metaDemo = demo.providers.find((provider) => provider.provider === "meta");
+  assert.equal(scoped.totals.spendAud, metaDemo?.metrics.spendAud);
 });
 
 test("live provider reports override matching demo provider data without breaking the other provider", () => {

@@ -5,6 +5,7 @@ import {
   buildDemoMonitorDashboardBundle,
   mergeProviderReportsWithDemo,
   normalizeProviderReport,
+  scopeDemoBundleToProviders,
   type MonitorDashboardBundle,
   type MonitorProvider,
   type MonitorProviderReport,
@@ -15,6 +16,7 @@ import {
   loadStoredProviderTokens,
   type ProviderConnectionMetadata,
 } from "@/lib/providers/provider-connections";
+import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { fetchGoogleAdsReporting, refreshGoogleAccessToken } from "@/lib/providers/google-reporting";
 import { fetchMetaReporting } from "@/lib/providers/meta-reporting";
 
@@ -39,13 +41,28 @@ export async function buildMonitorDashboardForWorkspace(input: {
     return demo;
   }
 
-  const reports = await Promise.all(
-    connections
-      .filter((connection) => connection.provider === "meta" || connection.provider === "google")
-      .map((connection) => buildProviderReport(input.serviceSupabase, connection, demo)),
+  // Only providers the workspace has actually connected (and that are enabled) may surface
+  // any data — including demo/sample fixtures. This prevents a Meta-only workspace from
+  // seeing fake Google cards, leads, or charts.
+  const activeConnections = connections.filter(
+    (connection) => connection.provider === "meta" || (GOOGLE_ADS_ENABLED && connection.provider === "google"),
   );
 
-  return mergeProviderReportsWithDemo(demo, reports.filter((report): report is MonitorProviderReport => Boolean(report)));
+  if (activeConnections.length === 0) {
+    return demo;
+  }
+
+  const connectedProviders: Set<MonitorProvider> = new Set(activeConnections.map((connection) => connection.provider));
+  const scopedDemo = scopeDemoBundleToProviders(demo, connectedProviders);
+
+  const reports = await Promise.all(
+    activeConnections.map((connection) => buildProviderReport(input.serviceSupabase, connection, demo)),
+  );
+
+  return mergeProviderReportsWithDemo(
+    scopedDemo,
+    reports.filter((report): report is MonitorProviderReport => Boolean(report)),
+  );
 }
 
 async function buildProviderReport(

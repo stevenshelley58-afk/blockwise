@@ -387,14 +387,6 @@ function extractAttributionLabel(source: Record<string, unknown> | null | undefi
   return String(source?.campaignName ?? source?.campaign_name ?? source?.utm_campaign ?? "Direct");
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function stringField(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
 function firstSentence(value: string | null | undefined): string | null {
   if (!value) return null;
   const sentence = value.split(/[.!?]\s/)[0] ?? value;

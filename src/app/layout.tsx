@@ -12,9 +12,43 @@ const inter = Inter({
 
 const META_PIXEL_ID = "1699948581050851";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
+const SITE_TITLE = "Blockwise — More listings. Nothing hidden.";
+const SITE_DESCRIPTION =
+  "Blockwise runs Meta ads that win listings for real estate agents. Pick a suburb, approve the ads, and watch every lead and every cent in real time. Book a 15-minute demo.";
+
 export const metadata: Metadata = {
-  title: "Blockwise",
-  description: "Real estate lead generation control plane for Monitor, Self-Serve, and operator workflows.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s · Blockwise",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: "Blockwise",
+  keywords: [
+    "real estate ads",
+    "real estate lead generation",
+    "Meta ads for agents",
+    "listing leads",
+    "real estate marketing",
+    "Perth real estate",
+  ],
+  authors: [{ name: "Blockwise" }],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "Blockwise",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    locale: "en_AU",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

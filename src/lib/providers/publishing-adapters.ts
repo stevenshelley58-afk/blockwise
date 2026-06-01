@@ -82,47 +82,6 @@ export function buildAdStudioPublishRequests(input: {
   return requests;
 }
 
-export async function executeProviderPublishRequest(input: {
-  request: ProviderPublishRequest;
-  accessToken: string;
-  developerToken?: string;
-  fetchImpl?: typeof fetch;
-}) {
-  const fetchImpl = input.fetchImpl ?? fetch;
-  const url =
-    input.request.provider === "meta"
-      ? `https://graph.facebook.com/${process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0"}${input.request.endpoint}`
-      : `https://googleads.googleapis.com/${process.env.GOOGLE_ADS_API_VERSION ?? "v24"}${input.request.endpoint}`;
-  const headers: Record<string, string> = {
-    authorization: `Bearer ${input.accessToken}`,
-    "content-type": "application/json",
-  };
-
-  if (input.request.provider === "google") {
-    const developerToken = input.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
-
-    if (!developerToken) {
-      throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN is required for Google publishing.");
-    }
-
-    headers["developer-token"] = developerToken;
-  }
-
-  const response = await fetchImpl(url, {
-    method: input.request.method,
-    headers,
-    body: JSON.stringify(input.request.body),
-  });
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-
-  if (!response.ok) {
-    const error = payload.error as { message?: string } | undefined;
-    throw new Error(error?.message ?? `Provider publish request failed with ${response.status}.`);
-  }
-
-  return payload;
-}
-
 function normalizeGoogleCustomerPath(value: string): string {
   return value.startsWith("customers/") ? value : `customers/${value.replaceAll("-", "")}`;
 }

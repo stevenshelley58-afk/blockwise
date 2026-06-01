@@ -1,7 +1,12 @@
 import { ExternalLink } from "lucide-react";
 
 import { StatusPill } from "@/components/status-pill";
-import type { CustomerMetaAdLibraryCard, CustomerMetaAdLibraryMedia } from "@/lib/research/customer-meta-card";
+import {
+  adRunningMs,
+  formatAdDuration,
+  type CustomerMetaAdLibraryCard,
+  type CustomerMetaAdLibraryMedia,
+} from "@/lib/research/customer-meta-card";
 
 export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard }) {
   const hasLongBody = Boolean(card.body && card.body.length > 320);
@@ -154,8 +159,11 @@ function MediaAsset({ media, label }: { media: CustomerMetaAdLibraryMedia; label
 function deliveryDateText(startedAt: string | null, stoppedAt: string | null): string | null {
   const started = formatDate(startedAt);
   const stopped = formatDate(stoppedAt);
-  if (started && stopped) return `Started ${started} - stopped ${stopped}`;
-  if (started) return `Started ${started}`;
+  const ms = adRunningMs(startedAt, stoppedAt);
+  const duration = ms === null ? null : formatAdDuration(ms, !stoppedAt);
+
+  if (started && stopped) return `Started ${started} – stopped ${stopped}${duration ? ` · ${duration}` : ""}`;
+  if (started) return `Started ${started}${duration ? ` · ${duration}` : ""}`;
   if (stopped) return `Stopped ${stopped}`;
   return null;
 }

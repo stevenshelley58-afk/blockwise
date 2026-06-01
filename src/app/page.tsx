@@ -1,9 +1,9 @@
-"use client";
-
-import { ArrowRight, ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { CtaLink } from "@/components/landing/cta-link";
+import { DemoForm } from "@/components/landing/demo-form";
 
 type AdProps = {
   agency: string;
@@ -15,9 +15,10 @@ type AdProps = {
   headline: string;
   copy: string;
   scene: 1 | 2 | 3 | 4 | 5 | 6;
+  image: string;
 };
 
-function FacebookAd({ agency, initial, brand, suburb, status, price, headline, copy, scene }: AdProps) {
+function FacebookAd({ agency, initial, brand, suburb, status, price, headline, copy, scene, image }: AdProps) {
   return (
     <article className="mock-ad mock-ad-feed">
       <header className="mock-ad-head">
@@ -31,7 +32,11 @@ function FacebookAd({ agency, initial, brand, suburb, status, price, headline, c
         <span className="mock-ad-tag">Ad</span>
       </header>
       <p className="mock-ad-copy">{copy}</p>
-      <div className={`mock-ad-image scene-${scene}`} aria-hidden>
+      <div
+        className={`mock-ad-image scene-${scene}`}
+        style={{ backgroundImage: `url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+        aria-hidden
+      >
         <span className="mock-ad-status">{status}</span>
         <span className="mock-ad-price">{price}</span>
         <span className="mock-ad-pin">
@@ -44,18 +49,20 @@ function FacebookAd({ agency, initial, brand, suburb, status, price, headline, c
           <strong>{headline}</strong>
           <span>blockwise.sale</span>
         </div>
-        <button type="button" className="mock-ad-cta">
-          Book appraisal
-        </button>
+        <span className="mock-ad-cta">Book appraisal</span>
       </footer>
     </article>
   );
 }
 
-function InstagramStory({ agency, brand, suburb, price, headline, scene }: AdProps) {
+function InstagramStory({ agency, brand, suburb, price, headline, scene, image }: AdProps) {
   return (
     <article className="mock-ad mock-ad-story">
-      <div className={`mock-ad-story-bg scene-${scene}`} aria-hidden />
+      <div
+        className={`mock-ad-story-bg scene-${scene}`}
+        style={{ backgroundImage: `url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+        aria-hidden
+      />
       <div className="mock-ad-story-overlay">
         <header className="mock-ad-story-head">
           <span className="mock-ad-story-bar" />
@@ -82,31 +89,7 @@ function InstagramStory({ agency, brand, suburb, price, headline, scene }: AdPro
   );
 }
 
-function GoogleAd({ agency, suburb, headline, copy }: AdProps) {
-  return (
-    <article className="mock-ad mock-ad-google">
-      <header className="mock-ad-google-head">
-        <span className="mock-ad-google-tag">Sponsored</span>
-        <div className="mock-ad-google-id">
-          <span className="mock-ad-google-favicon">B</span>
-          <div>
-            <strong>{agency}</strong>
-            <span>blockwise.sale › {suburb.toLowerCase().replace(/\s+/g, "-")}</span>
-          </div>
-        </div>
-      </header>
-      <h4 className="mock-ad-google-title">{headline}</h4>
-      <p className="mock-ad-google-copy">{copy}</p>
-      <div className="mock-ad-google-links">
-        <span>Free appraisal</span>
-        <span>Recently sold</span>
-        <span>Why us</span>
-      </div>
-    </article>
-  );
-}
-
-const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
+const ads: Array<AdProps & { format: "facebook" | "instagram" }> = [
   {
     format: "facebook",
     agency: "Northstar Realty",
@@ -118,6 +101,7 @@ const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
     headline: "Federation home, 3 streets back from Beaufort St",
     copy: "Mt Lawley owners — three homes like yours sold above reserve this month. Free 15-min appraisal.",
     scene: 1,
+    image: "/ads/ad-northstar.jpg",
   },
   {
     format: "instagram",
@@ -130,18 +114,7 @@ const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
     headline: "Ocean glimpse. 4 bed, 2 bath.",
     copy: "",
     scene: 4,
-  },
-  {
-    format: "google",
-    agency: "Eastland Homes",
-    initial: "E",
-    brand: "#4a5670",
-    suburb: "Inglewood",
-    status: "Appraisals",
-    price: "",
-    headline: "Inglewood appraisals — free, no obligation",
-    copy: "11 sales in Inglewood last quarter. Average days on market: 19. Free 15-min appraisal.",
-    scene: 2,
+    image: "/ads/ad-coastline.jpg",
   },
   {
     format: "facebook",
@@ -154,6 +127,7 @@ const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
     headline: "Riverside terrace. Wide block. 1pm Saturday.",
     copy: "Saturday auction, 1pm. Three bidders registered. Inspections Thursday 5:30pm.",
     scene: 3,
+    image: "/ads/ad-hillco.jpg",
   },
   {
     format: "instagram",
@@ -166,18 +140,7 @@ const ads: Array<AdProps & { format: "facebook" | "instagram" | "google" }> = [
     headline: "Subi cottage. Walk to Rokeby Rd.",
     copy: "",
     scene: 5,
-  },
-  {
-    format: "google",
-    agency: "Northstar Realty",
-    initial: "N",
-    brand: "#1a3a55",
-    suburb: "Mount Lawley",
-    status: "Appraisals",
-    price: "",
-    headline: "Selling in Mt Lawley? See what your home is worth.",
-    copy: "14 sales on Beaufort St in 12 months. Free written appraisal in 48 hours.",
-    scene: 6,
+    image: "/ads/ad-hillview.jpg",
   },
 ];
 
@@ -258,9 +221,9 @@ export default function HomePage() {
         </nav>
         <nav className="site-nav-actions" aria-label="Account">
           <Link href="/login">Client sign in</Link>
-          <a className="button" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
+          <CtaLink location="nav" className="button">
             Request access
-          </a>
+          </CtaLink>
         </nav>
       </header>
 
@@ -275,10 +238,10 @@ export default function HomePage() {
             Selling isn&apos;t the hard bit. Getting the listing is. We run the ads. You watch every cent.
           </p>
           <div className="hero-cta">
-            <a className="button primary" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
+            <CtaLink location="hero" className="button primary">
               Book a demo
               <ArrowRight aria-hidden size={18} />
-            </a>
+            </CtaLink>
             <a className="button ghost" href="#ads">
               See the ads
             </a>
@@ -291,7 +254,7 @@ export default function HomePage() {
               <span className="hero-ad-mini">Instagram</span>
             </div>
             <div className="hero-ad-card hero-ad-mid" aria-hidden>
-              <span className="hero-ad-mini">Google</span>
+              <span className="hero-ad-mini">Reels</span>
             </div>
             <div className="hero-ad-card hero-ad-front">
               <FacebookAd {...ads[0]} />
@@ -306,11 +269,13 @@ export default function HomePage() {
         </div>
 
         <div className="ads-gallery">
-          {ads.map((ad, index) => {
-            if (ad.format === "facebook") return <FacebookAd key={index} {...ad} />;
-            if (ad.format === "instagram") return <InstagramStory key={index} {...ad} />;
-            return <GoogleAd key={index} {...ad} />;
-          })}
+          {ads.map((ad, index) =>
+            ad.format === "facebook" ? (
+              <FacebookAd key={index} {...ad} />
+            ) : (
+              <InstagramStory key={index} {...ad} />
+            ),
+          )}
         </div>
 
         <div className="live-strip" aria-label="Live campaign performance">
@@ -346,22 +311,21 @@ export default function HomePage() {
         <HowItWorksFlow />
       </section>
 
-      <section className="final-cta" aria-labelledby="final-heading">
-        <div className="final-cta-inner">
-          <h2 id="final-heading">See it in 15 minutes.</h2>
-          <a className="button primary big" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
-            Book a demo
-            <ArrowUpRight aria-hidden size={20} />
-          </a>
+      <section id="demo" className="demo-section" aria-labelledby="demo-heading">
+        <div className="demo-intro">
+          <p className="eyebrow">Book a demo</p>
+          <h2 id="demo-heading">See it in 15 minutes.</h2>
+          <p className="demo-lead">
+            Tell us your patch. We&apos;ll show you the ads we&apos;d run and the numbers
+            you&apos;d watch — live, on a call.
+          </p>
         </div>
+        <DemoForm />
       </section>
 
       <footer className="site-footer" aria-label="Footer">
         <BlockwiseLogo />
-        <nav
-          aria-label="Legal"
-          style={{ display: "flex", gap: 18, fontSize: 13, color: "#707470", flexWrap: "wrap" }}
-        >
+        <nav className="site-footer-legal" aria-label="Legal">
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/data-deletion">Data deletion</Link>

@@ -22,6 +22,7 @@ const ignoredSegments = new Set([
 checkLegacyAdFirstReferences();
 checkCustomerInternalFieldReferences();
 checkCustomerDataSourceBoundaries();
+checkHermesQueueWorkerContract();
 
 if (failures.length > 0) {
   console.error("Hard-reset static verification failed:");
@@ -97,6 +98,67 @@ function checkCustomerDataSourceBoundaries() {
     if (hits.length > 0) {
       failures.push(`${display(file)} queries internal research tables directly: ${hits.join(", ")}`);
     }
+  }
+}
+
+function checkHermesQueueWorkerContract() {
+  const runtimeFiles = {
+    index: "hermes/tools/research-runtime/src/index.ts",
+    supervisor: "hermes/tools/research-runtime/src/supervisor.ts",
+    types: "hermes/tools/research-runtime/src/types.ts",
+    worker: "hermes/tools/research-runtime/src/worker.ts",
+    capture: "hermes/tools/meta-library-capture/src/capture.ts",
+    captureTypes: "hermes/tools/meta-library-capture/src/types.ts",
+  };
+  const runtimeText = Object.fromEntries(
+    Object.entries(runtimeFiles).map(([name, path]) => [name, stripComments(readFileSync(join(root, path), "utf8"))]),
+  );
+
+  if (!/export\s+\*\s+from\s+["']\.\/worker\.ts["']/.test(runtimeText.index)) {
+    failures.push("Hermes research runtime must export its queue worker entrypoint from src/index.ts");
+  }
+  if (!/class\s+ResearchQueueWorker\b/.test(runtimeText.worker) || !/async\s+workOnce\s*\(/.test(runtimeText.worker)) {
+    failures.push("Hermes research runtime must provide a ResearchQueueWorker.workOnce queue entrypoint");
+  }
+
+  const requiredKinds = [
+    "blockwise-agent-census",
+    "blockwise-page-resolver",
+    "blockwise-ad-collector",
+    "blockwise-media-collector",
+    "blockwise-ad-classifier",
+  ];
+  for (const kind of requiredKinds) {
+    if (!new RegExp(`["']${kind}["']`).test(runtimeText.types)) {
+      failures.push(`Hermes researchJobInputSchema must include ${kind}`);
+    }
+  }
+
+  const requiredPlannerMethods = [
+    "planPostcodeRosterRefresh",
+    "planPageResolution",
+    "planResolvedAdvertiserCapture",
+    "planCreativeClassification",
+  ];
+  for (const method of requiredPlannerMethods) {
+    if (!new RegExp(`\\b${method}\\s*\\(`).test(runtimeText.supervisor)) {
+      failures.push(`Hermes ResearchSupervisor must include ${method}`);
+    }
+  }
+  if (!/\bplan\w*Media\w*\s*\(/.test(runtimeText.supervisor)) {
+    failures.push("Hermes ResearchSupervisor must include a media queue planner between collector and classifier");
+  }
+
+  const collectorRuntime = `${runtimeText.types}\n${runtimeText.supervisor}\n${runtimeText.capture}\n${runtimeText.captureTypes}`;
+  const forbiddenCollectionInputs = [
+    /\bsearchQuery\b/i,
+    /\bsearch_query\b/i,
+    /\bradius\b/i,
+    /\bgeo\b/i,
+    /\blocation\b/i,
+  ].filter((pattern) => pattern.test(collectorRuntime)).map(String);
+  if (forbiddenCollectionInputs.length > 0) {
+    failures.push(`Hermes active collection runtime accepts location/search-query inputs: ${forbiddenCollectionInputs.join(", ")}`);
   }
 }
 

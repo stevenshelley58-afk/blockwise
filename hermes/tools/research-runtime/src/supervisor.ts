@@ -1,27 +1,33 @@
-import { DeterministicResearchQueue, type EnqueueResult } from "./queue.ts";
-import type { RealEstateGate, ResearchJobInput } from "./types.ts";
+import type { RealEstateGate } from "./types.ts";
+
+export type QueuePlan = {
+  queue_name: "research";
+  job_type: string;
+  dedupe_key: string;
+  priority: number;
+  payload: Record<string, unknown>;
+  status: "pending";
+  max_attempts: number;
+};
 
 export class ResearchSupervisor {
-  constructor(private readonly queue: DeterministicResearchQueue) {}
-
-  planPostcodeRosterRefresh(input: {
-    postcode: string;
-    state: string;
-    forceRefresh?: boolean;
-    maxAgeDays?: number;
-    reason?: string;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-agent-census",
+  planPostcodeRosterRefresh(input: { postcode: string; state: string; buildRunId?: string }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-agent-census",
+      dedupe_key: `census:${input.state}:${input.postcode}`,
       priority: 10,
-      reason: input.reason ?? "postcode roster refresh",
       payload: {
         postcode: input.postcode,
         state: input.state,
-        forceRefresh: input.forceRefresh ?? false,
-        maxAgeDays: input.maxAgeDays ?? 7,
+        build_run_id: input.buildRunId,
+        verified_roster_first: true,
+        location_search_allowed: false,
+        legacy_discovery_allowed: false,
       },
-    });
+      status: "pending",
+      max_attempts: 3,
+    };
   }
 
   planPageResolution(input: {
@@ -29,14 +35,22 @@ export class ResearchSupervisor {
     subjectId: string;
     censusDecisionId: string;
     sourceDocumentIds: string[];
-    forceRevisit?: boolean;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-page-resolver",
+  }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-page-resolver",
+      dedupe_key: `page-resolver:${input.subjectKind}:${input.subjectId}`,
       priority: 20,
-      reason: "resolve verified real-estate subject to Meta advertiser page",
-      payload: input,
-    });
+      payload: {
+        subjectKind: input.subjectKind,
+        subjectId: input.subjectId,
+        censusDecisionId: input.censusDecisionId,
+        sourceDocumentIds: input.sourceDocumentIds,
+        location_search_allowed: false,
+      },
+      status: "pending",
+      max_attempts: 3,
+    };
   }
 
   planResolvedAdvertiserCapture(input: {
@@ -44,58 +58,39 @@ export class ResearchSupervisor {
     metaPageId: string;
     resolverDecisionId: string;
     realEstateGate: RealEstateGate;
-    country?: string;
-    activeStatus?: "active" | "inactive" | "all";
-    resultsLimit?: number;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-ad-collector",
+  }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-ad-collector",
+      dedupe_key: `ad-collector:${input.advertiserPageId}`,
       priority: 30,
-      reason: "collect ads for resolved real-estate advertiser page",
       payload: input,
-    });
+      status: "pending",
+      max_attempts: 3,
+    };
   }
 
-  planCreativeClassification(input: {
-    adCreativeId: string;
-    sourceDocumentId: string;
-    force?: boolean;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-ad-classifier",
+  planMediaCapture(input: { adCreativeId: string; observedAdId: string; sourceUrls: string[] }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-media-collector",
+      dedupe_key: `media:${input.adCreativeId}`,
+      priority: 35,
+      payload: input,
+      status: "pending",
+      max_attempts: 3,
+    };
+  }
+
+  planCreativeClassification(input: { adCreativeId: string; sourceDocumentId?: string; force?: boolean }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-ad-classifier",
+      dedupe_key: `classifier:${input.adCreativeId}`,
       priority: 40,
-      reason: "classify captured real-estate creative",
       payload: input,
-    });
-  }
-
-  planCoverageAudit(input: {
-    postcode: string;
-    state: string;
-    method?: "resolved_roster_sample" | "operator_defect_replay";
-    sampleSize?: number;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-coverage-auditor",
-      priority: 60,
-      reason: "audit known roster coverage and open defects for gaps",
-      payload: input,
-    });
-  }
-
-  planDefectInvestigation(input: {
-    coverageDefectId: string;
-    operatorDecisionId?: string;
-  }): EnqueueResult {
-    return this.queue.enqueue({
-      kind: "blockwise-defect-investigator",
-      priority: 5,
-      reason: "operator requested coverage defect investigation",
-      payload: input,
-    });
-  }
-
-  planFollowUps(inputs: ResearchJobInput[]): EnqueueResult[] {
-    return inputs.map((input) => this.queue.enqueue(input));
+      status: "pending",
+      max_attempts: 3,
+    };
   }
 }
