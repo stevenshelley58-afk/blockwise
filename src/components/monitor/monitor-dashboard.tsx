@@ -19,11 +19,14 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
+  Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -206,10 +209,10 @@ function OverviewTab({ bundle }: { bundle: MonitorDashboardBundle }) {
   return (
     <div className="monitor-tab-panel">
       <section className="monitor-kpi-grid" aria-label="Primary ad metrics">
-        <DashboardMetric label="Spend" value={formatCurrency(bundle.totals.spendAud)} note={`${formatNumber(bundle.totals.impressions)} impressions`} />
-        <DashboardMetric label="Leads" value={formatNumber(bundle.totals.leads)} note={`${formatNumber(bundle.totals.clicks)} clicks`} />
-        <DashboardMetric label="Valid leads" value={formatNumber(bundle.totals.validLeads)} note={`${formatPercent(bundle.totals.validLeadRate)} valid rate`} />
-        <DashboardMetric label="Valid CPL" value={formatCurrency(bundle.totals.validCplAud)} note="Spend divided by valid leads" />
+        <DashboardMetric label="Spend" value={formatCurrency(bundle.totals.spendAud)} note={`${formatNumber(bundle.totals.impressions)} impressions`} spark={{ data: bundle.daily, dataKey: "spendAud" }} />
+        <DashboardMetric label="Leads" value={formatNumber(bundle.totals.leads)} note={`${formatNumber(bundle.totals.clicks)} clicks`} spark={{ data: bundle.daily, dataKey: "leads" }} />
+        <DashboardMetric label="Valid leads" value={formatNumber(bundle.totals.validLeads)} note={`${formatPercent(bundle.totals.validLeadRate)} valid rate`} spark={{ data: bundle.daily, dataKey: "validLeads" }} />
+        <DashboardMetric label="Valid CPL" value={formatCurrency(bundle.totals.validCplAud)} note="Spend divided by valid leads" spark={{ data: bundle.validCplTrend, dataKey: "validCplAud" }} />
       </section>
 
       <section className="panel monitor-panel">
@@ -222,15 +225,22 @@ function OverviewTab({ bundle }: { bundle: MonitorDashboardBundle }) {
           <SectionTitle title="Spend vs valid leads" />
           <div className="monitor-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={bundle.daily}>
-                <CartesianGrid stroke="#d9e0dc" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} />
-                <YAxis yAxisId="left" tickFormatter={(value) => `$${Number(value)}`} width={54} />
-                <YAxis yAxisId="right" orientation="right" width={38} />
+              <ComposedChart data={bundle.daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1f3a6e" stopOpacity={0.18} />
+                    <stop offset="100%" stopColor="#1f3a6e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#e7eaf1" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={{ stroke: "#e7eaf1" }} tickLine={false} />
+                <YAxis yAxisId="left" tickFormatter={(value) => `$${Number(value)}`} width={54} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" width={40} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={chartTooltipFormatter} labelFormatter={chartLabelFormatter} />
-                <Line yAxisId="left" type="monotone" dataKey="spendAud" name="Spend" stroke="#087f7a" strokeWidth={2} dot={false} />
-                <Line yAxisId="right" type="monotone" dataKey="validLeads" name="Valid leads" stroke="#2364aa" strokeWidth={2} dot={false} />
-              </LineChart>
+                <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} />
+                <Area yAxisId="left" type="monotone" dataKey="spendAud" name="Spend (A$)" stroke="#1f3a6e" strokeWidth={2} fill="url(#spendFill)" dot={false} activeDot={{ r: 3 }} />
+                <Line yAxisId="right" type="monotone" dataKey="validLeads" name="Valid leads" stroke="#1d4ed8" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -239,13 +249,19 @@ function OverviewTab({ bundle }: { bundle: MonitorDashboardBundle }) {
           <SectionTitle title="Valid CPL trend" />
           <div className="monitor-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={bundle.validCplTrend}>
-                <CartesianGrid stroke="#d9e0dc" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} />
-                <YAxis tickFormatter={(value) => `$${Number(value)}`} width={54} />
+              <AreaChart data={bundle.validCplTrend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="cplFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1f3a6e" stopOpacity={0.18} />
+                    <stop offset="100%" stopColor="#1f3a6e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#e7eaf1" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={{ stroke: "#e7eaf1" }} tickLine={false} />
+                <YAxis tickFormatter={(value) => `$${Number(value)}`} width={54} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={chartTooltipFormatter} labelFormatter={chartLabelFormatter} />
-                <Line type="monotone" dataKey="validCplAud" name="Valid CPL" stroke="#aa6b00" strokeWidth={2} dot={false} />
-              </LineChart>
+                <Area type="monotone" dataKey="validCplAud" name="Valid CPL" stroke="#1f3a6e" strokeWidth={2} fill="url(#cplFill)" dot={false} activeDot={{ r: 3 }} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -496,11 +512,11 @@ function AdsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
           <div className="monitor-chart">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bundle.daily}>
-                <CartesianGrid stroke="#d9e0dc" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} />
-                <YAxis tickFormatter={(value) => `$${Number(value)}`} width={54} />
+                <CartesianGrid stroke="#e7eaf1" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickFormatter={formatShortDate} minTickGap={22} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={{ stroke: "#e7eaf1" }} tickLine={false} />
+                <YAxis tickFormatter={(value) => `$${Number(value)}`} width={54} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={chartTooltipFormatter} labelFormatter={chartLabelFormatter} />
-                <Bar dataKey="spendAud" name="Spend" fill="#087f7a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="spendAud" name="Spend" fill="#1f3a6e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -511,11 +527,11 @@ function AdsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
           <div className="monitor-chart">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bundle.spendByCampaign} layout="vertical" margin={{ left: 12, right: 16 }}>
-                <CartesianGrid stroke="#d9e0dc" strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(value) => `$${Number(value)}`} />
-                <YAxis type="category" dataKey="name" width={138} tick={{ fontSize: 12 }} />
+                <CartesianGrid stroke="#e7eaf1" strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tickFormatter={(value) => `$${Number(value)}`} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={{ stroke: "#e7eaf1" }} tickLine={false} />
+                <YAxis type="category" dataKey="name" width={138} tick={{ fontSize: 12, fill: "#5b6678" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={chartTooltipFormatter} />
-                <Bar dataKey="spendAud" name="Spend" fill="#2364aa" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="spendAud" name="Spend" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -752,12 +768,45 @@ function ProviderStatusStrip({ bundle }: { bundle: MonitorDashboardBundle }) {
   );
 }
 
-function DashboardMetric({ label, value, note }: { label: string; value: string; note: string }) {
+function DashboardMetric({
+  label,
+  value,
+  note,
+  spark,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  spark?: { data: unknown[]; dataKey: string };
+}) {
   return (
     <article className="metric-card monitor-metric">
       <p className="metric-label">{label}</p>
       <p className="metric-value">{value}</p>
       <p className="metric-note">{note}</p>
+      {spark && spark.data.length > 1 ? (
+        <div className="metric-spark">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={spark.data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+              <defs>
+                <linearGradient id={`spark-${spark.dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1f3a6e" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#1f3a6e" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey={spark.dataKey}
+                stroke="#1f3a6e"
+                strokeWidth={1.75}
+                fill={`url(#spark-${spark.dataKey})`}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      ) : null}
     </article>
   );
 }

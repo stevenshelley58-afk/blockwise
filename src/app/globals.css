@@ -1915,22 +1915,9 @@ h3 {
   justify-content: space-between;
   gap: 10px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-card);
   background: var(--surface);
-  padding: 10px 14px;
-}
-
-.monitor-provider-status.green {
-  border-left-color: var(--green);
-}
-
-.monitor-provider-status.amber {
-  border-left-color: var(--amber);
-}
-
-.monitor-provider-status.blue {
-  border-left-color: var(--blue);
+  padding: 14px 16px;
 }
 
 .monitor-provider-status-meta {
@@ -2042,6 +2029,12 @@ h3 {
 
 .monitor-metric .metric-note {
   font-size: 13px;
+}
+
+.monitor-metric .metric-spark {
+  margin-top: 12px;
+  width: 100%;
+  height: 40px;
 }
 
 .monitor-chart {
@@ -2325,33 +2318,48 @@ h3 {
   display: inline-flex;
   min-height: 24px;
   align-items: center;
-  border-radius: 999px;
-  background: #eef3ef;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: var(--r-chip);
+  background: var(--surface-subtle);
   color: var(--muted);
   padding: 0 9px;
-  font-size: 12px;
-  font-weight: 850;
+  font-size: 12.5px;
+  font-weight: 600;
   text-transform: capitalize;
+}
+
+.monitor-quality::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
 }
 
 .monitor-quality.valid,
 .monitor-quality.active {
-  background: #e4f3e5;
+  background: color-mix(in srgb, var(--green) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--green) 20%, transparent);
   color: var(--green);
 }
 
 .monitor-quality.nurture {
-  background: #e7f0fb;
+  background: color-mix(in srgb, var(--blue) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--blue) 20%, transparent);
   color: var(--blue);
 }
 
 .monitor-quality.duplicate {
-  background: #fff1d8;
+  background: color-mix(in srgb, var(--amber) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--amber) 20%, transparent);
   color: var(--amber);
 }
 
 .monitor-quality.unqualified {
-  background: #fde4eb;
+  background: color-mix(in srgb, var(--rose) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--rose) 20%, transparent);
   color: var(--rose);
 }
 
