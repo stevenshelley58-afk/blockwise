@@ -7,7 +7,11 @@ const root = process.cwd();
 const supervisorPath = "hermes/tools/research-runtime/bin/supabase-supervisor.mjs";
 const supervisor = readFileSync(join(root, supervisorPath), "utf8");
 const collector = functionBody(supervisor, "handleAdCollector");
+const mediaCollector = functionBody(supervisor, "handleMediaCollector");
+const agentCensus = functionBody(supervisor, "handleAgentCensus");
+const verifiedSubjectUpsert = functionBody(supervisor, "upsertVerifiedAgency");
 const pageResolver = functionBody(supervisor, "handlePageResolver");
+const resolverExactName = functionBody(supervisor, "resolveMetaAdLibraryVerifiedNameCandidate");
 const metaHtmlParser = functionBody(supervisor, "normaliseMetaAdLibraryHtml");
 const hostedMetaParser = [
   functionBody(supervisor, "normaliseHostedMetaItems"),
@@ -72,11 +76,12 @@ test("Hermes Meta parser explicitly handles search_results_connection collated_r
   );
 });
 
-test("Hermes page resolver may use exact verified-name Meta Ad Library search, not location or ad-first discovery", () => {
+test("Hermes page resolver may use exact verified-subject Meta Ad Library search, not location or ad-first discovery", () => {
+  const resolverSource = `${pageResolver}\n${resolverExactName}`;
   assert.match(
-    pageResolver,
-    /\bagency\.name\b[\s\S]*(?:ads\/library|Meta Ad Library|metaAdLibrary|search_terms|searchTerms)|(?:ads\/library|Meta Ad Library|metaAdLibrary|search_terms|searchTerms)[\s\S]*\bagency\.name\b/i,
-    "resolver must search Meta Ad Library by the verified agency name",
+    resolverSource,
+    /\bsubject\.name\b[\s\S]*(?:ads\/library|Meta Ad Library|metaAdLibrary|search_terms|searchTerms)|(?:ads\/library|Meta Ad Library|metaAdLibrary|search_terms|searchTerms)[\s\S]*\bsubject\.name\b/i,
+    "resolver must search Meta Ad Library by the verified subject name",
   );
   assert.match(
     pageResolver,
@@ -105,6 +110,25 @@ test("Hermes page resolver may use exact verified-name Meta Ad Library search, n
     present,
     [],
     `resolver must not use location or ad-first discovery: ${present.join(", ")}`,
+  );
+});
+
+test("Hermes queues and resolves verified agent pages, not just agency pages", () => {
+  const resolverBootstrap = `${agentCensus}\n${verifiedSubjectUpsert}`;
+  assert.match(
+    resolverBootstrap,
+    /dedupe_key:\s*`page-resolver:agent:\$\{agentId\}`[\s\S]*subjectKind:\s*["']agent["']|subjectKind:\s*["']agent["'][\s\S]*dedupe_key:\s*`page-resolver:agent:\$\{agentId\}`/,
+    "census must queue page resolver jobs for verified agents",
+  );
+  assert.doesNotMatch(
+    pageResolver,
+    /page_resolver_subject_not_supported|v1 resolver handles agency subjects first/,
+    "page resolver must not block agent subjects",
+  );
+  assert.match(
+    pageResolver,
+    /\bagent_id:\s*subject\.agent\?\.id\b/,
+    "resolved advertiser pages must preserve agent ownership",
   );
 });
 
@@ -167,6 +191,19 @@ test("Hermes active ad collector queues media and classifier follow-up jobs", ()
       `collector must enqueue ${jobType} follow-up work after ingest`,
     );
   }
+});
+
+test("Hermes media collector can rebuild missing media rows from saved creative URLs", () => {
+  assert.match(
+    mediaCollector,
+    /\bloadCreativeForMediaCapture\b[\s\S]*\bmediaSourcesFromCreative\b|\bmediaSourcesFromCreative\b[\s\S]*\bloadCreativeForMediaCapture\b/,
+    "media collector must recover when media_assets rows are missing but ad_creatives still has source media",
+  );
+  assert.match(
+    mediaCollector,
+    /\bcaptureMediaAsset\b[\s\S]*\brefreshCreativeStoredMedia\b/,
+    "media collector must download assets and refresh storage-backed creative fields",
+  );
 });
 
 function functionBody(source, name) {

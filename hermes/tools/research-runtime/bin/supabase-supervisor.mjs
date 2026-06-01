@@ -114,10 +114,27 @@ const rpc = (functionName, payload) => rest("research", `rpc/${functionName}`, {
 const encode = (value) => encodeURIComponent(value);
 
 async function recordEvent(eventType, tableName, rowId, payload = {}, extra = {}) {
-  await rest("research", "ingest_events", {
-    method: "POST",
-    body: json({ event_type: eventType, table_name: tableName, row_id: rowId, source_provider: "hermes", payload, ...extra }),
-  });
+  const row = { event_type: eventType, table_name: tableName, row_id: rowId, source_provider: "hermes", payload, ...extra };
+  try {
+    await rest("research", "ingest_events", {
+      method: "POST",
+      body: json(row),
+    });
+  } catch (error) {
+    if (!/schema cache|column .* does not exist|PGRST204|42703/i.test(error.message)) throw error;
+    const compatibleRow = { ...row };
+    delete compatibleRow.work_queue_id;
+    delete compatibleRow.agent_decision_id;
+    delete compatibleRow.source_document_id;
+    delete compatibleRow.build_run_id;
+    delete compatibleRow.ad_fetch_run_id;
+    delete compatibleRow.payload_hash;
+    delete compatibleRow.diff;
+    await rest("research", "ingest_events", {
+      method: "POST",
+      body: json(compatibleRow),
+    });
+  }
 }
 
 async function ensureBuildRun() {
@@ -489,6 +506,7 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
     source_document_id: sourceDocumentId,
   });
   let agentId = null;
+  let agentDecisionId = null;
   if (agency.agent?.full_name) {
     const agentNorm = normalizeName(agency.agent.full_name);
     const existingAgent = await rest("research", `agents?select=id&normalized_name=eq.${encode(agentNorm)}&agency_id=eq.${agencyId}&limit=1`);
@@ -561,6 +579,29 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
           notes: "Hermes deterministic census verification from roster source.",
         }),
       });
+      const agentDecision = await rest("research", "agent_decisions", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: json({
+          decision_type: "real_estate_verification",
+          subject_type: "agent",
+          subject_id: agentId,
+          decision: {
+            verified: true,
+            method: "deterministic_census",
+            agency_id: agencyId,
+            location_search_allowed: false,
+          },
+          rationale: "Verified from supplied or configured public roster evidence before any page or ad collection.",
+          confidence: agency.confidence,
+          evidence: { urls: [agency.evidence_url, agency.agent.website_url].filter(Boolean), agent_name: agency.agent.full_name, agency_name: agency.name },
+          source_document_ids: [sourceDocumentId],
+          hermes_session_id: workerId,
+          hermes_skill: "blockwise-agent-census",
+          model: "deterministic",
+        }),
+      });
+      agentDecisionId = agentDecision?.[0]?.id || null;
     }
   }
   const decision = await rest("research", "agent_decisions", {
@@ -617,6 +658,51 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
       status: "pending",
       max_attempts: 3,
     } : null,
+    followUps: [
+      decisionId ? {
+        queue_name: "research",
+        job_type: "blockwise-page-resolver",
+        dedupe_key: `page-resolver:agency:${agencyId}`,
+        priority: 20,
+        payload: {
+          subjectKind: "agency",
+          subjectId: agencyId,
+          build_run_id: job.payload?.build_run_id || null,
+          censusDecisionId: decisionId,
+          sourceDocumentIds: [sourceDocumentId],
+          agencyName: agency.name,
+          reiwaUrl: agency.reiwa_url || null,
+          websiteUrl: agency.website_url || null,
+          forceRevisit: false,
+          location_search_allowed: false,
+        },
+        status: "pending",
+        max_attempts: 3,
+      } : null,
+      agentId && agentDecisionId ? {
+        queue_name: "research",
+        job_type: "blockwise-page-resolver",
+        dedupe_key: `page-resolver:agent:${agentId}`,
+        priority: 18,
+        payload: {
+          subjectKind: "agent",
+          subjectId: agentId,
+          agencyId,
+          build_run_id: job.payload?.build_run_id || null,
+          censusDecisionId: agentDecisionId,
+          sourceDocumentIds: [sourceDocumentId],
+          agentName: agency.agent.full_name,
+          agencyName: agency.name,
+          profileUrl: agency.agent.website_url || null,
+          websiteUrl: agency.website_url || null,
+          reiwaUrl: agency.reiwa_url || null,
+          forceRevisit: false,
+          location_search_allowed: false,
+        },
+        status: "pending",
+        max_attempts: 3,
+      } : null,
+    ].filter(Boolean),
   };
 }
 
@@ -752,8 +838,12 @@ function metaAdLibraryVerifiedNameUrl(name) {
   return `https://www.facebook.com/ads/library/?${params.toString()}`;
 }
 
-async function resolveMetaAdLibraryVerifiedNameCandidate(agencyName, agency, payload, fetched, facebookCandidates, job) {
-  const queries = [...new Set([agencyName, agency.trading_name].filter((name) => typeof name === "string" && name.trim()).map((name) => name.trim()))].slice(0, 2);
+async function resolveMetaAdLibraryVerifiedNameCandidate(subject, payload, fetched, facebookCandidates, job) {
+  const queryInputs = subject.kind === "agent"
+    ? [payload.agentName, subject.name, subject.agency?.name ? `${subject.name} ${subject.agency.name}` : null]
+    : [payload.agencyName, subject.name, subject.agency?.trading_name];
+  const queries = [...new Set(queryInputs.filter((name) => typeof name === "string" && name.trim()).map((name) => name.trim()))]
+    .slice(0, subject.kind === "agent" ? 3 : 2);
   const knownFacebookUrls = [...facebookCandidates];
   let best = null;
 
@@ -762,15 +852,15 @@ async function resolveMetaAdLibraryVerifiedNameCandidate(agencyName, agency, pay
     try {
       const html = await browserDumpDom(url, Math.max(metaCaptureTimeoutMs, 20_000)).then((body) => body.slice(0, 2_500_000));
       const sourceDocumentId = await sourceDocument("meta_ad_library_exact_name_search", url, html, {
-        agency_id: agency.id,
+        ...resolverSubjectMetadata(subject),
         work_queue_id: job.id,
-        verified_agency_name: query,
+        verified_subject_name: query,
         location_search_allowed: false,
       });
       fetched.push({ url, sourceDocumentId, meta_ad_library_exact_name: true });
       const candidates = extractMetaSearchPageCandidates(html);
       for (const candidate of candidates) {
-        const score = scoreMetaSearchPageCandidate(candidate, agency, knownFacebookUrls);
+        const score = scoreMetaSearchPageCandidate(candidate, subject, knownFacebookUrls);
         if (!best || score > best.score) best = { ...candidate, score, sourceDocumentId, evidenceUrl: url, matchedQuery: query };
       }
     } catch (error) {
@@ -809,16 +899,19 @@ function extractMetaSearchPageCandidates(html) {
   return [...byPage.values()];
 }
 
-function scoreMetaSearchPageCandidate(candidate, agency, knownFacebookUrls) {
-  const agencyNorm = normalizeName(agency.name || "");
-  const tradingNorm = normalizeName(agency.trading_name || "");
+function scoreMetaSearchPageCandidate(candidate, subject, knownFacebookUrls) {
+  const subjectNorm = normalizeName(subject.name || "");
+  const agencyNorm = normalizeName(subject.agency?.name || "");
+  const tradingNorm = normalizeName(subject.agency?.trading_name || "");
   const pageNorm = normalizeName(candidate.pageName || "");
-  const agencyTokens = significantNameTokens(agency.name || agency.trading_name || "");
+  const subjectTokens = significantNameTokens(subject.name || "");
+  const agencyTokens = significantNameTokens(subject.agency?.name || subject.agency?.trading_name || "");
   const pageTokens = new Set(significantNameTokens(candidate.pageName || ""));
-  const overlap = agencyTokens.filter((token) => pageTokens.has(token)).length;
-  const websiteDomain = domainFromUrl(agency.website_url);
+  const subjectOverlap = subjectTokens.filter((token) => pageTokens.has(token)).length;
+  const agencyOverlap = agencyTokens.filter((token) => pageTokens.has(token)).length;
+  const websiteDomains = [subject.agent?.website_url, subject.agency?.website_url].map(domainFromUrl).filter(Boolean);
   const candidateText = normalizeName([candidate.pageName, candidate.pageUrl, candidate.caption, candidate.linkUrl].filter(Boolean).join(" "));
-  const domainMatch = Boolean(websiteDomain && candidateText.includes(normalizeName(websiteDomain.replace(/^www\./iu, ""))));
+  const domainMatch = websiteDomains.some((domain) => candidateText.includes(normalizeName(domain.replace(/^www\./iu, ""))));
   const knownSlugMatch = knownFacebookUrls.some((url) => {
     try {
       const knownSlug = normalizeName(facebookSlugFromUrl(url));
@@ -830,14 +923,17 @@ function scoreMetaSearchPageCandidate(candidate, agency, knownFacebookUrls) {
   });
 
   let score = 0;
-  if (pageNorm && (pageNorm === agencyNorm || pageNorm === tradingNorm)) score += 92;
-  else if (agencyNorm && pageNorm && (pageNorm.includes(agencyNorm) || agencyNorm.includes(pageNorm))) score += 76;
-  else if (agencyTokens.length && overlap >= Math.min(2, agencyTokens.length)) score += 48 + overlap * 12;
+  if (pageNorm && pageNorm === subjectNorm) score += 94;
+  else if (subjectNorm && pageNorm && (pageNorm.includes(subjectNorm) || subjectNorm.includes(pageNorm))) score += subject.kind === "agent" ? 84 : 76;
+  else if (subjectTokens.length && subjectOverlap >= Math.min(2, subjectTokens.length)) score += 50 + subjectOverlap * 12;
+  if (subject.kind === "agency" && pageNorm && (pageNorm === agencyNorm || pageNorm === tradingNorm)) score += 92;
+  else if (subject.kind === "agency" && agencyNorm && pageNorm && (pageNorm.includes(agencyNorm) || agencyNorm.includes(pageNorm))) score += 76;
+  else if (subject.kind === "agent" && agencyTokens.length && agencyOverlap >= Math.min(2, agencyTokens.length)) score += 18 + agencyOverlap * 8;
   if (knownSlugMatch) score += 35;
   if (domainMatch) score += 30;
   if (candidate.pageId && candidate.adArchiveId) score += 10;
   if (candidate.adCount > 1) score += Math.min(10, candidate.adCount);
-  if (agencyTokens.length === 0 && !knownSlugMatch && !domainMatch) return 0;
+  if (subjectTokens.length === 0 && agencyTokens.length === 0 && !knownSlugMatch && !domainMatch) return 0;
   if (!knownSlugMatch && !domainMatch && !hasRealEstatePageSignal(candidateText)) return Math.min(score, 84);
   return Math.min(score, 100);
 }
@@ -851,6 +947,13 @@ function hasRealEstatePageSignal(text) {
   return /\b(real estate|realty|property|properties|ray white|realmark|belle property|acton|harcourts|lj hooker|professionals|reiwa|home open|for sale|leased|sold)\b/iu.test(text);
 }
 
+function facebookUrlMatchesResolverSubject(pageUrl, subject) {
+  if (subject.kind !== "agent") return true;
+  const urlText = normalizeName(pageUrl);
+  const nameTokens = significantNameTokens(subject.name || "");
+  return nameTokens.length > 0 && nameTokens.some((token) => urlText.includes(token));
+}
+
 function domainFromUrl(url) {
   if (typeof url !== "string" || !url.trim()) return null;
   try {
@@ -860,9 +963,49 @@ function domainFromUrl(url) {
   }
 }
 
+function resolverSubjectMetadata(subject) {
+  return {
+    subject_kind: subject.kind,
+    subject_id: subject.id,
+    agency_id: subject.agency?.id || subject.agent?.agency_id || null,
+    agent_id: subject.agent?.id || null,
+  };
+}
+
 async function findAgency(id) {
   const rows = await rest("research", `agencies?select=id,name,trading_name,website_url,primary_suburb,primary_postcode,metadata&id=eq.${id}&limit=1`);
   return rows?.[0] || null;
+}
+
+async function findAgent(id) {
+  const rows = await rest("research", `agents?select=id,full_name,normalized_name,website_url,primary_suburb,primary_postcode,agency_id,metadata&id=eq.${id}&limit=1`);
+  return rows?.[0] || null;
+}
+
+async function findResolverSubject(payload) {
+  if (payload.subjectKind === "agency") {
+    const agency = await findAgency(payload.subjectId);
+    if (!agency) return null;
+    return { kind: "agency", id: agency.id, name: agency.name, agency, agent: null };
+  }
+  if (payload.subjectKind === "agent") {
+    const agent = await findAgent(payload.subjectId);
+    if (!agent) return null;
+    const agency = agent.agency_id ? await findAgency(agent.agency_id) : null;
+    return { kind: "agent", id: agent.id, name: agent.full_name, agency, agent };
+  }
+  return null;
+}
+
+function resolverEvidenceUrls(subject, payload) {
+  return [
+    payload.profileUrl,
+    payload.reiwaUrl,
+    payload.websiteUrl,
+    subject.agent?.website_url,
+    subject.agency?.website_url,
+    subject.agency?.metadata?.reiwa_url,
+  ].filter((url) => typeof url === "string" && /^https:\/\//iu.test(url));
 }
 
 async function createPageResolutionDecision(input) {
@@ -871,8 +1014,8 @@ async function createPageResolutionDecision(input) {
     headers: { Prefer: "return=representation" },
     body: json({
       decision_type: "page_resolution",
-      subject_type: "agency",
-      subject_id: input.agencyId,
+      subject_type: input.subjectKind || "agency",
+      subject_id: input.subjectId || input.agencyId,
       decision: input.decision,
       rationale: input.rationale,
       confidence: input.confidence,
@@ -887,29 +1030,66 @@ async function createPageResolutionDecision(input) {
 }
 
 async function upsertAdvertiserPage(input) {
-  const rows = await rest("research", "advertiser_pages?on_conflict=platform,page_id", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-    body: json({
-      platform: "facebook",
-      page_id: input.pageId,
-      page_name: input.pageName,
-      page_url: input.pageUrl,
-      agency_id: input.agencyId,
-      status: input.status,
-      confidence: input.confidence,
-      resolution_decision_id: input.decisionId,
-      resolved_at: input.status === "resolved_collectable" ? now() : null,
-      metadata: {
-        source: "hermes-page-resolver",
-        page_slug: input.pageSlug,
-        evidence_urls: input.evidenceUrls,
-        ...(input.metadata || {}),
-      },
-      last_seen_at: now(),
-    }),
-  });
+  const row = {
+    platform: "facebook",
+    page_id: input.pageId,
+    page_name: input.pageName,
+    page_url: input.pageUrl,
+    agent_id: input.agentId || null,
+    agency_id: input.agencyId,
+    status: input.status,
+    confidence: input.confidence,
+    resolution_decision_id: input.decisionId,
+    resolved_at: input.status === "resolved_collectable" ? now() : null,
+    metadata: {
+      source: "hermes-page-resolver",
+      page_slug: input.pageSlug,
+      evidence_urls: input.evidenceUrls,
+      ...(input.metadata || {}),
+    },
+    last_seen_at: now(),
+  };
+  let rows;
+  try {
+    rows = await rest("research", "advertiser_pages?on_conflict=platform,page_id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: json(row),
+    });
+  } catch (error) {
+    if (!/resolution_decision_id|resolved_at|schema cache|PGRST204|42703/i.test(error.message)) throw error;
+    const { resolution_decision_id: _decisionId, resolved_at: _resolvedAt, ...compatibleRow } = row;
+    rows = await rest("research", "advertiser_pages?on_conflict=platform,page_id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: json(compatibleRow),
+    });
+  }
   return rows?.[0]?.id || null;
+}
+
+async function insertCoverageDefect(row) {
+  try {
+    await rest("research", "coverage_defects", {
+      method: "POST",
+      body: json(row),
+    });
+  } catch (error) {
+    if (!/reporter_identity|resolution_decision_id|resolved_agent_id|resolved_agency_id|resolved_advertiser_page_id|resolved_at|schema cache|PGRST204|42703/i.test(error.message)) throw error;
+    const {
+      reporter_identity: _reporterIdentity,
+      resolution_decision_id: _resolutionDecisionId,
+      resolved_agent_id: _resolvedAgentId,
+      resolved_agency_id: _resolvedAgencyId,
+      resolved_advertiser_page_id: _resolvedAdvertiserPageId,
+      resolved_at: _resolvedAt,
+      ...compatibleRow
+    } = row;
+    await rest("research", "coverage_defects", {
+      method: "POST",
+      body: json(compatibleRow),
+    });
+  }
 }
 
 async function enqueueCollectorForPage(page, job) {
@@ -968,7 +1148,11 @@ async function handleAgentCensus(job) {
 
   if (found.length) {
     let queuedResolvers = 0;
-    for (const item of found) if (item.followUp && await enqueueFollowUp(item.followUp, job)) queuedResolvers += 1;
+    for (const item of found) {
+      for (const followUp of item.followUps || [item.followUp].filter(Boolean)) {
+        if (await enqueueFollowUp(followUp, job)) queuedResolvers += 1;
+      }
+    }
     await rest("research", `refresh_policies?postcode=eq.${encode(payload.postcode)}&state=eq.${encode(payload.state || "WA")}`, {
       method: "PATCH",
       body: json({
@@ -980,10 +1164,7 @@ async function handleAgentCensus(job) {
   }
 
   const reason = errors.length ? "census_evidence_fetch_failed" : "census_requires_verified_evidence";
-  await rest("research", "coverage_defects", {
-    method: "POST",
-    body: json({ postcode: payload.postcode, state: payload.state || "WA", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } }),
-  });
+  await insertCoverageDefect({ postcode: payload.postcode, state: payload.state || "WA", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } });
   return { status: "blocked", blocked_reason: reason, result: { handler: "blockwise-agent-census", reason, errors, location_search_allowed: false } };
 }
 
@@ -992,17 +1173,14 @@ async function handlePageResolver(job) {
   if (!payload.subjectId || !payload.censusDecisionId || !Array.isArray(payload.sourceDocumentIds) || payload.sourceDocumentIds.length === 0) {
     return { status: "blocked", blocked_reason: "page_resolver_missing_verified_census_handoff", result: { handler: "blockwise-page-resolver", reason: "missing censusDecisionId/sourceDocumentIds/subjectId" } };
   }
-  if (payload.subjectKind !== "agency") {
-    return { status: "blocked", blocked_reason: "page_resolver_subject_not_supported", result: { handler: "blockwise-page-resolver", reason: "v1 resolver handles agency subjects first", subject_kind: payload.subjectKind } };
+
+  const subject = await findResolverSubject(payload);
+  if (!subject) {
+    return { status: "blocked", blocked_reason: "page_resolver_subject_missing", result: { handler: "blockwise-page-resolver", subject_kind: payload.subjectKind, subject_id: payload.subjectId } };
   }
 
-  const agency = await findAgency(payload.subjectId);
-  if (!agency) {
-    return { status: "blocked", blocked_reason: "page_resolver_agency_missing", result: { handler: "blockwise-page-resolver", subject_id: payload.subjectId } };
-  }
-
-  const evidenceUrlsToFetch = [payload.reiwaUrl, payload.websiteUrl, agency.website_url, agency.metadata?.reiwa_url]
-    .filter((url) => typeof url === "string" && /^https:\/\//iu.test(url));
+  const subjectMeta = resolverSubjectMetadata(subject);
+  const evidenceUrlsToFetch = resolverEvidenceUrls(subject, payload);
   const fetched = [];
   const facebookCandidates = new Set();
   const websiteCandidates = new Set();
@@ -1010,7 +1188,7 @@ async function handlePageResolver(job) {
   for (const url of [...new Set(evidenceUrlsToFetch)].slice(0, 4)) {
     try {
       const html = await fetchText(url);
-      const sourceDocumentId = await sourceDocument("page_resolution_evidence", url, html, { agency_id: agency.id, work_queue_id: job.id });
+      const sourceDocumentId = await sourceDocument("page_resolution_evidence", url, html, { ...subjectMeta, work_queue_id: job.id });
       fetched.push({ url, sourceDocumentId });
       for (const link of facebookLinks(url, html)) facebookCandidates.add(link);
       for (const link of candidateWebsiteLinks(url, html)) websiteCandidates.add(link);
@@ -1022,7 +1200,7 @@ async function handlePageResolver(job) {
   for (const url of [...websiteCandidates].slice(0, 3)) {
     try {
       const html = await fetchText(url);
-      const sourceDocumentId = await sourceDocument("agency_website", url, html, { agency_id: agency.id, work_queue_id: job.id });
+      const sourceDocumentId = await sourceDocument("subject_website", url, html, { ...subjectMeta, work_queue_id: job.id });
       fetched.push({ url, sourceDocumentId });
       for (const link of facebookLinks(url, html)) facebookCandidates.add(link);
     } catch (error) {
@@ -1032,13 +1210,17 @@ async function handlePageResolver(job) {
 
   const resolved = [];
   for (const pageUrl of [...facebookCandidates]) {
+    if (!facebookUrlMatchesResolverSubject(pageUrl, subject)) {
+      fetched.push({ url: pageUrl, skipped: "facebook_url_does_not_match_verified_subject" });
+      continue;
+    }
     const pageSlug = facebookSlugFromUrl(pageUrl);
     let numericId = facebookPageIdFromUrl(pageUrl);
     let facebookSourceDocumentId = null;
     if (!numericId) {
       try {
         const html = await fetchFacebookPageDocument(pageUrl);
-        facebookSourceDocumentId = await sourceDocument("meta_page", pageUrl, html, { agency_id: agency.id, work_queue_id: job.id, page_slug: pageSlug });
+        facebookSourceDocumentId = await sourceDocument("meta_page", pageUrl, html, { ...subjectMeta, work_queue_id: job.id, page_slug: pageSlug });
         fetched.push({ url: pageUrl, sourceDocumentId: facebookSourceDocumentId });
         numericId = facebookPageIdFromHtml(html, pageSlug);
       } catch (error) {
@@ -1047,10 +1229,13 @@ async function handlePageResolver(job) {
     }
     const confidence = numericId ? 92 : 78;
     const decisionId = await createPageResolutionDecision({
-      agencyId: agency.id,
+      subjectKind: subject.kind,
+      subjectId: subject.id,
+      agentId: subject.agent?.id || null,
+      agencyId: subject.agency?.id || null,
       confidence,
       sourceDocumentIds: fetched.map((item) => item.sourceDocumentId).filter(Boolean),
-      evidence: { page_url: pageUrl, evidence_urls: fetched.map((item) => item.url), page_slug: pageSlug, numeric_page_id_found: Boolean(numericId) },
+      evidence: { page_url: pageUrl, evidence_urls: fetched.map((item) => item.url), page_slug: pageSlug, numeric_page_id_found: Boolean(numericId), subject_name: subject.name },
       decision: {
         resolved: Boolean(numericId),
         collectable: Boolean(numericId),
@@ -1059,15 +1244,16 @@ async function handlePageResolver(job) {
         location_search_allowed: false,
       },
       rationale: numericId
-        ? "Resolved a verified real-estate agency to a Facebook page from agency-controlled evidence before collection."
-        : "Found a Facebook page link from agency-controlled evidence but could not confirm a numeric Meta page id for collection.",
+        ? "Resolved a verified real-estate subject to a Facebook page from controlled evidence before collection."
+        : "Found a Facebook page link from controlled evidence but could not confirm a numeric Meta page id for collection.",
     });
     const advertiserPageId = await upsertAdvertiserPage({
-      agencyId: agency.id,
+      agentId: subject.agent?.id || null,
+      agencyId: subject.agency?.id || null,
       decisionId,
       pageId: numericId || `slug:${pageSlug}`,
       pageSlug,
-      pageName: agency.name,
+      pageName: subject.name,
       pageUrl,
       status: numericId ? "resolved_collectable" : "verified_real_estate_unresolved",
       confidence,
@@ -1080,11 +1266,12 @@ async function handlePageResolver(job) {
           subject_type: "advertiser_page",
           subject_id: advertiserPageId,
           advertiser_page_id: advertiserPageId,
-          agency_id: agency.id,
+          agent_id: subject.agent?.id || null,
+          agency_id: subject.agency?.id || null,
           verification_status: numericId ? "verified" : "needs_review",
           evidence_type: "meta_page",
           evidence_url: pageUrl,
-          evidence: { agency_name: agency.name, page_slug: pageSlug, numeric_page_id_found: Boolean(numericId) },
+          evidence: { subject_kind: subject.kind, subject_name: subject.name, agent_name: subject.agent?.full_name || null, agency_name: subject.agency?.name || null, page_slug: pageSlug, numeric_page_id_found: Boolean(numericId) },
           source_document_id: fetched.find((item) => item.sourceDocumentId)?.sourceDocumentId || null,
           verified_by: "blockwise-page-resolver",
           verified_at: numericId ? now() : null,
@@ -1106,10 +1293,13 @@ async function handlePageResolver(job) {
     }
   }
 
-  const exactNameCandidate = await resolveMetaAdLibraryVerifiedNameCandidate(payload.agencyName || agency.name, agency, payload, fetched, facebookCandidates, job);
+  const exactNameCandidate = await resolveMetaAdLibraryVerifiedNameCandidate(subject, payload, fetched, facebookCandidates, job);
   if (exactNameCandidate && !resolved.some((item) => item.metaPageId === exactNameCandidate.pageId)) {
     const decisionId = await createPageResolutionDecision({
-      agencyId: agency.id,
+      subjectKind: subject.kind,
+      subjectId: subject.id,
+      agentId: subject.agent?.id || null,
+      agencyId: subject.agency?.id || null,
       confidence: exactNameCandidate.score,
       sourceDocumentIds: [exactNameCandidate.sourceDocumentId, ...payload.sourceDocumentIds].filter(Boolean),
       evidence: {
@@ -1118,6 +1308,7 @@ async function handlePageResolver(job) {
         page_name: exactNameCandidate.pageName,
         matched_query: exactNameCandidate.matchedQuery,
         ad_archive_id: exactNameCandidate.adArchiveId,
+        subject_name: subject.name,
         resolver: "meta_ad_library_exact_verified_name_search",
       },
       decision: {
@@ -1127,10 +1318,11 @@ async function handlePageResolver(job) {
         page_id: exactNameCandidate.pageId,
         location_search_allowed: false,
       },
-      rationale: "Resolved a verified real-estate agency to an ad-bearing Meta page from exact verified-name Meta Ad Library search; collection remains page-id only.",
+      rationale: "Resolved a verified real-estate subject to an ad-bearing Meta page from exact verified-name Meta Ad Library search; collection remains page-id only.",
     });
     const advertiserPageId = await upsertAdvertiserPage({
-      agencyId: agency.id,
+      agentId: subject.agent?.id || null,
+      agencyId: subject.agency?.id || null,
       decisionId,
       pageId: exactNameCandidate.pageId,
       pageSlug: exactNameCandidate.pageUrl ? facebookSlugFromUrl(exactNameCandidate.pageUrl) : null,
@@ -1153,11 +1345,12 @@ async function handlePageResolver(job) {
           subject_type: "advertiser_page",
           subject_id: advertiserPageId,
           advertiser_page_id: advertiserPageId,
-          agency_id: agency.id,
+          agent_id: subject.agent?.id || null,
+          agency_id: subject.agency?.id || null,
           verification_status: "verified",
           evidence_type: "meta_page",
           evidence_url: exactNameCandidate.evidenceUrl,
-          evidence: { agency_name: agency.name, page_name: exactNameCandidate.pageName, matched_query: exactNameCandidate.matchedQuery, page_id: exactNameCandidate.pageId, ad_archive_id: exactNameCandidate.adArchiveId },
+          evidence: { subject_kind: subject.kind, subject_name: subject.name, agent_name: subject.agent?.full_name || null, agency_name: subject.agency?.name || null, page_name: exactNameCandidate.pageName, matched_query: exactNameCandidate.matchedQuery, page_id: exactNameCandidate.pageId, ad_archive_id: exactNameCandidate.adArchiveId },
           source_document_id: exactNameCandidate.sourceDocumentId || null,
           verified_by: "blockwise-page-resolver",
           verified_at: now(),
@@ -1182,7 +1375,10 @@ async function handlePageResolver(job) {
       status: "complete",
       result: {
         handler: "blockwise-page-resolver",
-        agency_id: agency.id,
+        subject_kind: subject.kind,
+        subject_id: subject.id,
+        agent_id: subject.agent?.id || null,
+        agency_id: subject.agency?.id || null,
         resolved_pages: resolved.length,
         collectable_pages: resolved.filter((item) => item.metaPageId).length,
         collection_started: resolved.some((item) => item.metaPageId),
@@ -1190,20 +1386,19 @@ async function handlePageResolver(job) {
     };
   }
 
-  await rest("research", "coverage_defects", {
-    method: "POST",
-    body: json({
-      state: "WA",
-      agency_name: agency.name,
-      notes: "Hermes page resolver could not find a Facebook page from agency-controlled evidence.",
-      reported_by: "system",
-      reporter_identity: workerId,
-      status: "open",
-      resolution: { fetched, location_search_allowed: false },
-      resolved_agency_id: agency.id,
-    }),
+  await insertCoverageDefect({
+    state: "WA",
+    agent_name: subject.agent?.full_name || null,
+    agency_name: subject.agency?.name || null,
+    notes: "Hermes page resolver could not find a Facebook page from verified-subject evidence.",
+    reported_by: "system",
+    reporter_identity: workerId,
+    status: "open",
+    resolution: { fetched, location_search_allowed: false },
+    resolved_agent_id: subject.agent?.id || null,
+    resolved_agency_id: subject.agency?.id || null,
   });
-  return { status: "blocked", blocked_reason: "page_resolver_no_verified_meta_page", result: { handler: "blockwise-page-resolver", agency_id: agency.id, fetched, location_search_allowed: false } };
+  return { status: "blocked", blocked_reason: "page_resolver_no_verified_meta_page", result: { handler: "blockwise-page-resolver", subject_kind: subject.kind, subject_id: subject.id, agent_id: subject.agent?.id || null, agency_id: subject.agency?.id || null, fetched, location_search_allowed: false } };
 }
 
 function captureInput(payload) {
@@ -1764,30 +1959,47 @@ async function insertCreativeVersion({ adCreative, observedAdId, snapshotId, cre
 async function upsertMediaAssets({ creativeId, observedAdId, snapshotId, mediaSources }) {
   let count = 0;
   for (const source of mediaSources) {
+    if (!source.source_url || !/^https?:\/\//iu.test(source.source_url)) continue;
     const existing = await rest("research", `media_assets?select=id&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
     if (existing?.[0]?.id) {
-      await rest("research", `media_assets?id=eq.${existing[0].id}`, {
-        method: "PATCH",
-        body: json({ kind: source.kind, external_asset_id: source.external_asset_id, capture_status: "pending", last_error: null }),
-      });
+      await patchMediaAsset(existing[0].id, { kind: source.kind, capture_status: "pending", last_error: null });
     } else {
       await rest("research", "media_assets", {
         method: "POST",
         body: json({
           ad_creative_id: creativeId,
           observed_ad_id: observedAdId,
-          ad_snapshot_id: snapshotId,
-          external_asset_id: source.external_asset_id,
           kind: source.kind,
           source_url: source.source_url,
           capture_status: "pending",
-          metadata: { source_provider: "meta_ad_library" },
+          metadata: { source_provider: "meta_ad_library", external_asset_id: source.external_asset_id, ad_snapshot_id: snapshotId },
         }),
       });
     }
     count += 1;
   }
   return count;
+}
+
+async function patchMediaAsset(id, patch) {
+  try {
+    return await rest("research", `media_assets?id=eq.${id}`, {
+      method: "PATCH",
+      body: json(patch),
+    });
+  } catch (error) {
+    if (!/last_error|content_type|checksum|captured_at|42703|column .* does not exist/i.test(error.message)) throw error;
+    const { last_error: _lastError, content_type: contentType, checksum, captured_at: _capturedAt, ...withoutUnsupportedColumns } = patch;
+    const withoutLastError = {
+      ...withoutUnsupportedColumns,
+      ...(contentType ? { mime_type: contentType } : {}),
+      ...(checksum ? { content_hash: checksum } : {}),
+    };
+    return rest("research", `media_assets?id=eq.${id}`, {
+      method: "PATCH",
+      body: json(withoutLastError),
+    });
+  }
 }
 
 async function upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId }) {
@@ -1851,17 +2063,14 @@ async function handleAdCollector(job) {
   }
   if (outcome.status !== "SUCCEEDED") {
     await updateFetchRun(adFetchRunId, { status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0 });
-    await rest("research", "coverage_defects", {
-      method: "POST",
-      body: json({
-        platform: "facebook",
-        notes: "Hermes ad collector could not fetch a verified Meta page.",
-        reported_by: "system",
-        reporter_identity: workerId,
-        status: "open",
-        resolution: { advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, error: outcome.errorMessage },
-        resolved_advertiser_page_id: payload.advertiserPageId,
-      }),
+    await insertCoverageDefect({
+      platform: "facebook",
+      notes: "Hermes ad collector could not fetch a verified Meta page.",
+      reported_by: "system",
+      reporter_identity: workerId,
+      status: "open",
+      resolution: { advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, error: outcome.errorMessage },
+      resolved_advertiser_page_id: payload.advertiserPageId,
     });
     throw new Error(outcome.errorMessage || "Meta capture failed");
   }
@@ -1913,31 +2122,38 @@ async function handleMediaCollector(job) {
   if (!payload.adCreativeId || !payload.observedAdId) {
     return { status: "blocked", blocked_reason: "media_collector_missing_creative", result: { handler: "blockwise-media-collector" } };
   }
-  const assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${payload.adCreativeId}&capture_status=in.(pending,failed)&order=created_at.asc&limit=20`);
+  let assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${payload.adCreativeId}&capture_status=in.(pending,failed)&order=created_at.asc&limit=20`);
+  let seeded = 0;
+  if (!assets.length) {
+    const creative = await loadCreativeForMediaCapture(payload.adCreativeId);
+    if (creative) {
+      seeded = await upsertMediaAssets({
+        creativeId: creative.id,
+        observedAdId: creative.observed_ad_id || payload.observedAdId,
+        snapshotId: creative.ad_snapshot_id || null,
+        mediaSources: mediaSourcesFromCreative(creative),
+      });
+      assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${payload.adCreativeId}&capture_status=in.(pending,failed)&order=created_at.asc&limit=20`);
+    }
+  }
   let captured = 0;
   let failed = 0;
   for (const asset of assets) {
     try {
       const stored = await captureMediaAsset(asset, payload.build_run_id || "unassigned");
-      await rest("research", `media_assets?id=eq.${asset.id}`, {
-        method: "PATCH",
-        body: json({
-          storage_bucket: mediaBucket,
-          storage_path: stored.storagePath,
-          content_type: stored.contentType,
-          byte_size: stored.byteSize,
-          checksum: stored.checksum,
-          capture_status: "captured",
-          captured_at: now(),
-          last_error: null,
-        }),
+      await patchMediaAsset(asset.id, {
+        storage_bucket: mediaBucket,
+        storage_path: stored.storagePath,
+        content_type: stored.contentType,
+        byte_size: stored.byteSize,
+        checksum: stored.checksum,
+        capture_status: "captured",
+        captured_at: now(),
+        last_error: null,
       });
       captured += 1;
     } catch (error) {
-      await rest("research", `media_assets?id=eq.${asset.id}`, {
-        method: "PATCH",
-        body: json({ capture_status: "failed", last_error: error.message }),
-      });
+      await patchMediaAsset(asset.id, { capture_status: "failed", last_error: error.message });
       failed += 1;
     }
   }
@@ -1952,7 +2168,37 @@ async function handleMediaCollector(job) {
     status: "pending",
     max_attempts: 3,
   }, job);
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, captured, failed } };
+  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed } };
+}
+
+async function loadCreativeForMediaCapture(adCreativeId) {
+  const rows = await rest("research", `ad_creatives?select=id,observed_ad_id,ad_snapshot_id,primary_image_url,image_urls,video_url,video_thumbnail_url&id=eq.${adCreativeId}&limit=1`);
+  return rows?.[0] || null;
+}
+
+function mediaSourcesFromCreative(creative) {
+  const sources = [];
+  const imageUrls = uniqueMediaUrls([creative.primary_image_url, ...(Array.isArray(creative.image_urls) ? creative.image_urls : [])]);
+  const videoUrls = uniqueMediaUrls([creative.video_url]);
+  const thumbnailUrls = uniqueMediaUrls([creative.video_thumbnail_url]);
+  for (const [index, sourceUrl] of imageUrls.entries()) {
+    sources.push({ kind: "image", source_url: sourceUrl, external_asset_id: `image:${index}:${hash(sourceUrl).slice(0, 12)}` });
+  }
+  for (const [index, sourceUrl] of videoUrls.entries()) {
+    sources.push({ kind: "video", source_url: sourceUrl, external_asset_id: `video:${index}:${hash(sourceUrl).slice(0, 12)}` });
+  }
+  for (const [index, sourceUrl] of thumbnailUrls.entries()) {
+    sources.push({ kind: "thumbnail", source_url: sourceUrl, external_asset_id: `thumbnail:${index}:${hash(sourceUrl).slice(0, 12)}` });
+  }
+  return sources;
+}
+
+function uniqueMediaUrls(values) {
+  const urls = new Set();
+  for (const value of values) {
+    if (typeof value === "string" && /^https?:\/\//iu.test(value.trim())) urls.add(value.trim());
+  }
+  return [...urls];
 }
 
 async function handleAdClassifier(job) {
@@ -2080,7 +2326,7 @@ function extensionForContentType(contentType, kind) {
 }
 
 async function refreshCreativeStoredMedia(adCreativeId) {
-  const assets = await rest("research", `media_assets?select=kind,storage_path,content_type,byte_size,captured_at&ad_creative_id=eq.${adCreativeId}&capture_status=eq.captured&order=created_at.asc&limit=50`);
+  const assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${adCreativeId}&capture_status=eq.captured&order=created_at.asc&limit=50`);
   const firstImage = assets.find((asset) => asset.kind === "image")?.storage_path || null;
   const firstVideo = assets.find((asset) => asset.kind === "video")?.storage_path || null;
   const firstThumbnail = assets.find((asset) => asset.kind === "thumbnail")?.storage_path || null;
@@ -2093,7 +2339,7 @@ async function refreshCreativeStoredMedia(adCreativeId) {
       media_assets: assets.map((asset) => ({
         kind: asset.kind,
         storagePath: asset.storage_path,
-        contentType: asset.content_type,
+        contentType: asset.content_type || asset.mime_type || null,
         byteSize: asset.byte_size,
         capturedAt: asset.captured_at,
       })),
