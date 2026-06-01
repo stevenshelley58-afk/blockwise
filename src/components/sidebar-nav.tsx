@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   Bot,
   Building2,
   ClipboardCheck,
@@ -27,15 +28,16 @@ type NavItem = {
 
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
+  { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/monitor", label: "Monitor", icon: Gauge },
   { href: "/self-serve", label: "Create", icon: Sparkles },
-  { href: "/research", label: "Research", icon: FileSearch },
+  { href: "/research", label: "Ad Library", icon: FileSearch },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/onboarding", label: "Onboarding", icon: Building2 },
-  { href: "/agents", label: "Agent Workforce", icon: Bot },
+  { href: "/agents", label: "Agents", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 

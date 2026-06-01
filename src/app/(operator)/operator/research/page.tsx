@@ -101,7 +101,6 @@ export default async function OperatorResearchPage() {
   const externalLinks = [
     { label: "AionUi cockpit", url: "https://aion.blockwise.sale", note: "Visual Hermes control" },
     { label: "Coolify", url: "https://coolify.blockwise.sale", note: "VPS / deploy / logs" },
-    { label: "Hermes admin", url: "https://hermes.blockwise.sale", note: "Skill management" },
     { label: "Uptime Kuma", url: "https://uptime.blockwise.sale", note: "Service monitors" },
   ];
 
