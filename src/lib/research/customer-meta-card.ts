@@ -252,3 +252,33 @@ function cleanString(value: unknown): string | null {
 function isVideoUrl(url: string): boolean {
   return /\.(mp4|mov|webm)(?:$|\?)/i.test(url) || /video-/i.test(url);
 }
+
+/**
+ * Milliseconds an ad has been (or was) delivering: from its start date until
+ * its stop date, or until `now` when it is still running. Null when there is
+ * no usable start date. Single source of truth for both the "X days running"
+ * label on the card and the longest-running sort on the research page.
+ */
+export function adRunningMs(
+  startedAt: string | null,
+  stoppedAt: string | null,
+  now: number = Date.now(),
+): number | null {
+  if (!startedAt) return null;
+  const start = new Date(startedAt).getTime();
+  if (Number.isNaN(start)) return null;
+  const end = stoppedAt ? new Date(stoppedAt).getTime() : now;
+  if (Number.isNaN(end)) return null;
+  return Math.max(0, end - start);
+}
+
+/** Human label for a delivery duration, e.g. "61 days running" or "ran 12 days". */
+export function formatAdDuration(ms: number, isRunning: boolean): string {
+  const days = Math.floor(ms / 86_400_000);
+  if (isRunning) {
+    if (days <= 0) return "started today";
+    return `${days} day${days === 1 ? "" : "s"} running`;
+  }
+  if (days <= 0) return "ran less than a day";
+  return `ran ${days} day${days === 1 ? "" : "s"}`;
+}

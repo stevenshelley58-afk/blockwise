@@ -5,11 +5,14 @@ import { PageHeading } from "@/components/page-heading";
 import { MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import {
+  adRunningMs,
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
 } from "@/lib/research/customer-meta-card";
+
+type ResearchSort = "recent" | "longest";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +22,9 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   const { supabase } = await requirePageSurfaceAccess("monitor");
   const params = searchParams ? await searchParams : {};
   const searchTerm = firstParam(params.q ?? params.postcode).trim();
+  const sort: ResearchSort = firstParam(params.sort) === "longest" ? "longest" : "recent";
 
-  const { cards, loadError } = await loadCustomerMetaAdLibraryCards(supabase, searchTerm);
+  const { cards, loadError } = await loadCustomerMetaAdLibraryCards(supabase, searchTerm, sort);
   const advertiserCount = unique(cards.map((card) => card.pageId ?? card.pageName)).length;
   const allPostcodes = unique(cards.flatMap((card) => card.postcodes));
   const mediaReady = cards.filter((card) => card.media.length > 0).length;
@@ -83,6 +87,23 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
               {advertiserCount === 1 ? "" : "s"}.
             </p>
           </div>
+          <div className="research-sort" role="group" aria-label="Sort ads">
+            <span className="research-sort-label">Sort</span>
+            <a
+              className={`research-sort-option${sort === "recent" ? " is-active" : ""}`}
+              href={buildResearchHref(searchTerm, "recent")}
+              aria-current={sort === "recent" ? "true" : undefined}
+            >
+              Most recent
+            </a>
+            <a
+              className={`research-sort-option${sort === "longest" ? " is-active" : ""}`}
+              href={buildResearchHref(searchTerm, "longest")}
+              aria-current={sort === "longest" ? "true" : undefined}
+            >
+              Longest running
+            </a>
+          </div>
         </div>
 
         {cards.length > 0 ? (
@@ -105,6 +126,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
 async function loadCustomerMetaAdLibraryCards(
   supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"],
   searchTerm: string,
+  sort: ResearchSort,
 ): Promise<{ cards: CustomerMetaAdLibraryCard[]; loadError: string | null }> {
   const { data, error } = await supabase
     .schema("research")
@@ -122,7 +144,30 @@ async function loadCustomerMetaAdLibraryCards(
     ? allCards.filter((card) => cardMatches(card, searchTerm))
     : allCards.filter((card) => !card.state || card.state.toUpperCase() === "WA");
 
-  return { cards: dedupeCards(filtered).slice(0, 80), loadError: null };
+  const sorted = sortCards(dedupeCards(filtered), sort);
+
+  return { cards: sorted.slice(0, 80), loadError: null };
+}
+
+function sortCards(cards: CustomerMetaAdLibraryCard[], sort: ResearchSort): CustomerMetaAdLibraryCard[] {
+  if (sort !== "longest") return cards; // default order is already last-seen desc
+  const now = Date.now();
+  return [...cards].sort((a, b) => {
+    const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
+    const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
+    if (aMs === null && bMs === null) return 0;
+    if (aMs === null) return 1; // ads with no start date sink to the bottom
+    if (bMs === null) return -1;
+    return bMs - aMs; // longest running first
+  });
+}
+
+function buildResearchHref(searchTerm: string, sort: ResearchSort): string {
+  const query = new URLSearchParams();
+  if (searchTerm) query.set("q", searchTerm);
+  if (sort !== "recent") query.set("sort", sort);
+  const qs = query.toString();
+  return qs ? `/research?${qs}` : "/research";
 }
 
 function cardMatches(card: CustomerMetaAdLibraryCard, searchTerm: string): boolean {

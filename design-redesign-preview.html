@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise — Navy Minimalist Redesign Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     TWO THEMES on one shell. Toggle flips [data-theme].
+     theme = "new"      -> navy minimalist (the proposal)
+     theme = "current"  -> approximation of today's Blockwise
+     ============================================================ */
+
+  /* ---------- NEW: navy minimalist tokens ---------- */
+  [data-theme="new"]{
+    --bg:#f7f8fa;
+    --surface:#ffffff;
+    --surface-2:#f1f3f7;     /* hover / subtle fill */
+    --ink:#0f1729;           /* primary text, near-navy black */
+    --muted:#5b6678;         /* secondary text */
+    --faint:#9aa3b2;         /* tertiary / meta */
+    --line:#e8ebf1;          /* hairline border */
+    --line-soft:#eef1f6;
+    --accent:#1f3a6e;        /* navy — primary action */
+    --accent-press:#172c54;
+    --accent-tint:#eef2fb;   /* selected nav / focus bg */
+    --link:#1d4ed8;          /* interactive blue */
+    --pos:#127a54; --warn:#8a5a00; --neg:#b3344a;  /* status, used as text/dot only */
+    --shadow:0 1px 2px rgba(15,23,41,.05);
+    --shadow-float:0 1px 2px rgba(15,23,41,.05), 0 10px 30px rgba(15,23,41,.08);
+    --r-card:14px; --r-ctl:9px; --r-chip:7px;
+    /* dark sidebar — makes the black block mark read premium */
+    --side-bg:#0d1424; --side-ink:#8b94a7; --side-ink-active:#ffffff;
+    --side-line:#1d2740; --side-cap:#5e6a82; --side-active-bg:rgba(255,255,255,.08);
+    --brand-ink:#ffffff;
+    --topbar-bg:rgba(247,248,250,.85);
+  }
+  /* ---------- CURRENT: approximation of today ---------- */
+  [data-theme="current"]{
+    --bg:#f6f7f4;
+    --surface:#ffffff;
+    --surface-2:#f1f5f2;
+    --ink:#18201f;
+    --muted:#68746f;
+    --faint:#68746f;
+    --line:#d9e0dc;
+    --line-soft:#d9e0dc;
+    --accent:#087f7a;
+    --accent-press:#055f5b;
+    --accent-tint:#f1f5f2;
+    --link:#2364aa;
+    --pos:#2f7d32; --warn:#aa6b00; --neg:#b83b5e;
+    --shadow:0 12px 28px rgba(24,32,31,.08);
+    --shadow-float:0 12px 28px rgba(24,32,31,.08);
+    --r-card:8px; --r-ctl:8px; --r-chip:8px;
+    --side-bg:#ffffff; --side-ink:#68746f; --side-ink-active:#18201f;
+    --side-line:#d9e0dc; --side-cap:#68746f; --side-active-bg:#f1f5f2;
+    --brand-ink:#050505;
+    --topbar-bg:rgba(246,247,244,.9);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background:#0f1729;
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- compare bar ---- */
+  .compare-bar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:16px;
+    padding:14px 24px;
+    background:#0f1729; color:#cfd6e4;
+    border-bottom:1px solid #1d2638;
+    font-size:13px;
+  }
+  .compare-bar strong{color:#fff; font-weight:600;}
+  .toggle{
+    margin-left:auto; display:inline-flex; gap:4px; padding:4px;
+    background:#1a2336; border-radius:999px;
+  }
+  .toggle button{
+    border:0; cursor:pointer; padding:7px 16px; border-radius:999px;
+    font:inherit; font-size:13px; font-weight:600; color:#9aa3b2; background:transparent;
+  }
+  .toggle button.active{background:#fff; color:#0f1729;}
+
+  /* ============================================================
+     APP SHELL (shared structure, themed by tokens)
+     ============================================================ */
+  .frame{ background:var(--bg); color:var(--ink); transition:background .25s; }
+  .app{
+    display:grid;
+    grid-template-columns:248px minmax(0,1fr);
+    min-height:760px;
+    font-size:15px;
+  }
+  [data-theme="current"] .app{font-size:14px;}
+
+  /* sidebar */
+  .sidebar{
+    border-right:1px solid var(--side-line);
+    background:var(--side-bg);
+    padding:22px 14px;
+    transition:background .25s;
+  }
+  .brand{display:flex; align-items:center; gap:11px; padding:2px 8px 28px; color:var(--brand-ink);}
+  .brand .mark{width:26px; height:26px; flex:0 0 auto; color:var(--brand-ink);}
+  .brand .mark svg{display:block; width:100%; height:100%;}
+  .brand .word{font-weight:700; font-size:20px; letter-spacing:-.035em; color:var(--brand-ink);}
+
+  .nav-cap{
+    padding:18px 10px 8px; font-size:11px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--side-cap);
+  }
+  [data-theme="current"] .nav-cap{font-weight:800;}
+  .nav-group{display:grid; gap:2px;}
+  .nav-link{
+    display:flex; align-items:center; gap:10px;
+    min-height:36px; padding:0 10px; border-radius:var(--r-ctl);
+    color:var(--side-ink); font-weight:500; font-size:14px;
+    text-decoration:none; cursor:pointer;
+  }
+  [data-theme="current"] .nav-link{font-weight:700; min-height:42px;}
+  .nav-link svg{width:17px; height:17px; opacity:.65;}
+  .nav-link:hover{background:var(--side-active-bg); color:var(--side-ink-active);}
+  .nav-link.active{
+    background:var(--side-active-bg); color:var(--side-ink-active); font-weight:600;
+  }
+  .nav-link.active svg{opacity:1;}
+  [data-theme="current"] .nav-link.active{
+    background:var(--surface-2); box-shadow:inset 2px 0 0 var(--ink); font-weight:700;
+  }
+
+  /* main */
+  .main{min-width:0; display:flex; flex-direction:column;}
+  .topbar{
+    display:flex; align-items:center; gap:16px;
+    min-height:64px; padding:0 28px;
+    border-bottom:1px solid var(--line);
+    background:var(--topbar-bg); backdrop-filter:blur(8px);
+    position:sticky; top:0;
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 12px;
+    border:1px solid var(--line); border-radius:999px; background:var(--surface);
+    color:var(--muted); font-size:13px; font-weight:500;
+  }
+  [data-theme="current"] .chip{font-weight:700;}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--pos);}
+  .spacer{flex:1;}
+  .icon-btn{
+    width:36px;height:36px;display:grid;place-items:center;border-radius:var(--r-ctl);
+    border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer;
+  }
+  .icon-btn svg{width:17px;height:17px;}
+  .acct{display:flex; align-items:center; gap:10px;}
+  .acct .who{display:grid; text-align:right; line-height:1.2;}
+  .acct .who b{font-size:13px; font-weight:600;}
+  .acct .who span{font-size:12px; color:var(--muted);}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;
+    display:grid;place-items:center;font-size:13px;font-weight:600;}
+  [data-theme="current"] .avatar{border-radius:50%;}
+
+  .content{padding:32px 32px 48px; display:grid; gap:28px;}
+  [data-theme="current"] .content{padding:24px 28px;}
+
+  .page-head{display:grid; gap:6px;}
+  .page-head h1{
+    margin:0; font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1.1;
+  }
+  [data-theme="current"] .page-head h1{font-size:44px; font-weight:900; line-height:1.05;}
+  .page-head p{margin:0; color:var(--muted); font-size:15px;}
+  [data-theme="current"] .page-head p{font-size:17px;}
+
+  /* metric cards */
+  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r-card); box-shadow:var(--shadow);
+    padding:20px;
+  }
+  [data-theme="current"] .card{box-shadow:var(--shadow); border-radius:8px; padding:16px;}
+  .metric .label{font-size:13px; color:var(--muted); font-weight:500;}
+  [data-theme="current"] .metric .label{font-weight:800; font-size:13px;}
+  .metric .value{
+    font-size:30px; font-weight:600; letter-spacing:-.02em; margin-top:8px;
+    font-variant-numeric:tabular-nums; line-height:1;
+  }
+  [data-theme="current"] .metric .value{font-weight:850; letter-spacing:0;}
+  .metric .delta{margin-top:10px; font-size:13px; font-weight:500; display:inline-flex; gap:6px; align-items:center;}
+  .metric .delta.up{color:var(--pos);}
+  .metric .delta.down{color:var(--neg);}
+
+  /* table block */
+  .panel{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r-card); box-shadow:var(--shadow); overflow:hidden;
+  }
+  [data-theme="current"] .panel{border-radius:8px;}
+  .panel-head{display:flex; align-items:center; gap:12px; padding:18px 20px;}
+  .panel-head h2{margin:0; font-size:16px; font-weight:600; letter-spacing:-.01em;}
+  [data-theme="current"] .panel-head h2{font-weight:800; font-size:16px;}
+  .btn{
+    border:1px solid transparent; border-radius:var(--r-ctl); cursor:pointer;
+    font:inherit; font-size:14px; font-weight:600; padding:9px 16px;
+    background:var(--accent); color:#fff;
+  }
+  [data-theme="current"] .btn{font-weight:800;}
+  .btn.ghost{background:var(--surface); color:var(--ink); border-color:var(--line);}
+  .btn.ghost:hover{background:var(--surface-2);}
+
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  thead th{
+    text-align:left; padding:10px 20px; font-size:12px; font-weight:600;
+    letter-spacing:.04em; text-transform:uppercase; color:var(--faint);
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    background:var(--surface-2);
+  }
+  [data-theme="current"] thead th{font-weight:800; background:var(--surface);}
+  tbody td{padding:14px 20px; border-bottom:1px solid var(--line-soft); color:var(--ink);}
+  [data-theme="current"] tbody td{padding:13px 20px;}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:hover{background:var(--surface-2);}
+  .num{font-variant-numeric:tabular-nums; text-align:right;}
+  td .sub{color:var(--muted); font-size:12.5px;}
+
+  /* status pill -> in NEW it's a dot+text, in CURRENT a filled pill */
+  .status{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:500;}
+  .status .sdot{width:7px;height:7px;border-radius:50%;}
+  .status.live .sdot{background:var(--pos);} .status.live{color:var(--ink);}
+  .status.review .sdot{background:var(--warn);} .status.review{color:var(--ink);}
+  .status.paused .sdot{background:var(--faint);} .status.paused{color:var(--muted);}
+
+  [data-theme="current"] .status{
+    padding:4px 10px; border-radius:999px; font-weight:850; font-size:12px; color:#fff;
+  }
+  [data-theme="current"] .status .sdot{display:none;}
+  [data-theme="current"] .status.live{background:var(--pos);}
+  [data-theme="current"] .status.review{background:var(--warn);}
+  [data-theme="current"] .status.paused{background:var(--faint); color:#fff;}
+
+  .note{font-size:12px; color:var(--faint); padding:0 4px;}
+  @media (max-width:1080px){ .metrics{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+
+<div class="compare-bar">
+  <strong>Blockwise redesign</strong>
+  <span>— same screen, two looks. Toggle to compare.</span>
+  <div class="toggle" role="tablist">
+    <button id="b-new" class="active" onclick="setTheme('new')">Navy minimalist (new)</button>
+    <button id="b-cur" onclick="setTheme('current')">Current</button>
+  </div>
+</div>
+
+<div class="frame" id="frame" data-theme="new">
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+            <rect x="70" y="4"  width="26" height="26" rx="5"/>
+            <rect x="37" y="37" width="26" height="26" rx="5"/>
+            <rect x="70" y="37" width="26" height="26" rx="5"/>
+            <rect x="4"  y="70" width="26" height="26" rx="5"/>
+            <rect x="37" y="70" width="26" height="26" rx="5"/>
+            <rect x="70" y="70" width="26" height="26" rx="5"/>
+          </svg>
+        </div>
+        <div class="word">blockwise</div>
+      </div>
+
+      <div class="nav-cap">Workspace</div>
+      <nav class="nav-group">
+        <a class="nav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Overview</a>
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Campaigns</a>
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Leads</a>
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Monitor</a>
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>Ad Studio</a>
+      </nav>
+
+      <div class="nav-cap">Operator</div>
+      <nav class="nav-group">
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Approvals</a>
+        <a class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Research</a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div class="chip"><span class="dot"></span>Acme Growth · Production</div>
+        <div class="spacer"></div>
+        <button class="icon-btn" title="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+        <button class="icon-btn" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+        <div class="acct">
+          <div class="who"><b>Steven Shelley</b><span>Owner</span></div>
+          <div class="avatar">SS</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-head">
+          <h1>Overview</h1>
+          <p>Performance across every active campaign, updated 4 minutes ago.</p>
+        </div>
+
+        <section class="metrics">
+          <div class="card metric">
+            <div class="label">Ad spend (30d)</div>
+            <div class="value">$48,210</div>
+            <div class="delta up">▲ 12.4% vs prev</div>
+          </div>
+          <div class="card metric">
+            <div class="label">Qualified leads</div>
+            <div class="value">1,284</div>
+            <div class="delta up">▲ 8.1% vs prev</div>
+          </div>
+          <div class="card metric">
+            <div class="label">Cost per lead</div>
+            <div class="value">$37.55</div>
+            <div class="delta down">▼ 3.9% vs prev</div>
+          </div>
+          <div class="card metric">
+            <div class="label">Conversion rate</div>
+            <div class="value">4.62%</div>
+            <div class="delta up">▲ 0.5pt vs prev</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Active campaigns</h2>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn ghost">Export</button>
+            <button class="btn">New campaign</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Campaign</th><th>Status</th>
+                <th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Spring Demand Gen<div class="sub">Meta · Lookalike 1%</div></td>
+                <td><span class="status live"><span class="sdot"></span>Live</span></td>
+                <td class="num">$18,420</td><td class="num">612</td><td class="num">$30.10</td>
+              </tr>
+              <tr>
+                <td>Retargeting — Cart<div class="sub">Meta · 14-day window</div></td>
+                <td><span class="status live"><span class="sdot"></span>Live</span></td>
+                <td class="num">$9,880</td><td class="num">341</td><td class="num">$28.97</td>
+              </tr>
+              <tr>
+                <td>Q3 Brand Lift<div class="sub">Awaiting operator sign-off</div></td>
+                <td><span class="status review"><span class="sdot"></span>In review</span></td>
+                <td class="num">$12,300</td><td class="num">198</td><td class="num">$62.12</td>
+              </tr>
+              <tr>
+                <td>Webinar Signups<div class="sub">Paused 2 days ago</div></td>
+                <td><span class="status paused"><span class="sdot"></span>Paused</span></td>
+                <td class="num">$7,610</td><td class="num">133</td><td class="num">$57.21</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:14px 20px;"><span class="note">Showing 4 of 27 campaigns</span></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setTheme(t){
+    document.getElementById('frame').setAttribute('data-theme', t);
+    document.getElementById('b-new').classList.toggle('active', t==='new');
+    document.getElementById('b-cur').classList.toggle('active', t==='current');
+  }
+</script>
+</body>
+</html>

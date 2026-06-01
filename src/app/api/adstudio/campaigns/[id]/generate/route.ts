@@ -39,7 +39,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       city: "Perth",
       state: "WA",
       offerId: "seller_prep_checklist",
-      platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+      // Google Ads parked for Meta-only v1 (see src/lib/config/feature-flags.ts). Was: ["meta", "google_search", "google_pmax", "google_demand_gen"]
+      platforms: ["meta"],
       variantCount: body.variantCount ?? 5,
     });
     const persisted = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);

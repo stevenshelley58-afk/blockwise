@@ -87,10 +87,6 @@ export function getOAuthRedirectUri(request: NextRequest, provider: MonitorProvi
   return `${appUrl.replace(/\/$/, "")}/api/integrations/${provider}/callback`;
 }
 
-export function getProviderScopes(provider: MonitorProvider): string[] {
-  return provider === "meta" ? META_SCOPES : GOOGLE_SCOPES;
-}
-
 async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAuthTokenExchange> {
   const appId = process.env.META_APP_ID;
   const appSecret = process.env.META_APP_SECRET;

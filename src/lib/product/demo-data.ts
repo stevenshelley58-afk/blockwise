@@ -1,11 +1,7 @@
 import { AGENT_DEFINITIONS } from "@/lib/agents/permissions";
-import { listModelProfiles } from "@/lib/ai/model-registry";
 import type { StatusTone } from "@/components/status-pill";
 
 export const workspace = {
-  id: "workspace_demo",
-  name: "Northstar Realty",
-  mode: "self_serve",
   plan: "Growth",
   region: "Australia",
   suburbs: ["Subiaco", "Leederville", "Mount Lawley", "Cottesloe"],
@@ -75,17 +71,6 @@ export const agentRuns = AGENT_DEFINITIONS.slice(0, 6).map((agent, index) => ({
   confidence: `${84 - index * 3}%`,
 }));
 
-export const modelRows = listModelProfiles()
-  .filter((profile) => profile.key !== "disabled_profile")
-  .map((profile) => ({
-    profile: profile.label,
-    task: profile.task,
-    primary: profile.primary.model,
-    fallbackCount: profile.fallbacks.length,
-    maxCost: `$${profile.maxRunCostUsd.toFixed(2)}`,
-    status: profile.enabled ? "Enabled" : "Disabled",
-  }));
-
 export const competitorSignals = [
   {
     competitor: "Perth Appraisal Co.",
@@ -126,122 +111,4 @@ export const campaignIdeas = [
     hook: "Capture high-intent owners comparing sale vs renovation value.",
     approval: "Needs landing-page evidence",
   },
-];
-
-export const campaignDrafts = [
-  {
-    id: "campaign_meta_appraisal_pulse",
-    name: "Suburb Appraisal Pulse",
-    provider: "Meta",
-    channel: "Lead ad",
-    status: "Blocked pending approval",
-    approvalStatus: "requested",
-    complianceStatus: "approved",
-    providerConnectionStatus: "connected",
-    draftPayload: {
-      objective: "LEAD_GENERATION",
-      headline: "What changed in your suburb this month?",
-      callToAction: "Get report",
-    },
-  },
-  {
-    id: "campaign_google_appraisal_search",
-    name: "High-Intent Appraisal Search",
-    provider: "Google",
-    channel: "Search",
-    status: "Blocked by provider health",
-    approvalStatus: "approved",
-    complianceStatus: "approved",
-    providerConnectionStatus: "needs_attention",
-    draftPayload: {
-      keywords: ["property appraisal subiaco", "real estate appraisal perth"],
-      headline: "Local Appraisal Guide",
-    },
-  },
-  {
-    id: "campaign_meta_weekend_urgency",
-    name: "Weekend Seller Push",
-    provider: "Meta",
-    channel: "Lead ad",
-    status: "Blocked by compliance",
-    approvalStatus: "approved",
-    complianceStatus: "blocked",
-    providerConnectionStatus: "connected",
-    draftPayload: {
-      objective: "LEAD_GENERATION",
-      headline: "Guaranteed top price this weekend",
-    },
-  },
-];
-
-export const leads = [
-  {
-    id: "lead_001",
-    name: "Amelia Hart",
-    email: "amelia@example.com",
-    phone: "0400 111 222",
-    suburb: "Subiaco",
-    source: "Meta lead form",
-    quality: "High intent",
-    createdAt: "2026-05-26T03:20:00.000Z",
-  },
-  {
-    id: "lead_002",
-    name: "Daniel Ng",
-    email: "daniel@example.com",
-    phone: "0400 333 444",
-    suburb: "Leederville",
-    source: "Google lead form",
-    quality: "Needs nurture",
-    createdAt: "2026-05-25T09:40:00.000Z",
-  },
-  {
-    id: "lead_003",
-    name: "Sofia Lane",
-    email: "sofia@example.com",
-    phone: "0400 555 666",
-    suburb: "Mount Lawley",
-    source: "CSV import",
-    quality: "Unqualified",
-    createdAt: "2026-05-24T12:10:00.000Z",
-  },
-];
-
-export const aiLedgerPreview = [
-  {
-    id: "ai_run_hook_draft",
-    workspace: "Northstar Realty",
-    profile: "cheap_draft_text",
-    task: "campaign_hook_draft",
-    model: "gpt-4.1-mini",
-    status: "completed",
-    cost: "$0.01",
-  },
-  {
-    id: "ai_run_final_image",
-    workspace: "Northstar Realty",
-    profile: "image_final",
-    task: "final_image_generation",
-    model: "gpt-image-1.5",
-    status: "blocked",
-    cost: "$2.36",
-  },
-  {
-    id: "ai_run_compliance",
-    workspace: "Metro Nest",
-    profile: "compliance_review",
-    task: "real_estate_compliance",
-    model: "gpt-4.1-mini",
-    status: "completed",
-    cost: "$0.02",
-  },
-];
-
-export const onboardingSteps = [
-  { label: "Plan assigned", state: "Complete" },
-  { label: "Agency profile", state: "Complete" },
-  { label: "Service suburbs", state: "Complete" },
-  { label: "Brand setup", state: "In progress" },
-  { label: "Meta connection", state: "Connected" },
-  { label: "Google connection", state: "Needs attention" },
 ];

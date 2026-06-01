@@ -22,14 +22,14 @@ test("Meta setup UI captures concrete lead delivery endpoint config", () => {
   assert.match(monitor, /https:\/\/crm\.example\.com\/leads/);
 });
 
-test("Ad Studio UI can create approval requests for live Meta mutations", () => {
+test("Ad Studio UI generates Meta-only campaigns and exports packs", () => {
   const adstudio = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
 
-  assert.match(adstudio, /requestMetaPlanMutation/);
-  assert.match(adstudio, /\/api\/integrations\/meta\/publish-plans\/\$\{lastMetaPlanId\}\/mutations/);
-  assert.match(adstudio, /Request activation/);
-  assert.match(adstudio, /Request pause/);
-  assert.match(adstudio, /Request budget/);
+  assert.match(adstudio, /\/api\/adstudio\/campaigns/);
+  assert.match(adstudio, /\/api\/adstudio\/export-packages\/\$\{pack\.campaign\.campaignId\}\/download/);
+  assert.match(adstudio, /platforms:\s*\["meta"\]/);
+  assert.match(adstudio, /Export pack/);
+  assert.doesNotMatch(adstudio, /setPlatform\("google"\)/);
 });
 
 test("Trigger includes scheduled Meta lead sync and token health checks", () => {

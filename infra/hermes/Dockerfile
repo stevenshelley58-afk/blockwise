@@ -13,6 +13,10 @@ FROM ${HERMES_BASE_IMAGE}
 LABEL org.opencontainers.image.title="Blockwise Hermes Research"
 LABEL org.opencontainers.image.description="Hermes runtime wrapper for the Blockwise research engine hard reset"
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY hermes/skills /app/skills
 COPY hermes/tools/research-runtime /app/research-runtime
 COPY infra/hermes/hermes.toml /app/hermes.toml

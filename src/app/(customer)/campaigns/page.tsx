@@ -17,29 +17,29 @@ export default async function CampaignsPage() {
   return (
     <main className="content">
       <PageHeading
-        eyebrow="Campaign operations"
+        eyebrow="Your campaigns"
         title="Campaigns"
-        description="Draft Meta and Google campaigns, validate compliance, map provider payloads, and block publishing until provider health and human approval are clear."
+        description="Build your Meta and Google ads, run the brand check, and we hold anything that isn't ready until it's approved and connected."
       />
 
       <section className="grid cols-4">
-        <MetricCard icon={Megaphone} label="Drafts" value={String(campaigns.length)} note="Meta and Google provider payloads" />
-        <MetricCard icon={BadgeCheck} label="Ready" value={String(readyCount)} note="Approved, compliant, connected" />
-        <MetricCard icon={TriangleAlert} label="Blocked" value={String(blockedCount)} note="Approval, compliance, or provider health" />
-        <MetricCard icon={ShieldCheck} label="Publishing Gate" value="On" note="No live publish without approval" />
+        <MetricCard icon={Megaphone} label="Drafts" value={String(campaigns.length)} note="Across Meta and Google" />
+        <MetricCard icon={BadgeCheck} label="Ready" value={String(readyCount)} note="Approved, brand-checked, connected" />
+        <MetricCard icon={TriangleAlert} label="Needs attention" value={String(blockedCount)} note="Waiting on approval, brand check, or connection" />
+        <MetricCard icon={ShieldCheck} label="Safe publishing" value="On" note="Nothing goes live without approval" />
       </section>
 
       <section className="panel">
-        <h2>Publish Readiness</h2>
+        <h2>Ready to publish?</h2>
         <table className="table">
           <thead>
             <tr>
               <th>Campaign</th>
-              <th>Provider</th>
+              <th>Where</th>
               <th>Approval</th>
-              <th>Compliance</th>
-              <th>Readiness</th>
-              <th>Blockers</th>
+              <th>Brand check</th>
+              <th>Status</th>
+              <th>What's needed</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +54,7 @@ export default async function CampaignsPage() {
                     {campaign.readiness.ready ? "ready" : "blocked"}
                   </StatusPill>
                 </td>
-                <td>{campaign.readiness.blockers.join(" ") || "Ready for provider publish call."}</td>
+                <td>{campaign.readiness.blockers.join(" ") || "Ready to publish."}</td>
               </tr>
             ))}
           </tbody>

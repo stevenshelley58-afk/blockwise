@@ -554,7 +554,7 @@ function LeadsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
         <DashboardMetric label="Lead volume" value={formatNumber(bundle.totals.leads)} note={`${bundle.range.label}`} />
         <DashboardMetric label="Valid rate" value={formatPercent(bundle.totals.validLeadRate)} note={`${formatNumber(bundle.totals.validLeads)} valid leads`} />
         <DashboardMetric label="Duplicates" value={formatNumber(bundle.leads.duplicateCount)} note={bundle.leads.dedupeSummary} />
-        <DashboardMetric label="Source count" value={String(bundle.leads.sourceSplit.filter((source) => source.leads > 0).length)} note="Meta, Google, CSV, manual" />
+        <DashboardMetric label="Source count" value={String(bundle.leads.sourceSplit.filter((source) => source.leads > 0).length)} note={bundle.leads.sourceSplit.filter((source) => source.leads > 0).map((source) => source.source).join(", ") || "No leads yet"} />
       </section>
 
       <section className="monitor-chart-grid compact">
@@ -575,7 +575,7 @@ function LeadsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
         </div>
 
         <div className="panel monitor-panel">
-          <SectionTitle title="Dedupe summary" />
+          <SectionTitle title="Duplicates merged" />
           <div className="monitor-dedupe">
             <strong>{bundle.leads.duplicateCount}</strong>
             <span>{bundle.leads.dedupeSummary}</span>
@@ -738,7 +738,7 @@ function PerformanceTable({ rows, compact = false }: { rows: MonitorPerformanceR
 
 function ProviderStatusStrip({ bundle }: { bundle: MonitorDashboardBundle }) {
   return (
-    <section className="monitor-provider-strip" aria-label="Provider sync status">
+    <section className="monitor-provider-strip" aria-label="Ad account connection status">
       {bundle.providers.map((provider) => (
         <div className={`monitor-provider-status ${statusTone(provider.status)}`} key={provider.provider}>
           <div className="monitor-provider-status-meta">

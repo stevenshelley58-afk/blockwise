@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
 import { verifyOAuthState } from "@/lib/providers/oauth-state";
@@ -14,9 +15,15 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
+  const origin = request.nextUrl.origin;
+
+  // Google Ads is parked for the Meta-only v1. See src/lib/config/feature-flags.ts.
+  if (!GOOGLE_ADS_ENABLED) {
+    return NextResponse.redirect(new URL("/monitor?integration=google&error=disabled", origin));
+  }
+
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
-  const origin = request.nextUrl.origin;
 
   if (!code || !state) {
     return NextResponse.redirect(new URL("/monitor?integration=google&error=missing_code", origin));

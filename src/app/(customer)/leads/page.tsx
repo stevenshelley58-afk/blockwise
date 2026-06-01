@@ -16,20 +16,20 @@ export default async function LeadsPage() {
   return (
     <main className="content">
       <PageHeading
-        eyebrow="Lead operations"
+        eyebrow="Your leads"
         title="Leads"
-        description="Ingest Meta leads, Google lead forms, CSV and manual imports, dedupe identities, label quality, attribute sources, and audit exports."
+        description="Every lead from Meta, Google, and imports in one place. We merge duplicates, flag the hot ones, and keep exports secure."
       />
 
       <section className="grid cols-4">
-        <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="Provider and import sources" />
-        <MetricCard icon={Tags} label="High intent" value={String(highIntentCount)} note="Quality labels feed reporting" />
-        <MetricCard icon={Fingerprint} label="Duplicates" value={String(incoming.duplicateIds.length)} note="Normalized email and phone dedupe" />
-        <MetricCard icon={Download} label="Exports" value="0" note="PII exports require approval" />
+        <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="From ads and imports" />
+        <MetricCard icon={Tags} label="High intent" value={String(highIntentCount)} note="Most likely to convert" />
+        <MetricCard icon={Fingerprint} label="Duplicates merged" value={String(incoming.duplicateIds.length)} note="Same person, matched by email or phone" />
+        <MetricCard icon={Download} label="Exports" value="0" note="Exports need approval" />
       </section>
 
       <section className="panel">
-        <h2>Lead Inbox</h2>
+        <h2>Your leads</h2>
         <table className="table">
           <thead>
             <tr>
@@ -37,7 +37,7 @@ export default async function LeadsPage() {
               <th>Suburb</th>
               <th>Source</th>
               <th>Quality</th>
-              <th>Dedupe</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -49,7 +49,7 @@ export default async function LeadsPage() {
                 <td>{lead.quality}</td>
                 <td>
                   <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                    {lead.duplicateCandidate ? "duplicate candidate" : "unique"}
+                    {lead.duplicateCandidate ? "possible duplicate" : "new"}
                   </StatusPill>
                 </td>
               </tr>
@@ -59,9 +59,9 @@ export default async function LeadsPage() {
       </section>
 
       <section className="panel">
-        <h2>Dedupe Record</h2>
-        <p className="item-meta">Incoming key: {incoming.dedupeKey}</p>
-        <p className="item-meta">Matched lead IDs: {incoming.duplicateIds.join(", ") || "none"}</p>
+        <h2>Duplicate matches</h2>
+        <p className="item-meta">Matched on: {incoming.dedupeKey}</p>
+        <p className="item-meta">Matched leads: {incoming.duplicateIds.join(", ") || "none"}</p>
       </section>
     </main>
   );

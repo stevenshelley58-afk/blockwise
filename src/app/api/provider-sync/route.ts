@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { parseMonitorRange, resolveMonitorDateRange, type MonitorProvider } from "@/lib/monitor/dashboard-data";
 import {
   listProviderSyncSummariesForWorkspace,
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({} as { provider?: MonitorProvider; workspaceId?: string; range?: string }));
-  const provider = body.provider === "google" ? "google" : "meta";
+  // Google Ads is parked for the Meta-only v1. See src/lib/config/feature-flags.ts.
+  const provider = GOOGLE_ADS_ENABLED && body.provider === "google" ? "google" : "meta";
   const supabase = await createSupabaseServerClient();
   const access = await requireWorkspaceAccess(supabase, {
     surface: "monitor",

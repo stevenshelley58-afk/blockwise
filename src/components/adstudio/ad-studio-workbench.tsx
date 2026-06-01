@@ -30,17 +30,12 @@ type AdStudioWorkbenchProps = {
 };
 
 type Mode = "ai" | "assist" | "manual";
-type Platform = "meta" | "google";
 type FormatId =
   | "feed-1x1"
   | "feed-4x5"
   | "story-9x16"
-  | "land-191"
-  | "g-search"
-  | "g-leadform"
-  | "g-maps"
-  | "g-demand";
-type FieldKey = "primary" | "headline" | "body" | "cta" | "gh1" | "gh2" | "gh3" | "gdesc";
+  | "land-191";
+type FieldKey = "primary" | "headline" | "body" | "cta";
 
 type CopyState = Record<FieldKey, string>;
 
@@ -50,11 +45,9 @@ type Fx = {
   sat: number;
   warm: number;
   zoom: number;
-  panX: number;
-  panY: number;
 };
 
-type ImageState = { src?: string; grad?: string; label?: string; gen?: boolean } | null;
+type ImageState = { src?: string; gen?: boolean } | null;
 
 const MODES: Record<Mode, { label: string; helper: string; btn: string }> = {
   ai: {
@@ -74,25 +67,15 @@ const MODES: Record<Mode, { label: string; helper: string; btn: string }> = {
   },
 };
 
-const PLACEMENTS: Record<Platform, Array<{ id: FormatId; lbl: string; sub: string }>> = {
-  meta: [
-    { id: "feed-1x1", lbl: "1:1", sub: "Square" },
-    { id: "feed-4x5", lbl: "4:5", sub: "Feed" },
-    { id: "story-9x16", lbl: "9:16", sub: "Story" },
-    { id: "land-191", lbl: "1.91", sub: "Link" },
-  ],
-  google: [
-    { id: "g-search", lbl: "Search", sub: "Text" },
-    { id: "g-leadform", lbl: "Lead form", sub: "Asset" },
-    { id: "g-maps", lbl: "Maps", sub: "Local" },
-    { id: "g-demand", lbl: "Demand", sub: "Native" },
-  ],
-};
+const PLACEMENTS: Array<{ id: FormatId; lbl: string; sub: string }> = [
+  { id: "feed-1x1", lbl: "1:1", sub: "Square" },
+  { id: "feed-4x5", lbl: "4:5", sub: "Feed" },
+  { id: "story-9x16", lbl: "9:16", sub: "Story" },
+  { id: "land-191", lbl: "1.91", sub: "Link" },
+];
 
 type FormatMeta = {
-  plat: Platform;
-  kind: "feed" | "story" | "land" | "g-search" | "g-leadform" | "g-maps" | "g-demand";
-  name: string;
+  kind: "feed" | "story" | "land";
   spec: string;
   w: number;
   ar: string;
@@ -103,14 +86,10 @@ type FormatMeta = {
 };
 
 const FMT: Record<FormatId, FormatMeta> = {
-  "feed-1x1": { plat: "meta", kind: "feed", name: "Feed 1:1", spec: "1080×1080 · square", w: 340, ar: "1 / 1", ctr: "4.3%", cpc: "A$0.24", cpl: "A$49", aspect: "1:1" },
-  "feed-4x5": { plat: "meta", kind: "feed", name: "Feed 4:5", spec: "1080×1350 · recommended for Feed", w: 340, ar: "4 / 5", ctr: "5.5%", cpc: "A$0.24", cpl: "A$49", aspect: "4:5" },
-  "story-9x16": { plat: "meta", kind: "story", name: "Story/Reel 9:16", spec: "1080×1920 · full screen", w: 250, ar: "9 / 16", ctr: "4.7%", cpc: "A$0.26", cpl: "A$52", aspect: "9:16" },
-  "land-191": { plat: "meta", kind: "land", name: "Link 1.91", spec: "1200×628 · landscape", w: 470, ar: "1.91 / 1", ctr: "3.9%", cpc: "A$0.25", cpl: "A$55", aspect: "1.91:1" },
-  "g-search": { plat: "google", kind: "g-search", name: "Search text ad", spec: "High-intent search capture", w: 560, ar: "1 / 1", ctr: "8.4%", cpc: "A$2.53", cpl: "A$100", aspect: "1:1" },
-  "g-leadform": { plat: "google", kind: "g-leadform", name: "Lead-form asset", spec: "In-SERP form · privacy URL required", w: 420, ar: "1 / 1", ctr: "7.1%", cpc: "A$2.53", cpl: "A$88", aspect: "1:1" },
-  "g-maps": { plat: "google", kind: "g-maps", name: "Maps / local", spec: "Search, Maps & Waze", w: 380, ar: "1 / 1", ctr: "—", cpc: "A$1.90", cpl: "A$74", aspect: "1:1" },
-  "g-demand": { plat: "google", kind: "g-demand", name: "Demand Gen", spec: "YouTube, Discover & Gmail", w: 330, ar: "1.91 / 1", ctr: "1.2%", cpc: "A$0.40", cpl: "A$62", aspect: "1.91:1" },
+  "feed-1x1": { kind: "feed", spec: "1080×1080 · square", w: 340, ar: "1 / 1", ctr: "4.3%", cpc: "A$0.24", cpl: "A$49", aspect: "1:1" },
+  "feed-4x5": { kind: "feed", spec: "1080×1350 · recommended for Feed", w: 340, ar: "4 / 5", ctr: "5.5%", cpc: "A$0.24", cpl: "A$49", aspect: "4:5" },
+  "story-9x16": { kind: "story", spec: "1080×1920 · full screen", w: 250, ar: "9 / 16", ctr: "4.7%", cpc: "A$0.26", cpl: "A$52", aspect: "9:16" },
+  "land-191": { kind: "land", spec: "1200×628 · landscape", w: 470, ar: "1.91 / 1", ctr: "3.9%", cpc: "A$0.25", cpl: "A$55", aspect: "1.91:1" },
 };
 
 const LIMITS: Record<FieldKey, number> = {
@@ -118,20 +97,12 @@ const LIMITS: Record<FieldKey, number> = {
   primary: 125,
   body: 30,
   cta: 20,
-  gh1: 30,
-  gh2: 30,
-  gh3: 30,
-  gdesc: 90,
 };
 
 const FIELDSETS: Record<FormatMeta["kind"], Array<[FieldKey, string]>> = {
   feed: [["primary", "Primary text"], ["headline", "Headline"], ["body", "Description"], ["cta", "Button"]],
   land: [["primary", "Primary text"], ["headline", "Headline"], ["body", "Description"], ["cta", "Button"]],
   story: [["headline", "Headline"], ["body", "Body"], ["cta", "CTA sticker"]],
-  "g-search": [["gh1", "Headline 1"], ["gh2", "Headline 2"], ["gh3", "Headline 3"], ["gdesc", "Description"]],
-  "g-leadform": [["gh1", "Form headline"], ["gdesc", "Form subtext"], ["cta", "Submit button"]],
-  "g-maps": [["headline", "Tagline"], ["cta", "Button"]],
-  "g-demand": [["headline", "Headline"], ["gdesc", "Description"], ["cta", "Button"]],
 };
 
 const CTA_LABELS: Record<string, string> = {
@@ -141,7 +112,7 @@ const CTA_LABELS: Record<string, string> = {
   CONTACT_US: "Contact us",
 };
 
-const DEFAULT_FX: Fx = { bright: 100, contrast: 100, sat: 100, warm: 0, zoom: 100, panX: 50, panY: 50 };
+const DEFAULT_FX: Fx = { bright: 100, contrast: 100, sat: 100, warm: 0, zoom: 100 };
 
 function hostOf(url: string): string {
   try {
@@ -154,16 +125,11 @@ function hostOf(url: string): string {
 function seedCopy(pack: AdStudioCampaignPack): CopyState {
   const cp = pack.copyPacks[0];
   const meta = cp?.meta;
-  const gs = cp?.googleSearch;
   return {
     primary: meta?.primaryText?.[0] ?? "",
     headline: meta?.headlines?.[0] ?? pack.variants[0]?.headline ?? "",
     body: meta?.descriptions?.[0] ?? "",
     cta: CTA_LABELS[meta?.cta ?? "LEARN_MORE"] ?? "Learn more",
-    gh1: gs?.headlines?.[0] ?? "",
-    gh2: gs?.headlines?.[1] ?? "",
-    gh3: gs?.headlines?.[2] ?? "",
-    gdesc: gs?.descriptions?.[0] ?? "",
   };
 }
 
@@ -173,9 +139,8 @@ export function AdStudioWorkbench({
   offers,
   performance,
 }: AdStudioWorkbenchProps) {
-  const [mode, setMode] = useState<Mode>("ai");
+  const [mode, setMode] = useState<Mode>("assist");
   const [showModeScreen, setShowModeScreen] = useState(true);
-  const [platform, setPlatform] = useState<Platform>("meta");
   const [format, setFormat] = useState<FormatId>("feed-4x5");
   const [pack, setPack] = useState(initialPack);
   const [copy, setCopy] = useState<CopyState>(() => seedCopy(initialPack));
@@ -239,7 +204,6 @@ export function AdStudioWorkbench({
     return {
       filter: `brightness(${fx.bright}%) contrast(${fx.contrast}%) saturate(${fx.sat}%) sepia(${fx.warm}%)`,
       transform: `scale(${fx.zoom / 100})`,
-      objectPosition: `${fx.panX}% ${fx.panY}%`,
     };
   }
 
@@ -272,7 +236,7 @@ export function AdStudioWorkbench({
         city: pack.campaign.market.city,
         state: pack.campaign.market.state,
         offerId: selectedOfferId || "seller_prep_checklist",
-        platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+        platforms: ["meta"],
         variantCount: 5,
       });
       setPack(payload.campaignPack);
@@ -372,12 +336,10 @@ export function AdStudioWorkbench({
   }
 
   const fields = FIELDSETS[meta.kind];
-  const usesImage = ["feed", "land", "story", "g-demand"].includes(meta.kind);
   const initials = brand.charAt(0).toUpperCase();
 
   const imageNode = (className: string) => {
     if (image?.src) return <img className={className} src={image.src} style={fxStyle()} alt="" />;
-    if (image?.grad) return <div className={className} style={{ background: image.grad, ...fxStyle() }} />;
     return (
       <div className="as2-vis-ph">
         <ImageIcon aria-hidden size={26} />
@@ -445,7 +407,6 @@ export function AdStudioWorkbench({
       </div>
 
       <div className="as2-work">
-        {/* LEFT */}
         <aside className="as2-pane left">
           <div className="as2-pane-hd">
             <div>
@@ -602,29 +563,17 @@ export function AdStudioWorkbench({
             <div className="as2-plat">
               <button
                 type="button"
-                className={platform === "meta" ? "active" : ""}
+                className="active"
                 onClick={() => {
-                  setPlatform("meta");
                   setFormat("feed-4x5");
                   setSelected(null);
                 }}
               >
                 Meta
               </button>
-              <button
-                type="button"
-                className={platform === "google" ? "active" : ""}
-                onClick={() => {
-                  setPlatform("google");
-                  setFormat("g-search");
-                  setSelected(null);
-                }}
-              >
-                Google
-              </button>
             </div>
             <div className="as2-seg">
-              {PLACEMENTS[platform].map((p) => (
+              {PLACEMENTS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -700,80 +649,6 @@ export function AdStudioWorkbench({
               </div>
             )}
 
-            {meta.kind === "g-search" && (
-              <div className="as2-device">
-                <div className="as2-g-search">
-                  <div className="as2-g-label">Sponsored</div>
-                  <div className="as2-g-site">
-                    <span className="as2-g-fav">{initials}</span>
-                    <div>
-                      <div className="as2-g-name">{brand}</div>
-                      <div className="as2-g-url">{domain} › appraisal</div>
-                    </div>
-                  </div>
-                  <div className="as2-g-titleline">
-                    <Layer field="gh1" className="as2-gh">{copy.gh1}</Layer>
-                    <span className="as2-sep"> | </span>
-                    <Layer field="gh2" className="as2-gh">{copy.gh2}</Layer>
-                    <span className="as2-sep"> | </span>
-                    <Layer field="gh3" className="as2-gh">{copy.gh3}</Layer>
-                  </div>
-                  <Layer field="gdesc" className="as2-g-desc">{copy.gdesc}</Layer>
-                </div>
-              </div>
-            )}
-
-            {meta.kind === "g-leadform" && (
-              <div className="as2-device">
-                <div className="as2-g-form">
-                  <div className="as2-g-form-hd" style={{ background: accent }}>
-                    <Layer field="gh1" className="as2-h">{copy.gh1}</Layer>
-                    <Layer field="gdesc" className="as2-s">{copy.gdesc}</Layer>
-                  </div>
-                  <div className="as2-g-form-body">
-                    <div className="as2-g-field">Full name</div>
-                    <div className="as2-g-field">Email address</div>
-                    <div className="as2-g-field">Property address</div>
-                    <Layer field="cta" className="as2-g-form-cta" style={{ background: accent }}>{copy.cta}</Layer>
-                    <div className="as2-sm as2-muted" style={{ textAlign: "center" }}>Privacy policy required · data expires in 60 days</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {meta.kind === "g-maps" && (
-              <div className="as2-device">
-                <div className="as2-g-maps">
-                  <div className="as2-g-map-strip" />
-                  <div className="as2-g-biz">
-                    <div className="as2-g-badge">Sponsored</div>
-                    <div className="as2-g-nm">{brand}</div>
-                    <div className="as2-g-stars">★★★★★ <span>4.9 (212) · Real estate agency</span></div>
-                    <Layer field="headline" className="as2-g-tagline">{copy.headline}</Layer>
-                    <div className="as2-g-biz-actions">
-                      <div className="b">Call</div>
-                      <div className="b">Directions</div>
-                      <Layer field="cta" className="b">{copy.cta}</Layer>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {meta.kind === "g-demand" && (
-              <div className="as2-device">
-                <div className="as2-g-demand">
-                  <Layer field="image" className="as2-dg-vis">{imageNode("as2-vis-img")}</Layer>
-                  <div className="as2-dg-body">
-                    <div className="as2-dg-spon">Sponsored</div>
-                    <Layer field="headline" className="as2-dg-h">{copy.headline}</Layer>
-                    <Layer field="gdesc" className="as2-dg-d">{copy.gdesc}</Layer>
-                    <Layer field="cta" className="as2-dg-cta" style={{ background: accent }}>{copy.cta}</Layer>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {busy && (
               <div className="as2-gen-loading">
                 <div className="as2-gen-card">
@@ -787,7 +662,6 @@ export function AdStudioWorkbench({
           </div>
         </div>
 
-        {/* RIGHT */}
         <aside className="as2-pane right">
           <div className="as2-pane-hd">
             <div>
@@ -843,34 +717,31 @@ export function AdStudioWorkbench({
               </details>
             )}
 
-            {usesImage && (
-              <details className="as2-acc" open={selected === "image"}>
-                <summary>
-                  Edit image <span className="as2-chev">›</span>
-                </summary>
-                <div className="as2-acc-body">
-                  <div className="as2-row">
-                    <span className="as2-sm as2-muted">
-                      {!image ? "no image yet" : image.gen ? "AI generated" : "uploaded"}
-                    </span>
-                    <button className="as2-btn ghost sm" type="button" onClick={() => setFx(DEFAULT_FX)}>
-                      Reset
-                    </button>
-                  </div>
-                  <FxSlider label="Brightness" min={50} max={150} value={fx.bright} suffix="%" onChange={(v) => setFx((f) => ({ ...f, bright: v }))} />
-                  <FxSlider label="Contrast" min={50} max={150} value={fx.contrast} suffix="%" onChange={(v) => setFx((f) => ({ ...f, contrast: v }))} />
-                  <FxSlider label="Saturation" min={0} max={200} value={fx.sat} suffix="%" onChange={(v) => setFx((f) => ({ ...f, sat: v }))} />
-                  <FxSlider label="Warmth" min={0} max={80} value={fx.warm} suffix="%" onChange={(v) => setFx((f) => ({ ...f, warm: v }))} />
-                  <FxSlider label="Zoom / crop" min={100} max={180} value={fx.zoom} suffix="%" onChange={(v) => setFx((f) => ({ ...f, zoom: v }))} />
-                  <AiEditRow disabled={busy || !image?.src} onRun={(p) => generateImage(p)} />
+            <details className="as2-acc" open={selected === "image"}>
+              <summary>
+                Edit image <span className="as2-chev">›</span>
+              </summary>
+              <div className="as2-acc-body">
+                <div className="as2-row">
+                  <span className="as2-sm as2-muted">
+                    {!image ? "no image yet" : image.gen ? "AI generated" : "uploaded"}
+                  </span>
+                  <button className="as2-btn ghost sm" type="button" onClick={() => setFx(DEFAULT_FX)}>
+                    Reset
+                  </button>
                 </div>
-              </details>
-            )}
+                <FxSlider label="Brightness" min={50} max={150} value={fx.bright} suffix="%" onChange={(v) => setFx((f) => ({ ...f, bright: v }))} />
+                <FxSlider label="Contrast" min={50} max={150} value={fx.contrast} suffix="%" onChange={(v) => setFx((f) => ({ ...f, contrast: v }))} />
+                <FxSlider label="Saturation" min={0} max={200} value={fx.sat} suffix="%" onChange={(v) => setFx((f) => ({ ...f, sat: v }))} />
+                <FxSlider label="Warmth" min={0} max={80} value={fx.warm} suffix="%" onChange={(v) => setFx((f) => ({ ...f, warm: v }))} />
+                <FxSlider label="Zoom / crop" min={100} max={180} value={fx.zoom} suffix="%" onChange={(v) => setFx((f) => ({ ...f, zoom: v }))} />
+                <AiEditRow disabled={busy || !image?.src} onRun={(p) => generateImage(p)} />
+              </div>
+            </details>
           </div>
         </aside>
       </div>
 
-      {/* MODE SCREEN */}
       {showModeScreen && (
         <div className="as2-modescreen">
           <div className="as2-ms-wrap">
@@ -1090,40 +961,6 @@ const STYLES = `
 .as2-story-headline{font-size:21px;font-weight:800;letter-spacing:-.025em;line-height:1.04;text-shadow:0 2px 10px rgba(0,0,0,.5);margin:0}
 .as2-story-body{font-size:12px;line-height:1.35;opacity:.95;text-shadow:0 1px 6px rgba(0,0,0,.55);margin:0}
 .as2-story-cta{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;z-index:5;background:#fff;color:var(--ink);border-radius:99px;padding:10px 18px;font-size:12.5px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.3)}
-.as2-g-search{width:560px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;padding:18px 20px}
-.as2-g-label{display:inline-block;font-size:12px;font-weight:800;color:#202124;margin-bottom:6px}
-.as2-g-site{display:flex;align-items:center;gap:9px;margin-bottom:5px}
-.as2-g-fav{width:26px;height:26px;border-radius:99px;background:#f1f3f4;display:grid;place-items:center;font-weight:800;font-size:12px;color:#5f6368}
-.as2-g-name{font-size:14px;color:#202124;font-weight:600;line-height:1.1}
-.as2-g-url{font-size:12px;color:#5f6368}
-.as2-g-titleline{font-size:20px;line-height:1.3;color:#1a0dab;font-weight:500;margin:2px 0 3px;display:flex;flex-wrap:wrap;gap:2px}
-.as2-g-titleline .as2-gh{cursor:pointer;border-radius:4px}
-.as2-g-titleline .as2-sep{color:#5f6368;font-weight:400}
-.as2-g-desc{font-size:14px;color:#4d5156;line-height:1.45}
-.as2-g-form{width:420px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;overflow:hidden}
-.as2-g-form-hd{color:#fff;padding:14px 16px}
-.as2-g-form-hd .as2-h{font-size:16px;font-weight:700;line-height:1.2}
-.as2-g-form-hd .as2-s{font-size:12px;opacity:.92;margin-top:3px}
-.as2-g-form-body{padding:14px 16px;display:flex;flex-direction:column;gap:9px}
-.as2-g-field{border:1px solid #dadce0;border-radius:8px;padding:9px 11px;font-size:13px;color:#80868b}
-.as2-g-form-cta{color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:700;font-size:13.5px}
-.as2-g-maps{width:380px;max-width:100%;background:#fff;border-radius:14px;border:1px solid #e6ebe8;overflow:hidden}
-.as2-g-map-strip{height:120px;background:linear-gradient(135deg,#d9e6cf,#cfe0ea);position:relative}
-.as2-g-biz{padding:13px 15px}
-.as2-g-nm{font-size:15px;font-weight:700;color:#202124}
-.as2-g-badge{font-size:10px;font-weight:800;color:#5f6368;letter-spacing:.04em;text-transform:uppercase}
-.as2-g-stars{color:#fbbc04;font-size:13px;margin:3px 0}
-.as2-g-stars span{color:#5f6368}
-.as2-g-tagline{font-size:12.5px;color:#5f6368;margin-top:2px}
-.as2-g-biz-actions{display:flex;gap:8px;margin-top:11px}
-.as2-g-biz-actions .b{flex:1;text-align:center;border:1px solid #dadce0;border-radius:99px;padding:8px;font-size:12.5px;font-weight:600;color:#1a73e8}
-.as2-g-demand{width:330px;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6ebe8}
-.as2-dg-vis{width:100%;aspect-ratio:1.91/1;background:var(--surface-subtle);overflow:hidden;position:relative;display:grid;place-items:center}
-.as2-dg-body{padding:12px 13px}
-.as2-dg-spon{font-size:10.5px;color:#5f6368;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.as2-dg-h{font-size:15px;font-weight:800;letter-spacing:-.015em;color:#202124;margin-top:2px;line-height:1.2}
-.as2-dg-d{font-size:12.5px;color:#5f6368;line-height:1.35;margin-top:3px}
-.as2-dg-cta{display:inline-block;margin-top:10px;color:#fff;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700}
 .as2-gen-loading{position:absolute;inset:0;background:rgba(241,245,242,.85);display:grid;place-items:center;z-index:9}
 .as2-gen-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 22px;box-shadow:0 14px 40px rgba(24,32,31,.12);display:flex;flex-direction:column;align-items:center;gap:10px;width:270px;text-align:center}
 .as2-spinner{width:26px;height:26px;border-radius:99px;border:3px solid var(--surface-subtle);border-top-color:var(--accent);animation:as2spin .8s linear infinite}
