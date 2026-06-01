@@ -205,3 +205,29 @@ export function deriveActiveStatus(ad: MetaAdLibraryAd): "active" | "inactive" |
   if (status === "inactive" || status === "stopped" || status === "ended") return "inactive";
   return "unknown";
 }
+
+/**
+ * Reconcile a provider-supplied delivery-stop timestamp against the ad's
+ * active status.
+ *
+ * Meta's Ad Library populates `ad_delivery_stop_time` (-> endDate/end_date)
+ * with the END OF THE OBSERVED DELIVERY WINDOW, not a genuine stop. For an ad
+ * that is still running this is reported as the current scrape date, which is
+ * why active ads otherwise render as "Stopped <today>". An ad that is actually
+ * delivering has not stopped, so the only honest value is null.
+ *
+ * Invariant: adDeliveryStoppedAt is non-null ONLY when the ad is not active.
+ * (When status is "unknown" we keep the date - a stop time with no active
+ * signal most likely means the ad has in fact ended.)
+ *
+ * This is the single source of truth for the rule and is applied at both the
+ * ingest/write boundary and the customer read boundary.
+ */
+export function resolveDeliveryStoppedAt(
+  activeStatus: "active" | "inactive" | "unknown",
+  rawStoppedAt: string | null | undefined,
+): string | null {
+  if (!rawStoppedAt) return null;
+  if (activeStatus === "active") return null;
+  return rawStoppedAt;
+}
