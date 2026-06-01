@@ -9,6 +9,7 @@ import {
   extractExternalAdId,
   extractPageId,
   extractPageName,
+  resolveDeliveryStoppedAt,
 } from "./schemas/index.ts";
 
 /**
@@ -117,8 +118,10 @@ export function normaliseMetaAdLibraryAd(input: {
     metaPublisherPlatforms: platforms,
     adDeliveryStartedAt:
       coerceIso(ad.startDate as string | number | null | undefined) ?? coerceIso(ad.start_date as string | number | null | undefined) ?? coerceIso(ad.started_at as string | number | null | undefined) ?? null,
-    adDeliveryStoppedAt:
+    adDeliveryStoppedAt: resolveDeliveryStoppedAt(
+      activeStatus,
       coerceIso(ad.endDate as string | number | null | undefined) ?? coerceIso(ad.end_date as string | number | null | undefined) ?? coerceIso(ad.stopped_at as string | number | null | undefined) ?? null,
+    ),
     adCreationDate: pickIsoDate(ad.creation_time as string | number | null | undefined),
     rawPayload: ad as unknown as Record<string, unknown>,
     metadata: {

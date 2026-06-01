@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { normaliseHostedMetaItems } from "../../hermes/tools/meta-library-capture/src/normalise.ts";
 import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
+import { resolveDeliveryStoppedAt } from "../../src/lib/research/schemas/meta-ad-library.ts";
 import { adAlpha, adGammaVideo, advertiserPageAlphaId } from "./fixtures.ts";
 
 test("normaliseMetaAdLibraryAd extracts the canonical external_ad_id", () => {
@@ -148,4 +149,64 @@ test("normaliseHostedMetaItems preserves SearchAPI card copy and video assets", 
   assert.equal(creative.videoUrl, "https://example.org/agenzia-video.mp4");
   assert.equal(creative.videoThumbnailUrl, "https://example.org/agenzia-thumb.jpg");
   assert.equal(creative.format, "dco");
+});
+
+test("resolveDeliveryStoppedAt drops the stop date for active ads", () => {
+  assert.equal(resolveDeliveryStoppedAt("active", "2026-06-01T00:00:00.000Z"), null);
+});
+
+test("resolveDeliveryStoppedAt keeps the stop date for inactive ads", () => {
+  assert.equal(
+    resolveDeliveryStoppedAt("inactive", "2026-05-20T00:00:00.000Z"),
+    "2026-05-20T00:00:00.000Z",
+  );
+});
+
+test("resolveDeliveryStoppedAt keeps the stop date when status is unknown", () => {
+  assert.equal(
+    resolveDeliveryStoppedAt("unknown", "2026-05-20T00:00:00.000Z"),
+    "2026-05-20T00:00:00.000Z",
+  );
+});
+
+test("resolveDeliveryStoppedAt returns null when there is no raw stop date", () => {
+  assert.equal(resolveDeliveryStoppedAt("inactive", null), null);
+});
+
+test("normaliseMetaAdLibraryAd does not record a stop date for an active ad reporting end_date", () => {
+  // Meta reports ad_delivery_stop_time = today for ads that are still running.
+  const { observation } = normaliseMetaAdLibraryAd({
+    ad: {
+      ad_archive_id: "9001",
+      page_id: "555",
+      page_name: "Still Running Co",
+      is_active: true,
+      start_date: "2026-04-01",
+      end_date: "2026-06-01",
+      publisher_platform: ["facebook"],
+    },
+    advertiserPageId: advertiserPageAlphaId,
+    observedByProvider: "self_hosted_meta",
+  });
+  assert.equal(observation.activeStatus, "active");
+  assert.equal(observation.adDeliveryStoppedAt, null);
+  assert.equal(observation.adDeliveryStartedAt, "2026-04-01");
+});
+
+test("normaliseMetaAdLibraryAd records a stop date for a genuinely inactive ad", () => {
+  const { observation } = normaliseMetaAdLibraryAd({
+    ad: {
+      ad_archive_id: "9002",
+      page_id: "555",
+      page_name: "Finished Co",
+      is_active: false,
+      start_date: "2026-04-01",
+      end_date: "2026-05-20",
+      publisher_platform: ["facebook"],
+    },
+    advertiserPageId: advertiserPageAlphaId,
+    observedByProvider: "self_hosted_meta",
+  });
+  assert.equal(observation.activeStatus, "inactive");
+  assert.equal(observation.adDeliveryStoppedAt, "2026-05-20");
 });

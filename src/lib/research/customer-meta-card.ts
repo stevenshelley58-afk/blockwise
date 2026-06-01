@@ -1,3 +1,5 @@
+import { resolveDeliveryStoppedAt } from "./schemas/meta-ad-library.ts";
+
 export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
   "card_id",
   "library_id",
@@ -96,6 +98,7 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
   const pageName = cleanString(row.page_name) ?? "Unknown page";
   const fallbackId = [cleanString(row.page_id), pageName, cleanString(row.last_seen_at)].filter(Boolean).join(":");
   const id = cleanString(row.card_id) ?? libraryId ?? fallbackId;
+  const activeStatus = normaliseActiveStatus(row.active_status);
 
   return {
     id,
@@ -104,9 +107,12 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     pageName,
     pageUrl: normalisePublicUrl(row.page_url),
     pageImageUrl: normaliseMediaUrl(row.page_image_url),
-    activeStatus: normaliseActiveStatus(row.active_status),
+    activeStatus,
     startedAt: cleanString(row.ad_delivery_started_at),
-    stoppedAt: cleanString(row.ad_delivery_stopped_at),
+    // Defensive: legacy rows ingested before the invariant was enforced may
+    // carry Meta's observed-window end on still-active ads. Reconcile here too
+    // so the UI never shows "Stopped <today>" next to an Active pill.
+    stoppedAt: resolveDeliveryStoppedAt(activeStatus, cleanString(row.ad_delivery_stopped_at)),
     lastSeenAt: cleanString(row.last_seen_at),
     platforms: uniqueStrings(row.publisher_platforms).map(formatPlatformLabel),
     postcode: cleanString(row.postcode),
