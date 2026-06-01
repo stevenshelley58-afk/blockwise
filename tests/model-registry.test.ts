@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
@@ -8,7 +8,7 @@ import {
   resolveModelProfile,
   resolveModelProfileForData,
   shouldBlockForCostPolicy,
-} from "../src/lib/ai/model-registry.ts";
+} from "../src/lib/model-control/model-registry.ts";
 
 test("resolveModelProfile returns the active model and ordered fallback chain for a task", () => {
   const resolved = resolveModelProfile("structured_json");

@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fetchOpenRouterModelCatalog, testOpenRouterModel } from "../src/lib/ai/openrouter-client.ts";
+import { fetchOpenRouterModelCatalog, testOpenRouterModel } from "../src/lib/model-control/openrouter-client.ts";
 
 test("fetchOpenRouterModelCatalog maps OpenRouter model metadata to catalog options", async () => {
   const fetchImpl: typeof fetch = async () =>

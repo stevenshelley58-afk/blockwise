@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Play, Save } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -9,7 +9,7 @@ import type {
   ModelControlProfileRow,
   ModelControlSection,
   ModelControlViewData,
-} from "@/lib/ai/model-control-config";
+} from "@/lib/model-control/model-control-config";
 
 type ModelControlPanelProps = {
   initialData: ModelControlViewData;

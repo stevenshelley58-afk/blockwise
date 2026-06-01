@@ -22,7 +22,7 @@ It is **one app with permission surfaces**, not three apps. See
 - Next.js 16 App Router (React 19) on Vercel — `src/app/`
 - Supabase: Auth, Postgres, RLS, Storage — `src/lib/supabase/`, `supabase/migrations/`
 - Trigger.dev durable jobs & schedules — `trigger/`
-- OpenAI direct + OpenRouter-routed model profiles — `src/lib/ai/`
+- OpenAI direct + OpenRouter-routed model profiles — `src/lib/model-control/`
 - Hermes: a remote research supervisor (separate deploy) — `hermes/`
 
 ## Commands
@@ -84,7 +84,7 @@ being migrated onto capabilities; prefer `requireCapability` in new code.
 | `auth/` | Capabilities, workspace access, page guards, operator gate |
 | `audit/` | Typed `audit_logs` writer |
 | `ai-workforce/` | AI automation agent definitions + runtime policy |
-| `ai/` | Model registry, OpenRouter client, run ledger, profile store |
+| `model-control/` | Model registry, OpenRouter client, run ledger, profile store, cost policy |
 | `providers/` | Meta/Google OAuth, publish/mutation/lead-delivery queues+workers |
 | `research/` | Research engine schemas, ingest, normalise, Supabase writer |
 | `adstudio/` | Ad creative generation, brand extraction, compliance, export |

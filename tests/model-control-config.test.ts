@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
@@ -7,7 +7,7 @@ import {
   getCuratedModelOptionsForProfile,
   getOpenRouterReadiness,
   validateModelProfileSelection,
-} from "../src/lib/ai/model-control-config.ts";
+} from "../src/lib/model-control/model-control-config.ts";
 
 test("validateModelProfileSelection rejects unknown profile keys", () => {
   const result = validateModelProfileSelection("unknown_profile", {

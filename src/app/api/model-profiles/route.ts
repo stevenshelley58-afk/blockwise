@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { ensureOperatorSession, getModelControlViewData } from "@/lib/ai/model-profile-store";
+import { ensureOperatorSession, getModelControlViewData } from "@/lib/model-control/model-profile-store";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";

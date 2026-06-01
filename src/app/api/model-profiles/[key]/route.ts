@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
-import { ensureOperatorSession, saveModelProfileSelection } from "@/lib/ai/model-profile-store";
+import { ensureOperatorSession, saveModelProfileSelection } from "@/lib/model-control/model-profile-store";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";

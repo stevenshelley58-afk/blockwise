@@ -1,5 +1,5 @@
-import { AGENT_DEFINITIONS } from "@/lib/ai-workforce/permissions";
-import { listModelProfiles } from "@/lib/ai/model-registry";
+﻿import { AGENT_DEFINITIONS } from "@/lib/ai-workforce/permissions";
+import { listModelProfiles } from "@/lib/model-control/model-registry";
 import type { StatusTone } from "@/components/status-pill";
 
 export const workspace = {

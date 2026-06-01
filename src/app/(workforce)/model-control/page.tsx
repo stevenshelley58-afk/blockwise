@@ -1,10 +1,10 @@
-import { Gauge, PlugZap, ShieldCheck, SlidersHorizontal } from "lucide-react";
+﻿import { Gauge, PlugZap, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
 import { ModelControlPanel } from "@/components/model-control-panel";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { getModelControlViewData } from "@/lib/ai/model-profile-store";
+import { getModelControlViewData } from "@/lib/model-control/model-profile-store";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listAiLedgerRows } from "@/lib/product/live-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";

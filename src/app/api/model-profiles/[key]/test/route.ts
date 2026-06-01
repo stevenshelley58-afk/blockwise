@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
-import { validateModelProfileSelection } from "@/lib/ai/model-control-config";
-import { ensureOperatorSession } from "@/lib/ai/model-profile-store";
-import { testOpenRouterModel } from "@/lib/ai/openrouter-client";
-import { resolveModelProfile } from "@/lib/ai/model-registry";
-import type { ModelProfileKey } from "@/lib/ai/model-registry";
+import { validateModelProfileSelection } from "@/lib/model-control/model-control-config";
+import { ensureOperatorSession } from "@/lib/model-control/model-profile-store";
+import { testOpenRouterModel } from "@/lib/model-control/openrouter-client";
+import { resolveModelProfile } from "@/lib/model-control/model-registry";
+import type { ModelProfileKey } from "@/lib/model-control/model-registry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
