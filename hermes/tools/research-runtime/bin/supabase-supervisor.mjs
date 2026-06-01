@@ -456,14 +456,19 @@ async function ensureServiceArea(input) {
     input.agency_id ? `agency_id=eq.${input.agency_id}` : null,
     input.agent_id ? `agent_id=eq.${input.agent_id}` : null,
   ].filter(Boolean).join("&");
-  const existing = await rest("research", `agent_service_areas?select=id&${filters}&limit=1`);
-  if (existing.length) return existing[0].id;
-  const created = await rest("research", "agent_service_areas", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: json(input),
-  });
-  return created?.[0]?.id;
+  try {
+    const existing = await rest("research", `agent_service_areas?select=id&${filters}&limit=1`);
+    if (existing.length) return existing[0].id;
+    const created = await rest("research", "agent_service_areas", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: json(input),
+    });
+    return created?.[0]?.id;
+  } catch (error) {
+    if (missingSchemaRelation(error, "agent_service_areas")) return null;
+    throw error;
+  }
 }
 
 async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
@@ -826,6 +831,28 @@ function facebookSlugFromUrl(url) {
   return path.find((part) => part && !blocked.has(part.toLowerCase()) && !/^\d+$/u.test(part)) || path.join(":");
 }
 
+function metaAdLibraryKnownFacebookQueries(urls) {
+  const queries = [];
+  for (const url of urls || []) {
+    let slug = "";
+    try {
+      slug = decodeURIComponent(facebookSlugFromUrl(url));
+    } catch {
+      continue;
+    }
+    const raw = slug.replace(/[-_]+/gu, " ").trim();
+    const spaced = slug
+      .replace(/([a-z])([A-Z])/gu, "$1 $2")
+      .replace(/[._:/-]+/gu, " ")
+      .replace(/\s+/gu, " ")
+      .trim();
+    for (const query of [spaced, raw]) {
+      if (query.length >= 3) queries.push(query);
+    }
+  }
+  return [...new Set(queries)].slice(0, 3);
+}
+
 function metaAdLibraryVerifiedNameUrl(name) {
   const params = new URLSearchParams({
     active_status: "active",
@@ -840,10 +867,10 @@ function metaAdLibraryVerifiedNameUrl(name) {
 
 async function resolveMetaAdLibraryVerifiedNameCandidate(subject, payload, fetched, facebookCandidates, job) {
   const queryInputs = subject.kind === "agent"
-    ? [payload.agentName, subject.name, subject.agency?.name ? `${subject.name} ${subject.agency.name}` : null]
-    : [payload.agencyName, subject.name, subject.agency?.trading_name];
+    ? [payload.agentName, subject.name, subject.agency?.name ? `${subject.name} ${subject.agency.name}` : null, ...metaAdLibraryKnownFacebookQueries(facebookCandidates)]
+    : [payload.agencyName, subject.name, subject.agency?.trading_name, ...metaAdLibraryKnownFacebookQueries(facebookCandidates)];
   const queries = [...new Set(queryInputs.filter((name) => typeof name === "string" && name.trim()).map((name) => name.trim()))]
-    .slice(0, subject.kind === "agent" ? 3 : 2);
+    .slice(0, subject.kind === "agent" ? 6 : 4);
   const knownFacebookUrls = [...facebookCandidates];
   let best = null;
 
@@ -930,6 +957,7 @@ function scoreMetaSearchPageCandidate(candidate, subject, knownFacebookUrls) {
   else if (subject.kind === "agency" && agencyNorm && pageNorm && (pageNorm.includes(agencyNorm) || agencyNorm.includes(pageNorm))) score += 76;
   else if (subject.kind === "agent" && agencyTokens.length && agencyOverlap >= Math.min(2, agencyTokens.length)) score += 18 + agencyOverlap * 8;
   if (knownSlugMatch) score += 35;
+  if (subject.kind === "agent" && knownSlugMatch && subjectOverlap >= 1) score += 45;
   if (domainMatch) score += 30;
   if (candidate.pageId && candidate.adArchiveId) score += 10;
   if (candidate.adCount > 1) score += Math.min(10, candidate.adCount);
@@ -1098,7 +1126,7 @@ async function enqueueCollectorForPage(page, job) {
     job_type: "blockwise-ad-collector",
     dedupe_key: `ad-collector:${page.advertiserPageId}`,
     advertiser_page_id: page.advertiserPageId,
-    priority: 15,
+    priority: 4,
     payload: {
       advertiserPageId: page.advertiserPageId,
       metaPageId: page.metaPageId,
@@ -1806,31 +1834,61 @@ function creativeFromMetaAd(ad) {
 }
 
 async function insertFetchRun(job, buildRunId, input, provider) {
-  const created = await rest("research", "ad_fetch_runs", {
+  const row = {
+    build_run_id: buildRunId,
+    work_queue_id: job.id,
+    source_provider: provider,
+    role: "primary",
+    trigger: "scheduled",
+    target_kind: "advertiser_page",
+    target_value: input.advertiserPageId,
+    input_payload: input,
+    input_hash: hash(json(input)),
+    status: "running",
+    result_summary: {},
+  };
+  const created = await writeFetchRunWithMissingColumnFallback("ad_fetch_runs", {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: json({
-      build_run_id: buildRunId,
-      work_queue_id: job.id,
-      source_provider: provider,
-      role: "primary",
-      trigger: "scheduled",
-      target_kind: "advertiser_page",
-      target_value: input.advertiserPageId,
-      input_payload: input,
-      input_hash: hash(json(input)),
-      status: "running",
-      result_summary: {},
-    }),
-  });
+  }, row);
   return created?.[0]?.id;
 }
 
 async function updateFetchRun(id, patch) {
-  await rest("research", `ad_fetch_runs?id=eq.${id}`, {
+  await writeFetchRunWithMissingColumnFallback(`ad_fetch_runs?id=eq.${id}`, {
     method: "PATCH",
-    body: json({ completed_at: now(), ...patch }),
-  });
+  }, { completed_at: now(), ...patch });
+}
+
+async function writeFetchRunWithMissingColumnFallback(path, options, row) {
+  const compatibleRow = { ...row };
+  const removedColumns = [];
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try {
+      return await rest("research", path, {
+        ...options,
+        body: json(compatibleRow),
+      });
+    } catch (error) {
+      const column = missingSchemaColumn(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(compatibleRow, column)) {
+        throw error;
+      }
+      delete compatibleRow[column];
+      removedColumns.push(column);
+    }
+  }
+  throw new Error(`ad_fetch_runs write still incompatible after removing ${removedColumns.join(", ")}`);
+}
+
+function missingSchemaColumn(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /Could not find the '([^']+)' column/iu.exec(message)?.[1] || null;
+}
+
+function missingSchemaRelation(error, relation) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("PGRST205") && message.includes(`'research.${relation}'`);
 }
 
 async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob }) {
@@ -1873,35 +1931,62 @@ async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, so
   if (!observedAd?.id) throw new Error(`observed_ads upsert did not return an id for ${ad.adArchiveID}`);
 
   const snapshot = await insertSnapshot({ observedAdId: observedAd.id, adFetchRunId, sourceProvider, rawPayload, payloadHash });
-  const creativeRows = await rest("research", "ad_creatives?on_conflict=observed_ad_id", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-    body: json({
-      observed_ad_id: observedAd.id,
-      ad_snapshot_id: snapshot?.id || null,
-      format: creative.format,
-      headline: creative.headline,
-      body: creative.body,
-      cta: creative.cta,
-      cta_url: creative.cta_url,
-      primary_image_url: creative.primary_image_url,
-      image_urls: creative.image_urls,
-      video_url: creative.video_url,
-      video_thumbnail_url: creative.video_thumbnail_url,
-      landing_url: creative.landing_url,
-      creative_hash: creativeHash,
-      media_assets: [],
-      classification_status: "unclassified",
-      display_state: "pending_review",
-      metadata: { description: creative.description, page_name: ad.pageName, page_id: ad.pageID, source_provider: sourceProvider },
-    }),
+  const adCreative = await upsertAdCreative({
+    observed_ad_id: observedAd.id,
+    ad_snapshot_id: snapshot?.id || null,
+    format: creative.format,
+    headline: creative.headline,
+    body: creative.body,
+    cta: creative.cta,
+    cta_url: creative.cta_url,
+    primary_image_url: creative.primary_image_url,
+    image_urls: creative.image_urls,
+    video_url: creative.video_url,
+    video_thumbnail_url: creative.video_thumbnail_url,
+    landing_url: creative.landing_url,
+    creative_hash: creativeHash,
+    media_assets: [],
+    classification_status: "unclassified",
+    display_state: "pending_review",
+    metadata: { description: creative.description, page_name: ad.pageName, page_id: ad.pageID, source_provider: sourceProvider },
   });
-  const adCreative = creativeRows?.[0];
   if (!adCreative?.id) throw new Error(`ad_creatives upsert did not return an id for ${ad.adArchiveID}`);
   await insertCreativeVersion({ adCreative, observedAdId: observedAd.id, snapshotId: snapshot?.id || null, creative, creativeHash });
   const mediaCount = await upsertMediaAssets({ creativeId: adCreative.id, observedAdId: observedAd.id, snapshotId: snapshot?.id || null, mediaSources: creative.mediaSources });
   await upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId: observedAd.id });
   return { observed_ad_id: observedAd.id, ad_creative_id: adCreative.id, creative_hash: creativeHash, external_ad_id: ad.adArchiveID, media_sources: mediaCount };
+}
+
+async function upsertAdCreative(row) {
+  try {
+    const rows = await rest("research", "ad_creatives?on_conflict=observed_ad_id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: json(row),
+    });
+    return rows?.[0] || null;
+  } catch (error) {
+    if (!/ON CONFLICT|42P10|no unique|exclusion constraint/i.test(error.message)) {
+      throw error;
+    }
+  }
+
+  const existing = await rest("research", `ad_creatives?select=*&observed_ad_id=eq.${encode(row.observed_ad_id)}&limit=1`);
+  if (existing?.[0]?.id) {
+    const updated = await rest("research", `ad_creatives?id=eq.${encode(existing[0].id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: json(row),
+    });
+    return updated?.[0] || { ...existing[0], ...row };
+  }
+
+  const created = await rest("research", "ad_creatives", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: json(row),
+  });
+  return created?.[0] || null;
 }
 
 async function insertSnapshot({ observedAdId, adFetchRunId, sourceProvider, rawPayload, payloadHash }) {
@@ -2007,8 +2092,13 @@ async function upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId }
   const page = pages?.[0];
   if (!page) return 0;
   const rows = [];
-  if (page.agency_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agency_id=eq.${page.agency_id}&limit=20`));
-  if (page.agent_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agent_id=eq.${page.agent_id}&limit=20`));
+  try {
+    if (page.agency_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agency_id=eq.${page.agency_id}&limit=20`));
+    if (page.agent_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agent_id=eq.${page.agent_id}&limit=20`));
+  } catch (error) {
+    if (missingSchemaRelation(error, "agent_service_areas")) return 0;
+    throw error;
+  }
   let count = 0;
   const seen = new Set();
   for (const row of rows) {
@@ -2016,20 +2106,25 @@ async function upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId }
     if (seen.has(key)) continue;
     seen.add(key);
     const matchType = page.agent_id ? "agent_service_area" : "agency_service_area";
-    const existing = await rest("research", `ad_area_matches?select=id&observed_ad_id=eq.${observedAdId}&postcode=eq.${encode(row.postcode)}&suburb=eq.${encode(row.suburb)}&match_type=eq.${matchType}&limit=1`);
-    if (existing?.[0]?.id) continue;
-    await rest("research", "ad_area_matches", {
-      method: "POST",
-      body: json({
-        observed_ad_id: observedAdId,
-        postcode: row.postcode,
-        suburb: row.suburb,
-        state: row.state || "WA",
-        match_type: matchType,
-        confidence: Math.max(60, Math.min(100, Number(row.confidence || 85))),
-        evidence: { source: "verified_roster_service_area", advertiser_page_id: advertiserPageId },
-      }),
-    });
+    try {
+      const existing = await rest("research", `ad_area_matches?select=id&observed_ad_id=eq.${observedAdId}&postcode=eq.${encode(row.postcode)}&suburb=eq.${encode(row.suburb)}&match_type=eq.${matchType}&limit=1`);
+      if (existing?.[0]?.id) continue;
+      await rest("research", "ad_area_matches", {
+        method: "POST",
+        body: json({
+          observed_ad_id: observedAdId,
+          postcode: row.postcode,
+          suburb: row.suburb,
+          state: row.state || "WA",
+          match_type: matchType,
+          confidence: Math.max(60, Math.min(100, Number(row.confidence || 85))),
+          evidence: { source: "verified_roster_service_area", advertiser_page_id: advertiserPageId },
+        }),
+      });
+    } catch (error) {
+      if (missingSchemaRelation(error, "ad_area_matches")) return count;
+      throw error;
+    }
     count += 1;
   }
   return count;

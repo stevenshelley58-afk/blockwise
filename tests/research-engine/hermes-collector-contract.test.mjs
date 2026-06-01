@@ -11,7 +11,10 @@ const mediaCollector = functionBody(supervisor, "handleMediaCollector");
 const agentCensus = functionBody(supervisor, "handleAgentCensus");
 const verifiedSubjectUpsert = functionBody(supervisor, "upsertVerifiedAgency");
 const pageResolver = functionBody(supervisor, "handlePageResolver");
+const collectorEnqueue = functionBody(supervisor, "enqueueCollectorForPage");
 const resolverExactName = functionBody(supervisor, "resolveMetaAdLibraryVerifiedNameCandidate");
+const resolverSlugQueries = functionBody(supervisor, "metaAdLibraryKnownFacebookQueries");
+const resolverScorer = functionBody(supervisor, "scoreMetaSearchPageCandidate");
 const metaHtmlParser = functionBody(supervisor, "normaliseMetaAdLibraryHtml");
 const hostedMetaParser = [
   functionBody(supervisor, "normaliseHostedMetaItems"),
@@ -113,6 +116,24 @@ test("Hermes page resolver may use exact verified-subject Meta Ad Library search
   );
 });
 
+test("Hermes page resolver searches verified Facebook slugs for agent-run pages", () => {
+  assert.match(
+    resolverExactName,
+    /\bmetaAdLibraryKnownFacebookQueries\s*\(\s*facebookCandidates\s*\)/,
+    "resolver must search Meta Ad Library with slugs from verified Facebook evidence",
+  );
+  assert.match(
+    resolverSlugQueries,
+    /\bdecodeURIComponent\b[\s\S]*\bfacebookSlugFromUrl\b|\bfacebookSlugFromUrl\b[\s\S]*\bdecodeURIComponent\b/,
+    "slug query builder must derive search terms from verified Facebook page URLs",
+  );
+  assert.match(
+    resolverScorer,
+    /\bsubject\.kind\s*===\s*["']agent["'][\s\S]*\bknownSlugMatch\b[\s\S]*\bsubjectOverlap\s*>=\s*1\b/,
+    "agent direct Facebook slug matches should be collectable when at least one agent-name token overlaps",
+  );
+});
+
 test("Hermes queues and resolves verified agent pages, not just agency pages", () => {
   const resolverBootstrap = `${agentCensus}\n${verifiedSubjectUpsert}`;
   assert.match(
@@ -161,6 +182,14 @@ test("Hermes ad collection remains by verified Meta page id only", () => {
     present,
     [],
     `ad collection target must not use postcode/suburb/search-query inputs: ${present.join(", ")}`,
+  );
+});
+
+test("Hermes prioritizes ad collection once a verified page is resolved", () => {
+  assert.match(
+    collectorEnqueue,
+    /\bjob_type:\s*["']blockwise-ad-collector["'][\s\S]*\bpriority:\s*[0-5]\b/,
+    "verified page collection should run before the remaining resolver backlog",
   );
 });
 
