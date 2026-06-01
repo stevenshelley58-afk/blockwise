@@ -21,6 +21,7 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
             ) : (
               <strong>{card.pageName}</strong>
             )}
+            <span className="meta-ad-sponsored">Sponsored</span>
             <span>{card.libraryId ? `Library ID ${card.libraryId}` : "Library ID unavailable"}</span>
           </div>
         </div>
@@ -38,9 +39,9 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
         ))}
       </div>
 
-      <div className="meta-ad-card-body">
-        {card.body ? (
-          hasLongBody ? (
+      {card.body ? (
+        <div className="meta-ad-card-body">
+          {hasLongBody ? (
             <details className="meta-ad-copy-details">
               <summary>
                 <span className="meta-ad-copy-preview">{visibleBody}</span>
@@ -53,34 +54,34 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
             </details>
           ) : (
             <p className="meta-ad-primary-text">{visibleBody}</p>
-          )
-        ) : null}
-
-        {card.headline || card.description || card.cta || card.destinationUrl ? (
-          <div className="meta-ad-link-preview">
-            {card.headline ? <h3>{card.headline}</h3> : null}
-            {card.description ? <p>{card.description}</p> : null}
-            <div className="meta-ad-link-actions">
-              {card.cta ? (
-                card.destinationUrl ? (
-                  <a className="meta-ad-card-cta" href={card.destinationUrl} target="_blank" rel="noreferrer">
-                    {card.cta}
-                  </a>
-                ) : (
-                  <span className="meta-ad-card-cta">{card.cta}</span>
-                )
-              ) : null}
-              {card.destinationUrl ? (
-                <a className="meta-ad-destination-link" href={card.destinationUrl} target="_blank" rel="noreferrer">
-                  {displayDomain(card.destinationUrl)} <ExternalLink size={12} />
-                </a>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </div>
+          )}
+        </div>
+      ) : null}
 
       <MediaPanel card={card} />
+
+      {card.headline || card.description || card.cta || card.destinationUrl ? (
+        <div className="meta-ad-link-preview">
+          <div className="meta-ad-link-copy">
+            {card.destinationUrl ? (
+              <a className="meta-ad-link-domain" href={card.destinationUrl} target="_blank" rel="noreferrer">
+                {displayDomain(card.destinationUrl)}
+              </a>
+            ) : null}
+            {card.headline ? <h3>{card.headline}</h3> : null}
+            {card.description ? <p>{card.description}</p> : null}
+          </div>
+          {card.cta ? (
+            card.destinationUrl ? (
+              <a className="meta-ad-card-cta" href={card.destinationUrl} target="_blank" rel="noreferrer">
+                {card.cta}
+              </a>
+            ) : (
+              <span className="meta-ad-card-cta">{card.cta}</span>
+            )
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -107,7 +108,7 @@ function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
 
   if (card.media.length === 1) {
     return (
-      <div className="meta-ad-media-frame">
+      <div className="meta-ad-media-frame meta-ad-media-frame--single">
         <MediaAsset media={card.media[0]} label={card.headline ?? card.pageName} />
       </div>
     );
