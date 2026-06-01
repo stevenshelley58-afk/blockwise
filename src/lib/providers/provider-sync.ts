@@ -1,5 +1,5 @@
-import type { MonitorDateRange, MonitorProvider, MonitorProviderReport } from "../monitor/dashboard-data.ts";
-import { listProviderConnections, loadStoredProviderTokens } from "./provider-connections.ts";
+﻿import type { MonitorDateRange, MonitorProvider, MonitorProviderReport } from "../monitor/dashboard-data.ts";
+import { listProviderConnections, loadStoredProviderTokens } from "../api-control/provider-connections.ts";
 import { fetchGoogleAdsReporting, refreshGoogleAccessToken } from "./google-reporting.ts";
 import { fetchMetaReporting } from "./meta-reporting.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";

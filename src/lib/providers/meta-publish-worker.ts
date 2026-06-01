@@ -1,11 +1,11 @@
-import {
+﻿import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
   loadMetaPublishPlan,
   updateMetaPublishPlanExecution,
   type MetaPublishPlan,
 } from "./meta-execution.ts";
-import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { loadStoredProviderTokens } from "../api-control/provider-connections.ts";
 import { recordAudit } from "../audit/record-audit.ts";
 import { assertJobCapability } from "../auth/job-capability.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -19,7 +19,7 @@ export async function executeMetaPublishPlanById(input: {
   actorProfileId?: string | null;
   fetchImpl?: typeof fetch;
 }) {
-  // Jobs bypass RLS — enforce the capability in code (defence in depth; the
+  // Jobs bypass RLS - enforce the capability in code (defence in depth; the
   // HTTP publish route already requires publish_ads before enqueuing).
   await assertJobCapability(
     input.serviceSupabase,

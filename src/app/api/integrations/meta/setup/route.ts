@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+﻿import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import {
@@ -11,7 +11,7 @@ import {
   validateMetaConnectionSetup,
   type MetaConnectionSetup,
 } from "@/lib/providers/meta-execution";
-import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import { loadStoredProviderTokens } from "@/lib/api-control/provider-connections";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 

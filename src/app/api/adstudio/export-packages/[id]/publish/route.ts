@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+﻿import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
@@ -22,7 +22,7 @@ import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queu
 import {
   listProviderConnections,
   type ProviderConnectionMetadata,
-} from "@/lib/providers/provider-connections";
+} from "@/lib/api-control/provider-connections";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 

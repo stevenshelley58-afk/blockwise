@@ -1,10 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
+﻿import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
-import { verifyOAuthState } from "@/lib/providers/oauth-state";
-import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";
+import { verifyOAuthState } from "@/lib/api-control/oauth-state";
+import { upsertProviderConnectionWithTokens } from "@/lib/api-control/provider-connections";
 import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";

@@ -1,4 +1,4 @@
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
+﻿import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import {
@@ -14,7 +14,7 @@ import {
   listProviderConnections,
   loadStoredProviderTokens,
   type ProviderConnectionMetadata,
-} from "@/lib/providers/provider-connections";
+} from "@/lib/api-control/provider-connections";
 import { fetchGoogleAdsReporting, refreshGoogleAccessToken } from "@/lib/providers/google-reporting";
 import { fetchMetaReporting } from "@/lib/providers/meta-reporting";
 

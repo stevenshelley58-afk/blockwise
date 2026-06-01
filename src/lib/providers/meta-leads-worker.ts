@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import { buildLeadDedupeKey } from "../leads/dedupe.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { syncMetaLeads, type LeadDeliveryAction, type MetaLeadRepository, type NormalizedMetaLead } from "./meta-leads.ts";
-import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { loadStoredProviderTokens } from "../api-control/provider-connections.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 

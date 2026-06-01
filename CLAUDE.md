@@ -85,7 +85,8 @@ being migrated onto capabilities; prefer `requireCapability` in new code.
 | `audit/` | Typed `audit_logs` writer |
 | `ai-workforce/` | AI automation agent definitions + runtime policy |
 | `model-control/` | Model registry, OpenRouter client, run ledger, profile store, cost policy |
-| `providers/` | Meta/Google OAuth, publish/mutation/lead-delivery queues+workers |
+| `api-control/` | Provider credential core: token crypto, OAuth state, connection/token vault |
+| `providers/` | Provider execution: Meta/Google OAuth handlers, reporting, publish/mutation/lead-delivery queues+workers, sync |
 | `research/` | Research engine schemas, ingest, normalise, Supabase writer |
 | `adstudio/` | Ad creative generation, brand extraction, compliance, export |
 | `campaigns/` | Publishing readiness/workflow |

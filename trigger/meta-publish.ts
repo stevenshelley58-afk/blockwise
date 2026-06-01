@@ -1,11 +1,11 @@
-import { schedules, task } from "@trigger.dev/sdk/v3";
+﻿import { schedules, task } from "@trigger.dev/sdk/v3";
 
 import { executeLeadDeliveryAttemptById } from "../src/lib/providers/lead-delivery-worker.ts";
 import { checkMetaConnectionHealth } from "../src/lib/providers/meta-assets.ts";
 import { syncMetaLeadsForPlanById } from "../src/lib/providers/meta-leads-worker.ts";
 import { executeMetaMutationById } from "../src/lib/providers/meta-mutation-worker.ts";
 import { executeMetaPublishPlanById } from "../src/lib/providers/meta-publish-worker.ts";
-import { loadStoredProviderTokens } from "../src/lib/providers/provider-connections.ts";
+import { loadStoredProviderTokens } from "../src/lib/api-control/provider-connections.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;

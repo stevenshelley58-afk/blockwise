@@ -1,8 +1,8 @@
-import { NextResponse, type NextRequest } from "next/server";
+﻿import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { buildProviderAuthorizationUrl } from "@/lib/providers/oauth-handlers";
-import { createOAuthStatePayload, signOAuthState } from "@/lib/providers/oauth-state";
+import { createOAuthStatePayload, signOAuthState } from "@/lib/api-control/oauth-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";

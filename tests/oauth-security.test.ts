@@ -1,8 +1,8 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decryptToken, encryptToken } from "../src/lib/providers/token-crypto.ts";
-import { signOAuthState, verifyOAuthState } from "../src/lib/providers/oauth-state.ts";
+import { decryptToken, encryptToken } from "../src/lib/api-control/token-crypto.ts";
+import { signOAuthState, verifyOAuthState } from "../src/lib/api-control/oauth-state.ts";
 
 const encryptionKey = Buffer.alloc(32, 7).toString("base64");
 const stateSecret = Buffer.alloc(32, 9).toString("base64");
