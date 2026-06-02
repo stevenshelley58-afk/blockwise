@@ -53,3 +53,62 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return NextResponse.json({ campaign: data });
 }
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const { id } = await Promise.resolve(context.params);
+  const access = await requireAdStudioRequest(request);
+
+  if (!access.ok) {
+    return access.response;
+  }
+
+  // Verify the campaign belongs to this workspace before deleting.
+  const { data: campaign, error: fetchError } = await access.supabase
+    .from("adstudio_campaigns")
+    .select("id")
+    .eq("workspace_id", access.access.workspaceId)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError) return errorResponse(fetchError);
+  if (!campaign) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
+
+  // Cascade-delete related records first, then the campaign row itself.
+  const [variantsResult, creativesResult, copyResult, complianceResult] = await Promise.all([
+    access.supabase
+      .from("adstudio_campaign_variants")
+      .delete()
+      .eq("workspace_id", access.access.workspaceId)
+      .eq("campaign_id", id),
+    access.supabase
+      .from("adstudio_creatives")
+      .delete()
+      .eq("workspace_id", access.access.workspaceId)
+      .eq("campaign_id", id),
+    access.supabase
+      .from("adstudio_platform_copy")
+      .delete()
+      .eq("workspace_id", access.access.workspaceId)
+      .eq("campaign_id", id),
+    access.supabase
+      .from("adstudio_compliance_reports")
+      .delete()
+      .eq("workspace_id", access.access.workspaceId)
+      .eq("campaign_id", id),
+  ]);
+
+  if (variantsResult.error) return errorResponse(variantsResult.error);
+  if (creativesResult.error) return errorResponse(creativesResult.error);
+  if (copyResult.error) return errorResponse(copyResult.error);
+  if (complianceResult.error) return errorResponse(complianceResult.error);
+
+  const { error: deleteError } = await access.supabase
+    .from("adstudio_campaigns")
+    .delete()
+    .eq("workspace_id", access.access.workspaceId)
+    .eq("id", id);
+
+  if (deleteError) return errorResponse(deleteError);
+
+  return NextResponse.json({ deleted: true });
+}
