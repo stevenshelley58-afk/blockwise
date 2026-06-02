@@ -34,6 +34,7 @@ const claimTtlSeconds = positiveInt("HERMES_QUEUE_CLAIM_TTL_SECONDS", 900);
 const maxJobsPerTick = positiveInt("HERMES_QUEUE_MAX_JOBS_PER_TICK", mode === "build" ? 4 : 1);
 const fetchTimeoutMs = positiveInt("HERMES_RESEARCH_FETCH_TIMEOUT_MS", 8_000);
 const metaCaptureTimeoutMs = positiveInt("HERMES_META_CAPTURE_TIMEOUT_MS", 30_000);
+const metaCaptureResultsLimit = Math.min(positiveInt("HERMES_META_CAPTURE_RESULTS_LIMIT", 250), 250);
 const targetPostcodes = uniqueCsv(env.HERMES_RESEARCH_TARGET_POSTCODES, DEFAULT_POSTCODES);
 const sourceTemplates = uniqueCsv(env.HERMES_CENSUS_SOURCE_URL_TEMPLATES, []);
 const metaCaptureProvider = env.HERMES_META_CAPTURE_PROVIDER || (env.HERMES_META_CAPTURE_ENDPOINT ? "http_json" : "hermes_browser");
@@ -1141,7 +1142,7 @@ async function enqueueCollectorForPage(page, job) {
       },
       country: "AU",
       activeStatus: "all",
-      resultsLimit: 50,
+      resultsLimit: metaCaptureResultsLimit,
     },
     status: "pending",
     max_attempts: 3,
@@ -1435,7 +1436,7 @@ function captureInput(payload) {
     metaPageId: String(payload.metaPageId),
     country: String(payload.country || "AU").toUpperCase(),
     activeStatus: ["active", "inactive", "all"].includes(payload.activeStatus) ? payload.activeStatus : "all",
-    resultsLimit: Math.max(1, Math.min(Number.parseInt(payload.resultsLimit || "50", 10) || 50, 250)),
+    resultsLimit: Math.max(1, Math.min(Number.parseInt(payload.resultsLimit || `${metaCaptureResultsLimit}`, 10) || metaCaptureResultsLimit, 250)),
     realEstateGate: payload.realEstateGate,
     resolverDecisionId: payload.resolverDecisionId || null,
   };
@@ -2205,6 +2206,28 @@ async function handleAdCollector(job) {
     }, job);
   }
   await updateFetchRun(adFetchRunId, { status: "success", result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} }, cost_usd: outcome.costUsd || 0 });
+  if (outcome.itemCount >= input.resultsLimit) {
+    log("Meta capture hit the configured results limit", {
+      advertiser_page_id: payload.advertiserPageId,
+      meta_page_id: payload.metaPageId,
+      item_count: outcome.itemCount,
+      results_limit: input.resultsLimit,
+    }, "warn");
+    await insertCoverageDefect({
+      platform: "facebook",
+      notes: `Ad collector hit resultsLimit (${input.resultsLimit}) for page ${payload.metaPageId}; there may be more ads. Consider paginated collection.`,
+      reported_by: "system",
+      reporter_identity: workerId,
+      status: "open",
+      resolution: {
+        advertiser_page_id: payload.advertiserPageId,
+        meta_page_id: payload.metaPageId,
+        item_count: outcome.itemCount,
+        results_limit: input.resultsLimit,
+      },
+      resolved_advertiser_page_id: payload.advertiserPageId,
+    });
+  }
   await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
     method: "PATCH",
     body: json({ status: "resolved_collectable", last_checked_at: now(), last_successful_check_at: now(), consecutive_failed_checks: 0 }),

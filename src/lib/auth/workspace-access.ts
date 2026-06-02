@@ -51,6 +51,13 @@ type MembershipRow = {
     | null;
 };
 
+export function hasOperatorAccessFromRows(
+  profile: { is_operator?: boolean | null } | null | undefined,
+  memberships: Array<{ role?: string | null }> | null | undefined,
+): boolean {
+  return Boolean(profile?.is_operator) || (memberships ?? []).some((membership) => membership.role === "operator");
+}
+
 export function canManageProviderConnections(context: { role: WorkspaceRole; workspaceMode: WorkspaceMode }): boolean {
   return context.role === "operator" || context.role === "owner" || context.role === "admin";
 }
@@ -126,8 +133,8 @@ export async function requireWorkspaceAccess(
       .order("created_at", { ascending: true }),
   ]);
 
-  const isOperator = Boolean(profile?.is_operator);
   const normalizedMemberships = ((memberships ?? []) as MembershipRow[]).flatMap(normalizeMembershipRow);
+  const isOperator = hasOperatorAccessFromRows(profile, normalizedMemberships);
   let resolved = resolveRequestedWorkspaceAccess({
     isOperator,
     memberships: normalizedMemberships,

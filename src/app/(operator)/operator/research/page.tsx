@@ -3,6 +3,7 @@ import {
   AlertOctagon,
   Bot,
   ChevronRight,
+  ExternalLink,
   PauseOctagon,
   RefreshCcw,
   ShieldCheck,
@@ -80,6 +81,44 @@ type EntityCounts = {
   advertiserPages: number;
 };
 
+type RecentAdRow = {
+  agency_id: string | null;
+  agency_name: string | null;
+  agent_id: string | null;
+  agent_name: string | null;
+  advertiser_page_id: string;
+  page_name: string | null;
+  platform: string | null;
+  observed_ad_id: string;
+  external_ad_id: string | null;
+  active_status: string | null;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  last_checked_at: string | null;
+  headline: string | null;
+  body: string | null;
+  cta: string | null;
+  primary_image_url: string | null;
+  video_url: string | null;
+  format: string | null;
+  classification: Record<string, unknown> | null;
+  snapshot_count: number | null;
+  ad_delivery_started_at: string | null;
+  ad_delivery_stopped_at: string | null;
+  ad_creation_date: string | null;
+  image_urls: unknown;
+  image_storage_path: string | null;
+  video_storage_path: string | null;
+  video_thumbnail_url: string | null;
+  media_assets: unknown;
+  ad_type: string | null;
+  primary_intent: string | null;
+  display_state: string | null;
+};
+
+const RECENT_AD_SELECT =
+  "agency_id,agency_name,agent_id,agent_name,advertiser_page_id,page_name,platform,observed_ad_id,external_ad_id,active_status,first_seen_at,last_seen_at,last_checked_at,headline,body,cta,primary_image_url,video_url,format,classification,snapshot_count,ad_delivery_started_at,ad_delivery_stopped_at,ad_creation_date,image_urls,image_storage_path,video_storage_path,video_thumbnail_url,media_assets,ad_type,primary_intent,display_state";
+
 async function loadCoverage(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
   return (data ?? []) as CoverageRow[];
@@ -128,14 +167,26 @@ async function loadEntityCounts(supabase: Awaited<ReturnType<typeof requirePageS
   };
 }
 
+async function loadRecentAds(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
+  const { data } = await supabase
+    .schema("research")
+    .from("v_agent_ad_history")
+    .select(RECENT_AD_SELECT)
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  return (data ?? []) as unknown as RecentAdRow[];
+}
+
 export default async function OperatorResearchPage() {
-  const { supabase } = await requirePageSurfaceAccess("monitor");
-  const [coverage, runs, defects, adLibraryStats, entityCounts] = await Promise.all([
+  const { supabase } = await requirePageSurfaceAccess("operator");
+  const [coverage, runs, defects, adLibraryStats, entityCounts, recentAds] = await Promise.all([
     loadCoverage(supabase).catch(() => [] as CoverageRow[]),
     loadRuns(supabase).catch(() => [] as RunRow[]),
     loadDefects(supabase).catch(() => [] as DefectRow[]),
     loadAdLibraryStats(supabase).catch(() => ({ activeCards: 0, totalCards: 0, cardsWithStoredMedia: 0 })),
     loadEntityCounts(supabase).catch(() => ({ agents: 0, advertiserPages: 0 })),
+    loadRecentAds(supabase).catch(() => [] as RecentAdRow[]),
   ]);
 
   const postcodeMatchedAds = coverage.reduce((acc, r) => acc + (r.live_active_ads ?? 0), 0);
@@ -175,6 +226,116 @@ export default async function OperatorResearchPage() {
             <h3>Access</h3>
             <p className="item-meta">Hermes controls are inside Blockwise Research Ops.</p>
           </article>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="row-between">
+          <h2>Recent ads</h2>
+          <span className="muted">{recentAds.length} latest ingested rows</span>
+        </div>
+        <div className="table-wrap operator-ad-list-wrap">
+          <table className="table operator-ad-list">
+            <thead>
+              <tr>
+                <th>Creative</th>
+                <th>Page</th>
+                <th>Agent</th>
+                <th>Agency</th>
+                <th>Platform</th>
+                <th>Status</th>
+                <th>Display</th>
+                <th>Type</th>
+                <th>Intent</th>
+                <th>Format</th>
+                <th>CTA</th>
+                <th>Started</th>
+                <th>Stopped</th>
+                <th>Created</th>
+                <th>First seen</th>
+                <th>Last seen</th>
+                <th>Checked</th>
+                <th>Snapshots</th>
+                <th>External ad ID</th>
+                <th>Observed ad ID</th>
+                <th>Advertiser page ID</th>
+                <th>Media</th>
+                <th>Classification</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentAds.map((ad) => {
+                const thumbnailUrl = resolveAdThumbnailUrl(ad);
+                const libraryUrl = ad.external_ad_id
+                  ? `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.external_ad_id)}`
+                  : null;
+                const headline = cleanString(ad.headline) ?? cleanString(ad.body) ?? ad.external_ad_id ?? "Untitled ad";
+                const body = cleanString(ad.body);
+
+                return (
+                  <tr key={ad.observed_ad_id}>
+                    <td className="operator-ad-thumbnail-cell">
+                      <div className="operator-ad-creative">
+                        {thumbnailUrl ? (
+                          <img className="operator-ad-thumb" src={thumbnailUrl} alt="" loading="lazy" />
+                        ) : (
+                          <span className="operator-ad-thumb operator-ad-thumb-placeholder">No media</span>
+                        )}
+                        <div className="operator-ad-primary">
+                          <strong>{truncate(headline, 90)}</strong>
+                          {body ? <span>{truncate(body, 160)}</span> : null}
+                          {libraryUrl ? (
+                            <a className="operator-ad-link" href={libraryUrl} target="_blank" rel="noreferrer">
+                              Meta library <ExternalLink size={12} />
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td>{ad.page_name ?? "-"}</td>
+                    <td>{ad.agent_name ?? "-"}</td>
+                    <td>{ad.agency_name ?? "-"}</td>
+                    <td>{ad.platform ?? "-"}</td>
+                    <td>
+                      <StatusPill tone={adStatusTone(ad.active_status)}>{ad.active_status ?? "unknown"}</StatusPill>
+                    </td>
+                    <td>{ad.display_state ?? "-"}</td>
+                    <td>{ad.ad_type ?? "-"}</td>
+                    <td>{ad.primary_intent ?? "-"}</td>
+                    <td>{ad.format ?? "-"}</td>
+                    <td>{ad.cta ?? "-"}</td>
+                    <td>{formatDateTime(ad.ad_delivery_started_at)}</td>
+                    <td>{formatDateTime(ad.ad_delivery_stopped_at)}</td>
+                    <td>{formatDateTime(ad.ad_creation_date)}</td>
+                    <td>{formatDateTime(ad.first_seen_at)}</td>
+                    <td>{formatDateTime(ad.last_seen_at)}</td>
+                    <td>{formatDateTime(ad.last_checked_at)}</td>
+                    <td>{ad.snapshot_count ?? 0}</td>
+                    <td>
+                      <span className="operator-ad-code">{ad.external_ad_id ?? "-"}</span>
+                    </td>
+                    <td>
+                      <span className="operator-ad-code">{ad.observed_ad_id}</span>
+                    </td>
+                    <td>
+                      <span className="operator-ad-code">{ad.advertiser_page_id}</span>
+                    </td>
+                    <td>
+                      <span className="operator-ad-json">{formatMediaSummary(ad)}</span>
+                    </td>
+                    <td>
+                      <span className="operator-ad-json">{formatClassificationSummary(ad.classification)}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {recentAds.length === 0 && (
+                <tr>
+                  <td colSpan={23}>No ingested ads yet. Collector output will appear here after the next successful run.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -340,6 +501,134 @@ function hasStoredMedia(row: AdLibraryCardRow): boolean {
       row.video_storage_path ||
       (Array.isArray(row.media_assets) && row.media_assets.length > 0),
   );
+}
+
+function resolveAdThumbnailUrl(row: RecentAdRow): string | null {
+  return (
+    mediaUrl(row.primary_image_url) ??
+    mediaUrl(row.video_thumbnail_url) ??
+    firstArrayUrl(row.image_urls) ??
+    firstMediaAssetUrl(row.media_assets)
+  );
+}
+
+function firstArrayUrl(value: unknown): string | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  for (const item of value) {
+    const url = mediaUrl(item);
+    if (url) {
+      return url;
+    }
+  }
+
+  return null;
+}
+
+function firstMediaAssetUrl(value: unknown): string | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const preferredKeys = ["thumbnail_url", "thumbnailUrl", "public_url", "publicUrl", "source_url", "sourceUrl", "url"];
+
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const asset = item as Record<string, unknown>;
+    for (const key of preferredKeys) {
+      const url = mediaUrl(asset[key]);
+      if (url) {
+        return url;
+      }
+    }
+  }
+
+  return null;
+}
+
+function mediaUrl(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return /^https?:\/\//iu.test(trimmed) ? trimmed : null;
+}
+
+function formatMediaSummary(row: RecentAdRow): string {
+  const imageUrlCount = Array.isArray(row.image_urls) ? row.image_urls.length : 0;
+  const mediaAssetCount = Array.isArray(row.media_assets) ? row.media_assets.length : 0;
+  const parts = [
+    row.primary_image_url ? "primary image" : null,
+    row.video_thumbnail_url ? "video thumb" : null,
+    row.video_url ? "video" : null,
+    row.image_storage_path ? `image storage: ${row.image_storage_path}` : null,
+    row.video_storage_path ? `video storage: ${row.video_storage_path}` : null,
+    imageUrlCount ? `${imageUrlCount} image urls` : null,
+    mediaAssetCount ? `${mediaAssetCount} media assets` : null,
+  ].filter(Boolean);
+
+  return parts.length ? truncate(parts.join(", "), 220) : "-";
+}
+
+function formatClassificationSummary(classification: RecentAdRow["classification"]): string {
+  if (!classification || Object.keys(classification).length === 0) {
+    return "-";
+  }
+
+  const hooks = Array.isArray(classification.hooks)
+    ? classification.hooks.filter((hook): hook is string => typeof hook === "string")
+    : [];
+  const parts = [
+    cleanString(classification.industry),
+    cleanString(classification.type ?? classification.ad_type),
+    cleanString(classification.primary_intent ?? classification.intent),
+    typeof classification.confidence === "number" ? `confidence ${Math.round(classification.confidence * 100)}%` : null,
+    hooks.length ? `hooks: ${hooks.slice(0, 3).join(", ")}` : null,
+    cleanString(classification.rejection_reason),
+  ].filter(Boolean);
+
+  return truncate(parts.length ? parts.join(", ") : JSON.stringify(classification), 220);
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString();
+}
+
+function adStatusTone(status: string | null): "green" | "amber" | "rose" | "blue" {
+  const normalized = status?.toLowerCase();
+
+  if (normalized === "active") {
+    return "green";
+  }
+
+  if (normalized === "inactive") {
+    return "amber";
+  }
+
+  if (normalized === "failed" || normalized === "rejected") {
+    return "rose";
+  }
+
+  return "blue";
+}
+
+function truncate(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+}
+
+function cleanString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function healthTone(health: string): "green" | "amber" | "rose" | "blue" {

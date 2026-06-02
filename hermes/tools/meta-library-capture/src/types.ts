@@ -30,7 +30,7 @@ export const metaCaptureInputSchema = z.object({
   metaPageId: idString,
   country: z.string().length(2).transform((value) => value.toUpperCase()).default("AU"),
   activeStatus: z.enum(["active", "inactive", "all"]).default("active"),
-  resultsLimit: z.number().int().positive().max(250).default(50),
+  resultsLimit: z.number().int().positive().max(250).default(250),
   realEstateGate: captureRealEstateGateSchema,
   resolverDecisionId: idString,
 }).strict();

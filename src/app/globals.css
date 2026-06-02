@@ -649,6 +649,17 @@ h3 {
   border-bottom: 0;
 }
 
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
 .operator-ad-list-wrap {
   max-height: 680px;
   border: 1px solid var(--line);

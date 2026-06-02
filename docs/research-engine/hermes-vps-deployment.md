@@ -1,6 +1,6 @@
 # Hermes VPS Deployment
 
-Date: 2026-05-30
+Date: 2026-06-02
 
 This is the deployment contract for the hard-reset research runtime. This agent
 did not run these commands.
@@ -22,13 +22,13 @@ The stack does not include `research-orchestrator` or
 Set these before deploying:
 
 ```bash
-HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:<pinned-version-or-digest>
-BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-05-30
+HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:v2026.5.29.2
+BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-06-02
 UPTIME_KUMA_IMAGE=louislam/uptime-kuma:1.23.16
 ```
 
 `HERMES_BASE_IMAGE` must be a concrete version tag or digest. Do not use
-`:latest`.
+`:latest`. `v2026.5.29.2` is Hermes Agent v0.15.2.
 
 ## Required Environment
 
@@ -50,6 +50,7 @@ HERMES_DAILY_SPEND_LIMIT_USD=25
 HERMES_RESEARCH_RAW_EVIDENCE_BUCKET=research-raw-evidence
 HERMES_RESEARCH_AD_CREATIVES_BUCKET=research-ad-creatives
 HERMES_RESEARCH_SCREENSHOTS_BUCKET=research-screenshots
+HERMES_META_CAPTURE_RESULTS_LIMIT=250
 MEM0_API_KEY=<key>
 MEM0_PROJECT_ID=blockwise-research
 BROWSERBASE_API_KEY=<key>
