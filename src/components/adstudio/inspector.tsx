@@ -41,15 +41,25 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
         ["headline", "Headline"],
         ["description", "Description"],
         ["cta", "CTA"],
-      ] as Array<[keyof CopyState, string]>).map(([key, label]) => (
-        <label key={key}>
-          <span>
-            {label}
-            <small>{copy[key].length} / {COPY_LIMITS[key]}</small>
-          </span>
-          <textarea rows={key === "primaryText" ? 3 : 2} value={copy[key]} onChange={(event) => updateCopy(key, event.target.value)} />
-        </label>
-      ))}
+      ] as Array<[keyof CopyState, string]>).map(([key, label]) => {
+        const overLimit = copy[key].length > COPY_LIMITS[key];
+        return (
+          <label key={key}>
+            <span>
+              {label}
+              <small style={{ color: overLimit ? "var(--red, #c00)" : undefined }}>
+                {copy[key].length} / {COPY_LIMITS[key]}
+              </small>
+            </span>
+            <textarea rows={key === "primaryText" ? 3 : 2} value={copy[key]} onChange={(event) => updateCopy(key, event.target.value)} />
+            {overLimit && (
+              <small style={{ color: "var(--red, #c00)" }}>
+                Over the Meta limit — shorten this.
+              </small>
+            )}
+          </label>
+        );
+      })}
     </div>
   );
 }

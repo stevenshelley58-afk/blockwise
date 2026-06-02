@@ -74,8 +74,24 @@ export function useCopy(
       updateCopy("headline", "What's Your Home Worth in South Perth?");
     } else if (action === "Reduce hype") {
       updateCopy("description", "Free appraisal. No pressure, no commitment.");
-    } else {
-      updateCopy("headline", copy.headline.replace(/\?*$/, "?"));
+    } else if (action === "Make sharper") {
+      const firstSentence = copy.primaryText.split(".")[0] ?? copy.primaryText;
+      const shortened = firstSentence.slice(0, 80).trimEnd();
+      updateCopy("primaryText", `${shortened}. Act now.`.slice(0, COPY_LIMITS.primaryText));
+    } else if (action === "Make more premium") {
+      const prefix = "Exclusively for discerning buyers: ";
+      const combined = `${prefix}${copy.primaryText.replace(/^Exclusively for discerning buyers:\s*/i, "")}`;
+      updateCopy("primaryText", combined.slice(0, COPY_LIMITS.primaryText));
+    } else if (action === "Generate 5 hooks") {
+      const base = copy.headline.replace(/\?*$/, "").trim();
+      const hooks = [
+        `1. ${base} — find out today.`,
+        `2. What would you do with the equity in your home?`,
+        `3. Thinking of selling? See your home's potential value.`,
+        `4. ${base} — no pressure, just clarity.`,
+        `5. Ready to make a move? Get a free appraisal now.`,
+      ].join("\n");
+      updateCopy("primaryText", hooks.slice(0, COPY_LIMITS.primaryText));
     }
     showToast(action);
   }
