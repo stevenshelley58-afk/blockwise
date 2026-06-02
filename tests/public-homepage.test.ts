@@ -4,10 +4,16 @@ import test from "node:test";
 
 test("public homepage does not redirect anonymous visitors to the login screen", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
+  // C5 fix: "Client sign in" text lives in SignInLink component so Space-key
+  // activations scroll the page rather than navigating to /login.
+  const signInLink = readFileSync("src/components/landing/sign-in-link.tsx", "utf8");
 
   assert.doesNotMatch(source, /redirect\(/);
   assert.match(source, /Request access/);
-  assert.match(source, /Client sign in/);
+  // The sign-in link text is in its own component to prevent Space-key navigation.
+  assert.match(signInLink, /Client sign in/);
+  // The component is referenced from the page.
+  assert.match(source, /SignInLink/);
 });
 
 test("production login page does not expose development test profiles or passwords", () => {

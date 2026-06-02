@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
+import { SignInLink } from "@/components/landing/sign-in-link";
 
 type AdProps = {
   agency: string;
@@ -220,7 +221,7 @@ export default function HomePage() {
           <a href="#how">How it works</a>
         </nav>
         <nav className="site-nav-actions" aria-label="Account">
-          <Link href="/login">Client sign in</Link>
+          <SignInLink />
           <CtaLink location="nav" className="button">
             Request access
           </CtaLink>

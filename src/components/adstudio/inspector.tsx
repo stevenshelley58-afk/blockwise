@@ -171,9 +171,9 @@ export function Inspector({
 }: InspectorProps) {
   return (
     <>
-      <div className="studio-inspector-tabs">
+      <div className="studio-inspector-tabs" role="tablist" aria-label="Inspector panels">
         {(["checklist", "variants", "edit", "publish"] as InspectorTab[]).map((item) => (
-          <button className={tab === item ? "active" : ""} key={item} type="button" onClick={() => setTab(item)}>
+          <button className={tab === item ? "active" : ""} key={item} type="button" role="tab" aria-selected={tab === item} onClick={() => setTab(item)}>
             {item.charAt(0).toUpperCase() + item.slice(1)}
           </button>
         ))}

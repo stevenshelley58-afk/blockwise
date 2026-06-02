@@ -108,40 +108,40 @@ export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, o
           <Send aria-hidden size={17} />
           Export
         </button>
-        <button className="studio-icon-btn" type="button" aria-label="More actions" onClick={() => setShowMore((value) => !value)}>
+        <button className="studio-icon-btn" type="button" aria-label="More actions" aria-expanded={showMore} aria-haspopup="menu" onClick={() => setShowMore((value) => !value)}>
           <MoreHorizontal aria-hidden size={20} />
         </button>
       </div>
 
       {showMore && (
-        <div className="studio-more-menu" ref={menuRef}>
+        <div className="studio-more-menu" ref={menuRef} role="menu" aria-label="Campaign actions">
           {/* H9: Duplicate — wired to POST /api/adstudio/campaigns/{id}/duplicate */}
-          <button type="button" onClick={handleDuplicate}>
+          <button type="button" role="menuitem" onClick={handleDuplicate}>
             <Copy aria-hidden size={16} />
             Duplicate campaign
           </button>
-          <button type="button" onClick={() => { setShowMore(false); onExport(); }}>
+          <button type="button" role="menuitem" onClick={() => { setShowMore(false); onExport(); }}>
             <Download aria-hidden size={16} />
             Export creatives
             <ChevronRight aria-hidden size={15} />
           </button>
           {/* Wave 2 owns Share and Send for approval */}
-          <button type="button">
+          <button type="button" role="menuitem">
             <Share2 aria-hidden size={16} />
             Share for review
           </button>
-          <button type="button">
+          <button type="button" role="menuitem">
             <BadgeCheck aria-hidden size={16} />
             Send for approval
           </button>
           <span className="studio-menu-line" />
           {/* H9: Archive — wired to PATCH /api/adstudio/campaigns/{id} */}
-          <button type="button" onClick={handleArchive}>
+          <button type="button" role="menuitem" onClick={handleArchive}>
             <Archive aria-hidden size={16} />
             Archive campaign
           </button>
           {/* H9: Delete campaign — wired to caller-provided onDelete (confirm logic lives in workbench) */}
-          <button className="danger" type="button" onClick={() => { setShowMore(false); onDelete?.(); }}>
+          <button className="danger" type="button" role="menuitem" onClick={() => { setShowMore(false); onDelete?.(); }}>
             <Trash2 aria-hidden size={16} />
             Delete campaign
           </button>
