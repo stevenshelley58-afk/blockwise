@@ -649,6 +649,91 @@ h3 {
   border-bottom: 0;
 }
 
+.operator-ad-list-wrap {
+  max-height: 680px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.operator-ad-list {
+  min-width: 2260px;
+  font-size: 13px;
+}
+
+.operator-ad-list th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
+.operator-ad-thumbnail-cell {
+  width: 360px;
+}
+
+.operator-ad-creative {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.operator-ad-thumb {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  object-fit: cover;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.operator-ad-thumb-placeholder {
+  padding: 8px;
+}
+
+.operator-ad-primary {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.operator-ad-primary strong,
+.operator-ad-primary span {
+  overflow-wrap: anywhere;
+}
+
+.operator-ad-primary span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.operator-ad-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.operator-ad-code,
+.operator-ad-json {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .stack {
   display: grid;
   gap: 12px;
@@ -1416,153 +1501,6 @@ h3 {
   margin-top: 6px;
 }
 
-.adstudio-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.adstudio-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 8px;
-}
-
-.adstudio-tabs button,
-.adstudio-ratio-row button,
-.adstudio-tool-panel button,
-.adstudio-stepper-row button {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--muted);
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.adstudio-tabs button {
-  min-height: 38px;
-  padding: 0 12px;
-  white-space: nowrap;
-}
-
-.adstudio-tabs button.active,
-.adstudio-ratio-row button.active,
-.adstudio-tool-panel button.active {
-  border-color: var(--accent);
-  background: #e6f4f2;
-  color: var(--accent-strong);
-}
-
-.adstudio-section {
-  display: grid;
-  gap: 16px;
-}
-
-.adstudio-live-panel {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(180px, 0.55fr) minmax(160px, 0.45fr);
-  gap: 14px;
-  align-items: end;
-}
-
-.adstudio-live-panel label {
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.adstudio-live-panel input {
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--ink);
-  padding: 8px 10px;
-}
-
-.adstudio-live-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  grid-column: 1 / -1;
-}
-
-.adstudio-live-actions .button {
-  min-height: 38px;
-}
-
-.adstudio-live-log {
-  display: grid;
-  gap: 6px;
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-}
-
-.adstudio-live-log p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.adstudio-dashboard,
-.adstudio-brief,
-.adstudio-copy-layout,
-.adstudio-export {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
-  gap: 16px;
-}
-
-.adstudio-primary-action,
-.adstudio-preview-card,
-.adstudio-download-panel {
-  align-content: space-between;
-  display: grid;
-  gap: 16px;
-}
-
-.adstudio-brand-grid,
-.adstudio-offer-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.adstudio-publish-controls {
-  display: grid;
-  gap: 10px;
-}
-
-.adstudio-publish-controls label {
-  display: grid;
-  gap: 6px;
-}
-
-.adstudio-publish-controls span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.adstudio-publish-controls input {
-  min-height: 38px;
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--ink);
-  padding: 0 10px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 750;
-}
-
 .approval-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1570,44 +1508,13 @@ h3 {
   gap: 8px;
 }
 
-.adstudio-brand-panel {
-  display: grid;
-  gap: 14px;
-  min-height: 220px;
-}
-
-.adstudio-logo-preview {
-  display: grid;
-  width: 86px;
-  height: 64px;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--ink);
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 900;
-}
-
-.adstudio-swatches {
-  display: flex;
-  gap: 8px;
-}
-
-.adstudio-swatches span {
-  width: 48px;
-  height: 48px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.adstudio-form-grid {
+.monitor-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
-.adstudio-form-grid label,
-.adstudio-object-controls label {
+.monitor-form-grid label {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -1615,9 +1522,8 @@ h3 {
   font-weight: 800;
 }
 
-.adstudio-form-grid input,
-.adstudio-object-controls textarea,
-.adstudio-object-controls input {
+.monitor-form-grid input,
+.monitor-form-grid select {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1626,287 +1532,9 @@ h3 {
   padding: 8px 10px;
 }
 
-.adstudio-object-controls textarea {
-  min-height: 92px;
-  resize: vertical;
-}
-
-.adstudio-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink);
-  font-weight: 800;
-}
-
-.adstudio-offer-card {
-  display: grid;
-  gap: 14px;
-  min-height: 230px;
-}
-
-.adstudio-variant-layout {
-  grid-template-columns: minmax(240px, 0.28fr) minmax(0, 1fr);
-}
-
-.adstudio-variant-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.adstudio-variant-card {
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--ink);
-  padding: 12px;
-  text-align: left;
-  box-shadow: var(--shadow);
-}
-
-.adstudio-variant-card.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.13);
-}
-
-.adstudio-thumb {
-  display: grid;
-  min-height: 150px;
-  align-items: start;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(8, 127, 122, 0.14), transparent 52%),
-    linear-gradient(30deg, rgba(35, 100, 170, 0.13), transparent 45%),
-    #eef3ef;
-  padding: 18px;
-}
-
-.adstudio-thumb strong {
-  max-width: 260px;
-  font-size: 19px;
-  line-height: 1.08;
-}
-
-.adstudio-editor {
-  grid-template-columns: 230px minmax(0, 1fr) 290px;
-  align-items: start;
-}
-
-.adstudio-tool-panel {
-  display: grid;
-  gap: 10px;
-}
-
-.adstudio-tool-panel button {
-  display: flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px;
-  text-align: left;
-}
-
-.adstudio-ratio-row,
-.adstudio-stepper-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.adstudio-ratio-row button,
-.adstudio-stepper-row button {
-  min-height: 34px;
-}
-
-.adstudio-canvas-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.adstudio-editor-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.adstudio-editor-bar div,
-.adstudio-recommendation,
-.adstudio-checklist p,
-.adstudio-brand-panel p {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.adstudio-canvas-wrap {
-  display: grid;
-  min-height: 550px;
-  place-items: center;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(104, 116, 111, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(104, 116, 111, 0.08) 1px, transparent 1px),
-    #f8fafc;
-  background-size: 24px 24px;
-  padding: 20px;
-}
-
-.adstudio-canvas {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(24, 32, 31, 0.18);
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 82% 10%, rgba(255, 255, 255, 0.75), transparent 18%),
-    #eef3ef;
-  box-shadow: 0 18px 48px rgba(24, 32, 31, 0.18);
-}
-
-.adstudio-canvas-object {
-  position: absolute;
-  overflow: hidden;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-}
-
-.adstudio-canvas-object.text {
-  display: block;
-  font-weight: 850;
-  line-height: 1.02;
-  white-space: normal;
-}
-
-.adstudio-canvas-object.shape {
-  border-radius: 14px;
-}
-
-.adstudio-canvas-object.image {
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 28%, #68746f 0 18%, transparent 19%),
-    radial-gradient(circle at 50% 78%, #68746f 0 42%, transparent 43%),
-    #d9e7e3;
-}
-
-.adstudio-canvas-object.logo {
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--ink);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 900;
-  text-align: center;
-}
-
-.adstudio-canvas-object.selected {
-  border-color: #2364aa;
-  box-shadow: 0 0 0 3px rgba(35, 100, 170, 0.16);
-}
-
-.adstudio-object-controls,
-.adstudio-advanced,
-.adstudio-checklist {
-  display: grid;
-  gap: 12px;
-}
-
-.adstudio-copy-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.adstudio-copy-tabs span {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #ffffff;
-  padding: 7px 10px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.adstudio-copy-block {
-  display: grid;
-  gap: 10px;
-  border-top: 1px solid var(--line);
-  padding: 14px 0;
-}
-
-.adstudio-copy-block div:first-child {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.adstudio-copy-block span,
-.adstudio-question span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-  text-transform: uppercase;
-}
-
-.adstudio-copy-block p {
-  white-space: pre-wrap;
-  line-height: 1.5;
-}
-
-.adstudio-question {
-  display: grid;
-  gap: 5px;
-  border-bottom: 1px solid var(--line);
-  padding: 12px 0;
-}
-
-.adstudio-compliance {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.adstudio-download-panel .button {
-  width: 100%;
-}
-
-@media (max-width: 1180px) {
-  .adstudio-dashboard,
-  .adstudio-live-panel,
-  .adstudio-brief,
-  .adstudio-copy-layout,
-  .adstudio-export,
-  .adstudio-variant-layout,
-  .adstudio-editor {
-    grid-template-columns: 1fr;
-  }
-
-  .adstudio-brand-grid,
-  .adstudio-offer-grid,
-  .adstudio-variant-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 760px) {
-  .adstudio-brand-grid,
-  .adstudio-offer-grid,
-  .adstudio-variant-grid,
-  .adstudio-form-grid {
+  .monitor-form-grid {
     grid-template-columns: 1fr;
-  }
-
-  .adstudio-canvas-wrap {
-    min-height: 420px;
   }
 }
 
