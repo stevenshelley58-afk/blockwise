@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
   }
   const { scope, value } = parsed.data;
 
-  const research = guard.supabase.schema("research");
+  const research = createSupabaseServiceClient().schema("research");
 
   if (scope === "postcode") {
     const { error } = await research

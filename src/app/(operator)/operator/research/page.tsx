@@ -14,8 +14,11 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
+
+type ResearchSupabaseClient = ReturnType<typeof createSupabaseServiceClient>;
 
 type CoverageRow = {
   postcode: string;
@@ -119,12 +122,12 @@ type RecentAdRow = {
 const RECENT_AD_SELECT =
   "agency_id,agency_name,agent_id,agent_name,advertiser_page_id,page_name,platform,observed_ad_id,external_ad_id,active_status,first_seen_at,last_seen_at,last_checked_at,headline,body,cta,primary_image_url,video_url,format,classification,snapshot_count,ad_delivery_started_at,ad_delivery_stopped_at,ad_creation_date,image_urls,image_storage_path,video_storage_path,video_thumbnail_url,media_assets,ad_type,primary_intent,display_state";
 
-async function loadCoverage(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
+async function loadCoverage(supabase: ResearchSupabaseClient) {
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
   return (data ?? []) as CoverageRow[];
 }
 
-async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
+async function loadRuns(supabase: ResearchSupabaseClient) {
   const { data } = await supabase
     .schema("research")
     .from("ad_fetch_runs")
@@ -134,12 +137,12 @@ async function loadRuns(supabase: Awaited<ReturnType<typeof requirePageSurfaceAc
   return (data ?? []) as RunRow[];
 }
 
-async function loadDefects(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
+async function loadDefects(supabase: ResearchSupabaseClient) {
   const { data } = await supabase.schema("research").from("v_missing_competitors").select("*").limit(30);
   return (data ?? []) as DefectRow[];
 }
 
-async function loadAdLibraryStats(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]): Promise<AdLibraryStats> {
+async function loadAdLibraryStats(supabase: ResearchSupabaseClient): Promise<AdLibraryStats> {
   const { data } = await supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
@@ -155,7 +158,7 @@ async function loadAdLibraryStats(supabase: Awaited<ReturnType<typeof requirePag
   };
 }
 
-async function loadEntityCounts(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]): Promise<EntityCounts> {
+async function loadEntityCounts(supabase: ResearchSupabaseClient): Promise<EntityCounts> {
   const [{ count: agents }, { count: advertiserPages }] = await Promise.all([
     supabase.schema("research").from("agents").select("id", { count: "exact", head: true }),
     supabase.schema("research").from("advertiser_pages").select("id", { count: "exact", head: true }),
@@ -167,7 +170,7 @@ async function loadEntityCounts(supabase: Awaited<ReturnType<typeof requirePageS
   };
 }
 
-async function loadRecentAds(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
+async function loadRecentAds(supabase: ResearchSupabaseClient) {
   const { data } = await supabase
     .schema("research")
     .from("v_agent_ad_history")
@@ -179,7 +182,8 @@ async function loadRecentAds(supabase: Awaited<ReturnType<typeof requirePageSurf
 }
 
 export default async function OperatorResearchPage() {
-  const { supabase } = await requirePageSurfaceAccess("operator");
+  await requirePageSurfaceAccess("operator");
+  const supabase = createSupabaseServiceClient();
   const [coverage, runs, defects, adLibraryStats, entityCounts, recentAds] = await Promise.all([
     loadCoverage(supabase).catch(() => [] as CoverageRow[]),
     loadRuns(supabase).catch(() => [] as RunRow[]),

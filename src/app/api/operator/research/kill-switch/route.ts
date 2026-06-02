@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { paused, reason } = parsed.data;
 
-  const research = guard.supabase.schema("research");
+  const research = createSupabaseServiceClient().schema("research");
   const { error } = await research
     .from("refresh_policies")
     .update({ active: !paused })
