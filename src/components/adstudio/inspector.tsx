@@ -130,6 +130,7 @@ type InspectorProps = {
   variants: VariantItem[];
   selectedVariantIndex: number;
   onSelectVariant: (index: number) => void;
+  onRegenerate?: (variantId: string) => void;
   selectedElement: SelectedElement;
   copy: CopyState;
   updateCopy: (key: keyof CopyState, value: string) => void;
@@ -148,6 +149,7 @@ export function Inspector({
   variants,
   selectedVariantIndex,
   onSelectVariant,
+  onRegenerate = () => {},
   selectedElement,
   copy,
   updateCopy,
@@ -179,8 +181,10 @@ export function Inspector({
                 <div className="studio-card-actions">
                   <button type="button" onClick={() => onSelectVariant(index)}>Preview</button>
                   <button type="button" onClick={() => onSelectVariant(index)}>Use</button>
+                  {/* Duplicate variant — Wave 2 will wire a per-variant duplicate endpoint */}
                   <button type="button">Duplicate</button>
-                  <button type="button">Regenerate</button>
+                  {/* H9: Regenerate — POST /api/adstudio/campaigns/{id}/regenerate */}
+                  <button type="button" onClick={() => onRegenerate(variant.variantId)}>Regenerate</button>
                 </div>
               </div>
             </article>
