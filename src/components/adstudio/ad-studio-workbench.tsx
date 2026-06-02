@@ -85,6 +85,7 @@ export function AdStudioWorkbench({
   brandKit,
   campaignPack: initialPack,
   offers,
+  performance,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -192,6 +193,24 @@ export function AdStudioWorkbench({
     studio.setInspectorTab("variants");
   }
 
+  const variantIds = variants.map((v) => v.variantId);
+
+  // Duplicate the campaign — used by both TopBar (internal) and Inspector Duplicate button
+  async function duplicateCampaign() {
+    try {
+      const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      studio.showToast("Campaign duplicated");
+    } catch {
+      studio.showToast("Could not duplicate campaign");
+    }
+  }
+
+  // Add variant — generates variants for the currently selected angle
+  function addVariant() {
+    generateVariantsForAngle(selectedAngle);
+  }
+
   const publishBlocker = destinationUrl ? "" : "Publish blocked: Landing URL is missing.";
 
   function renderPanel() {
@@ -277,6 +296,7 @@ export function AdStudioWorkbench({
         onDelete={deleteCampaign}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
+        variantIds={variantIds}
       />
 
       <div className="studio-desktop-body">
@@ -384,6 +404,7 @@ export function AdStudioWorkbench({
             setTab={studio.setInspectorTab}
             readinessScore={readinessScore}
             readinessItems={readinessItems}
+            recommendations={performance.recommendations}
             variants={variants}
             selectedVariantIndex={selectedVariantIndex}
             onSelectVariant={selectVariant}
@@ -392,6 +413,8 @@ export function AdStudioWorkbench({
               const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
               void generateVariantsForAngle(angle);
             }}
+            onDuplicateCampaign={duplicateCampaign}
+            onAddVariant={addVariant}
             selectedElement={selectedElement}
             copy={copy}
             updateCopy={updateCopy}
@@ -453,7 +476,7 @@ export function AdStudioWorkbench({
 
         {studio.mobileTab === "checklist" && (
           <div className="studio-mobile-panel">
-            <ReadinessCard score={readinessScore} items={readinessItems} compact={false} />
+            <ReadinessCard score={readinessScore} items={readinessItems} compact={false} recommendations={performance.recommendations} />
           </div>
         )}
 

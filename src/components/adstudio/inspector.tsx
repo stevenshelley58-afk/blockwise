@@ -2,6 +2,7 @@
 
 import { Check, ChevronRight, Circle, CircleAlert, Download, Image as ImageIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { InspectorTab } from "./use-ad-studio";
@@ -64,9 +65,10 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
   );
 }
 
-type ReadinessCardProps = { score: number; items: ReadinessItem[]; compact: boolean };
+type ReadinessCardProps = { score: number; items: ReadinessItem[]; compact: boolean; recommendations?: string[] };
 
-export function ReadinessCard({ score, items, compact }: ReadinessCardProps) {
+export function ReadinessCard({ score, items, compact, recommendations }: ReadinessCardProps) {
+  const [showRecs, setShowRecs] = useState(false);
   return (
     <section className={compact ? "studio-readiness compact" : "studio-readiness"}>
       <header>
@@ -93,10 +95,18 @@ export function ReadinessCard({ score, items, compact }: ReadinessCardProps) {
         ))}
       </div>
       {!compact && (
-        <button className="studio-recommendations" type="button">
+        <button className="studio-recommendations" type="button" onClick={() => setShowRecs((v) => !v)}>
           View all recommendations
           <ChevronRight aria-hidden size={16} />
         </button>
+      )}
+      {/* QA: recommendations list */}
+      {showRecs && recommendations && recommendations.length > 0 && (
+        <ul className="studio-recommendations-list">
+          {recommendations.map((rec) => (
+            <li key={rec}>{rec}</li>
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -137,10 +147,13 @@ type InspectorProps = {
   setTab: (tab: InspectorTab) => void;
   readinessScore: number;
   readinessItems: ReadinessItem[];
+  recommendations?: string[];
   variants: VariantItem[];
   selectedVariantIndex: number;
   onSelectVariant: (index: number) => void;
   onRegenerate?: (variantId: string) => void;
+  onDuplicateCampaign?: () => void;
+  onAddVariant?: () => void;
   selectedElement: SelectedElement;
   copy: CopyState;
   updateCopy: (key: keyof CopyState, value: string) => void;
@@ -156,10 +169,13 @@ export function Inspector({
   setTab,
   readinessScore,
   readinessItems,
+  recommendations,
   variants,
   selectedVariantIndex,
   onSelectVariant,
   onRegenerate = () => {},
+  onDuplicateCampaign,
+  onAddVariant,
   selectedElement,
   copy,
   updateCopy,
@@ -179,7 +195,7 @@ export function Inspector({
         ))}
       </div>
 
-      {tab === "checklist" && <ReadinessCard score={readinessScore} items={readinessItems} compact={false} />}
+      {tab === "checklist" && <ReadinessCard score={readinessScore} items={readinessItems} compact={false} recommendations={recommendations} />}
       {tab === "variants" && (
         <div className="studio-inspector-list">
           {variants.map((variant, index) => (
@@ -192,14 +208,17 @@ export function Inspector({
                 <div className="studio-card-actions">
                   <button type="button" onClick={() => onSelectVariant(index)}>Preview</button>
                   <button type="button" onClick={() => onSelectVariant(index)}>Use</button>
-                  {/* Duplicate variant — Wave 2 will wire a per-variant duplicate endpoint */}
-                  <button type="button">Duplicate</button>
+                  {/* Duplicate — no per-variant endpoint; duplicates the whole campaign */}
+                  <button type="button" onClick={() => onDuplicateCampaign?.()}>Duplicate</button>
                   {/* H9: Regenerate — POST /api/adstudio/campaigns/{id}/regenerate */}
                   <button type="button" onClick={() => onRegenerate(variant.variantId)}>Regenerate</button>
                 </div>
               </div>
             </article>
           ))}
+          <button className="studio-btn secondary block" type="button" onClick={() => onAddVariant?.()}>
+            + Add variant
+          </button>
         </div>
       )}
       {tab === "edit" && (

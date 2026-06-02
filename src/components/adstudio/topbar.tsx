@@ -29,9 +29,11 @@ type TopBarProps = {
   /** H9: delete campaign — caller provides confirm logic */
   onDelete?: () => void;
   showToast?: (message: string) => void;
+  /** All variant IDs in the current campaign — used by Send for approval */
+  variantIds?: string[];
 };
 
-export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, onSave, onPublish, onExport, onDelete, showToast = () => {} }: TopBarProps) {
+export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, onSave, onPublish, onExport, onDelete, showToast = () => {}, variantIds = [] }: TopBarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // C2: close on outside click
@@ -65,6 +67,33 @@ export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, o
       showToast("Campaign duplicated");
     } catch {
       showToast("Could not duplicate campaign");
+    }
+  }
+
+  // Share for review — copies current URL to clipboard
+  async function handleShare() {
+    setShowMore(false);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast("Link copied to clipboard");
+    } catch {
+      showToast("Could not copy link");
+    }
+  }
+
+  // Send for approval — submits all variants via POST /api/adstudio/variants/{id}/approve
+  async function handleSendForApproval() {
+    setShowMore(false);
+    if (!variantIds.length) { showToast("No variants to submit"); return; }
+    try {
+      await Promise.all(
+        variantIds.map((id) =>
+          fetch(`/api/adstudio/variants/${id}/approve`, { method: "POST" })
+        )
+      );
+      showToast("Sent for approval");
+    } catch {
+      showToast("Could not send for approval");
     }
   }
 
@@ -125,12 +154,11 @@ export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, o
             Export creatives
             <ChevronRight aria-hidden size={15} />
           </button>
-          {/* Wave 2 owns Share and Send for approval */}
-          <button type="button" role="menuitem">
+          <button type="button" role="menuitem" onClick={handleShare}>
             <Share2 aria-hidden size={16} />
             Share for review
           </button>
-          <button type="button" role="menuitem">
+          <button type="button" role="menuitem" onClick={handleSendForApproval}>
             <BadgeCheck aria-hidden size={16} />
             Send for approval
           </button>

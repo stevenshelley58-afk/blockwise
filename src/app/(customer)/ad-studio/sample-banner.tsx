@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export function SampleBanner() {
@@ -25,6 +26,9 @@ export function SampleBanner() {
         <strong>You&#39;re viewing sample data.</strong> Connect your workspace
         to see your real campaigns.
       </span>
+      <Link href="/onboarding" style={{ fontWeight: 700, color: "#92400E", textDecoration: "underline", marginRight: 8 }}>
+        Get started →
+      </Link>
       <button
         type="button"
         aria-label="Dismiss sample data notice"

@@ -225,5 +225,8 @@ export const STYLES = `
 .studio-statusbar [data-state="error"]{color:#b91c1c}
 /* M6: rail indicator dots */
 .studio-rail button{position:relative}
+/* QA: recommendations list */
+.studio-recommendations-list{margin:10px 0 0;padding:0 0 0 18px;font-size:12px;color:var(--muted)}
+.studio-recommendations-list li{margin-bottom:4px}
 `;
 
