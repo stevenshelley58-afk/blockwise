@@ -22,13 +22,21 @@ test("Meta setup UI captures concrete lead delivery endpoint config", () => {
   assert.match(monitor, /https:\/\/crm\.example\.com\/leads/);
 });
 
-test("Ad Studio UI generates Meta-only campaigns and exports packs", () => {
+test("Ad Studio UI presents the constrained campaign workspace", () => {
   const adstudio = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
 
   assert.match(adstudio, /\/api\/adstudio\/campaigns/);
-  assert.match(adstudio, /\/api\/adstudio\/export-packages\/\$\{pack\.campaign\.campaignId\}\/download/);
+  assert.match(adstudio, /\/api\/adstudio\/campaigns\/\$\{currentPack\.campaign\.campaignId\}\/draft/);
+  assert.match(adstudio, /\/api\/adstudio\/export-packages\/\$\{currentPack\.campaign\.campaignId\}\/download/);
   assert.match(adstudio, /platforms:\s*\["meta"\]/);
-  assert.match(adstudio, /Export pack/);
+  assert.match(adstudio, /Generate variants/);
+  assert.match(adstudio, /Campaign readiness/);
+  assert.match(adstudio, /Export creatives/);
+  assert.doesNotMatch(adstudio, /AI generated/);
+  assert.doesNotMatch(adstudio, /AI helps/);
+  assert.doesNotMatch(adstudio, /Create your own/);
+  assert.doesNotMatch(adstudio, /Export pack/);
+  assert.doesNotMatch(adstudio, /Engine: OpenAI/);
   assert.doesNotMatch(adstudio, /setPlatform\("google"\)/);
 });
 

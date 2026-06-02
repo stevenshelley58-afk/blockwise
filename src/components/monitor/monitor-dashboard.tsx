@@ -391,7 +391,7 @@ function AdsTab({ bundle }: { bundle: MonitorDashboardBundle }) {
       <section className="panel monitor-panel">
         <SectionTitle title="Meta publish setup" detail="Required before campaign generation and publishing" />
         {metaSetup ? (
-          <div className="adstudio-form-grid">
+          <div className="monitor-form-grid">
             <label>
               <span>Ad account</span>
               <select value={metaSetup.metaAdAccountId} onChange={(event) => patchMetaSetup({ metaAdAccountId: event.target.value })}>
