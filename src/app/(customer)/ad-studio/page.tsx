@@ -3,15 +3,19 @@ import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
+import { SampleBanner } from "./sample-banner";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdStudioPage() {
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId);
+  const isSample = liveBundle === null;
   const bundle = liveBundle ?? getAdStudioDemoBundle();
 
   return (
     <>
+      {isSample && <SampleBanner />}
       <AdStudioWorkbench
         brandKit={bundle.brandKit}
         campaignPack={bundle.campaignPack}
