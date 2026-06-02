@@ -25,7 +25,13 @@ export function LandingPanel({ destinationUrl, setDestinationUrl, leadDestinatio
           <option>CRM endpoint</option>
         </select>
       </FieldShell>
-      <button className="studio-btn secondary block" type="button">
+      {/* H9: open destinationUrl in new tab */}
+      <button
+        className="studio-btn secondary block"
+        type="button"
+        disabled={!destinationUrl}
+        onClick={() => window.open(destinationUrl, "_blank", "noopener")}
+      >
         <Globe2 aria-hidden size={17} />
         Test landing page
       </button>

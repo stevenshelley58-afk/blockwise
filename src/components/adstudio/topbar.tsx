@@ -1,9 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   Archive,
   BadgeCheck,
-  ChevronDown,
   ChevronRight,
   Cloud,
   Copy,
@@ -11,30 +11,84 @@ import {
   MoreHorizontal,
   Send,
   Share2,
-  Smartphone,
   Trash2,
 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 
 type TopBarProps = {
+  campaignId?: string;
   campaignName: string;
   showMore: boolean;
   setShowMore: (value: boolean | ((prev: boolean) => boolean)) => void;
-  onPreview: () => void;
+  /** @deprecated H7: removed from top bar — preview is accessible via the main canvas */
+  onPreview?: () => void;
   onSave: () => void;
   onPublish: () => void;
   onExport: () => void;
+  showToast?: (message: string) => void;
 };
 
-export function TopBar({ campaignName, showMore, setShowMore, onPreview, onSave, onPublish, onExport }: TopBarProps) {
+export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, onSave, onPublish, onExport, showToast = () => {} }: TopBarProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // C2: close on outside click
+  useEffect(() => {
+    if (!showMore) return;
+    function handleClick(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMore(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMore, setShowMore]);
+
+  // C2: close on Escape
+  useEffect(() => {
+    if (!showMore) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowMore(false);
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [showMore, setShowMore]);
+
+  // H9: duplicate campaign
+  async function handleDuplicate() {
+    setShowMore(false);
+    try {
+      const res = await fetch(`/api/adstudio/campaigns/${campaignId}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed");
+      showToast("Campaign duplicated");
+    } catch {
+      showToast("Could not duplicate campaign");
+    }
+  }
+
+  // H9: archive campaign
+  async function handleArchive() {
+    setShowMore(false);
+    try {
+      const res = await fetch(`/api/adstudio/campaigns/${campaignId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      showToast("Campaign archived");
+    } catch {
+      showToast("Could not archive campaign");
+    }
+  }
+
   return (
     <header className="studio-topbar">
       <div className="studio-titlebar">
         <BlockwiseLogo />
         <span className="studio-divider" />
+        {/* L2: removed misleading <ChevronDown> from breadcrumb */}
         <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>
-        <ChevronDown aria-hidden size={16} />
       </div>
       <div className="studio-mobile-title">
         <BlockwiseLogo />
@@ -42,10 +96,7 @@ export function TopBar({ campaignName, showMore, setShowMore, onPreview, onSave,
         <strong>Ad Studio</strong>
       </div>
       <div className="studio-actions">
-        <button className="studio-btn secondary" type="button" onClick={onPreview}>
-          <Smartphone aria-hidden size={17} />
-          Preview
-        </button>
+        {/* H7: Preview button removed — preview is accessible via the main canvas */}
         <button className="studio-btn secondary" type="button" onClick={onSave}>
           <Cloud aria-hidden size={17} />
           Save
@@ -60,16 +111,18 @@ export function TopBar({ campaignName, showMore, setShowMore, onPreview, onSave,
       </div>
 
       {showMore && (
-        <div className="studio-more-menu">
-          <button type="button">
+        <div className="studio-more-menu" ref={menuRef}>
+          {/* H9: Duplicate — wired to POST /api/adstudio/campaigns/{id}/duplicate */}
+          <button type="button" onClick={handleDuplicate}>
             <Copy aria-hidden size={16} />
             Duplicate campaign
           </button>
-          <button type="button" onClick={onExport}>
+          <button type="button" onClick={() => { setShowMore(false); onExport(); }}>
             <Download aria-hidden size={16} />
             Export creatives
             <ChevronRight aria-hidden size={15} />
           </button>
+          {/* Wave 2 owns Share and Send for approval */}
           <button type="button">
             <Share2 aria-hidden size={16} />
             Share for review
@@ -79,10 +132,12 @@ export function TopBar({ campaignName, showMore, setShowMore, onPreview, onSave,
             Send for approval
           </button>
           <span className="studio-menu-line" />
-          <button type="button">
+          {/* H9: Archive — wired to PATCH /api/adstudio/campaigns/{id} */}
+          <button type="button" onClick={handleArchive}>
             <Archive aria-hidden size={16} />
             Archive campaign
           </button>
+          {/* Wave 2 owns Delete */}
           <button className="danger" type="button">
             <Trash2 aria-hidden size={16} />
             Delete campaign
