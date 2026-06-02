@@ -8,9 +8,12 @@ import { PanelHeader } from "../inspector";
 type MediaPanelProps = {
   primaryImage: string;
   openFilePicker: () => void;
+  // NOTE for Wave 2 Integrator: pass onSelectImage={setPrimaryImage} from useMedia
+  // in ad-studio-workbench.tsx at the MediaPanel render site.
+  onSelectImage?: (src: string) => void;
 };
 
-export function MediaPanel({ primaryImage, openFilePicker }: MediaPanelProps) {
+export function MediaPanel({ primaryImage, openFilePicker, onSelectImage }: MediaPanelProps) {
   return (
     <>
       <PanelHeader title="Media" detail="Use property and brand-safe imagery." />
@@ -21,7 +24,7 @@ export function MediaPanel({ primaryImage, openFilePicker }: MediaPanelProps) {
       </button>
       <div className="studio-media-grid">
         {MEDIA_ASSETS.map((asset) => (
-          <button className={primaryImage === asset.src ? "active" : ""} key={asset.src} type="button">
+          <button className={primaryImage === asset.src ? "active" : ""} key={asset.src} type="button" onClick={() => onSelectImage?.(asset.src)}>
             <img src={asset.src} alt="" />
             <span>{asset.label}</span>
             <small>{asset.type} / {asset.ratio}</small>

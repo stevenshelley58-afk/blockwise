@@ -14,7 +14,7 @@ export const FORMAT_META: Record<
   { label: string; size: string }
 > = {
   story: { label: "Story", size: "1080x1920" },
-  feed: { label: "Feed", size: "1080x1080" },
+  feed: { label: "Feed", size: "1080x1350" },
   square: { label: "Square", size: "1080x1080" },
   landscape: { label: "Landscape", size: "1200x628" },
 };
@@ -191,10 +191,16 @@ export function AdPreview({
     );
   }
 
+  // aspect ratio for each format: story handled above, landscape uses CSS class
+  const feedAspectRatio = format === "feed" ? "4/5" : format === "landscape" ? "1.91/1" : "1/1";
+
   if (mode === "creative") {
     return (
       <div className="studio-preview-device" style={transform}>
-        <div className={format === "landscape" ? "studio-creative-card landscape" : "studio-creative-card"}>
+        <div
+          className={format === "landscape" ? "studio-creative-card landscape" : "studio-creative-card"}
+          style={format === "feed" ? { aspectRatio: "4/5" } : undefined}
+        >
           <img src={image} alt="" />
           <span className="studio-creative-shade" />
           <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
@@ -241,7 +247,7 @@ export function AdPreview({
           </button>
         )}
         <button className="studio-feed-image" type="button" onClick={() => setSelectedElement("image")}>
-          <img src={image} alt="" />
+          <img src={image} alt="" style={format !== "landscape" ? { aspectRatio: feedAspectRatio } : undefined} />
         </button>
         <footer>
           <div>
