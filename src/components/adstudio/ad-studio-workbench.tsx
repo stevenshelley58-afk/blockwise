@@ -187,7 +187,7 @@ export function AdStudioWorkbench({
       return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} />;
     }
     if (studio.section === "copy") {
-      return <CopyPanel copy={copy} updateCopy={updateCopy} />;
+      return <CopyPanel copy={copy} updateCopy={updateCopy} applyCopyAssist={applyCopyAssist} />;
     }
     if (studio.section === "audience") {
       return <AudiencePanel />;
