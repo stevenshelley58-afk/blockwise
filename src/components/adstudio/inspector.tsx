@@ -187,7 +187,8 @@ export function Inspector({
               <img src={variant.image} alt="" />
               <div>
                 <strong>{variant.displayName}: {variant.angleLabel}</strong>
-                <small>{variant.headline}</small>
+                {/* L3: truncate long headlines so they don't overflow the card */}
+                <small style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", maxWidth: "100%" }}>{variant.headline}</small>
                 <div className="studio-card-actions">
                   <button type="button" onClick={() => onSelectVariant(index)}>Preview</button>
                   <button type="button" onClick={() => onSelectVariant(index)}>Use</button>

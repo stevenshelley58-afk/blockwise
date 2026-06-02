@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Globe2, Home, MapPin, Pencil, Target, Wand2 } from "lucide-react";
+import { BadgeCheck, Globe2, Home, MapPin, Pencil, Sparkles, Target, Wand2 } from "lucide-react";
 
 import type { AngleCard } from "../angles";
 import { FieldShell, PanelHeader } from "../inspector";
@@ -20,6 +20,7 @@ type CampaignPanelProps = {
   setLeadDestination: (value: string) => void;
   destinationUrl: string;
   setDestinationUrl: (value: string) => void;
+  variantCount: number;
   onGenerate: (angle: AngleCard) => void;
 };
 
@@ -38,6 +39,7 @@ export function CampaignPanel({
   setLeadDestination,
   destinationUrl,
   setDestinationUrl,
+  variantCount,
   onGenerate,
 }: CampaignPanelProps) {
   return (
@@ -87,13 +89,23 @@ export function CampaignPanel({
         <Pencil aria-hidden size={16} />
         Edit campaign brief
       </button>
+      {/* M7: prominent first-run CTA when no variants exist yet */}
+      {variantCount === 0 && (
+        <div style={{ border: "1.5px dashed var(--line)", borderRadius: 8, padding: "20px 16px", textAlign: "center", display: "grid", gap: 10 }}>
+          <Sparkles aria-hidden size={24} style={{ margin: "0 auto", color: "var(--muted)" }} />
+          <strong style={{ fontSize: 15 }}>No variants yet</strong>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13, lineHeight: 1.45 }}>
+            Fill in your campaign details above, then generate your first ad variants.
+          </p>
+        </div>
+      )}
       <button
         className="studio-btn publish block"
         type="button"
         onClick={() => onGenerate(angles.find((angle) => angle.id === selectedAngleId) ?? angles[0])}
       >
         <Wand2 aria-hidden size={17} />
-        Generate variants
+        {variantCount === 0 ? "Generate your first variants →" : "Generate variants"}
       </button>
     </>
   );

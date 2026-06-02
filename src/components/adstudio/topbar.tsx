@@ -26,10 +26,12 @@ type TopBarProps = {
   onSave: () => void;
   onPublish: () => void;
   onExport: () => void;
+  /** H9: delete campaign — caller provides confirm logic */
+  onDelete?: () => void;
   showToast?: (message: string) => void;
 };
 
-export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, onSave, onPublish, onExport, showToast = () => {} }: TopBarProps) {
+export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, onSave, onPublish, onExport, onDelete, showToast = () => {} }: TopBarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // C2: close on outside click
@@ -101,9 +103,10 @@ export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, o
           <Cloud aria-hidden size={17} />
           Save
         </button>
+        {/* M1: renamed to "Export" — live publishing lives in the publish panel */}
         <button className="studio-btn publish" type="button" onClick={onPublish}>
           <Send aria-hidden size={17} />
-          Publish
+          Export
         </button>
         <button className="studio-icon-btn" type="button" aria-label="More actions" onClick={() => setShowMore((value) => !value)}>
           <MoreHorizontal aria-hidden size={20} />
@@ -137,8 +140,8 @@ export function TopBar({ campaignId = "", campaignName, showMore, setShowMore, o
             <Archive aria-hidden size={16} />
             Archive campaign
           </button>
-          {/* Wave 2 owns Delete */}
-          <button className="danger" type="button">
+          {/* H9: Delete campaign — wired to caller-provided onDelete (confirm logic lives in workbench) */}
+          <button className="danger" type="button" onClick={() => { setShowMore(false); onDelete?.(); }}>
             <Trash2 aria-hidden size={16} />
             Delete campaign
           </button>

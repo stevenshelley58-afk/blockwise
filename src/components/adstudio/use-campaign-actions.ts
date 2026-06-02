@@ -30,6 +30,7 @@ export type CampaignActionsState = {
   market: string;
   copy: CopyState;
   offerLabel: string;
+  campaignGoal: string;
   selectedVariantIndex: number;
   setPack: (pack: AdStudioCampaignPack) => void;
   setSelectedVariantIndex: (index: number) => void;
@@ -89,9 +90,9 @@ export function useCampaignActions(s: CampaignActionsState) {
     };
   }
 
-  async function generateVariantsForAngle(angle: AngleCard) {
+  async function generateVariantsForAngle(angle: AngleCard, goalOverride?: string) {
     s.setSelectedAngleId(angle.id);
-    s.setSection("angles");
+    // M3: removed setSection("angles") so the user stays on their current section
     s.setInspectorTab("variants");
     s.setBusy(true);
     s.setBusyMessage(`Generating ${angle.name} variants`);
@@ -101,7 +102,8 @@ export function useCampaignActions(s: CampaignActionsState) {
       const m = parseMarket();
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
         brandKit: s.brandKit,
-        goal: angle.goal,
+        goal: goalOverride ?? angle.goal,
+        campaignGoal: s.campaignGoal,
         suburb: m.suburb,
         city: m.city,
         state: m.state,

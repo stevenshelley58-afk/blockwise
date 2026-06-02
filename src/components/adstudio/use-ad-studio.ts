@@ -34,12 +34,17 @@ export function useAdStudio() {
     toastTimer.current = setTimeout(() => setToast(null), 2400);
   }
 
+  // L5: include save timestamp for better user feedback
+  function formatSaveTime() {
+    return `at ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+
   const statusText =
     saveState === "saving"
-      ? "Saving..."
+      ? "Saving…"
       : saveState === "error"
         ? `Could not save: ${saveError}`
-        : "Saved just now";
+        : `Saved ${formatSaveTime()}`;
 
   return {
     section,

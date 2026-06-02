@@ -218,4 +218,12 @@ export const STYLES = `
 }
 
 /* D: actions — reserved for Wave 1-D additions */
+
+/* A: Wave 2 integrator additions */
+.studio-statusbar [data-state="saved"]{color:#45b757}
+.studio-statusbar [data-state="saving"]{color:var(--muted)}
+.studio-statusbar [data-state="error"]{color:#b91c1c}
+/* M6: rail indicator dots */
+.studio-rail button{position:relative}
 `;
+

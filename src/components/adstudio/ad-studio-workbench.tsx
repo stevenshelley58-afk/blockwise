@@ -2,7 +2,9 @@
 
 import {
   BadgeCheck,
+  Check,
   ChevronDown,
+  CircleAlert,
   Copy,
   Image as ImageIcon,
   Link2,
@@ -137,6 +139,7 @@ export function AdStudioWorkbench({
     market,
     copy,
     offerLabel,
+    campaignGoal,   // M4: pass goal so generation includes it
     selectedVariantIndex,
     setPack,
     setSelectedVariantIndex,
@@ -153,7 +156,21 @@ export function AdStudioWorkbench({
     showToast: studio.showToast,
   });
 
+  // H9: delete campaign with confirmation — lives in publish panel (ownership boundary)
+  async function deleteCampaign() {
+    if (!window.confirm("Delete this campaign? This cannot be undone.")) return;
+    const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}`, { method: "DELETE" });
+    if (res.ok) {
+      window.location.href = "/";
+    } else {
+      studio.showToast("Could not delete campaign");
+    }
+  }
+
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
+
+  // M6: derive per-section completion state from readiness items for rail indicators
+  // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
   const campaignName = "Free Appraisal Campaign";
 
@@ -162,7 +179,8 @@ export function AdStudioWorkbench({
     return source.slice(0, 4).map((variant, index) => ({
       ...variant,
       displayName: `Variant ${String.fromCharCode(65 + index)}`,
-      angleLabel: index === 0 ? selectedAngle.variantLabel : ANGLES[(index + 6) % ANGLES.length].variantLabel,
+      // M5: use the variant's own angle field as the label — not an index-offset into ANGLES
+      angleLabel: variant.angle || selectedAngle.variantLabel,
       image: MEDIA_ASSETS[index % MEDIA_ASSETS.length].src,
     }));
   }, [initialPack.variants, pack.variants, selectedAngle.variantLabel]);
@@ -184,7 +202,8 @@ export function AdStudioWorkbench({
       return <BrandPanel brand={brand} brandKit={brandKit} />;
     }
     if (studio.section === "media") {
-      return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} />;
+      // 1a: wire onSelectImage so library tiles actually update the primary image
+      return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={setPrimaryImage} />;
     }
     if (studio.section === "copy") {
       return <CopyPanel copy={copy} updateCopy={updateCopy} applyCopyAssist={applyCopyAssist} />;
@@ -203,7 +222,15 @@ export function AdStudioWorkbench({
       );
     }
     if (studio.section === "publish") {
-      return <PublishSetupPanel />;
+      // M1: wire real props; H9: pass deleteCampaign
+      return (
+        <PublishSetupPanel
+          campaignId={pack.campaign.campaignId}
+          destinationUrl={destinationUrl}
+          onExport={exportCreatives}
+          onDelete={deleteCampaign}
+        />
+      );
     }
     if (studio.section === "settings") {
       return <SettingsPanel />;
@@ -224,6 +251,7 @@ export function AdStudioWorkbench({
         setLeadDestination={setLeadDestination}
         destinationUrl={destinationUrl}
         setDestinationUrl={setDestinationUrl}
+        variantCount={pack.variants.length}
         onGenerate={generateVariantsForAngle}
       />
     );
@@ -234,20 +262,55 @@ export function AdStudioWorkbench({
       <style>{STYLES}</style>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(event) => replaceImage(event.target.files)} />
 
+      {/* 1b: pass campaignId and showToast; M1: onPublish navigates to publish/export panel; H9: wire delete */}
       <TopBar
         campaignName={campaignName}
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onPreview={() => setPreviewMode("platform")}
         onSave={saveDraft}
-        onPublish={() => studio.setInspectorTab("publish")}
+        onPublish={() => {
+          studio.setSection("publish");
+          studio.setInspectorTab("publish");
+        }}
         onExport={exportCreatives}
+        onDelete={deleteCampaign}
+        campaignId={pack.campaign.campaignId}
+        showToast={studio.showToast}
       />
 
       <div className="studio-desktop-body">
         <aside className="studio-rail" aria-label="Ad Studio sections">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
+
+            // M6: map readiness items to section, derive dot state
+            const sectionItems: Record<string, string[]> = {
+              campaign: ["Goal & offer", "Location", "Property type"],
+              media: ["Primary media"],
+              copy: ["Ad copy", "Call to action"],
+              landing: ["Landing page"],
+              brand: [],   // special-cased below
+              publish: [], // all items
+            };
+            let railState: "done" | "warn" | "todo" | null = null;
+            if (item.id === "brand") {
+              railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
+            } else if (item.id === "publish") {
+              const allDone = readinessItems.every((ri) => ri.state === "done");
+              railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
+            } else {
+              const labels = sectionItems[item.id] ?? [];
+              if (labels.length > 0) {
+                const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
+                if (relevant.length > 0) {
+                  if (relevant.every((ri) => ri.state === "done")) railState = "done";
+                  else if (relevant.some((ri) => ri.state === "warn")) railState = "warn";
+                  else railState = "todo";
+                }
+              }
+            }
+
             return (
               <button
                 className={studio.section === item.id ? "active" : ""}
@@ -260,6 +323,9 @@ export function AdStudioWorkbench({
               >
                 <Icon aria-hidden size={19} />
                 <span>{item.label}</span>
+                {railState === "done" && <Check aria-hidden size={13} style={{ color: "#45b757", marginLeft: "auto", flexShrink: 0 }} />}
+                {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#ffb020", marginLeft: "auto", flexShrink: 0 }} />}
+                {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e2e5ea", marginLeft: "auto", flexShrink: 0 }} />}
               </button>
             );
           })}
@@ -312,6 +378,7 @@ export function AdStudioWorkbench({
         </section>
 
         <aside className="studio-inspector" aria-label="Campaign inspector">
+          {/* 1c: wire onRegenerate */}
           <Inspector
             tab={studio.inspectorTab}
             setTab={studio.setInspectorTab}
@@ -320,6 +387,11 @@ export function AdStudioWorkbench({
             variants={variants}
             selectedVariantIndex={selectedVariantIndex}
             onSelectVariant={selectVariant}
+            onRegenerate={(variantId) => {
+              const variant = pack.variants.find((v) => v.variantId === variantId);
+              const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
+              void generateVariantsForAngle(angle);
+            }}
             selectedElement={selectedElement}
             copy={copy}
             updateCopy={updateCopy}
@@ -400,7 +472,8 @@ export function AdStudioWorkbench({
       </div>
 
       <footer className="studio-statusbar">
-        <span className={studio.saveState === "error" ? "error" : ""}>{studio.statusText}</span>
+        {/* L5: data-state attribute lets CSS color the save chip; existing .error class also applies */}
+        <span className={studio.saveState === "error" ? "error" : ""} data-state={studio.saveState}>{studio.statusText}</span>
         <span>{format.label} | {format.size}</span>
         <span>{previewMode === "platform" ? "Platform preview" : "Creative preview"}</span>
       </footer>
