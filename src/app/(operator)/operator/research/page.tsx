@@ -1,13 +1,12 @@
 import {
   Activity,
   AlertOctagon,
+  Bot,
   ChevronRight,
-  ExternalLink,
   PauseOctagon,
   RefreshCcw,
   ShieldCheck,
   Signal,
-  Timer,
 } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
@@ -29,9 +28,10 @@ type CoverageRow = {
   last_audit_score: number | null;
   last_audited_at: string | null;
   live_active_ads: number;
-  live_advertiser_pages: number;
-  live_agents: number;
-  live_agencies: number;
+  live_advertiser_pages?: number;
+  live_agents?: number;
+  live_agencies?: number;
+  listings?: number;
   health: string;
 };
 
@@ -62,6 +62,24 @@ type DefectRow = {
   created_at: string;
 };
 
+type AdLibraryCardRow = {
+  active_status: string | null;
+  image_storage_path: string | null;
+  video_storage_path: string | null;
+  media_assets: unknown;
+};
+
+type AdLibraryStats = {
+  activeCards: number;
+  totalCards: number;
+  cardsWithStoredMedia: number;
+};
+
+type EntityCounts = {
+  agents: number;
+  advertiserPages: number;
+};
+
 async function loadCoverage(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]) {
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
   return (data ?? []) as CoverageRow[];
@@ -82,28 +100,50 @@ async function loadDefects(supabase: Awaited<ReturnType<typeof requirePageSurfac
   return (data ?? []) as DefectRow[];
 }
 
+async function loadAdLibraryStats(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]): Promise<AdLibraryStats> {
+  const { data } = await supabase
+    .schema("research")
+    .from("v_customer_meta_ad_library_cards")
+    .select("active_status,image_storage_path,video_storage_path,media_assets")
+    .limit(1000);
+
+  const rows = (data ?? []) as AdLibraryCardRow[];
+
+  return {
+    activeCards: rows.filter((row) => String(row.active_status ?? "").toLowerCase() === "active").length,
+    totalCards: rows.length,
+    cardsWithStoredMedia: rows.filter(hasStoredMedia).length,
+  };
+}
+
+async function loadEntityCounts(supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"]): Promise<EntityCounts> {
+  const [{ count: agents }, { count: advertiserPages }] = await Promise.all([
+    supabase.schema("research").from("agents").select("id", { count: "exact", head: true }),
+    supabase.schema("research").from("advertiser_pages").select("id", { count: "exact", head: true }),
+  ]);
+
+  return {
+    agents: agents ?? 0,
+    advertiserPages: advertiserPages ?? 0,
+  };
+}
+
 export default async function OperatorResearchPage() {
   const { supabase } = await requirePageSurfaceAccess("monitor");
-  const [coverage, runs, defects] = await Promise.all([
+  const [coverage, runs, defects, adLibraryStats, entityCounts] = await Promise.all([
     loadCoverage(supabase).catch(() => [] as CoverageRow[]),
     loadRuns(supabase).catch(() => [] as RunRow[]),
     loadDefects(supabase).catch(() => [] as DefectRow[]),
+    loadAdLibraryStats(supabase).catch(() => ({ activeCards: 0, totalCards: 0, cardsWithStoredMedia: 0 })),
+    loadEntityCounts(supabase).catch(() => ({ agents: 0, advertiserPages: 0 })),
   ]);
 
-  const liveAds = coverage.reduce((acc, r) => acc + (r.live_active_ads ?? 0), 0);
-  const liveAgents = coverage.reduce((acc, r) => acc + (r.live_agents ?? 0), 0);
+  const postcodeMatchedAds = coverage.reduce((acc, r) => acc + (r.live_active_ads ?? 0), 0);
   const openDefects = defects.length;
   const failedRunsLast20 = runs.filter((r) => r.status === "failed").length;
   const totalCost24h = runs
     .filter((r) => new Date(r.started_at).getTime() > Date.now() - 24 * 3600 * 1000)
     .reduce((a, r) => a + (Number(r.cost_usd) || 0), 0);
-
-  const externalLinks = [
-    { label: "AionUi cockpit", url: "https://aion.blockwise.sale", note: "Visual Hermes control" },
-    { label: "Coolify", url: "https://coolify.blockwise.sale", note: "VPS / deploy / logs" },
-    { label: "Hermes admin", url: "https://hermes.blockwise.sale", note: "Skill management" },
-    { label: "Uptime Kuma", url: "https://uptime.blockwise.sale", note: "Service monitors" },
-  ];
 
   return (
     <main className="content">
@@ -114,23 +154,27 @@ export default async function OperatorResearchPage() {
       />
 
       <section className="grid cols-4">
-        <MetricCard icon={Signal} label="Live active ads" value={String(liveAds)} note="Across all covered postcodes" />
-        <MetricCard icon={Activity} label="Known agents" value={String(liveAgents)} note="From census + page resolution" />
-        <MetricCard icon={AlertOctagon} label="Open defects" value={String(openDefects)} note="Gaps awaiting investigation" />
-        <MetricCard icon={Timer} label="24h collector spend" value={`$${totalCost24h.toFixed(2)}`} note={`${failedRunsLast20} failed in last 20 runs`} />
+        <MetricCard icon={Signal} label="Active ad cards" value={String(adLibraryStats.activeCards)} note={`${adLibraryStats.totalCards} customer-visible cards`} />
+        <MetricCard icon={Activity} label="Postcode-matched ads" value={String(postcodeMatchedAds)} note="Coverage rows, not the library total" />
+        <MetricCard icon={Bot} label="Known agents" value={String(entityCounts.agents)} note={`${entityCounts.advertiserPages} advertiser pages`} />
+        <MetricCard icon={AlertOctagon} label="Open defects" value={String(openDefects)} note={`${failedRunsLast20} failed runs in last 20`} />
       </section>
 
       <section className="panel">
-        <h2>External cockpits</h2>
-        <div className="grid cols-4">
-          {externalLinks.map((link) => (
-            <a key={link.label} className="item-card" href={link.url} target="_blank" rel="noreferrer">
-              <h3>
-                {link.label} <ExternalLink size={14} />
-              </h3>
-              <p className="item-meta">{link.note}</p>
-            </a>
-          ))}
+        <h2>Hermes runtime</h2>
+        <div className="grid cols-3">
+          <article className="item-card">
+            <h3>Media archive</h3>
+            <p className="item-meta">{adLibraryStats.cardsWithStoredMedia} cards have stored creative media.</p>
+          </article>
+          <article className="item-card">
+            <h3>Scheduler</h3>
+            <p className="item-meta">${totalCost24h.toFixed(2)} collector spend in the last 24h.</p>
+          </article>
+          <article className="item-card">
+            <h3>Access</h3>
+            <p className="item-meta">Hermes controls are inside Blockwise Research Ops.</p>
+          </article>
         </div>
       </section>
 
@@ -287,6 +331,14 @@ export default async function OperatorResearchPage() {
         </table>
       </section>
     </main>
+  );
+}
+
+function hasStoredMedia(row: AdLibraryCardRow): boolean {
+  return Boolean(
+    row.image_storage_path ||
+      row.video_storage_path ||
+      (Array.isArray(row.media_assets) && row.media_assets.length > 0),
   );
 }
 

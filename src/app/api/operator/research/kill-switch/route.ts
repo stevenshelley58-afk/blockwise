@@ -6,9 +6,22 @@ import { requireOperator } from "@/lib/operator/auth";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  paused: z.boolean(),
+  paused: z.preprocess((value) => value === true || value === "true", z.boolean()),
   reason: z.string().nullable().optional(),
 });
+
+async function parseBody(req: Request) {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return { body: await req.json(), redirectAfter: false };
+  }
+
+  const formData = await req.formData();
+  return {
+    body: Object.fromEntries(formData.entries()),
+    redirectAfter: true,
+  };
+}
 
 /**
  * POST /api/operator/research/kill-switch
@@ -20,7 +33,8 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
-  const parsed = bodySchema.safeParse(await req.json());
+  const { body, redirectAfter } = await parseBody(req);
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { paused, reason } = parsed.data;
 
@@ -40,6 +54,10 @@ export async function POST(req: Request) {
     confidence: 100,
     hermes_skill: "operator-console",
   });
+
+  if (redirectAfter) {
+    return NextResponse.redirect(new URL("/operator/research", req.url), 303);
+  }
 
   return NextResponse.json({ ok: true, paused });
 }
