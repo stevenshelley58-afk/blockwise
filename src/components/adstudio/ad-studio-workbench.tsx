@@ -18,6 +18,8 @@ import {
   Link2,
   MapPin,
   Megaphone,
+  Minus,
+  Monitor,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -70,9 +72,8 @@ type StudioSection =
   | "landing"
   | "publish"
   | "settings";
-type InspectorTab = "checklist" | "variants" | "edit" | "publish";
+type InspectorTab = "edit" | "publish";
 type PreviewFormat = "story" | "feed" | "square" | "landscape";
-type PreviewMode = "platform" | "creative";
 type SelectedElement = "headline" | "primaryText" | "description" | "cta" | "image";
 type SaveState = "saved" | "saving" | "error";
 
@@ -272,11 +273,10 @@ export function AdStudioWorkbench({
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const [section, setSection] = useState<StudioSection>("campaign");
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("checklist");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("publish");
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("story");
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("platform");
   const [device, setDevice] = useState<"mobile" | "desktop">("mobile");
   const [zoom, setZoom] = useState(75);
   const [copy, setCopy] = useState<CopyState>(() => seedCopy(initialPack));
@@ -350,7 +350,6 @@ export function AdStudioWorkbench({
     setSelectedVariantIndex(index);
     setCopy(seedCopy(pack, index));
     setPrimaryImage(MEDIA_ASSETS[index % MEDIA_ASSETS.length].src);
-    setInspectorTab("variants");
   }
 
   async function postJson<T>(url: string, body: Record<string, unknown>, method = "POST"): Promise<T> {
@@ -384,7 +383,6 @@ export function AdStudioWorkbench({
   async function generateVariantsForAngle(angle: AngleCard) {
     setSelectedAngleId(angle.id);
     setSection("angles");
-    setInspectorTab("variants");
     setBusy(true);
     setBusyMessage(`Generating ${angle.name} variants`);
     setOfferLabel(angle.name === "Free Appraisal" ? "Free appraisal" : angle.name);
@@ -566,10 +564,6 @@ export function AdStudioWorkbench({
           <strong>Ad Studio</strong>
         </div>
         <div className="studio-actions">
-          <button className="studio-btn secondary" type="button" onClick={() => setPreviewMode("platform")}>
-            <Smartphone aria-hidden size={17} />
-            Preview
-          </button>
           <button className="studio-btn secondary" type="button" onClick={saveDraft}>
             <Cloud aria-hidden size={17} />
             Save
@@ -667,8 +661,6 @@ export function AdStudioWorkbench({
           <PreviewControls
             previewFormat={previewFormat}
             setPreviewFormat={setPreviewFormat}
-            previewMode={previewMode}
-            setPreviewMode={setPreviewMode}
             zoom={zoom}
             setZoom={setZoom}
             device={device}
@@ -683,7 +675,6 @@ export function AdStudioWorkbench({
               copy={copy}
               image={primaryImage}
               format={previewFormat}
-              mode={previewMode}
               zoom={zoom}
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
@@ -711,9 +702,6 @@ export function AdStudioWorkbench({
             setTab={setInspectorTab}
             readinessScore={readinessScore}
             readinessItems={readinessItems}
-            variants={variants}
-            selectedVariantIndex={selectedVariantIndex}
-            onSelectVariant={selectVariant}
             selectedElement={selectedElement}
             copy={copy}
             updateCopy={updateCopy}
@@ -752,7 +740,6 @@ export function AdStudioWorkbench({
               copy={copy}
               image={primaryImage}
               format={previewFormat}
-              mode="platform"
               zoom={100}
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
@@ -795,7 +782,7 @@ export function AdStudioWorkbench({
       <footer className="studio-statusbar">
         <span className={saveState === "error" ? "error" : ""}>{statusText}</span>
         <span>{format.label} | {format.size}</span>
-        <span>{previewMode === "platform" ? "Platform preview" : "Creative preview"}</span>
+        <span>In-feed preview</span>
       </footer>
 
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
@@ -1121,8 +1108,6 @@ function FieldShell({ label, icon: Icon, children }: { label: string; icon?: Luc
 function PreviewControls({
   previewFormat,
   setPreviewFormat,
-  previewMode,
-  setPreviewMode,
   zoom,
   setZoom,
   device,
@@ -1130,58 +1115,46 @@ function PreviewControls({
 }: {
   previewFormat: PreviewFormat;
   setPreviewFormat: (format: PreviewFormat) => void;
-  previewMode: PreviewMode;
-  setPreviewMode: (mode: PreviewMode) => void;
   zoom: number;
   setZoom: (zoom: number) => void;
   device: "mobile" | "desktop";
   setDevice: (device: "mobile" | "desktop") => void;
 }) {
+  const zoomMin = 50;
+  const zoomMax = 150;
+  const zoomStep = 25;
   return (
     <div className="studio-preview-controls">
-      <div className="studio-segment">
-        {(["story", "feed", "square", "landscape"] as PreviewFormat[]).map((item) => (
-          <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
-            <span>{FORMAT_META[item].label}</span>
-            <small>{FORMAT_META[item].size}</small>
-          </button>
-        ))}
+      <div className="studio-format-group">
+        <div className="studio-segment">
+          {(["story", "feed", "square", "landscape"] as PreviewFormat[]).map((item) => (
+            <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
+              {FORMAT_META[item].label}
+            </button>
+          ))}
+        </div>
+        <span className="studio-format-size">{FORMAT_META[previewFormat].size.replace("x", " × ")}</span>
       </div>
       <div className="studio-control-right">
-        <Segmented
-          options={[
-            { id: "platform", label: "Platform" },
-            { id: "creative", label: "Creative" },
-          ]}
-          value={previewMode}
-          onChange={(value) => setPreviewMode(value as PreviewMode)}
-        />
-        <Segmented
-          options={[50, 75, 100].map((value) => ({ id: String(value), label: String(value) }))}
-          value={String(zoom)}
-          onChange={(value) => setZoom(Number(value))}
-        />
-        <Segmented
-          options={[
-            { id: "mobile", label: "Mobile" },
-            { id: "desktop", label: "Desktop" },
-          ]}
-          value={device}
-          onChange={(value) => setDevice(value as "mobile" | "desktop")}
-        />
+        <div className="studio-zoom">
+          <button type="button" aria-label="Zoom out" disabled={zoom <= zoomMin} onClick={() => setZoom(Math.max(zoomMin, zoom - zoomStep))}>
+            <Minus aria-hidden size={16} />
+          </button>
+          <span>{zoom}%</span>
+          <button type="button" aria-label="Zoom in" disabled={zoom >= zoomMax} onClick={() => setZoom(Math.min(zoomMax, zoom + zoomStep))}>
+            <Plus aria-hidden size={16} />
+          </button>
+        </div>
+        <span className="studio-control-sep" aria-hidden />
+        <div className="studio-segment icons">
+          <button className={device === "mobile" ? "active" : ""} type="button" aria-label="Mobile preview" onClick={() => setDevice("mobile")}>
+            <Smartphone aria-hidden size={17} />
+          </button>
+          <button className={device === "desktop" ? "active" : ""} type="button" aria-label="Desktop preview" onClick={() => setDevice("desktop")}>
+            <Monitor aria-hidden size={17} />
+          </button>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function Segmented({ options, value, onChange }: { options: Array<{ id: string; label: string }>; value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="studio-mini-segment">
-      {options.map((option) => (
-        <button className={value === option.id ? "active" : ""} key={option.id} type="button" onClick={() => onChange(option.id)}>
-          {option.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -1193,7 +1166,6 @@ function AdPreview({
   copy,
   image,
   format,
-  mode,
   zoom,
   selectedElement,
   setSelectedElement,
@@ -1204,7 +1176,6 @@ function AdPreview({
   copy: CopyState;
   image: string;
   format: PreviewFormat;
-  mode: PreviewMode;
   zoom: number;
   selectedElement: SelectedElement;
   setSelectedElement: (element: SelectedElement) => void;
@@ -1214,18 +1185,16 @@ function AdPreview({
   if (format === "story") {
     return (
       <div className="studio-preview-device" style={transform}>
-        <div className={mode === "creative" ? "studio-story-card creative" : "studio-story-card"}>
+        <div className="studio-story-card">
           <img src={image} alt="" />
           <span className="studio-story-shade" />
-          {mode === "platform" && (
-            <div className="studio-story-brand">
-              <span>{initials}</span>
-              <div>
-                <strong>{brand}</strong>
-                <small>Sponsored</small>
-              </div>
+          <div className="studio-story-brand">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
             </div>
-          )}
+          </div>
           <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
           <button
             className={selectedElement === "headline" ? "studio-story-headline selected" : "studio-story-headline"}
@@ -1250,55 +1219,22 @@ function AdPreview({
     );
   }
 
-  if (mode === "creative") {
-    return (
-      <div className="studio-preview-device" style={transform}>
-        <div className={format === "landscape" ? "studio-creative-card landscape" : "studio-creative-card"}>
-          <img src={image} alt="" />
-          <span className="studio-creative-shade" />
-          <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
-          <button
-            className={selectedElement === "headline" ? "studio-creative-headline selected" : "studio-creative-headline"}
-            type="button"
-            onClick={() => setSelectedElement("headline")}
-          >
-            {copy.headline}
-          </button>
-          <button
-            className={selectedElement === "description" ? "studio-creative-body selected" : "studio-creative-body"}
-            type="button"
-            onClick={() => setSelectedElement("description")}
-          >
-            {copy.description}
-          </button>
-          <button className={selectedElement === "cta" ? "studio-creative-cta selected" : "studio-creative-cta"} type="button" onClick={() => setSelectedElement("cta")}>
-            {copy.cta}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="studio-preview-device" style={transform}>
       <article className={format === "landscape" ? "studio-feed-card landscape" : "studio-feed-card"}>
-        {mode === "platform" && (
-          <header>
-            <div className="studio-feed-id">
-              <span>{initials}</span>
-              <div>
-                <strong>{brand}</strong>
-                <small>Sponsored</small>
-              </div>
+        <header>
+          <div className="studio-feed-id">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
             </div>
-            <MoreHorizontal aria-hidden size={18} />
-          </header>
-        )}
-        {mode === "platform" && (
-          <button className={selectedElement === "primaryText" ? "studio-feed-primary selected" : "studio-feed-primary"} type="button" onClick={() => setSelectedElement("primaryText")}>
-            {copy.primaryText}
-          </button>
-        )}
+          </div>
+          <MoreHorizontal aria-hidden size={18} />
+        </header>
+        <button className={selectedElement === "primaryText" ? "studio-feed-primary selected" : "studio-feed-primary"} type="button" onClick={() => setSelectedElement("primaryText")}>
+          {copy.primaryText}
+        </button>
         <button className="studio-feed-image" type="button" onClick={() => setSelectedElement("image")}>
           <img src={image} alt="" />
         </button>
@@ -1365,9 +1301,6 @@ function Inspector({
   setTab,
   readinessScore,
   readinessItems,
-  variants,
-  selectedVariantIndex,
-  onSelectVariant,
   selectedElement,
   copy,
   updateCopy,
@@ -1381,9 +1314,6 @@ function Inspector({
   setTab: (tab: InspectorTab) => void;
   readinessScore: number;
   readinessItems: ReadinessItem[];
-  variants: Array<{ variantId: string; displayName: string; angleLabel: string; image: string; headline: string; offer: string; cta: string }>;
-  selectedVariantIndex: number;
-  onSelectVariant: (index: number) => void;
   selectedElement: SelectedElement;
   copy: CopyState;
   updateCopy: (key: keyof CopyState, value: string) => void;
@@ -1396,33 +1326,13 @@ function Inspector({
   return (
     <>
       <div className="studio-inspector-tabs">
-        {(["checklist", "variants", "edit", "publish"] as InspectorTab[]).map((item) => (
+        {(["edit", "publish"] as InspectorTab[]).map((item) => (
           <button className={tab === item ? "active" : ""} key={item} type="button" onClick={() => setTab(item)}>
             {item.charAt(0).toUpperCase() + item.slice(1)}
           </button>
         ))}
       </div>
 
-      {tab === "checklist" && <ReadinessCard score={readinessScore} items={readinessItems} compact={false} />}
-      {tab === "variants" && (
-        <div className="studio-inspector-list">
-          {variants.map((variant, index) => (
-            <article className={selectedVariantIndex === index ? "active" : ""} key={variant.variantId}>
-              <img src={variant.image} alt="" />
-              <div>
-                <strong>{variant.displayName}: {variant.angleLabel}</strong>
-                <small>{variant.headline}</small>
-                <div className="studio-card-actions">
-                  <button type="button" onClick={() => onSelectVariant(index)}>Preview</button>
-                  <button type="button" onClick={() => onSelectVariant(index)}>Use</button>
-                  <button type="button">Duplicate</button>
-                  <button type="button">Regenerate</button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
       {tab === "edit" && (
         <div className="studio-edit-panel">
           <PanelHeader title={selectedElement === "image" ? "Edit image" : "Edit copy"} detail={selectedElement === "image" ? "Replace and crop inside safe areas." : "Keep copy clear and local."} />
@@ -1453,7 +1363,12 @@ function Inspector({
           )}
         </div>
       )}
-      {tab === "publish" && <PublishPanel destinationUrl={destinationUrl} blocker={publishBlocker} onExport={onExport} />}
+      {tab === "publish" && (
+        <div className="studio-inspector-publish">
+          <ReadinessCard score={readinessScore} items={readinessItems} compact={false} />
+          <PublishPanel destinationUrl={destinationUrl} blocker={publishBlocker} onExport={onExport} />
+        </div>
+      )}
     </>
   );
 }
@@ -1569,7 +1484,7 @@ const STYLES = `
 .studio-rail{border-right:1px solid var(--line);background:#fff;padding:22px 16px;display:grid;align-content:start;gap:8px}
 .studio-rail button{height:54px;border:0;border-radius:8px;background:transparent;color:var(--ink);display:flex;align-items:center;gap:14px;padding:0 18px;font-weight:750;text-align:left}
 .studio-rail button:hover,.studio-rail button.active{background:#f3f4f6}
-.studio-left-panel{min-width:0;overflow:auto;border-right:1px solid var(--line);padding:30px 28px;display:flex;flex-direction:column;gap:22px}
+.studio-left-panel{min-width:0;min-height:0;overflow:auto;border-right:1px solid var(--line);padding:30px 28px;display:flex;flex-direction:column;gap:22px}
 .studio-panel-header h2{margin:0 0 8px;font-size:22px;line-height:1.1;font-weight:750;letter-spacing:0}
 .studio-panel-header p{margin:0;color:var(--muted);font-size:14px}
 .studio-field{display:grid;gap:8px}
@@ -1611,15 +1526,21 @@ const STYLES = `
 .studio-assist-row{display:flex;flex-wrap:wrap;gap:8px}
 .studio-assist-row button,.studio-card-actions button{border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:32px;padding:0 10px;font-size:12px;font-weight:750}
 .studio-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:11px 0;font-weight:700}
-.studio-preview-column{min-width:0;display:flex;flex-direction:column;background:#fafafa}
-.studio-preview-controls{min-height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 22px;background:#fff}
-.studio-segment,.studio-mini-segment{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;background:#f6f6f6;padding:4px}
-.studio-segment button,.studio-mini-segment button{border:0;border-radius:7px;background:transparent;color:var(--ink);min-height:34px;padding:4px 13px;font-weight:750}
-.studio-segment button{display:grid;gap:1px;text-align:center;min-width:86px}
-.studio-segment button small{font-size:10px;color:var(--muted)}
-.studio-segment button.active,.studio-mini-segment button.active{background:#111;color:#fff}
-.studio-segment button.active small{color:#fff}
-.studio-control-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.studio-preview-column{min-width:0;min-height:0;display:flex;flex-direction:column;background:#fafafa}
+.studio-preview-controls{min-height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 22px;background:#fff;flex-wrap:wrap}
+.studio-format-group{display:inline-flex;align-items:center;gap:12px;min-width:0}
+.studio-format-size{font-size:12px;color:var(--muted);white-space:nowrap}
+.studio-segment{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:8px;background:#f6f6f6;padding:3px}
+.studio-segment button{border:0;border-radius:6px;background:transparent;color:var(--ink);height:32px;padding:0 14px;font-weight:750;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.studio-segment button.active{background:#111;color:#fff}
+.studio-segment.icons button{width:34px;padding:0;justify-content:center}
+.studio-control-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.studio-control-sep{width:1px;height:22px;background:var(--line)}
+.studio-zoom{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#f6f6f6;padding:3px}
+.studio-zoom button{width:32px;height:32px;border:0;border-radius:6px;background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
+.studio-zoom button:hover:not(:disabled){background:#ececec}
+.studio-zoom button:disabled{opacity:.4;cursor:not-allowed}
+.studio-zoom span{min-width:48px;text-align:center;font-weight:750;font-size:13px}
 .studio-stage{position:relative;flex:1;min-height:0;display:grid;place-items:center;overflow:auto;padding:34px}
 .studio-preview-device{transform:scale(var(--preview-scale));transform-origin:center;transition:transform .16s ease}
 .studio-story-card{position:relative;width:332px;aspect-ratio:9/16;overflow:hidden;border-radius:22px;background:#111;color:#fff;box-shadow:0 26px 70px rgba(15,23,41,.2)}
@@ -1634,19 +1555,7 @@ const STYLES = `
 .studio-story-headline{left:24px;right:24px;bottom:158px;font-family:Georgia,serif;font-size:35px;line-height:1.03;font-weight:750;text-shadow:0 2px 12px rgba(0,0,0,.55)}
 .studio-story-body{left:24px;right:58px;bottom:104px;font-size:22px;line-height:1.18;text-shadow:0 2px 9px rgba(0,0,0,.55)}
 .studio-story-cta{left:24px;right:24px;bottom:24px;min-height:54px;border-radius:8px;background:#fff;color:#111;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:16px;font-weight:800;box-shadow:0 8px 22px rgba(0,0,0,.26)}
-.studio-story-card.creative .studio-story-brand{display:none}
 .selected{outline:2px solid #fff;outline-offset:3px}
-.studio-creative-card{position:relative;width:392px;aspect-ratio:1/1;overflow:hidden;border-radius:8px;background:#111;color:#fff;box-shadow:0 18px 55px rgba(15,23,41,.12)}
-.studio-creative-card.landscape{width:560px;aspect-ratio:1.91/1}
-.studio-creative-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.studio-creative-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.68))}
-.studio-creative-headline,.studio-creative-body,.studio-creative-cta{position:absolute;z-index:4;border:0;background:transparent;color:#fff;text-align:left;padding:0}
-.studio-creative-headline{left:24px;right:24px;bottom:104px;font-family:Georgia,serif;font-size:30px;line-height:1.05;font-weight:750;text-shadow:0 2px 12px rgba(0,0,0,.5)}
-.studio-creative-body{left:24px;right:24px;bottom:66px;font-size:17px;line-height:1.25;text-shadow:0 2px 9px rgba(0,0,0,.48)}
-.studio-creative-cta{left:24px;bottom:22px;min-height:36px;border-radius:8px;background:#fff;color:#111;padding:0 14px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.22)}
-.studio-creative-card.landscape .studio-creative-headline{right:190px;bottom:86px}
-.studio-creative-card.landscape .studio-creative-body{right:190px;bottom:50px}
-.studio-creative-card.landscape .studio-creative-cta{bottom:18px}
 .studio-feed-card{width:392px;overflow:hidden;border:1px solid #e6e8ed;border-radius:24px;background:#fff;box-shadow:0 18px 55px rgba(15,23,41,.12)}
 .studio-feed-card.landscape{width:560px}
 .studio-feed-card header{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 18px}
@@ -1682,7 +1591,8 @@ const STYLES = `
 .studio-variant-tile strong{margin-top:8px}
 .studio-variant-tile small{color:var(--muted)}
 .studio-add-variant{display:grid;place-items:center;align-content:center;gap:8px;border-style:dashed;color:var(--ink);min-height:164px}
-.studio-inspector{border-left:1px solid var(--line);background:#fff;padding:22px 22px 26px;overflow:auto}
+.studio-inspector{min-height:0;border-left:1px solid var(--line);background:#fff;padding:22px 22px 26px;overflow:auto}
+.studio-inspector-publish{display:grid;gap:18px}
 .studio-inspector-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border:1px solid var(--line);border-radius:8px;background:#f6f6f6;padding:4px;margin-bottom:22px}
 .studio-inspector-tabs button{border:0;border-radius:7px;background:transparent;color:var(--ink);min-height:36px;font-weight:750}
 .studio-inspector-tabs button.active{background:#fff;box-shadow:0 1px 2px rgba(15,23,41,.05)}
@@ -1702,11 +1612,7 @@ const STYLES = `
 .studio-checklist strong,.studio-checklist small{display:block}
 .studio-checklist small{color:var(--muted);line-height:1.35}
 .studio-recommendations{width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;margin-top:22px;font-weight:750}
-.studio-inspector-list,.studio-edit-panel,.studio-publish-panel{display:grid;gap:14px}
-.studio-inspector-list article{display:grid;grid-template-columns:86px 1fr;gap:12px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px}
-.studio-inspector-list article.active{border-color:#111}
-.studio-inspector-list img{width:86px;height:78px;object-fit:cover;border-radius:7px}
-.studio-inspector-list small{display:block;color:var(--muted);margin:3px 0 8px}
+.studio-edit-panel,.studio-publish-panel{display:grid;gap:14px}
 .studio-publish-blocker,.studio-publish-ready{border-radius:8px;padding:12px;font-weight:750}
 .studio-publish-blocker{background:#fff2f2;color:#b91c1c;border:1px solid #ffd5d5}
 .studio-publish-ready{background:#edf8f0;color:#126b35;border:1px solid #cdebd4}
@@ -1739,8 +1645,8 @@ const STYLES = `
   .studio-mobile-preview-wrap{display:grid;place-items:center}
   .studio-mobile-preview-wrap .studio-preview-device{transform:none}
   .studio-mobile-preview-wrap .studio-story-card{width:min(340px,88vw)}
-  .studio-mobile-preview-wrap .studio-feed-card,.studio-mobile-preview-wrap .studio-creative-card{width:min(340px,88vw);border-radius:18px}
-  .studio-mobile-preview-wrap .studio-feed-card.landscape,.studio-mobile-preview-wrap .studio-creative-card.landscape{width:min(340px,88vw)}
+  .studio-mobile-preview-wrap .studio-feed-card{width:min(340px,88vw);border-radius:18px}
+  .studio-mobile-preview-wrap .studio-feed-card.landscape{width:min(340px,88vw)}
   .studio-mobile-variants{margin-top:24px}
   .studio-mobile-variants .studio-variant-strip{border:0;padding:0;background:transparent}
   .studio-variant-strip.compact .studio-variant-tile{width:132px}

@@ -3,13 +3,13 @@
 import {
   Activity,
   Bot,
-  Building2,
   ClipboardCheck,
   FileSearch,
   Gauge,
   Images,
   LayoutDashboard,
   Megaphone,
+  Settings,
   Settings2,
   Sparkles,
   UsersRound,
@@ -36,26 +36,26 @@ const operatorNavItems: NavItem[] = [
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 
+// Self-serve = monitor's view + Ad Studio. The self-serve home (/self-serve)
+// is reached via the brand logo and post-login redirect, not a sidebar link.
 const selfServeNavItems: NavItem[] = [
-  { href: "/self-serve", label: "Create", icon: Sparkles },
   { href: "/monitor", label: "Monitor", icon: Gauge },
   { href: "/research", label: "Research", icon: FileSearch },
-  { href: "/ad-studio", label: "Ad Studio", icon: Images },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/ad-studio", label: "Ad Studio", icon: Images },
 ];
 
 const monitorNavItems: NavItem[] = [
   { href: "/monitor", label: "Monitor", icon: Gauge },
   { href: "/research", label: "Research", icon: FileSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const navByVariant: Record<SidebarVariant, NavItem[]> = {

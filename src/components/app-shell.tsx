@@ -5,6 +5,7 @@ import { AccountMenu } from "@/components/account-menu";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
+import { hasOperatorAccessFromRows } from "@/lib/auth/workspace-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AppShellProps = {
@@ -46,8 +47,8 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
       .order("created_at", { ascending: true }),
   ]);
 
-  const isOperator = Boolean(profile?.is_operator);
   const membershipRows = (memberships ?? []) as MembershipRow[];
+  const isOperator = hasOperatorAccessFromRows(profile, membershipRows);
   const primaryMembership = membershipRows[0];
   const workspace = normalizeWorkspace(primaryMembership?.workspaces ?? null);
   const workspaceMode = workspace?.mode === "self_serve" ? "self_serve" : "monitor";

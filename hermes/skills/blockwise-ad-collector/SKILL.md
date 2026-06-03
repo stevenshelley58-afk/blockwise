@@ -20,7 +20,7 @@ pages. The collector never discovers agencies or pages by location.
   },
   "country": "AU",
   "activeStatus": "active",
-  "resultsLimit": 50
+  "resultsLimit": 250
 }
 ```
 
@@ -33,6 +33,7 @@ must explicitly configure a Hermes-owned adapter before live capture:
 HERMES_META_CAPTURE_PROVIDER=disabled
 HERMES_META_CAPTURE_ENDPOINT=<operator-configured-resolved-page-capture-endpoint>
 HERMES_META_CAPTURE_TIMEOUT_MS=30000
+HERMES_META_CAPTURE_RESULTS_LIMIT=250
 ```
 
 Do not use legacy worker-specific collector or hosted-provider environment

@@ -25,6 +25,19 @@ behaviour) still hold.
 - If the index is stale or pending, run `codegraph sync` or trust the MCP watcher after edits.
 - If CodeGraph reports a stale-file banner, read that file directly before editing.
 
+## Deployment and Testing
+
+- Do not run local deployments.
+- Test deployed behavior only through Vercel Preview or Production URLs.
+- Do not use localhost smoke tests as acceptance for deployment readiness.
+
+## Service Access and Tooling
+
+- Use the official CLI, MCP server, or installed plugin for GitHub, Vercel, Supabase, and other hosted services whenever available.
+- If a required GitHub, Vercel, or Supabase action needs authentication, start the normal login flow and wait for the user to approve the OAuth prompt.
+- Do not avoid hosted-service work because authentication is missing; request/login through the approved tool path instead.
+- Prefer MCPs and plugins over browser scraping, and prefer CLIs over ad hoc API calls when the CLI supports the task.
+
 ## Hard Rules
 
 These always hold, in both modes:

@@ -9,7 +9,7 @@ import { listCampaignReadinessRows } from "@/lib/product/live-data";
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
-  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
+  const { supabase, access } = await requirePageSurfaceAccess("campaigns");
   const campaigns = await listCampaignReadinessRows(supabase, access.workspaceId);
   const readyCount = campaigns.filter((campaign) => campaign.readiness.ready).length;
   const blockedCount = campaigns.length - readyCount;

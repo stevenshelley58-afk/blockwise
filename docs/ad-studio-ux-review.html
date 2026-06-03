@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise Ad Studio — UX/UI Review</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --ink:#15181d; --muted:#5b6270; --line:#e4e7ec;
+    --crit:#d93025; --high:#e8710a; --med:#f4a000; --low:#5f6368; --ok:#1e8e54;
+    --crit-bg:#fdeceb; --high-bg:#fdf0e6; --med-bg:#fdf6e3; --low-bg:#eef0f2; --ok-bg:#e7f6ee;
+    --accent:#111;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:#1558d6}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+  header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:6px}
+  h1{font-size:26px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:4px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .d-crit{background:var(--crit)} .d-high{background:var(--high)} .d-med{background:var(--med)} .d-low{background:var(--low)} .d-ok{background:var(--ok)}
+
+  nav.tabs{position:sticky;top:0;z-index:5;display:flex;gap:4px;flex-wrap:wrap;background:var(--bg);padding:14px 0 12px;margin-top:14px;border-bottom:1px solid var(--line)}
+  nav.tabs button{border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:700;font-size:13.5px;padding:9px 14px;border-radius:9px;cursor:pointer}
+  nav.tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  section.tab{display:none;padding-top:22px}
+  section.tab.active{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+  .callout{background:linear-gradient(180deg,#fff, #fbfcfe);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .callout h2{margin:0 0 8px;font-size:18px}
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 4px}
+  .stat{flex:1 1 150px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat b{display:block;font-size:30px;line-height:1.1;letter-spacing:-.02em}
+  .stat span{color:var(--muted);font-size:12.5px}
+  h2.sec{font-size:16px;margin:22px 0 10px}
+  ul.clean{margin:8px 0;padding-left:18px} ul.clean li{margin:5px 0}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted)}
+  .filters button.active{color:#fff}
+  .filters button[data-f="all"].active{background:var(--accent);border-color:var(--accent)}
+  .filters button[data-f="crit"].active{background:var(--crit);border-color:var(--crit)}
+  .filters button[data-f="high"].active{background:var(--high);border-color:var(--high)}
+  .filters button[data-f="med"].active{background:var(--med);border-color:var(--med);color:#3a2c00}
+  .filters button[data-f="low"].active{background:var(--low);border-color:var(--low)}
+
+  .issue{background:#fff;border:1px solid var(--line);border-left-width:5px;border-radius:11px;padding:15px 17px;margin-bottom:12px}
+  .issue.crit{border-left-color:var(--crit)} .issue.high{border-left-color:var(--high)}
+  .issue.med{border-left-color:var(--med)} .issue.low{border-left-color:var(--low)}
+  .issue .hd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+  .tag.crit{background:var(--crit-bg);color:var(--crit)} .tag.high{background:var(--high-bg);color:var(--high)}
+  .tag.med{background:var(--med-bg);color:#9a6b00} .tag.low{background:var(--low-bg);color:var(--low)}
+  .issue h3{font-size:15.5px;margin:0;flex:1 1 auto}
+  .loc{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#9a3b2f;background:#fbeae8;border-radius:6px;padding:2px 7px;white-space:nowrap}
+  .issue .row{margin-top:9px;font-size:13.7px}
+  .issue .row b{color:var(--muted);font-weight:700;display:inline-block;min-width:64px}
+  .api{display:inline-block;font:11.5px ui-monospace,Menlo,Consolas,monospace;background:var(--ok-bg);color:var(--ok);border:1px solid #bfe6cf;border-radius:6px;padding:1px 7px;margin-top:8px}
+  .api.warn{background:#fff6e3;color:#8a5a00;border-color:#f0d79a}
+
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.3px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#fafbfc;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+  td code{font:12px ui-monospace,Menlo,Consolas,monospace;color:#9a3b2f}
+  tr:last-child td{border-bottom:0}
+  .yes{color:var(--ok);font-weight:800} .no{color:var(--high);font-weight:800}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .flowbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .flowbox h3{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .step{border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin:8px 0;font-size:13px;position:relative}
+  .step.bad{background:var(--crit-bg);border-color:#f3c2bd}
+  .step.good{background:var(--ok-bg);border-color:#bfe6cf}
+  .step .ref{font-size:11px;font-weight:800;opacity:.7}
+  .arrow{text-align:center;color:var(--muted);font-size:14px;margin:-2px 0}
+  .wire{display:grid;grid-template-columns:1fr 26px 1fr;gap:8px;align-items:center;margin:7px 0}
+  .wire .u{background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.7px}
+  .wire .a{font:11.5px ui-monospace,Menlo,Consolas,monospace;border-radius:8px;padding:7px 10px;font-size:11.5px}
+  .wire .a.ok{background:var(--ok-bg);border:1px solid #bfe6cf;color:#0b5e34}
+  .wire .a.no{background:var(--crit-bg);border:1px solid #f3c2bd;color:#8a241b}
+  .wire .lnk{text-align:center;font-weight:800}
+  .wire .lnk.ok{color:var(--ok)} .wire .lnk.no{color:var(--crit)}
+  .tree{font-size:13px;line-height:1.9}
+  .tree .node{padding:2px 0}
+  .badge{font-size:11px;font-weight:800;border-radius:5px;padding:1px 6px;margin-left:6px}
+  .badge.b-bad{background:var(--crit-bg);color:var(--crit)} .badge.b-ok{background:var(--ok-bg);color:var(--ok)} .badge.b-warn{background:var(--med-bg);color:#9a6b00}
+
+  .phase{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:13px;border-top:4px solid var(--accent)}
+  .phase h3{margin:0 0 4px;font-size:15.5px}
+  .phase .eff{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .phase ol{margin:0;padding-left:20px} .phase ol li{margin:6px 0;font-size:13.7px}
+  .mini{font-size:11px;font-weight:800;border-radius:5px;padding:1px 6px;background:#eef0f2;color:#444;margin-right:4px}
+  footer{color:var(--muted);font-size:12px;margin-top:26px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Blockwise Ad Studio — UX/UI Review</h1>
+      <div class="sub">First-time-user walkthrough of <b>blockwise.sale/ad-studio</b> + full source read · 2 June 2026</div>
+    </div>
+    <div class="legend">
+      <span class="pill"><span class="dot d-crit"></span>5 Critical</span>
+      <span class="pill"><span class="dot d-high"></span>9 High</span>
+      <span class="pill"><span class="dot d-med"></span>8 Medium</span>
+      <span class="pill"><span class="dot d-low"></span>6 Low</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="issues">Issues</button>
+    <button data-tab="buttons">Broken buttons</button>
+    <button data-tab="diagrams">Flow &amp; diagrams</button>
+    <button data-tab="roadmap">Roadmap</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section class="tab active" id="overview">
+    <div class="callout">
+      <h2>The one thing to understand</h2>
+      <p style="margin:0">The Ad Studio is a <b>beautifully built front-end shell wired to almost nothing.</b> Of the
+      <b>~36 <code>api/adstudio/*</code> endpoints that already work</b>, the UI calls only <b>three</b>
+      (Generate, Save, Export). Updating the brand pack, picking a library image, the six Copy "assist" chips,
+      Duplicate / Approve / Archive / Delete, Regenerate, the real publish-readiness check — all are dead
+      <code>&lt;button&gt;</code>s or hard-coded values. <b>The backend for most already exists</b>, so the bulk of the
+      work is <b>wiring</b>, not building. The design is good; it needs to be connected and sequenced.</p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><b>3 / 36</b><span>API endpoints the UI actually calls</span></div>
+      <div class="stat"><b>~15</b><span>buttons with no <code>onClick</code> (50 buttons, 35 handlers)</span></div>
+      <div class="stat"><b>82%</b><span>readiness score — hard-coded, can never reach 100%</span></div>
+      <div class="stat"><b>143/125</b><span>primary-text length over Meta's limit, unflagged</span></div>
+    </div>
+
+    <h2 class="sec">What's working well (keep it)</h2>
+    <div class="card">
+      <ul class="clean">
+        <li>The four-zone layout — <b>nav rail → setup → live preview → inspector</b> — is the right structure.</li>
+        <li>The <b>live ad preview</b> (Story/Feed/Creative with selectable headline/body/CTA) is polished and the best part of the product.</li>
+        <li><b>Generate variants</b> works end-to-end (<code>POST /campaigns</code> → 201), as do <b>Save</b> and <b>Export creatives</b>.</li>
+        <li>The <b>readiness checklist</b> is the right concept — it just needs to be real.</li>
+        <li>A responsive <b>mobile layout</b> already exists.</li>
+      </ul>
+    </div>
+
+    <h2 class="sec">How this was reviewed</h2>
+    <div class="card">
+      Full read of <code>src/components/adstudio/ad-studio-workbench.tsx</code> (1,762 lines), the page wrapper, and the
+      <code>src/app/api/adstudio/**</code> routes — combined with a live click-through of every control while signed in,
+      capturing screenshots, console errors and network calls. Every finding below was confirmed in code <i>and</i>/<i>or</i> in the live app.
+    </div>
+  </section>
+
+  <!-- ISSUES -->
+  <section class="tab" id="issues">
+    <div class="filters" id="filters">
+      <button data-f="all" class="active">All</button>
+      <button data-f="crit">Critical</button>
+      <button data-f="high">High</button>
+      <button data-f="med">Medium</button>
+      <button data-f="low">Low</button>
+    </div>
+    <div id="issueList"></div>
+  </section>
+
+  <!-- BUTTONS -->
+  <section class="tab" id="buttons">
+    <div class="card" style="margin-bottom:14px">
+      <b>50</b> <code>type="button"</code> elements, only <b>35</b> <code>onClick</code> handlers. The silent controls below
+      mostly map to endpoints that <span class="yes">already exist</span> — wiring, not building. <span class="no">⚠</span> = needs a small new endpoint/feature.
+    </div>
+    <table id="btnTable">
+      <thead><tr><th>Control</th><th>Line(s)</th><th>Today</th><th>Wire to</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- DIAGRAMS -->
+  <section class="tab" id="diagrams">
+    <h2 class="sec">1 · UI wired to 3 of ~36 APIs</h2>
+    <div class="flowbox" id="wireBox"></div>
+
+    <h2 class="sec" style="margin-top:24px">2 · Current flow vs. intended flow</h2>
+    <div class="cols">
+      <div class="flowbox">
+        <h3><span class="dot d-crit"></span> Current — confusing</h3>
+        <div class="step bad">Land in a fake "Northstar Realty" campaign <span class="ref">C4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">9 nav items, no order or progress <span class="ref">M6</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">Brand is read-only — can't change it <span class="ref">C1</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">Copy "assist" chips do nothing <span class="ref">H1</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">Generate → teleports to Angles; goal ignored <span class="ref">M3 · M4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">Readiness stuck at 82% <span class="ref">H3 · H4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step bad">"Publish" → just a zip export <span class="ref">M1</span></div>
+      </div>
+      <div class="flowbox">
+        <h3><span class="dot d-ok"></span> Proposed — guided</h3>
+        <div class="step good">First run: scan brand or pick a sample <span class="ref">C4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Ordered steps with live completion ticks <span class="ref">M6</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Brand editable + Re-scan / Approve <span class="ref">C1</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Copy assist works + limit warnings <span class="ref">H1 · H2 · H5</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Goal drives Generate; stay in place <span class="ref">M3 · M4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Readiness reflects real state → 100% <span class="ref">H3 · H4</span></div>
+        <div class="arrow">↓</div>
+        <div class="step good">Export (manual) vs Publish (live, gated) <span class="ref">M1</span></div>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-top:24px">3 · Component map</h2>
+    <div class="flowbox tree" id="treeBox"></div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section class="tab" id="roadmap">
+    <div class="phase">
+      <h3>Phase 0 — Stop breaking trust</h3>
+      <div class="eff">~½ day · low risk</div>
+      <ol>
+        <li><span class="mini">C3</span>Disable the Vercel Toolbar on production (config) — removes the HUD, INP pop-ups and console crash.</li>
+        <li><span class="mini">C2</span>Add outside-click + Escape dismissal to the "…" menu (~10 lines).</li>
+        <li><span class="mini">H3·H4</span>Compute readiness from real state (can now reach 100%).</li>
+        <li><span class="mini">H5</span>Red over-limit counter + warning when copy exceeds Meta limits.</li>
+        <li><span class="mini">C4</span>Badge demo data as "Sample campaign" until the real empty state ships.</li>
+      </ol>
+    </div>
+    <div class="phase">
+      <h3>Phase 1 — Make the visible buttons real</h3>
+      <div class="eff">~1–2 days</div>
+      <ol>
+        <li><span class="mini">C1</span>Brand pack: editable fields + Re-scan / Save / Approve (APIs exist). <b>Highest user value.</b></li>
+        <li><span class="mini">H1·H2</span>Wire the Copy assist chips and implement all six behaviours.</li>
+        <li><span class="mini">H6</span>Make media-library tiles selectable; optional "Generate image".</li>
+        <li><span class="mini">H9</span>Wire "…" + variant actions to existing endpoints (duplicate, regenerate, archive).</li>
+        <li><span class="mini">H7</span>Make "Preview" open a real full-size preview (or remove it).</li>
+      </ol>
+    </div>
+    <div class="phase">
+      <h3>Phase 2 — Fix the flow &amp; information architecture</h3>
+      <div class="eff">~1–2 days</div>
+      <ol>
+        <li><span class="mini">M1</span>Split Export (manual) from Publish (live) and surface the real <code>publish-readiness</code> checklist.</li>
+        <li><span class="mini">M2</span>Collapse duplicate entry points — one trigger per action.</li>
+        <li><span class="mini">M3·M4</span>Keep the user in place on Generate; make the Campaign goal actually drive it.</li>
+        <li><span class="mini">M5</span>Sync variant labels and preview to one source of truth.</li>
+        <li><span class="mini">M6·M7</span>Ordered steps + live ticks on the rail; real empty/loading states.</li>
+      </ol>
+    </div>
+    <div class="phase">
+      <h3>Phase 3 — Polish</h3>
+      <div class="eff">~½ day</div>
+      <ol>
+        <li><span class="mini">H8·L1</span>Differentiate or remove "Square"; delete dead <code>kind</code>/<code>imageClass</code>.</li>
+        <li><span class="mini">L2–L6</span>Breadcrumb, text truncation, sample copy, save-state feedback.</li>
+        <li><span class="mini">C5</span>Outside the studio: reproduce &amp; fix the landing-page scroll→/login issue.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>Companion to <code>ad-studio-ux-review.md</code> · generated from source-code review + live walkthrough.</footer>
+</div>
+
+<script>
+const ISSUES=[
+ {id:"C1",sev:"crit",t:"Brand pack cannot be updated (the headline complaint)",seen:"Brand section is fully read-only — no Edit, Re-scan, Re-extract, Save or Approve control anywhere. 'Advanced' just expands to a sentence.",loc:"lines 894–921",fix:"Make the panel editable + stateful; add Re-scan / Save / Approve buttons.",api:["PATCH /brand-kits/[id]","POST /brand-kits/[id]/rescan","POST /brand-kits/[id]/approve"]},
+ {id:"C2",sev:"crit",t:"The “…” overflow menu cannot be closed",seen:"Opening the … menu then clicking elsewhere or pressing Escape does nothing — only the … toggle closes it. (Verified live.)",loc:"lines 581–616",fix:"Add a useEffect with mousedown + Escape listeners and a ref; close on outside click.",api:[]},
+ {id:"C3",sev:"crit",t:"Vercel Toolbar / Live feedback exposed to clients (and crashing)",seen:"A floating stopwatch+menu pill and recurring 'INP Issue' pop-ups; console throws InvalidNodeTypeError from vercel.live/_next-live/feedback.",loc:"deployment config",fix:"Disable Vercel Toolbar for Production (or guard @vercel/toolbar to preview only).",api:[]},
+ {id:"C4",sev:"crit",t:"New user is dropped into a fake campaign, no empty state",seen:"First load shows a fully populated 'Northstar Realty' campaign — demo data that looks like the user's own saved work.",loc:"page.tsx lines 8–22",fix:"Branch on liveBundle===null: show first-run/onboarding or clearly badge demo data.",api:["GET /publish-readiness (for real state)"]},
+ {id:"C5",sev:"crit",t:"Landing page: scrolling bounces visitors to /login (carried — verify)",seen:"Reported: scrolling the public homepage redirects to /login each time. Not reproduced this pass (was authenticated); likely keyboard-scroll activating a focused sign-in link.",loc:"landing surface",fix:"Reproduce logged-out; ensure no CTA autofocus and Space/PageDown don't activate an anchor.",api:[]},
+
+ {id:"H1",sev:"high",t:"The six Copy “assist” chips are dead",seen:"In Copy, clicking Make sharper / more local / more premium / more direct / Reduce hype / Generate 5 hooks does nothing — no change, no toast. The identical row in Inspector→Edit works.",loc:"lines 951–957",fix:"Add onClick={()=>applyCopyAssist(label)} (thread it into PanelContent). Fix H2 first.",api:[]},
+ {id:"H2",sev:"high",t:"applyCopyAssist implements only 3 of its 6 labels",seen:"Make sharper, Make more premium and Generate 5 hooks all fall to the else branch (just append '?'). So even the working Inspector copy misbehaves for half.",loc:"lines 535–546",fix:"Implement each label, or route them to the AI copy endpoint.",api:[]},
+ {id:"H3",sev:"high",t:"Readiness score is hard-coded (68/74/82), never 100%",seen:"Score sits at 82% with the demo data regardless of real progress; 'Great. You are almost ready to publish.' always.",loc:"lines 337–341",fix:"Compute from readinessItems (done=1, warn=.5, todo=0 → %).",api:[]},
+ {id:"H4",sev:"high",t:"“Ad copy” & “Call to action” checklist items can never turn green",seen:"Both are permanently amber — they use state: value ? 'warn' : 'todo' with no path to 'done'.",loc:"lines 327–328",fix:"Add real validation → done when within limits / CTA chosen.",api:[]},
+ {id:"H5",sev:"high",t:"Over-limit copy shown with no warning",seen:"Primary text reads '143 / 125' (18 over Meta's limit) in the same plain grey as every other counter. Live upload would truncate/reject.",loc:"line 1473",fix:"Red counter + warning when length>limit; reflect in readiness and at export.",api:[]},
+ {id:"H6",sev:"high",t:"Media-library tiles aren't selectable",seen:"Clicking a different library image doesn't change the selection — only 'Replace image' (upload) works.",loc:"lines 934–940",fix:"onClick={()=>setPrimaryImage(asset.src)}; optional Generate image.",api:["POST /generate-image"]},
+ {id:"H7",sev:"high",t:"The “Preview” button is misleading",seen:"Clicking Preview only flips back to Platform mode (does nothing when already Platform) — redundant with the toggle beside it.",loc:"line 569",fix:"Open a real full-size/device preview, or remove the button.",api:[]},
+ {id:"H8",sev:"high",t:"“Feed” and “Square” are the same tab",seen:"Switching Feed↔Square produces a pixel-identical preview.",loc:"lines 201–202",fix:"Make Square a true 1:1 crop, or remove it. Delete dead kind/imageClass.",api:[]},
+ {id:"H9",sev:"high",t:"~15 buttons across the workbench have no onClick",seen:"Duplicate/Share/Approve/Archive/Delete, Edit brief, Test landing page, variant Duplicate/Regenerate, Add variant, View all, View all recommendations, breadcrumb + mobile 'dropdowns'.",loc:"see Broken buttons tab",fix:"Wire each to its (mostly existing) endpoint or hide until built.",api:["POST /campaigns/[id]/duplicate","PATCH /campaigns/[id]","PATCH /variants/[id]"]},
+
+ {id:"M1",sev:"med",t:"“Publish” doesn't publish",seen:"The black Publish button, the nav item and the inspector tab all lead to 'Manual export first. Live publishing remains gated.' + a zip download. The real publish-readiness path is never shown.",loc:"line 577, 1518–1541",fix:"Rename manual action to Export; reserve Publish for the gated live flow driven by publish-readiness.",api:["GET /publish-readiness","POST /export-packages/[id]/publish"]},
+ {id:"M2",sev:"med",t:"Too many entry points for the same action",seen:"Publish has 3 triggers; Generate variants has 3. A big reason the flow feels 'weird'.",loc:"top bar / rail / inspector",fix:"One primary trigger per action; rail navigates, top bar acts, inspector inspects.",api:[]},
+ {id:"M3",sev:"med",t:"“Generate variants” silently teleports to another panel",seen:"Clicking Generate on the Campaign panel jumps the left panel to Angles (setSection('angles')).",loc:"line 386",fix:"Keep the current section, or make angle selection an explicit visible step.",api:[]},
+ {id:"M4",sev:"med",t:"The Campaign goal you pick is ignored when generating",seen:"Generate uses selectedAngleId (default free_appraisal), not the Campaign goal dropdown. Changing the goal changes nothing.",loc:"lines 1088–1095",fix:"Map campaignGoal → goal/angle, or merge the two concepts.",api:[]},
+ {id:"M5",sev:"med",t:"Variant labels duplicated; card headline ≠ preview",seen:"Generated 'Variant A: Direct appraisal' and 'Variant C: Direct appraisal' (same label); A's card headline differs from the live preview headline.",loc:"line 315",fix:"Derive labels from the variant; keep list + preview on one source of truth.",api:[]},
+ {id:"M6",sev:"med",t:"Nav rail gives no sense of progress or order",seen:"Nine sections, no step numbers, no done/incomplete marks, no 'required' hints. The only progress signal is the fake readiness number.",loc:"NAV_ITEMS / rail",fix:"Per-section completion ticks (reuse real readiness) and/or an ordered core path.",api:[]},
+ {id:"M7",sev:"med",t:"No empty or loading states",seen:"Media, variants and copy are always pre-filled with demo content; impossible to tell real data from sample.",loc:"throughout",fix:"Add empty states + skeletons; only show demo behind a sample badge.",api:[]},
+ {id:"M8",sev:"med",t:"Brand preview details are wrong/sloppy",seen:"Phone renders with no spacing ('Realty0899990000') and Agent name duplicates Agency name (both 'Northstar Realty').",loc:"lines 901–909",fix:"Format the phone, add spacing, source/label agent vs agency distinctly.",api:[]},
+
+ {id:"L1",sev:"low",t:"Dead config: FORMAT_META.kind & imageClass",seen:"Both fields are never read; the *-frame classes they name don't exist in STYLES.",loc:"lines 196–204",fix:"Remove the fields, or implement them.",api:[]},
+ {id:"L2",sev:"low",t:"Breadcrumb looks like a dropdown but isn't",seen:"'Ad Studio / … ▾' is a non-interactive span with a chevron.",loc:"lines 557–562",fix:"Make it a real menu, or drop the chevron.",api:[]},
+ {id:"L3",sev:"low",t:"Inspector text clips",seen:"'Set in ad accou…', 'Needs confirmati…', 'Variant C: Direct appraisa…' truncate.",loc:"Publish/Variants panels",fix:"Allow wrap / widen the column.",api:[]},
+ {id:"L4",sev:"low",t:"Demo primary text is ungrammatical",seen:"'Download the what is your home worth in today's market?' — poor first impression.",loc:"demo-data.ts",fix:"Rewrite the sample copy.",api:[]},
+ {id:"L5",sev:"low",t:"Weak save-state feedback",seen:"Footer always reads 'Saved just now'; saving/error transitions barely visible.",loc:"line 549, 795–799",fix:"Show saving / saved / error states clearly.",api:[]},
+ {id:"L6",sev:"low",t:"zustand deprecation warning in console",seen:"'Default export is deprecated' — emitted by the vercel.live bundle.",loc:"vercel.live bundle",fix:"Resolves once C3 (toolbar) is disabled.",api:[]},
+];
+
+const SEVNAME={crit:"Critical",high:"High",med:"Medium",low:"Low"};
+const BTNS=[
+ ["Breadcrumb “Ad Studio / … ▾”","557–562","non-interactive span","Real switcher menu, or drop chevron",false],
+ ["More ▸ Duplicate campaign","588","no onClick","POST /campaigns/[id]/duplicate",true],
+ ["More ▸ Share for review","597","no onClick","Build share-link feature",false],
+ ["More ▸ Send for approval","601","no onClick","Approval flow (/variants/[id]/approve exists)",false],
+ ["More ▸ Archive campaign","606","no onClick","PATCH /campaigns/[id] (status)",true],
+ ["More ▸ Delete campaign","610","no onClick","⚠ needs new DELETE /campaigns/[id]",false],
+ ["Copy assist ×6","951–957","no onClick","applyCopyAssist(label) (+ implement H2)",false],
+ ["Media library tiles ×4","934–940","no onClick","setPrimaryImage(asset.src)",false],
+ ["Test landing page","995–998","no onClick","Open destinationUrl + validate",false],
+ ["Edit campaign brief","1084–1087","no onClick","Open brief editor (build)",false],
+ ["Variant strip ▸ View all","1339","no onClick","Switch inspector → Variants",false],
+ ["Variant strip ▸ Add variant","1353–1356","no onClick","POST /campaigns/[id]/generate (+1)",true],
+ ["Inspector variant ▸ Duplicate","1418","no onClick","Duplicate variant (variants API)",true],
+ ["Inspector variant ▸ Regenerate","1419","no onClick","POST /campaigns/[id]/generate · /variants/[id]",true],
+ ["Readiness ▸ View all recommendations","1509–1512","no onClick","Expand recommendations (build)",false],
+ ["Mobile campaign button","731–735","no onClick","Mobile campaign switcher (build)",false],
+];
+const WIRES=[
+ ["Generate variants","POST /campaigns","ok"],
+ ["Save draft","PATCH /campaigns/[id]/draft","ok"],
+ ["Export creatives","POST /export-packages/[id]/download","ok"],
+ ["Brand edit / rescan / approve","PATCH /brand-kits/[id] · /rescan · /approve","no"],
+ ["Media: pick / generate image","POST /generate-image · /creatives","no"],
+ ["Copy assist ×6","(dead onClick — no call)","no"],
+ ["Duplicate campaign","POST /campaigns/[id]/duplicate","no"],
+ ["Variant duplicate / regenerate","PATCH /variants/[id] · /generate","no"],
+ ["Publish (live)","POST /export-packages/[id]/publish","no"],
+ ["Real readiness check","GET /publish-readiness","no"],
+];
+const TREE=[
+ [0,"page.tsx — liveBundle ?? demoBundle","bad","C4"],
+ [1,"AdStudioWorkbench","",""],
+ [2,"Top bar","",""],
+ [3,"Preview","bad","H7"],[3,"Save","ok",""],[3,"Publish","bad","M1"],[3,"More menu","bad","C2 · H9"],
+ [2,"Nav rail","bad","M6"],
+ [2,"PanelContent (setup)","",""],
+ [3,"Campaign","warn","M4 goal ignored"],[3,"Brand","bad","C1 read-only"],[3,"Media","bad","H6 tiles dead"],[3,"Copy","bad","H1 chips dead"],[3,"Landing","bad","H9 test btn"],
+ [2,"AdPreview","ok","best part"],
+ [2,"Inspector","",""],
+ [3,"Checklist","bad","H3 · H4 fake"],[3,"Variants","bad","H9 dup/regen dead"],[3,"Edit","warn","H2 half-works"],[3,"Publish","bad","M1"],
+];
+
+// render issues
+function renderIssues(f){
+  const list=document.getElementById('issueList'); list.innerHTML='';
+  ISSUES.filter(i=>f==='all'||i.sev===f).forEach(i=>{
+    const apis=i.api.map(a=>{const warn=a.indexOf('⚠')>=0||a.indexOf('(')===0;return `<span class="api${warn?' warn':''}">${a}</span>`}).join(' ');
+    list.insertAdjacentHTML('beforeend',`
+    <div class="issue ${i.sev}">
+      <div class="hd"><span class="tag ${i.sev}">${i.id} · ${SEVNAME[i.sev]}</span><h3>${i.t}</h3><span class="loc">${i.loc}</span></div>
+      <div class="row"><b>Seen</b> ${i.seen}</div>
+      <div class="row"><b>Fix</b> ${i.fix}</div>
+      ${apis?`<div>${apis}</div>`:''}
+    </div>`);
+  });
+}
+renderIssues('all');
+document.getElementById('filters').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#filters button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); renderIssues(b.dataset.f);
+});
+
+// buttons table
+const tb=document.querySelector('#btnTable tbody');
+BTNS.forEach(r=>tb.insertAdjacentHTML('beforeend',
+  `<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td>${r[2]}</td><td>${r[4]?'<span class="yes">✓</span> ':''}${r[3].indexOf('⚠')>=0?'<span class="no">⚠</span> ':''}<code>${r[3].replace('⚠ ','')}</code></td></tr>`));
+
+// wire diagram
+const wb=document.getElementById('wireBox');
+WIRES.forEach(w=>wb.insertAdjacentHTML('beforeend',
+  `<div class="wire"><div class="u">${w[0]}</div><div class="lnk ${w[2]}">${w[2]==='ok'?'→':'⊘'}</div><div class="a ${w[2]}">${w[1]}</div></div>`));
+
+// tree
+const tbx=document.getElementById('treeBox');
+TREE.forEach(n=>{
+  const pad=8+n[0]*20; const badge=n[2]?`<span class="badge b-${n[2]}">${n[3]}</span>`:(n[3]?`<span class="badge b-warn">${n[3]}</span>`:'');
+  const mark=n[2]==='bad'?'🟥 ':n[2]==='ok'?'🟩 ':n[2]==='warn'?'🟧 ':'';
+  tbx.insertAdjacentHTML('beforeend',`<div class="node" style="padding-left:${pad}px">${n[0]>1?'└ ':''}${mark}${n[1]}${badge}</div>`);
+});
+
+// tabs
+document.getElementById('tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('section.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+</script>
+</body>
+</html>

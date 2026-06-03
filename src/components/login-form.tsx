@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
-import { getRedirectForEmail, testUsers } from "@/lib/auth/test-users";
+import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type LoginFormProps = {
@@ -35,7 +35,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
       return;
     }
 
-    router.replace(getRedirectForEmail(targetEmail));
+    router.replace("/home");
     router.refresh();
   }
 

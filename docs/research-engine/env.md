@@ -1,6 +1,6 @@
 # Research Engine Environment Variables
 
-Date: 2026-05-30
+Date: 2026-06-02
 
 These variables describe the hard-reset runtime in
 `infra/coolify/docker-compose.research.yml`. Do not print real secret values in
@@ -9,12 +9,13 @@ logs or docs.
 ## Image Pins
 
 ```bash
-HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:<pinned-version-or-digest>
-BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-05-30
+HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:v2026.5.29.2
+BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-06-02
 UPTIME_KUMA_IMAGE=louislam/uptime-kuma:1.23.16
 ```
 
-`HERMES_BASE_IMAGE` must not be `:latest`.
+`HERMES_BASE_IMAGE` must not be `:latest`. `v2026.5.29.2` is the Hermes
+Agent v0.15.2 release.
 
 ## Hermes Runtime
 
@@ -33,6 +34,7 @@ HERMES_BUILD_CONCURRENCY=4
 HERMES_MAINTAIN_CONCURRENCY=1
 HERMES_COLLECTION_INTERVAL_SECONDS=900
 HERMES_DAILY_SPEND_LIMIT_USD=25
+HERMES_META_CAPTURE_RESULTS_LIMIT=250
 OPENROUTER_API_KEY=<key>
 MEM0_API_KEY=<key>
 MEM0_PROJECT_ID=blockwise-research

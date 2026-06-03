@@ -43,8 +43,8 @@ test("ad studio exposes the full generation workflow", async ({ page }) => {
   await expect(page.getByText("Ad Studio / Free Appraisal Campaign")).toBeVisible();
   await expect(page.getByRole("button", { name: "Campaign" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Angles" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Variants" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Checklist" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add variant" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Generate variants" })).toBeVisible();
   await expect(page.getByText("Campaign readiness")).toBeVisible();
