@@ -13,15 +13,20 @@ type CtaLinkProps = {
 };
 
 /**
- * Anchor that scrolls to the demo form and fires a Meta Pixel intent event.
- * Falls back to a normal in-page link if JS/pixel is unavailable.
+ * Anchor for landing CTAs. Demo links fire a Meta Pixel intent event; signup links do not.
  */
 export function CtaLink({ location, href = "#demo", className, children }: CtaLinkProps) {
+  function handleClick() {
+    if (href === "#demo") {
+      trackDemoCtaClick(location);
+    }
+  }
+
   return (
     <a
       href={href}
       className={className}
-      onClick={() => trackDemoCtaClick(location)}
+      onClick={handleClick}
     >
       {children}
     </a>

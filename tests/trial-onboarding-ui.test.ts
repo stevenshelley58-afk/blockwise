@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+test("onboarding page renders the wizard instead of redirecting to settings", () => {
+  const source = readFileSync("src/app/(customer)/onboarding/page.tsx", "utf8");
+
+  assert.doesNotMatch(source, /redirect\(/);
+  assert.doesNotMatch(source, /\/settings/);
+  assert.match(source, /requirePageSurfaceAccess\("self_serve"\)/);
+  assert.match(source, /<OnboardingWizard/);
+});
+
+test("onboarding wizard completes setup into first ad flow", () => {
+  const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
+
+  assert.match(wizard, /\/api\/workspace\/onboarding-status/);
+  assert.match(wizard, /status: "complete"/);
+  assert.match(wizard, /router\.push\("\/ad-studio\?first=1"\)/);
+  assert.doesNotMatch(wizard, /\/campaigns/);
+  assert.ok((wizard.match(/Skip for now/g) ?? []).length >= 3);
+});
+
+test("new ad dialog explains trial credit use without requiring Meta", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(dialog, /Uses 1 of 10 free ad packs/);
+  assert.match(dialog, /No Meta account is needed until publish/);
+});
+
+test("landing CTA tracking only fires for demo links", () => {
+  const ctaLink = readFileSync("src/components/landing/cta-link.tsx", "utf8");
+  const homepage = readFileSync("src/app/page.tsx", "utf8");
+
+  assert.match(ctaLink, /if \(href === "#demo"\)/);
+  assert.match(ctaLink, /trackDemoCtaClick\(location\)/);
+  assert.doesNotMatch(ctaLink, /onClick=\{\(\) => trackDemoCtaClick\(location\)\}/);
+  assert.match(homepage, /href="\/signup"/);
+  assert.match(homepage, /href="#demo"/);
+});
+
+test("trial pill refreshes from the first-ad generation event", () => {
+  const pill = readFileSync("src/components/trial-status-pill.tsx", "utf8");
+  const campaignActions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
+
+  assert.match(pill, /blockwise:trial-status-refresh/);
+  assert.match(campaignActions, /dispatchEvent\(new Event\("blockwise:trial-status-refresh"\)\)/);
+  assert.match(pill, /href="\/settings#plan"/);
+});

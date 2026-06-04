@@ -9,7 +9,10 @@ test("public homepage does not redirect anonymous visitors to the login screen",
   const signInLink = readFileSync("src/components/landing/sign-in-link.tsx", "utf8");
 
   assert.doesNotMatch(source, /redirect\(/);
-  assert.match(source, /Request access/);
+  assert.match(source, /Start free trial/);
+  assert.match(source, /href="\/signup"/);
+  assert.match(source, /Managed setup/);
+  assert.match(source, /href="#demo"/);
   // The sign-in link text is in its own component to prevent Space-key navigation.
   assert.match(signInLink, /Client sign in/);
   // The component is referenced from the page.

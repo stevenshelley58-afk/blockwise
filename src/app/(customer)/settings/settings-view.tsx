@@ -99,9 +99,9 @@ export function SettingsView(props: SettingsViewProps) {
 
   const navItems: Array<{ href: string; label: string }> = [
     { href: "#account", label: "Account" },
+    { href: "#connections", label: "Connections" },
     { href: "#security", label: "Password" },
     { href: "#billing", label: "Billing" },
-    { href: "#connections", label: "Connections" },
     ...(props.canManage ? [{ href: "#workspace", label: "Workspace" }, { href: "#team", label: "Team" }] : []),
     { href: "#notifications", label: "Notifications" },
     { href: "#danger", label: "Danger zone" },
@@ -118,14 +118,6 @@ export function SettingsView(props: SettingsViewProps) {
       </nav>
 
       <AccountSection supabase={supabase} router={router} user={props.user} fullName={props.profile.fullName} />
-      <PasswordSection supabase={supabase} />
-      <BillingSection
-        supabase={supabase}
-        router={router}
-        canManage={props.canManage}
-        workspace={props.workspace}
-        plan={props.plan}
-      />
       <ConnectionsSection
         supabase={supabase}
         router={router}
@@ -135,6 +127,14 @@ export function SettingsView(props: SettingsViewProps) {
         googleAdsEnabled={props.googleAdsEnabled}
         metaConnectHref={props.metaConnectHref}
         googleConnectHref={props.googleConnectHref}
+      />
+      <PasswordSection supabase={supabase} />
+      <BillingSection
+        supabase={supabase}
+        router={router}
+        canManage={props.canManage}
+        workspace={props.workspace}
+        plan={props.plan}
       />
       {props.canManage ? (
         <WorkspaceSection supabase={supabase} router={router} workspace={props.workspace} />

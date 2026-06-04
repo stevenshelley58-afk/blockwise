@@ -22,6 +22,7 @@ export type MetaInsightRow = {
   clicks?: string | number;
   ctr?: string | number;
   cpc?: string | number;
+  frequency?: string | number;
   actions?: MetaActionMetric[];
   date_start?: string;
 };
@@ -221,6 +222,97 @@ async function fetchMetaCreativePreviews(
       },
     ];
   });
+}
+
+export type MetaAdEntity = {
+  id?: string;
+  name?: string | null;
+  effective_status?: string | null;
+  preview_shareable_link?: string | null;
+  creative?: (MetaCreativeNode & {
+    object_type?: string | null;
+    video_id?: string | null;
+    object_story_spec?: {
+      link_data?: { link?: string | null; message?: string | null; description?: string | null } | null;
+      video_data?: { link_description?: string | null; message?: string | null } | null;
+    } | null;
+  }) | null;
+};
+
+export type MetaBreakdownRow = {
+  ad_id?: string;
+  impressions?: string | number;
+  publisher_platform?: string;
+  platform_position?: string;
+  impression_device?: string;
+};
+
+/** Raw per-ad-per-day insight rows for the Meta monitor. Additive export; does not alter fetchMetaReporting. */
+export async function fetchMetaInsightRows(input: {
+  accessToken: string;
+  accountId: string;
+  since: string;
+  until: string;
+}): Promise<MetaInsightRow[]> {
+  const accountId = normalizeAccountId(input.accountId);
+
+  return fetchMetaList<MetaInsightRow>(`/${accountId}/insights`, input.accessToken, {
+    level: "ad",
+    time_increment: "1",
+    time_range: JSON.stringify({ since: input.since, until: input.until }),
+    fields: [
+      "ad_id",
+      "ad_name",
+      "campaign_id",
+      "campaign_name",
+      "adset_id",
+      "adset_name",
+      "spend",
+      "impressions",
+      "clicks",
+      "actions",
+      "frequency",
+      "date_start",
+    ].join(","),
+    limit: "500",
+  });
+}
+
+/** Ad entities with creative + status + permalink for the Meta monitor ad cards. */
+export async function fetchMetaAdEntities(input: {
+  accessToken: string;
+  accountId: string;
+}): Promise<MetaAdEntity[]> {
+  const accountId = normalizeAccountId(input.accountId);
+
+  return fetchMetaList<MetaAdEntity>(`/${accountId}/ads`, input.accessToken, {
+    fields:
+      "id,name,effective_status,preview_shareable_link,creative{thumbnail_url,image_url,title,body,object_type,video_id,object_story_spec}",
+    limit: "200",
+  });
+}
+
+/** One Insights breakdown per call — combinations are not always valid, so callers pick one. */
+export async function fetchMetaInsightBreakdown(input: {
+  accessToken: string;
+  accountId: string;
+  since: string;
+  until: string;
+  breakdowns: "publisher_platform,platform_position" | "impression_device";
+}): Promise<MetaBreakdownRow[]> {
+  const accountId = normalizeAccountId(input.accountId);
+
+  return fetchMetaList<MetaBreakdownRow>(`/${accountId}/insights`, input.accessToken, {
+    level: "ad",
+    time_range: JSON.stringify({ since: input.since, until: input.until }),
+    fields: "ad_id,impressions",
+    breakdowns: input.breakdowns,
+    limit: "1000",
+  });
+}
+
+function normalizeAccountId(accountId: string): string {
+  return accountId.startsWith("act_") ? accountId : `act_${accountId}`;
 }
 
 async function fetchMetaList<T>(path: string, accessToken: string, params: Record<string, string>): Promise<T[]> {

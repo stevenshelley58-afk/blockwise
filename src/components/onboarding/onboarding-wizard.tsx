@@ -2,6 +2,7 @@
 
 import { ArrowRight, Check, Link2, MapPinned, Palette } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { StatusPill } from "@/components/status-pill";
@@ -78,6 +79,7 @@ export function OnboardingWizard({
   canOpenCampaigns,
   googleAdsEnabled,
 }: WizardProps) {
+  const router = useRouter();
   const initialColours = (brandKit?.colours_json ?? {}) as JsonObject;
   const initialTone = (brandKit?.tone_json ?? {}) as JsonObject;
   const [stepIndex, setStepIndex] = useState(0);
@@ -104,6 +106,30 @@ export function OnboardingWizard({
   function back() {
     setStepIndex((i) => Math.max(i - 1, 0));
     setMessage(null);
+  }
+
+  async function finishOnboarding() {
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/workspace/onboarding-status", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId, status: "complete" }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "We couldn't finish setup yet.");
+      }
+
+      router.push("/ad-studio?first=1");
+      router.refresh();
+    } catch (caught) {
+      setBusy(false);
+      setMessage({ tone: "error", text: caught instanceof Error ? caught.message : "We couldn't finish setup yet." });
+    }
   }
 
   function chooseLogo(file: File | undefined) {
@@ -298,6 +324,9 @@ export function OnboardingWizard({
             </label>
             {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
             <div className="wizard-actions">
+              <button className="button secondary" disabled={busy} onClick={next} type="button">
+                Skip for now
+              </button>
               <button className="button" disabled={busy} type="submit">
                 {canSaveProfile ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
               </button>
@@ -353,6 +382,9 @@ export function OnboardingWizard({
               <button className="button secondary" disabled={busy} onClick={back} type="button">
                 Back
               </button>
+              <button className="button secondary" disabled={busy} onClick={next} type="button">
+                Skip for now
+              </button>
               <button className="button" disabled={busy} type="submit">
                 {canSaveBrand ? "Save and continue" : "Continue"} <ArrowRight size={16} aria-hidden />
               </button>
@@ -366,8 +398,8 @@ export function OnboardingWizard({
             <h2>Connect your ad accounts</h2>
             <p>
               {canManageConnections
-                ? "Connect ad accounts when you are ready. These links return to Monitor after authorization."
-                : "An owner or admin can connect ad accounts from Monitor when the workspace is ready."}
+                ? "Connect ad accounts when you are ready to publish. You can create ads before Meta is connected."
+                : "An owner or admin can connect ad accounts later when the workspace is ready to publish."}
             </p>
             <div className="wizard-connect-row">
               <span>Meta</span>
@@ -393,23 +425,21 @@ export function OnboardingWizard({
                 </button>
               )}
             </div>
-            <p className="wizard-skip-note">You can come back to connections from Monitor.</p>
+            <p className="wizard-skip-note">You can come back to connections from Settings.</p>
             {!canOpenCampaigns ? (
-              <p className="wizard-skip-note">Campaign creation is available when this workspace is enabled for self-serve.</p>
+              <p className="wizard-skip-note">Ad creation is available when this workspace is enabled for self-serve.</p>
             ) : null}
+            {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
             <div className="wizard-actions">
-              <button className="button secondary" onClick={back} type="button">
+              <button className="button secondary" disabled={busy} onClick={back} type="button">
                 Back
               </button>
-              {canOpenCampaigns ? (
-                <Link className="button" href="/campaigns">
-                  Generate my first campaign. <ArrowRight size={16} aria-hidden />
-                </Link>
-              ) : (
-                <Link className="button" href="/monitor">
-                  Open Monitor <ArrowRight size={16} aria-hidden />
-                </Link>
-              )}
+              <button className="button secondary" disabled={busy} onClick={() => void finishOnboarding()} type="button">
+                Skip for now
+              </button>
+              <button className="button" disabled={busy} onClick={() => void finishOnboarding()} type="button">
+                {busy ? "Finishing" : "Create first ad"} <ArrowRight size={16} aria-hidden />
+              </button>
             </div>
           </div>
         ) : null}

@@ -116,6 +116,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setSaveState("saved");
       s.setSection("media");
       s.showToast("Generated 3 ads");
+      window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {
       s.showToast(getMessage(error));
     } finally {
@@ -147,6 +148,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setSaveState("saved");
       s.setSection("media");
       s.showToast("Generated Story, Feed, and Square");
+      window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {
       s.showToast(getMessage(error));
       throw error;

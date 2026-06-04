@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { buildMonitorDashboardForWorkspace } from "@/lib/monitor/live-dashboard";
+import { getMetaMonitorData } from "@/lib/meta-monitor/getMetaMonitorData";
 import { parseMonitorRange } from "@/lib/monitor/dashboard-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const bundle = await buildMonitorDashboardForWorkspace({
+  const payload = await getMetaMonitorData({
     supabase,
     serviceSupabase,
     workspaceId: access.access.workspaceId,
     range: parseMonitorRange(request.nextUrl.searchParams.get("range")),
   });
 
-  return NextResponse.json(bundle);
+  return NextResponse.json(payload);
 }

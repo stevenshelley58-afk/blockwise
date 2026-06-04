@@ -14,12 +14,14 @@ test("approvals page exposes human approve and reject actions", () => {
   assert.match(actions, /Reject/);
 });
 
-test("Meta setup UI captures concrete lead delivery endpoint config", () => {
-  const monitor = readFileSync("src/components/monitor/monitor-dashboard.tsx", "utf8");
+test("Meta setup API captures concrete lead delivery endpoint config", () => {
+  const setupRoute = readFileSync("src/app/api/integrations/meta/setup/route.ts", "utf8");
 
-  assert.match(monitor, /Destination endpoint/);
-  assert.match(monitor, /leadDestination\.config\.endpoint/);
-  assert.match(monitor, /https:\/\/crm\.example\.com\/leads/);
+  assert.match(setupRoute, /PATCH/);
+  assert.match(setupRoute, /leadDestination/);
+  assert.match(setupRoute, /current\.leadDestination\.config/);
+  assert.match(setupRoute, /patch\.leadDestination\?\.config/);
+  assert.match(setupRoute, /validateMetaConnectionSetup\(nextSetup\)/);
 });
 
 test("Ad Studio UI presents the constrained campaign workspace", () => {

@@ -1,101 +1,104 @@
-import { ClipboardCheck, FileText, Image, Search, WandSparkles } from "lucide-react";
+import { ArrowRight, Palette, Plug, WandSparkles } from "lucide-react";
+import Link from "next/link";
 
-import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
+import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { campaignIdeas, competitorSignals } from "@/lib/product/demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function SelfServePage() {
-  await requirePageSurfaceAccess("self_serve");
+  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
+
+  const [campaigns, brandKits, connections] = await Promise.all([
+    supabase.from("adstudio_campaigns").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
+    supabase.from("adstudio_brand_kits").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
+    supabase
+      .from("provider_connections")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", access.workspaceId)
+      .neq("status", "revoked"),
+  ]);
+
+  const hasAd = (campaigns.count ?? 0) > 0;
+  const hasBrand = (brandKits.count ?? 0) > 0;
+  const hasConnection = (connections.count ?? 0) > 0;
+  const checklist: SetupChecklistItem[] = [
+    {
+      id: "first-ad",
+      label: "Create your first ad",
+      description: "Use one image and a short brief to generate Story, Feed, and Square.",
+      complete: hasAd,
+      href: "/ad-studio?first=1",
+    },
+    {
+      id: "brand",
+      label: "Confirm your brand",
+      description: "Add the basics so draft copy and colours feel like your agency.",
+      complete: hasBrand,
+      href: "/onboarding",
+    },
+    {
+      id: "connections",
+      label: "Connect Meta before publishing",
+      description: "You can leave this until the ad is approved and ready to launch.",
+      complete: hasConnection,
+      href: "/settings#connections",
+    },
+  ];
 
   return (
     <main className="content">
       <PageHeading
-        eyebrow="Customer product"
-        title="Self-Serve"
-        description="Research competitors, mine campaign ideas, draft Meta and Google campaigns, create AI creative, preview ads, and manage leads under approval gates."
+        eyebrow="Home"
+        title="Start with one ad"
+        description="Blockwise can build your first ad before your ad accounts are connected."
+        actions={
+          <Link className="button" href="/ad-studio?first=1">
+            Create first ad
+            <ArrowRight aria-hidden size={16} />
+          </Link>
+        }
       />
 
-      <section className="grid cols-4" aria-label="Self-serve workflow">
-        <MetricCard icon={Search} label="Competitors" value="12" note="Watchlisted with source evidence" />
-        <MetricCard icon={WandSparkles} label="Ideas" value="34" note="Generated from patterns and owned results" />
-        <MetricCard icon={Image} label="Creative Drafts" value="18" note="Image cost controls enabled" />
-        <MetricCard icon={ClipboardCheck} label="Approvals" value="5" note="Publishing is blocked until reviewed" />
-      </section>
-
-      <section className="split">
-        <div className="panel">
-          <h2>Idea Mine</h2>
-          <div className="stack">
-            {campaignIdeas.map((idea) => (
-              <article className="item-card" key={idea.title}>
-                <h3>{idea.title}</h3>
-                <p>{idea.hook}</p>
-                <p className="item-meta">{idea.channel}</p>
-                <StatusPill tone={idea.approval.includes("Ready") ? "green" : "amber"}>{idea.approval}</StatusPill>
-              </article>
-            ))}
+      <section className="panel">
+        <div className="stack">
+          <StatusPill tone="blue">Trial</StatusPill>
+          <h2>10 free ad packs are included</h2>
+          <p className="item-meta">
+            Generating your first ad uses 1 pack. Meta is only needed when you are ready to publish.
+          </p>
+          <div className="wizard-actions">
+            <Link className="button" href="/ad-studio?first=1">
+              Create first ad
+              <ArrowRight aria-hidden size={16} />
+            </Link>
+            <Link className="button secondary" href="/onboarding">
+              Set up workspace
+            </Link>
           </div>
         </div>
-
-        <aside className="ad-preview" aria-label="Ad preview studio">
-          <div className="ad-visual">
-            <div className="ad-visual-inner">
-              <p className="eyebrow">Creative Studio</p>
-              <h2 style={{ marginBottom: 6 }}>Suburb appraisal pulse</h2>
-              <p className="item-meta">AI draft image and copy are held for operator/client approval.</p>
-            </div>
-          </div>
-          <div className="ad-copy">
-            <h3>Ad Preview Studio</h3>
-            <p className="item-meta">
-              Preview Meta lead forms, Google search drafts, carousel concepts, lead magnet covers, and compliance flags before publishing.
-            </p>
-          </div>
-        </aside>
       </section>
 
-      <section className="panel">
-        <h2>Campaign Builder</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Stage</th>
-              <th>Output</th>
-              <th>Gate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              ["Competitor Explorer", competitorSignals[0].signal, "Source evidence required"],
-              ["Creative Brief", "Image prompts, carousel outline, and lead magnet cover brief", "Brand-safe review"],
-              ["Compliance Check", "AU real-estate claim, housing targeting, urgency, and unsupported performance checks", "Human approval required"],
-              ["Provider Draft", "Meta lead ad and Google Search campaign payloads", "Publishing blocked"],
-            ].map(([stage, output, gate]) => (
-              <tr key={stage}>
-                <td>{stage}</td>
-                <td>{output}</td>
-                <td>{gate}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <SetupChecklist items={checklist} />
 
-      <section className="panel">
-        <h2>Lead Magnet Builder</h2>
-        <div className="grid cols-3">
-          {["Seller suburb report", "Downsizer checklist", "Renovate or sell calculator"].map((asset) => (
-            <article className="item-card" key={asset}>
-              <FileText aria-hidden color="#2364aa" size={20} />
-              <h3>{asset}</h3>
-              <p className="item-meta">Drafted by AI, stored as a reviewable campaign asset, and linked to lead source attribution.</p>
-            </article>
-          ))}
-        </div>
+      <section className="grid cols-3" aria-label="Next actions">
+        <article className="item-card">
+          <WandSparkles aria-hidden color="#2364aa" size={20} />
+          <h3>Create</h3>
+          <p className="item-meta">Turn one listing photo and a short brief into Meta-ready ad formats.</p>
+        </article>
+        <article className="item-card">
+          <Palette aria-hidden color="#2364aa" size={20} />
+          <h3>Brand</h3>
+          <p className="item-meta">Keep colours, tone, and compliance defaults tidy before review.</p>
+        </article>
+        <article className="item-card">
+          <Plug aria-hidden color="#2364aa" size={20} />
+          <h3>Publish later</h3>
+          <p className="item-meta">Connect Meta only when the ad is approved and ready to go live.</p>
+        </article>
       </section>
     </main>
   );
