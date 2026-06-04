@@ -3,25 +3,15 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { listHermesSkills } from "@/lib/operator/hermes-assets";
+import {
+  buildResearchChatAnswer,
+  summarizeCoverageRows,
+  type ResearchChatCoverageRow,
+} from "@/lib/operator/research-chat";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-type CoverageRow = {
-  postcode: string;
-  state: string;
-  last_audit_score: number | null;
-  last_refreshed_at: string | null;
-  live_active_ads: number;
-  live_advertiser_pages?: number;
-  health: string;
-};
-
-type WorkQueueRow = {
-  status: string;
-  is_stale_claim: boolean | null;
-};
 
 const bodySchema = z.object({
   query: z.string().min(1).max(1000),
@@ -35,37 +25,53 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const research = createSupabaseServiceClient().schema("research");
-  const [coverageResult, jobsResult, defectsResult, runsResult, skills] = await Promise.all([
-    research.from("v_coverage_status").select("postcode,state,last_audit_score,last_refreshed_at,live_active_ads,live_advertiser_pages,health").order("priority").order("postcode").limit(250),
-    research.from("v_operator_work_queue_diagnostics").select("status,is_stale_claim").limit(500),
-    research.from("v_missing_competitors").select("id").limit(500),
-    research.from("ad_fetch_runs").select("id,status,cost_usd,started_at").order("started_at", { ascending: false }).limit(50),
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const [
+    coverageResult,
+    pendingJobs,
+    claimedJobs,
+    failedJobs,
+    blockedJobs,
+    staleJobs,
+    defectsResult,
+    runsResult,
+    skills,
+  ] = await Promise.all([
+    research.from("v_coverage_status").select("*", { count: "exact" }).order("priority").order("postcode").limit(1000),
+    research.from("v_operator_work_queue_diagnostics").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    research.from("v_operator_work_queue_diagnostics").select("id", { count: "exact", head: true }).eq("status", "claimed"),
+    research.from("v_operator_work_queue_diagnostics").select("id", { count: "exact", head: true }).eq("status", "failed"),
+    research.from("v_operator_work_queue_diagnostics").select("id", { count: "exact", head: true }).eq("status", "blocked"),
+    research.from("v_operator_work_queue_diagnostics").select("id", { count: "exact", head: true }).eq("is_stale_claim", true),
+    research.from("v_missing_competitors").select("id", { count: "exact", head: true }),
+    research.from("ad_fetch_runs").select("cost_usd").gte("started_at", since).limit(1000),
     listHermesSkills().catch(() => []),
   ]);
 
   if (coverageResult.error) return NextResponse.json({ error: coverageResult.error.message }, { status: 500 });
-  if (jobsResult.error) return NextResponse.json({ error: jobsResult.error.message }, { status: 500 });
+  if (pendingJobs.error) return NextResponse.json({ error: pendingJobs.error.message }, { status: 500 });
+  if (claimedJobs.error) return NextResponse.json({ error: claimedJobs.error.message }, { status: 500 });
+  if (failedJobs.error) return NextResponse.json({ error: failedJobs.error.message }, { status: 500 });
+  if (blockedJobs.error) return NextResponse.json({ error: blockedJobs.error.message }, { status: 500 });
+  if (staleJobs.error) return NextResponse.json({ error: staleJobs.error.message }, { status: 500 });
   if (defectsResult.error) return NextResponse.json({ error: defectsResult.error.message }, { status: 500 });
   if (runsResult.error) return NextResponse.json({ error: runsResult.error.message }, { status: 500 });
 
-  const coverage = ((coverageResult.data ?? []) as CoverageRow[]).map(toCoverageSummary).sort((left, right) => left.score - right.score);
-  const jobs = (jobsResult.data ?? []) as WorkQueueRow[];
-  const activeJobs = jobs.filter((job) => job.status === "pending" || job.status === "claimed").length;
-  const staleJobs = jobs.filter((job) => job.is_stale_claim).length;
-  const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "blocked").length;
-  const spend24h = (runsResult.data ?? [])
-    .filter((run) => new Date(String(run.started_at)).getTime() > Date.now() - 24 * 3600 * 1000)
-    .reduce((sum, run) => sum + (Number(run.cost_usd) || 0), 0);
-  const rows = coverage.slice(0, 4);
+  const rows = summarizeCoverageRows((coverageResult.data ?? []) as ResearchChatCoverageRow[]);
+  const activeJobs = (pendingJobs.count ?? 0) + (claimedJobs.count ?? 0);
+  const failedOrBlockedJobs = (failedJobs.count ?? 0) + (blockedJobs.count ?? 0);
+  const spend24h = (runsResult.data ?? []).reduce((sum, run) => sum + (Number(run.cost_usd) || 0), 0);
   const proposedPostcode = rows[0]?.postcode ?? null;
 
-  const answer = [
-    `${coverage.length} coverage rows loaded from research.v_coverage_status.`,
-    `${activeJobs} active jobs, ${failedJobs} failed or blocked jobs, ${staleJobs} stale claims.`,
-    `${defectsResult.data?.length ?? 0} coverage defects are visible to the operator view.`,
-    `${skills.length} Hermes skill files are available from hermes/skills.`,
-    `24h collector spend is $${spend24h.toFixed(2)}.`,
-  ].join(" ");
+  const answer = buildResearchChatAnswer({
+    coverageRows: coverageResult.count ?? rows.length,
+    activeJobs,
+    failedJobs: failedOrBlockedJobs,
+    staleJobs: staleJobs.count ?? 0,
+    defects: defectsResult.count ?? 0,
+    skillFiles: skills.length,
+    spend24h,
+  });
 
   await research.from("agent_decisions").insert({
     decision_type: "operator_chat",
@@ -75,7 +81,13 @@ export async function POST(req: Request) {
       query: parsed.data.query,
       answer,
       row_count: rows.length,
-      sources: ["research.v_coverage_status", "research.v_operator_work_queue_diagnostics", "research.v_missing_competitors", "research.ad_fetch_runs", "hermes/skills"],
+      sources: [
+        "research.v_coverage_status",
+        "research.v_operator_work_queue_diagnostics",
+        "research.v_missing_competitors",
+        "research.ad_fetch_runs",
+        "hermes/skills",
+      ],
     },
     rationale: "Operator chat response assembled from approved dashboard data sources.",
     confidence: 100,
@@ -93,32 +105,4 @@ export async function POST(req: Request) {
         }
       : undefined,
   });
-}
-
-function toCoverageSummary(row: CoverageRow) {
-  return {
-    postcode: row.postcode,
-    state: row.state,
-    score: coverageScore(row),
-    activeAds: row.live_active_ads ?? 0,
-    advertiserPages: row.live_advertiser_pages ?? 0,
-    health: row.health,
-  };
-}
-
-function coverageScore(row: CoverageRow): number {
-  if (typeof row.last_audit_score === "number") {
-    return clamp(Math.round(row.last_audit_score), 0, 100);
-  }
-  if (row.live_active_ads > 0) {
-    return clamp(55 + row.live_active_ads * 8, 55, 100);
-  }
-  if (row.last_refreshed_at) {
-    return 35;
-  }
-  return 0;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
