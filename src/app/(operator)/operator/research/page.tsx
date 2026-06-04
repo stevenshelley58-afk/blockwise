@@ -873,4 +873,16 @@ function runTone(status: string): "green" | "amber" | "rose" | "blue" {
 }
 
 function titleCase(value: string): string {
-  return value.replace(/_/gu, " ").replace(/\b\w/gu, (m
+  return value.replace(/_/gu, " ").replace(/\b\w/gu, (match) => match.toUpperCase());
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  const kib = value / 1024;
+  if (kib < 1024) return `${kib.toFixed(1)} KB`;
+  return `${(kib / 1024).toFixed(1)} MB`;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}

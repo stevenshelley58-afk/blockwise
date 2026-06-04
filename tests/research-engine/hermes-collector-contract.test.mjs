@@ -330,4 +330,13 @@ function functionBody(source, name) {
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     const char = source[index];
-    if (char === "{") depth 
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (depth === 0) return source.slice(bodyStart + 1, index);
+  }
+  assert.fail(`${name} body was not closed`);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

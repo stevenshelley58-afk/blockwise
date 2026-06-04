@@ -4691,4 +4691,36 @@ a.operator-file-row {
   border-top: 1px solid #ececec;
 }
 
-.site-footer .blockwise-s
+.site-footer .blockwise-symbol { width: 24px; height: 24px; }
+.site-footer .blockwise-wordmark { font-size: 18px; }
+
+.site-footer-legal {
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  color: #707470;
+  flex-wrap: wrap;
+}
+
+.site-footer-legal a:hover,
+.site-footer-legal a:focus-visible {
+  color: #0a0a0a;
+  outline: none;
+}
+
+.footer-fine {
+  font-size: 13px;
+  color: #8a908d;
+}
+
+@media (max-width: 860px) {
+  .demo-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding: 80px 0;
+  }
+
+  .demo-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

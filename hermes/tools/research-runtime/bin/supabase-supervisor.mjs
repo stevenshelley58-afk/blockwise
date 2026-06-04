@@ -2962,4 +2962,12 @@ async function main() {
     } catch (error) {
       log(error.message, {}, "error");
     }
-    if (env.HERMES_RESEARCH_RUN_O
+    if (env.HERMES_RESEARCH_RUN_ONCE === "true") break;
+    await sleep(intervalMs);
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
