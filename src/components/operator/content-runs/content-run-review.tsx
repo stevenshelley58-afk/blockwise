@@ -72,7 +72,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(payload?.error ?? "Rerun failed to queue.");
       }
-      setMessage("Rerun queued.");
+      setMessage("Rerun queued for Hermes.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Rerun failed to queue.");
     }
@@ -218,4 +218,3 @@ function toneForStatus(status: string): StatusTone {
   if (status === "queued") return "amber";
   return "blue";
 }
-

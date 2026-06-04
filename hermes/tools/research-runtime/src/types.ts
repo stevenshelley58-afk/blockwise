@@ -12,6 +12,7 @@ export const researchJobKinds = [
   "blockwise-ad-classifier",
   "blockwise-coverage-auditor",
   "blockwise-defect-investigator",
+  "blockwise-content-run-orchestrator",
 ] as const;
 
 export type ResearchJobKind = typeof researchJobKinds[number];
@@ -64,6 +65,12 @@ export const adClassifierPayloadSchema = z.object({
   force: z.boolean().default(false),
 }).strict();
 
+export const contentRunPayloadSchema = z.object({
+  contentRunId: idString,
+  workspaceId: idString,
+  fromStep: idString.nullable().optional(),
+}).passthrough();
+
 export const researchJobInputSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("blockwise-agent-census"), payload: agentCensusPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-page-resolver"), payload: pageResolverPayloadSchema }).passthrough(),
@@ -72,6 +79,7 @@ export const researchJobInputSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("blockwise-ad-classifier"), payload: adClassifierPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-coverage-auditor"), payload: z.record(z.unknown()) }).passthrough(),
   z.object({ kind: z.literal("blockwise-defect-investigator"), payload: z.record(z.unknown()) }).passthrough(),
+  z.object({ kind: z.literal("blockwise-content-run-orchestrator"), payload: contentRunPayloadSchema }).passthrough(),
 ]);
 
 export type RealEstateGate = z.infer<typeof realEstateGateSchema>;

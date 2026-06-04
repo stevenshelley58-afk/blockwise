@@ -4,8 +4,23 @@ import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { promisify } from "node:util";
+import {
+  CLASSIFIER_VERSION,
+  classifyCreativeWithModels,
+  shouldReclassifyCreative,
+  shouldWaitForMediaClassification,
+} from "./ad-classifier.mjs";
+import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 
 const DEFAULT_POSTCODES = ["ALL"];
+const HANDLED_JOB_TYPES = [
+  "blockwise-agent-census",
+  "blockwise-page-resolver",
+  "blockwise-ad-collector",
+  "blockwise-media-collector",
+  "blockwise-ad-classifier",
+  CONTENT_RUN_JOB_TYPE,
+];
 const env = process.env;
 const execFileAsync = promisify(execFile);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -43,6 +58,7 @@ const adPageRefreshEnabled = env.HERMES_AD_PAGE_REFRESH_ENABLED !== "false";
 const adPageRefreshIntervalMinutes = positiveInt("HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES", mode === "build" ? 720 : 360);
 const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", mode === "build" ? 40 : 16);
 const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
+const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const maxRosterUrlsPerPostcode = positiveInt("HERMES_CENSUS_MAX_ROSTER_URLS_PER_POSTCODE", 5);
 const censusQueuePriority = positiveInt("HERMES_CENSUS_QUEUE_PRIORITY", 30);
 const censusPolicyAutoSeedEnabled = env.HERMES_CENSUS_AUTO_SEED_POLICIES_ENABLED !== "false";
@@ -466,14 +482,35 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
 }
 
 async function runWatchdogs() {
-  const [stale, providerFailures, zeroAds, missingMedia, unclassified] = await Promise.all([
+  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill] = await Promise.all([
     rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }),
     rpc("watchdog_record_provider_failures", { p_since: "24 hours", p_failure_threshold: 3 }),
     rpc("watchdog_record_zero_ad_anomalies", { p_since: "48 hours", p_limit: 100 }),
     rpc("watchdog_record_missing_media", { p_since: "24 hours", p_limit: 100 }),
     rpc("watchdog_record_unclassified_creatives", { p_since: "24 hours", p_limit: 100 }),
+    enqueueClassificationBackfillJobs(),
   ]);
-  return { stale: stale.length, providerFailures: providerFailures.length, zeroAds: zeroAds.length, missingMedia: missingMedia.length, unclassified: unclassified.length };
+  return {
+    stale: stale.length,
+    providerFailures: providerFailures.length,
+    zeroAds: zeroAds.length,
+    missingMedia: missingMedia.length,
+    unclassified: unclassified.length,
+    classificationBackfill,
+  };
+}
+
+async function enqueueClassificationBackfillJobs() {
+  const candidates = await rest(
+    "research",
+    `ad_creatives?select=id,observed_ad_id,creative_hash,classification_status,classification,ad_type,primary_intent,updated_at&order=updated_at.desc&limit=${classificationBackfillBatchSize}`,
+  );
+  let enqueued = 0;
+  for (const creative of candidates.filter((row) => shouldReclassifyCreative(row))) {
+    const inserted = await enqueueClassificationJob(creative, null);
+    if (inserted) enqueued += 1;
+  }
+  return enqueued;
 }
 
 async function claimJobs() {
@@ -481,13 +518,7 @@ async function claimJobs() {
     const claimed = await rpc("claim_work_queue_jobs", {
       p_worker_id: workerId,
       p_queue_name: "research",
-      p_job_types: [
-        "blockwise-agent-census",
-        "blockwise-page-resolver",
-        "blockwise-ad-collector",
-        "blockwise-media-collector",
-        "blockwise-ad-classifier",
-      ],
+      p_job_types: HANDLED_JOB_TYPES,
       p_limit: claimLimit,
       p_claim_ttl_seconds: claimTtlSeconds,
     });
@@ -498,7 +529,7 @@ async function claimJobs() {
     log("claim RPC unavailable, using direct REST fallback", { error: error.message }, "warning");
   }
 
-  const pending = await rest("research", `work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte.${encode(now())}&job_type=in.(blockwise-agent-census,blockwise-page-resolver,blockwise-ad-collector,blockwise-media-collector,blockwise-ad-classifier)&order=priority.asc,available_at.asc,created_at.asc&limit=${claimLimit}`);
+  const pending = await rest("research", `work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte.${encode(now())}&job_type=in.(${HANDLED_JOB_TYPES.map(encode).join(",")})&order=priority.asc,available_at.asc,created_at.asc&limit=${claimLimit}`);
   const claimed = [];
   for (const job of pending) {
     const token = randomUUID();
@@ -999,6 +1030,24 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
   };
 }
 
+async function enqueueClassificationJob(creative, parentJob) {
+  return enqueueFollowUp({
+    queue_name: "research",
+    job_type: "blockwise-ad-classifier",
+    dedupe_key: `classifier:${creative.id}:${creative.creative_hash || "unknown"}:${CLASSIFIER_VERSION}`,
+    advertiser_page_id: null,
+    priority: 5,
+    payload: {
+      adCreativeId: creative.id,
+      observedAdId: creative.observed_ad_id || null,
+      classifier_version: CLASSIFIER_VERSION,
+      force: true,
+    },
+    status: "pending",
+    max_attempts: 3,
+  }, parentJob);
+}
+
 async function enqueueFollowUp(input, parentJob) {
   const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(input.dedupe_key)}&status=in.(pending,claimed,failed,blocked)&limit=1`);
   const active = existing.find((job) => job.status === "pending" || job.status === "claimed");
@@ -1027,11 +1076,11 @@ async function enqueueFollowUp(input, parentJob) {
         completed_at: null,
       }),
     });
-    await recordEvent("requeue", "work_queue", recyclable.id, { parent_work_queue_id: parentJob.id, job_type: input.job_type }, { work_queue_id: recyclable.id });
+    await recordEvent("requeue", "work_queue", recyclable.id, { parent_work_queue_id: parentJob?.id || null, job_type: input.job_type }, { work_queue_id: recyclable.id });
     return true;
   }
   const created = await rest("research", "work_queue", { method: "POST", headers: { Prefer: "return=representation" }, body: json(input) });
-  if (created?.[0]?.id) await recordEvent("insert", "work_queue", created[0].id, { parent_work_queue_id: parentJob.id, job_type: input.job_type }, { work_queue_id: created[0].id });
+  if (created?.[0]?.id) await recordEvent("insert", "work_queue", created[0].id, { parent_work_queue_id: parentJob?.id || null, job_type: input.job_type }, { work_queue_id: created[0].id });
   return Boolean(created?.[0]?.id);
 }
 
@@ -2492,10 +2541,10 @@ async function handleAdCollector(job) {
     await enqueueFollowUp({
       queue_name: "research",
       job_type: "blockwise-ad-classifier",
-      dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}`,
+      dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
       advertiser_page_id: payload.advertiserPageId,
       priority: 5,
-      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId },
+      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
       status: "pending",
       max_attempts: 3,
     }, job);
@@ -2578,10 +2627,10 @@ async function handleMediaCollector(job) {
   await enqueueFollowUp({
     queue_name: "research",
     job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${payload.adCreativeId}:media:${Date.now()}`,
+    dedupe_key: `classifier:${payload.adCreativeId}:media:${CLASSIFIER_VERSION}:${Date.now()}`,
     advertiser_page_id: job.advertiser_page_id || null,
     priority: 5,
-    payload: { adCreativeId: payload.adCreativeId, observedAdId: payload.observedAdId, build_run_id: buildRunId },
+    payload: { adCreativeId: payload.adCreativeId, observedAdId: payload.observedAdId, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
     status: "pending",
     max_attempts: 3,
   }, job);
@@ -2626,8 +2675,16 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "blocked", blocked_reason: "classifier_creative_not_found", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,capture_status&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
-  const classification = classifyCreative(creative);
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
+  if (shouldWaitForMediaClassification(creative, capturedAssets)) {
+    throw new Error("classifier_waiting_for_media_capture");
+  }
+  const classificationResult = await classifyCreativeWithModels(creative, capturedAssets, {
+    env,
+    fetchImpl: fetch,
+    storagePublicUrlForPath,
+  });
+  const classification = classificationResult.classification;
   const requiresMedia = ["image", "video", "carousel"].includes(creative.format);
   const mediaReady = !requiresMedia || capturedAssets.length > 0;
   const displayState = classification.is_real_estate_ad && mediaReady ? "displayable" : "hidden";
@@ -2639,12 +2696,26 @@ async function handleAdClassifier(job) {
       subject_type: "ad_creative",
       subject_id: creative.id,
       decision: classification,
-      rationale: classification.rejection_reason || "Deterministic Hermes classification for verified real-estate page creative.",
+      rationale:
+        classification.rationale ||
+        classification.rejection_reason ||
+        (classificationResult.usedFallback
+          ? `Deterministic fallback classification: ${classificationResult.fallbackReason || "model unavailable"}.`
+          : "Model-backed Hermes classification for verified real-estate page creative."),
       confidence: Math.round((classification.confidence || 0) * 100),
-      evidence: { headline: creative.headline, body: creative.body, cta: creative.cta, landing_url: creative.landing_url, media_ready: mediaReady },
+      evidence: {
+        headline: creative.headline,
+        body: creative.body,
+        cta: creative.cta,
+        landing_url: creative.landing_url,
+        media_ready: mediaReady,
+        evidence_source: classificationResult.evidenceSource,
+        classifier_version: CLASSIFIER_VERSION,
+        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, storage_path: asset.storage_path })),
+      },
       hermes_session_id: workerId,
       hermes_skill: "blockwise-ad-classifier",
-      model: "deterministic",
+      model: classificationResult.model,
     }),
   });
   await rest("research", `ad_creatives?id=eq.${creative.id}`, {
@@ -2659,7 +2730,20 @@ async function handleAdClassifier(job) {
       display_state: displayState,
     }),
   });
-  return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: creative.id, display_state: displayState, media_ready: mediaReady, is_real_estate_ad: classification.is_real_estate_ad } };
+  return {
+    status: "complete",
+    result: {
+      handler: "blockwise-ad-classifier",
+      ad_creative_id: creative.id,
+      display_state: displayState,
+      media_ready: mediaReady,
+      is_real_estate_ad: classification.is_real_estate_ad,
+      ad_type: classification.ad_type,
+      primary_intent: classification.primary_intent,
+      evidence_source: classificationResult.evidenceSource,
+      classifier_version: CLASSIFIER_VERSION,
+    },
+  };
 }
 
 async function captureMediaAsset(asset, buildRunId) {
@@ -2801,6 +2885,11 @@ async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
   if (!response.ok) throw new Error(`storage upload failed ${response.status}: ${text.slice(0, 500)}`);
 }
 
+function storagePublicUrlForPath(objectPath) {
+  if (!objectPath) return null;
+  return `${supabaseUrl}/storage/v1/object/public/${encode(mediaBucket)}/${String(objectPath).split("/").map(encode).join("/")}`;
+}
+
 function extensionForContentType(contentType, kind) {
   if (/png$/iu.test(contentType)) return ".png";
   if (/webp$/iu.test(contentType)) return ".webp";
@@ -2834,70 +2923,23 @@ async function refreshCreativeStoredMedia(adCreativeId) {
   });
 }
 
-function classifyCreative(creative) {
-  const text = [creative.headline, creative.body, creative.cta, creative.cta_url, creative.landing_url, creative.metadata?.description, creative.metadata?.page_name]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  const hooks = [];
-  let adType = "agency_brand";
-  let primaryIntent = "agency_brand";
-  let relevance = "agent_brand";
-  if (/\b(appraisal|home value|market appraisal|property value|what.*worth|price update)\b/iu.test(text)) {
-    adType = "appraisal";
-    primaryIntent = "appraisal";
-    relevance = "appraisal";
-    hooks.push("appraisal");
-  } else if (/\b(sold|just sold|under offer)\b/iu.test(text)) {
-    adType = "just_sold";
-    primaryIntent = "just_sold";
-    relevance = "sold";
-    hooks.push("sold result");
-  } else if (/\b(for sale|just listed|new listing|open home|home open|auction|bedroom|bathroom|sqm)\b/iu.test(text)) {
-    adType = /\b(open home|home open)\b/iu.test(text) ? "open_home" : "listing";
-    primaryIntent = adType;
-    relevance = "listing";
-    hooks.push("listing");
-  } else if (/\b(rent|rental|leased|lease|tenant|property management)\b/iu.test(text)) {
-    adType = "property_management";
-    primaryIntent = "property_management";
-    relevance = "rental";
-    hooks.push("property management");
-  } else if (/\b(market update|suburb report|median price|clearance rate)\b/iu.test(text)) {
-    adType = "market_update";
-    primaryIntent = "market_update";
-    relevance = "agent_brand";
-    hooks.push("market update");
-  } else if (/\b(property|real estate|homes?|selling|buyers?|sellers?|agency|agent|reiwa|realty|ray white|realmark|belle property|acton|harcourts|lj hooker|professionals)\b/iu.test(text)) {
-    adType = "agency_brand";
-    primaryIntent = "agency_brand";
-    hooks.push("agency brand");
-  }
-  const hasRealEstateSignal = hooks.length > 0;
-  return {
-    is_real_estate_ad: hasRealEstateSignal,
-    industry: hasRealEstateSignal ? "real_estate" : "unknown",
-    real_estate_relevance: hasRealEstateSignal ? relevance : "irrelevant",
-    ad_type: hasRealEstateSignal ? adType : "other",
-    primary_intent: hasRealEstateSignal ? primaryIntent : "other",
-    property_or_agent_focus: /\b(bedroom|bathroom|sqm|for sale|leased|sold|open home)\b/iu.test(text) ? "property" : "agency",
-    hooks,
-    tone: "",
-    style: "",
-    audience: "",
-    suburb_signals: [],
-    confidence: hasRealEstateSignal ? 0.86 : 0.45,
-    rejection_reason: hasRealEstateSignal ? null : "No real-estate signal in the captured creative text or media metadata.",
-  };
-}
-
 async function handleJob(job) {
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
   if (job.job_type === "blockwise-page-resolver") return handlePageResolver(job);
   if (job.job_type === "blockwise-ad-collector") return handleAdCollector(job);
   if (job.job_type === "blockwise-media-collector") return handleMediaCollector(job);
   if (job.job_type === "blockwise-ad-classifier") return handleAdClassifier(job);
-  return { status: "blocked", blocked_reason: `unsupported_job_type:${job.job_type}`, result: { handler: "none", reason: "Hermes runtime only handles census and page resolver handoff." } };
+  if (job.job_type === CONTENT_RUN_JOB_TYPE) {
+    return handleHermesContentRun(job, {
+      rest,
+      now,
+      env,
+      fetchImpl: fetch,
+      workerId,
+      log,
+    });
+  }
+  return { status: "blocked", blocked_reason: `unsupported_job_type:${job.job_type}`, result: { handler: "none", reason: "Hermes runtime does not handle this job type." } };
 }
 
 async function processClaimedJobs() {

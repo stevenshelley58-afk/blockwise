@@ -65,7 +65,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
       });
       const payload = (await response.json()) as {
         run?: { id?: string };
-        triggerRunId?: string | null;
+        queueJobId?: string | null;
         queueError?: string | null;
         error?: unknown;
       };
@@ -74,7 +74,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
         throw new Error(typeof payload.error === "string" ? payload.error : "Unable to create content run.");
       }
 
-      setMessage(payload.queueError ? `Run saved. Queue warning: ${payload.queueError}` : "Run queued.");
+      setMessage(payload.queueError ? `Run saved. Hermes queue warning: ${payload.queueError}` : "Run queued for Hermes.");
       if (payload.run?.id) {
         window.location.href = `/operator/content-runs/${payload.run.id}`;
       }
@@ -238,4 +238,3 @@ function formatDate(value: string) {
     minute: "2-digit",
   });
 }
-

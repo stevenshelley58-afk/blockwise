@@ -40,20 +40,21 @@ export async function POST(req: Request) {
     operatorUserId: access.userId,
     body: parsed.data,
   });
-  let triggerRunId: string | null = null;
+  let queueJobId: string | null = null;
   let queueError: string | null = null;
 
   try {
     const queued = await queueContentRun({
+      supabase: serviceSupabase as never,
       workspaceId: access.workspaceId,
       runId: run.id,
     });
-    triggerRunId = queued.id ?? null;
+    queueJobId = queued.id ?? null;
   } catch (error) {
     queueError = error instanceof Error ? error.message : "Unable to queue content run.";
   }
 
-  return NextResponse.json({ run, triggerRunId, queueError }, { status: queueError ? 202 : 201 });
+  return NextResponse.json({ run, queueJobId, triggerRunId: queueJobId, queueError }, { status: queueError ? 202 : 201 });
 }
 
 async function resolveOperatorWorkspace(supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>) {
@@ -78,4 +79,3 @@ async function resolveOperatorWorkspace(supabase: Awaited<ReturnType<typeof impo
 
   return { ok: true as const, workspaceId: String(data.workspace_id), userId: user.id };
 }
-

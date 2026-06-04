@@ -93,4 +93,20 @@ export class ResearchSupervisor {
       max_attempts: 3,
     };
   }
+
+  planContentRun(input: { workspaceId: string; contentRunId: string; fromStep?: string | null }): QueuePlan {
+    return {
+      queue_name: "research",
+      job_type: "blockwise-content-run-orchestrator",
+      dedupe_key: `content-run:${input.workspaceId}:${input.contentRunId}`,
+      priority: 15,
+      payload: {
+        workspaceId: input.workspaceId,
+        contentRunId: input.contentRunId,
+        fromStep: input.fromStep ?? null,
+      },
+      status: "pending",
+      max_attempts: 1,
+    };
+  }
 }
