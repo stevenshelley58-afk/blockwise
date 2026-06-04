@@ -48,7 +48,11 @@ export async function persistAdStudioCampaignPack(
   pack: AdStudioCampaignPack,
   userId: string,
 ) {
-  await persistAdStudioBrandKit(supabase, pack.brandKit, userId);
+  const brandKitResult = await persistAdStudioBrandKit(supabase, pack.brandKit, userId);
+
+  if (brandKitResult.error) {
+    return brandKitResult;
+  }
 
   const campaignResult = await supabase.from("adstudio_campaigns").upsert(
     {

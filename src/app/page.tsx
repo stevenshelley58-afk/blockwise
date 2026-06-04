@@ -222,8 +222,8 @@ export default function HomePage() {
         </nav>
         <nav className="site-nav-actions" aria-label="Account">
           <SignInLink />
-          <CtaLink location="nav" className="button">
-            Request access
+          <CtaLink location="nav" href="/signup" className="button">
+            Start free trial
           </CtaLink>
         </nav>
       </header>
@@ -240,13 +240,13 @@ export default function HomePage() {
             Selling isn&apos;t the hard bit. Getting the listing is. We run the ads. You watch every cent.
           </p>
           <div className="hero-cta">
-            <CtaLink location="hero" className="button primary">
-              Book a demo
+            <CtaLink location="hero" href="/signup" className="button primary">
+              Start free trial
               <ArrowRight aria-hidden size={18} />
             </CtaLink>
-            <a className="button ghost" href="#ads">
-              See the ads
-            </a>
+            <CtaLink location="hero-managed-setup" href="#demo" className="button ghost">
+              Managed setup
+            </CtaLink>
           </div>
         </div>
 
@@ -317,8 +317,8 @@ export default function HomePage() {
 
       <section id="demo" className="demo-section" aria-labelledby="demo-heading">
         <div className="demo-intro">
-          <p className="eyebrow">Book a demo</p>
-          <h2 id="demo-heading">See it in 15 minutes.</h2>
+          <p className="eyebrow">Managed setup</p>
+          <h2 id="demo-heading">Get help setting up.</h2>
           <p className="demo-lead">
             Tell us your patch. We&apos;ll show you the ads we&apos;d run and the numbers
             you&apos;d watch — live, on a call.

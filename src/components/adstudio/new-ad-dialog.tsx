@@ -194,6 +194,7 @@ export function NewAdDialog({ open, onClose, templates, onGenerate, initialTempl
 
           {step === "brief" && (
             <div className="studio-newad-own">
+              <p className="studio-newad-note">Uses 1 of 10 free ad packs. No Meta account is needed until publish.</p>
               <input
                 ref={fileInputRef}
                 type="file"

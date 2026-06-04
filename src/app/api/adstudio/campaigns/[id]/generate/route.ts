@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { buildAdStudioLiveResult, generateAdStudioCampaignPack } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import {
+  refundReservedTrialCredit,
+  reserveAdStudioGenerationCredit,
+  type AdStudioGenerationTrialReservation,
+} from "@/lib/adstudio/generation-trial";
 import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
@@ -21,19 +27,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const body = await readJsonBody<{ brandKit?: AdStudioBrandKit; variantCount?: number; suburb?: string }>(request);
+  let trialReservation: AdStudioGenerationTrialReservation | null = null;
 
   try {
-    if (!body.brandKit) {
-      return NextResponse.json({ error: "Approved brandKit is required." }, { status: 400 });
+    const trialGate = await reserveAdStudioGenerationCredit({
+      supabase: access.supabase,
+      workspaceId: access.access.workspaceId,
+      actorProfileId: access.access.userId,
+    });
+
+    if (!trialGate.ok) {
+      return trialGate.response;
     }
 
-    if (body.brandKit.reviewStatus !== "approved") {
-      return NextResponse.json({ error: "Brand kit must be approved before campaign generation." }, { status: 409 });
+    trialReservation = trialGate.reservation;
+
+    const brandKitResult = await resolveAdStudioGenerationBrandKit({
+      supabase: access.supabase,
+      workspaceId: access.access.workspaceId,
+      workspaceName: access.access.workspaceName,
+      region: access.access.region,
+      userId: access.access.userId,
+      submittedBrandKit: body.brandKit,
+      isTrialWorkspace: trialReservation.isTrialWorkspace,
+    });
+
+    if (!brandKitResult.ok) {
+      await refundReservedTrialCredit(trialReservation);
+      return NextResponse.json({ error: brandKitResult.error }, { status: brandKitResult.status });
     }
 
     const pack = generateAdStudioCampaignPack({
       workspaceId: access.access.workspaceId,
-      brandKit: { ...body.brandKit, workspaceId: access.access.workspaceId, reviewStatus: "approved" },
+      brandKit: brandKitResult.brandKit,
       goal: "seller_leads",
       suburb: body.suburb ?? "Scarborough",
       city: "Perth",
@@ -44,6 +70,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       variantCount: body.variantCount ?? 5,
     });
     const persisted = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);
+
+    if (persisted.error) {
+      await refundReservedTrialCredit(trialReservation);
+    }
+
     const liveResult = buildAdStudioLiveResult({
       data: pack,
       persistenceError: persisted.error?.message,
@@ -55,6 +86,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       persistence: liveResult.persistence,
     });
   } catch (error) {
+    await refundReservedTrialCredit(trialReservation);
     return errorResponse(error, 400);
   }
 }

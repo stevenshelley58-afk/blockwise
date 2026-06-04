@@ -6,7 +6,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient
 
 type HomeMembershipRow = {
   role: string;
-  workspaces: { mode: string } | Array<{ mode: string }> | null;
+  workspaces: { mode: string; onboarding_status?: string | null } | Array<{ mode: string; onboarding_status?: string | null }> | null;
 };
 
 /**
@@ -28,7 +28,7 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
     supabase.from("profiles").select("is_operator").eq("id", user.id).maybeSingle(),
     supabase
       .from("workspace_members")
-      .select("role, workspaces(mode)")
+      .select("role, workspaces(mode, onboarding_status)")
       .eq("profile_id", user.id)
       .order("created_at", { ascending: true }),
   ]);
@@ -40,5 +40,13 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
   }
 
   const firstWorkspace = Array.isArray(rows[0]?.workspaces) ? rows[0]?.workspaces[0] : rows[0]?.workspaces;
+  const onboardingStatus = firstWorkspace?.onboarding_status ?? "complete";
+  if (
+    firstWorkspace?.mode === "self_serve" &&
+    (onboardingStatus === "not_started" || onboardingStatus === "fast_path" || onboardingStatus === "full_setup")
+  ) {
+    return "/start";
+  }
+
   return firstWorkspace?.mode === "self_serve" ? "/self-serve" : "/monitor";
 }

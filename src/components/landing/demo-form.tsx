@@ -98,7 +98,7 @@ export function DemoForm() {
       ) : null}
 
       <button type="submit" className="button primary big" disabled={status === "submitting"}>
-        {status === "submitting" ? "Sending…" : "Book a demo"}
+        {status === "submitting" ? "Sending..." : "Request managed setup"}
         <ArrowRight aria-hidden size={18} />
       </button>
       <p className="demo-form-fine">No obligation. We&apos;ll never share your details.</p>

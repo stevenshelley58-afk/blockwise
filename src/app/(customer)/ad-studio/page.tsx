@@ -7,7 +7,14 @@ import { SampleBanner } from "./sample-banner";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdStudioPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function isFirstRunParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value.includes("1") : value === "1";
+}
+
+export default async function AdStudioPage({ searchParams }: { searchParams?: SearchParams }) {
+  const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId);
   const isSample = liveBundle === null;
@@ -21,6 +28,7 @@ export default async function AdStudioPage() {
         campaignPack={bundle.campaignPack}
         offers={bundle.offers}
         performance={bundle.performance}
+        firstRun={isFirstRunParam(params.first)}
       />
     </>
   );

@@ -21,6 +21,7 @@ import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
   AdStudioOfferTemplate,
+  FirstAdInput,
 } from "@/lib/adstudio";
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 
@@ -45,6 +46,7 @@ import { PublishSetupPanel } from "./panels/publish-panel";
 import { SettingsPanel } from "./panels/settings-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { NewAdDialog } from "./new-ad-dialog";
+import { FirstRunExplainer } from "./first-run-explainer";
 
 type AdStudioWorkbenchProps = {
   brandKit: AdStudioBrandKit;
@@ -57,6 +59,7 @@ type AdStudioWorkbenchProps = {
     bestFormat: string;
     recommendations: string[];
   };
+  firstRun?: boolean;
 };
 
 type NavItem = { id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon };
@@ -87,10 +90,13 @@ const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: 
   { id: "publish", label: "Publish", icon: Send },
 ];
 
+const FIRST_RUN_DIALOG_KEY = "blockwise:first-ad-dialog-dismissed";
+
 export function AdStudioWorkbench({
   brandKit,
   campaignPack: initialPack,
   offers,
+  firstRun = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const [newAdOpen, setNewAdOpen] = useState(false);
@@ -142,6 +148,15 @@ export function AdStudioWorkbench({
     setNewAdTemplateId(templateId);
     setNewAdOpen(true);
   }
+
+  function closeNewAdDialog() {
+    if (firstRun) {
+      window.localStorage.setItem(FIRST_RUN_DIALOG_KEY, "1");
+    }
+    setNewAdOpen(false);
+    setNewAdTemplateId(undefined);
+  }
+
   const { primaryImage, setPrimaryImage, fileInputRef, replaceImage, openFilePicker } = useMedia(
     studio.showToast,
     () => {
@@ -203,11 +218,23 @@ export function AdStudioWorkbench({
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
 
   useEffect(() => {
-    if (!promptedForFirstAd && pack.variants.length === 0) {
+    if (!firstRun || promptedForFirstAd) return;
+
+    if (window.localStorage.getItem(FIRST_RUN_DIALOG_KEY) === "1") {
+      setPromptedForFirstAd(true);
+      return;
+    }
+
+    setPromptedForFirstAd(true);
+    setNewAdOpen(true);
+  }, [firstRun, promptedForFirstAd]);
+
+  useEffect(() => {
+    if (!firstRun && !promptedForFirstAd && pack.variants.length === 0) {
       setPromptedForFirstAd(true);
       setNewAdOpen(true);
     }
-  }, [pack.variants.length, promptedForFirstAd]);
+  }, [firstRun, pack.variants.length, promptedForFirstAd]);
 
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
@@ -234,6 +261,10 @@ export function AdStudioWorkbench({
   // Adds another generated ad idea from the current defaults.
   function addVariant() {
     generateVariantsForAngle(selectedAngle);
+  }
+
+  async function handleGenerateFirstAd(input: FirstAdInput) {
+    await generateFirstAd(input);
   }
 
   function renderPanel() {
@@ -380,6 +411,7 @@ export function AdStudioWorkbench({
         </aside>
 
         <section className="studio-left-panel" aria-label={`${studio.section} setup`}>
+          {firstRun && !newAdOpen ? <FirstRunExplainer /> : null}
           {renderPanel()}
         </section>
 
@@ -557,12 +589,9 @@ export function AdStudioWorkbench({
 
       <NewAdDialog
         open={newAdOpen}
-        onClose={() => {
-          setNewAdOpen(false);
-          setNewAdTemplateId(undefined);
-        }}
+        onClose={closeNewAdDialog}
         templates={AD_STUDIO_TEMPLATES}
-        onGenerate={generateFirstAd}
+        onGenerate={handleGenerateFirstAd}
         initialTemplateId={newAdTemplateId}
       />
 
