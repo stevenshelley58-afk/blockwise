@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Globe2, Home, MapPin, Sparkles, Target, Wand2 } from "lucide-react";
+import { BadgeCheck, Globe2, Home, LayoutGrid, MapPin, Sparkles, Target, Wand2 } from "lucide-react";
 
 import type { AdStudioTemplate } from "@/lib/adstudio";
 
@@ -129,6 +129,10 @@ export function CampaignPanel({
       <FieldShell label="Destination URL">
         <input value={destinationUrl} onChange={(event) => setDestinationUrl(event.target.value)} />
       </FieldShell>
+      <button className="studio-btn secondary block" type="button" onClick={onBrowseTemplates}>
+        <LayoutGrid aria-hidden size={16} />
+        Browse templates
+      </button>
     </>
   );
 }
