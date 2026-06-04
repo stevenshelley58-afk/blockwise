@@ -46,7 +46,7 @@ These always hold, in both modes:
 - Do not create generic helpers, managers, engines, processors, registries, or factories unless they replace clear duplicated code.
 - Do not create interfaces unless there are at least two real implementations now.
 - Do not future-proof.
-- Do not change database schema.
+- Do not change database schema unless the user request explicitly includes schema work. Schema changes must be additive, tested with migration assertions, and must not change auth behaviour, public API response shapes, or provider behaviour.
 - Do not change public API response shapes.
 - Do not change auth behaviour.
 - Do not change provider behaviour.

@@ -4724,3 +4724,207 @@ a.operator-file-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* ===========================================================================
+   Operator Content-to-Lead Engine
+   =========================================================================== */
+
+.content-run-console,
+.content-run-form,
+.content-review-sidebar,
+.content-review-main,
+.content-review-trace,
+.content-prompt-list,
+.content-prompt-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.content-run-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.4fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.content-run-form label,
+.content-review-sidebar label,
+.content-prompt-editor label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 750;
+}
+
+.content-run-form input,
+.content-run-form select,
+.content-review-sidebar select,
+.content-prompt-editor textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 11px;
+}
+
+.content-run-form input:focus,
+.content-run-form select:focus,
+.content-review-sidebar select:focus,
+.content-prompt-editor textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.content-run-metric {
+  min-height: 104px;
+}
+
+.content-run-metric-value {
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.content-run-metric-value.green { color: var(--green); }
+.content-run-metric-value.rose { color: var(--rose); }
+.content-run-metric-value.amber { color: var(--amber); }
+.content-run-metric-value.blue { color: var(--blue); }
+
+.content-review-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  gap: 18px;
+  align-items: start;
+}
+
+.content-review-score {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 12px;
+}
+
+.content-review-score span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.content-review-score strong {
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.content-artifact-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.content-artifact-tab,
+.content-prompt-row {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.content-artifact-tab:hover,
+.content-artifact-tab:focus-visible,
+.content-artifact-tab.active,
+.content-prompt-row:hover,
+.content-prompt-row:focus-visible,
+.content-prompt-row.active {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+  outline: none;
+}
+
+.content-artifact-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.content-markdown-preview,
+.content-json-preview,
+.content-prompt-message {
+  max-height: 720px;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fbfcfe;
+  color: var(--ink);
+  padding: 16px;
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.content-markdown-preview {
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+.content-approval-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.content-prompt-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.content-prompt-set {
+  padding: 12px;
+}
+
+.content-prompt-group {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 12px;
+}
+
+.content-prompt-group strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.content-prompt-row {
+  justify-content: flex-start;
+}
+
+.content-prompt-editor textarea {
+  min-height: 58vh;
+  padding: 12px;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+@media (max-width: 1280px) {
+  .content-run-layout,
+  .content-review-grid,
+  .content-prompt-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

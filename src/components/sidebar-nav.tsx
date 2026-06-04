@@ -5,6 +5,7 @@ import {
   Bot,
   Building2,
   ClipboardCheck,
+  FileText,
   FileSearch,
   Gauge,
   Images,
@@ -29,6 +30,7 @@ type NavItem = {
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
+  { href: "/operator/content-runs", label: "Content Runs", icon: FileText },
   { href: "/monitor", label: "Monitor", icon: Gauge },
   { href: "/self-serve", label: "Create", icon: Sparkles },
   { href: "/research", label: "Ad Library", icon: FileSearch },
