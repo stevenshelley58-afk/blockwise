@@ -21,6 +21,7 @@ export const CONTENT_STEPS = [
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_PROMPT_SET_NAME = "default-blockwise-authority-v1";
+const DEFAULT_APPROVAL_ACTIONS = ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"];
 
 export async function handleHermesContentRun(job, deps) {
   const contentRunId = job.payload?.contentRunId || job.payload?.content_run_id;
@@ -91,9 +92,17 @@ export async function handleHermesContentRun(job, deps) {
         input_json: variables,
         output_json: providerOutput.output,
       });
-      promptRuns.push({ id: promptRow?.id || null, skillName: step.skillName, model: providerOutput.model });
+      promptRuns.push({
+        id: promptRow?.id || null,
+        skillName: step.skillName,
+        provider: providerOutput.provider,
+        model: providerOutput.model,
+        modelPolicyId: prompt.modelPolicyId,
+        promptTemplateId: prompt.templateId,
+        promptVersion: prompt.promptVersion,
+      });
 
-      for (const artifact of artifactsForContentSkill(step.skillName, providerOutput.output)) {
+      for (const artifact of artifactsForContentSkill(step.skillName, providerOutput.output, { artifacts, promptRuns })) {
         artifactTypes.push(artifact.artifactType);
         await insertPublic(deps.rest, "content_artifacts", {
           workspace_id: run.workspace_id,
@@ -311,7 +320,7 @@ function stringifyPromptValue(value) {
   return JSON.stringify(value);
 }
 
-export function artifactsForContentSkill(skillName, output) {
+export function artifactsForContentSkill(skillName, output, context = {}) {
   switch (skillName) {
     case "blockwise-topic-researcher":
       return [{ artifactType: "research_brief", title: "Research brief", data: output }];
@@ -343,10 +352,45 @@ export function artifactsForContentSkill(skillName, output) {
     case "blockwise-agent-reviewer":
       return [{ artifactType: "review_report", title: "Agent review report", data: output }];
     case "blockwise-artifact-packager":
-      return [{ artifactType: "artifact_package", title: "Publishing-ready artifact package", data: output }];
+      return [{ artifactType: "artifact_package", title: "Publishing-ready artifact package", data: normalizeArtifactPackage(output, context) }];
     default:
       return [];
   }
+}
+
+function normalizeArtifactPackage(output, context) {
+  const data = safeObject(output);
+  const promptRuns = Array.isArray(context.promptRuns) ? context.promptRuns : [];
+  return {
+    ...data,
+    approval_actions: nonEmptyArray(data.approval_actions) ? data.approval_actions : DEFAULT_APPROVAL_ACTIONS,
+    prompt_versions_used: nonEmptyArray(data.prompt_versions_used) ? data.prompt_versions_used : promptRuns.map(promptRunProvenance),
+    models_used: nonEmptyArray(data.models_used) ? data.models_used : promptRuns.map(modelProvenance),
+  };
+}
+
+function promptRunProvenance(row) {
+  return {
+    skill_name: row.skillName || null,
+    prompt_template_id: row.promptTemplateId || null,
+    prompt_version: row.promptVersion || null,
+    model_policy_id: row.modelPolicyId || null,
+    provider: row.provider || null,
+    model_used: row.model || null,
+  };
+}
+
+function modelProvenance(row) {
+  return {
+    skill_name: row.skillName || null,
+    provider: row.provider || null,
+    model_used: row.model || null,
+    model_policy_id: row.modelPolicyId || null,
+  };
+}
+
+function nonEmptyArray(value) {
+  return Array.isArray(value) && value.length > 0;
 }
 
 function reviewRowForSkill(run, skillName, output) {

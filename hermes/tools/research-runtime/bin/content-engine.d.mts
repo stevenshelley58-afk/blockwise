@@ -18,7 +18,11 @@ export function handleHermesContentRun(
 ): Promise<{ status: string; blocked_reason?: string; result: Record<string, unknown> }>;
 
 export function modelForContentSkill(env: Record<string, any>, modelPolicyId: string, skillName: string): string;
-export function artifactsForContentSkill(skillName: string, output: Record<string, unknown>): Array<{
+export function artifactsForContentSkill(
+  skillName: string,
+  output: Record<string, unknown>,
+  context?: Record<string, any>,
+): Array<{
   artifactType: string;
   title: string;
   data: Record<string, unknown>;

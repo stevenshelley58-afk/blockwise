@@ -57,6 +57,12 @@ test("Hermes content handler turns a work_queue job into draft artifacts and rev
   assert.equal(db.tables.content_artifacts.some((row: Record<string, unknown>) => row.artifact_type === "artifact_package"), true);
   assert.equal(db.tables.content_artifacts.some((row: Record<string, unknown>) => row.artifact_type === "lead_ad"), true);
   assert.equal(db.tables.content_reviews.length, CONTENT_STEPS.length);
+
+  const artifactPackage = db.tables.content_artifacts.find((row: Record<string, unknown>) => row.artifact_type === "artifact_package");
+  assert.deepEqual(artifactPackage?.data_json.approval_actions, ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"]);
+  assert.equal(artifactPackage?.data_json.prompt_versions_used.length, CONTENT_STEPS.length);
+  assert.equal(artifactPackage?.data_json.models_used.length, CONTENT_STEPS.length);
+  assert.equal(artifactPackage?.data_json.models_used.every((row: Record<string, unknown>) => row.model_used === "hermes-deterministic-content"), true);
 });
 
 function createFakeRestDb() {
