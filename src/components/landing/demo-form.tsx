@@ -80,7 +80,7 @@ export function DemoForm() {
           <input id="demo-phone" name="phone" type="tel" autoComplete="tel" maxLength={40} />
         </div>
         <div className="demo-field demo-field-wide">
-          <label htmlFor="demo-suburb">Suburb you want listings in</label>
+          <label htmlFor="demo-suburb">Suburb you want to advertise in</label>
           <input id="demo-suburb" name="suburb" type="text" placeholder="e.g. Mount Lawley" maxLength={120} />
         </div>
       </div>
