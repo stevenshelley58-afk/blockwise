@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 export type StudioSection =
   | "campaign"
+  | "templates"
   | "brand"
   | "media"
   | "copy"
@@ -11,7 +12,7 @@ export type StudioSection =
   | "publish"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";
-export type MobileTab = "campaign" | "review" | "copy" | "publish";
+export type MobileTab = "campaign" | "media" | "copy" | "publish";
 
 export function useAdStudio() {
   const [section, setSection] = useState<StudioSection>("campaign");

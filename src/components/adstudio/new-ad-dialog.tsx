@@ -1,31 +1,34 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Check, LayoutGrid, Upload, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Upload, X } from "lucide-react";
 
 import type { AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
 
-type Mode = "template" | "custom";
-type Step = "mode" | "template" | "brief";
+import { BlankTemplateCard, TemplateCard } from "./panels/templates-panel";
+
+type Step = "template" | "brief";
 
 type NewAdDialogProps = {
   open: boolean;
   onClose: () => void;
   templates: AdStudioTemplate[];
   onGenerate: (input: FirstAdInput) => Promise<void>;
+  /** Pre-select a template (e.g. launched from the Templates panel). */
+  initialTemplateId?: string;
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialogProps) {
+export function NewAdDialog({ open, onClose, templates, onGenerate, initialTemplateId }: NewAdDialogProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<Mode>("template");
-  const [step, setStep] = useState<Step>("mode");
-  const [templateId, setTemplateId] = useState<string | undefined>(templates[0]?.id);
+  const [step, setStep] = useState<Step>("template");
+  // undefined = nothing chosen yet; "" = blank (create your own)
+  const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState("");
   const [imageName, setImageName] = useState("");
@@ -35,15 +38,19 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setMode("template");
-    setStep("mode");
-    setTemplateId(templates[0]?.id);
+    if (initialTemplateId !== undefined) {
+      setTemplateId(initialTemplateId);
+      setStep("brief");
+    } else {
+      setTemplateId(undefined);
+      setStep("template");
+    }
     setDescription("");
     setImageDataUrl("");
     setImageName("");
     setError("");
     window.setTimeout(() => dialogRef.current?.focus(), 0);
-  }, [open, templates]);
+  }, [open, initialTemplateId]);
 
   useEffect(() => {
     if (!open) return;
@@ -63,7 +70,8 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
 
   if (!open) return null;
 
-  const selectedTemplate = templates.find((template) => template.id === templateId) ?? templates[0];
+  const isBlank = templateId === "";
+  const selectedTemplate = templates.find((template) => template.id === templateId);
 
   function trapFocus(event: KeyboardEvent) {
     const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
@@ -81,14 +89,9 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
     }
   }
 
-  function chooseMode(nextMode: Mode) {
-    setMode(nextMode);
-    setError("");
-    setStep(nextMode === "template" ? "template" : "brief");
-  }
-
   function chooseTemplate(id: string) {
     setTemplateId(id);
+    setError("");
     setStep("brief");
   }
 
@@ -113,10 +116,6 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
 
   async function submit() {
     const trimmed = description.trim();
-    if (mode === "template" && !selectedTemplate) {
-      setError("Choose a template to continue.");
-      return;
-    }
     if (!imageDataUrl) {
       setError("Upload one image to generate the ad.");
       return;
@@ -134,8 +133,8 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
     setError("");
     try {
       await onGenerate({
-        mode,
-        templateId: mode === "template" ? selectedTemplate.id : undefined,
+        mode: isBlank ? "custom" : "template",
+        templateId: isBlank ? undefined : selectedTemplate?.id,
         description: trimmed,
         imageDataUrl,
         formats: ["9:16", "4:5", "1:1"],
@@ -148,6 +147,8 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
     }
   }
 
+  const stepTitle = step === "template" ? "Start with a template" : isBlank ? "Describe your ad" : `${selectedTemplate?.name ?? "Template"} — add your details`;
+
   return (
     <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div
@@ -159,46 +160,35 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
         tabIndex={-1}
       >
         <div className="studio-newad-head">
-          {step !== "mode" && (
-            <button className="studio-newad-x" type="button" aria-label="Back" onClick={() => setStep(mode === "template" && step === "brief" ? "template" : "mode")}>
+          {step === "brief" && (
+            <button className="studio-newad-x" type="button" aria-label="Back" onClick={() => setStep("template")}>
               <ArrowLeft aria-hidden size={18} />
             </button>
           )}
-          <h2 id={titleId}>{step === "mode" ? "How do you want to start?" : step === "template" ? "Start with a template" : "Create your ad"}</h2>
+          <h2 id={titleId}>{stepTitle}</h2>
+          <div className="studio-newad-steps" aria-hidden>
+            <span className={`st${step === "template" ? " on" : ""}`}><i>1</i>Template</span>
+            <span className="ln" />
+            <span className={`st${step === "brief" ? " on" : ""}`}><i>2</i>Details</span>
+          </div>
           <button className="studio-newad-x" type="button" aria-label="Close" onClick={onClose}>
             <X aria-hidden size={18} />
           </button>
         </div>
 
         <div className="studio-newad-body">
-          {step === "mode" && (
-            <div className="studio-newad-modes">
-              <button className="studio-newad-mode" type="button" onClick={() => chooseMode("template")}>
-                <span className="ic"><LayoutGrid aria-hidden size={20} /></span>
-                <span className="tx"><strong>Start with a template</strong></span>
-                <span className="ck"><Check aria-hidden size={13} /></span>
-              </button>
-              <button className="studio-newad-mode" type="button" onClick={() => chooseMode("custom")}>
-                <span className="ic"><Wand2 aria-hidden size={20} /></span>
-                <span className="tx"><strong>Create your own</strong></span>
-              </button>
-            </div>
-          )}
-
           {step === "template" && (
-            <div className="studio-newad-grid">
-              {templates.map((template) => (
-                <button
+            <div className="studio-tpl-grid">
+              {templates.map((template, index) => (
+                <TemplateCard
                   key={template.id}
-                  type="button"
-                  className={`studio-newad-card${templateId === template.id ? " active" : ""}`}
-                  aria-pressed={templateId === template.id}
-                  onClick={() => chooseTemplate(template.id)}
-                >
-                  <strong>{template.name}</strong>
-                  <span className="purpose">{template.promptHint}</span>
-                </button>
+                  template={template}
+                  index={index}
+                  active={templateId === template.id}
+                  onSelect={chooseTemplate}
+                />
               ))}
+              <BlankTemplateCard active={isBlank} onSelect={() => chooseTemplate("")} />
             </div>
           )}
 
@@ -223,7 +213,11 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
                   maxLength={500}
                   rows={5}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Example: Open home this Saturday, 3 bed family home in Scarborough with renovated kitchen."
+                  placeholder={
+                    selectedTemplate
+                      ? `Example: ${selectedTemplate.promptHint}`
+                      : "Example: Open home this Saturday, 3 bed family home in Scarborough with renovated kitchen."
+                  }
                 />
                 <small>{description.length}/500</small>
               </label>
@@ -233,7 +227,7 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
 
         <div className="studio-newad-foot">
           <span className={error ? "studio-newad-error" : "studio-newad-sel"}>
-            {error || (step === "brief" ? "Blockwise will generate Story, Feed, and Square." : " ")}
+            {error || (step === "brief" ? "Blockwise will generate Story, Feed, and Square." : "Pick a starting point — you can change everything later.")}
           </span>
           <button className="studio-btn secondary" type="button" onClick={onClose}>Close</button>
           {step === "brief" && (
@@ -247,3 +241,4 @@ export function NewAdDialog({ open, onClose, templates, onGenerate }: NewAdDialo
     </div>
   );
 }
+// NewAdDialog: template gallery → details (image + description) → generate.

@@ -1,6 +1,8 @@
 "use client";
 
-import { BadgeCheck, Globe2, Home, MapPin, Pencil, Sparkles, Target, Wand2 } from "lucide-react";
+import { BadgeCheck, Globe2, Home, MapPin, Sparkles, Target, Wand2 } from "lucide-react";
+
+import type { AdStudioTemplate } from "@/lib/adstudio";
 
 import { FieldShell, PanelHeader } from "../inspector";
 
@@ -19,7 +21,11 @@ type CampaignPanelProps = {
   setDestinationUrl: (value: string) => void;
   variantCount: number;
   onCreateAd: () => void;
+  onBrowseTemplates: () => void;
+  templates: AdStudioTemplate[];
 };
+
+const EMPTY_STATE_GRADIENTS = ["studio-tpl-g0", "studio-tpl-g2", "studio-tpl-g4", "studio-tpl-g5"];
 
 export function CampaignPanel({
   campaignGoal,
@@ -36,21 +42,45 @@ export function CampaignPanel({
   setDestinationUrl,
   variantCount,
   onCreateAd,
+  onBrowseTemplates,
+  templates,
 }: CampaignPanelProps) {
   if (variantCount === 0) {
+    const featured = templates.slice(0, 4);
     return (
       <>
-        <PanelHeader title="Create ad" detail="Start with one image and a short description." />
-        <div style={{ border: "1.5px dashed var(--line)", borderRadius: 8, padding: "22px 16px", textAlign: "center", display: "grid", gap: 12 }}>
-          <Sparkles aria-hidden size={24} style={{ margin: "0 auto", color: "var(--muted)" }} />
-          <strong style={{ fontSize: 15 }}>Create your first ad</strong>
-          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13, lineHeight: 1.45 }}>
-            Upload one image, add a short description, and Blockwise will generate Story, Feed, and Square.
+        <PanelHeader title="Create ad" detail="Template + one photo = a finished ad." />
+        <div className="studio-empty">
+          <span className="studio-empty-ic">
+            <Sparkles aria-hidden size={24} />
+          </span>
+          <strong>Create your first ad</strong>
+          <p>
+            Pick a template, add one photo, and Blockwise writes the copy and builds Story, Feed and Square — ready
+            for Meta in about a minute.
           </p>
-          <button className="studio-btn publish block" type="button" onClick={onCreateAd}>
-            <Wand2 aria-hidden size={17} />
-            Create ad
-          </button>
+          <div className="studio-empty-row">
+            <button className="studio-btn publish" type="button" onClick={onCreateAd}>
+              <Wand2 aria-hidden size={16} />
+              Create ad
+            </button>
+            <button className="studio-btn secondary" type="button" onClick={onBrowseTemplates}>
+              Browse templates
+            </button>
+          </div>
+          <div className="studio-mini-tpls" aria-label="Featured templates">
+            {featured.map((template, index) => (
+              <button
+                key={template.id}
+                type="button"
+                className={EMPTY_STATE_GRADIENTS[index % EMPTY_STATE_GRADIENTS.length]}
+                onClick={onCreateAd}
+              >
+                <span>{template.name}</span>
+              </button>
+            ))}
+          </div>
+          <small>{templates.length} templates tuned for WA real-estate compliance</small>
         </div>
       </>
     );
@@ -99,10 +129,6 @@ export function CampaignPanel({
       <FieldShell label="Destination URL">
         <input value={destinationUrl} onChange={(event) => setDestinationUrl(event.target.value)} />
       </FieldShell>
-      <button className="studio-link-btn" type="button">
-        <Pencil aria-hidden size={16} />
-        Edit ad details
-      </button>
     </>
   );
 }

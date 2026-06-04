@@ -5,6 +5,7 @@ import {
   ChevronDown,
   CircleAlert,
   Image as ImageIcon,
+  LayoutGrid,
   RefreshCw,
   Send,
   Settings2,
@@ -42,6 +43,7 @@ import { CopyPanel } from "./panels/copy-panel";
 import { MediaPanel } from "./panels/media-panel";
 import { PublishSetupPanel } from "./panels/publish-panel";
 import { SettingsPanel } from "./panels/settings-panel";
+import { TemplatesPanel } from "./panels/templates-panel";
 import { NewAdDialog } from "./new-ad-dialog";
 
 type AdStudioWorkbenchProps = {
@@ -57,19 +59,30 @@ type AdStudioWorkbenchProps = {
   };
 };
 
-const NAV_ITEMS: Array<{ id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon }> = [
-  { id: "campaign", label: "Ad", icon: Target },
-  { id: "brand", label: "Brand", icon: ShieldCheck },
-  { id: "media", label: "Review", icon: ImageIcon },
-  { id: "copy", label: "Copy", icon: Type },
-  { id: "audience", label: "Audience", icon: UsersRound },
-  { id: "publish", label: "Publish", icon: Send },
-  { id: "settings", label: "Settings", icon: Settings2 },
+type NavItem = { id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon };
+
+const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
+  {
+    label: "Create",
+    items: [
+      { id: "campaign", label: "Ad", icon: Target },
+      { id: "templates", label: "Templates", icon: LayoutGrid },
+      { id: "brand", label: "Brand", icon: ShieldCheck },
+      { id: "media", label: "Media", icon: ImageIcon },
+      { id: "copy", label: "Copy", icon: Type },
+      { id: "audience", label: "Audience", icon: UsersRound },
+      { id: "publish", label: "Publish", icon: Send },
+    ],
+  },
+  {
+    label: "Workspace",
+    items: [{ id: "settings", label: "Settings", icon: Settings2 }],
+  },
 ];
 
-const MOBILE_NAV: Array<{ id: "campaign" | "review" | "copy" | "publish"; label: string; icon: LucideIcon }> = [
+const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: string; icon: LucideIcon }> = [
   { id: "campaign", label: "Ad", icon: Target },
-  { id: "review", label: "Review", icon: ImageIcon },
+  { id: "media", label: "Media", icon: ImageIcon },
   { id: "copy", label: "Copy", icon: Type },
   { id: "publish", label: "Publish", icon: Send },
 ];
@@ -81,6 +94,7 @@ export function AdStudioWorkbench({
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const [newAdOpen, setNewAdOpen] = useState(false);
+  const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -97,12 +111,33 @@ export function AdStudioWorkbench({
 
   const studio = useAdStudio();
   const { brand, initials, domain } = useBrandKit(brandKit);
-  const { copy, setCopy, updateCopy, applyCopyAssist } = useCopy(
-    initialPack,
-    studio.setSaveState,
-    studio.showToast,
-    setSelectedElement,
-  );
+  const {
+    copy,
+    setCopy,
+    updateCopy,
+    copyMode,
+    setCopyMode,
+    brief,
+    setBrief,
+    generating,
+    alternates,
+    generateCopy,
+    applyCopyAssist,
+    applyAlternate,
+  } = useCopy(initialPack, studio.setSaveState, studio.showToast, setSelectedElement);
+
+  const copyContext = {
+    goal: campaignGoal,
+    offer: offerLabel,
+    market,
+    propertyType,
+    businessName: brand,
+  };
+
+  function openNewAd(templateId?: string) {
+    setNewAdTemplateId(templateId);
+    setNewAdOpen(true);
+  }
   const { primaryImage, setPrimaryImage, fileInputRef, replaceImage, openFilePicker } = useMedia(
     studio.showToast,
     () => {
@@ -122,10 +157,11 @@ export function AdStudioWorkbench({
   });
 
   // API routes used in campaign actions:
-  //   POST /api/adstudio/campaigns — generate variants
+  //   POST /api/adstudio/campaigns — Generate variants
   //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft — save draft
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download — Export creatives
   //   platforms: ["meta"]
+  // Campaign readiness checklist lives in the publish panel.
   const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives } = useCampaignActions({
     pack,
     brandKit,
@@ -197,6 +233,15 @@ export function AdStudioWorkbench({
   }
 
   function renderPanel() {
+    if (studio.section === "templates") {
+      return (
+        <TemplatesPanel
+          templates={AD_STUDIO_TEMPLATES}
+          onUseTemplate={(id) => openNewAd(id)}
+          onStartBlank={() => openNewAd("")}
+        />
+      );
+    }
     if (studio.section === "brand") {
       return <BrandPanel brand={brand} brandKit={brandKit} />;
     }
@@ -205,7 +250,22 @@ export function AdStudioWorkbench({
       return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={setPrimaryImage} />;
     }
     if (studio.section === "copy") {
-      return <CopyPanel copy={copy} updateCopy={updateCopy} applyCopyAssist={applyCopyAssist} />;
+      return (
+        <CopyPanel
+          copy={copy}
+          updateCopy={updateCopy}
+          copyMode={copyMode}
+          setCopyMode={setCopyMode}
+          brief={brief}
+          setBrief={setBrief}
+          generating={generating}
+          alternates={alternates}
+          context={copyContext}
+          onGenerate={(kind, context) => void generateCopy(kind, context)}
+          onAssist={(action, context) => void applyCopyAssist(action, context)}
+          onApplyAlternate={applyAlternate}
+        />
+      );
     }
     if (studio.section === "audience") {
       return <AudiencePanel />;
@@ -240,7 +300,9 @@ export function AdStudioWorkbench({
         destinationUrl={destinationUrl}
         setDestinationUrl={setDestinationUrl}
         variantCount={pack.variants.length}
-        onCreateAd={() => setNewAdOpen(true)}
+        onCreateAd={() => openNewAd()}
+        onBrowseTemplates={() => studio.setSection("templates")}
+        templates={AD_STUDIO_TEMPLATES}
       />
     );
   }
@@ -262,50 +324,55 @@ export function AdStudioWorkbench({
 
       <div className="studio-desktop-body">
         <aside className="studio-rail" aria-label="Ad Studio sections">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} style={{ display: "grid", gap: 2 }}>
+              <span className="studio-rail-label">{group.label}</span>
+              {group.items.map((item) => {
+                const Icon = item.icon;
 
-            // M6: map readiness items to section, derive dot state
-            const sectionItems: Record<string, string[]> = {
-              campaign: ["Goal & offer", "Location", "Property type"],
-              media: ["Primary media"],
-              copy: ["Ad copy", "Call to action"],
-              brand: [],   // special-cased below
-              publish: [], // all items
-            };
-            let railState: "done" | "warn" | "todo" | null = null;
-            if (item.id === "brand") {
-              railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
-            } else if (item.id === "publish") {
-              const allDone = readinessItems.every((ri) => ri.state === "done");
-              railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
-            } else {
-              const labels = sectionItems[item.id] ?? [];
-              if (labels.length > 0) {
-                const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
-                if (relevant.length > 0) {
-                  if (relevant.every((ri) => ri.state === "done")) railState = "done";
-                  else if (relevant.some((ri) => ri.state === "warn")) railState = "warn";
-                  else railState = "todo";
+                // M6: map readiness items to section, derive dot state
+                const sectionItems: Record<string, string[]> = {
+                  campaign: ["Goal & offer", "Location", "Property type"],
+                  media: ["Primary media"],
+                  copy: ["Ad copy", "Call to action"],
+                  brand: [],   // special-cased below
+                  publish: [], // all items
+                };
+                let railState: "done" | "warn" | "todo" | null = null;
+                if (item.id === "brand") {
+                  railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
+                } else if (item.id === "publish") {
+                  const allDone = readinessItems.every((ri) => ri.state === "done");
+                  railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
+                } else {
+                  const labels = sectionItems[item.id] ?? [];
+                  if (labels.length > 0) {
+                    const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
+                    if (relevant.length > 0) {
+                      if (relevant.every((ri) => ri.state === "done")) railState = "done";
+                      else if (relevant.some((ri) => ri.state === "warn")) railState = "warn";
+                      else railState = "todo";
+                    }
+                  }
                 }
-              }
-            }
 
-            return (
-              <button
-                className={studio.section === item.id ? "active" : ""}
-                key={item.id}
-                type="button"
-                onClick={() => studio.setSection(item.id)}
-              >
-                <Icon aria-hidden size={19} />
-                <span>{item.label}</span>
-                {railState === "done" && <Check aria-hidden size={13} style={{ color: "#45b757", marginLeft: "auto", flexShrink: 0 }} />}
-                {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#ffb020", marginLeft: "auto", flexShrink: 0 }} />}
-                {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e2e5ea", marginLeft: "auto", flexShrink: 0 }} />}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    className={studio.section === item.id ? "active" : ""}
+                    key={item.id}
+                    type="button"
+                    onClick={() => studio.setSection(item.id)}
+                  >
+                    <Icon aria-hidden size={18} />
+                    <span>{item.label}</span>
+                    {railState === "done" && <Check aria-hidden size={13} style={{ color: "#0e7a4d", marginLeft: "auto", flexShrink: 0 }} />}
+                    {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#ffb020", marginLeft: "auto", flexShrink: 0 }} />}
+                    {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e2e5ea", marginLeft: "auto", flexShrink: 0 }} />}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </aside>
 
         <section className="studio-left-panel" aria-label={`${studio.section} setup`}>
@@ -349,7 +416,7 @@ export function AdStudioWorkbench({
             variants={variants}
             selectedVariantIndex={selectedVariantIndex}
             onSelect={selectVariant}
-            onAdd={() => setNewAdOpen(true)}
+            onAdd={() => openNewAd()}
             onEditCopy={(index) => {
               selectVariant(index);
               studio.setSection("copy");
@@ -399,19 +466,19 @@ export function AdStudioWorkbench({
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
                 setSelectedElement(element);
-                studio.setMobileTab(element === "image" ? "review" : "copy");
+                studio.setMobileTab(element === "image" ? "media" : "copy");
               }}
             />
           </div>
         )}
 
-        {studio.mobileTab === "review" && (
+        {studio.mobileTab === "media" && (
           <div className="studio-mobile-panel">
             <VariantStrip
               variants={variants}
               selectedVariantIndex={selectedVariantIndex}
               onSelect={selectVariant}
-              onAdd={() => setNewAdOpen(true)}
+              onAdd={() => openNewAd()}
               onEditCopy={(index) => {
                 selectVariant(index);
                 studio.setMobileTab("copy");
@@ -431,7 +498,20 @@ export function AdStudioWorkbench({
 
         {studio.mobileTab === "copy" && (
           <div className="studio-mobile-panel">
-            <CopyPanel copy={copy} updateCopy={updateCopy} applyCopyAssist={applyCopyAssist} />
+            <CopyPanel
+              copy={copy}
+              updateCopy={updateCopy}
+              copyMode={copyMode}
+              setCopyMode={setCopyMode}
+              brief={brief}
+              setBrief={setBrief}
+              generating={generating}
+              alternates={alternates}
+              context={copyContext}
+              onGenerate={(kind, context) => void generateCopy(kind, context)}
+              onAssist={(action, context) => void applyCopyAssist(action, context)}
+              onApplyAlternate={applyAlternate}
+            />
           </div>
         )}
 
@@ -473,9 +553,13 @@ export function AdStudioWorkbench({
 
       <NewAdDialog
         open={newAdOpen}
-        onClose={() => setNewAdOpen(false)}
+        onClose={() => {
+          setNewAdOpen(false);
+          setNewAdTemplateId(undefined);
+        }}
         templates={AD_STUDIO_TEMPLATES}
         onGenerate={generateFirstAd}
+        initialTemplateId={newAdTemplateId}
       />
 
       {studio.toast && <div className="studio-toast">{studio.toast}</div>}
