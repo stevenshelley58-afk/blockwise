@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
 import Script from "next/script";
 
 import "./globals.css";
 import "./meta-monitor.css";
+import "./landing.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,12 +12,18 @@ const inter = Inter({
   display: "swap",
 });
 
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+
 const META_PIXEL_ID = "1699948581050851";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
-const SITE_TITLE = "Blockwise — More listings. Nothing hidden.";
+const SITE_TITLE = "Blockwise — Create and launch real estate ads from one platform";
 const SITE_DESCRIPTION =
-  "Blockwise runs Meta ads that win listings for real estate agents. Pick a suburb, approve the ads, and watch every lead and every cent in real time. Book a 15-minute demo.";
+  "Build Facebook and Instagram campaigns from a simple brief. Connect your ad account, approve every ad, set the budget and track results inside Blockwise. Free 7-day trial, no card required.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -54,7 +61,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-AU" className={inter.variable} data-sidebar-theme="dark" suppressHydrationWarning>
+    <html
+      lang="en-AU"
+      className={`${inter.variable} ${manrope.variable}`}
+      data-sidebar-theme="dark"
+      suppressHydrationWarning
+    >
       <head>
         {/* Set sidebar theme before paint to avoid a flash */}
         <Script id="sidebar-theme-init" strategy="beforeInteractive">
