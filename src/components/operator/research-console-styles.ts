@@ -1,6 +1,6 @@
 export const CONSOLE_STYLES = `
-.rops{--rops-good:#0e7a4d;--rops-good-tint:#e8f6ef;--rops-warn:#b27905;--rops-warn-tint:#faf1de;--rops-bad:#b91c1c;--rops-bad-tint:#fff2f2;--rops-sh:0 1px 2px rgba(15,23,41,.05),0 0 0 1px rgba(15,23,41,.03);
-  background:#f7f8fa;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:13px;color:var(--ink)}
+.rops{--rops-good:#006d38;--rops-good-tint:#ecfdf5;--rops-warn:#8a5a00;--rops-warn-tint:#fdf8ee;--rops-bad:#ba1a1a;--rops-bad-tint:#fdf3f2;--rops-sh:0 1px 2px rgba(15,23,41,.05),0 0 0 1px rgba(15,23,41,.03);
+  background:#f8fafc;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:13px;color:var(--ink)}
 .rops *{box-sizing:border-box}
 .rops button{cursor:pointer;font:inherit}
 .rops-topbar{min-height:60px;display:flex;align-items:center;gap:13px;background:#fff;border-bottom:1px solid var(--line-soft);padding:10px 18px;flex-wrap:wrap}
@@ -22,27 +22,27 @@ export const CONSOLE_STYLES = `
 .rops-btn:hover{background:var(--surface-subtle)}
 .rops-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(31,58,110,.28)}
 .rops-btn.primary:hover{background:var(--accent-strong)}
-.rops-btn.danger{color:var(--rops-bad);border-color:#ffd5d5}
+.rops-btn.danger{color:var(--rops-bad);border-color:#ffdad6}
 .rops-btn.danger:hover{background:var(--rops-bad-tint)}
 .rops-btn.danger.on{background:var(--rops-bad-tint)}
 .rops-body{display:flex;align-items:stretch;min-height:520px}
 .rops-rail{width:172px;flex-shrink:0;background:#fff;border-right:1px solid var(--line-soft);padding:10px 8px 14px}
-.rops-rail-label{font-size:10.5px;font-weight:700;letter-spacing:.7px;color:#8a93a6;text-transform:uppercase;padding:12px 12px 5px;margin:0}
+.rops-rail-label{font-size:10.5px;font-weight:700;letter-spacing:.7px;color:#94a3b8;text-transform:uppercase;padding:12px 12px 5px;margin:0}
 .rops-navb{display:flex;align-items:center;gap:10px;width:100%;font-size:13px;font-weight:600;padding:9px 12px;border-radius:9px;border:0;background:transparent;color:var(--muted);text-align:left}
 .rops-navb:hover{background:var(--surface-subtle);color:var(--ink)}
 .rops-navb.on{background:var(--accent-tint);color:var(--accent)}
-.rops-navb .rops-cnt{margin-left:auto;font-size:11px;font-weight:650;color:#8a93a6}
+.rops-navb .rops-cnt{margin-left:auto;font-size:11px;font-weight:650;color:#94a3b8}
 .rops-navb .rops-cnt.bad{color:var(--rops-bad)}
 .rops-main{flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:12px}
 .rops-card{background:#fff;border-radius:12px;box-shadow:var(--rops-sh);padding:14px 16px}
 .rops-card h3{font-size:14.5px;font-weight:650;margin:0 0 10px;letter-spacing:-.1px}
 .rops-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
-.rops-stat{margin:0;font-size:11px;font-weight:650;color:#8a93a6;text-transform:uppercase;letter-spacing:.5px}
+.rops-stat{margin:0;font-size:11px;font-weight:650;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
 .rops-stv{font-size:21px;font-weight:700;margin:3px 0 0;color:var(--ink)}
 .rops-stv.warn{color:var(--rops-warn)}
 .rops-stv.bad{color:var(--rops-bad)}
 .rops-table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
-.rops-table th{text-align:left;color:#8a93a6;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:5px 6px;border-bottom:1px solid var(--line-soft)}
+.rops-table th{text-align:left;color:#94a3b8;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:5px 6px;border-bottom:1px solid var(--line-soft)}
 .rops-table td{padding:7px 6px;border-bottom:1px solid var(--line-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
 .rops-table td.wrap{white-space:normal}
 .rops-table td.r{text-align:right}
@@ -57,7 +57,7 @@ export const CONSOLE_STYLES = `
 .rops-act:hover{background:var(--surface-subtle)}
 .rops-act:disabled{opacity:.5;cursor:not-allowed}
 .rops-actform{display:inline;margin:0}
-.rops-src{font-size:11px;color:#8a93a6;margin:9px 0 0}
+.rops-src{font-size:11px;color:#94a3b8;margin:9px 0 0}
 .rops-bar{height:6px;border-radius:3px;background:var(--line-soft);overflow:hidden}
 .rops-bar>span{display:block;height:100%;border-radius:3px;background:var(--accent)}
 .rops-glance{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted)}

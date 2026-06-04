@@ -102,7 +102,7 @@ export default function OperatorConsolePage() {
         <div className="grid cols-3">
           {["Publishing", "Budget changes", "PII exports"].map((gate) => (
             <article className="item-card" key={gate}>
-              <CheckCircle2 aria-hidden color="#2f7d32" size={20} />
+              <CheckCircle2 aria-hidden color="#31c46f" size={20} />
               <h3>{gate}</h3>
               <p className="item-meta">Human approval is required before this action can leave Blockwise.</p>
             </article>

@@ -53,7 +53,7 @@ export function SetupChecklist({ items }: { items: SetupChecklistItem[] }) {
           return (
             <div className="wizard-connect-row" key={item.id}>
               <span style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <Icon aria-hidden size={19} color={item.complete ? "#2f7d32" : "#8a93a6"} />
+                <Icon aria-hidden size={19} color={item.complete ? "#31c46f" : "#94a3b8"} />
                 <span>
                   <strong>{item.label}</strong>
                   <span className="item-meta" style={{ display: "block" }}>

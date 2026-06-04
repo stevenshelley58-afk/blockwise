@@ -85,17 +85,17 @@ export default async function SelfServePage() {
 
       <section className="grid cols-3" aria-label="Next actions">
         <article className="item-card">
-          <WandSparkles aria-hidden color="#2364aa" size={20} />
+          <WandSparkles aria-hidden color="#123e75" size={20} />
           <h3>Create</h3>
           <p className="item-meta">Turn one listing photo and a short brief into Meta-ready ad formats.</p>
         </article>
         <article className="item-card">
-          <Palette aria-hidden color="#2364aa" size={20} />
+          <Palette aria-hidden color="#123e75" size={20} />
           <h3>Brand</h3>
           <p className="item-meta">Keep colours, tone, and compliance defaults tidy before review.</p>
         </article>
         <article className="item-card">
-          <Plug aria-hidden color="#2364aa" size={20} />
+          <Plug aria-hidden color="#123e75" size={20} />
           <h3>Publish later</h3>
           <p className="item-meta">Connect Meta only when the ad is approved and ready to go live.</p>
         </article>

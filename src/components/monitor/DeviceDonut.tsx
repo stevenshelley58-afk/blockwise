@@ -1,4 +1,4 @@
-const DEVICE_COLORS = ["var(--blue)", "var(--green)", "#b45309"];
+const DEVICE_COLORS = ["var(--blue)", "var(--green-bright)", "#94a3b8"];
 const CIRCUMFERENCE = 2 * Math.PI * 15.915;
 
 export function DeviceDonut({ rows }: { rows: Array<{ label: string; percentage: number }> }) {

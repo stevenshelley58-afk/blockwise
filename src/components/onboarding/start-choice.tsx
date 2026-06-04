@@ -84,7 +84,7 @@ export function StartChoice({ workspaceId, onboardingStatus }: StartChoiceProps)
         return (
           <article className="panel" key={choice.status}>
             <div className="stack">
-              <Icon aria-hidden color="#2364aa" size={24} />
+              <Icon aria-hidden color="#123e75" size={24} />
               <div>
                 <h2>{choice.title}</h2>
                 <p className="item-meta">{choice.description}</p>

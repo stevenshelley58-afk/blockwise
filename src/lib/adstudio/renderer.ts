@@ -15,9 +15,9 @@ export function renderCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">
   const { width, height, objects } = creative.canvas;
   const background = objects.find((object) => object.role === "background_shape");
   const fills = {
-    bg: background?.fill ?? "#F1F5F2",
-    text: "#18201F",
-    accent: "#087F7A",
+    bg: background?.fill ?? "#F1F5F9",
+    text: "#131B2E",
+    accent: "#123E75",
   };
   const nodes = objects
     .filter((object) => object.type !== "safe_zone")

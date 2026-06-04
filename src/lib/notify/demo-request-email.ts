@@ -57,7 +57,7 @@ export async function sendDemoRequestNotification(
   const htmlBody = `<h2>New Blockwise demo request</h2><table cellpadding="6" style="font-family:system-ui,sans-serif;font-size:14px;border-collapse:collapse">${visible
     .map(
       ([k, v]) =>
-        `<tr><td style="color:#5b6678">${k}</td><td><strong>${escapeHtml(String(v))}</strong></td></tr>`,
+        `<tr><td style="color:#475569">${k}</td><td><strong>${escapeHtml(String(v))}</strong></td></tr>`,
     )
     .join("")}</table>`;
 
