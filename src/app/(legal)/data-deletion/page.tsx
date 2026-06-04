@@ -11,7 +11,7 @@ export const dynamic = "force-static";
 export default function DataDeletionPage() {
   return (
     <>
-      <p style={{ color: "#707470", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
         Last updated: 28 May 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Requesting Data Deletion</h1>
@@ -85,7 +85,7 @@ export default function DataDeletionPage() {
         style={{
           fontFamily:
             "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-          background: "#f5f5f3",
+          background: "#f8fafc",
           padding: "12px 16px",
           borderRadius: 6,
         }}

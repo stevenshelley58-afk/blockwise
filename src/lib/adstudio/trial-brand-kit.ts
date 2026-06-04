@@ -93,11 +93,11 @@ export function buildTrialFallbackBrandKit(input: {
       faviconUrl: null,
     },
     colours: {
-      primary: "#087F7A",
-      secondary: "#F1F5F2",
-      accent: "#2364AA",
+      primary: "#123E75",
+      secondary: "#F1F5F9",
+      accent: "#31C46F",
       background: "#FFFFFF",
-      text: "#18201F",
+      text: "#131B2E",
       confidence: {
         primary: 0.52,
         secondary: 0.48,

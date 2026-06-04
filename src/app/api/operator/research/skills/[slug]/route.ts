@@ -127,17 +127,17 @@ function renderEditor(skill: Awaited<ReturnType<typeof readHermesSkill>>, produc
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Edit ${escapeHtml(skill.slug)}</title>
     <style>
-      body { margin: 0; background: #f6f8fb; color: #0f1729; font-family: Inter, system-ui, sans-serif; }
+      body { margin: 0; background: #f8fafc; color: #131b2e; font-family: Inter, system-ui, sans-serif; }
       main { display: grid; gap: 14px; max-width: 1080px; margin: 0 auto; padding: 24px; }
-      header, form, section { border: 1px solid #e7eaf1; border-radius: 8px; background: #fff; padding: 16px; }
+      header, form, section { border: 1px solid #dfe6f0; border-radius: 8px; background: #fff; padding: 16px; }
       h1 { margin: 0 0 6px; font-size: 24px; }
-      p { color: #5b6678; margin: 0; }
-      textarea { width: 100%; min-height: 68vh; box-sizing: border-box; border: 1px solid #e7eaf1; border-radius: 8px; padding: 12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      p { color: #475569; margin: 0; }
+      textarea { width: 100%; min-height: 68vh; box-sizing: border-box; border: 1px solid #dfe6f0; border-radius: 8px; padding: 12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
       button, a { display: inline-flex; min-height: 38px; align-items: center; border-radius: 8px; padding: 0 14px; font-weight: 700; text-decoration: none; }
-      button { border: 1px solid #1d4ed8; background: #1d4ed8; color: #fff; cursor: pointer; }
-      a { border: 1px solid #e7eaf1; color: #0f1729; }
+      button { border: 1px solid #123e75; background: #123e75; color: #fff; cursor: pointer; }
+      a { border: 1px solid #dfe6f0; color: #131b2e; }
       .actions { display: flex; gap: 10px; margin-top: 12px; }
-      code { color: #1d4ed8; }
+      code { color: #123e75; }
     </style>
   </head>
   <body>
