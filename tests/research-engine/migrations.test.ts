@@ -89,6 +89,17 @@ test("research engine migration creates an idempotency index on observed_ads", (
   );
 });
 
+test("research engine migration enables pg_trgm before trigram indexes", () => {
+  const sql = readFileSync(schemaMigration, "utf8").toLowerCase();
+  const extensionIndex = sql.indexOf("create extension if not exists pg_trgm");
+  const headlineIndex = sql.indexOf("headline gin_trgm_ops");
+  const bodyIndex = sql.indexOf("body gin_trgm_ops");
+
+  assert.ok(extensionIndex >= 0, "expected pg_trgm extension creation");
+  assert.ok(headlineIndex > extensionIndex, "expected headline trigram index after pg_trgm");
+  assert.ok(bodyIndex > extensionIndex, "expected body trigram index after pg_trgm");
+});
+
 test("research engine migration seeds the Perth refresh policy", () => {
   const sql = readFileSync(schemaMigration, "utf8");
   // Subiaco demo postcode should appear with high priority and a sub-daily

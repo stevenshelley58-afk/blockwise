@@ -375,6 +375,9 @@ create table research.ad_creatives (
   updated_at timestamptz not null default now()
 );
 
+-- Enable trigram extension for fuzzy text search on headlines/bodies.
+create extension if not exists pg_trgm;
+
 create index ad_creatives_observed_ad_idx on research.ad_creatives (observed_ad_id);
 create index ad_creatives_creative_hash_idx on research.ad_creatives (creative_hash);
 create index ad_creatives_classification_gin_idx
@@ -385,9 +388,6 @@ create index ad_creatives_headline_trgm_idx
 create index ad_creatives_body_trgm_idx
   on research.ad_creatives using gin (body gin_trgm_ops)
   where body is not null;
-
--- Enable trigram extension for fuzzy text search on headlines/bodies.
-create extension if not exists pg_trgm;
 
 -- ---------------------------------------------------------------------------
 -- Ad area matches (which postcodes/suburbs each ad targets or is relevant to)
