@@ -65,6 +65,36 @@ test("Hermes content handler turns a work_queue job into draft artifacts and rev
   assert.equal(artifactPackage?.data_json.models_used.every((row: Record<string, unknown>) => row.model_used === "hermes-deterministic-content"), true);
 });
 
+test("Hermes content handler times out stalled provider calls", async () => {
+  const db = createFakeRestDb();
+
+  await assert.rejects(
+    handleHermesContentRun(
+      {
+        id: "job-1",
+        job_type: CONTENT_RUN_JOB_TYPE,
+        payload: { contentRunId: "run-1", workspaceId: "workspace-1" },
+      },
+      {
+        rest: db.rest,
+        now: () => "2026-06-04T00:00:00.000Z",
+        env: {
+          HERMES_CONTENT_MODEL_TIMEOUT_MS: "1000",
+          HERMES_DEFAULT_MODEL: "test-model",
+          OPENROUTER_API_KEY: "test-key",
+        },
+        fetchImpl: (_url: RequestInfo | URL, init: RequestInit = {}) => new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), { once: true });
+        }),
+      },
+    ),
+    /OpenRouter content request timed out after 1000ms for blockwise-topic-researcher/u,
+  );
+
+  assert.equal(db.tables.content_runs[0].status, "failed");
+  assert.match(db.tables.content_runs[0].error_message, /timed out/u);
+});
+
 function createFakeRestDb() {
   const tables: Record<string, Array<Record<string, any>>> = {
     content_runs: [{

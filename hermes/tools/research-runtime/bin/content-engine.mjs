@@ -219,24 +219,38 @@ async function executeContentSkill(skillName, input) {
   }
 
   const model = modelForContentSkill(input.env, input.modelPolicyId, skillName);
-  const response = await input.fetchImpl(`${(input.env.OPENROUTER_BASE_URL || OPENROUTER_BASE_URL).replace(/\/$/u, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${requiredOpenRouterKey(input.env)}`,
-      "Content-Type": "application/json",
-      ...(input.env.OPENROUTER_SITE_URL ? { "HTTP-Referer": input.env.OPENROUTER_SITE_URL } : {}),
-      ...(input.env.OPENROUTER_APP_NAME ? { "X-Title": input.env.OPENROUTER_APP_NAME } : {}),
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: "You are a Blockwise Hermes content skill. Return strict JSON only." },
-        { role: "user", content: input.prompt },
-      ],
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-    }),
-  });
+  const timeoutMs = contentModelTimeoutMs(input.env);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response;
+  try {
+    response = await input.fetchImpl(`${(input.env.OPENROUTER_BASE_URL || OPENROUTER_BASE_URL).replace(/\/$/u, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${requiredOpenRouterKey(input.env)}`,
+        "Content-Type": "application/json",
+        ...(input.env.OPENROUTER_SITE_URL ? { "HTTP-Referer": input.env.OPENROUTER_SITE_URL } : {}),
+        ...(input.env.OPENROUTER_APP_NAME ? { "X-Title": input.env.OPENROUTER_APP_NAME } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "You are a Blockwise Hermes content skill. Return strict JSON only." },
+          { role: "user", content: input.prompt },
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+      }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`OpenRouter content request timed out after ${timeoutMs}ms for ${skillName}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   const raw = await response.json().catch(() => null);
   if (!response.ok) throw new Error(`OpenRouter content request failed ${response.status}: ${JSON.stringify(raw).slice(0, 700)}`);
   return {
@@ -262,6 +276,12 @@ function requiredOpenRouterKey(env) {
 
 function dryRunEnabled(env) {
   return /^(1|true|yes)$/iu.test(String(env.HERMES_CONTENT_DRY_RUN || env.CONTENT_ENGINE_DRY_RUN || ""));
+}
+
+function contentModelTimeoutMs(env) {
+  const configured = Number.parseInt(String(env.HERMES_CONTENT_MODEL_TIMEOUT_MS || env.OPENROUTER_TIMEOUT_MS || ""), 10);
+  if (Number.isFinite(configured) && configured >= 1000) return configured;
+  return 90000;
 }
 
 function extractContent(raw) {
