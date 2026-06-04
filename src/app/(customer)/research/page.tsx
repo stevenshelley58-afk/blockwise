@@ -1,4 +1,5 @@
-import { Clock3, FileSearch, ImageIcon, MapPin, Search, Users } from "lucide-react";
+import { Bookmark, Clock3, FileSearch, ImageIcon, MapPin, Search, Users } from "lucide-react";
+import Link from "next/link";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
@@ -88,6 +89,9 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
             </p>
           </div>
           <div className="research-sort" role="group" aria-label="Sort ads">
+            <Link className="research-sort-option" href="/research/swipe-file">
+              <Bookmark size={13} /> Swipe file
+            </Link>
             <span className="research-sort-label">Sort</span>
             <a
               className={`research-sort-option${sort === "recent" ? " is-active" : ""}`}

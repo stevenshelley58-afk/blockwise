@@ -16,7 +16,7 @@ type MediaPanelProps = {
 export function MediaPanel({ primaryImage, openFilePicker, onSelectImage }: MediaPanelProps) {
   return (
     <>
-      <PanelHeader title="Media" detail="Use property and brand-safe imagery." />
+      <PanelHeader title="Review ads" detail="Check the generated ad sizes and replace the image if needed." />
       <button className="studio-dropzone" type="button" onClick={openFilePicker}>
         <ImageIcon aria-hidden size={22} />
         <span>Replace image</span>

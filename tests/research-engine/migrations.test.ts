@@ -5,6 +5,8 @@ import test from "node:test";
 const dropMigration = "supabase/migrations/202605280002_research_drop_legacy.sql";
 const schemaMigration = "supabase/migrations/202605280003_research_engine.sql";
 const viewsMigration = "supabase/migrations/202605280004_research_views.sql";
+const zeroAdContractMigration = "supabase/migrations/202606030003_zero_ad_item_count_contract.sql";
+const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_library_ingestion_extensions.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -127,4 +129,23 @@ test("views migration restricts v_agent_ad_history to authenticated roles only",
     sql,
     /grant select on research\.v_agent_ad_history\s+to[^;]*anon/i,
   );
+});
+
+test("zero-ad diagnostics use Hermes item_count and ignore confirmed absence", () => {
+  const sql = readFileSync(zeroAdContractMigration, "utf8");
+  assert.match(sql, /watchdog_record_zero_ad_anomalies/i);
+  assert.match(sql, /array\['item_count',\s*'ads_observed',\s*'adsObserved',\s*'itemCount'\]/i);
+  assert.match(sql, /confirmed_absence'\)::boolean,\s*false\)\s*=\s*false/i);
+  assert.match(sql, /create or replace view research\.v_operator_zero_ad_anomalies/i);
+});
+
+test("ad-library extension migration adds validation, swipe, and media-dedupe tables", () => {
+  const sql = readFileSync(adLibraryExtensionsMigration, "utf8");
+  assert.match(sql, /create table if not exists research\.official_api_validation_runs/i);
+  assert.match(sql, /create table if not exists research\.media_blobs/i);
+  assert.match(sql, /alter table research\.media_assets[\s\S]*add column if not exists content_hash/i);
+  assert.match(sql, /create table if not exists public\.research_saved_ads/i);
+  assert.match(sql, /enable row level security/i);
+  assert.match(sql, /grant select, insert, update on research\.media_blobs to service_role/i);
+  assert.match(sql, /grant select, insert, update, delete on public\.research_saved_ads to authenticated, service_role/i);
 });

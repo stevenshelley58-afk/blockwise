@@ -230,6 +230,7 @@ export default function HomePage() {
 
       <section className="hero">
         <div className="hero-left">
+          <p className="eyebrow">For real estate agents</p>
           <h1>
             More listings.
             <br />
@@ -266,6 +267,7 @@ export default function HomePage() {
 
       <section id="ads" className="ads-section" aria-labelledby="ads-heading">
         <div className="ads-head">
+          <p className="eyebrow">What you get</p>
           <h2 id="ads-heading">Ads worth running. Numbers worth watching.</h2>
         </div>
 
@@ -307,6 +309,7 @@ export default function HomePage() {
 
       <section id="how" className="how-section" aria-labelledby="how-heading">
         <div className="how-head">
+          <p className="eyebrow">How it works</p>
           <h2 id="how-heading" className="sr-only">Three steps</h2>
         </div>
         <HowItWorksFlow />

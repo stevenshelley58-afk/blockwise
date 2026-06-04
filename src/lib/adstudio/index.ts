@@ -7,6 +7,7 @@ export {
 export { runAdStudioComplianceReview } from "./compliance.ts";
 export { buildAdStudioExportPackage } from "./export-package.ts";
 export { generateAdStudioCampaignPack, type GenerateCampaignPackInput } from "./generator.ts";
+export { AD_STUDIO_TEMPLATES, resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
@@ -56,7 +57,9 @@ export type {
   AdStudioPlatform,
   AdStudioPlatformCopyPack,
   ComplianceIssue,
+  FirstAdInput,
   GoogleAssetPack,
   GoogleSearchPack,
   MetaLeadAdPack,
 } from "./types.ts";
+export { FIRST_AD_FORMATS } from "./types.ts";

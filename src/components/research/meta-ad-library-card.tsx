@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
+import { AdCardActions } from "@/components/research/ad-card-actions";
 import { StatusPill } from "@/components/status-pill";
 import {
   adRunningMs,
@@ -87,6 +88,8 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
           ) : null}
         </div>
       ) : null}
+
+      <AdCardActions observedAdId={card.id} libraryId={card.libraryId} />
     </article>
   );
 }

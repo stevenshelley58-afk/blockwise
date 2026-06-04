@@ -8,6 +8,9 @@ const supervisorPath = "hermes/tools/research-runtime/bin/supabase-supervisor.mj
 const supervisor = readFileSync(join(root, supervisorPath), "utf8");
 const collector = functionBody(supervisor, "handleAdCollector");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
+const captureMediaAsset = functionBody(supervisor, "captureMediaAsset");
+const findMediaBlob = functionBody(supervisor, "findMediaBlob");
+const insertMediaBlob = functionBody(supervisor, "insertMediaBlob");
 const agentCensus = functionBody(supervisor, "handleAgentCensus");
 const verifiedSubjectUpsert = functionBody(supervisor, "upsertVerifiedAgency");
 const pageResolver = functionBody(supervisor, "handlePageResolver");
@@ -63,6 +66,56 @@ test("Hermes active ad collector supports browser/http_json capture", () => {
     collector,
     /\bbrowser\b|\bcapture[_-]?mode\b|\bprovider\b[\s\S]*http_json/i,
     "collector must preserve browser/http_json capture metadata",
+  );
+});
+
+test("Hermes census writes let database generated normalized names compute", () => {
+  const writePayloads = verifiedSubjectUpsert
+    .replace(/agents\?select=[^\n]+/giu, "")
+    .replace(/agencies\?on_conflict=normalized_name,state/giu, "");
+
+  assert.doesNotMatch(
+    writePayloads,
+    /\bnormalized_name\s*:/u,
+    "census inserts must not write generated normalized_name columns",
+  );
+  assert.match(
+    verifiedSubjectUpsert,
+    /agencies\?on_conflict=normalized_name,state/u,
+    "agency dedupe should still use the database-computed normalized name conflict key",
+  );
+  assert.match(
+    verifiedSubjectUpsert,
+    /agents\?select=id&normalized_name=eq\./u,
+    "agent dedupe should still query the database-computed normalized name",
+  );
+});
+
+test("Hermes census supervisor keeps source-backed targets grinding", () => {
+  assert.match(
+    supervisor,
+    /const DEFAULT_POSTCODES = \["ALL"\]/u,
+    "census defaults should not be locked to the old Perth postcode list",
+  );
+  assert.match(
+    supervisor,
+    /\bensureSourceBackedRefreshPolicies\b[\s\S]*refresh_policies\?on_conflict=postcode,state/u,
+    "supervisor should seed source-backed postcode policies through the existing refresh table",
+  );
+  assert.match(
+    supervisor,
+    /\brecycleBlockedCensusJob\b[\s\S]*source_backed_census_recycle/u,
+    "source-backed schema/runtime failures should be recyclable instead of permanently blocking the dedupe key",
+  );
+  assert.match(
+    supervisor,
+    /\bdeferCensusPolicy\b[\s\S]*Hermes deferred census target/u,
+    "exhausted census targets should be deferred so later targets can run",
+  );
+  assert.match(
+    supervisor,
+    /\bcensusQueuePriority\b[\s\S]*job_type:\s*["']blockwise-agent-census["'][\s\S]*priority:\s*censusQueuePriority/u,
+    "census work should be tunable so verified page resolution and ad collection are not starved",
   );
 });
 
@@ -244,6 +297,25 @@ test("Hermes media collector can rebuild missing media rows from saved creative 
   );
 });
 
+test("Hermes media collector globally dedupes stored media by content hash", () => {
+  const mediaSource = `${mediaCollector}\n${captureMediaAsset}\n${findMediaBlob}\n${insertMediaBlob}`;
+  assert.match(
+    mediaSource,
+    /\bmedia_blobs\b/,
+    "media capture must use the global research.media_blobs table for hash-level dedupe",
+  );
+  assert.match(
+    mediaSource,
+    /\bcontent_hash\b/,
+    "media asset rows must keep the global content hash",
+  );
+  assert.match(
+    mediaSource,
+    /\bdeduped\b/,
+    "media collector result should expose how many assets reused existing blobs",
+  );
+});
+
 function functionBody(source, name) {
   let start = source.indexOf(`async function ${name}`);
   if (start === -1) start = source.indexOf(`function ${name}`);
@@ -258,13 +330,4 @@ function functionBody(source, name) {
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     const char = source[index];
-    if (char === "{") depth += 1;
-    if (char === "}") depth -= 1;
-    if (depth === 0) return source.slice(bodyStart + 1, index);
-  }
-  assert.fail(`${name} body was not closed`);
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+    if (char === "{") depth 

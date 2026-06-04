@@ -1,19 +1,25 @@
 import {
   Activity,
-  AlertOctagon,
+  AlertTriangle,
+  ArrowUpRight,
+  BarChart3,
   Bot,
-  ChevronRight,
+  Clock3,
   ExternalLink,
-  PauseOctagon,
-  RefreshCcw,
-  ShieldCheck,
-  Signal,
+  FileSearch,
+  FolderOpen,
+  Gauge,
+  type LucideIcon,
+  Plus,
+  Shield,
+  TerminalSquare,
+  Wrench,
 } from "lucide-react";
 
-import { MetricCard } from "@/components/metric-card";
-import { PageHeading } from "@/components/page-heading";
+import { OperatorAssistant, type OperatorAssistantCoverageRow } from "@/components/operator/operator-assistant";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { listHermesSkills, type HermesSkillSummary } from "@/lib/operator/hermes-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -119,8 +125,56 @@ type RecentAdRow = {
   display_state: string | null;
 };
 
+type WorkQueueRow = {
+  id: string;
+  queue_name: string;
+  job_type: string;
+  dedupe_key: string | null;
+  status: string;
+  priority: number;
+  available_at: string | null;
+  claimed_at: string | null;
+  claimed_by: string | null;
+  claim_expires_at: string | null;
+  attempts: number;
+  max_attempts: number;
+  last_error: string | null;
+  blocked_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  is_stale_claim: boolean | null;
+};
+
+type DefectRollup = {
+  label: string;
+  count: number;
+  detail: string;
+  tone: "green" | "rose" | "amber";
+};
+
+type PolicyStats = {
+  total: number;
+  active: number;
+  paused: boolean;
+  nextRefreshAt: string | null;
+};
+
+type FileInventoryStats = {
+  sourceDocuments: number;
+  mediaBlobs: number;
+  buildRunReports: number;
+  skillFiles: number;
+  latestEvidenceAt: string | null;
+  latestMediaAt: string | null;
+  latestReportAt: string | null;
+  mediaError: string | null;
+};
+
 const RECENT_AD_SELECT =
   "agency_id,agency_name,agent_id,agent_name,advertiser_page_id,page_name,platform,observed_ad_id,external_ad_id,active_status,first_seen_at,last_seen_at,last_checked_at,headline,body,cta,primary_image_url,video_url,format,classification,snapshot_count,ad_delivery_started_at,ad_delivery_stopped_at,ad_creation_date,image_urls,image_storage_path,video_storage_path,video_thumbnail_url,media_assets,ad_type,primary_intent,display_state";
+
+const STATUS_TABS = ["All", "Running", "Queued", "Retry", "Blocked", "Failed"];
 
 async function loadCoverage(supabase: ResearchSupabaseClient) {
   const { data } = await supabase.schema("research").from("v_coverage_status").select("*").order("priority").order("postcode");
@@ -181,321 +235,503 @@ async function loadRecentAds(supabase: ResearchSupabaseClient) {
   return (data ?? []) as unknown as RecentAdRow[];
 }
 
+async function loadWorkQueueDiagnostics(supabase: ResearchSupabaseClient) {
+  const { data } = await supabase
+    .schema("research")
+    .from("v_operator_work_queue_diagnostics")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(250);
+
+  return (data ?? []) as WorkQueueRow[];
+}
+
+async function loadPolicyStats(supabase: ResearchSupabaseClient): Promise<PolicyStats> {
+  const { data } = await supabase
+    .schema("research")
+    .from("refresh_policies")
+    .select("active,next_refresh_at");
+  const rows = (data ?? []) as { active: boolean; next_refresh_at: string | null }[];
+  const active = rows.filter((row) => row.active).length;
+  const nextRefreshAt =
+    rows
+      .filter((row) => row.active && row.next_refresh_at)
+      .map((row) => row.next_refresh_at as string)
+      .sort()[0] ?? null;
+
+  return {
+    total: rows.length,
+    active,
+    paused: rows.length > 0 && active === 0,
+    nextRefreshAt,
+  };
+}
+
+async function loadFileInventoryStats(
+  supabase: ResearchSupabaseClient,
+  skillFiles: number,
+): Promise<FileInventoryStats> {
+  const research = supabase.schema("research");
+  const [sourceCount, latestSource, mediaCount, latestMedia, reportCount, latestReport] = await Promise.all([
+    research.from("source_documents").select("id", { count: "exact", head: true }),
+    research.from("source_documents").select("fetched_at").order("fetched_at", { ascending: false }).limit(1).maybeSingle(),
+    research.from("media_blobs").select("content_hash", { count: "exact", head: true }),
+    research.from("media_blobs").select("last_seen_at").order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
+    research.from("build_run_reports").select("id", { count: "exact", head: true }),
+    research.from("build_run_reports").select("last_seen_at").order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+
+  return {
+    sourceDocuments: sourceCount.count ?? 0,
+    mediaBlobs: mediaCount.error ? 0 : mediaCount.count ?? 0,
+    buildRunReports: reportCount.count ?? 0,
+    skillFiles,
+    latestEvidenceAt: (latestSource.data as { fetched_at?: string | null } | null)?.fetched_at ?? null,
+    latestMediaAt: mediaCount.error
+      ? null
+      : (latestMedia.data as { last_seen_at?: string | null } | null)?.last_seen_at ?? null,
+    latestReportAt: (latestReport.data as { last_seen_at?: string | null } | null)?.last_seen_at ?? null,
+    mediaError: mediaCount.error?.message ?? latestMedia.error?.message ?? null,
+  };
+}
+
 export default async function OperatorResearchPage() {
   await requirePageSurfaceAccess("operator");
   const supabase = createSupabaseServiceClient();
-  const [coverage, runs, defects, adLibraryStats, entityCounts, recentAds] = await Promise.all([
+  const [coverage, runs, defects, adLibraryStats, entityCounts, recentAds, workQueueJobs, skills, policyStats] = await Promise.all([
     loadCoverage(supabase).catch(() => [] as CoverageRow[]),
     loadRuns(supabase).catch(() => [] as RunRow[]),
     loadDefects(supabase).catch(() => [] as DefectRow[]),
     loadAdLibraryStats(supabase).catch(() => ({ activeCards: 0, totalCards: 0, cardsWithStoredMedia: 0 })),
     loadEntityCounts(supabase).catch(() => ({ agents: 0, advertiserPages: 0 })),
     loadRecentAds(supabase).catch(() => [] as RecentAdRow[]),
+    loadWorkQueueDiagnostics(supabase).catch(() => [] as WorkQueueRow[]),
+    listHermesSkills().catch(() => [] as HermesSkillSummary[]),
+    loadPolicyStats(supabase).catch(() => ({ total: 0, active: 0, paused: false, nextRefreshAt: null })),
   ]);
+  const fileInventory = await loadFileInventoryStats(supabase, skills.length).catch(() => ({
+    sourceDocuments: 0,
+    mediaBlobs: 0,
+    buildRunReports: 0,
+    skillFiles: skills.length,
+    latestEvidenceAt: null,
+    latestMediaAt: null,
+    latestReportAt: null,
+    mediaError: null,
+  }));
 
-  const postcodeMatchedAds = coverage.reduce((acc, r) => acc + (r.live_active_ads ?? 0), 0);
-  const openDefects = defects.length;
-  const failedRunsLast20 = runs.filter((r) => r.status === "failed").length;
+  const activeJobs = workQueueJobs.filter((job) => job.status === "pending" || job.status === "claimed").length;
+  const runningJobs = workQueueJobs.filter((job) => job.status === "claimed" && !job.is_stale_claim).length;
+  const queuedJobs = workQueueJobs.filter((job) => job.status === "pending").length;
+  const retryJobs = workQueueJobs.filter((job) => job.attempts > 0 && job.status === "pending").length;
+  const blockedJobs = workQueueJobs.filter((job) => job.status === "blocked").length;
+  const failedJobs = workQueueJobs.filter((job) => job.status === "failed").length;
+  const staleJobs = workQueueJobs.filter((job) => job.is_stale_claim).length;
+  const needsAttention = failedJobs + blockedJobs + staleJobs + defects.length;
+  const coveredRows = coverage.filter((row) => row.live_active_ads > 0 || row.last_refreshed_at || row.last_audit_status).length;
+  const coveragePercent = coverage.length ? Math.round((coveredRows / coverage.length) * 100) : 0;
   const totalCost24h = runs
-    .filter((r) => new Date(r.started_at).getTime() > Date.now() - 24 * 3600 * 1000)
-    .reduce((a, r) => a + (Number(r.cost_usd) || 0), 0);
+    .filter((run) => new Date(run.started_at).getTime() > Date.now() - 24 * 3600 * 1000)
+    .reduce((sum, run) => sum + (Number(run.cost_usd) || 0), 0);
+  const lastRun = runs[0];
+  const lastRunAge = lastRun ? formatRelativeTime(lastRun.started_at) : "No runs";
+  const lastRunTarget = lastRun?.target_value ? `Postcode ${lastRun.target_value}` : "Awaiting first run";
+  const topCoverage = coverage.slice(0, 6);
+  const defectRollups = rollupDefects(defects);
+  const assistantCoverageRows = coverage
+    .map(toAssistantCoverageRow)
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 4);
+  const chatPostcode = assistantCoverageRows[0]?.postcode ?? null;
+  const activeJobTone = activeJobs > 0 ? "blue" : "green";
+  const researchHealthy = needsAttention === 0;
+  const killSwitchNote = policyStats.total
+    ? `${policyStats.active}/${policyStats.total} policies active`
+    : "No refresh policies configured";
 
   return (
-    <main className="content">
-      <PageHeading
-        eyebrow="Research engine"
-        title="Operator control"
-        description="Live coverage, fetch runs, defects, and the kill switch for the Hermes-driven research engine."
-      />
+    <main className="operator-os">
+      <section className="operator-os-main">
+        <header className="operator-os-hero">
+          <div>
+            <p className="operator-os-eyebrow">
+              <Activity aria-hidden size={14} /> Research Ops
+            </p>
+            <h1>Operator OS</h1>
+            <p>Command center for Hermes research operations. Live control, coverage, defects, skills, files, and evidence.</p>
+          </div>
+        </header>
 
-      <section className="grid cols-4">
-        <MetricCard icon={Signal} label="Active ad cards" value={String(adLibraryStats.activeCards)} note={`${adLibraryStats.totalCards} customer-visible cards`} />
-        <MetricCard icon={Activity} label="Postcode-matched ads" value={String(postcodeMatchedAds)} note="Coverage rows, not the library total" />
-        <MetricCard icon={Bot} label="Known agents" value={String(entityCounts.agents)} note={`${entityCounts.advertiserPages} advertiser pages`} />
-        <MetricCard icon={AlertOctagon} label="Open defects" value={String(openDefects)} note={`${failedRunsLast20} failed runs in last 20`} />
-      </section>
+        <nav className="operator-os-tabs" aria-label="Research Ops sections">
+          {["Overview", "Chat", "Skills", "Files", "Inspect"].map((tab, index) => (
+            <a className={index === 0 ? "active" : ""} href={`#${tab.toLowerCase()}`} key={tab}>
+              {tab}
+            </a>
+          ))}
+        </nav>
 
-      <section className="panel">
-        <h2>Hermes runtime</h2>
-        <div className="grid cols-3">
-          <article className="item-card">
-            <h3>Media archive</h3>
-            <p className="item-meta">{adLibraryStats.cardsWithStoredMedia} cards have stored creative media.</p>
-          </article>
-          <article className="item-card">
-            <h3>Scheduler</h3>
-            <p className="item-meta">${totalCost24h.toFixed(2)} collector spend in the last 24h.</p>
-          </article>
-          <article className="item-card">
-            <h3>Access</h3>
-            <p className="item-meta">Hermes controls are inside Blockwise Research Ops.</p>
-          </article>
-        </div>
-      </section>
+        <section className="operator-os-status-grid" id="overview" aria-label="Research status summary">
+          <StatusTile icon={Gauge} label="Research status" value={researchHealthy ? "Healthy" : "Needs attention"} note={researchHealthy ? "All systems operational" : `${needsAttention} operator items open`} tone={researchHealthy ? "green" : "rose"} />
+          <StatusTile icon={BarChart3} label="Active jobs" value={String(activeJobs)} note={`${runningJobs} running - ${queuedJobs} queued`} tone={activeJobTone} />
+          <StatusTile icon={Activity} label="Coverage" value={`${coveragePercent}%`} note="Postcode coverage" tone={coveragePercent > 70 ? "green" : coveragePercent > 35 ? "amber" : "rose"} />
+          <StatusTile icon={AlertTriangle} label="Needs attention" value={String(needsAttention)} note="Jobs - Coverage - Defects" tone={needsAttention ? "rose" : "green"} />
+          <StatusTile icon={Clock3} label="Last run" value={lastRunAge} note={lastRunTarget} tone={lastRun?.status === "failed" ? "rose" : "blue"} />
+          <StatusTile icon={Shield} label="Kill switch" value={policyStats.paused ? "ON" : "OFF"} note={killSwitchNote} tone={policyStats.paused ? "rose" : "blue"} />
+        </section>
 
-      <section className="panel">
-        <div className="row-between">
-          <h2>Recent ads</h2>
-          <span className="muted">{recentAds.length} latest ingested rows</span>
-        </div>
-        <div className="table-wrap operator-ad-list-wrap">
-          <table className="table operator-ad-list">
+        <section className="operator-attention-strip" aria-label="Needs attention">
+          <div className="operator-section-title">
+            <AlertTriangle aria-hidden size={18} />
+            <h2>Needs attention</h2>
+          </div>
+          <AttentionStat value={failedJobs} label="Jobs failing" />
+          <AttentionStat value={defects.length} label="Coverage defects" />
+          <AttentionStat value={staleJobs} label="Stale claims" />
+          <AttentionStat value={blockedJobs} label="Blocked jobs" />
+          <a className="button secondary compact" href="/api/operator/research/jobs?status=failed" target="_blank" rel="noreferrer">
+            View all issues
+          </a>
+        </section>
+
+        <section className="operator-os-grid">
+          <section className="operator-card operator-card-coverage">
+            <CardHeader title="Coverage by postcode" action={`${coveragePercent}% overall coverage`} />
+            <div className="operator-coverage-list">
+              {topCoverage.map((row) => {
+                const score = coverageScore(row);
+                return (
+                  <div className="operator-coverage-row" key={`${row.state}-${row.postcode}`}>
+                    <div>
+                      <strong>{row.postcode}</strong>
+                      <span>{row.state}</span>
+                    </div>
+                    <div className="operator-progress" aria-label={`${row.postcode} coverage ${score}%`}>
+                      <span style={{ width: `${score}%` }} />
+                    </div>
+                    <span>{score}%</span>
+                  </div>
+                );
+              })}
+              {topCoverage.length === 0 ? <p className="item-meta">No postcodes configured yet.</p> : null}
+            </div>
+            <a className="operator-text-link" href="/api/operator/research/coverage" target="_blank" rel="noreferrer">
+              View coverage matrix <ArrowUpRight size={14} />
+            </a>
+          </section>
+
+          <section className="operator-card operator-card-queue">
+            <CardHeader title="Research queue" action={`${activeJobs} active`} />
+            <div className="operator-status-tabs">
+              {STATUS_TABS.map((tab) => (
+                <span className={tab === "All" ? "active" : ""} key={tab}>
+                  {tab}
+                  <b>{queueTabCount(tab, { activeJobs, runningJobs, queuedJobs, retryJobs, blockedJobs, failedJobs })}</b>
+                </span>
+              ))}
+            </div>
+            <table className="operator-mini-table">
+              <thead>
+                <tr>
+                  <th>Job</th>
+                  <th>Type</th>
+                  <th>Postcode</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workQueueJobs.slice(0, 5).map((job) => (
+                  <tr key={job.id}>
+                    <td>
+                      <a href={`/api/operator/research/jobs/${job.id}`} target="_blank" rel="noreferrer">
+                        {shortId(job.id)}
+                      </a>
+                    </td>
+                    <td>{compactJobType(job.job_type)}</td>
+                    <td>{payloadPostcode(job)}</td>
+                    <td>
+                      <StatusPill tone={jobTone(job)}>{job.is_stale_claim ? "Stale" : titleCase(job.status)}</StatusPill>
+                    </td>
+                    <td>{formatRelativeTime(job.updated_at)}</td>
+                  </tr>
+                ))}
+                {workQueueJobs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No research queue items are visible.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+            <div className="operator-card-footer">
+              <a className="operator-text-link" href="/api/operator/research/jobs" target="_blank" rel="noreferrer">
+                View all jobs <ArrowUpRight size={14} />
+              </a>
+              <a className="button secondary compact" href="/api/operator/research/jobs" target="_blank" rel="noreferrer">
+                <Plus size={14} /> Queue API
+              </a>
+            </div>
+          </section>
+
+          <section className="operator-card operator-card-defects">
+            <CardHeader title="Defects" action="Last 24h" />
+            <div className="operator-defect-list">
+              {defectRollups.map((defect) => (
+                <div className="operator-defect-row" key={defect.label}>
+                  <span>{defect.label}</span>
+                  <strong>{defect.count}</strong>
+                  <em className={defect.tone}>{defect.detail}</em>
+                </div>
+              ))}
+            </div>
+            <a className="operator-text-link" href="/api/operator/research/defects" target="_blank" rel="noreferrer">
+              View all defects <ArrowUpRight size={14} />
+            </a>
+          </section>
+
+          <section className="operator-card operator-card-runs">
+            <CardHeader title="Recent runs" action="View all runs" href="/api/operator/research/runs" />
+            <table className="operator-mini-table">
+              <thead>
+                <tr>
+                  <th>Run</th>
+                  <th>Postcode</th>
+                  <th>Status</th>
+                  <th>Duration</th>
+                  <th>Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.slice(0, 5).map((run) => (
+                  <tr key={run.id}>
+                    <td>
+                      <a href={`/api/operator/research/runs/${run.id}/raw`} target="_blank" rel="noreferrer">
+                        {shortId(run.id)}
+                      </a>
+                    </td>
+                    <td>{run.target_value.slice(0, 12)}</td>
+                    <td>
+                      <StatusPill tone={runTone(run.status)}>{titleCase(run.status)}</StatusPill>
+                    </td>
+                    <td>{formatDuration(run.started_at, run.completed_at)}</td>
+                    <td>{formatRelativeTime(run.completed_at ?? run.started_at)}</td>
+                  </tr>
+                ))}
+                {runs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No fetch runs logged yet.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="operator-card operator-card-saved">
+            <CardHeader title="Saved ads" action="View library" href="/research" />
+            <div className="operator-saved-ads">
+              <strong>{adLibraryStats.activeCards}</strong>
+              <span>active customer-visible ads</span>
+              <div className="operator-saved-ad-metrics">
+                <span>Total cards</span>
+                <b>{adLibraryStats.totalCards}</b>
+                <span>Cards with stored media</span>
+                <b>{adLibraryStats.cardsWithStoredMedia}</b>
+                <span>Media blobs</span>
+                <b>{fileInventory.mediaBlobs}</b>
+              </div>
+            </div>
+          </section>
+
+          <section className="operator-card operator-card-health">
+            <CardHeader title="System health" action={researchHealthy ? "Operational" : "Review"} />
+            <div className="operator-health-list">
+              <HealthRow label="Hermes skill files" ok={skills.length > 0} />
+              <HealthRow label="Work queue" ok={failedJobs === 0 && blockedJobs === 0} />
+              <HealthRow label="Evidence documents" ok={fileInventory.sourceDocuments > 0 || runs.length === 0} />
+              <HealthRow label="Media archive" ok={!fileInventory.mediaError} />
+              <HealthRow label="Scheduler policies" ok={policyStats.total > 0 && !policyStats.paused} />
+            </div>
+            <a className="operator-text-link" href="/api/health" target="_blank" rel="noreferrer">
+              View health details <ArrowUpRight size={14} />
+            </a>
+          </section>
+        </section>
+
+        <section className="operator-lower-grid">
+          <section className="operator-card" id="skills">
+            <CardHeader title="Skills" action={`${skills.length} live skill files`} href="/api/operator/research/skills" />
+            <div className="operator-skill-grid">
+              {skills.map((skill) => (
+                <article className="operator-skill-card" key={skill.slug}>
+                  <Wrench aria-hidden size={16} />
+                  <div>
+                    <strong>{skill.title}</strong>
+                    <span>{skill.slug}</span>
+                    <p>{skill.purpose}</p>
+                    <div className="operator-skill-meta">
+                      <span>{formatBytes(skill.byteSize)}</span>
+                      <span>{formatRelativeTime(skill.updatedAt)}</span>
+                      <span>{skill.sha256.slice(0, 10)}</span>
+                    </div>
+                    <div className="operator-skill-actions">
+                      <a href={`/api/operator/research/skills/${skill.slug}`} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                      <a href={`/api/operator/research/skills/${skill.slug}?mode=edit`} target="_blank" rel="noreferrer">
+                        Edit
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+              {skills.length === 0 ? <p className="item-meta">No Hermes skill files were found in hermes/skills.</p> : null}
+            </div>
+          </section>
+
+          <section className="operator-card" id="files">
+            <CardHeader title="Files" action={`${fileInventory.sourceDocuments + fileInventory.mediaBlobs + fileInventory.buildRunReports + fileInventory.skillFiles} indexed`} href="/api/operator/research/files" />
+            <div className="operator-file-list">
+              <FileRow icon={FileSearch} label="Source documents" value={`${fileInventory.sourceDocuments} evidence rows`} href="/api/operator/research/files?kind=source_documents" />
+              <FileRow icon={Bot} label="Agent index" value={`${entityCounts.agents} agents / ${entityCounts.advertiserPages} pages`} href="/api/operator/research/coverage" />
+              <FileRow icon={FolderOpen} label="Creative media" value={`${fileInventory.mediaBlobs} media blobs`} href="/api/operator/research/files?kind=media_blobs" />
+              <FileRow icon={TerminalSquare} label="Runtime skills" value={`${fileInventory.skillFiles} SKILL.md files`} href="/api/operator/research/skills" />
+              <FileRow icon={AlertTriangle} label="Run reports" value={`${fileInventory.buildRunReports} reports`} href="/api/operator/research/files?kind=build_run_reports" />
+            </div>
+          </section>
+        </section>
+
+        <section className="operator-card operator-inspect" id="inspect">
+          <CardHeader title="Inspect data" action="Open evidence JSON" href="/api/operator/research/files?kind=source_documents" />
+          <div className="operator-sql-line">select * from research.v_agent_ad_history order by last_seen_at desc limit 50;</div>
+          <p className="item-meta">{recentAds.length} rows loaded from research.v_agent_ad_history.</p>
+          <table className="operator-mini-table operator-inspect-table">
             <thead>
               <tr>
-                <th>Creative</th>
-                <th>Page</th>
-                <th>Agent</th>
+                <th>Postcode</th>
                 <th>Agency</th>
-                <th>Platform</th>
-                <th>Status</th>
-                <th>Display</th>
-                <th>Type</th>
-                <th>Intent</th>
                 <th>Format</th>
-                <th>CTA</th>
-                <th>Started</th>
-                <th>Stopped</th>
-                <th>Created</th>
-                <th>First seen</th>
-                <th>Last seen</th>
-                <th>Checked</th>
-                <th>Snapshots</th>
-                <th>External ad ID</th>
-                <th>Observed ad ID</th>
-                <th>Advertiser page ID</th>
-                <th>Media</th>
-                <th>Classification</th>
+                <th>Type</th>
+                <th>Seen</th>
               </tr>
             </thead>
             <tbody>
-              {recentAds.map((ad) => {
-                const thumbnailUrl = resolveAdThumbnailUrl(ad);
-                const libraryUrl = ad.external_ad_id
-                  ? `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.external_ad_id)}`
-                  : null;
-                const headline = cleanString(ad.headline) ?? cleanString(ad.body) ?? ad.external_ad_id ?? "Untitled ad";
-                const body = cleanString(ad.body);
-
-                return (
-                  <tr key={ad.observed_ad_id}>
-                    <td className="operator-ad-thumbnail-cell">
-                      <div className="operator-ad-creative">
-                        {thumbnailUrl ? (
-                          <img className="operator-ad-thumb" src={thumbnailUrl} alt="" loading="lazy" />
-                        ) : (
-                          <span className="operator-ad-thumb operator-ad-thumb-placeholder">No media</span>
-                        )}
-                        <div className="operator-ad-primary">
-                          <strong>{truncate(headline, 90)}</strong>
-                          {body ? <span>{truncate(body, 160)}</span> : null}
-                          {libraryUrl ? (
-                            <a className="operator-ad-link" href={libraryUrl} target="_blank" rel="noreferrer">
-                              Meta library <ExternalLink size={12} />
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{ad.page_name ?? "-"}</td>
-                    <td>{ad.agent_name ?? "-"}</td>
-                    <td>{ad.agency_name ?? "-"}</td>
-                    <td>{ad.platform ?? "-"}</td>
-                    <td>
-                      <StatusPill tone={adStatusTone(ad.active_status)}>{ad.active_status ?? "unknown"}</StatusPill>
-                    </td>
-                    <td>{ad.display_state ?? "-"}</td>
-                    <td>{ad.ad_type ?? "-"}</td>
-                    <td>{ad.primary_intent ?? "-"}</td>
-                    <td>{ad.format ?? "-"}</td>
-                    <td>{ad.cta ?? "-"}</td>
-                    <td>{formatDateTime(ad.ad_delivery_started_at)}</td>
-                    <td>{formatDateTime(ad.ad_delivery_stopped_at)}</td>
-                    <td>{formatDateTime(ad.ad_creation_date)}</td>
-                    <td>{formatDateTime(ad.first_seen_at)}</td>
-                    <td>{formatDateTime(ad.last_seen_at)}</td>
-                    <td>{formatDateTime(ad.last_checked_at)}</td>
-                    <td>{ad.snapshot_count ?? 0}</td>
-                    <td>
-                      <span className="operator-ad-code">{ad.external_ad_id ?? "-"}</span>
-                    </td>
-                    <td>
-                      <span className="operator-ad-code">{ad.observed_ad_id}</span>
-                    </td>
-                    <td>
-                      <span className="operator-ad-code">{ad.advertiser_page_id}</span>
-                    </td>
-                    <td>
-                      <span className="operator-ad-json">{formatMediaSummary(ad)}</span>
-                    </td>
-                    <td>
-                      <span className="operator-ad-json">{formatClassificationSummary(ad.classification)}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {recentAds.length === 0 && (
-                <tr>
-                  <td colSpan={23}>No ingested ads yet. Collector output will appear here after the next successful run.</td>
+              {recentAds.slice(0, 8).map((ad) => (
+                <tr key={ad.observed_ad_id}>
+                  <td>{ad.primary_intent === "postcode" ? ad.primary_intent : payloadFromAd(ad)}</td>
+                  <td>{ad.agency_name ?? ad.page_name ?? "Advertiser page"}</td>
+                  <td>{ad.format ?? "-"}</td>
+                  <td>{ad.ad_type ?? ad.primary_intent ?? "-"}</td>
+                  <td>{formatRelativeTime(ad.last_seen_at ?? ad.first_seen_at)}</td>
                 </tr>
-              )}
+              ))}
+              {recentAds.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>No ad rows available yet.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
-        </div>
+        </section>
+
+        <footer className="operator-os-footer">
+          <span className="operator-live-dot">Live</span>
+          <span>Time (AWST) {new Date().toLocaleTimeString("en-AU", { timeZone: "Australia/Perth" })}</span>
+          <span>Environment Production</span>
+          <span>Region Australia</span>
+          <span>Spend 24h ${totalCost24h.toFixed(2)}</span>
+          <a href="https://hermes.blockwise.sale" target="_blank" rel="noreferrer">
+            Open Hermes Workspace <ExternalLink size={13} />
+          </a>
+        </footer>
       </section>
 
-      <section className="panel">
-        <div className="row-between">
-          <h2>Coverage status</h2>
-          <form method="post" action="/api/operator/research/kill-switch">
-            <input type="hidden" name="paused" value="true" />
-            <button className="button secondary" type="submit">
-              <PauseOctagon size={14} /> Pause scheduler
-            </button>
-          </form>
-        </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Postcode</th>
-              <th>Priority</th>
-              <th>Cadence</th>
-              <th>Last run</th>
-              <th>Active ads</th>
-              <th>Pages</th>
-              <th>Health</th>
-              <th>Audit</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {coverage.map((row) => (
-              <tr key={`${row.postcode}-${row.state}`}>
-                <td>
-                  {row.postcode} <span className="muted">{row.state}</span>
-                </td>
-                <td>{row.priority}</td>
-                <td>{row.refresh_cadence_minutes} min</td>
-                <td>{row.last_refreshed_at ? new Date(row.last_refreshed_at).toLocaleString() : "—"}</td>
-                <td>{row.live_active_ads}</td>
-                <td>{row.live_advertiser_pages}</td>
-                <td>
-                  <StatusPill tone={healthTone(row.health)}>{row.health}</StatusPill>
-                </td>
-                <td>{row.last_audit_status ? `${row.last_audit_status} (${row.last_audit_score ?? 0})` : "never"}</td>
-                <td>
-                  <form method="post" action="/api/operator/research/refresh-now">
-                    <input type="hidden" name="scope" value="postcode" />
-                    <input type="hidden" name="value" value={row.postcode} />
-                    <button className="button secondary" type="submit">
-                      <RefreshCcw size={14} /> Run
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-            {coverage.length === 0 && (
-              <tr>
-                <td colSpan={9}>No postcodes configured. Insert into research.refresh_policies to begin.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="panel">
-        <h2>Recent fetch runs</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Provider</th>
-              <th>Target</th>
-              <th>Status</th>
-              <th>Cost</th>
-              <th>Summary</th>
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map((r) => (
-              <tr key={r.id}>
-                <td>{new Date(r.started_at).toLocaleString()}</td>
-                <td>{r.source_provider}</td>
-                <td>
-                  <span className="muted">{r.target_kind}</span> {r.target_value.slice(0, 20)}
-                </td>
-                <td>
-                  <StatusPill tone={r.status === "success" ? "green" : r.status === "failed" ? "rose" : "amber"}>
-                    {r.status}
-                  </StatusPill>
-                </td>
-                <td>${(Number(r.cost_usd) || 0).toFixed(4)}</td>
-                <td>
-                  {r.result_summary ? (
-                    <span>
-                      new {String((r.result_summary as Record<string, unknown>).adsNew ?? 0)}, upd{" "}
-                      {String((r.result_summary as Record<string, unknown>).adsUpdated ?? 0)}, miss{" "}
-                      {String((r.result_summary as Record<string, unknown>).adsMissing ?? 0)}
-                    </span>
-                  ) : r.error ? (
-                    <span className="muted">{r.error.slice(0, 80)}</span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              </tr>
-            ))}
-            {runs.length === 0 && (
-              <tr>
-                <td colSpan={6}>No fetch runs yet. The orchestrator will start logging here on first tick.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="panel">
-        <h2>Open coverage defects</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Where</th>
-              <th>Agent / Agency</th>
-              <th>Notes</th>
-              <th>Reporter</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {defects.map((d) => (
-              <tr key={d.id}>
-                <td>
-                  {d.postcode ?? "—"} {d.suburb ? `(${d.suburb})` : ""}
-                </td>
-                <td>{d.agent_name ?? d.agency_name ?? "—"}</td>
-                <td>{d.notes.slice(0, 120)}</td>
-                <td>{d.reported_by}</td>
-                <td>
-                  <StatusPill tone={d.status === "open" ? "rose" : "amber"}>{d.status}</StatusPill>
-                </td>
-                <td>
-                  <a className="button secondary" href={`/operator/research/defects/${d.id}`}>
-                    Investigate <ChevronRight size={14} />
-                  </a>
-                </td>
-              </tr>
-            ))}
-            {defects.length === 0 && (
-              <tr>
-                <td colSpan={6}>
-                  <ShieldCheck size={14} /> No open coverage defects. Auditor will populate this when it next runs.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+      <OperatorAssistant initialRows={assistantCoverageRows} initialPostcode={chatPostcode} lastUpdated={lastRunAge} />
     </main>
+  );
+}
+
+function StatusTile({
+  icon: Icon,
+  label,
+  value,
+  note,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  note: string;
+  tone: "green" | "amber" | "rose" | "blue";
+}) {
+  return (
+    <article className={`operator-status-tile ${tone}`}>
+      <div>
+        <span>{label}</span>
+        <span className="operator-status-icon">
+          <Icon aria-hidden size={16} />
+        </span>
+      </div>
+      <strong>{value}</strong>
+      <p>{note}</p>
+    </article>
+  );
+}
+
+function AttentionStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="operator-attention-stat">
+      <AlertTriangle aria-hidden size={14} />
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function CardHeader({ title, action, href }: { title: string; action?: string; href?: string }) {
+  return (
+    <div className="operator-card-header">
+      <h2>{title}</h2>
+      {href ? (
+        <a href={href} target={href.startsWith("/api") ? "_blank" : undefined} rel={href.startsWith("/api") ? "noreferrer" : undefined}>
+          {action} <ArrowUpRight size={13} />
+        </a>
+      ) : action ? (
+        <span>{action}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function HealthRow({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div className="operator-health-row">
+      <span>{label}</span>
+      <strong className={ok ? "green" : "rose"}>{ok ? "Operational" : "Review"}</strong>
+    </div>
+  );
+}
+
+function FileRow({ icon: Icon, label, value, href }: { icon: LucideIcon; label: string; value: string; href?: string }) {
+  const content = (
+    <>
+      <Icon aria-hidden size={16} />
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </>
+  );
+
+  if (href) {
+    const opensNewTab = href.startsWith("/api") || href.startsWith("http");
+    return (
+      <a className="operator-file-row" href={href} target={opensNewTab ? "_blank" : undefined} rel={opensNewTab ? "noreferrer" : undefined}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="operator-file-row">
+      {content}
+    </div>
   );
 }
 
@@ -507,145 +743,134 @@ function hasStoredMedia(row: AdLibraryCardRow): boolean {
   );
 }
 
-function resolveAdThumbnailUrl(row: RecentAdRow): string | null {
-  return (
-    mediaUrl(row.primary_image_url) ??
-    mediaUrl(row.video_thumbnail_url) ??
-    firstArrayUrl(row.image_urls) ??
-    firstMediaAssetUrl(row.media_assets)
-  );
+function rollupDefects(defects: DefectRow[]): DefectRollup[] {
+  const validation = defects.filter((defect) => /validation|verify|evidence|roster/iu.test(defect.notes)).length;
+  const processing = defects.filter((defect) => /processing|collector|resolver|classifier/iu.test(defect.notes)).length;
+  const timeouts = defects.filter((defect) => /timeout|blocked|rate|login/iu.test(defect.notes)).length;
+  const dataGaps = Math.max(0, defects.length - validation - processing - timeouts);
+
+  return [
+    { label: "Validation errors", count: validation, detail: validation ? "open" : "clear", tone: validation ? "rose" : "green" },
+    { label: "Processing failures", count: processing, detail: processing ? "open" : "clear", tone: processing ? "rose" : "green" },
+    { label: "Timeouts", count: timeouts, detail: timeouts ? "open" : "clear", tone: timeouts ? "amber" : "green" },
+    { label: "Data gaps", count: dataGaps, detail: dataGaps ? "open" : "clear", tone: dataGaps ? "rose" : "green" },
+  ];
 }
 
-function firstArrayUrl(value: unknown): string | null {
-  if (!Array.isArray(value)) {
-    return null;
+function queueTabCount(
+  tab: string,
+  counts: { activeJobs: number; runningJobs: number; queuedJobs: number; retryJobs: number; blockedJobs: number; failedJobs: number },
+): number {
+  switch (tab) {
+    case "Running":
+      return counts.runningJobs;
+    case "Queued":
+      return counts.queuedJobs;
+    case "Retry":
+      return counts.retryJobs;
+    case "Blocked":
+      return counts.blockedJobs;
+    case "Failed":
+      return counts.failedJobs;
+    case "All":
+    default:
+      return counts.activeJobs;
   }
-
-  for (const item of value) {
-    const url = mediaUrl(item);
-    if (url) {
-      return url;
-    }
-  }
-
-  return null;
 }
 
-function firstMediaAssetUrl(value: unknown): string | null {
-  if (!Array.isArray(value)) {
-    return null;
+function coverageScore(row: CoverageRow): number {
+  if (typeof row.last_audit_score === "number") {
+    return clamp(Math.round(row.last_audit_score), 0, 100);
   }
-
-  const preferredKeys = ["thumbnail_url", "thumbnailUrl", "public_url", "publicUrl", "source_url", "sourceUrl", "url"];
-
-  for (const item of value) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-
-    const asset = item as Record<string, unknown>;
-    for (const key of preferredKeys) {
-      const url = mediaUrl(asset[key]);
-      if (url) {
-        return url;
-      }
-    }
+  if (row.live_active_ads > 0) {
+    return clamp(55 + row.live_active_ads * 8, 55, 100);
   }
-
-  return null;
+  if (row.last_refreshed_at) {
+    return 35;
+  }
+  return 0;
 }
 
-function mediaUrl(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return /^https?:\/\//iu.test(trimmed) ? trimmed : null;
+function toAssistantCoverageRow(row: CoverageRow): OperatorAssistantCoverageRow {
+  return {
+    postcode: row.postcode,
+    state: row.state,
+    score: coverageScore(row),
+    activeAds: row.live_active_ads ?? 0,
+    advertiserPages: row.live_advertiser_pages ?? 0,
+    health: row.health,
+  };
 }
 
-function formatMediaSummary(row: RecentAdRow): string {
-  const imageUrlCount = Array.isArray(row.image_urls) ? row.image_urls.length : 0;
-  const mediaAssetCount = Array.isArray(row.media_assets) ? row.media_assets.length : 0;
-  const parts = [
-    row.primary_image_url ? "primary image" : null,
-    row.video_thumbnail_url ? "video thumb" : null,
-    row.video_url ? "video" : null,
-    row.image_storage_path ? `image storage: ${row.image_storage_path}` : null,
-    row.video_storage_path ? `video storage: ${row.video_storage_path}` : null,
-    imageUrlCount ? `${imageUrlCount} image urls` : null,
-    mediaAssetCount ? `${mediaAssetCount} media assets` : null,
-  ].filter(Boolean);
-
-  return parts.length ? truncate(parts.join(", "), 220) : "-";
+function compactJobType(value: string): string {
+  return value
+    .replace(/^blockwise-/u, "")
+    .replace(/-/gu, "_")
+    .replace(/^ad_collector$/u, "fetch_ads")
+    .replace(/^agent_census$/u, "refresh_postcode");
 }
 
-function formatClassificationSummary(classification: RecentAdRow["classification"]): string {
-  if (!classification || Object.keys(classification).length === 0) {
-    return "-";
-  }
-
-  const hooks = Array.isArray(classification.hooks)
-    ? classification.hooks.filter((hook): hook is string => typeof hook === "string")
-    : [];
-  const parts = [
-    cleanString(classification.industry),
-    cleanString(classification.type ?? classification.ad_type),
-    cleanString(classification.primary_intent ?? classification.intent),
-    typeof classification.confidence === "number" ? `confidence ${Math.round(classification.confidence * 100)}%` : null,
-    hooks.length ? `hooks: ${hooks.slice(0, 3).join(", ")}` : null,
-    cleanString(classification.rejection_reason),
-  ].filter(Boolean);
-
-  return truncate(parts.length ? parts.join(", ") : JSON.stringify(classification), 220);
+function payloadPostcode(job: WorkQueueRow): string {
+  const payload = parsePayload(job);
+  const value = payload.postcode ?? payload.targetPostcode ?? payload.target_value;
+  return typeof value === "string" ? value : "-";
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) {
-    return "-";
-  }
+function parsePayload(job: WorkQueueRow): Record<string, unknown> {
+  const value = (job as unknown as { payload?: unknown }).payload;
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
 
+function payloadFromAd(ad: RecentAdRow): string {
+  const classification = ad.classification ?? {};
+  const value = classification.postcode ?? classification.primary_postcode ?? classification.suburb;
+  return typeof value === "string" ? value : "-";
+}
+
+function shortId(value: string): string {
+  return value.length > 12 ? `${value.slice(0, 3)}_${value.slice(-8)}` : value;
+}
+
+function formatDuration(startedAt: string, completedAt: string | null): string {
+  const started = new Date(startedAt).getTime();
+  const completed = completedAt ? new Date(completedAt).getTime() : Date.now();
+  if (Number.isNaN(started) || Number.isNaN(completed)) return "-";
+  const seconds = Math.max(0, Math.round((completed - started) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes ? `${minutes}m ${rest}s` : `${rest}s`;
+}
+
+function formatRelativeTime(value: string | null): string {
+  if (!value) return "-";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString();
+  if (Number.isNaN(date.getTime())) return "-";
+  const diffMs = Date.now() - date.getTime();
+  const abs = Math.abs(diffMs);
+  const suffix = diffMs >= 0 ? "ago" : "from now";
+  const minutes = Math.round(abs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ${suffix}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ${suffix}`;
+  const days = Math.round(hours / 24);
+  return `${days}d ${suffix}`;
 }
 
-function adStatusTone(status: string | null): "green" | "amber" | "rose" | "blue" {
-  const normalized = status?.toLowerCase();
-
-  if (normalized === "active") {
-    return "green";
-  }
-
-  if (normalized === "inactive") {
-    return "amber";
-  }
-
-  if (normalized === "failed" || normalized === "rejected") {
-    return "rose";
-  }
-
+function jobTone(job: WorkQueueRow): "green" | "amber" | "rose" | "blue" {
+  if (job.status === "complete") return "green";
+  if (job.status === "failed" || job.status === "blocked") return "rose";
+  if (job.is_stale_claim) return "amber";
+  if (job.status === "pending") return "amber";
   return "blue";
 }
 
-function truncate(value: string, maxLength: number): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+function runTone(status: string): "green" | "amber" | "rose" | "blue" {
+  if (status === "success") return "green";
+  if (status === "failed") return "rose";
+  if (status === "partial") return "amber";
+  return "blue";
 }
 
-function cleanString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function healthTone(health: string): "green" | "amber" | "rose" | "blue" {
-  switch (health) {
-    case "healthy":
-      return "green";
-    case "refresh_overdue":
-    case "audit_overdue":
-      return "amber";
-    case "gap_known":
-      return "rose";
-    case "never_audited":
-    default:
-      return "blue";
-  }
-}
+function titleCase(value: string): string {
+  return value.replace(/_/gu, " ").replace(/\b\w/gu, (m

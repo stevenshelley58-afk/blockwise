@@ -2,15 +2,17 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { promisify } from "node:util";
 
-const DEFAULT_POSTCODES = "6008,6000,6005,6006,6007,6009,6010,6011,6014,6015,6016,6017,6018,6019,6020,6050,6051,6052,6151,6152,6153,6158,6159,6160,6166".split(",");
+const DEFAULT_POSTCODES = ["ALL"];
 const env = process.env;
 const execFileAsync = promisify(execFile);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const now = () => new Date().toISOString();
 const json = (value) => JSON.stringify(value);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const positiveInt = (name, fallback) => {
   const parsed = Number.parseInt(env[name] || `${fallback}`, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) throw new Error(`${name} must be a positive integer`);
@@ -35,12 +37,25 @@ const maxJobsPerTick = positiveInt("HERMES_QUEUE_MAX_JOBS_PER_TICK", mode === "b
 const fetchTimeoutMs = positiveInt("HERMES_RESEARCH_FETCH_TIMEOUT_MS", 8_000);
 const metaCaptureTimeoutMs = positiveInt("HERMES_META_CAPTURE_TIMEOUT_MS", 30_000);
 const metaCaptureResultsLimit = Math.min(positiveInt("HERMES_META_CAPTURE_RESULTS_LIMIT", 250), 250);
-const targetPostcodes = uniqueCsv(env.HERMES_RESEARCH_TARGET_POSTCODES, DEFAULT_POSTCODES);
+const requestedTargetPostcodes = uniqueCsv(env.HERMES_RESEARCH_TARGET_POSTCODES, DEFAULT_POSTCODES);
 const sourceTemplates = uniqueCsv(env.HERMES_CENSUS_SOURCE_URL_TEMPLATES, []);
+const adPageRefreshEnabled = env.HERMES_AD_PAGE_REFRESH_ENABLED !== "false";
+const adPageRefreshIntervalMinutes = positiveInt("HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES", mode === "build" ? 720 : 360);
+const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", mode === "build" ? 40 : 16);
+const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
+const maxRosterUrlsPerPostcode = positiveInt("HERMES_CENSUS_MAX_ROSTER_URLS_PER_POSTCODE", 5);
+const censusQueuePriority = positiveInt("HERMES_CENSUS_QUEUE_PRIORITY", 30);
+const censusPolicyAutoSeedEnabled = env.HERMES_CENSUS_AUTO_SEED_POLICIES_ENABLED !== "false";
+const censusPolicySeedBatchSize = positiveInt("HERMES_CENSUS_POLICY_SEED_BATCH_SIZE", mode === "build" ? 500 : 100);
+const censusRecycleBlockedEnabled = env.HERMES_CENSUS_RECYCLE_BLOCKED_ENABLED !== "false";
 const metaCaptureProvider = env.HERMES_META_CAPTURE_PROVIDER || (env.HERMES_META_CAPTURE_ENDPOINT ? "http_json" : "hermes_browser");
 const metaCaptureEndpoint = env.HERMES_META_CAPTURE_ENDPOINT || "";
 const metaBrowserExecutable = env.HERMES_META_BROWSER_EXECUTABLE || env.CHROMIUM_BIN || "chromium";
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
+const META_BROWSER_SOURCE_PROVIDER = "hermes_meta_page_capture";
+const META_STRUCTURED_SOURCE_PROVIDER = "structured_meta_page_provider";
+const targetAllPostcodes = requestedTargetPostcodes.some((value) => /^(?:all|\*)$/iu.test(value));
+const targetPostcodes = targetAllPostcodes ? [] : requestedTargetPostcodes;
 
 const POSTCODE_ROSTER_SOURCES = {
   "6000": [{ suburb: "Perth", slug: "perth" }],
@@ -75,6 +90,99 @@ const POSTCODE_ROSTER_SOURCES = {
     { suburb: "Wattleup", slug: "wattleup" },
   ],
 };
+
+function readAuPostcodes() {
+  const paths = [
+    env.HERMES_AU_POSTCODES_PATH,
+    "/app/data/au-postcodes.json",
+    new URL("../../../data/au-postcodes.json", import.meta.url),
+  ].filter(Boolean);
+  for (const path of paths) {
+    try {
+      return JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+      // Keep trying the next known runtime path.
+    }
+  }
+  return [];
+}
+
+function readAgentSources() {
+  const paths = [
+    env.HERMES_AGENT_SOURCES_PATH,
+    "/app/data/agent-sources.json",
+    new URL("../../../data/agent-sources.json", import.meta.url),
+  ].filter(Boolean);
+  for (const path of paths) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, "utf8"));
+      return Array.isArray(parsed?.sources) ? parsed.sources : [];
+    } catch {
+      // Keep trying the next known runtime path.
+    }
+  }
+  return [{
+    id: "reiwa_agent_finder",
+    state: "WA",
+    enabled: true,
+    type: "agent_roster",
+    parser: "reiwa_jsonld_person",
+  }];
+}
+
+function suburbSlug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/gu, " and ")
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+}
+
+function validRosterSuburb(value) {
+  const suburb = String(value || "").trim();
+  return suburb && !/^[A-Z]{2,3}\s+\d{4}\b/u.test(suburb) && /[A-Z]/u.test(suburb);
+}
+
+function buildPostcodeSuburbIndex() {
+  const index = new Map();
+  for (const row of readAuPostcodes()) {
+    if (!row?.postcode || !row?.state || !Array.isArray(row.suburbs)) continue;
+    const suburbs = row.suburbs.filter(validRosterSuburb).map((suburb) => titleCase(suburb));
+    index.set(`${row.state}:${row.postcode}`, suburbs);
+  }
+  return index;
+}
+
+const postcodeSuburbIndex = buildPostcodeSuburbIndex();
+const agentSourceDefinitions = readAgentSources();
+const configuredTargetStates = uniqueCsv(env.HERMES_RESEARCH_TARGET_STATES, []);
+const enabledCensusSourceStates = [...new Set(agentSourceDefinitions
+  .filter((source) => source.enabled !== false && source.type === "agent_roster" && source.state)
+  .map((source) => source.state))];
+const targetStates = configuredTargetStates.length
+  ? configuredTargetStates
+  : targetAllPostcodes
+    ? enabledCensusSourceStates
+    : [];
+const targetPostcodeLog = targetAllPostcodes ? ["ALL"] : targetPostcodes;
+
+function sourceEnabled(id) {
+  const source = agentSourceDefinitions.find((item) => item.id === id);
+  return !source || source.enabled !== false;
+}
+
+function hasCensusSourceForState(state) {
+  if (state === "WA" && sourceEnabled("reiwa_agent_finder")) return true;
+  return sourceTemplates.length > 0;
+}
+
+function hasCensusSourceForPolicy(policy) {
+  return hasCensusSourceForState(policy.state || "WA");
+}
+
+function postgrestIn(values) {
+  return values.map((value) => `"${String(value).replace(/"/gu, "")}"`).join(",");
+}
 
 function log(message, metadata = {}, level = "info") {
   console.log(json({ ts: now(), component: "blockwise-research-runtime", level, message, ...metadata }));
@@ -113,6 +221,8 @@ async function storage(path, init = {}) {
 
 const rpc = (functionName, payload) => rest("research", `rpc/${functionName}`, { method: "POST", body: json(payload) });
 const encode = (value) => encodeURIComponent(value);
+const uuidOrNull = (value) => (typeof value === "string" && uuidPattern.test(value.trim()) ? value.trim() : null);
+const resolveBuildRunId = async (...candidates) => candidates.map(uuidOrNull).find(Boolean) || await ensureBuildRun();
 
 async function recordEvent(eventType, tableName, rowId, payload = {}, extra = {}) {
   const row = { event_type: eventType, table_name: tableName, row_id: rowId, source_provider: "hermes", payload, ...extra };
@@ -146,32 +256,134 @@ async function ensureBuildRun() {
     headers: { Prefer: "return=representation" },
     body: json({
       mode,
-      market: "WA",
-      target_postcodes: targetPostcodes,
+      market: targetStates.length > 1 ? "AU" : targetStates[0] || "AU",
+      target_postcodes: targetPostcodeLog,
       source_provider: "hermes",
       trigger: "scheduled",
       status: "running",
       notes: "Hermes research run started by deterministic queue runtime.",
-      metadata: { owner: "hermes", runner: "supabase-supervisor", location_search_allowed: false, legacy_workers_allowed: false },
+      metadata: { owner: "hermes", runner: "supabase-supervisor", location_search_allowed: false, legacy_workers_allowed: false, target_states: targetStates, source_backed_states: enabledCensusSourceStates },
     }),
   });
   const id = created?.[0]?.id;
   if (!id) throw new Error("Supabase did not return a build_run id");
-  await recordEvent("insert", "build_runs", id, { mode, targetPostcodes });
+  await recordEvent("insert", "build_runs", id, { mode, targetPostcodes: targetPostcodeLog, targetStates });
   return id;
 }
 
+function sourceBackedPolicyCandidates() {
+  const out = [];
+  for (const key of postcodeSuburbIndex.keys()) {
+    const [state, postcode] = key.split(":");
+    if (!postcode || !hasCensusSourceForState(state)) continue;
+    if (targetStates.length && !targetStates.includes(state)) continue;
+    if (!targetAllPostcodes && targetPostcodes.length && !targetPostcodes.includes(postcode)) continue;
+    out.push({ state, postcode });
+  }
+  return out.sort((left, right) => left.state.localeCompare(right.state) || left.postcode.localeCompare(right.postcode));
+}
+
+async function ensureSourceBackedRefreshPolicies() {
+  if (!censusPolicyAutoSeedEnabled) return { policySeedCandidates: 0, policySeeded: 0 };
+  const candidates = sourceBackedPolicyCandidates();
+  if (!candidates.length) return { policySeedCandidates: 0, policySeeded: 0 };
+  const states = [...new Set(candidates.map((candidate) => candidate.state))];
+  const existingRows = await rest("research", `refresh_policies?select=postcode,state&state=in.(${postgrestIn(states)})&limit=10000`);
+  const existing = new Set(existingRows.map((row) => `${row.state}:${row.postcode}`));
+  const missing = candidates
+    .filter((candidate) => !existing.has(`${candidate.state}:${candidate.postcode}`))
+    .slice(0, censusPolicySeedBatchSize);
+  if (!missing.length) return { policySeedCandidates: candidates.length, policySeeded: 0 };
+  const seededAt = Date.now();
+  await rest("research", "refresh_policies?on_conflict=postcode,state", {
+    method: "POST",
+    headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: json(missing.map((candidate, index) => ({
+      postcode: candidate.postcode,
+      state: candidate.state,
+      priority: candidate.state === "WA" ? 3 : 4,
+      refresh_cadence_minutes: 1440,
+      next_refresh_at: new Date(seededAt + index * 1_000).toISOString(),
+      active: true,
+      notes: "Auto-seeded by Hermes from source-backed Australian postcode data.",
+    }))),
+  });
+  return { policySeedCandidates: candidates.length, policySeeded: missing.length };
+}
+
+async function recycleBlockedCensusJob(job, policy, buildRunId) {
+  if (!censusRecycleBlockedEnabled) return false;
+  if (!job || !["blocked", "failed"].includes(job.status)) return false;
+  if (!hasCensusSourceForPolicy(policy)) return false;
+  const priorFailure = `${job.blocked_reason || ""} ${job.last_error || ""} ${json(job.result || {})}`;
+  if (!/(generated column|non-default value|schema cache|column .*does not exist|PGRST204|42703|428C9)/iu.test(priorFailure)) return false;
+  await rest("research", `work_queue?id=eq.${job.id}`, {
+      method: "PATCH",
+      body: json({
+        payload: { postcode: policy.postcode, state: policy.state, build_run_id: buildRunId, verified_roster_first: true, location_search_allowed: false, legacy_discovery_allowed: false },
+        priority: censusQueuePriority,
+        status: "pending",
+        available_at: now(),
+      claimed_at: null,
+      claimed_by: null,
+      claim_token: null,
+      claim_expires_at: null,
+      attempts: 0,
+      max_attempts: 3,
+      last_error: null,
+      blocked_reason: null,
+      result: {},
+      completed_at: null,
+    }),
+  });
+  await recordEvent("requeue", "work_queue", job.id, { job_type: "blockwise-agent-census", reason: "source_backed_census_recycle", postcode: policy.postcode, state: policy.state }, { work_queue_id: job.id });
+  return true;
+}
+
+async function deferCensusPolicy(postcode, state, reason, hours = 12) {
+  if (!postcode) return;
+  await rest("research", `refresh_policies?postcode=eq.${encode(postcode)}&state=eq.${encode(state || "WA")}`, {
+    method: "PATCH",
+    body: json({
+      next_refresh_at: new Date(Date.now() + hours * 60 * 60 * 1000).toISOString(),
+      notes: `Hermes deferred census target: ${reason}`,
+    }),
+  });
+}
+
 async function enqueueDueCensusJobs(buildRunId) {
-  const selected = targetPostcodes.map((postcode) => `"${postcode}"`).join(",");
+  const filters = [
+    "active=eq.true",
+    `next_refresh_at=lte.${encode(now())}`,
+    !targetAllPostcodes && targetPostcodes.length ? `postcode=in.(${postgrestIn(targetPostcodes)})` : null,
+    targetStates.length ? `state=in.(${postgrestIn(targetStates)})` : null,
+  ].filter(Boolean).join("&");
   const policies = await rest(
     "research",
-    `refresh_policies?select=id,postcode,state,priority,refresh_cadence_minutes,next_refresh_at&active=eq.true&next_refresh_at=lte.${encode(now())}&postcode=in.(${selected})&order=priority.asc,next_refresh_at.asc&limit=${supervisorLimit}`,
+    `refresh_policies?select=id,postcode,state,priority,refresh_cadence_minutes,next_refresh_at&${filters}&order=priority.asc,next_refresh_at.asc&limit=${supervisorLimit}`,
   );
   let enqueued = 0;
-  for (const policy of policies) {
+  let recycled = 0;
+  let deferredCensus = 0;
+  let skippedNoCensusSource = 0;
+  for (const policy of policies.filter((item) => {
+    const ok = hasCensusSourceForPolicy(item);
+    if (!ok) skippedNoCensusSource += 1;
+    return ok;
+  })) {
     const dedupeKey = `census:${policy.state}:${policy.postcode}`;
-    const existing = await rest("research", `work_queue?select=id&dedupe_key=eq.${encode(dedupeKey)}&status=in.(pending,claimed,failed,blocked)&limit=1`);
-    if (existing.length) continue;
+    const existing = await rest("research", `work_queue?select=id,status,blocked_reason,updated_at&dedupe_key=eq.${encode(dedupeKey)}&status=in.(pending,claimed,failed,blocked)&limit=1`);
+    const active = existing.find((job) => job.status === "pending" || job.status === "claimed");
+    if (active) continue;
+    const recyclable = existing.find((job) => job.status === "failed" || job.status === "blocked");
+    if (recyclable) {
+      if (await recycleBlockedCensusJob(recyclable, policy, buildRunId)) recycled += 1;
+      else {
+        await deferCensusPolicy(policy.postcode, policy.state, recyclable.blocked_reason || "blocked_census_job_waiting_for_new_source", 12);
+        deferredCensus += 1;
+      }
+      continue;
+    }
     const created = await rest("research", "work_queue", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -179,7 +391,7 @@ async function enqueueDueCensusJobs(buildRunId) {
         queue_name: "research",
         job_type: "blockwise-agent-census",
         dedupe_key: dedupeKey,
-        priority: policy.priority ?? 3,
+        priority: censusQueuePriority,
         payload: { postcode: policy.postcode, state: policy.state, build_run_id: buildRunId, verified_roster_first: true, location_search_allowed: false, legacy_discovery_allowed: false },
         status: "pending",
         max_attempts: 3,
@@ -190,7 +402,67 @@ async function enqueueDueCensusJobs(buildRunId) {
       await recordEvent("insert", "work_queue", created[0].id, { dedupeKey, job_type: "blockwise-agent-census" }, { work_queue_id: created[0].id });
     }
   }
-  return { duePolicies: policies.length, enqueued };
+  return { duePolicies: policies.length, enqueued, recycledCensus: recycled, deferredCensus, skippedNoCensusSource };
+}
+
+async function enqueueDueAdPageRefreshJobs(buildRunId) {
+  if (!adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
+  const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed,failed,blocked)&limit=${adPageRefreshMaxActive}`);
+  if (activeCollectors.length >= adPageRefreshMaxActive) {
+    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: activeCollectors.length };
+  }
+  const activePageIds = new Set(activeCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
+  const pages = await rest(
+    "research",
+    `advertiser_pages?select=id,page_id,page_name,status,resolution_decision_id,last_checked_at&status=in.(resolved_collectable,no_ads_confirmed)&page_id=not.is.null&order=last_checked_at.asc.nullsfirst&limit=${adPageRefreshBatchSize * 4}`,
+  );
+  const cutoff = Date.now() - adPageRefreshIntervalMinutes * 60_000;
+  const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - activeCollectors.length, adPageRefreshBatchSize));
+  const candidates = pages.filter((page) => {
+    if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
+    if (activePageIds.has(page.id)) return false;
+    if (!page.last_checked_at) return true;
+    return Date.parse(page.last_checked_at) < cutoff;
+  }).slice(0, capacity);
+  let enqueued = 0;
+  const bucket = Math.floor(Date.now() / Math.max(60_000, adPageRefreshIntervalMinutes * 60_000));
+  for (const [index, page] of candidates.entries()) {
+    const created = await rest("research", "work_queue", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: json({
+        queue_name: "research",
+        job_type: "blockwise-ad-collector",
+        dedupe_key: `ad-refresh:${page.id}:${bucket}`,
+        advertiser_page_id: page.id,
+        priority: 8,
+        payload: {
+          advertiserPageId: page.id,
+          metaPageId: String(page.page_id),
+          build_run_id: buildRunId,
+          resolverDecisionId: page.resolution_decision_id || null,
+          realEstateGate: {
+            verified: true,
+            verifiedBySkill: "blockwise-auto-page-refresh",
+            decisionId: page.resolution_decision_id || null,
+            sourceDocumentIds: [],
+            verifiedAt: now(),
+          },
+          country: "AU",
+          activeStatus: "all",
+          resultsLimit: metaCaptureResultsLimit,
+        },
+        status: "pending",
+        available_at: new Date(Date.now() + index * 2_000).toISOString(),
+        max_attempts: 3,
+      }),
+    });
+    if (created?.[0]?.id) {
+      enqueued += 1;
+      await recordEvent("insert", "work_queue", created[0].id, { job_type: "blockwise-ad-collector", reason: "auto_verified_page_refresh", advertiser_page_id: page.id }, { work_queue_id: created[0].id });
+    }
+  }
+  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: activeCollectors.length };
 }
 
 async function runWatchdogs() {
@@ -283,8 +555,19 @@ function titleCase(value) {
 }
 
 function reiwaRosterSources(payload) {
+  if ((payload.state || "WA") !== "WA") return [];
   const configured = POSTCODE_ROSTER_SOURCES[payload.postcode] || [];
-  return configured.map((source) => ({
+  const fromPostcodeData = (postcodeSuburbIndex.get(`WA:${payload.postcode}`) || [])
+    .slice(0, maxRosterUrlsPerPostcode)
+    .map((suburb) => ({ suburb, slug: suburbSlug(suburb) }))
+    .filter((source) => source.slug);
+  const seen = new Set();
+  return [...configured, ...fromPostcodeData].filter((source) => {
+    const key = source.slug;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map((source) => ({
     source: "reiwa_agent_finder",
     suburb: source.suburb,
     url: `https://reiwa.com.au/real-estate-agents/${source.slug}/`,
@@ -293,7 +576,13 @@ function reiwaRosterSources(payload) {
 
 function evidenceUrls(payload) {
   const direct = [payload.source_url, payload.website_url, payload.agency_url, payload.evidence_url, ...(Array.isArray(payload.source_urls) ? payload.source_urls : []), ...(Array.isArray(payload.evidence_urls) ? payload.evidence_urls : [])];
-  const templated = sourceTemplates.map((template) => template.replaceAll("{postcode}", payload.postcode).replaceAll("{state}", payload.state || "WA"));
+  const suburb = payload.suburb || postcodeSuburbIndex.get(`${payload.state || "WA"}:${payload.postcode}`)?.[0] || "";
+  const templated = sourceTemplates.map((template) => template
+    .replaceAll("{postcode}", payload.postcode)
+    .replaceAll("{state}", payload.state || "WA")
+    .replaceAll("{state_lower}", String(payload.state || "WA").toLowerCase())
+    .replaceAll("{suburb}", suburb)
+    .replaceAll("{suburb_slug}", suburbSlug(suburb)));
   const roster = reiwaRosterSources(payload).map((source) => source.url);
   return [...new Set([...direct, ...templated, ...roster].filter((url) => typeof url === "string" && /^https:\/\//iu.test(url)))];
 }
@@ -475,7 +764,6 @@ async function ensureServiceArea(input) {
 async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
   const row = {
     name: agency.name,
-    normalized_name: normalizeName(agency.name),
     state: agency.state,
     primary_postcode: agency.primary_postcode,
     primary_suburb: agency.primary_suburb,
@@ -539,7 +827,6 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
         headers: { Prefer: "return=representation" },
         body: json({
           full_name: agency.agent.full_name,
-          normalized_name: agentNorm,
           agency_id: agencyId,
           state: agency.state,
           primary_suburb: agency.agent.primary_suburb || agency.primary_suburb,
@@ -1193,6 +1480,7 @@ async function handleAgentCensus(job) {
   }
 
   const reason = errors.length ? "census_evidence_fetch_failed" : "census_requires_verified_evidence";
+  await deferCensusPolicy(payload.postcode, payload.state || "WA", reason, errors.length ? 6 : 24);
   await insertCoverageDefect({ postcode: payload.postcode, state: payload.state || "WA", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } });
   return { status: "blocked", blocked_reason: reason, result: { handler: "blockwise-agent-census", reason, errors, location_search_allowed: false } };
 }
@@ -1472,7 +1760,7 @@ async function runHermesBrowserCapture(input) {
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: input.metaPageId, limit: input.resultsLimit });
     return {
       runId: `hermes-browser-${input.metaPageId}-${Date.now()}`,
-      provider: "hermes_browser",
+      provider: META_BROWSER_SOURCE_PROVIDER,
       status: parsed.warnings.length ? "FAILED" : "SUCCEEDED",
       startedAt,
       finishedAt: now(),
@@ -1493,7 +1781,7 @@ async function runHermesBrowserCapture(input) {
   } catch (error) {
     return {
       runId: `hermes-browser-failed-${input.metaPageId}-${Date.now()}`,
-      provider: "hermes_browser",
+      provider: META_BROWSER_SOURCE_PROVIDER,
       status: "FAILED",
       startedAt,
       finishedAt: now(),
@@ -2075,7 +2363,14 @@ async function patchMediaAsset(id, patch) {
     });
   } catch (error) {
     if (!/last_error|content_type|checksum|captured_at|42703|column .* does not exist/i.test(error.message)) throw error;
-    const { last_error: _lastError, content_type: contentType, checksum, captured_at: _capturedAt, ...withoutUnsupportedColumns } = patch;
+    const {
+      last_error: _lastError,
+      content_type: contentType,
+      checksum,
+      content_hash: _contentHash,
+      captured_at: _capturedAt,
+      ...withoutUnsupportedColumns
+    } = patch;
     const withoutLastError = {
       ...withoutUnsupportedColumns,
       ...(contentType ? { mime_type: contentType } : {}),
@@ -2138,12 +2433,12 @@ async function handleAdCollector(job) {
   }
   const ingestTables = ["ad_fetch_runs", "observed_ads", "ad_snapshots", "ad_creatives", "media_assets"];
   const input = captureInput(payload);
-  const buildRunId = payload.build_run_id || payload.buildRunId || await ensureBuildRun();
-  const sourceProvider = metaCaptureProvider === "http_json" && metaCaptureEndpoint ? "http_json" : "hermes_browser";
-  const capture_mode = sourceProvider === "http_json" ? "http_json" : "browser";
+  const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
+  const sourceProvider = metaCaptureProvider === "http_json" && metaCaptureEndpoint ? META_STRUCTURED_SOURCE_PROVIDER : META_BROWSER_SOURCE_PROVIDER;
+  const capture_mode = sourceProvider === META_STRUCTURED_SOURCE_PROVIDER ? "http_json" : "browser";
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, sourceProvider);
   let outcome;
-  if (sourceProvider === "http_json") {
+  if (sourceProvider === META_STRUCTURED_SOURCE_PROVIDER) {
     const startedAt = now();
     const response = await fetch(metaCaptureEndpoint, {
       method: "POST",
@@ -2152,7 +2447,7 @@ async function handleAdCollector(job) {
     });
     const body = await response.json().catch(() => null);
     outcome = response.ok
-      ? normalizeCaptureOutcome(body, input, "http_json", startedAt)
+      ? normalizeCaptureOutcome(body, input, META_STRUCTURED_SOURCE_PROVIDER, startedAt)
       : { status: "FAILED", errorMessage: `capture endpoint failed ${response.status}`, itemCount: 0, items: [], costUsd: 0, metadata: { http_status: response.status, body } };
   } else {
     outcome = await runHermesBrowserCapture(input);
@@ -2256,20 +2551,24 @@ async function handleMediaCollector(job) {
   }
   let captured = 0;
   let failed = 0;
+  let deduped = 0;
+  const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
   for (const asset of assets) {
     try {
-      const stored = await captureMediaAsset(asset, payload.build_run_id || "unassigned");
+      const stored = await captureMediaAsset(asset, buildRunId);
       await patchMediaAsset(asset.id, {
         storage_bucket: mediaBucket,
         storage_path: stored.storagePath,
         content_type: stored.contentType,
         byte_size: stored.byteSize,
         checksum: stored.checksum,
+        content_hash: stored.contentHash,
         capture_status: "captured",
         captured_at: now(),
         last_error: null,
       });
       captured += 1;
+      if (stored.deduped) deduped += 1;
     } catch (error) {
       await patchMediaAsset(asset.id, { capture_status: "failed", last_error: error.message });
       failed += 1;
@@ -2282,11 +2581,11 @@ async function handleMediaCollector(job) {
     dedupe_key: `classifier:${payload.adCreativeId}:media:${Date.now()}`,
     advertiser_page_id: job.advertiser_page_id || null,
     priority: 5,
-    payload: { adCreativeId: payload.adCreativeId, observedAdId: payload.observedAdId, build_run_id: payload.build_run_id || null },
+    payload: { adCreativeId: payload.adCreativeId, observedAdId: payload.observedAdId, build_run_id: buildRunId },
     status: "pending",
     max_attempts: 3,
   }, job);
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed } };
+  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, failed } };
 }
 
 async function loadCreativeForMediaCapture(adCreativeId) {
@@ -2381,11 +2680,81 @@ async function captureMediaAsset(asset, buildRunId) {
     const buffer = Buffer.from(await response.arrayBuffer());
     if (!buffer.length) throw new Error("media fetch returned an empty body");
     const checksum = hash(buffer);
-    const storagePath = `build-runs/${buildRunId}/creatives/${asset.ad_creative_id}/${checksum}${extensionForContentType(contentType, asset.kind)}`;
+    const existingBlob = await findMediaBlob(checksum);
+    if (existingBlob) {
+      await touchMediaBlob(checksum);
+      return {
+        storagePath: existingBlob.storage_path,
+        contentType: existingBlob.content_type || contentType,
+        byteSize: existingBlob.byte_size || buffer.length,
+        checksum,
+        contentHash: checksum,
+        deduped: true,
+      };
+    }
+    const storagePath = `media-blobs/${checksum}${extensionForContentType(contentType, asset.kind)}`;
     await uploadStorageObject(mediaBucket, storagePath, buffer, contentType);
-    return { storagePath, contentType, byteSize: buffer.length, checksum };
+    await insertMediaBlob({
+      contentHash: checksum,
+      storagePath,
+      contentType,
+      byteSize: buffer.length,
+      asset,
+      buildRunId,
+    });
+    return { storagePath, contentType, byteSize: buffer.length, checksum, contentHash: checksum, deduped: false };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function findMediaBlob(contentHash) {
+  try {
+    const rows = await rest("research", `media_blobs?select=content_hash,storage_bucket,storage_path,content_type,byte_size&content_hash=eq.${encode(contentHash)}&limit=1`);
+    return rows?.[0] || null;
+  } catch (error) {
+    if (missingSchemaRelation(error, "media_blobs")) return null;
+    throw error;
+  }
+}
+
+async function touchMediaBlob(contentHash) {
+  try {
+    await rest("research", `media_blobs?content_hash=eq.${encode(contentHash)}`, {
+      method: "PATCH",
+      body: json({
+        last_seen_at: now(),
+      }),
+    });
+  } catch (error) {
+    if (!missingSchemaRelation(error, "media_blobs")) throw error;
+  }
+}
+
+async function insertMediaBlob({ contentHash, storagePath, contentType, byteSize, asset, buildRunId }) {
+  try {
+    await rest("research", "media_blobs?on_conflict=content_hash", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates" },
+      body: json({
+        content_hash: contentHash,
+        storage_bucket: mediaBucket,
+        storage_path: storagePath,
+        content_type: contentType,
+        byte_size: byteSize,
+        first_captured_at: now(),
+        last_seen_at: now(),
+        metadata: {
+          first_media_asset_id: asset.id,
+          first_ad_creative_id: asset.ad_creative_id,
+          first_observed_ad_id: asset.observed_ad_id,
+          source_url: asset.source_url,
+          build_run_id: buildRunId,
+        },
+      }),
+    });
+  } catch (error) {
+    if (!missingSchemaRelation(error, "media_blobs")) throw error;
   }
 }
 
@@ -2565,11 +2934,14 @@ async function processOneJob(job) {
 
 async function tick() {
   let buildRunId = null;
-  let supervisor = { duePolicies: 0, enqueued: 0 };
+  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0 };
   let watchdogs = {};
   try {
     buildRunId = await ensureBuildRun();
-    supervisor = await enqueueDueCensusJobs(buildRunId);
+    const policySeed = await ensureSourceBackedRefreshPolicies();
+    const census = await enqueueDueCensusJobs(buildRunId);
+    const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
+    supervisor = { ...policySeed, ...census, ...adRefresh };
   } catch (error) {
     log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
   }
@@ -2583,19 +2955,11 @@ async function tick() {
 }
 
 async function main() {
-  log("starting", { mode, workerId, intervalMs, targetPostcodes, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length });
+  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive });
   for (;;) {
     try {
       await tick();
     } catch (error) {
       log(error.message, {}, "error");
     }
-    if (env.HERMES_RESEARCH_RUN_ONCE === "true") break;
-    await sleep(intervalMs);
-  }
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+    if (env.HERMES_RESEARCH_RUN_O

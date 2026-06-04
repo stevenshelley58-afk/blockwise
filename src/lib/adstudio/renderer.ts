@@ -31,6 +31,10 @@ export function renderCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">
       }
 
       if (object.type === "image") {
+        if (object.content?.startsWith("data:image/")) {
+          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" href="${escapeXml(object.content)}" preserveAspectRatio="xMidYMid slice"/>`;
+        }
+
         return `<circle cx="${object.x + object.width / 2}" cy="${object.y + (object.height ?? object.width) / 2}" r="${Math.min(object.width, object.height ?? object.width) / 2}" fill="#D9E7E3"/><circle cx="${object.x + object.width / 2}" cy="${object.y + 46}" r="34" fill="#68746F"/><path d="M ${object.x + 38} ${object.y + 142} Q ${object.x + object.width / 2} ${object.y + 72} ${object.x + object.width - 38} ${object.y + 142} Z" fill="#68746F"/>`;
       }
 

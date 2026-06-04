@@ -1,13 +1,10 @@
 "use client";
 
 import {
-  BadgeCheck,
   Check,
   ChevronDown,
   CircleAlert,
-  Copy,
   Image as ImageIcon,
-  Link2,
   RefreshCw,
   Send,
   Settings2,
@@ -15,19 +12,18 @@ import {
   Target,
   Type,
   UsersRound,
-  Wand2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
   AdStudioOfferTemplate,
 } from "@/lib/adstudio";
+import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 
 import { ANGLES } from "./angles";
-import { Inspector, PublishPanel, ReadinessCard } from "./inspector";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, PreviewMode, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
@@ -39,15 +35,14 @@ import { seedCopy, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
-import { AnglesPanel } from "./panels/angles-panel";
 import { AudiencePanel } from "./panels/audience-panel";
 import { BrandPanel } from "./panels/brand-panel";
 import { CampaignPanel } from "./panels/campaign-panel";
 import { CopyPanel } from "./panels/copy-panel";
-import { LandingPanel } from "./panels/landing-panel";
 import { MediaPanel } from "./panels/media-panel";
 import { PublishSetupPanel } from "./panels/publish-panel";
 import { SettingsPanel } from "./panels/settings-panel";
+import { NewAdDialog } from "./new-ad-dialog";
 
 type AdStudioWorkbenchProps = {
   brandKit: AdStudioBrandKit;
@@ -63,21 +58,19 @@ type AdStudioWorkbenchProps = {
 };
 
 const NAV_ITEMS: Array<{ id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon }> = [
-  { id: "campaign", label: "Campaign", icon: Target },
-  { id: "angles", label: "Angles", icon: Wand2 },
+  { id: "campaign", label: "Ad", icon: Target },
   { id: "brand", label: "Brand", icon: ShieldCheck },
-  { id: "media", label: "Media", icon: ImageIcon },
+  { id: "media", label: "Review", icon: ImageIcon },
   { id: "copy", label: "Copy", icon: Type },
   { id: "audience", label: "Audience", icon: UsersRound },
-  { id: "landing", label: "Landing", icon: Link2 },
   { id: "publish", label: "Publish", icon: Send },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV: Array<{ id: "campaign" | "variants" | "checklist" | "publish"; label: string; icon: LucideIcon }> = [
-  { id: "campaign", label: "Campaign", icon: Target },
-  { id: "variants", label: "Variants", icon: Copy },
-  { id: "checklist", label: "Checklist", icon: BadgeCheck },
+const MOBILE_NAV: Array<{ id: "campaign" | "review" | "copy" | "publish"; label: string; icon: LucideIcon }> = [
+  { id: "campaign", label: "Ad", icon: Target },
+  { id: "review", label: "Review", icon: ImageIcon },
+  { id: "copy", label: "Copy", icon: Type },
   { id: "publish", label: "Publish", icon: Send },
 ];
 
@@ -85,15 +78,15 @@ export function AdStudioWorkbench({
   brandKit,
   campaignPack: initialPack,
   offers,
-  performance,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
+  const [newAdOpen, setNewAdOpen] = useState(false);
+  const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("story");
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("platform");
-  const [device, setDevice] = useState<"mobile" | "desktop">("mobile");
-  const [zoom, setZoom] = useState(75);
+  const previewMode: PreviewMode = "platform";
+  const zoom = 75;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
   const [campaignGoal, setCampaignGoal] = useState("Get appraisal leads");
   const [offerLabel, setOfferLabel] = useState("Free appraisal");
@@ -114,10 +107,10 @@ export function AdStudioWorkbench({
     studio.showToast,
     () => {
       setSelectedElement("image");
-      studio.setInspectorTab("edit");
+      studio.setSection("media");
     },
   );
-  const { readinessItems, readinessScore } = useReadiness({
+  const { readinessItems } = useReadiness({
     campaignGoal,
     offerLabel,
     market,
@@ -133,7 +126,7 @@ export function AdStudioWorkbench({
   //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft — save draft
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download — Export creatives
   //   platforms: ["meta"]
-  const { generateVariantsForAngle, saveDraft, exportCreatives } = useCampaignActions({
+  const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives } = useCampaignActions({
     pack,
     brandKit,
     offers,
@@ -152,7 +145,6 @@ export function AdStudioWorkbench({
     setBusy: studio.setBusy,
     setBusyMessage: studio.setBusyMessage,
     setSection: studio.setSection,
-    setInspectorTab: studio.setInspectorTab,
     setSelectedAngleId,
     showToast: studio.showToast,
   });
@@ -170,16 +162,23 @@ export function AdStudioWorkbench({
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
 
+  useEffect(() => {
+    if (!promptedForFirstAd && pack.variants.length === 0) {
+      setPromptedForFirstAd(true);
+      setNewAdOpen(true);
+    }
+  }, [pack.variants.length, promptedForFirstAd]);
+
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
-  const campaignName = "Free Appraisal Campaign";
+  const campaignName = pack.campaign.name || "Ad draft";
 
   const variants = useMemo(() => {
     const source = pack.variants.length > 0 ? pack.variants : initialPack.variants;
     return source.slice(0, 4).map((variant, index) => ({
       ...variant,
-      displayName: `Variant ${String.fromCharCode(65 + index)}`,
+      displayName: `Ad ${index + 1}`,
       // M5: use the variant's own angle field as the label — not an index-offset into ANGLES
       angleLabel: variant.angle || selectedAngle.variantLabel,
       image: MEDIA_ASSETS[index % MEDIA_ASSETS.length].src,
@@ -190,33 +189,14 @@ export function AdStudioWorkbench({
     setSelectedVariantIndex(index);
     setCopy(seedCopy(pack, index));
     setPrimaryImage(MEDIA_ASSETS[index % MEDIA_ASSETS.length].src);
-    studio.setInspectorTab("variants");
   }
 
-  const variantIds = variants.map((v) => v.variantId);
-
-  // Duplicate the campaign — used by both TopBar (internal) and Inspector Duplicate button
-  async function duplicateCampaign() {
-    try {
-      const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}/duplicate`, { method: "POST" });
-      if (!res.ok) throw new Error();
-      studio.showToast("Campaign duplicated");
-    } catch {
-      studio.showToast("Could not duplicate campaign");
-    }
-  }
-
-  // Add variant — generates variants for the currently selected angle
+  // Adds another generated ad idea from the current defaults.
   function addVariant() {
     generateVariantsForAngle(selectedAngle);
   }
 
-  const publishBlocker = destinationUrl ? "" : "Publish blocked: Landing URL is missing.";
-
   function renderPanel() {
-    if (studio.section === "angles") {
-      return <AnglesPanel angles={ANGLES} selectedAngleId={selectedAngleId} onGenerate={generateVariantsForAngle} />;
-    }
     if (studio.section === "brand") {
       return <BrandPanel brand={brand} brandKit={brandKit} />;
     }
@@ -230,21 +210,12 @@ export function AdStudioWorkbench({
     if (studio.section === "audience") {
       return <AudiencePanel />;
     }
-    if (studio.section === "landing") {
-      return (
-        <LandingPanel
-          destinationUrl={destinationUrl}
-          setDestinationUrl={setDestinationUrl}
-          leadDestination={leadDestination}
-          setLeadDestination={setLeadDestination}
-        />
-      );
-    }
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
       return (
         <PublishSetupPanel
           campaignId={pack.campaign.campaignId}
+          campaignPack={pack}
           destinationUrl={destinationUrl}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
@@ -256,8 +227,6 @@ export function AdStudioWorkbench({
     }
     return (
       <CampaignPanel
-        angles={ANGLES}
-        selectedAngleId={selectedAngleId}
         campaignGoal={campaignGoal}
         setCampaignGoal={setCampaignGoal}
         offerLabel={offerLabel}
@@ -271,7 +240,7 @@ export function AdStudioWorkbench({
         destinationUrl={destinationUrl}
         setDestinationUrl={setDestinationUrl}
         variantCount={pack.variants.length}
-        onGenerate={generateVariantsForAngle}
+        onCreateAd={() => setNewAdOpen(true)}
       />
     );
   }
@@ -281,22 +250,14 @@ export function AdStudioWorkbench({
       <style>{STYLES}</style>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(event) => replaceImage(event.target.files)} />
 
-      {/* 1b: pass campaignId and showToast; M1: onPublish navigates to publish/export panel; H9: wire delete */}
       <TopBar
         campaignName={campaignName}
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
-        onPreview={() => setPreviewMode("platform")}
         onSave={saveDraft}
-        onPublish={() => {
-          studio.setSection("publish");
-          studio.setInspectorTab("publish");
-        }}
-        onExport={exportCreatives}
         onDelete={deleteCampaign}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
-        variantIds={variantIds}
       />
 
       <div className="studio-desktop-body">
@@ -309,7 +270,6 @@ export function AdStudioWorkbench({
               campaign: ["Goal & offer", "Location", "Property type"],
               media: ["Primary media"],
               copy: ["Ad copy", "Call to action"],
-              landing: ["Landing page"],
               brand: [],   // special-cased below
               publish: [], // all items
             };
@@ -336,10 +296,7 @@ export function AdStudioWorkbench({
                 className={studio.section === item.id ? "active" : ""}
                 key={item.id}
                 type="button"
-                onClick={() => {
-                  studio.setSection(item.id);
-                  if (item.id === "publish") studio.setInspectorTab("publish");
-                }}
+                onClick={() => studio.setSection(item.id)}
               >
                 <Icon aria-hidden size={19} />
                 <span>{item.label}</span>
@@ -359,12 +316,6 @@ export function AdStudioWorkbench({
           <PreviewControls
             previewFormat={previewFormat}
             setPreviewFormat={setPreviewFormat}
-            previewMode={previewMode}
-            setPreviewMode={setPreviewMode}
-            zoom={zoom}
-            setZoom={setZoom}
-            device={device}
-            setDevice={setDevice}
           />
 
           <div className="studio-stage">
@@ -380,7 +331,7 @@ export function AdStudioWorkbench({
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
                 setSelectedElement(element);
-                studio.setInspectorTab("edit");
+                studio.setSection(element === "image" ? "media" : "copy");
               }}
             />
             {studio.busy && (
@@ -394,37 +345,27 @@ export function AdStudioWorkbench({
             )}
           </div>
 
-          <VariantStrip variants={variants} selectedVariantIndex={selectedVariantIndex} onSelect={selectVariant} />
-        </section>
-
-        <aside className="studio-inspector" aria-label="Campaign inspector">
-          {/* 1c: wire onRegenerate */}
-          <Inspector
-            tab={studio.inspectorTab}
-            setTab={studio.setInspectorTab}
-            readinessScore={readinessScore}
-            readinessItems={readinessItems}
-            recommendations={performance.recommendations}
+          <VariantStrip
             variants={variants}
             selectedVariantIndex={selectedVariantIndex}
-            onSelectVariant={selectVariant}
-            onRegenerate={(variantId) => {
-              const variant = pack.variants.find((v) => v.variantId === variantId);
+            onSelect={selectVariant}
+            onAdd={() => setNewAdOpen(true)}
+            onEditCopy={(index) => {
+              selectVariant(index);
+              studio.setSection("copy");
+            }}
+            onReplaceImage={(index) => {
+              selectVariant(index);
+              studio.setSection("media");
+              openFilePicker();
+            }}
+            onRegenerate={(index) => {
+              const variant = pack.variants[index];
               const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
               void generateVariantsForAngle(angle);
             }}
-            onDuplicateCampaign={duplicateCampaign}
-            onAddVariant={addVariant}
-            selectedElement={selectedElement}
-            copy={copy}
-            updateCopy={updateCopy}
-            openFilePicker={openFilePicker}
-            applyCopyAssist={applyCopyAssist}
-            destinationUrl={destinationUrl}
-            publishBlocker={publishBlocker}
-            onExport={exportCreatives}
           />
-        </aside>
+        </section>
       </div>
 
       <div className="studio-mobile-body">
@@ -458,40 +399,57 @@ export function AdStudioWorkbench({
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
                 setSelectedElement(element);
-                studio.setMobileTab("checklist");
+                studio.setMobileTab(element === "image" ? "review" : "copy");
               }}
             />
           </div>
         )}
 
-        {studio.mobileTab === "variants" && (
+        {studio.mobileTab === "review" && (
           <div className="studio-mobile-panel">
-            <VariantStrip variants={variants} selectedVariantIndex={selectedVariantIndex} onSelect={selectVariant} />
-            <button className="studio-btn publish block" type="button" onClick={() => generateVariantsForAngle(selectedAngle)}>
-              <Wand2 aria-hidden size={17} />
-              Generate variants
-            </button>
+            <VariantStrip
+              variants={variants}
+              selectedVariantIndex={selectedVariantIndex}
+              onSelect={selectVariant}
+              onAdd={() => setNewAdOpen(true)}
+              onEditCopy={(index) => {
+                selectVariant(index);
+                studio.setMobileTab("copy");
+              }}
+              onReplaceImage={(index) => {
+                selectVariant(index);
+                openFilePicker();
+              }}
+              onRegenerate={(index) => {
+                const variant = pack.variants[index];
+                const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
+                void generateVariantsForAngle(angle);
+              }}
+            />
           </div>
         )}
 
-        {studio.mobileTab === "checklist" && (
+        {studio.mobileTab === "copy" && (
           <div className="studio-mobile-panel">
-            <ReadinessCard score={readinessScore} items={readinessItems} compact={false} recommendations={performance.recommendations} />
+            <CopyPanel copy={copy} updateCopy={updateCopy} applyCopyAssist={applyCopyAssist} />
           </div>
         )}
 
         {studio.mobileTab === "publish" && (
           <div className="studio-mobile-panel">
-            <PublishPanel destinationUrl={destinationUrl} blocker={publishBlocker} onExport={exportCreatives} />
+            <PublishSetupPanel
+              campaignId={pack.campaign.campaignId}
+              campaignPack={pack}
+              destinationUrl={destinationUrl}
+              onExport={exportCreatives}
+              onDelete={deleteCampaign}
+            />
           </div>
         )}
 
         <div className="studio-mobile-variants">
           <VariantStrip variants={variants} selectedVariantIndex={selectedVariantIndex} onSelect={selectVariant} compact />
         </div>
-
-        {/* Campaign readiness — compact summary on mobile */}
-        <ReadinessCard score={readinessScore} items={readinessItems.slice(0, 4)} compact />
       </div>
 
       <footer className="studio-statusbar">
@@ -512,6 +470,13 @@ export function AdStudioWorkbench({
           );
         })}
       </nav>
+
+      <NewAdDialog
+        open={newAdOpen}
+        onClose={() => setNewAdOpen(false)}
+        templates={AD_STUDIO_TEMPLATES}
+        onGenerate={generateFirstAd}
+      />
 
       {studio.toast && <div className="studio-toast">{studio.toast}</div>}
     </main>

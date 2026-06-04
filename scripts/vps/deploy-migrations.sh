@@ -31,7 +31,10 @@ else
     supabase/migrations/202605280004_research_views.sql \
     supabase/migrations/202605300001_research_media_view_contract.sql \
     supabase/migrations/202605300002_research_real_estate_gate.sql \
-    supabase/migrations/202605300003_blockwise_hard_reset_clean_schema.sql; do
+    supabase/migrations/202605300003_blockwise_hard_reset_clean_schema.sql \
+    supabase/migrations/202606030001_research_work_queue_functions.sql \
+    supabase/migrations/202606030002_research_schema_drift_columns.sql \
+    supabase/migrations/202606030003_zero_ad_item_count_contract.sql; do
     echo "[migrations] $f"
     psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
   done

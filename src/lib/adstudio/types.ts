@@ -20,6 +20,16 @@ export type AdStudioPlatform = z.infer<typeof adStudioPlatformSchema>;
 export type AdStudioFormat = z.infer<typeof adStudioFormatSchema>;
 export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 
+export const FIRST_AD_FORMATS = ["9:16", "4:5", "1:1"] as const;
+
+export type FirstAdInput = {
+  mode: "template" | "custom";
+  templateId?: string;
+  description: string;
+  imageDataUrl: string;
+  formats: ["9:16", "4:5", "1:1"];
+};
+
 export type AdStudioBrandKit = {
   brandKitId: string;
   workspaceId: string;

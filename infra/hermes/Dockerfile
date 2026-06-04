@@ -18,6 +18,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY hermes/skills /app/skills
+COPY hermes/data /app/data
 COPY hermes/tools/research-runtime /app/research-runtime
 COPY infra/hermes/hermes.toml /app/hermes.toml
 COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh

@@ -1347,7 +1347,8 @@ begin
     where afr.status in ('success', 'partial')
       and afr.started_at >= now() - coalesce(p_since, interval '24 hours')
       and afr.result_summary <> '{}'::jsonb
-      and research.jsonb_int(afr.result_summary, array['ads_observed', 'adsObserved', 'itemCount'], 0) = 0
+      and coalesce((afr.result_summary->>'confirmed_absence')::boolean, false) = false
+      and research.jsonb_int(afr.result_summary, array['item_count', 'ads_observed', 'adsObserved', 'itemCount'], 0) = 0
     order by afr.started_at desc
     limit greatest(1, least(coalesce(p_limit, 100), 1000))
   loop
@@ -1900,11 +1901,12 @@ select
   afr.started_at,
   afr.completed_at,
   afr.result_summary,
-  research.jsonb_int(afr.result_summary, array['ads_observed', 'adsObserved', 'itemCount'], 0) as ads_observed
+  research.jsonb_int(afr.result_summary, array['item_count', 'ads_observed', 'adsObserved', 'itemCount'], 0) as ads_observed
 from research.ad_fetch_runs afr
 where afr.status in ('success', 'partial')
   and afr.result_summary <> '{}'::jsonb
-  and research.jsonb_int(afr.result_summary, array['ads_observed', 'adsObserved', 'itemCount'], 0) = 0
+  and coalesce((afr.result_summary->>'confirmed_absence')::boolean, false) = false
+  and research.jsonb_int(afr.result_summary, array['item_count', 'ads_observed', 'adsObserved', 'itemCount'], 0) = 0
 order by afr.started_at desc;
 
 create or replace view research.v_operator_missing_media as

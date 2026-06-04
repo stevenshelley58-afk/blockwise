@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad Studio — UI/UX Mockups (Premium Light)</title>
+<style>
+  :root{
+    --ink:#0f1729; --muted:#5b6678; --faint:#8a93a6;
+    --line:#e7eaf1; --line-soft:#eef1f6;
+    --canvas:#f7f8fa; --card:#ffffff;
+    --accent:#1f3a6e; --accent-strong:#16315c; --accent-tint:#eef2fb; --accent-mid:#dbe5f7;
+    --good:#0e7a4d; --good-tint:#e8f6ef; --warn:#9a6b00; --warn-tint:#fdf4dd;
+    --stage:#10141c;
+    --sh-1:0 1px 2px rgba(15,23,41,.05),0 0 0 1px rgba(15,23,41,.03);
+    --sh-2:0 8px 28px rgba(15,23,41,.12),0 2px 6px rgba(15,23,41,.06);
+    --sh-lift:0 10px 30px rgba(15,23,41,.14);
+    --r-card:12px; --r-ctl:8px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:ui-sans-serif,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;background:#e9ebf0;color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+  /* ===== viewer chrome ===== */
+  .viewer-bar{position:sticky;top:0;z-index:50;background:var(--stage);color:#fff;display:flex;align-items:center;gap:14px;padding:12px 22px;flex-wrap:wrap}
+  .viewer-bar .vb-title{font-weight:650;font-size:14px;letter-spacing:.2px;margin-right:8px}
+  .viewer-bar .vb-sub{color:#9aa3b5;font-size:12.5px;margin-right:auto}
+  .vb-tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .vb-tabs button{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#c6cddc;background:rgba(255,255,255,.06)}
+  .vb-tabs button.on{background:#fff;color:var(--ink)}
+  .screen{display:none;padding:26px 22px 60px}
+  .screen.on{display:block}
+  .frame{max-width:1320px;margin:0 auto;background:var(--canvas);border-radius:16px;box-shadow:0 24px 80px rgba(10,15,30,.35);overflow:hidden}
+  .note{max-width:1320px;margin:14px auto 0;color:#5d6575;font-size:13px;line-height:1.55}
+  .note b{color:#2a3142}
+
+  /* ===== shared studio chrome ===== */
+  .topbar{height:64px;background:var(--card);border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:16px;padding:0 22px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:750;font-size:15.5px;letter-spacing:-.2px}
+  .logo .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#1f3a6e,#3a5fa8);display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800}
+  .tb-div{width:1px;height:24px;background:var(--line)}
+  .tb-name{display:flex;align-items:center;gap:7px;font-weight:600;font-size:14px}
+  .tb-name svg{color:var(--faint)}
+  .tb-saved{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px}
+  .dot-good{width:7px;height:7px;border-radius:99px;background:var(--good)}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .btn{height:38px;padding:0 15px;border-radius:var(--r-ctl);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
+  .btn.ghost{color:var(--muted)}
+  .btn.ghost:hover{background:var(--line-soft)}
+  .btn.sec{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh-1)}
+  .btn.pri{background:var(--accent);color:#fff;height:40px;box-shadow:0 2px 8px rgba(31,58,110,.28)}
+  .btn.pri:hover{background:var(--accent-strong)}
+  .avatar{width:32px;height:32px;border-radius:99px;background:linear-gradient(135deg,#c4d2ec,#8fa9d8);display:grid;place-items:center;font-size:12px;font-weight:700;color:#27406f}
+
+  .shell{display:grid;grid-template-columns:216px 372px 1fr;min-height:680px}
+  .rail{background:var(--card);border-right:1px solid var(--line-soft);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+  .rail button{display:flex;align-items:center;gap:11px;height:42px;padding:0 12px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--muted)}
+  .rail button svg{flex:0 0 auto}
+  .rail button:hover{background:var(--line-soft);color:var(--ink)}
+  .rail button.on{background:var(--accent-tint);color:var(--accent);font-weight:650}
+  .rail .rail-gap{height:10px}
+  .rail .rail-label{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--faint);text-transform:uppercase;padding:12px 12px 6px}
+  .rail .badge{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--accent-mid);color:var(--accent);border-radius:99px;padding:2px 7px}
+
+  .panel{padding:24px 22px;overflow:auto;display:flex;flex-direction:column;gap:16px;border-right:1px solid var(--line-soft);background:var(--canvas)}
+  .ph h2{font-size:18px;font-weight:650;letter-spacing:-.2px}
+  .ph p{color:var(--muted);font-size:13px;margin-top:3px}
+  .card{background:var(--card);border-radius:var(--r-card);box-shadow:var(--sh-1);padding:16px}
+  .field{display:grid;gap:6px}
+  .field>span{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .ctl{height:42px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--card);display:flex;align-items:center;gap:9px;padding:0 12px;font-size:13.5px;color:var(--ink)}
+  .ctl svg{color:var(--faint)}
+  .ctl .chev{margin-left:auto}
+
+  /* preview stage */
+  .stage{background:var(--stage);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:30px;position:relative}
+  .seg{display:flex;background:rgba(255,255,255,.08);border-radius:10px;padding:3px;gap:2px}
+  .seg button{padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:600;color:#aab2c2}
+  .seg button.on{background:#fff;color:var(--ink)}
+  .phone{width:264px;aspect-ratio:9/16;border-radius:26px;background:#000;padding:9px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+  .ad{width:100%;height:100%;border-radius:18px;overflow:hidden;position:relative;background:linear-gradient(168deg,#27415f 0%,#1a2c44 55%,#101b2c 100%)}
+  .ad .photo{position:absolute;inset:0;background:
+      radial-gradient(120% 90% at 80% 0%,rgba(255,196,120,.32),transparent 55%),
+      linear-gradient(180deg,rgba(12,20,33,0) 35%,rgba(12,20,33,.88) 78%),
+      linear-gradient(168deg,#3d5d80 0%,#22374f 60%,#15233a 100%)}
+  .ad .house{position:absolute;left:10%;right:10%;top:18%;height:34%;border-radius:8px;background:linear-gradient(180deg,#e9eef5,#cdd8e6);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+  .ad .house::after{content:"";position:absolute;left:8%;bottom:12%;width:30%;height:42%;background:#9fb4cf;border-radius:3px;box-shadow:38px 0 0 #9fb4cf}
+  .ad .brandchip{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.94);border-radius:99px;padding:5px 10px 5px 6px;font-size:9.5px;font-weight:700;color:#16315c}
+  .ad .brandchip i{width:16px;height:16px;border-radius:99px;background:#1f3a6e;display:grid;place-items:center;color:#fff;font-style:normal;font-size:8px}
+  .ad .adcopy{position:absolute;left:14px;right:14px;bottom:48px;color:#fff}
+  .ad .adcopy .kick{font-size:9px;font-weight:700;letter-spacing:1.2px;opacity:.75;text-transform:uppercase}
+  .ad .adcopy h4{font-size:17px;line-height:1.22;font-weight:750;letter-spacing:-.2px;margin-top:5px}
+  .ad .adcopy p{font-size:10.5px;opacity:.85;margin-top:5px;line-height:1.4}
+  .ad .adcta{position:absolute;left:14px;right:14px;bottom:12px;height:28px;border-radius:7px;background:#fff;color:#16315c;display:grid;place-items:center;font-size:11px;font-weight:750}
+  .stage .meta{color:#8d96a8;font-size:12px;display:flex;gap:14px}
+  .stage .meta b{color:#d6dbe6;font-weight:600}
+  .variants{position:absolute;right:22px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+  .variants .v{width:54px;aspect-ratio:9/16;border-radius:9px;background:linear-gradient(168deg,#3d5d80,#15233a);opacity:.55;border:2px solid transparent}
+  .variants .v.on{opacity:1;border-color:#fff}
+  .variants span{color:#8d96a8;font-size:10.5px;text-align:center}
+
+  /* ===== screen 1 · template gallery ===== */
+  .creator{max-width:1020px;margin:0 auto;padding:38px 30px 56px}
+  .steps{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:30px}
+  .steps .st{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--faint)}
+  .steps .st i{width:24px;height:24px;border-radius:99px;display:grid;place-items:center;font-style:normal;font-size:11.5px;font-weight:700;background:var(--line-soft);color:var(--muted)}
+  .steps .st.on{color:var(--accent)}
+  .steps .st.on i{background:var(--accent);color:#fff}
+  .steps .ln{width:46px;height:1.5px;background:var(--line)}
+  .creator h1{font-size:23px;font-weight:680;letter-spacing:-.3px;text-align:center}
+  .creator .sub{text-align:center;color:var(--muted);font-size:14px;margin-top:7px}
+  .tpl-filter{display:flex;gap:7px;justify-content:center;margin:22px 0 24px;flex-wrap:wrap}
+  .tpl-filter button{padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--card);box-shadow:var(--sh-1)}
+  .tpl-filter button.on{background:var(--accent);color:#fff}
+  .tpl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .tpl{background:var(--card);border-radius:var(--r-card);box-shadow:var(--sh-1);overflow:hidden;text-align:left;transition:transform .15s,box-shadow .15s;position:relative}
+  .tpl:hover{transform:translateY(-2px);box-shadow:var(--sh-lift)}
+  .tpl.sel{outline:2px solid var(--accent);outline-offset:2px}
+  .tpl .thumb{aspect-ratio:4/5;position:relative;overflow:hidden;color:#fff}
+  .tpl .thumb .tag{position:absolute;top:9px;left:9px;font-size:9px;font-weight:750;letter-spacing:.8px;text-transform:uppercase;background:rgba(255,255,255,.92);color:#16315c;border-radius:99px;padding:4px 8px}
+  .tpl .thumb .t-copy{position:absolute;left:11px;right:11px;bottom:30px}
+  .tpl .thumb .t-copy b{font-size:13.5px;line-height:1.25;font-weight:750;letter-spacing:-.1px;display:block}
+  .tpl .thumb .t-cta{position:absolute;left:11px;right:11px;bottom:9px;height:17px;border-radius:5px;background:#fff;color:#16315c;display:grid;place-items:center;font-size:8.5px;font-weight:750}
+  .tpl .meta{padding:11px 13px 13px}
+  .tpl .meta b{font-size:13.5px;font-weight:650;display:block}
+  .tpl .meta span{font-size:11.5px;color:var(--muted);display:block;margin-top:2px;line-height:1.4}
+  .g1{background:linear-gradient(165deg,#34557a,#152740)}
+  .g2{background:linear-gradient(165deg,#7a5a34,#3f2c14)}
+  .g3{background:linear-gradient(165deg,#2e6b5e,#143229)}
+  .g4{background:linear-gradient(165deg,#5a4a7c,#241c3a)}
+  .g5{background:linear-gradient(165deg,#7c4a55,#3a1c24)}
+  .g6{background:linear-gradient(165deg,#3a6a8a,#13283a)}
+  .g7{background:linear-gradient(165deg,#56683a,#222e14)}
+  .tpl .thumb::before{content:"";position:absolute;inset:0;background:radial-gradient(130% 80% at 85% 0%,rgba(255,210,150,.25),transparent 50%),linear-gradient(180deg,transparent 30%,rgba(8,12,20,.75) 80%)}
+  .tpl.blank .thumb{background:var(--accent-tint);display:grid;place-items:center;color:var(--accent)}
+  .tpl.blank .thumb::before{display:none}
+  .tpl.blank .plus{width:44px;height:44px;border-radius:99px;background:var(--card);box-shadow:var(--sh-1);display:grid;place-items:center}
+  .creator-foot{display:flex;justify-content:center;gap:10px;margin-top:30px}
+
+  /* ===== screen 3 · copy modes ===== */
+  .mode-seg{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--line-soft);border-radius:10px;padding:3px;gap:3px}
+  .mode-seg button{padding:9px 6px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+  .mode-seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--sh-1);font-weight:650}
+  .ctx{display:flex;flex-wrap:wrap;gap:6px}
+  .ctx span{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-tint);border-radius:99px;padding:5px 10px;display:inline-flex;gap:5px;align-items:center}
+  .gen-field{display:grid;gap:7px}
+  .gen-field .gf-head{display:flex;align-items:center;gap:8px}
+  .gen-field .gf-head span{font-size:12.5px;font-weight:600}
+  .gen-field .gf-head small{color:var(--faint);font-size:11px;margin-left:auto}
+  .gen-box{border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--card);padding:11px 12px;font-size:13.5px;line-height:1.45;position:relative}
+  .gen-box .regen{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--faint)}
+  .gen-box .regen:hover{background:var(--accent-tint);color:var(--accent)}
+  .alts{display:flex;gap:6px;flex-wrap:wrap}
+  .alts button{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--card);box-shadow:var(--sh-1);border-radius:99px;padding:5px 11px}
+  .alts button:hover{color:var(--accent);background:var(--accent-tint)}
+  .assist-row{display:flex;flex-wrap:wrap;gap:7px}
+  .assist-row button{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-tint);border-radius:999px;padding:7px 13px;display:inline-flex;align-items:center;gap:6px}
+  .assist-row button:hover{background:var(--accent-mid)}
+  .brief-box{border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--card);padding:12px;min-height:120px;font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .brief-box .placeholder{color:var(--faint)}
+  .hint{font-size:12px;color:var(--muted);line-height:1.5;background:var(--card);border-radius:10px;box-shadow:var(--sh-1);padding:11px 13px;display:flex;gap:9px}
+  .hint svg{flex:0 0 auto;color:var(--accent);margin-top:1px}
+  .copy-mode{display:none}
+  .copy-mode.on{display:flex;flex-direction:column;gap:16px}
+
+  /* ===== screen 4 · empty state ===== */
+  .empty-wrap{display:grid;place-items:center;padding:70px 30px}
+  .empty{max-width:430px;text-align:center;display:grid;justify-items:center;gap:14px}
+  .empty .ic{width:64px;height:64px;border-radius:99px;background:var(--accent-tint);display:grid;place-items:center;color:var(--accent)}
+  .empty h3{font-size:19px;font-weight:680;letter-spacing:-.2px}
+  .empty p{color:var(--muted);font-size:14px;line-height:1.55}
+  .empty .row{display:flex;gap:9px;margin-top:4px}
+  .mini-tpls{display:flex;gap:9px;margin-top:18px}
+  .mini-tpls .m{width:74px;aspect-ratio:4/5;border-radius:9px;position:relative;overflow:hidden;box-shadow:var(--sh-1);transition:transform .15s}
+  .mini-tpls .m:hover{transform:translateY(-2px)}
+  .mini-tpls .m::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(8,12,20,.7))}
+  .mini-tpls .m span{position:absolute;left:6px;right:6px;bottom:5px;color:#fff;font-size:8.5px;font-weight:700;text-align:left;line-height:1.25}
+  .empty small{color:var(--faint);font-size:12px}
+
+  @media(max-width:1100px){
+    .shell{grid-template-columns:64px 340px 1fr}
+    .rail button span,.rail .rail-label,.rail .badge{display:none}
+    .tpl-grid{grid-template-columns:repeat(2,1fr)}
+    .variants{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="viewer-bar">
+  <span class="vb-title">Ad Studio mockups</span>
+  <span class="vb-sub">Premium-light direction · click through the 4 screens</span>
+  <div class="vb-tabs">
+    <button class="on" data-s="s1">1 · Template gallery</button>
+    <button data-s="s2">2 · Workbench &amp; nav</button>
+    <button data-s="s3">3 · Copy — three paths</button>
+    <button data-s="s4">4 · First-run empty state</button>
+  </div>
+</div>
+
+<!-- ================= SCREEN 1 · TEMPLATE GALLERY ================= -->
+<section class="screen on" id="s1">
+  <div class="frame">
+    <div class="topbar">
+      <div class="logo"><span class="mark">B</span>Blockwise</div>
+      <div class="tb-div"></div>
+      <div class="tb-name">New ad</div>
+      <div class="tb-right"><button class="btn ghost">Cancel</button></div>
+    </div>
+    <div class="creator">
+      <div class="steps">
+        <span class="st on"><i>1</i>Template</span><span class="ln"></span>
+        <span class="st"><i>2</i>Media</span><span class="ln"></span>
+        <span class="st"><i>3</i>Copy</span><span class="ln"></span>
+        <span class="st"><i>4</i>Review</span>
+      </div>
+      <h1>Start with a template</h1>
+      <p class="sub">Proven layouts for Perth agents — or start blank and build your own.</p>
+      <div class="tpl-filter">
+        <button class="on">All</button><button>Listings</button><button>Appraisals</button><button>Market updates</button><button>Open homes</button><button>Proof</button>
+      </div>
+      <div class="tpl-grid">
+        <button class="tpl sel">
+          <span class="thumb g1"><span class="tag">Just listed</span><span class="t-copy"><b>Just listed in South Perth</b></span><span class="t-cta">See the home</span></span>
+          <span class="meta"><b>Just listed</b><span>Announce a new listing to nearby owners</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g2"><span class="tag">Coming soon</span><span class="t-copy"><b>Something special is coming to Como</b></span><span class="t-cta">Get first look</span></span>
+          <span class="meta"><b>Coming soon</b><span>Tease a listing before it launches</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g3"><span class="tag">Free appraisal</span><span class="t-copy"><b>What's your home worth in 2026?</b></span><span class="t-cta">Book free appraisal</span></span>
+          <span class="meta"><b>Free appraisal</b><span>No-pressure local price update</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g4"><span class="tag">Just sold</span><span class="t-copy"><b>SOLD — 14 days, 3 offers</b></span><span class="t-cta">See what yours could get</span></span>
+          <span class="meta"><b>Just sold</b><span>Recent sale as local proof</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g5"><span class="tag">Open home</span><span class="t-copy"><b>Open Sat 11:00 — 12 River St</b></span><span class="t-cta">Save your spot</span></span>
+          <span class="meta"><b>Open home</b><span>Drive inspections with date &amp; time</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g6"><span class="tag">Market update</span><span class="t-copy"><b>South Perth: what sold this quarter</b></span><span class="t-cta">Get the report</span></span>
+          <span class="meta"><b>Market update</b><span>Suburb data for owners weighing a move</span></span>
+        </button>
+        <button class="tpl">
+          <span class="thumb g7"><span class="tag">Seller checklist</span><span class="t-copy"><b>10 things to fix before you list</b></span><span class="t-cta">Download checklist</span></span>
+          <span class="meta"><b>Seller checklist</b><span>Practical prep guide lead magnet</span></span>
+        </button>
+        <button class="tpl blank">
+          <span class="thumb"><span class="plus">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </span></span>
+          <span class="meta"><b>Start blank</b><span>No template — describe it yourself</span></span>
+        </button>
+      </div>
+      <div class="creator-foot">
+        <button class="btn sec">Browse all 10 templates</button>
+        <button class="btn pri">Continue with “Just listed”
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>What changed:</b> templates return as a visual gallery — each card shows a real rendered preview of the ad style, not a text button. It's step 1 of every new ad, with a stepper (Template → Media → Copy → Review) replacing the current mode/brief dialog. Same 10 templates already in <b>templates.ts</b>; thumbnails come from the existing SVG renderer. "Start blank" preserves the create-your-own path.</p>
+</section>
+
+<!-- ================= SCREEN 2 · WORKBENCH ================= -->
+<section class="screen" id="s2">
+  <div class="frame">
+    <div class="topbar">
+      <div class="logo"><span class="mark">B</span>Blockwise</div>
+      <div class="tb-div"></div>
+      <div class="tb-name">South Perth — Free appraisal
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <span class="tb-saved"><span class="dot-good"></span>Saved · 2 min ago</span>
+      <div class="tb-right">
+        <button class="btn ghost">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg>
+          Share</button>
+        <button class="btn sec">Export</button>
+        <button class="btn pri">Publish
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+        <div class="avatar">SS</div>
+      </div>
+    </div>
+    <div class="shell">
+      <nav class="rail">
+        <div class="rail-label">Create</div>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span>Ad</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg><span>Templates</span><span class="badge">10</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg><span>Brand</span></button>
+        <button class="on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Media</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 6v3M20 6v3M12 6v13M9 19h6"/></svg><span>Copy</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.7c2 .2 3.6 1.5 4.3 3.8"/></svg><span>Audience</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span>Publish</span></button>
+        <div class="rail-gap"></div>
+        <div class="rail-label">Workspace</div>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2z"/></svg><span>Settings</span></button>
+      </nav>
+      <div class="panel">
+        <div class="ph"><h2>Media</h2><p>Your images and the generated ad sizes.</p></div>
+        <div class="card" style="display:grid;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:10px;background:var(--accent-tint);display:grid;place-items:center;color:var(--accent)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 17v2a1.5 1.5 0 001.5 1.5h13A1.5 1.5 0 0020 19v-2"/></svg>
+            </span>
+            <div><b style="font-size:13.5px;font-weight:650">Upload image</b><div style="font-size:12px;color:var(--muted)">PNG, JPG or WebP · up to 8 MB</div></div>
+            <button class="btn sec" style="margin-left:auto;height:34px">Browse</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="card" style="padding:8px;outline:2px solid var(--accent);outline-offset:1px">
+            <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(165deg,#3d5d80,#15233a)"></div>
+            <div style="padding:9px 5px 4px;font-size:12.5px;font-weight:650">Riverside house<div style="font-weight:500;color:var(--muted);font-size:11.5px;margin-top:1px">Primary · used in 3 sizes</div></div>
+          </div>
+          <div class="card" style="padding:8px">
+            <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(165deg,#7a5a34,#3f2c14)"></div>
+            <div style="padding:9px 5px 4px;font-size:12.5px;font-weight:650">Kitchen detail<div style="font-weight:500;color:var(--muted);font-size:11.5px;margin-top:1px">Library</div></div>
+          </div>
+          <div class="card" style="padding:8px">
+            <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(165deg,#2e6b5e,#143229)"></div>
+            <div style="padding:9px 5px 4px;font-size:12.5px;font-weight:650">Garden twilight<div style="font-weight:500;color:var(--muted);font-size:11.5px;margin-top:1px">Library</div></div>
+          </div>
+          <div class="card" style="padding:8px">
+            <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(165deg,#5a4a7c,#241c3a)"></div>
+            <div style="padding:9px 5px 4px;font-size:12.5px;font-weight:650">Street frontage<div style="font-weight:500;color:var(--muted);font-size:11.5px;margin-top:1px">Library</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="seg"><button class="on">Story</button><button>Feed</button><button>Square</button></div>
+        <div class="phone"><div class="ad">
+          <div class="photo"></div><div class="house"></div>
+          <span class="brandchip"><i>N</i>North Star Realty</span>
+          <div class="adcopy">
+            <div class="kick">South Perth · Free appraisal</div>
+            <h4>What's your home worth in today's market?</h4>
+            <p>Local data, no pressure. Find out where you stand before spring.</p>
+          </div>
+          <div class="adcta">Book free appraisal</div>
+        </div></div>
+        <div class="meta"><span><b>1080×1920</b> · Story</span><span><b>Meta</b> · Reels + Stories</span><span style="color:#7ee2b0">✓ Compliant</span></div>
+        <div class="variants">
+          <button class="v on"></button><button class="v"></button><button class="v"></button>
+          <span>3 variants</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>What changed:</b> "Review" is now <b>Media</b> (the rail id was already <code>media</code> — label only). Nav is grouped (Create / Workspace) and ordered to match the flow, with <b>Templates</b> as a permanent item. Panels float as cards on the canvas instead of edge-to-edge 1px boxes; one radius rule (12 outer / 8 inner); active nav gets the accent pill. The preview sits on a <b>dark stage</b> with a real phone frame, format segmented control, spec line and variant strip — this is the single biggest "premium" move.</p>
+</section>
+
+<!-- ================= SCREEN 3 · COPY THREE PATHS ================= -->
+<section class="screen" id="s3">
+  <div class="frame">
+    <div class="topbar">
+      <div class="logo"><span class="mark">B</span>Blockwise</div>
+      <div class="tb-div"></div>
+      <div class="tb-name">South Perth — Free appraisal
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <span class="tb-saved"><span class="dot-good"></span>Saved just now</span>
+      <div class="tb-right"><button class="btn sec">Export</button><button class="btn pri">Publish</button><div class="avatar">SS</div></div>
+    </div>
+    <div class="shell">
+      <nav class="rail">
+        <div class="rail-label">Create</div>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg><span>Ad</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg><span>Templates</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg><span>Brand</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Media</span></button>
+        <button class="on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 6v3M20 6v3M12 6v13M9 19h6"/></svg><span>Copy</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.7c2 .2 3.6 1.5 4.3 3.8"/></svg><span>Audience</span></button>
+        <button><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span>Publish</span></button>
+      </nav>
+      <div class="panel">
+        <div class="ph"><h2>Copy</h2><p>Three ways to get the words right.</p></div>
+
+        <div class="mode-seg" id="modeSeg">
+          <button class="on" data-m="m-ai">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/><path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z"/></svg>
+            AI copy</button>
+          <button data-m="m-brief">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 14h6M9 17h4"/></svg>
+            From a brief</button>
+          <button data-m="m-own">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+            Write your own</button>
+        </div>
+
+        <!-- AI mode -->
+        <div class="copy-mode on" id="m-ai">
+          <div class="ctx">
+            <span>Template · Free appraisal</span>
+            <span>Voice · Helpful local expert</span>
+            <span>Market · South Perth, WA</span>
+          </div>
+          <div class="gen-field">
+            <div class="gf-head"><span>Headline</span><small>34 / 40</small></div>
+            <div class="gen-box">What's your home worth in today's market?
+              <button class="regen" title="Regenerate"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg></button>
+            </div>
+            <div class="alts"><button>Curious what your place could sell for?</button><button>South Perth values moved again this quarter</button></div>
+          </div>
+          <div class="gen-field">
+            <div class="gf-head"><span>Primary text</span><small>118 / 125</small></div>
+            <div class="gen-box">Local sales are setting new benchmarks. Get a free, no-pressure appraisal from agents who know South Perth street by street.
+              <button class="regen" title="Regenerate"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg></button>
+            </div>
+            <div class="alts"><button>Alt · data-led</button><button>Alt · warmer tone</button></div>
+          </div>
+          <div class="gen-field">
+            <div class="gf-head"><span>Call to action</span></div>
+            <div class="gen-box">Book free appraisal</div>
+          </div>
+          <button class="btn pri" style="width:max-content">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/></svg>
+            Rewrite all 3 fields</button>
+          <div class="hint">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+            <span>AI writes from your <b>template, brand voice and market</b> — every generation is checked against compliance rules before it lands in the ad.</span>
+          </div>
+        </div>
+
+        <!-- Brief mode -->
+        <div class="copy-mode" id="m-brief">
+          <div class="brief-box"><span class="placeholder">Tell us about this ad in your own words…<br><br>e.g. "Open home this Saturday 11am, renovated 3-bed on River St, big backyard, walk to the foreshore. Friendly tone, push urgency on the time."</span></div>
+          <button class="btn pri" style="width:max-content">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/></svg>
+            Generate copy from brief</button>
+          <div class="hint">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+            <span>Your brief is saved with the ad, so you can <b>regenerate or tweak</b> later without retyping it.</span>
+          </div>
+        </div>
+
+        <!-- Own mode -->
+        <div class="copy-mode" id="m-own">
+          <div class="field"><span>Headline</span><div class="ctl">What's your home worth in today's market?</div></div>
+          <div class="field"><span>Primary text</span><div class="ctl" style="height:auto;padding:11px 12px;align-items:flex-start">Local sales are setting new benchmarks. Get a free, no-pressure appraisal.</div></div>
+          <div class="field"><span>Call to action</span><div class="ctl">Book free appraisal <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
+          <div class="field"><span style="display:flex;align-items:center;gap:6px">AI assist
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/></svg></span>
+            <div class="assist-row">
+              <button>Sharper</button><button>More local</button><button>More premium</button><button>More direct</button><button>Less hype</button><button>5 hook ideas</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="seg"><button class="on">Story</button><button>Feed</button><button>Square</button></div>
+        <div class="phone"><div class="ad">
+          <div class="photo"></div><div class="house"></div>
+          <span class="brandchip"><i>N</i>North Star Realty</span>
+          <div class="adcopy">
+            <div class="kick">South Perth · Free appraisal</div>
+            <h4>What's your home worth in today's market?</h4>
+            <p>Local sales are setting new benchmarks. No pressure, just clarity.</p>
+          </div>
+          <div class="adcta">Book free appraisal</div>
+        </div></div>
+        <div class="meta"><span><b>Live preview</b> — copy updates as you type or generate</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>What changed:</b> the Copy panel opens with an explicit choice — <b>AI copy</b> (one click, shows the context it used: template + brand voice + market, with alternates and per-field regenerate), <b>From a brief</b> (describe the ad in plain words, brief saved for later regeneration), or <b>Write your own</b> (manual fields; the old chips become real AI assist actions). All three hit one new endpoint backed by your existing <code>ai-providers.ts</code> + prompt library — no more fake string transforms. <i>Click the three tabs above — they work.</i></p>
+</section>
+
+<!-- ================= SCREEN 4 · EMPTY STATE ================= -->
+<section class="screen" id="s4">
+  <div class="frame">
+    <div class="topbar">
+      <div class="logo"><span class="mark">B</span>Blockwise</div>
+      <div class="tb-div"></div>
+      <div class="tb-name">Ad Studio</div>
+      <div class="tb-right"><div class="avatar">SS</div></div>
+    </div>
+    <div class="empty-wrap">
+      <div class="empty">
+        <span class="ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/><path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z"/></svg>
+        </span>
+        <h3>Create your first ad</h3>
+        <p>Pick a template, add one photo, and Blockwise writes the copy and builds Story, Feed and Square — ready for Meta in about a minute.</p>
+        <div class="row">
+          <button class="btn pri">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Create ad</button>
+          <button class="btn sec">Browse templates</button>
+        </div>
+        <div class="mini-tpls">
+          <button class="m g1"><span>Just listed</span></button>
+          <button class="m g3"><span>Free appraisal</span></button>
+          <button class="m g5"><span>Open home</span></button>
+          <button class="m g6"><span>Market update</span></button>
+        </div>
+        <small>10 templates tuned for WA real-estate compliance</small>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>What changed:</b> the dashed-border box is gone. First-run sells the outcome (template + photo → finished ad) and previews real templates immediately — the gallery is the hero even before the first ad exists. This is the moment that currently reads "cheap"; now it reads like a product.</p>
+</section>
+
+<script>
+  const tabs=document.querySelectorAll(".vb-tabs button");
+  tabs.forEach(t=>t.addEventListener("click",()=>{
+    tabs.forEach(x=>x.classList.toggle("on",x===t));
+    document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===t.dataset.s));
+    window.scrollTo({top:0});
+  }));
+  const seg=document.getElementById("modeSeg");
+  if(seg){seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    seg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    document.querySelectorAll(".copy-mode").forEach(m=>m.classList.toggle("on",m.id===b.dataset.m));
+  }));}
+</script>
+</body>
+</html>

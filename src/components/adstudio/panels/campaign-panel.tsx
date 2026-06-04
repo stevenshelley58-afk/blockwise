@@ -2,12 +2,9 @@
 
 import { BadgeCheck, Globe2, Home, MapPin, Pencil, Sparkles, Target, Wand2 } from "lucide-react";
 
-import type { AngleCard } from "../angles";
 import { FieldShell, PanelHeader } from "../inspector";
 
 type CampaignPanelProps = {
-  angles: AngleCard[];
-  selectedAngleId: string;
   campaignGoal: string;
   setCampaignGoal: (value: string) => void;
   offerLabel: string;
@@ -21,12 +18,10 @@ type CampaignPanelProps = {
   destinationUrl: string;
   setDestinationUrl: (value: string) => void;
   variantCount: number;
-  onGenerate: (angle: AngleCard) => void;
+  onCreateAd: () => void;
 };
 
 export function CampaignPanel({
-  angles,
-  selectedAngleId,
   campaignGoal,
   setCampaignGoal,
   offerLabel,
@@ -40,12 +35,31 @@ export function CampaignPanel({
   destinationUrl,
   setDestinationUrl,
   variantCount,
-  onGenerate,
+  onCreateAd,
 }: CampaignPanelProps) {
+  if (variantCount === 0) {
+    return (
+      <>
+        <PanelHeader title="Create ad" detail="Start with one image and a short description." />
+        <div style={{ border: "1.5px dashed var(--line)", borderRadius: 8, padding: "22px 16px", textAlign: "center", display: "grid", gap: 12 }}>
+          <Sparkles aria-hidden size={24} style={{ margin: "0 auto", color: "var(--muted)" }} />
+          <strong style={{ fontSize: 15 }}>Create your first ad</strong>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13, lineHeight: 1.45 }}>
+            Upload one image, add a short description, and Blockwise will generate Story, Feed, and Square.
+          </p>
+          <button className="studio-btn publish block" type="button" onClick={onCreateAd}>
+            <Wand2 aria-hidden size={17} />
+            Create ad
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <PanelHeader title="Campaign" detail="Set up the basics for your campaign." />
-      <FieldShell label="Campaign goal" icon={Target}>
+      <PanelHeader title="Ad settings" detail="Review the defaults before export or launch." />
+      <FieldShell label="Goal" icon={Target}>
         <select value={campaignGoal} onChange={(event) => setCampaignGoal(event.target.value)}>
           <option>Get appraisal leads</option>
           <option>Promote recent sale</option>
@@ -87,25 +101,7 @@ export function CampaignPanel({
       </FieldShell>
       <button className="studio-link-btn" type="button">
         <Pencil aria-hidden size={16} />
-        Edit campaign brief
-      </button>
-      {/* M7: prominent first-run CTA when no variants exist yet */}
-      {variantCount === 0 && (
-        <div style={{ border: "1.5px dashed var(--line)", borderRadius: 8, padding: "20px 16px", textAlign: "center", display: "grid", gap: 10 }}>
-          <Sparkles aria-hidden size={24} style={{ margin: "0 auto", color: "var(--muted)" }} />
-          <strong style={{ fontSize: 15 }}>No variants yet</strong>
-          <p style={{ margin: 0, color: "var(--muted)", fontSize: 13, lineHeight: 1.45 }}>
-            Fill in your campaign details above, then generate your first ad variants.
-          </p>
-        </div>
-      )}
-      <button
-        className="studio-btn publish block"
-        type="button"
-        onClick={() => onGenerate(angles.find((angle) => angle.id === selectedAngleId) ?? angles[0])}
-      >
-        <Wand2 aria-hidden size={17} />
-        {variantCount === 0 ? "Generate your first variants →" : "Generate variants"}
+        Edit ad details
       </button>
     </>
   );

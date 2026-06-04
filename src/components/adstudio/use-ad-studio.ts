@@ -4,27 +4,24 @@ import { useRef, useState } from "react";
 
 export type StudioSection =
   | "campaign"
-  | "angles"
   | "brand"
   | "media"
   | "copy"
   | "audience"
-  | "landing"
   | "publish"
   | "settings";
-export type InspectorTab = "checklist" | "variants" | "edit" | "publish";
 export type SaveState = "saved" | "saving" | "error";
+export type MobileTab = "campaign" | "review" | "copy" | "publish";
 
 export function useAdStudio() {
   const [section, setSection] = useState<StudioSection>("campaign");
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("checklist");
   const [showMore, setShowMore] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [busyMessage, setBusyMessage] = useState("Generating variants");
+  const [busyMessage, setBusyMessage] = useState("Generating ad");
   const [toast, setToast] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState("");
-  const [mobileTab, setMobileTab] = useState<"campaign" | "variants" | "checklist" | "publish">("campaign");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("campaign");
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,7 +38,7 @@ export function useAdStudio() {
 
   const statusText =
     saveState === "saving"
-      ? "Saving…"
+      ? "Saving..."
       : saveState === "error"
         ? `Could not save: ${saveError}`
         : `Saved ${formatSaveTime()}`;
@@ -49,8 +46,6 @@ export function useAdStudio() {
   return {
     section,
     setSection,
-    inspectorTab,
-    setInspectorTab,
     showMore,
     setShowMore,
     busy,

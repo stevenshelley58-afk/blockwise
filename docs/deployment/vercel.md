@@ -21,6 +21,8 @@ Blockwise hosts the Next.js website and request/response route handlers on Verce
 
 ## Deployment Checks
 
+Run deployment checks through Vercel build and preview workflows. Do not run local deployments, and do not treat localhost smoke tests as deployment-readiness evidence.
+
 - `npm test`
 - `npm run typecheck`
 - `npm run build`

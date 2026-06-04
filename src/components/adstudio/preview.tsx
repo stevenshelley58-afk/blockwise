@@ -19,71 +19,24 @@ export const FORMAT_META: Record<
   landscape: { label: "Landscape", size: "1200x628" },
 };
 
-function Segmented({ options, value, onChange }: { options: Array<{ id: string; label: string }>; value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="studio-mini-segment">
-      {options.map((option) => (
-        <button className={value === option.id ? "active" : ""} key={option.id} type="button" onClick={() => onChange(option.id)}>
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 type PreviewControlsProps = {
   previewFormat: PreviewFormat;
   setPreviewFormat: (format: PreviewFormat) => void;
-  previewMode: PreviewMode;
-  setPreviewMode: (mode: PreviewMode) => void;
-  zoom: number;
-  setZoom: (zoom: number) => void;
-  device: "mobile" | "desktop";
-  setDevice: (device: "mobile" | "desktop") => void;
 };
 
 export function PreviewControls({
   previewFormat,
   setPreviewFormat,
-  previewMode,
-  setPreviewMode,
-  zoom,
-  setZoom,
-  device,
-  setDevice,
 }: PreviewControlsProps) {
   return (
     <div className="studio-preview-controls">
       <div className="studio-segment">
-        {(["story", "feed", "square", "landscape"] as PreviewFormat[]).map((item) => (
+        {(["story", "feed", "square"] as PreviewFormat[]).map((item) => (
           <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
             <span>{FORMAT_META[item].label}</span>
             <small>{FORMAT_META[item].size}</small>
           </button>
         ))}
-      </div>
-      <div className="studio-control-right">
-        <Segmented
-          options={[
-            { id: "platform", label: "Platform" },
-            { id: "creative", label: "Creative" },
-          ]}
-          value={previewMode}
-          onChange={(value) => setPreviewMode(value as PreviewMode)}
-        />
-        <Segmented
-          options={[50, 75, 100].map((value) => ({ id: String(value), label: String(value) }))}
-          value={String(zoom)}
-          onChange={(value) => setZoom(Number(value))}
-        />
-        <Segmented
-          options={[
-            { id: "mobile", label: "Mobile" },
-            { id: "desktop", label: "Desktop" },
-          ]}
-          value={device}
-          onChange={(value) => setDevice(value as "mobile" | "desktop")}
-        />
       </div>
     </div>
   );
@@ -106,33 +59,54 @@ type VariantStripProps = {
   variants: Array<{ variantId: string; displayName: string; angleLabel: string; image: string; headline: string }>;
   selectedVariantIndex: number;
   onSelect: (index: number) => void;
+  onAdd?: () => void;
+  onEditCopy?: (index: number) => void;
+  onReplaceImage?: (index: number) => void;
+  onRegenerate?: (index: number) => void;
   compact?: boolean;
 };
 
-export function VariantStrip({ variants, selectedVariantIndex, onSelect, compact = false }: VariantStripProps) {
+export function VariantStrip({
+  variants,
+  selectedVariantIndex,
+  onSelect,
+  onAdd,
+  onEditCopy,
+  onReplaceImage,
+  onRegenerate,
+  compact = false,
+}: VariantStripProps) {
   return (
     <div className={compact ? "studio-variant-strip compact" : "studio-variant-strip"}>
       <div className="studio-variant-strip-head">
-        <strong>Variants</strong>
-        <button type="button">View all</button>
+        <strong>Generated ads</strong>
+        {!compact && (
+          <button type="button" onClick={onAdd}>
+            <Plus aria-hidden size={16} />
+            Add ad
+          </button>
+        )}
       </div>
       <div className="studio-variant-row">
         {variants.map((variant, index) => (
-          <button className={selectedVariantIndex === index ? "studio-variant-tile active" : "studio-variant-tile"} key={variant.variantId} type="button" onClick={() => onSelect(index)}>
-            <span className="studio-variant-image">
-              <img src={variant.image} alt="" />
-              {selectedVariantIndex === index ? <Check aria-hidden size={15} /> : null}
-            </span>
-            <strong>{variant.displayName}</strong>
-            <small>{variant.angleLabel}</small>
-          </button>
+          <article className={selectedVariantIndex === index ? "studio-variant-tile active" : "studio-variant-tile"} key={variant.variantId}>
+            <button className="studio-variant-preview" type="button" onClick={() => onSelect(index)}>
+              <span className="studio-variant-image">
+                <img src={variant.image} alt="" />
+                {selectedVariantIndex === index ? <Check aria-hidden size={15} /> : null}
+              </span>
+              <strong>{variant.displayName}</strong>
+              <small>{variant.angleLabel}</small>
+            </button>
+            {!compact && (
+              <div className="studio-variant-actions">
+                <button type="button" onClick={() => onEditCopy?.(index)}>Edit copy</button>
+                <button type="button" onClick={() => onReplaceImage?.(index)}>Replace image</button>
+                <button type="button" onClick={() => onRegenerate?.(index)}>Regenerate</button>
+              </div>
+            )}
+          </article>
         ))}
-        {!compact && (
-          <button className="studio-add-variant" type="button">
-            <Plus aria-hidden size={20} />
-            Add variant
-          </button>
-        )}
       </div>
     </div>
   );

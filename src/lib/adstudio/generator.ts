@@ -3,6 +3,7 @@ import { deterministicUuid } from "./id.ts";
 import { getOfferTemplate } from "./offers.ts";
 import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
+import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -13,6 +14,7 @@ import type {
   AdStudioGoal,
   AdStudioPlatform,
   AdStudioPlatformCopyPack,
+  FirstAdInput,
   GoogleAssetPack,
   GoogleSearchPack,
   MetaLeadAdPack,
@@ -29,11 +31,13 @@ export type GenerateCampaignPackInput = {
   platforms: AdStudioPlatform[];
   creativeFormats?: AdStudioFormat[];
   variantCount?: number;
+  firstAd?: FirstAdInput;
 };
 
-const DEFAULT_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
+const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
+const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
 
-const ANGLES = [
+const FALLBACK_MESSAGES = [
   {
     label: "Preparation mistakes",
     headline: "Before you list, fix these 10 things",
@@ -71,15 +75,16 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     throw new Error("Brand kit must be approved before campaign generation.");
   }
 
-  const offer = getOfferTemplate(input.offerId);
-  const formats = input.creativeFormats ?? DEFAULT_FORMATS;
-  const campaignId = deterministicUuid(`${input.workspaceId}:${input.offerId}:${input.suburb}`);
+  const template = input.firstAd ? resolveAdStudioTemplate(input.firstAd.templateId) : null;
+  const offer = getOfferTemplate(template?.offerId ?? input.offerId);
+  const formats = input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
+  const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${input.suburb}:${input.firstAd?.description ?? ""}`);
   const campaign: AdStudioCampaign = {
     campaignId,
     workspaceId: input.workspaceId,
     brandKitId: input.brandKit.brandKitId,
-    name: `${input.suburb} ${offer.name}`,
-    goal: input.goal,
+    name: input.firstAd && template ? `${input.suburb} ${template.name}` : `${input.suburb} ${offer.name}`,
+    goal: template?.goal ?? input.goal,
     market: {
       country: "AU",
       state: input.state,
@@ -92,9 +97,12 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     creativeFormats: formats,
     status: "ready",
   };
-  const variantCount = Math.max(1, Math.min(input.variantCount ?? 5, 8));
-  const variants = ANGLES.slice(0, variantCount).map((angle, index): AdStudioCampaignVariant => {
-    const complianceSafety = angle.headline.includes("improve") ? 18 : 20;
+  const messages = input.firstAd && template
+    ? buildFirstAdMessages(template, input.firstAd.description)
+    : FALLBACK_MESSAGES;
+  const variantCount = Math.max(1, Math.min(input.variantCount ?? messages.length, 8));
+  const variants = messages.slice(0, variantCount).map((message, index): AdStudioCampaignVariant => {
+    const complianceSafety = message.headline.includes("improve") ? 18 : 20;
     const score = scoreAdStudioVariant({
       offerClarity: index === 0 ? 20 : 18,
       localRelevance: 13 + (index % 2),
@@ -102,15 +110,15 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       brandFit: 13,
       complianceSafety,
       visualHierarchy: index === 0 ? 9 : 8,
-      notes: angle.notes,
+      notes: message.notes,
       warnings: complianceSafety < 20 ? ["Keep performance wording conservative."] : [],
     });
 
     return {
-      variantId: deterministicUuid(`${campaignId}:${angle.label}`),
+      variantId: deterministicUuid(`${campaignId}:${message.label}`),
       campaignId,
-      angle: angle.label,
-      headline: localizeHeadline(angle.headline, input.suburb),
+      angle: message.label,
+      headline: localizeHeadline(message.headline, input.suburb),
       offer: offer.name,
       cta: offer.defaultCta,
       score,
@@ -120,7 +128,13 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
   });
   const copyPacks = variants.map((variant) => buildCopyPack({ campaign, variant, brandKit: input.brandKit }));
   const creatives = variants.flatMap((variant) =>
-    formats.map((format) => buildCreative({ campaign, variant, brandKit: input.brandKit, format })),
+    formats.map((format) => buildCreative({
+      campaign,
+      variant,
+      brandKit: input.brandKit,
+      format,
+      sourceImageDataUrl: input.firstAd?.imageDataUrl,
+    })),
   );
   const compliance = runAdStudioComplianceReview({ campaign, copyPacks });
 
@@ -135,6 +149,46 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     copyPacks,
     compliance,
   };
+}
+
+function buildFirstAdMessages(template: AdStudioTemplate, description: string) {
+  const trimmed = description.trim();
+  const shortDescription = shorten(trimmed, 64);
+  return [
+    {
+      label: template.name,
+      headline: shortDescription || template.name,
+      copy: trimmed || template.promptHint,
+      notes: ["Template selected", "Uses the uploaded brief", "No blocking compliance issues"],
+    },
+    {
+      label: `${template.name} local`,
+      headline: localTemplateHeadline(template.name),
+      copy: template.promptHint,
+      notes: ["Local relevance", "Plain-language positioning", "No blocking compliance issues"],
+    },
+    {
+      label: `${template.name} simple`,
+      headline: simpleTemplateHeadline(template.name),
+      copy: trimmed || template.promptHint,
+      notes: ["Simple CTA", "Broad audience fit", "No blocking compliance issues"],
+    },
+  ];
+}
+
+function localTemplateHeadline(templateName: string): string {
+  if (/appraisal|price/i.test(templateName)) return "A clearer view of your home's value";
+  if (/open home/i.test(templateName)) return "See this home this weekend";
+  if (/sold/i.test(templateName)) return "Curious what your home could achieve?";
+  if (/market/i.test(templateName)) return "Your local market, made simple";
+  return `${templateName} in your area`;
+}
+
+function simpleTemplateHeadline(templateName: string): string {
+  if (/checklist/i.test(templateName)) return "Start with a simple seller checklist";
+  if (/buyer demand/i.test(templateName)) return "Buyer interest can start close to home";
+  if (/just listed|new to market/i.test(templateName)) return "A fresh local listing to watch";
+  return `Start with ${templateName.toLowerCase()}`;
 }
 
 function buildCopyPack(input: {
@@ -250,6 +304,7 @@ function buildCreative(input: {
   variant: AdStudioCampaignVariant;
   brandKit: AdStudioBrandKit;
   format: AdStudioFormat;
+  sourceImageDataUrl?: string;
 }): AdStudioCreative {
   const size = getCanvasSize(input.format);
   const headlineSize = input.format === "9:16" ? 68 : input.format === "1.91:1" ? 48 : 62;
@@ -325,14 +380,15 @@ function buildCreative(input: {
           locked: false,
         },
         {
-          objectId: "agent_headshot",
+          objectId: "primary_image",
           type: "image",
-          role: "agent_headshot",
-          assetId: input.brandKit.assets.headshots[0] ?? undefined,
-          x: Math.round(size.width * 0.72),
-          y: Math.round(size.height * 0.66),
-          width: Math.round(size.width * 0.18),
-          height: Math.round(size.width * 0.18),
+          role: "primary_image",
+          content: input.sourceImageDataUrl,
+          assetId: input.sourceImageDataUrl ? undefined : input.brandKit.assets.listingImages[0] ?? input.brandKit.assets.headshots[0] ?? undefined,
+          x: Math.round(size.width * 0.52),
+          y: Math.round(size.height * 0.48),
+          width: Math.round(size.width * 0.36),
+          height: Math.round(size.height * 0.34),
           locked: false,
         },
         {

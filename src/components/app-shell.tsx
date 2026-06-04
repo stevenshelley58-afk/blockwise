@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronDown, ChevronRight, ChevronsLeft } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
@@ -69,12 +70,30 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
         <Link className="brand" href={homeHref} aria-label="Blockwise">
           <BlockwiseLogo />
         </Link>
+        {variant === "operator" ? <p className="sidebar-kicker">Operator</p> : null}
         <SidebarNav variant={variant} />
+        {variant === "operator" ? (
+          <div className="sidebar-footer" aria-label="Runtime status">
+            <a className="sidebar-engine" href="https://hermes.blockwise.sale" target="_blank" rel="noreferrer">
+              <span>
+                <i aria-hidden />
+                <strong>Hermes Engine</strong>
+                <small>Operational</small>
+              </span>
+              <ChevronRight aria-hidden size={16} />
+            </a>
+            <button className="sidebar-collapse" type="button" disabled>
+              <ChevronsLeft aria-hidden size={17} />
+              Collapse
+            </button>
+          </div>
+        ) : null}
       </aside>
       <div className="main">
         <header className="topbar">
           <span className="workspace-chip">
             {workspaceName} - {workspace?.region ?? "AU"}
+            <ChevronDown aria-hidden size={15} />
           </span>
           <div className="topbar-actions">
             <SidebarThemeToggle />

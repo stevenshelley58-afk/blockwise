@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
-import { getRedirectForEmail } from "@/lib/auth/test-users";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +12,7 @@ export default async function LoginPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect(getRedirectForEmail(user.email));
+    redirect("/home");
   }
 
   return (

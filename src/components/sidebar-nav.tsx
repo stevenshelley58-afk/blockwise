@@ -68,6 +68,9 @@ function isItemActive(pathname: string, href: string) {
   if (pathname === href) {
     return true;
   }
+  if (href === "/operator") {
+    return false;
+  }
   return pathname.startsWith(`${href}/`);
 }
 

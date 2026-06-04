@@ -1,12 +1,12 @@
 "use client";
 
-import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "@/lib/adstudio";
+import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 
 import type { AngleCard } from "./angles";
 import { MEDIA_ASSETS } from "./use-media";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
-import type { InspectorTab, StudioSection } from "./use-ad-studio";
+import type { StudioSection } from "./use-ad-studio";
 
 function getMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Ad Studio request failed.";
@@ -43,7 +43,6 @@ export type CampaignActionsState = {
   setBusy: (busy: boolean) => void;
   setBusyMessage: (msg: string) => void;
   setSection: (section: StudioSection) => void;
-  setInspectorTab: (tab: InspectorTab) => void;
   showToast: (msg: string) => void;
 };
 
@@ -92,10 +91,8 @@ export function useCampaignActions(s: CampaignActionsState) {
 
   async function generateVariantsForAngle(angle: AngleCard, goalOverride?: string) {
     s.setSelectedAngleId(angle.id);
-    // M3: removed setSection("angles") so the user stays on their current section
-    s.setInspectorTab("variants");
     s.setBusy(true);
-    s.setBusyMessage(`Generating ${angle.name} variants`);
+    s.setBusyMessage(`Generating ${angle.name} ad options`);
     s.setOfferLabel(angle.name === "Free Appraisal" ? "Free appraisal" : angle.name);
 
     try {
@@ -117,9 +114,42 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setCopy(seedCopy(payload.campaignPack));
       s.setPrimaryImage(MEDIA_ASSETS[0].src);
       s.setSaveState("saved");
-      s.showToast("Generated 3 variants");
+      s.setSection("media");
+      s.showToast("Generated 3 ads");
     } catch (error) {
       s.showToast(getMessage(error));
+    } finally {
+      s.setBusy(false);
+    }
+  }
+
+  async function generateFirstAd(input: FirstAdInput) {
+    s.setBusy(true);
+    s.setBusyMessage("Generating your ad");
+
+    try {
+      const m = parseMarket();
+      const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
+        brandKit: s.brandKit,
+        firstAd: input,
+        suburb: m.suburb,
+        city: m.city,
+        state: m.state,
+        platforms: ["meta"],
+        creativeFormats: input.formats,
+        variantCount: 3,
+      });
+
+      s.setPack(payload.campaignPack);
+      s.setSelectedVariantIndex(0);
+      s.setCopy(seedCopy(payload.campaignPack));
+      s.setPrimaryImage(input.imageDataUrl);
+      s.setSaveState("saved");
+      s.setSection("media");
+      s.showToast("Generated Story, Feed, and Square");
+    } catch (error) {
+      s.showToast(getMessage(error));
+      throw error;
     } finally {
       s.setBusy(false);
     }
@@ -180,5 +210,5 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  return { generateVariantsForAngle, saveDraft, exportCreatives };
+  return { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives };
 }
