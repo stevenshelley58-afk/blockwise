@@ -3,6 +3,7 @@ import { Gauge, PlugZap, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { ModelControlPanel } from "@/components/model-control-panel";
 import { PageHeading } from "@/components/page-heading";
+import { PromptControlPanel } from "@/components/prompt-control-panel";
 import { StatusPill } from "@/components/status-pill";
 import { getModelControlViewData } from "@/lib/ai/model-profile-store";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -36,6 +37,8 @@ export default async function ModelControlPage() {
       </section>
 
       <ModelControlPanel initialData={modelControlData} />
+
+      <PromptControlPanel />
 
       <section className="panel">
         <h2>Ledger Requirements</h2>

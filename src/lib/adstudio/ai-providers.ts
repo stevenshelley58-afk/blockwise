@@ -1,4 +1,8 @@
 import type {
+  ModelCandidate,
+} from "@/lib/ai/model-registry";
+
+import type {
   ImageProviderAdapter,
   ImageProviderRequest,
   ImageProviderResponse,
@@ -293,6 +297,18 @@ export function createOpenAiVisionProvider(options: ProviderOptions = {}): Visio
       };
     },
   };
+}
+
+export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
+  return candidate.provider === "openrouter"
+    ? createOpenRouterTextProvider({ ...options, model: candidate.model })
+    : createOpenAiTextProvider({ ...options, model: candidate.model });
+}
+
+export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
+  return candidate.provider === "openrouter"
+    ? createOpenRouterImageProvider({ ...options, model: candidate.model })
+    : createOpenAiImageProvider({ ...options, model: candidate.model });
 }
 
 async function postChatCompletion(input: {

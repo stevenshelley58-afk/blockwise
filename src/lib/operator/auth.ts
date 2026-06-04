@@ -11,7 +11,7 @@ import { createSupabaseServerClient } from "../supabase/server.ts";
  * NextResponse 401/403 otherwise.
  */
 export async function requireOperator(): Promise<
-  | { ok: true; supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>; email: string }
+  | { ok: true; supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>; email: string; userId: string }
   | { ok: false; response: NextResponse }
 > {
   const supabase = await createSupabaseServerClient();
@@ -34,5 +34,5 @@ export async function requireOperator(): Promise<
   if (!isOperator && !isAllowedEmail) {
     return { ok: false, response: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
   }
-  return { ok: true, supabase, email: user.email };
+  return { ok: true, supabase, email: user.email, userId: user.id };
 }

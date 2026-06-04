@@ -1,8 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createOpenAiTextProvider, createOpenRouterTextProvider } from "@/lib/adstudio/ai-providers";
+import {
+  createOpenAiTextProvider,
+  createOpenRouterTextProvider,
+  createTextProviderForCandidate,
+} from "@/lib/adstudio/ai-providers";
 import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import type { TextProviderAdapter } from "@/lib/adstudio/providers";
+import type { TextProviderAdapter, TextProviderResponse } from "@/lib/adstudio/providers";
+import { assembleMetaCopyPrompt } from "@/lib/operator/prompts/assemble-prompt";
+import { modelCandidateAttempts, resolveRuntimeModelProfile } from "@/lib/operator/prompts/model-profile-runtime";
+import { getActivePromptBundle, type PromptKey } from "@/lib/operator/prompts/prompt-registry";
+import { recordAdStudioProviderRun } from "@/lib/operator/prompts/redact-prompt-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,12 +35,26 @@ type CopyRequestBody = {
     businessName?: string;
     templateName?: string;
     templateHint?: string;
-    /** Brand kit voice — dominates wording style. */
+    /** Brand kit voice - dominates wording style. */
     voice?: string;
     preferredPhrases?: string[];
     neverSay?: string[];
   };
 };
+
+type CopyGenerationResult = {
+  output: TextProviderResponse;
+  provider: TextProviderAdapter;
+  modelName: string;
+  attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }>;
+};
+
+const COPY_PROMPT_KEYS: PromptKey[] = [
+  "adstudio.copy.system",
+  "adstudio.copy.input_template",
+  "adstudio.copy.output_schema",
+  "adstudio.copy.compliance_rules",
+];
 
 const LIMITS: Record<keyof CopyFields, number> = {
   primaryText: 125,
@@ -40,18 +62,6 @@ const LIMITS: Record<keyof CopyFields, number> = {
   description: 90,
   cta: 24,
 };
-
-const SYSTEM_PROMPT = `You write Meta (Facebook/Instagram) ad copy for Australian residential real-estate lead generation. Ads run under Special Ad Category: Housing.
-
-Hard rules:
-- Never guarantee prices, returns, sale outcomes, or timeframes.
-- No discriminatory or exclusionary language (age, family status, religion, ethnicity, etc.).
-- Plain Australian English. Warm, useful, local — never hype or pressure.
-- Respect character limits exactly: headline <= 40 chars, primaryText <= 125 chars, description <= 90 chars, cta <= 24 chars.
-- The CTA is a short button label ("Book free appraisal", "Download checklist", "Get the report").
-
-Always respond with a single JSON object:
-{"headline": string, "primaryText": string, "description": string, "cta": string, "altHeadlines": [string, string], "altPrimaryTexts": [string, string]}`;
 
 function pickProvider(): TextProviderAdapter | null {
   if (process.env.OPENAI_API_KEY) return createOpenAiTextProvider();
@@ -73,42 +83,6 @@ function clampList(value: unknown, limit: number): string[] {
     .map((item) => (item.length > limit ? item.slice(0, limit).trimEnd() : item.trim()));
 }
 
-function buildUserMessage(body: CopyRequestBody): string {
-  const context = body.context ?? {};
-  const lines = [
-    `Business: ${context.businessName || "a local real-estate agency"}`,
-    `Campaign goal: ${context.goal || "Get appraisal leads"}`,
-    `Offer: ${context.offer || "Free appraisal"}`,
-    `Market: ${context.market || "the local area"}`,
-    `Property type: ${context.propertyType || "Houses"}`,
-  ];
-  if (context.templateName) lines.push(`Template: ${context.templateName}`);
-  if (context.templateHint) lines.push(`Template intent: ${context.templateHint}`);
-
-  // Brand kit — the advertiser wrote these; they govern wording style.
-  if (context.voice?.trim()) {
-    lines.push("", `Write every field in this voice: ${context.voice.trim()}`);
-  }
-  if (context.preferredPhrases?.length) {
-    lines.push(`Where natural, use phrases like: ${context.preferredPhrases.join("; ")}.`);
-  }
-  if (context.neverSay?.length) {
-    lines.push(`Strictly never use these words or phrases: ${context.neverSay.join("; ")}.`);
-  }
-
-  if (body.mode === "brief") {
-    lines.push("", "The advertiser describes the ad in their own words:", body.brief?.trim() || "(no brief provided)");
-    lines.push("", "Write the full copy set from this brief.");
-  } else if (body.mode === "assist") {
-    lines.push("", "Current copy:", JSON.stringify(body.copy ?? {}));
-    lines.push("", `Apply this single adjustment and return the full copy set: ${body.assistAction || "Improve clarity"}.`);
-    lines.push("Keep fields you were not asked to change as close to the original as possible.");
-  } else {
-    lines.push("", "Write the full copy set for this campaign.");
-  }
-  return lines.join("\n");
-}
-
 export async function POST(request: NextRequest) {
   const access = await requireAdStudioRequest(request);
   if (!access.ok) {
@@ -116,24 +90,44 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJsonBody<CopyRequestBody>(request);
-  const provider = pickProvider();
-
-  if (!provider) {
-    return NextResponse.json(
-      { error: "AI copy is not configured. Add OPENAI_API_KEY or OPENROUTER_API_KEY to enable it." },
-      { status: 503 },
-    );
-  }
+  const startedAt = Date.now();
+  const bundle = await getActivePromptBundle(COPY_PROMPT_KEYS);
+  const assembled = assembleMetaCopyPrompt({
+    bundle,
+    mode: body.mode ?? "generate",
+    context: body.context ?? {},
+    brief: body.brief,
+    currentCopy: body.copy,
+    assistAction: body.assistAction,
+  });
+  let generation: CopyGenerationResult | null = null;
 
   try {
-    const output = await provider.generate({
-      system: SYSTEM_PROMPT,
-      schemaName: "metaLeadAdPack",
-      messages: [{ role: "user", content: buildUserMessage(body) }],
-    });
-
+    generation = await generateCopyWithProfile(assembled.system, assembled.user);
+    const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
     const current = body.copy ?? {};
+
+    await recordAdStudioProviderRun({
+      workspaceId: access.access.workspaceId,
+      taskType: "adstudio.copy",
+      modelProfile: "structured_json",
+      prompt: assembled,
+      input: {
+        mode: body.mode ?? "generate",
+        context: body.context ?? {},
+        brief: body.brief,
+        copy: body.copy,
+        assistAction: body.assistAction,
+      },
+      attempts: generation.attempts,
+      latencyMs: Date.now() - startedAt,
+      providerName: generation.provider.providerName,
+      providerType: generation.provider.providerType,
+      modelName: generation.modelName,
+      output,
+      status: "completed",
+    });
 
     return NextResponse.json({
       copy: {
@@ -149,9 +143,96 @@ export async function POST(request: NextRequest) {
       source: "ai" as const,
     });
   } catch (error) {
+    await recordAdStudioProviderRun({
+      workspaceId: access.access.workspaceId,
+      taskType: "adstudio.copy",
+      modelProfile: "structured_json",
+      prompt: assembled,
+      input: {
+        mode: body.mode ?? "generate",
+        context: body.context ?? {},
+        brief: body.brief,
+        copy: body.copy,
+        assistAction: body.assistAction,
+      },
+      attempts: generation?.attempts ?? [],
+      latencyMs: Date.now() - startedAt,
+      providerName: generation?.provider.providerName ?? "unavailable",
+      providerType: "text_generation",
+      modelName: generation?.modelName ?? "unavailable",
+      output: null,
+      status: "failed",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "AI copy generation failed." },
       { status: 502 },
     );
   }
+}
+
+async function generateCopyWithProfile(system: string, user: string): Promise<CopyGenerationResult> {
+  const profile = await resolveRuntimeModelProfile("structured_json");
+  const attempts: CopyGenerationResult["attempts"] = [];
+  let lastError: unknown = null;
+
+  for (const candidate of modelCandidateAttempts(profile)) {
+    const provider = createTextProviderForCandidate(candidate);
+    attempts.push({ provider: provider.providerName, model: candidate.model, status: "attempted" });
+
+    try {
+      const output = await provider.generate({
+        system,
+        schemaName: "metaLeadAdPack",
+        messages: [{ role: "user", content: user }],
+      });
+      attempts[attempts.length - 1] = { provider: provider.providerName, model: candidate.model, status: "completed" };
+      return {
+        output,
+        provider,
+        modelName: String(output.providerMetadata.model ?? candidate.model),
+        attempts,
+      };
+    } catch (error) {
+      lastError = error;
+      attempts[attempts.length - 1] = {
+        provider: provider.providerName,
+        model: candidate.model,
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  const legacyProvider = pickProvider();
+
+  if (legacyProvider) {
+    attempts.push({ provider: legacyProvider.providerName, model: "env_default", status: "attempted" });
+    try {
+      const output = await legacyProvider.generate({
+        system,
+        schemaName: "metaLeadAdPack",
+        messages: [{ role: "user", content: user }],
+      });
+      attempts[attempts.length - 1] = { provider: legacyProvider.providerName, model: "env_default", status: "completed" };
+      return {
+        output,
+        provider: legacyProvider,
+        modelName: String(output.providerMetadata.model ?? "env_default"),
+        attempts,
+      };
+    } catch (error) {
+      lastError = error;
+      attempts[attempts.length - 1] = {
+        provider: legacyProvider.providerName,
+        model: "env_default",
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  if (lastError instanceof Error) throw lastError;
+  throw new Error("AI copy is not configured. Add OPENAI_API_KEY or OPENROUTER_API_KEY to enable it.");
 }

@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createOpenAiImageProvider, generateMixedImageVariantsInParallel } from "@/lib/adstudio";
+import { createImageProviderForCandidate } from "@/lib/adstudio/ai-providers";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "@/lib/adstudio/providers";
+import { assembleImagePrompt } from "@/lib/operator/prompts/assemble-prompt";
+import { modelCandidateAttempts, resolveRuntimeModelProfile } from "@/lib/operator/prompts/model-profile-runtime";
+import { getActivePromptBundle, type PromptKey } from "@/lib/operator/prompts/prompt-registry";
+import { recordAdStudioProviderRun } from "@/lib/operator/prompts/redact-prompt-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +19,7 @@ type GenerateImageBody = {
   stylePreset?: string;
   referenceAssets?: string[];
   variantCount?: number;
-  /** Brand kit visual context — appended so scenes match the brand look. */
+  /** Brand kit visual context - appended so scenes match the brand look. */
   brand?: {
     palette?: string[];
     styleTags?: string[];
@@ -21,20 +27,20 @@ type GenerateImageBody = {
   };
 };
 
-function withBrandContext(prompt: string, brand: GenerateImageBody["brand"]): string {
-  if (!brand) return prompt;
-  const parts = [prompt];
-  if (brand.palette?.length) {
-    parts.push(`Colour direction: lean into ${brand.palette.slice(0, 3).join(", ")} tones.`);
-  }
-  if (brand.styleTags?.length) {
-    parts.push(`Visual style: ${brand.styleTags.join(", ")}.`);
-  }
-  if (brand.imageTreatment) {
-    parts.push(`Treatment: ${brand.imageTreatment}.`);
-  }
-  return parts.join("\n");
-}
+type ImageGenerationResult = {
+  result: ImageProviderResponse;
+  providerName: string;
+  modelName: string;
+  attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }>;
+};
+
+const IMAGE_PROMPT_KEYS: PromptKey[] = [
+  "adstudio.image.system",
+  "adstudio.image.input_template",
+  "adstudio.image.brand_rules",
+  "adstudio.image.negative_prompt",
+  "adstudio.image.aspect_ratio_rules",
+];
 
 export async function POST(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
@@ -49,26 +55,84 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "An image prompt is required." }, { status: 400 });
   }
 
-  try {
-    const imageInput = {
-      prompt: withBrandContext(body.prompt.trim(), body.brand),
-      referenceAssets: body.referenceAssets ?? [],
-      aspectRatio: body.aspectRatio ?? "1:1",
-      stylePreset: body.stylePreset ?? "real_estate_photography",
-    };
+  const startedAt = Date.now();
+  const referenceAssets = body.referenceAssets ?? [];
+  const aspectRatio = body.aspectRatio ?? "1:1";
+  const stylePreset = body.stylePreset ?? "real_estate_photography";
+  const bundle = await getActivePromptBundle(IMAGE_PROMPT_KEYS);
+  const assembled = assembleImagePrompt({
+    bundle,
+    prompt: body.prompt.trim(),
+    brand: body.brand,
+    aspectRatio,
+    stylePreset,
+    referenceAssets,
+  });
+  const imageInput: ImageProviderRequest = {
+    prompt: assembled.fullPrompt,
+    negativePrompt: bundle["adstudio.image.negative_prompt"].body,
+    referenceAssets,
+    aspectRatio,
+    stylePreset,
+  };
 
+  try {
     if ((body.variantCount ?? 1) > 1) {
-      const variants = await generateMixedImageVariantsInParallel(imageInput);
-      const first = variants.find((variant) => variant.assetUrl);
+      const variants = await generateMixedDraftVariants(imageInput);
+      const first = variants.variants.find((variant) => variant.assetUrl);
 
       if (!first) {
+        await recordAdStudioProviderRun({
+          workspaceId: context.access.workspaceId,
+          taskType: "adstudio.image",
+          modelProfile: "image_draft",
+          prompt: assembled,
+          input: {
+            prompt: body.prompt,
+            brand: body.brand,
+            aspectRatio,
+            stylePreset,
+            referenceAssets,
+            variantCount: body.variantCount,
+          },
+          attempts: variants.attempts,
+          latencyMs: Date.now() - startedAt,
+          providerName: "mixed",
+          providerType: "image_generation",
+          modelName: "unavailable",
+          output: null,
+          status: "failed",
+          error: new Error("No image was returned by the providers."),
+        });
         return NextResponse.json({ error: "No image was returned by the providers." }, { status: 502 });
       }
+
+      await recordAdStudioProviderRun({
+        workspaceId: context.access.workspaceId,
+        taskType: "adstudio.image",
+        modelProfile: "image_draft",
+        prompt: assembled,
+        input: {
+          prompt: body.prompt,
+          brand: body.brand,
+          aspectRatio,
+          stylePreset,
+          referenceAssets,
+          variantCount: body.variantCount,
+        },
+        attempts: variants.attempts,
+        latencyMs: Date.now() - startedAt,
+        providerName: "mixed",
+        providerType: "image_generation",
+        modelName: first.model,
+        output: first,
+        status: "completed",
+      });
 
       return NextResponse.json({
         image: first.assetUrl,
         model: first.model,
-        variants: variants.map((variant, index) => ({
+        variants: variants.variants.map((variant, index) => ({
           image: variant.assetUrl,
           model: variant.model,
           provider: variant.providerMetadata.provider,
@@ -77,15 +141,156 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const provider = createOpenAiImageProvider();
-    const result = await provider.generate(imageInput);
+    const generation = await generateSingleImageWithProfile(imageInput);
 
-    if (!result.assetUrl) {
+    if (!generation.result.assetUrl) {
+      await recordAdStudioProviderRun({
+        workspaceId: context.access.workspaceId,
+        taskType: "adstudio.image",
+        modelProfile: "image_final",
+        prompt: assembled,
+        input: {
+          prompt: body.prompt,
+          brand: body.brand,
+          aspectRatio,
+          stylePreset,
+          referenceAssets,
+          variantCount: body.variantCount,
+        },
+        attempts: generation.attempts,
+        latencyMs: Date.now() - startedAt,
+        providerName: generation.providerName,
+        providerType: "image_generation",
+        modelName: generation.modelName,
+        output: generation.result,
+        status: "failed",
+        error: new Error("No image was returned by the provider."),
+      });
       return NextResponse.json({ error: "No image was returned by the provider." }, { status: 502 });
     }
 
-    return NextResponse.json({ image: result.assetUrl, model: result.model });
+    await recordAdStudioProviderRun({
+      workspaceId: context.access.workspaceId,
+      taskType: "adstudio.image",
+      modelProfile: "image_final",
+      prompt: assembled,
+      input: {
+        prompt: body.prompt,
+        brand: body.brand,
+        aspectRatio,
+        stylePreset,
+        referenceAssets,
+        variantCount: body.variantCount,
+      },
+      attempts: generation.attempts,
+      latencyMs: Date.now() - startedAt,
+      providerName: generation.providerName,
+      providerType: "image_generation",
+      modelName: generation.modelName,
+      output: generation.result,
+      status: "completed",
+    });
+
+    return NextResponse.json({ image: generation.result.assetUrl, model: generation.result.model });
   } catch (error) {
+    await recordAdStudioProviderRun({
+      workspaceId: context.access.workspaceId,
+      taskType: "adstudio.image",
+      modelProfile: (body.variantCount ?? 1) > 1 ? "image_draft" : "image_final",
+      prompt: assembled,
+      input: {
+        prompt: body.prompt,
+        brand: body.brand,
+        aspectRatio,
+        stylePreset,
+        referenceAssets,
+        variantCount: body.variantCount,
+      },
+      attempts: [],
+      latencyMs: Date.now() - startedAt,
+      providerName: "unavailable",
+      providerType: "image_generation",
+      modelName: "unavailable",
+      output: null,
+      status: "failed",
+      error,
+    });
     return errorResponse(error, 500);
+  }
+}
+
+async function generateMixedDraftVariants(input: ImageProviderRequest): Promise<{
+  variants: ImageProviderResponse[];
+  attempts: ImageGenerationResult["attempts"];
+}> {
+  const profile = await resolveRuntimeModelProfile("image_draft");
+  const candidates = modelCandidateAttempts(profile);
+  const openAiModel = candidates.find((candidate) => candidate.provider === "openai")?.model;
+  const openRouterModel = candidates.find((candidate) => candidate.provider === "openrouter")?.model;
+  const variants = await generateMixedImageVariantsInParallel(input, {
+    openAiModel,
+    openRouterModel,
+  });
+
+  return {
+    variants,
+    attempts: variants.map((variant) => ({
+      provider: String(variant.providerMetadata.provider ?? "unknown"),
+      model: variant.model,
+      status: variant.assetUrl ? "completed" : "failed",
+    })),
+  };
+}
+
+async function generateSingleImageWithProfile(input: ImageProviderRequest): Promise<ImageGenerationResult> {
+  const profile = await resolveRuntimeModelProfile("image_final");
+  const attempts: ImageGenerationResult["attempts"] = [];
+  let lastError: unknown = null;
+
+  for (const candidate of modelCandidateAttempts(profile)) {
+    const provider = createImageProviderForCandidate(candidate);
+    attempts.push({ provider: provider.providerName, model: candidate.model, status: "attempted" });
+
+    try {
+      const result = await provider.generate(input);
+      attempts[attempts.length - 1] = { provider: provider.providerName, model: candidate.model, status: "completed" };
+      return {
+        result,
+        providerName: provider.providerName,
+        modelName: result.model,
+        attempts,
+      };
+    } catch (error) {
+      lastError = error;
+      attempts[attempts.length - 1] = {
+        provider: provider.providerName,
+        model: candidate.model,
+        status: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  const fallbackProvider: ImageProviderAdapter = createOpenAiImageProvider();
+  attempts.push({ provider: fallbackProvider.providerName, model: "env_default", status: "attempted" });
+
+  try {
+    const result = await fallbackProvider.generate(input);
+    attempts[attempts.length - 1] = { provider: fallbackProvider.providerName, model: "env_default", status: "completed" };
+    return {
+      result,
+      providerName: fallbackProvider.providerName,
+      modelName: result.model,
+      attempts,
+    };
+  } catch (error) {
+    attempts[attempts.length - 1] = {
+      provider: fallbackProvider.providerName,
+      model: "env_default",
+      status: "failed",
+      error: error instanceof Error ? error.message : String(error),
+    };
+    if (lastError instanceof Error) throw lastError;
+    throw error;
   }
 }
