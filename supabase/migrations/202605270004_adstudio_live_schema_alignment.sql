@@ -62,7 +62,18 @@ alter table public.adstudio_creative_objects add column if not exists locked boo
 alter table public.adstudio_creative_objects add column if not exists sort_order integer not null default 0;
 alter table public.adstudio_creative_objects add column if not exists updated_at timestamptz not null default now();
 
-alter table public.adstudio_platform_copy alter column platform drop not null;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'adstudio_platform_copy'
+      and column_name = 'platform'
+  ) then
+    alter table public.adstudio_platform_copy alter column platform drop not null;
+  end if;
+end $$;
 alter table public.adstudio_platform_copy add column if not exists meta_json jsonb not null default '{}';
 alter table public.adstudio_platform_copy add column if not exists google_search_json jsonb not null default '{}';
 alter table public.adstudio_platform_copy add column if not exists google_pmax_json jsonb not null default '{}';
@@ -78,7 +89,18 @@ alter table public.adstudio_exports add column if not exists updated_at timestam
 alter table public.adstudio_compliance_reports add column if not exists variant_id uuid references public.adstudio_campaign_variants (id) on delete cascade;
 alter table public.adstudio_compliance_reports add column if not exists checked_at timestamptz not null default now();
 
-alter table public.adstudio_provider_runs alter column provider drop not null;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'adstudio_provider_runs'
+      and column_name = 'provider'
+  ) then
+    alter table public.adstudio_provider_runs alter column provider drop not null;
+  end if;
+end $$;
 alter table public.adstudio_provider_runs add column if not exists job_id uuid;
 alter table public.adstudio_provider_runs add column if not exists provider_name text;
 alter table public.adstudio_provider_runs add column if not exists provider_type text;
