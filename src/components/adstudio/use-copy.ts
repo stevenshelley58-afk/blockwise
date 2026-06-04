@@ -163,7 +163,7 @@ export function useCopy(
   async function generateCopy(kind: "ai" | "brief", context: CopyContext) {
     if (generating) return;
     if (kind === "brief" && !brief.trim()) {
-      showToast("Describe the ad first");
+      showToast("Add a brief before generating copy");
       return;
     }
     setGenerating(true);
