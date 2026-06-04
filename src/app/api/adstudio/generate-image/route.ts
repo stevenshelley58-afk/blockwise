@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createOpenAiImageProvider } from "@/lib/adstudio";
+import { createOpenAiImageProvider, generateMixedImageVariantsInParallel } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 
 export const runtime = "nodejs";
@@ -12,6 +12,7 @@ type GenerateImageBody = {
   aspectRatio?: string;
   stylePreset?: string;
   referenceAssets?: string[];
+  variantCount?: number;
   /** Brand kit visual context — appended so scenes match the brand look. */
   brand?: {
     palette?: string[];
@@ -49,13 +50,35 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const provider = createOpenAiImageProvider();
-    const result = await provider.generate({
+    const imageInput = {
       prompt: withBrandContext(body.prompt.trim(), body.brand),
       referenceAssets: body.referenceAssets ?? [],
       aspectRatio: body.aspectRatio ?? "1:1",
       stylePreset: body.stylePreset ?? "real_estate_photography",
-    });
+    };
+
+    if ((body.variantCount ?? 1) > 1) {
+      const variants = await generateMixedImageVariantsInParallel(imageInput);
+      const first = variants.find((variant) => variant.assetUrl);
+
+      if (!first) {
+        return NextResponse.json({ error: "No image was returned by the providers." }, { status: 502 });
+      }
+
+      return NextResponse.json({
+        image: first.assetUrl,
+        model: first.model,
+        variants: variants.map((variant, index) => ({
+          image: variant.assetUrl,
+          model: variant.model,
+          provider: variant.providerMetadata.provider,
+          index,
+        })),
+      });
+    }
+
+    const provider = createOpenAiImageProvider();
+    const result = await provider.generate(imageInput);
 
     if (!result.assetUrl) {
       return NextResponse.json({ error: "No image was returned by the provider." }, { status: 502 });

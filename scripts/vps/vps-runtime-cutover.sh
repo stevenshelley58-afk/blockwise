@@ -9,8 +9,8 @@ BLOCKWISE_GIT_URL="${BLOCKWISE_GIT_URL:-https://github.com/stevenshelley58-afk/b
 HERMES_BASE_IMAGE="${HERMES_BASE_IMAGE:-ghcr.io/nousresearch/hermes-agent:v2026.5.29.2}"
 BLOCKWISE_HERMES_IMAGE="${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:${DEPLOY_REF##*/}}"
 UPTIME_KUMA_IMAGE="${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1.23.16}"
-HERMES_DEFAULT_MODEL="${HERMES_DEFAULT_MODEL:-openai/gpt-4o-mini}"
-HERMES_ESCALATION_MODEL="${HERMES_ESCALATION_MODEL:-anthropic/claude-sonnet-4}"
+HERMES_DEFAULT_MODEL="${HERMES_DEFAULT_MODEL:-openai/gpt-5.5}"
+HERMES_ESCALATION_MODEL="${HERMES_ESCALATION_MODEL:-openai/gpt-5.5-pro}"
 
 old=/opt/blockwise
 stamp="$(date +%Y%m%d-%H%M%S)"

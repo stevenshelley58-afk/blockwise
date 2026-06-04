@@ -44,6 +44,23 @@ test("curated structured-output profiles expose OpenRouter slugs and capabilitie
   assert.equal(gemini.supportsImageOutput, false);
 });
 
+test("curated high-quality strategy options lead with the premium copy model", () => {
+  const options = getCuratedModelOptionsForProfile("high_quality_strategy");
+
+  assert.equal(options[0].provider, "openrouter");
+  assert.equal(options[0].model, "openai/gpt-5.5");
+  assert.equal(options[0].supportsStructuredOutput, true);
+});
+
+test("curated final image options include GPT Image 2 and Nano Banana", () => {
+  const options = getCuratedModelOptionsForProfile("image_final");
+
+  assert.equal(options[0].model, "openai/gpt-5.4-image-2");
+  assert.equal(options[0].supportsImageOutput, true);
+  assert.equal(options[1].model, "google/gemini-3.1-flash-image-preview");
+  assert.equal(options[1].supportsImageOutput, true);
+});
+
 test("buildModelProfileVersionInsert maps a selected option to Supabase columns", () => {
   const option = getCuratedModelOptionsForProfile("cheap_draft_text").find(
     (candidate) => candidate.model === "google/gemini-2.0-flash-001",

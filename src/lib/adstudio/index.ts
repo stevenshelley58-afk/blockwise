@@ -12,7 +12,9 @@ export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
   createOpenAiVisionProvider,
+  createOpenRouterImageProvider,
   createOpenRouterTextProvider,
+  generateMixedImageVariantsInParallel,
 } from "./ai-providers.ts";
 export { createAdStudioJobRun, failAdStudioJobRun, type AdStudioJobRun } from "./jobs.ts";
 export {

@@ -18,13 +18,22 @@ type ProviderOptions = {
   model?: string;
 };
 
+type MixedImageVariantOptions = {
+  env?: EnvLike;
+  fetchImpl?: typeof fetch;
+  openAiCount?: number;
+  openRouterCount?: number;
+  openAiModel?: string;
+  openRouterModel?: string;
+};
+
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 
 export function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENROUTER_TEXT_MODEL ?? "openai/gpt-4.1-mini";
+  const model = options.model ?? env.BLOCKWISE_OPENROUTER_TEXT_MODEL ?? "openai/gpt-5.5";
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
@@ -60,7 +69,7 @@ export function createOpenRouterTextProvider(options: ProviderOptions = {}): Tex
 
 export function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENAI_TEXT_MODEL ?? "gpt-4.1-mini";
+  const model = options.model ?? env.BLOCKWISE_OPENAI_TEXT_MODEL ?? "gpt-5.5";
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
@@ -92,7 +101,7 @@ export function createOpenAiTextProvider(options: ProviderOptions = {}): TextPro
 
 export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-1";
+  const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
@@ -121,6 +130,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
           model,
           prompt: buildImagePrompt(input),
           size: imageSizeForAspect(input.aspectRatio),
+          quality: "high",
           n: 1,
         }),
       });
@@ -143,6 +153,111 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       };
     },
   };
+}
+
+export function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "openrouter",
+    providerType: "image_generation",
+    capabilities: {
+      textToImage: true,
+      imageToImage: true,
+      multiReference: true,
+    },
+    async generate(input) {
+      const apiKey = env.OPENROUTER_API_KEY;
+
+      if (!apiKey) {
+        throw new Error("OPENROUTER_API_KEY is not configured.");
+      }
+
+      const response = await fetchImpl(OPENROUTER_CHAT_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+          "X-Title": "Blockwise",
+        },
+        body: JSON.stringify({
+          model,
+          modalities: ["image", "text"],
+          messages: [
+            {
+              role: "user",
+              content: buildOpenRouterImageContent(input),
+            },
+          ],
+        }),
+      });
+      const payload = (await response.json()) as {
+        choices?: Array<{
+          message?: {
+            content?: unknown;
+            images?: Array<{ image_url?: { url?: string }; url?: string }>;
+          };
+        }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+        error?: { message?: string };
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`);
+      }
+
+      const message = payload.choices?.[0]?.message;
+      const assetUrl = message?.images?.[0]?.image_url?.url ?? message?.images?.[0]?.url ?? extractImageUrl(message?.content);
+
+      return {
+        assetUrl: assetUrl ?? "",
+        seed: input.seed ?? 0,
+        model,
+        providerMetadata: {
+          provider: "openrouter",
+          referenceAssets: input.referenceAssets.length,
+          inputTokens: payload.usage?.prompt_tokens ?? 0,
+          outputTokens: payload.usage?.completion_tokens ?? 0,
+        },
+      };
+    },
+  };
+}
+
+export async function generateMixedImageVariantsInParallel(
+  input: ImageProviderRequest,
+  options: MixedImageVariantOptions = {},
+): Promise<ImageProviderResponse[]> {
+  const env = options.env ?? process.env;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const openAiCount = options.openAiCount ?? 2;
+  const openRouterCount = options.openRouterCount ?? 2;
+  const openAiProvider = createOpenAiImageProvider({
+    env,
+    fetchImpl,
+    model: options.openAiModel ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2",
+  });
+  const openRouterProvider = createOpenRouterImageProvider({
+    env,
+    fetchImpl,
+    model: options.openRouterModel ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview",
+  });
+  const jobs = [
+    ...Array.from({ length: openAiCount }, (_, index) => ({ provider: openAiProvider, index })),
+    ...Array.from({ length: openRouterCount }, (_, index) => ({ provider: openRouterProvider, index: index + openAiCount })),
+  ];
+
+  return Promise.all(
+    jobs.map(({ provider, index }) =>
+      provider.generate({
+        ...input,
+        seed: (input.seed ?? 0) + index + 1,
+      }),
+    ),
+  );
 }
 
 export function createOpenAiVisionProvider(options: ProviderOptions = {}): VisionProviderAdapter {
@@ -248,10 +363,46 @@ function gatewayHeaders(env: EnvLike): Record<string, string> {
 function buildImagePrompt(input: ImageProviderRequest): string {
   return [
     input.prompt,
+    `Aspect ratio: ${input.aspectRatio}.`,
     `Style preset: ${input.stylePreset}.`,
     input.negativePrompt ? `Avoid: ${input.negativePrompt}.` : "",
     input.referenceAssets.length ? `Reference assets: ${input.referenceAssets.join(", ")}.` : "",
   ].filter(Boolean).join("\n");
+}
+
+function buildOpenRouterImageContent(input: ImageProviderRequest): unknown {
+  const prompt = buildImagePrompt(input);
+
+  if (!input.referenceAssets.length) return prompt;
+
+  return [
+    { type: "text", text: prompt },
+    ...input.referenceAssets.map((url) => ({
+      type: "image_url",
+      image_url: { url },
+    })),
+  ];
+}
+
+function extractImageUrl(content: unknown): string | undefined {
+  if (typeof content === "string") {
+    return content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0];
+  }
+
+  if (!Array.isArray(content)) return undefined;
+
+  for (const item of content) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.url === "string" && record.url.startsWith("data:image/")) return record.url;
+    const imageUrl = record.image_url;
+    if (imageUrl && typeof imageUrl === "object") {
+      const url = (imageUrl as Record<string, unknown>).url;
+      if (typeof url === "string" && url.startsWith("data:image/")) return url;
+    }
+  }
+
+  return undefined;
 }
 
 function imageSizeForAspect(aspectRatio: string): string {

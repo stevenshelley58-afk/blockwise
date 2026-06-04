@@ -77,7 +77,7 @@ Image filenames are what the wiring step will reference in `/public/ads/`.
   > no people, no text. 9:16 vertical.
 
 ## Generation settings
-- Model: `gpt-image-1` (already wired in `src/lib/adstudio/ai-providers.ts`).
+- Model: `gpt-image-2` (already wired in `src/lib/adstudio/ai-providers.ts`).
 - Quality: high. Sizes: FB feed 1024×1280 (4:5), IG story 1024×1536 (9:16).
 - All text/badges/price stay as the existing HTML/CSS overlay — the AI image is the clean
   background only (prompts say "no text" so overlays stay legible).

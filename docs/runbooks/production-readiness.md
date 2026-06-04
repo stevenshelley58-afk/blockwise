@@ -8,7 +8,7 @@
 - Create the private `workspace-artifacts` storage bucket.
 - Configure Vercel environment variables for Production and Preview, including `OPENROUTER_API_KEY` before enabling OpenRouter model tests or routed runs.
 - Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google OAuth, token vault reads, approval records, and provider draft payloads pass a production smoke test.
-- Configure `BLOCKWISE_OPENAI_TEXT_MODEL`, `BLOCKWISE_OPENAI_IMAGE_MODEL`, and `BLOCKWISE_OPENROUTER_TEXT_MODEL` if the default production models need to differ from the repo defaults.
+- Configure `BLOCKWISE_OPENAI_TEXT_MODEL`, `BLOCKWISE_OPENAI_IMAGE_MODEL`, `BLOCKWISE_OPENROUTER_TEXT_MODEL`, and `BLOCKWISE_OPENROUTER_IMAGE_MODEL` if the default production models need to differ from the repo defaults.
 - Configure the recommended production security variables: `CLOUDFLARE_AI_GATEWAY_URL`, `CLOUDFLARE_AI_GATEWAY_TOKEN`, `AGENT_ALLOWED_OUTBOUND_DOMAINS`, and `SECURITY_AUDIT_LOG_DRAIN_URL`.
 - Configure Trigger.dev project and deploy jobs with `npm run trigger:deploy`.
 - Configure Sentry and PostHog projects.

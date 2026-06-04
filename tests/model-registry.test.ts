@@ -22,6 +22,17 @@ test("resolveModelProfile returns the active model and ordered fallback chain fo
   assert.equal(resolved.profile.requiresStructuredOutput, true);
 });
 
+test("client-facing strategy profile uses the premium copywriting model", () => {
+  const resolved = resolveModelProfile("high_quality_strategy");
+
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-5.5");
+  assert.deepEqual(
+    resolved.fallbacks.map((candidate) => `${candidate.provider}/${candidate.model}`),
+    ["openrouter/openai/gpt-5.5"],
+  );
+});
+
 test("normalizeModelSlug stores OpenRouter model ids without the legacy openrouter prefix", () => {
   assert.equal(
     normalizeModelSlug("openrouter", "openrouter/google/gemini-2.0-flash-001"),
@@ -57,7 +68,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.16);
+  assert.equal(cost, 0.45);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {
