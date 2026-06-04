@@ -132,6 +132,10 @@ export function AdStudioWorkbench({
     market,
     propertyType,
     businessName: brand,
+    // Brand kit governs wording style — sent verbatim with every generation.
+    voice: brandKit.tone.voice,
+    preferredPhrases: brandKit.tone.preferredPhrases,
+    neverSay: brandKit.tone.avoid,
   };
 
   function openNewAd(templateId?: string) {

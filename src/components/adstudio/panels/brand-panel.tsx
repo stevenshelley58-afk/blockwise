@@ -1,132 +1,135 @@
 "use client";
 
+import Link from "next/link";
+import { Globe2 } from "lucide-react";
+
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 
-import { FieldShell, PanelHeader } from "../inspector";
-import { useBrandKit } from "../use-brand-kit";
+import { PanelHeader } from "../inspector";
 
 type BrandPanelProps = {
   brandKit: AdStudioBrandKit;
-  /** @deprecated Derived internally via useBrandKit — kept for caller compatibility */
+  /** @deprecated Derived internally — kept for caller compatibility */
   brand?: string;
 };
 
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//, "");
+  }
+}
+
 export function BrandPanel({ brandKit }: BrandPanelProps) {
-  const {
-    editedBrand,
-    setEditedBrand,
-    editedAgent,
-    setEditedAgent,
-    editedPhone,
-    setEditedPhone,
-    isSaving,
-    saveError,
-    saveConfirmed,
-    saveKit,
-    rescanKit,
-    approveKit,
-  } = useBrandKit(brandKit);
+  const name = brandKit.identity.businessName || "Your brand";
+  const domain = hostOf(brandKit.source.url);
+  const approved = brandKit.reviewStatus === "approved";
+  const voiceLine = (brandKit.tone.voice || "").split(".")[0] || "Not set yet";
+  const swatches = [
+    brandKit.colours.primary,
+    brandKit.colours.secondary,
+    brandKit.colours.accent,
+    brandKit.colours.background,
+    brandKit.colours.text,
+  ].filter(Boolean);
 
   return (
     <>
-      <PanelHeader title="Brand" detail="Approved brand kit controls the creative guardrails." />
+      <PanelHeader title="Brand" detail="Your approved kit sets the guardrails for every ad." />
 
-      <FieldShell label="Agency name">
-        <input
-          value={editedBrand}
-          onChange={(e) => setEditedBrand(e.target.value)}
-        />
-      </FieldShell>
-
-      <FieldShell label="Agent name">
-        <input
-          value={editedAgent}
-          onChange={(e) => setEditedAgent(e.target.value)}
-        />
-      </FieldShell>
-
-      <FieldShell label="Phone">
-        <input
-          value={editedPhone}
-          onChange={(e) => setEditedPhone(e.target.value)}
-        />
-      </FieldShell>
-
-      {/* Action buttons */}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button
-          className="studio-btn secondary"
-          type="button"
-          onClick={() => void rescanKit()}
-          disabled={isSaving}
-        >
-          Re-scan website
-        </button>
-        <button
-          className="studio-btn secondary"
-          type="button"
-          onClick={() => void saveKit()}
-          disabled={isSaving}
-        >
-          {isSaving ? "Saving…" : "Save"}
-        </button>
-        <button
-          className="studio-btn secondary"
-          type="button"
-          onClick={() => void approveKit()}
-          disabled={isSaving}
-        >
-          Approve kit
-        </button>
-      </div>
-
-      {saveConfirmed && (
-        <p style={{ margin: 0, color: "#126b35", fontWeight: 700, fontSize: 13 }}>
-          Saved
-        </p>
-      )}
-      {saveError && (
-        <p style={{ margin: 0, color: "#b91c1c", fontWeight: 700, fontSize: 13 }}>
-          {saveError}
-        </p>
-      )}
-
-      {/* Preview card — M8: agency row + agent row + phone */}
-      <div className="studio-brand-preview">
-        <span style={{ background: brandKit.colours.primary || "#0f1729" }}>
-          {editedBrand.charAt(0).toUpperCase()}
-        </span>
-        <div style={{ display: "grid", gap: 2 }}>
-          <strong style={{ fontSize: 14 }}>
-            {editedBrand}{" "}
-            <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 12 }}>
-              (agency)
-            </span>
-          </strong>
-          <span style={{ fontSize: 13 }}>
-            {editedAgent}
-            {" — "}
-            <span style={{ color: "var(--muted)", fontSize: 12 }}>Agent</span>
+      <div className="studio-card" style={{ gap: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 11,
+              background: brandKit.colours.primary || "#0f1729",
+              color: "#fff",
+              display: "grid",
+              placeItems: "center",
+              fontWeight: 800,
+              fontSize: 19,
+            }}
+          >
+            {name.charAt(0).toUpperCase()}
           </span>
-          <small>{editedPhone}</small>
+          <span style={{ minWidth: 0 }}>
+            <strong style={{ fontSize: 15, fontWeight: 650, display: "block" }}>{name}</strong>
+            <small style={{ color: "var(--muted)", fontSize: 12 }}>{domain}</small>
+          </span>
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 11.5,
+              fontWeight: 650,
+              borderRadius: 999,
+              padding: "5px 11px",
+              background: approved ? "#e8f6ef" : "#fdf4dd",
+              color: approved ? "#0e7a4d" : "#9a6b00",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {approved ? "✓ Approved" : "Pending review"}
+          </span>
         </div>
-      </div>
 
-      <div className="studio-swatches">
-        {[brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent]
-          .filter(Boolean)
-          .map((colour) => (
-            <span key={colour} style={{ background: colour }} />
+        <div style={{ display: "flex", gap: 7 }}>
+          {swatches.map((colour) => (
+            <i
+              key={colour}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                background: colour,
+                border: "1px solid rgba(15,23,41,.08)",
+              }}
+            />
           ))}
+        </div>
+
+        <div style={{ display: "grid", gap: 8, fontSize: 12.5, color: "var(--muted)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <span>Voice</span>
+            <b style={{ color: "var(--ink)", fontWeight: 600, textAlign: "right" }}>{voiceLine}</b>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <span>Fonts</span>
+            <b style={{ color: "var(--ink)", fontWeight: 600, textAlign: "right" }}>
+              {brandKit.typography.headingFont} / {brandKit.typography.bodyFont}
+            </b>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <span>Contact</span>
+            <b style={{ color: "var(--ink)", fontWeight: 600, textAlign: "right" }}>
+              {brandKit.contact.phone ?? "—"}
+            </b>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <span>Compliance</span>
+            <b style={{ color: "var(--ink)", fontWeight: 600, textAlign: "right" }}>
+              {brandKit.compliance.disclaimers.length} disclaimer
+              {brandKit.compliance.disclaimers.length === 1 ? "" : "s"}
+            </b>
+          </div>
+        </div>
+
+        <Link href="/ad-studio/brand" className="studio-btn publish block" style={{ textDecoration: "none" }}>
+          Open Brand Studio
+        </Link>
       </div>
 
-      <details className="studio-advanced">
-        <summary>Advanced</summary>
-        <p>
-          Fonts, CTA style, compliance footer, website, phone, and email stay locked to
-          the approved kit.
-        </p>
-      </details>
+      <div className="studio-upload-card" style={{ cursor: "default" }}>
+        <span className="studio-upload-ic">
+          <Globe2 aria-hidden size={17} />
+        </span>
+        <span>
+          <strong>{domain}</strong>
+          <small>Scan and edit the full kit in Brand Studio</small>
+        </span>
+      </div>
     </>
   );
 }

@@ -12,7 +12,28 @@ type GenerateImageBody = {
   aspectRatio?: string;
   stylePreset?: string;
   referenceAssets?: string[];
+  /** Brand kit visual context — appended so scenes match the brand look. */
+  brand?: {
+    palette?: string[];
+    styleTags?: string[];
+    imageTreatment?: string;
+  };
 };
+
+function withBrandContext(prompt: string, brand: GenerateImageBody["brand"]): string {
+  if (!brand) return prompt;
+  const parts = [prompt];
+  if (brand.palette?.length) {
+    parts.push(`Colour direction: lean into ${brand.palette.slice(0, 3).join(", ")} tones.`);
+  }
+  if (brand.styleTags?.length) {
+    parts.push(`Visual style: ${brand.styleTags.join(", ")}.`);
+  }
+  if (brand.imageTreatment) {
+    parts.push(`Treatment: ${brand.imageTreatment}.`);
+  }
+  return parts.join("\n");
+}
 
 export async function POST(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
@@ -30,7 +51,7 @@ export async function POST(request: NextRequest) {
   try {
     const provider = createOpenAiImageProvider();
     const result = await provider.generate({
-      prompt: body.prompt.trim(),
+      prompt: withBrandContext(body.prompt.trim(), body.brand),
       referenceAssets: body.referenceAssets ?? [],
       aspectRatio: body.aspectRatio ?? "1:1",
       stylePreset: body.stylePreset ?? "real_estate_photography",

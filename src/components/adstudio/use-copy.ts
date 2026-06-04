@@ -24,6 +24,10 @@ export type CopyContext = {
   market: string;
   propertyType: string;
   businessName?: string;
+  /** Brand kit voice & guardrails — included verbatim in the AI prompt. */
+  voice?: string;
+  preferredPhrases?: string[];
+  neverSay?: string[];
 };
 
 export const COPY_LIMITS: Record<keyof CopyState, number> = {

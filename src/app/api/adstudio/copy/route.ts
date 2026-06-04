@@ -27,6 +27,10 @@ type CopyRequestBody = {
     businessName?: string;
     templateName?: string;
     templateHint?: string;
+    /** Brand kit voice — dominates wording style. */
+    voice?: string;
+    preferredPhrases?: string[];
+    neverSay?: string[];
   };
 };
 
@@ -80,6 +84,17 @@ function buildUserMessage(body: CopyRequestBody): string {
   ];
   if (context.templateName) lines.push(`Template: ${context.templateName}`);
   if (context.templateHint) lines.push(`Template intent: ${context.templateHint}`);
+
+  // Brand kit — the advertiser wrote these; they govern wording style.
+  if (context.voice?.trim()) {
+    lines.push("", `Write every field in this voice: ${context.voice.trim()}`);
+  }
+  if (context.preferredPhrases?.length) {
+    lines.push(`Where natural, use phrases like: ${context.preferredPhrases.join("; ")}.`);
+  }
+  if (context.neverSay?.length) {
+    lines.push(`Strictly never use these words or phrases: ${context.neverSay.join("; ")}.`);
+  }
 
   if (body.mode === "brief") {
     lines.push("", "The advertiser describes the ad in their own words:", body.brief?.trim() || "(no brief provided)");
