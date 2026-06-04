@@ -45,7 +45,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
               width: 46,
               height: 46,
               borderRadius: 11,
-              background: brandKit.colours.primary || "#0f1729",
+              background: brandKit.colours.primary || "#131b2e",
               color: "#fff",
               display: "grid",
               placeItems: "center",
@@ -66,8 +66,8 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
               fontWeight: 650,
               borderRadius: 999,
               padding: "5px 11px",
-              background: approved ? "#e8f6ef" : "#fdf4dd",
-              color: approved ? "#0e7a4d" : "#9a6b00",
+              background: approved ? "#ecfdf5" : "#fdf8ee",
+              color: approved ? "#006d38" : "#8a5a00",
               whiteSpace: "nowrap",
             }}
           >

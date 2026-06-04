@@ -15,8 +15,8 @@ import { MetaMonitorHeader } from "./MetaMonitorHeader";
 import { SmoothAreaChart } from "./SmoothAreaChart";
 import { SuburbBarChart } from "./SuburbBarChart";
 
-const SPEND_COLOR = "#2563eb";
-const LEADS_COLOR = "#7c3aed";
+const SPEND_COLOR = "#123e75";
+const LEADS_COLOR = "#31c46f";
 
 export function MetaMonitorDashboard({ initialPayload }: { initialPayload: MetaMonitorPayload }) {
   const [payload, setPayload] = useState(initialPayload);

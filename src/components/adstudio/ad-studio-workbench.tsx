@@ -400,9 +400,9 @@ export function AdStudioWorkbench({
                   >
                     <Icon aria-hidden size={18} />
                     <span>{item.label}</span>
-                    {railState === "done" && <Check aria-hidden size={13} style={{ color: "#0e7a4d", marginLeft: "auto", flexShrink: 0 }} />}
-                    {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#ffb020", marginLeft: "auto", flexShrink: 0 }} />}
-                    {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e2e5ea", marginLeft: "auto", flexShrink: 0 }} />}
+                    {railState === "done" && <Check aria-hidden size={13} style={{ color: "#006d38", marginLeft: "auto", flexShrink: 0 }} />}
+                    {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#8a5a00", marginLeft: "auto", flexShrink: 0 }} />}
+                    {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dfe6f0", marginLeft: "auto", flexShrink: 0 }} />}
                   </button>
                 );
               })}

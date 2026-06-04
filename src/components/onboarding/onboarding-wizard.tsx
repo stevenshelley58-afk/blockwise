@@ -50,11 +50,11 @@ const STEPS: Array<{ id: StepId; label: string }> = [
 ];
 
 const DEFAULT_COLOURS = {
-  primary: "#087F7A",
-  secondary: "#F1F5F2",
-  accent: "#2364AA",
+  primary: "#123E75",
+  secondary: "#F1F5F9",
+  accent: "#31C46F",
   background: "#FFFFFF",
-  text: "#18201F",
+  text: "#131B2E",
   confidence: { primary: 0.52, secondary: 0.48 },
 };
 
@@ -300,7 +300,7 @@ export function OnboardingWizard({
       <div className="panel wizard-panel">
         {current === "profile" ? (
           <form className="wizard-body" onSubmit={saveProfile}>
-            <MapPinned size={26} aria-hidden color="#2f7d32" />
+            <MapPinned size={26} aria-hidden color="#31c46f" />
             <h2>Confirm your profile</h2>
             <p>These details come from your signed-in workspace.</p>
             {!canSaveProfile ? <StatusPill tone="blue">Managed by an owner or admin</StatusPill> : null}
@@ -336,7 +336,7 @@ export function OnboardingWizard({
 
         {current === "brand" ? (
           <form className="wizard-body" onSubmit={saveBrand}>
-            <Palette size={26} aria-hidden color="#2f7d32" />
+            <Palette size={26} aria-hidden color="#31c46f" />
             <h2>Add your brand</h2>
             <p>
               {canSaveBrand
@@ -394,7 +394,7 @@ export function OnboardingWizard({
 
         {current === "connect" ? (
           <div className="wizard-body">
-            <Link2 size={26} aria-hidden color="#2f7d32" />
+            <Link2 size={26} aria-hidden color="#31c46f" />
             <h2>Connect your ad accounts</h2>
             <p>
               {canManageConnections

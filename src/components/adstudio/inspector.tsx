@@ -45,13 +45,13 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
           <label key={key}>
             <span>
               {label}
-              <small style={{ color: overLimit ? "var(--red, #c00)" : undefined }}>
+              <small style={{ color: overLimit ? "var(--rose, #ba1a1a)" : undefined }}>
                 {copy[key].length} / {COPY_LIMITS[key]}
               </small>
             </span>
             <textarea rows={key === "primaryText" ? 3 : 2} value={copy[key]} onChange={(event) => updateCopy(key, event.target.value)} />
             {overLimit && (
-              <small style={{ color: "var(--red, #c00)" }}>
+              <small style={{ color: "var(--rose, #ba1a1a)" }}>
                 Over the Meta limit - shorten this.
               </small>
             )}

@@ -120,8 +120,8 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
           {readiness.map((item) => (
             <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
               {item.met
-                ? <Check size={14} style={{ color: "#45b757", flexShrink: 0 }} aria-hidden />
-                : <CircleAlert size={14} style={{ color: "#ffb020", flexShrink: 0 }} aria-hidden />}
+                ? <Check size={14} style={{ color: "#31c46f", flexShrink: 0 }} aria-hidden />
+                : <CircleAlert size={14} style={{ color: "#8a5a00", flexShrink: 0 }} aria-hidden />}
               <span style={{ color: item.met ? "var(--ink)" : "var(--muted)" }}>{item.label}</span>
             </div>
           ))}
@@ -172,14 +172,14 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
 
       {/* M1: Publish live — gated behind readiness */}
       {publishDone ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 8, background: "#edf8f0", color: "#126b35", border: "1px solid #cdebd4", fontWeight: 750 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 8, background: "#ecfdf5", color: "#006d38", border: "1px solid #b7e7cd", fontWeight: 750 }}>
           <Check size={16} aria-hidden />
           Published live
         </div>
       ) : (
         <>
           {publishError && (
-            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#fff2f2", color: "#b91c1c", border: "1px solid #ffd5d5", fontSize: 13, fontWeight: 700 }}>
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#fdf3f2", color: "#ba1a1a", border: "1px solid #ffdad6", fontSize: 13, fontWeight: 700 }}>
               {publishError}
             </div>
           )}
@@ -207,10 +207,10 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
             type="button"
             style={{
               width: "100%",
-              border: "1px solid #ffd5d5",
+              border: "1px solid #ffdad6",
               borderRadius: 8,
               background: "#fff",
-              color: "#dc2626",
+              color: "#ba1a1a",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
