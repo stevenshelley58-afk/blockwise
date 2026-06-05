@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
+
+import { PageViewTracker } from "@/components/page-view-tracker";
 
 import "./globals.css";
 import "./meta-monitor.css";
@@ -99,6 +102,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </noscript>
         {/* End Meta Pixel Code */}
         {children}
+        <PageViewTracker />
+        <Analytics />
       </body>
     </html>
   );

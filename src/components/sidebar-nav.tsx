@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  BarChart3,
   Bot,
   Building2,
   ClipboardCheck,
@@ -29,6 +30,7 @@ type NavItem = {
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
+  { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/monitor", label: "Monitor", icon: Gauge },
   { href: "/self-serve", label: "Create", icon: Sparkles },
   { href: "/research", label: "Ad Library", icon: FileSearch },
