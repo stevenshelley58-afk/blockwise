@@ -108,8 +108,8 @@
 }
 .lp-hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
-  column-gap: 84px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  column-gap: 56px;
   align-items: center;
 }
 .lp-hero h1 {
@@ -142,19 +142,22 @@
   color: #fff; flex: none;
 }
 
-/* hero media */
-.lp-hero-media { position: relative; }
+/* hero media — oversized photo card, breaks out toward the right viewport edge */
+.lp-hero-media {
+  position: relative;
+  margin-right: clamp(-160px, calc(28px - (100vw - min(1200px, 100vw - 48px)) / 2), 0px);
+}
 .lp-hero-photo {
   display: block; width: 100%;
-  aspect-ratio: 13 / 10; object-fit: cover;
+  aspect-ratio: 6 / 5; object-fit: cover;
   border-radius: 24px;
   box-shadow: 0 30px 70px -28px rgba(10, 42, 84, 0.45);
 }
 
-/* hero performance card — floats over the photo */
+/* hero performance card — anchored in the photo's bottom-right corner */
 .lp-perf {
-  position: absolute; top: 30px; left: -38px;
-  width: min(72%, 400px);
+  position: absolute; right: 22px; bottom: 22px;
+  width: min(58%, 396px);
   background: #fff; border-radius: 18px;
   border: 1px solid var(--lp-border-soft);
   padding: 20px 20px 18px;
@@ -414,7 +417,8 @@
   .lp-hero-grid, .lp-split, .lp-faq-grid, .lp-radar-top { grid-template-columns: 1fr; gap: 48px; }
   .lp-hero-grid { row-gap: 56px; }
   .lp-hero h1, .lp-hero .lp-lead, .lp-trust-row { max-width: 620px; }
-  .lp-perf { left: 18px; top: 22px; width: min(68%, 400px); }
+  .lp-hero-media { margin-right: 0; }
+  .lp-perf { right: 16px; bottom: 18px; width: min(68%, 400px); }
   .lp-pipe-grid { grid-template-columns: repeat(2, 1fr); row-gap: 40px; }
   .lp-radar-list { grid-template-columns: repeat(2, 1fr); }
   .lp-radar-list > :last-child { grid-column: 1 / -1; }
