@@ -7,19 +7,19 @@ export const testUsers = [
   },
   {
     key: "monitor",
-    label: "Monitor",
+    label: "Results",
     email: "monitor@blockwise.test",
-    homePath: "/monitor",
+    homePath: "/results",
   },
   {
     key: "self_serve",
     label: "Self-Serve",
     email: "selfserve@blockwise.test",
-    homePath: "/self-serve",
+    homePath: "/results",
   },
 ] as const;
 
 export function getRedirectForEmail(email?: string | null) {
   const normalizedEmail = email?.toLowerCase();
-  return testUsers.find((user) => user.email === normalizedEmail)?.homePath ?? "/monitor";
+  return testUsers.find((user) => user.email === normalizedEmail)?.homePath ?? "/results";
 }

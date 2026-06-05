@@ -33,7 +33,7 @@ export function createOAuthStatePayload(input: {
     provider: input.provider,
     workspaceId: input.workspaceId,
     userId: input.userId,
-    returnPath: input.returnPath ?? "/monitor",
+    returnPath: input.returnPath ?? "/results",
     issuedAt: input.nowSeconds ?? Math.floor(Date.now() / 1000),
     nonce: randomBytes(16).toString("base64url"),
   };

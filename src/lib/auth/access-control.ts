@@ -7,8 +7,7 @@ export type ProductSurface =
   | "adstudio"
   | "agents"
   | "model_control"
-  | "approvals"
-  | "campaigns";
+  | "approvals";
 
 export type AccessContext = {
   role: WorkspaceRole;
@@ -16,7 +15,7 @@ export type AccessContext = {
 };
 
 export function canAccessSurface(context: AccessContext, surface: ProductSurface): boolean {
-  if (surface === "operator" || surface === "agents" || surface === "model_control" || surface === "campaigns") {
+  if (surface === "operator" || surface === "agents" || surface === "model_control") {
     return context.role === "operator";
   }
 

@@ -10,10 +10,9 @@ type HomeMembershipRow = {
 };
 
 /**
- * Resolves where a signed-in user should land based on the profile they signed
- * up for: operators -> /operator, self-serve workspaces -> /self-serve (the
- * self-serve home page), everyone else -> /monitor. Mirrors the variant logic
- * in AppShell so the landing page always matches the sidebar the user sees.
+ * Resolves where a signed-in user should land: operators -> /operator,
+ * everyone else -> /results. New workspaces see demo data on /results with a
+ * guided setup popup until they connect an ad account.
  */
 export async function resolveHomePath(supabase: SupabaseServerClient): Promise<string> {
   const {
@@ -39,14 +38,5 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
     return "/operator";
   }
 
-  const firstWorkspace = Array.isArray(rows[0]?.workspaces) ? rows[0]?.workspaces[0] : rows[0]?.workspaces;
-  const onboardingStatus = firstWorkspace?.onboarding_status ?? "complete";
-  if (
-    firstWorkspace?.mode === "self_serve" &&
-    (onboardingStatus === "not_started" || onboardingStatus === "full_setup")
-  ) {
-    return "/start";
-  }
-
-  return firstWorkspace?.mode === "self_serve" ? "/self-serve" : "/monitor";
+  return "/results";
 }
