@@ -2,17 +2,15 @@
 
 import {
   Activity,
-  BarChart3,
   Bot,
-  Building2,
+  ChartNoAxesCombined,
   ClipboardCheck,
-  FileSearch,
-  Gauge,
   Images,
   LayoutDashboard,
-  Megaphone,
+  PenLine,
+  Radar,
   Settings2,
-  Sparkles,
+  SlidersHorizontal,
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -30,33 +28,31 @@ type NavItem = {
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
-  { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/self-serve", label: "Create", icon: Sparkles },
-  { href: "/research", label: "Ad Library", icon: FileSearch },
+  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
+  { href: "/self-serve", label: "Create", icon: PenLine },
+  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: SlidersHorizontal },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 
 const selfServeNavItems: NavItem[] = [
-  { href: "/self-serve", label: "Create", icon: Sparkles },
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/research", label: "Research", icon: FileSearch },
+  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
+  { href: "/self-serve", label: "Create", icon: PenLine },
+  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
 const monitorNavItems: NavItem[] = [
-  { href: "/monitor", label: "Monitor", icon: Gauge },
-  { href: "/research", label: "Research", icon: FileSearch },
+  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
+  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/onboarding", label: "Onboarding", icon: Building2 },
+  { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
 const navByVariant: Record<SidebarVariant, NavItem[]> = {

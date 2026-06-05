@@ -41,11 +41,11 @@ export function MetaMonitorHeader(props: {
   return (
     <header className="mm-header">
       <div>
-        <div className="eyebrow">Monitor</div>
+        <div className="eyebrow">Results</div>
         <div className="mm-title-row">
           <MetaMark />
           <h1>Meta Ads Overview</h1>
-          {props.isSample ? <span className="mm-chip">Sample data</span> : null}
+          {props.isSample ? <span className="mm-chip mm-chip-demo">Demo data</span> : null}
         </div>
         <p className="mm-subtitle">Performance summary for the {props.range.label.toLowerCase()}</p>
       </div>

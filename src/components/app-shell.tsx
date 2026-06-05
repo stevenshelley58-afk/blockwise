@@ -150,11 +150,11 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   const workspaceMode = workspace?.mode === "self_serve" ? "self_serve" : "monitor";
 
   if (requiredAccess === "operator" && !isOperator) {
-    redirect(workspaceMode === "self_serve" ? "/self-serve" : "/monitor");
+    redirect("/results");
   }
 
   const variant: SidebarVariant = isOperator ? "operator" : workspaceMode === "self_serve" ? "self_serve" : "monitor";
-  const homeHref = isOperator ? "/operator" : workspaceMode === "self_serve" ? "/self-serve" : "/monitor";
+  const homeHref = isOperator ? "/operator" : "/results";
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
   const accountName = profile?.full_name ?? user.email ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";

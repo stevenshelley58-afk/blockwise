@@ -9,6 +9,7 @@ import type { MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types"
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdsSummaryTable } from "./AdsSummaryTable";
 import { BudgetPacingChart } from "./BudgetPacingChart";
+import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
@@ -18,7 +19,13 @@ import { SuburbBarChart } from "./SuburbBarChart";
 const SPEND_COLOR = "#123e75";
 const LEADS_COLOR = "#31c46f";
 
-export function MetaMonitorDashboard({ initialPayload }: { initialPayload: MetaMonitorPayload }) {
+export function MetaMonitorDashboard({
+  initialPayload,
+  metaConnectHref,
+}: {
+  initialPayload: MetaMonitorPayload;
+  metaConnectHref?: string;
+}) {
   const [payload, setPayload] = useState(initialPayload);
   const [rangeKey, setRangeKey] = useState<MonitorRange>(initialPayload.range.key);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -77,6 +84,10 @@ export function MetaMonitorDashboard({ initialPayload }: { initialPayload: MetaM
       />
 
       {error ? <p className="mm-error" role="alert">{error}</p> : null}
+
+      {payload.source === "sample" && !payload.connected && metaConnectHref ? (
+        <DemoModeNotice metaConnectHref={metaConnectHref} />
+      ) : null}
 
       {!summary ? (
         <EmptyMetaState issue={payload.issue} connected={payload.connected} />
