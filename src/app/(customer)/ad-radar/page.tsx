@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
-import { MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
+import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import {
   adRunningMs,
@@ -111,11 +111,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         </div>
 
         {cards.length > 0 ? (
-          <div className="research-results-grid">
-            {cards.map((card) => (
-              <MetaAdLibraryCard card={card} key={card.id} />
-            ))}
-          </div>
+          <AdRadarResultsGrid cards={cards} />
         ) : (
           <div className="research-empty-state">
             <h3>No ads matched</h3>
@@ -127,30 +123,39 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   );
 }
 
+const FETCH_BATCH_SIZE = 1000;
+const FETCH_CEILING = 10000;
+
 async function loadCustomerMetaAdLibraryCards(
   supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"],
   searchTerm: string,
   sort: ResearchSort,
 ): Promise<{ cards: CustomerMetaAdLibraryCard[]; loadError: string | null }> {
-  const { data, error } = await supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
-    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .order("last_seen_at", { ascending: false })
-    .limit(500);
+  // Page through the view in batches so results are not silently capped.
+  const rows: CustomerMetaAdLibraryCardRow[] = [];
+  for (let from = 0; from < FETCH_CEILING; from += FETCH_BATCH_SIZE) {
+    const { data, error } = await supabase
+      .schema("research")
+      .from("v_customer_meta_ad_library_cards")
+      .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+      .order("last_seen_at", { ascending: false })
+      .range(from, from + FETCH_BATCH_SIZE - 1);
 
-  if (error) {
-    return { cards: [], loadError: "Ad Radar data is temporarily unavailable." };
+    if (error) {
+      return { cards: [], loadError: "Ad Radar data is temporarily unavailable." };
+    }
+
+    const batch = (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];
+    rows.push(...batch);
+    if (batch.length < FETCH_BATCH_SIZE) break;
   }
 
-  const allCards = ((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseCustomerMetaAdLibraryCard);
+  const allCards = rows.map(normaliseCustomerMetaAdLibraryCard);
   const filtered = searchTerm
     ? allCards.filter((card) => cardMatches(card, searchTerm))
     : allCards.filter((card) => !card.state || card.state.toUpperCase() === "WA");
 
-  const sorted = sortCards(dedupeCards(filtered), sort);
-
-  return { cards: sorted.slice(0, 80), loadError: null };
+  return { cards: sortCards(dedupeCards(filtered), sort), loadError: null };
 }
 
 function sortCards(cards: CustomerMetaAdLibraryCard[], sort: ResearchSort): CustomerMetaAdLibraryCard[] {
