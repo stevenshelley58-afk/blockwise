@@ -12,9 +12,22 @@ type MediaPanelProps = {
 };
 
 export function MediaPanel({ primaryImage, openFilePicker, onSelectImage }: MediaPanelProps) {
+  const selectedAsset = MEDIA_ASSETS.find((asset) => asset.src === primaryImage);
+  const currentLabel = selectedAsset?.label ?? "Uploaded image";
+
   return (
     <>
       <PanelHeader title="Media" detail="Your images and the generated ad sizes." />
+      <div className="studio-current-media" aria-label="Current image">
+        <img src={primaryImage} alt="" />
+        <span>
+          <strong>Current image</strong>
+          <small>{currentLabel}</small>
+        </span>
+        <button type="button" onClick={openFilePicker}>
+          Replace
+        </button>
+      </div>
       <button className="studio-upload-card" type="button" onClick={openFilePicker}>
         <span className="studio-upload-ic">
           <Upload aria-hidden size={17} />

@@ -3,7 +3,7 @@
 import { FileText, Info, PenLine, Zap } from "lucide-react";
 
 import { CopyFields, PanelHeader } from "../inspector";
-import type { CopyAlternates, CopyContext, CopyMode, CopyState } from "../use-copy";
+import type { CopyAlternates, CopyContext, CopyFeedback, CopyMode, CopyState } from "../use-copy";
 
 const ASSIST_ACTIONS = ["Sharper", "More local", "More premium", "More direct", "Less hype", "5 hook ideas"];
 
@@ -15,6 +15,7 @@ type CopyPanelProps = {
   brief: string;
   setBrief: (value: string) => void;
   generating: boolean;
+  feedback: CopyFeedback | null;
   alternates: CopyAlternates;
   context: CopyContext;
   onGenerate: (kind: "ai" | "brief", context: CopyContext) => void;
@@ -30,6 +31,7 @@ export function CopyPanel({
   brief,
   setBrief,
   generating,
+  feedback,
   alternates,
   context,
   onGenerate,
@@ -37,6 +39,16 @@ export function CopyPanel({
   onApplyAlternate,
 }: CopyPanelProps) {
   const hasAlternates = alternates.headline.length > 0 || alternates.primaryText.length > 0;
+  const feedbackNode = feedback ? (
+    <div
+      className={`studio-inline-feedback ${feedback.tone}`}
+      role={feedback.tone === "error" ? "alert" : "status"}
+      aria-live="polite"
+    >
+      <Info aria-hidden size={15} />
+      <span>{feedback.message}</span>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -91,6 +103,7 @@ export function CopyPanel({
             <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Write it for me"}
           </button>
+          {feedbackNode}
           <CopyFields copy={copy} updateCopy={updateCopy} />
           {hasAlternates && (
             <>
@@ -141,6 +154,11 @@ export function CopyPanel({
             <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Generate copy from brief"}
           </button>
+          {feedbackNode}
+          <div className="studio-copy-result" aria-label="Current ad copy">
+            <strong>Current ad copy</strong>
+            <CopyFields copy={copy} updateCopy={updateCopy} />
+          </div>
           <div className="studio-hint">
             <Info aria-hidden size={15} />
             <span>

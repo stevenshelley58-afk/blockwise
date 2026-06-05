@@ -14,9 +14,10 @@ import {
   Target,
   Type,
   UsersRound,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   AdStudioBrandKit,
@@ -131,6 +132,7 @@ export function AdStudioWorkbench({
   const [pack, setPack] = useState(initialPack);
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
+  const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -156,6 +158,7 @@ export function AdStudioWorkbench({
     brief,
     setBrief,
     generating,
+    feedback,
     alternates,
     generateCopy,
     applyCopyAssist,
@@ -195,6 +198,15 @@ export function AdStudioWorkbench({
       studio.setSection("media");
     },
   );
+
+  function selectMediaImage(src: string) {
+    setPrimaryImage(src);
+    setSelectedElement("image");
+    studio.setSaveState("saving");
+    window.setTimeout(() => studio.setSaveState("saved"), 650);
+    studio.showToast("Image selected");
+  }
+
   const { readinessItems } = useReadiness({
     campaignGoal,
     offerLabel,
@@ -301,16 +313,25 @@ export function AdStudioWorkbench({
     setPrimaryImage(MEDIA_ASSETS[index % MEDIA_ASSETS.length].src);
   }
 
-  function updateCreative(nextCreative: AdStudioCreative) {
+  // Stable identity: the Fabric editor receives this — a new identity per render
+  // would force the canvas to remount and lose in-progress edits.
+  const { setSaveState } = studio;
+  const updateCreative = useCallback((nextCreative: AdStudioCreative) => {
     setPack((current) => ({
       ...current,
       creatives: current.creatives.map((creative) =>
         creative.creativeId === nextCreative.creativeId ? nextCreative : creative,
       ),
     }));
-    studio.setSaveState("saving");
-    window.setTimeout(() => studio.setSaveState("saved"), 650);
-  }
+    setSaveState("saving");
+    window.setTimeout(() => setSaveState("saved"), 650);
+  }, [setSaveState]);
+
+  const { setSection } = studio;
+  const handleCanvasElementSelect = useCallback((element: SelectedElement) => {
+    setSelectedElement(element);
+    setSection(element === "image" ? "media" : "copy");
+  }, [setSection]);
 
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
@@ -332,6 +353,39 @@ export function AdStudioWorkbench({
     await generateFirstAd(input);
   }
 
+  function renderCampaignPanel(options?: { mobileSheet?: boolean }) {
+    return (
+      <CampaignPanel
+        campaignGoal={campaignGoal}
+        setCampaignGoal={setCampaignGoal}
+        offerLabel={offerLabel}
+        setOfferLabel={setOfferLabel}
+        market={market}
+        setMarket={setMarket}
+        propertyType={propertyType}
+        setPropertyType={setPropertyType}
+        leadDestination={leadDestination}
+        setLeadDestination={setLeadDestination}
+        destinationUrl={destinationUrl}
+        setDestinationUrl={setDestinationUrl}
+        variantCount={pack.variants.length}
+        onCreateAd={() => {
+          if (options?.mobileSheet) setMobileAdDetailsOpen(false);
+          openNewAd();
+        }}
+        onBrowseTemplates={() => {
+          if (options?.mobileSheet) {
+            setMobileAdDetailsOpen(false);
+            openNewAd();
+          } else {
+            studio.setSection("templates");
+          }
+        }}
+        templates={AD_STUDIO_TEMPLATES}
+      />
+    );
+  }
+
   function renderPanel() {
     if (studio.section === "templates") {
       return (
@@ -347,7 +401,7 @@ export function AdStudioWorkbench({
     }
     if (studio.section === "media") {
       // 1a: wire onSelectImage so library tiles actually update the primary image
-      return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={setPrimaryImage} />;
+      return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={selectMediaImage} />;
     }
     if (studio.section === "copy") {
       return (
@@ -359,6 +413,7 @@ export function AdStudioWorkbench({
           brief={brief}
           setBrief={setBrief}
           generating={generating}
+          feedback={feedback}
           alternates={alternates}
           context={copyContext}
           onGenerate={(kind, context) => void generateCopy(kind, context)}
@@ -385,26 +440,7 @@ export function AdStudioWorkbench({
     if (studio.section === "settings") {
       return <SettingsPanel />;
     }
-    return (
-      <CampaignPanel
-        campaignGoal={campaignGoal}
-        setCampaignGoal={setCampaignGoal}
-        offerLabel={offerLabel}
-        setOfferLabel={setOfferLabel}
-        market={market}
-        setMarket={setMarket}
-        propertyType={propertyType}
-        setPropertyType={setPropertyType}
-        leadDestination={leadDestination}
-        setLeadDestination={setLeadDestination}
-        destinationUrl={destinationUrl}
-        setDestinationUrl={setDestinationUrl}
-        variantCount={pack.variants.length}
-        onCreateAd={() => openNewAd()}
-        onBrowseTemplates={() => studio.setSection("templates")}
-        templates={AD_STUDIO_TEMPLATES}
-      />
-    );
+    return renderCampaignPanel();
   }
 
   return (
@@ -461,7 +497,7 @@ export function AdStudioWorkbench({
                     className={studio.section === item.id ? "active" : ""}
                     key={item.id}
                     type="button"
-                    onClick={() => studio.setSection(item.id)}
+                    onClick={() => (item.id === "templates" ? openNewAd() : studio.setSection(item.id))}
                   >
                     <Icon aria-hidden size={18} />
                     <span>{item.label}</span>
@@ -499,10 +535,7 @@ export function AdStudioWorkbench({
                 onImageChange={setPrimaryImage}
                 onPatchSelectedLayer={patchSelectedLayer}
                 onRequestImageReplace={openFilePicker}
-                onSelectedElementChange={(element) => {
-                  setSelectedElement(element);
-                  studio.setSection(element === "image" ? "media" : "copy");
-                }}
+                onSelectedElementChange={handleCanvasElementSelect}
               />
             ) : (
               <AdPreview
@@ -557,12 +590,46 @@ export function AdStudioWorkbench({
 
       <div className="studio-mobile-body">
         <div className="studio-mobile-campaign">
-          <button className="studio-mobile-campaign-btn" type="button">
+          <button
+            className="studio-mobile-campaign-btn"
+            type="button"
+            aria-controls="studio-mobile-ad-details"
+            aria-expanded={mobileAdDetailsOpen}
+            onClick={() => setMobileAdDetailsOpen(true)}
+          >
             <Target aria-hidden size={18} />
             {campaignName}
             <ChevronDown aria-hidden size={16} />
           </button>
         </div>
+
+        {mobileAdDetailsOpen && (
+          <div
+            className="studio-mobile-sheet-backdrop"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setMobileAdDetailsOpen(false);
+            }}
+          >
+            <section
+              id="studio-mobile-ad-details"
+              className="studio-mobile-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Ad details"
+            >
+              <header className="studio-mobile-sheet-head">
+                <div>
+                  <strong>Ad details</strong>
+                  <span>{campaignName}</span>
+                </div>
+                <button type="button" aria-label="Close ad details" onClick={() => setMobileAdDetailsOpen(false)}>
+                  <X aria-hidden size={18} />
+                </button>
+              </header>
+              <div className="studio-mobile-sheet-body">{renderCampaignPanel({ mobileSheet: true })}</div>
+            </section>
+          </div>
+        )}
 
         <div className="studio-mobile-format-tabs">
           {(["story", "feed", "square"] as PreviewFormat[]).map((item) => (
@@ -594,25 +661,7 @@ export function AdStudioWorkbench({
 
         {studio.mobileTab === "media" && (
           <div className="studio-mobile-panel">
-            <VariantStrip
-              variants={variants}
-              selectedVariantIndex={selectedVariantIndex}
-              onSelect={selectVariant}
-              onAdd={() => openNewAd()}
-              onEditCopy={(index) => {
-                selectVariant(index);
-                studio.setMobileTab("copy");
-              }}
-              onReplaceImage={(index) => {
-                selectVariant(index);
-                openFilePicker();
-              }}
-              onRegenerate={(index) => {
-                const variant = pack.variants[index];
-                const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
-                void generateVariantsForAngle(angle);
-              }}
-            />
+            <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={selectMediaImage} />
           </div>
         )}
 
@@ -626,6 +675,7 @@ export function AdStudioWorkbench({
               brief={brief}
               setBrief={setBrief}
               generating={generating}
+              feedback={feedback}
               alternates={alternates}
               context={copyContext}
               onGenerate={(kind, context) => void generateCopy(kind, context)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { AdStudioCampaignPack, AdStudioPlatformCopyPack, MetaLeadAdPack } from "@/lib/adstudio";
 
@@ -16,6 +16,11 @@ export type CopyMode = "ai" | "brief" | "own";
 export type CopyAlternates = {
   headline: string[];
   primaryText: string[];
+};
+
+export type CopyFeedback = {
+  tone: "info" | "success" | "error";
+  message: string;
 };
 
 export type CopyContext = {
@@ -126,13 +131,15 @@ export function useCopy(
   const [brief, setBrief] = useState("");
   const [generating, setGenerating] = useState(false);
   const [alternates, setAlternates] = useState<CopyAlternates>(EMPTY_ALTERNATES);
+  const [feedback, setFeedback] = useState<CopyFeedback | null>(null);
 
-  function updateCopy(key: keyof CopyState, value: string) {
+  // Stable identity: flows into the Fabric editor's commit pipeline.
+  const updateCopy = useCallback((key: keyof CopyState, value: string) => {
     setCopy((current) => ({ ...current, [key]: value }));
     setSelectedElement?.(key);
     setSaveState("saving");
     window.setTimeout(() => setSaveState("saved"), 650);
-  }
+  }, [setSaveState, setSelectedElement]);
 
   function applyCopySet(next: Partial<CopyState>, nextAlternates?: Partial<CopyAlternates>) {
     setCopy((current) => ({ ...current, ...next }));
@@ -163,10 +170,12 @@ export function useCopy(
   async function generateCopy(kind: "ai" | "brief", context: CopyContext) {
     if (generating) return;
     if (kind === "brief" && !brief.trim()) {
+      setFeedback({ tone: "error", message: "Add a brief before generating copy." });
       showToast("Add a brief before generating copy");
       return;
     }
     setGenerating(true);
+    setFeedback({ tone: "info", message: kind === "brief" ? "Writing copy from your brief..." : "Writing copy for this ad..." });
     try {
       const result = await requestCopy({
         mode: kind === "brief" ? "brief" : "generate",
@@ -175,9 +184,12 @@ export function useCopy(
         context,
       });
       applyCopySet(result.copy ?? {}, result.alternates);
+      setFeedback({ tone: "success", message: kind === "brief" ? "Copy updated from your brief." : "Copy updated." });
       showToast(kind === "brief" ? "Copy written from your brief" : "Copy written for you");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not generate copy");
+      const message = error instanceof Error ? error.message : "Could not generate copy";
+      setFeedback({ tone: "error", message });
+      showToast(message);
     } finally {
       setGenerating(false);
     }
@@ -245,6 +257,7 @@ export function useCopy(
     brief,
     setBrief,
     generating,
+    feedback,
     alternates,
     generateCopy,
     applyCopyAssist,

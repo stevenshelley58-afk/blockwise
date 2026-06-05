@@ -58,6 +58,11 @@ export function TopBar({
     }
   }
 
+  function handleSaveFromMenu() {
+    setShowMore(false);
+    onSave();
+  }
+
   async function handleShare() {
     setShowMore(false);
     try {
@@ -118,6 +123,10 @@ export function TopBar({
 
       {showMore && (
         <div className="studio-more-menu" ref={menuRef} role="menu" aria-label="Ad actions">
+          <button className="studio-mobile-menu-save" type="button" role="menuitem" onClick={handleSaveFromMenu}>
+            <Cloud aria-hidden size={16} />
+            Save draft
+          </button>
           <button type="button" role="menuitem" onClick={handleDuplicate}>
             <Copy aria-hidden size={16} />
             Duplicate campaign
