@@ -12,6 +12,7 @@ export type PromptTestRunInput = {
   key: string;
   fixtureId: string;
   version?: number;
+  runProvider?: boolean;
   client?: PromptSupabaseClient;
 };
 
@@ -49,6 +50,10 @@ export function listPromptTestFixtures() {
 }
 
 export async function runPromptTest(input: PromptTestRunInput): Promise<PromptTestRunResult> {
+  if (input.runProvider) {
+    throw new Error("Provider execution is disabled for prompt tests in PR 1.");
+  }
+
   const promptKey = assertPromptKey(input.key);
   const fixture = getPromptTestFixture(input.fixtureId);
 

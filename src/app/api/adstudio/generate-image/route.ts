@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createOpenAiImageProvider, generateMixedImageVariantsInParallel } from "@/lib/adstudio";
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
   }
 
   const startedAt = Date.now();
+  const correlationId = randomUUID();
   const referenceAssets = body.referenceAssets ?? [];
   const aspectRatio = body.aspectRatio ?? "1:1";
   const stylePreset = body.stylePreset ?? "real_estate_photography";
@@ -84,6 +87,8 @@ export async function POST(request: NextRequest) {
       if (!first) {
         await recordAdStudioProviderRun({
           workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          correlationId,
           taskType: "adstudio.image",
           modelProfile: "image_draft",
           prompt: assembled,
@@ -109,6 +114,8 @@ export async function POST(request: NextRequest) {
 
       await recordAdStudioProviderRun({
         workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        correlationId,
         taskType: "adstudio.image",
         modelProfile: "image_draft",
         prompt: assembled,
@@ -146,6 +153,8 @@ export async function POST(request: NextRequest) {
     if (!generation.result.assetUrl) {
       await recordAdStudioProviderRun({
         workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        correlationId,
         taskType: "adstudio.image",
         modelProfile: "image_final",
         prompt: assembled,
@@ -171,6 +180,8 @@ export async function POST(request: NextRequest) {
 
     await recordAdStudioProviderRun({
       workspaceId: context.access.workspaceId,
+      userId: context.access.userId,
+      correlationId,
       taskType: "adstudio.image",
       modelProfile: "image_final",
       prompt: assembled,
@@ -195,6 +206,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     await recordAdStudioProviderRun({
       workspaceId: context.access.workspaceId,
+      userId: context.access.userId,
+      correlationId,
       taskType: "adstudio.image",
       modelProfile: (body.variantCount ?? 1) > 1 ? "image_draft" : "image_final",
       prompt: assembled,

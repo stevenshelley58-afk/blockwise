@@ -5,17 +5,34 @@ import test from "node:test";
 import {
   assembleImagePrompt,
   assembleMetaCopyPrompt,
+  PromptAssemblyError,
   renderTemplate,
 } from "../src/lib/operator/prompts/assemble-prompt.ts";
 import {
+  createDraftPromptVersion,
   getActivePromptBundle,
   getActivePromptSection,
+  listPromptKeys,
   PROMPT_FALLBACKS,
+  PROMPT_KEYS,
+  PROMPT_SECTION_TYPES,
   type PromptKey,
+  type PromptSection,
 } from "../src/lib/operator/prompts/prompt-registry.ts";
-import { buildRedactedProviderRunInput, redactRecord } from "../src/lib/operator/prompts/redact-prompt-run.ts";
+import { runPromptTest } from "../src/lib/operator/prompts/prompt-test-runner.ts";
+import {
+  buildRedactedProviderRunInput,
+  estimateAdStudioProviderRunCostUsd,
+  redactRecord,
+} from "../src/lib/operator/prompts/redact-prompt-run.ts";
 
-const migrationSql = readFileSync("supabase/migrations/202606040002_prompt_governance.sql", "utf8");
+const initialMigrationSql = readFileSync("supabase/migrations/202605260001_initial_blockwise.sql", "utf8");
+const promptGovernanceMigrationSql = readFileSync("supabase/migrations/202606040002_prompt_governance.sql", "utf8");
+const stabilizationMigrationSql = readFileSync(
+  "supabase/migrations/202606050001_prompt_governance_stabilization.sql",
+  "utf8",
+);
+const migrationSql = `${promptGovernanceMigrationSql}\n\n${stabilizationMigrationSql}`;
 
 const copyKeys: PromptKey[] = [
   "adstudio.copy.system",
@@ -32,14 +49,36 @@ const imageKeys: PromptKey[] = [
   "adstudio.image.aspect_ratio_rules",
 ];
 
-test("prompt governance migration adds active lifecycle and service-only RPC promotion", () => {
+test("prompt governance migrations keep lifecycle RPCs service-only and key-locked", () => {
+  assert.match(initialMigrationSql, /unique \(key, version\)/i);
   assert.match(migrationSql, /add column if not exists status text not null default 'draft'/i);
   assert.match(migrationSql, /check \(status in \('draft', 'active', 'archived'\)\)/i);
   assert.match(migrationSql, /where status = 'active' and workspace_id is null/i);
+  assert.match(stabilizationMigrationSql, /create or replace function public\.create_global_prompt_draft/i);
   assert.match(migrationSql, /create or replace function public\.promote_global_prompt_version/i);
   assert.match(migrationSql, /create or replace function public\.rollback_global_prompt_version/i);
+  assert.match(stabilizationMigrationSql, /pg_advisory_xact_lock\(hashtext\('prompt_versions\.global'\), hashtext\(target_key\)\)/i);
+  assert.match(stabilizationMigrationSql, /where workspace_id is null\s+and key = target_key\s+for update/i);
+  assert.match(stabilizationMigrationSql, /select coalesce\(max\(version\), 0\) \+ 1/i);
+  assert.doesNotMatch(stabilizationMigrationSql, /drop constraint/i);
+  assert.match(stabilizationMigrationSql, /revoke all on function public\.create_global_prompt_draft/i);
   assert.match(migrationSql, /revoke all on function public\.promote_global_prompt_version/i);
   assert.match(migrationSql, /grant execute on function public\.rollback_global_prompt_version.*to service_role/i);
+});
+
+test("active prompt registry excludes deferred future workflow prompts", () => {
+  const futureKeys = [
+    "adstudio.brief_refiner.system",
+    "adstudio.template_selector.system",
+    "adstudio.compliance_review.system",
+  ];
+  const listedKeys = listPromptKeys().map((prompt) => prompt.key);
+
+  for (const futureKey of futureKeys) {
+    assert.equal(PROMPT_KEYS.includes(futureKey as PromptKey), false);
+    assert.equal(listedKeys.includes(futureKey as PromptKey), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(PROMPT_FALLBACKS, futureKey), false);
+  }
 });
 
 test("active prompt lookup falls back to bundled prompt when no service client is available", async () => {
@@ -47,7 +86,58 @@ test("active prompt lookup falls back to bundled prompt when no service client i
 
   assert.equal(section.source, "fallback");
   assert.equal(section.version, 0);
+  assert.equal(section.metadata.section_type, "system");
   assert.match(section.body, /Australian residential real-estate/);
+});
+
+test("fallback prompt sections include canonical section_type metadata", async () => {
+  for (const key of PROMPT_KEYS) {
+    const section = await getActivePromptSection(key, PROMPT_FALLBACKS[key], null);
+    assert.equal(section.metadata.section_type, PROMPT_SECTION_TYPES[key]);
+  }
+});
+
+test("draft creation uses the locked RPC and sends section_type metadata", async () => {
+  const calls: Array<{ name: string; args?: Record<string, unknown> }> = [];
+  const client = {
+    from() {
+      throw new Error("createDraftPromptVersion should not insert directly.");
+    },
+    rpc(name: string, args?: Record<string, unknown>) {
+      calls.push({ name, args });
+      return {
+        data: {
+          id: "11111111-1111-4111-8111-111111111111",
+          workspace_id: null,
+          key: args?.target_key,
+          version: 2,
+          model_profile_id: null,
+          system_prompt: args?.prompt_body,
+          output_schema: args?.prompt_output_schema ?? null,
+          created_by: args?.operator_profile_id ?? null,
+          created_at: "2026-06-05T00:00:00.000Z",
+          status: "draft",
+          title: args?.prompt_title,
+          notes: args?.prompt_notes,
+          metadata_json: args?.prompt_metadata,
+        },
+        error: null,
+      };
+    },
+  };
+
+  const draft = await createDraftPromptVersion(client as any, "adstudio.copy.input_template", {
+    body: "{{BRAND_CONSTRAINTS}}",
+    metadata: { reviewer: "operator" },
+    createdBy: "22222222-2222-4222-8222-222222222222",
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.name, "create_global_prompt_draft");
+  assert.equal(calls[0]?.args?.target_key, "adstudio.copy.input_template");
+  assert.equal((calls[0]?.args?.prompt_metadata as Record<string, unknown>).section_type, "input_template");
+  assert.equal(draft.version, 2);
+  assert.equal(draft.source, "db");
 });
 
 test("template renderer rejects unknown placeholders", () => {
@@ -67,6 +157,37 @@ test("template renderer rejects unknown placeholders", () => {
         REFERENCE_ASSETS: "",
       }),
     /Unknown prompt placeholder: NOT_ALLOWED/,
+  );
+});
+
+test("malformed active database prompt fails loudly instead of falling back", async () => {
+  const bundle = await getActivePromptBundle(copyKeys, undefined, null);
+  const badSection: PromptSection = {
+    ...bundle["adstudio.copy.input_template"],
+    id: "33333333-3333-4333-8333-333333333333",
+    source: "db",
+    version: 7,
+    body: "{{NOT_ALLOWED}}",
+  };
+
+  assert.throws(
+    () =>
+      assembleMetaCopyPrompt({
+        bundle: {
+          ...bundle,
+          "adstudio.copy.input_template": badSection,
+        },
+        mode: "generate",
+        context: { businessName: "Northstar Realty" },
+      }),
+    (error) => {
+      assert.equal(error instanceof PromptAssemblyError, true);
+      assert.equal((error as PromptAssemblyError).key, "adstudio.copy.input_template");
+      assert.equal((error as PromptAssemblyError).version, 7);
+      assert.equal((error as PromptAssemblyError).source, "database");
+      assert.match((error as Error).message, /Unknown prompt placeholder: NOT_ALLOWED/);
+      return true;
+    },
   );
 });
 
@@ -117,6 +238,29 @@ test("image assembly includes negative prompt, aspect ratio rules, and redacted 
   assert.equal(prompt.fullPrompt.includes("aW1hZ2U="), false);
 });
 
+test("prompt test runner is assemble-only by default and blocks provider execution", async () => {
+  const result = await runPromptTest({
+    key: "adstudio.copy.input_template",
+    fixtureId: "copy_appraisal_no_listing",
+    client: null,
+  });
+
+  assert.equal(result.status, "assembled");
+  assert.equal(result.redactionPreview.task_type, "adstudio.copy");
+  assert.equal(JSON.stringify(result.redactionPreview).includes(result.assembledPrompt.fullPrompt), false);
+
+  await assert.rejects(
+    () =>
+      runPromptTest({
+        key: "adstudio.copy.input_template",
+        fixtureId: "copy_appraisal_no_listing",
+        runProvider: true,
+        client: null,
+      }),
+    /Provider execution is disabled for prompt tests in PR 1/,
+  );
+});
+
 test("provider run redaction removes raw prompts and uploaded image base64", async () => {
   const bundle = await getActivePromptBundle(imageKeys, undefined, null);
   const prompt = assembleImagePrompt({
@@ -129,6 +273,8 @@ test("provider run redaction removes raw prompts and uploaded image base64", asy
   const redacted = buildRedactedProviderRunInput({
     taskType: "adstudio.image",
     modelProfile: "image_draft",
+    correlationId: "trace_image_1",
+    userId: "44444444-4444-4444-8444-444444444444",
     prompt,
     input: {
       prompt: "Call Steve on 0400 000 000 and use test@example.com.",
@@ -137,10 +283,50 @@ test("provider run redaction removes raw prompts and uploaded image base64", asy
   });
   const serialized = JSON.stringify(redacted);
 
+  assert.equal(redacted.correlation_id, "trace_image_1");
+  assert.equal(redacted.user_id, "44444444-4444-4444-8444-444444444444");
   assert.equal(serialized.includes(prompt.fullPrompt), false);
   assert.equal(serialized.includes("aW1hZ2U="), false);
   assert.equal(serialized.includes("test@example.com"), false);
   assert.equal(serialized.includes("0400 000 000"), false);
+});
+
+test("provider run cost estimation uses model profile image pricing", async () => {
+  const bundle = await getActivePromptBundle(imageKeys, undefined, null);
+  const prompt = assembleImagePrompt({
+    bundle,
+    prompt: "Create a bright local real estate background.",
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+    referenceAssets: [],
+  });
+  const cost = estimateAdStudioProviderRunCostUsd({
+    workspaceId: "workspace_1",
+    userId: "44444444-4444-4444-8444-444444444444",
+    correlationId: "trace_image_2",
+    taskType: "adstudio.image",
+    modelProfile: "image_draft",
+    prompt,
+    input: { prompt: "Create a bright local real estate background." },
+    attempts: [
+      { provider: "openai", model: "gpt-image-1-mini", status: "completed" },
+      { provider: "openai", model: "gpt-image-1-mini", status: "completed" },
+      { provider: "openrouter", model: "google/gemini-3.1-flash-image-preview", status: "completed" },
+      { provider: "openrouter", model: "google/gemini-3.1-flash-image-preview", status: "completed" },
+    ],
+    providerName: "mixed",
+    providerType: "image_generation",
+    modelName: "gpt-image-1-mini",
+    output: {
+      assetUrl: "https://cdn.example/image.png",
+      seed: 1,
+      model: "gpt-image-1-mini",
+      providerMetadata: { provider: "openai" },
+    },
+    status: "completed",
+  });
+
+  assert.equal(cost, 0.16);
 });
 
 test("redactRecord flags unsafe targeting and unsupported claims", () => {

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
@@ -91,6 +93,7 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<CopyRequestBody>(request);
   const startedAt = Date.now();
+  const correlationId = randomUUID();
   const bundle = await getActivePromptBundle(COPY_PROMPT_KEYS);
   const assembled = assembleMetaCopyPrompt({
     bundle,
@@ -110,6 +113,8 @@ export async function POST(request: NextRequest) {
 
     await recordAdStudioProviderRun({
       workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
+      correlationId,
       taskType: "adstudio.copy",
       modelProfile: "structured_json",
       prompt: assembled,
@@ -145,6 +150,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     await recordAdStudioProviderRun({
       workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
+      correlationId,
       taskType: "adstudio.copy",
       modelProfile: "structured_json",
       prompt: assembled,

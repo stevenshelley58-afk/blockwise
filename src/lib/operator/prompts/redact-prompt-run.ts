@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import type { ModelCandidate, ModelProfileKey } from "../../ai/model-registry.ts";
-import { estimateRunCostUsd } from "../../ai/model-registry.ts";
+import type { ModelCandidate, ModelProfileKey, ModelProvider } from "../../ai/model-registry.ts";
+import { estimateRunCostUsd, normalizeModelSlug, resolveModelProfile } from "../../ai/model-registry.ts";
 import type { ImageProviderResponse, TextProviderResponse } from "../../adstudio/providers.ts";
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
 
@@ -10,6 +10,8 @@ import type { AssembledPrompt } from "./assemble-prompt.ts";
 export type RedactedProviderRunInput = {
   taskType: "adstudio.copy" | "adstudio.image" | "adstudio.background";
   modelProfile: ModelProfileKey;
+  correlationId?: string;
+  userId?: string | null;
   prompt: AssembledPrompt;
   input: Record<string, unknown>;
   attempts?: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }>;
@@ -38,10 +40,18 @@ type ProviderRunRow = {
   cost_estimate: number;
   status: string;
   error_json?: Record<string, unknown> | null;
+  user_id?: string | null;
+  correlation_id?: string | null;
+  ai_run_id?: string | null;
+  task_type?: string;
+  model_profile?: string;
+  ai_usage_ledger_id?: string | null;
 };
 
 export function buildRedactedProviderRunInput(input: RedactedProviderRunInput): Record<string, unknown> {
   return {
+    correlation_id: input.correlationId ?? null,
+    user_id: input.userId ?? null,
     task_type: input.taskType,
     prompt_versions: input.prompt.promptVersions.map((version) => ({
       key: version.key,
@@ -67,9 +77,29 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
     return;
   }
 
-  const usage = usageFromOutput(input.output);
+  const usage = usageFromOutput(input);
+  const costEstimate = estimateAdStudioProviderRunCostUsd(input, usage);
+  const aiRunId = await recordAiRun({
+    serviceSupabase,
+    input,
+    usage,
+    costEstimate,
+  });
+  const ledgerId = await recordAiUsageLedger({
+    serviceSupabase,
+    input,
+    usage,
+    costEstimate,
+    aiRunId,
+  });
   const row: ProviderRunRow = {
     workspace_id: input.workspaceId,
+    user_id: input.userId ?? null,
+    correlation_id: input.correlationId ?? null,
+    ai_run_id: aiRunId,
+    task_type: input.taskType,
+    model_profile: input.modelProfile,
+    ai_usage_ledger_id: ledgerId,
     provider_name: input.providerName,
     provider_type: input.providerType,
     model_name: input.modelName,
@@ -77,15 +107,133 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
     input_json: buildRedactedProviderRunInput(input),
     output_json: summarizeOutput(input.output),
     usage_json: usage,
-    cost_estimate: estimateCost(input.output, input.modelName, usage),
+    cost_estimate: costEstimate,
     status: input.status,
     error_json: input.error ? { summary: errorSummary(input.error) } : null,
   };
 
-  const { error } = await serviceSupabase.from("adstudio_provider_runs").insert(row);
+  const { data, error } = await serviceSupabase.from("adstudio_provider_runs").insert(row).select("id").maybeSingle();
 
   if (error) {
     console.error("Failed to record Ad Studio provider run", error.message);
+    return;
+  }
+
+  await recordAuditLog({
+    serviceSupabase,
+    input,
+    providerRunId: typeof data?.id === "string" ? data.id : null,
+    aiRunId,
+    ledgerId,
+    costEstimate,
+  });
+}
+
+async function recordAiRun(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  input: ProviderRunLogInput;
+  usage: Record<string, number>;
+  costEstimate: number;
+}): Promise<string | null> {
+  const { data, error } = await input.serviceSupabase
+    .from("ai_runs")
+    .insert({
+      workspace_id: input.input.workspaceId,
+      user_id: input.input.userId ?? null,
+      prompt_version_id: input.input.prompt.promptVersions.find((version) => version.id)?.id ?? null,
+      provider: input.input.providerName,
+      model: input.input.modelName,
+      task: input.input.taskType,
+      output_type: input.input.providerType === "image_generation" ? "image" : "json",
+      status: input.input.status === "completed" ? "completed" : "failed",
+      input_tokens: input.usage.inputTokens ?? 0,
+      output_tokens: input.usage.outputTokens ?? 0,
+      image_units: input.usage.imageUnits ?? 0,
+      estimated_cost_cents: Math.round(input.costEstimate * 100),
+      result_summary: input.input.output ? summarizeRunResult(input.input.output) : null,
+      error_message: input.input.error ? errorSummary(input.input.error) : null,
+      completed_at: new Date().toISOString(),
+      correlation_id: input.input.correlationId ?? null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to record AI run", error.message);
+    return null;
+  }
+
+  return typeof data?.id === "string" ? data.id : null;
+}
+
+async function recordAiUsageLedger(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  input: ProviderRunLogInput;
+  usage: Record<string, number>;
+  costEstimate: number;
+  aiRunId: string | null;
+}): Promise<string | null> {
+  const { data, error } = await input.serviceSupabase
+    .from("ai_usage_ledger")
+    .insert({
+      workspace_id: input.input.workspaceId,
+      ai_run_id: input.aiRunId,
+      user_id: input.input.userId ?? null,
+      provider: input.input.providerName,
+      model: input.input.modelName,
+      task: input.input.taskType,
+      output_type: input.input.providerType === "image_generation" ? "image" : "json",
+      input_tokens: input.usage.inputTokens ?? 0,
+      output_tokens: input.usage.outputTokens ?? 0,
+      image_units: input.usage.imageUnits ?? 0,
+      estimated_cost_cents: Math.round(input.costEstimate * 100),
+      result: input.input.status === "completed" ? "completed" : "failed",
+      correlation_id: input.input.correlationId ?? null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to record AI usage ledger row", error.message);
+    return null;
+  }
+
+  return typeof data?.id === "string" ? data.id : null;
+}
+
+async function recordAuditLog(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  input: ProviderRunLogInput;
+  providerRunId: string | null;
+  aiRunId: string | null;
+  ledgerId: string | null;
+  costEstimate: number;
+}): Promise<void> {
+  if (!input.providerRunId) {
+    return;
+  }
+
+  const { error } = await input.serviceSupabase.from("audit_logs").insert({
+    workspace_id: input.input.workspaceId,
+    actor_profile_id: input.input.userId ?? null,
+    action: "adstudio.ai_run",
+    target_type: "adstudio_provider_run",
+    target_id: input.providerRunId,
+    correlation_id: input.input.correlationId ?? null,
+    metadata: {
+      ai_run_id: input.aiRunId,
+      ai_usage_ledger_id: input.ledgerId,
+      task_type: input.input.taskType,
+      model_profile: input.input.modelProfile,
+      provider_name: input.input.providerName,
+      model_name: input.input.modelName,
+      status: input.input.status,
+      cost_estimate_usd: input.costEstimate,
+    },
+  });
+
+  if (error) {
+    console.error("Failed to record Ad Studio audit log", error.message);
   }
 }
 
@@ -195,39 +343,62 @@ function summarizeOutput(output: TextProviderResponse | ImageProviderResponse | 
   };
 }
 
-function usageFromOutput(output: TextProviderResponse | ImageProviderResponse | null): Record<string, number> {
+function summarizeRunResult(output: TextProviderResponse | ImageProviderResponse): string {
+  if ("assetUrl" in output) {
+    return output.assetUrl ? "image_generated" : "image_missing";
+  }
+
+  return typeof output.rawText === "string" ? `json:${output.rawText.length}` : "json";
+}
+
+function usageFromOutput(input: ProviderRunLogInput): Record<string, number> {
+  const output = input.output;
   if (!output) return {};
   if ("usage" in output) return output.usage as Record<string, number>;
 
+  const completedImageUnits = input.attempts?.filter((attempt) => attempt.status === "completed").length ?? 0;
   return {
-    imageUnits: output.assetUrl ? 1 : 0,
+    imageUnits: Math.max(output.assetUrl ? 1 : 0, completedImageUnits),
     inputTokens: Number(output.providerMetadata.inputTokens ?? 0),
     outputTokens: Number(output.providerMetadata.outputTokens ?? 0),
   };
 }
 
-function estimateCost(
-  output: TextProviderResponse | ImageProviderResponse | null,
-  modelName: string,
-  usage: Record<string, number>,
+export function estimateAdStudioProviderRunCostUsd(
+  input: ProviderRunLogInput,
+  usage: Record<string, number> = usageFromOutput(input),
 ): number {
-  if (!output) return 0;
-  const candidate: ModelCandidate = {
-    provider: String(output.providerMetadata.provider ?? "").includes("openrouter") ? "openrouter" : "openai",
-    model: modelName,
-    inputUsdPerMillionTokens: 0,
-    outputUsdPerMillionTokens: 0,
-    imageUsdPerUnit: "assetUrl" in output ? 0 : 0,
-    supportsStructuredOutput: false,
-    maxContextTokens: 0,
-    maxLatencyMs: 0,
-  };
+  if (!input.output) return 0;
+  const candidate = findCostCandidate(input.modelProfile, input.providerName, input.modelName);
 
   return estimateRunCostUsd(candidate, {
     inputTokens: usage.inputTokens ?? 0,
     outputTokens: usage.outputTokens ?? 0,
-    imageUnits: usage.imageUnits ?? ("assetUrl" in output ? 1 : 0),
+    imageUnits: usage.imageUnits ?? ("assetUrl" in input.output ? 1 : 0),
   });
+}
+
+function findCostCandidate(profileKey: ModelProfileKey, providerName: string, modelName: string): ModelCandidate {
+  const resolved = resolveModelProfile(profileKey);
+  const candidates = [resolved.primary, ...resolved.fallbacks];
+  const provider = normalizeProviderName(providerName);
+  const normalizedModel = provider ? normalizeModelSlug(provider, modelName) : modelName;
+
+  return (
+    candidates.find(
+      (candidate) =>
+        (!provider || candidate.provider === provider) &&
+        normalizeModelSlug(candidate.provider, candidate.model) === normalizedModel,
+    ) ??
+    candidates.find((candidate) => candidate.model === modelName || normalizeModelSlug(candidate.provider, candidate.model) === normalizedModel) ??
+    resolved.primary
+  );
+}
+
+function normalizeProviderName(providerName: string): ModelProvider | null {
+  if (providerName === "openai") return "openai";
+  if (providerName === "openrouter") return "openrouter";
+  return null;
 }
 
 function errorSummary(error: unknown): string {

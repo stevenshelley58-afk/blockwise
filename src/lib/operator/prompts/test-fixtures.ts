@@ -1,4 +1,4 @@
-import type { AdStudioBrandKit } from "@/lib/adstudio/types";
+import type { AdStudioBrandKit } from "../../adstudio/types.ts";
 
 export type PromptTestFixtureTask = "copy" | "image" | "background";
 

@@ -4,6 +4,8 @@ import test from "node:test";
 
 const migrationPath = "supabase/migrations/202605270003_adstudio.sql";
 const alignmentMigrationPath = "supabase/migrations/202605270004_adstudio_live_schema_alignment.sql";
+const traceabilityMigrationPath = "supabase/migrations/202606050002_adstudio_provider_run_traceability.sql";
+const traceEdgesMigrationPath = "supabase/migrations/202606050004_traceability_edges.sql";
 
 const workspaceTables = [
   "adstudio_brand_kits",
@@ -67,4 +69,62 @@ test("adstudio live alignment guards legacy column alters for fresh preview data
 
     assert.match(sql, guardedAlter);
   }
+});
+
+test("adstudio provider run traceability migration links users, ledger rows, and correlation ids", () => {
+  const sql = readFileSync(traceabilityMigrationPath, "utf8");
+
+  assert.match(sql, /alter table public\.adstudio_provider_runs[\s\S]*add column if not exists user_id uuid references public\.profiles/i);
+  assert.match(sql, /add column if not exists correlation_id text/i);
+  assert.match(sql, /add column if not exists ai_run_id uuid references public\.ai_runs/i);
+  assert.match(sql, /add column if not exists task_type text/i);
+  assert.match(sql, /add column if not exists model_profile text/i);
+  assert.match(sql, /add column if not exists ai_usage_ledger_id uuid references public\.ai_usage_ledger/i);
+  assert.match(sql, /alter table public\.ai_runs[\s\S]*add column if not exists correlation_id text/i);
+  assert.match(sql, /alter table public\.ai_usage_ledger[\s\S]*add column if not exists correlation_id text/i);
+  assert.match(sql, /adstudio_provider_runs_operator_cost_filters_idx/i);
+  assert.match(sql, /adstudio_provider_runs_task_model_profile_idx/i);
+  assert.match(sql, /adstudio_provider_runs_ledger_idx/i);
+  assert.match(sql, /adstudio_provider_runs_ai_run_idx/i);
+  assert.match(sql, /adstudio_provider_runs_job_idx/i);
+  assert.match(sql, /ai_runs_operator_cost_filters_idx/i);
+  assert.match(sql, /ai_usage_ledger_operator_cost_filters_idx/i);
+  assert.match(sql, /workspace_id, correlation_id, created_at desc/i);
+});
+
+test("traceability edge migration adds correlation ids across approvals artifacts leads and audit logs", () => {
+  const sql = readFileSync(traceEdgesMigrationPath, "utf8");
+
+  for (const [tableName, columnName] of [
+    ["audit_logs", "correlation_id"],
+    ["approval_requests", "correlation_id"],
+    ["agent_runs", "correlation_id"],
+    ["agent_artifacts", "correlation_id"],
+    ["lead_source_attribution", "correlation_id"],
+    ["lead_delivery_attempts", "correlation_id"],
+    ["lead_export_audits", "correlation_id"],
+  ]) {
+    assert.match(sql, new RegExp(`alter table public\\.${tableName}[\\s\\S]*add column if not exists ${columnName} text`, "i"));
+  }
+
+  assert.match(sql, /alter table public\.agent_runs[\s\S]*add column if not exists user_id uuid references public\.profiles/i);
+  assert.match(sql, /add column if not exists meta_publish_plan_id uuid references public\.meta_publish_plans/i);
+  assert.match(sql, /add column if not exists adstudio_campaign_id uuid references public\.adstudio_campaigns/i);
+  assert.match(sql, /add column if not exists approval_request_id uuid references public\.approval_requests/i);
+  assert.match(sql, /audit_logs_workspace_correlation_idx/i);
+  assert.match(sql, /approval_requests_correlation_idx/i);
+  assert.match(sql, /agent_runs_user_correlation_idx/i);
+  assert.match(sql, /agent_artifacts_correlation_idx/i);
+  assert.match(sql, /lead_source_attribution_trace_idx/i);
+  assert.match(sql, /lead_delivery_attempts_trace_idx/i);
+  assert.match(sql, /lead_export_audits_trace_idx/i);
+});
+
+test("adstudio provider runs API preserves response shape with an explicit projection", () => {
+  const route = readFileSync("src/app/api/adstudio/provider-runs/route.ts", "utf8");
+
+  assert.doesNotMatch(route, /\.select\("\*"\)/);
+  assert.match(route, /id, workspace_id, job_id, provider_name, provider_type, model_name, prompt_version_id/);
+  assert.doesNotMatch(route, /correlation_id/);
+  assert.doesNotMatch(route, /ai_usage_ledger_id/);
 });

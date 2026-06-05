@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 type CoverageRow = {
   postcode: string;
   state: string;
-  last_audit_score: number | null;
+  last_audit_score?: number | null;
   last_refreshed_at: string | null;
   live_active_ads: number;
   live_advertiser_pages?: number;
@@ -27,6 +27,13 @@ const bodySchema = z.object({
   query: z.string().min(1).max(1000),
 });
 
+const coverageSelects = [
+  "postcode,state,last_audit_score,last_refreshed_at,live_active_ads,live_advertiser_pages,health",
+  "postcode,state,last_refreshed_at,live_active_ads,live_advertiser_pages,health",
+  "postcode,state,last_audit_score,last_refreshed_at,live_active_ads,health",
+  "postcode,state,last_refreshed_at,live_active_ads,health",
+] as const;
+
 export async function POST(req: Request) {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
@@ -35,8 +42,24 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const research = createSupabaseServiceClient().schema("research");
+  const queryCoverage = (columns: (typeof coverageSelects)[number]) =>
+    research.from("v_coverage_status").select(columns).order("priority").order("postcode").limit(250);
+  const loadCoverage = async () => {
+    const [firstSelect, ...fallbackSelects] = coverageSelects;
+    let result = await queryCoverage(firstSelect);
+
+    if (!isMissingOptionalCoverageColumn(result.error)) return result;
+
+    for (const columns of fallbackSelects) {
+      result = await queryCoverage(columns);
+      if (!isMissingOptionalCoverageColumn(result.error)) return result;
+    }
+
+    return result;
+  };
+
   const [coverageResult, jobsResult, defectsResult, runsResult, skills] = await Promise.all([
-    research.from("v_coverage_status").select("postcode,state,last_audit_score,last_refreshed_at,live_active_ads,live_advertiser_pages,health").order("priority").order("postcode").limit(250),
+    loadCoverage(),
     research.from("v_operator_work_queue_diagnostics").select("status,is_stale_claim").limit(500),
     research.from("v_missing_competitors").select("id").limit(500),
     research.from("ad_fetch_runs").select("id,status,cost_usd,started_at").order("started_at", { ascending: false }).limit(50),
@@ -48,7 +71,7 @@ export async function POST(req: Request) {
   if (defectsResult.error) return NextResponse.json({ error: defectsResult.error.message }, { status: 500 });
   if (runsResult.error) return NextResponse.json({ error: runsResult.error.message }, { status: 500 });
 
-  const coverage = ((coverageResult.data ?? []) as CoverageRow[]).map(toCoverageSummary).sort((left, right) => left.score - right.score);
+  const coverage = ((coverageResult.data ?? []) as unknown as CoverageRow[]).map(toCoverageSummary).sort((left, right) => left.score - right.score);
   const jobs = (jobsResult.data ?? []) as WorkQueueRow[];
   const activeJobs = jobs.filter((job) => job.status === "pending" || job.status === "claimed").length;
   const staleJobs = jobs.filter((job) => job.is_stale_claim).length;
@@ -121,4 +144,11 @@ function coverageScore(row: CoverageRow): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function isMissingOptionalCoverageColumn(error: { code?: string; message?: string; details?: string; hint?: string } | null): boolean {
+  if (!error) return false;
+  const text = [error.code, error.message, error.details, error.hint].filter(Boolean).join(" ").toLowerCase();
+  const mentionsOptionalColumn = text.includes("last_audit_score") || text.includes("live_advertiser_pages");
+  return mentionsOptionalColumn && (text.includes("does not exist") || text.includes("could not find") || text.includes("schema cache") || text.includes("42703"));
 }

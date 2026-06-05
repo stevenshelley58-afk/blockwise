@@ -1,9 +1,19 @@
+import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../campaigns/publishing.ts";
+import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 type ProviderKey = "meta" | "google";
+
+type CampaignRow = {
+  id: string;
+  name: string;
+  provider?: ProviderKey | string | null;
+  status?: string | null;
+  draft_payload?: Record<string, unknown> | null;
+};
 
 type ApprovalRow = {
   id?: string;
@@ -13,6 +23,11 @@ type ApprovalRow = {
   risk_summary?: string | null;
   created_at?: string | null;
   workspaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
+};
+
+type ComplianceReportRow = {
+  campaign_id?: string | null;
+  status?: string | null;
 };
 
 type ProviderConnectionRow = {
@@ -111,6 +126,56 @@ type ResearchSignalRow = {
   last_seen_at?: string | null;
   postcodes?: string[] | null;
 };
+
+export function buildCampaignReadinessRows(input: {
+  campaigns: CampaignRow[];
+  approvals: ApprovalRow[];
+  complianceReports: ComplianceReportRow[];
+  providerConnections: ProviderConnectionRow[];
+}) {
+  const latestApprovalByCampaign = new Map(
+    input.approvals
+      .filter((approval) => approval.target_id)
+      .map((approval) => [approval.target_id as string, normalizeApprovalStatus(approval.status)]),
+  );
+  const latestComplianceByCampaign = new Map(
+    input.complianceReports
+      .filter((report) => report.campaign_id)
+      .map((report) => [report.campaign_id as string, normalizeComplianceStatus(report.status)]),
+  );
+  const providerStatus = new Map(
+    input.providerConnections
+      .filter((connection) => connection.provider)
+      .map((connection) => [String(connection.provider), normalizeProviderConnectionStatus(connection.status)]),
+  );
+
+  return input.campaigns.map((campaign) => {
+    const provider = normalizeProvider(campaign.provider);
+    const approvalStatus = latestApprovalByCampaign.get(campaign.id) ?? "draft";
+    const complianceStatus =
+      latestComplianceByCampaign.get(campaign.id) ??
+      normalizeComplianceStatus(String(campaign.draft_payload?.complianceStatus ?? campaign.draft_payload?.compliance_status ?? ""));
+    const readiness = evaluatePublishReadiness({
+      providerConnectionStatus: providerStatus.get(provider) ?? "not_connected",
+      approvalStatus,
+      complianceStatus,
+      hasDraftPayload: Object.keys(campaign.draft_payload ?? {}).length > 0,
+    });
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      provider: formatProvider(provider),
+      channel: provider === "meta" ? "Lead ad" : "Search",
+      status: campaign.status ?? "draft",
+      approvalStatus,
+      complianceStatus,
+      providerConnectionStatus: providerStatus.get(provider) ?? "not_connected",
+      draftPayload: campaign.draft_payload ?? {},
+      readiness,
+    };
+  });
+}
 
 export function buildLeadRowsWithDedupe(input: {
   leads: LeadRow[];
@@ -302,6 +367,23 @@ export function buildOperatorOverview(input: {
   };
 }
 
+export async function listCampaignReadinessRows(supabase: SupabaseServerClient, workspaceId: string) {
+  const [{ data: campaigns }, { data: approvals }, { data: complianceReports }, { data: providerConnections }] =
+    await Promise.all([
+      supabase.from("campaigns").select("id,name,provider,status,draft_payload").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }),
+      supabase.from("approval_requests").select("target_id,status,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }),
+      supabase.from("adstudio_compliance_reports").select("campaign_id,status,checked_at").eq("workspace_id", workspaceId).order("checked_at", { ascending: false }),
+      supabase.from("provider_connections").select("provider,status").eq("workspace_id", workspaceId),
+    ]);
+
+  return buildCampaignReadinessRows({
+    campaigns: (campaigns ?? []) as CampaignRow[],
+    approvals: (approvals ?? []) as ApprovalRow[],
+    complianceReports: (complianceReports ?? []) as ComplianceReportRow[],
+    providerConnections: (providerConnections ?? []) as ProviderConnectionRow[],
+  });
+}
+
 export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, workspaceId: string) {
   const { data: leads } = await supabase
     .from("leads")
@@ -466,6 +548,10 @@ function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
   };
 }
 
+function normalizeProvider(provider: CampaignRow["provider"]): ProviderKey {
+  return provider === "google" ? "google" : "meta";
+}
+
 function formatProvider(provider: ProviderKey) {
   return provider === "meta" ? "Meta" : "Google";
 }
@@ -482,6 +568,30 @@ function sourceLabel(provider: LeadRow["provider"]) {
   if (provider === "meta") return "Meta lead form";
   if (provider === "google") return "Google lead form";
   return "Manual import";
+}
+
+function normalizeApprovalStatus(value: string | null | undefined): ApprovalStatus {
+  if (value === "approved" || value === "rejected" || value === "cancelled" || value === "requested") {
+    return value;
+  }
+
+  return "draft";
+}
+
+function normalizeComplianceStatus(value: string | null | undefined): ComplianceStatus {
+  if (value === "approved" || value === "blocked" || value === "needs_review") {
+    return value;
+  }
+
+  return "needs_review";
+}
+
+function normalizeProviderConnectionStatus(value: string | null | undefined): ProviderConnectionStatus {
+  if (value === "connected" || value === "needs_attention") {
+    return value;
+  }
+
+  return "not_connected";
 }
 
 function extractAttributionLabel(source: Record<string, unknown> | null | undefined): string {

@@ -22,6 +22,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const body = (await request.json().catch(() => ({}))) as {
     fixtureId?: unknown;
     version?: unknown;
+    runProvider?: unknown;
   };
 
   try {
@@ -33,6 +34,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "fixtureId is required." }, { status: 400 });
     }
 
+    if (body.runProvider === true) {
+      return NextResponse.json(
+        { error: "Provider execution is disabled for prompt tests in PR 1." },
+        { status: 400 },
+      );
+    }
+
     if (version !== undefined && (!Number.isInteger(version) || version < 1)) {
       return NextResponse.json({ error: "version must be a positive integer." }, { status: 400 });
     }
@@ -41,6 +49,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       key,
       fixtureId,
       version,
+      runProvider: false,
       client: createPromptServiceClient(),
     });
 
