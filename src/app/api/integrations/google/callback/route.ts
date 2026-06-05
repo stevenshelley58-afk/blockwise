@@ -19,14 +19,14 @@ export async function GET(request: NextRequest) {
 
   // Google Ads is parked for the Meta-only v1. See src/lib/config/feature-flags.ts.
   if (!GOOGLE_ADS_ENABLED) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=disabled", origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=disabled", origin));
   }
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=missing_code", origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=missing_code", origin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!verified.ok) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=invalid_state", origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=invalid_state", origin));
   }
 
   const access = await requireWorkspaceAccess(supabase, {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!access.ok || !canManageProviderConnections(access.access)) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=forbidden", origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=forbidden", origin));
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = encodeURIComponent(error instanceof Error ? error.message : "Google connection failed.");
-    return NextResponse.redirect(new URL(`/monitor?integration=google&error=${message}`, origin));
+    return NextResponse.redirect(new URL(`/results?integration=google&error=${message}`, origin));
   }
 
   // Best-effort first sync so the dashboard shows real data immediately after
@@ -92,5 +92,5 @@ export async function GET(request: NextRequest) {
     // Connection is already saved; the first sync can be retried later.
   }
 
-  return NextResponse.redirect(new URL("/monitor?integration=google&connected=1", origin));
+  return NextResponse.redirect(new URL("/results?integration=google&connected=1", origin));
 }

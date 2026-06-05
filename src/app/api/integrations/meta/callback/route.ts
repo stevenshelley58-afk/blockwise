@@ -23,7 +23,7 @@ async function handleCallback(request: NextRequest) {
   const origin = request.nextUrl.origin;
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/monitor?integration=meta&error=missing_code", origin));
+    return NextResponse.redirect(new URL("/results?integration=meta&error=missing_code", origin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -41,7 +41,7 @@ async function handleCallback(request: NextRequest) {
   });
 
   if (!verified.ok) {
-    return NextResponse.redirect(new URL("/monitor?integration=meta&error=invalid_state", origin));
+    return NextResponse.redirect(new URL("/results?integration=meta&error=invalid_state", origin));
   }
 
   const access = await requireWorkspaceAccess(supabase, {
@@ -50,7 +50,7 @@ async function handleCallback(request: NextRequest) {
   });
 
   if (!access.ok || !canManageProviderConnections(access.access)) {
-    return NextResponse.redirect(new URL("/monitor?integration=meta&error=forbidden", origin));
+    return NextResponse.redirect(new URL("/results?integration=meta&error=forbidden", origin));
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -73,7 +73,7 @@ async function handleCallback(request: NextRequest) {
     });
   } catch (error) {
     const message = encodeURIComponent(error instanceof Error ? error.message : "Meta connection failed.");
-    return NextResponse.redirect(new URL(`/monitor?integration=meta&error=${message}`, origin));
+    return NextResponse.redirect(new URL(`/results?integration=meta&error=${message}`, origin));
   }
 
   // Best-effort first sync so the dashboard shows real data immediately after
@@ -91,5 +91,5 @@ async function handleCallback(request: NextRequest) {
     // Connection is already saved; the first sync can be retried later.
   }
 
-  return NextResponse.redirect(new URL("/monitor?integration=meta&connected=1", origin));
+  return NextResponse.redirect(new URL("/results?integration=meta&connected=1", origin));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Info, PenLine, Sparkles } from "lucide-react";
+import { FileText, Info, PenLine, Zap } from "lucide-react";
 
 import { CopyFields, PanelHeader } from "../inspector";
 import type { CopyAlternates, CopyContext, CopyMode, CopyState } from "../use-copy";
@@ -50,7 +50,7 @@ export function CopyPanel({
           className={copyMode === "ai" ? "active" : ""}
           onClick={() => setCopyMode("ai")}
         >
-          <Sparkles aria-hidden size={14} />
+          <Zap aria-hidden size={14} />
           AI copy
         </button>
         <button
@@ -88,7 +88,7 @@ export function CopyPanel({
             disabled={generating}
             onClick={() => onGenerate("ai", context)}
           >
-            <Sparkles aria-hidden size={15} />
+            <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Write it for me"}
           </button>
           <CopyFields copy={copy} updateCopy={updateCopy} />
@@ -138,7 +138,7 @@ export function CopyPanel({
             disabled={generating}
             onClick={() => onGenerate("brief", context)}
           >
-            <Sparkles aria-hidden size={15} />
+            <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Generate copy from brief"}
           </button>
           <div className="studio-hint">

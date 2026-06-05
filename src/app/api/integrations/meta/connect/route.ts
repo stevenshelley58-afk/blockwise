@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
       provider: "meta",
       workspaceId: access.access.workspaceId,
       userId: access.access.userId,
-      returnPath: "/monitor",
+      returnPath: "/results",
     }),
   );
   const authorizationUrl = buildProviderAuthorizationUrl("meta", request, state);
 
   if (!authorizationUrl) {
-    return NextResponse.redirect(new URL("/monitor?integration=meta&error=missing_config", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/results?integration=meta&error=missing_config", request.nextUrl.origin));
   }
 
   return NextResponse.redirect(authorizationUrl);

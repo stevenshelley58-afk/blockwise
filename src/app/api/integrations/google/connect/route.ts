@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   // Google Ads is parked for the Meta-only v1. See src/lib/config/feature-flags.ts.
   if (!GOOGLE_ADS_ENABLED) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=disabled", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=disabled", request.nextUrl.origin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -34,13 +34,13 @@ export async function GET(request: NextRequest) {
       provider: "google",
       workspaceId: access.access.workspaceId,
       userId: access.access.userId,
-      returnPath: "/monitor",
+      returnPath: "/results",
     }),
   );
   const authorizationUrl = buildProviderAuthorizationUrl("google", request, state);
 
   if (!authorizationUrl) {
-    return NextResponse.redirect(new URL("/monitor?integration=google&error=missing_config", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/results?integration=google&error=missing_config", request.nextUrl.origin));
   }
 
   return NextResponse.redirect(authorizationUrl);
