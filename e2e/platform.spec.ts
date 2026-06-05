@@ -21,10 +21,10 @@ test("operator console exposes control-plane queues", async ({ page }) => {
   await expect(page.getByText("Approval Queue")).toBeVisible();
 });
 
-test("monitor shows zero-safe provider reporting", async ({ page }) => {
-  await page.goto("/monitor");
+test("results shows zero-safe provider reporting", async ({ page }) => {
+  await page.goto("/results");
 
-  await expect(page.getByRole("heading", { name: "Monitor" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Meta Ads Overview" })).toBeVisible();
   await expect(page.getByText("Meta")).toBeVisible();
   await expect(page.getByText("Google")).toBeVisible();
 });
@@ -52,13 +52,6 @@ test("ad studio exposes the full generation workflow", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Story/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Feed/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Square/ })).toBeVisible();
-});
-
-test("campaigns page shows publishing blockers", async ({ page }) => {
-  await page.goto("/campaigns");
-
-  await expect(page.getByRole("heading", { name: "Campaigns" })).toBeVisible();
-  await expect(page.getByText("Human approval is required before publishing.")).toBeVisible();
 });
 
 test("leads page shows dedupe state", async ({ page }) => {

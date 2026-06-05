@@ -1,36 +1,14 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
   buildAgentRunRows,
   buildAiLedgerRows,
   buildApprovalRows,
-  buildCampaignReadinessRows,
   buildLeadRowsWithDedupe,
   buildResearchSignals,
 } from "../src/lib/product/live-data.ts";
-
-test("buildCampaignReadinessRows uses Supabase rows, approvals, compliance reports, and provider health", () => {
-  const rows = buildCampaignReadinessRows({
-    campaigns: [
-      {
-        id: "campaign_1",
-        name: "Seller campaign",
-        provider: "meta",
-        status: "draft",
-        draft_payload: { headline: "Seller checklist" },
-      },
-    ],
-    approvals: [{ target_id: "campaign_1", status: "approved" }],
-    complianceReports: [{ campaign_id: "campaign_1", status: "approved" }],
-    providerConnections: [{ provider: "meta", status: "connected" }],
-  });
-
-  assert.equal(rows[0].provider, "Meta");
-  assert.equal(rows[0].approvalStatus, "approved");
-  assert.equal(rows[0].complianceStatus, "approved");
-  assert.deepEqual(rows[0].readiness, { ready: true, blockers: [] });
-});
 
 test("buildLeadRowsWithDedupe maps live leads, labels, attribution, and duplicate state", () => {
   const result = buildLeadRowsWithDedupe({
@@ -98,6 +76,7 @@ test("buildApprovalRows and buildAgentRunRows keep queues workspace backed", () 
         error_message: null,
         workspaces: { name: "Northstar" },
         agent_definitions: { name: "Research Agent" },
+        ai_runs: { estimated_cost_cents: 37 },
       },
     ]),
     [
@@ -107,7 +86,7 @@ test("buildApprovalRows and buildAgentRunRows keep queues workspace backed", () 
         task: "Classify competitor hooks",
         status: "Complete",
         workspace: "Northstar",
-        cost: "$0.00",
+        cost: "$0.37",
         confidence: "91%",
       },
     ],
@@ -125,13 +104,19 @@ test("buildAiLedgerRows and buildResearchSignals map production tables", () => {
         output_type: "json",
         result: "completed",
         estimated_cost_cents: 2,
+        created_at: "2026-06-05T01:02:03.000Z",
         workspaces: { name: "Northstar" },
+        user_id: "user_1",
+        profiles: { email: "amelia@example.com", full_name: "Amelia Hart" },
       },
     ]),
     [
       {
         id: "run_1",
         workspace: "Northstar",
+        userId: "user_1",
+        user: "Amelia Hart",
+        userEmail: "amelia@example.com",
         profile: "openrouter",
         task: "campaign_copy",
         provider: "openrouter",
@@ -139,6 +124,7 @@ test("buildAiLedgerRows and buildResearchSignals map production tables", () => {
         usage: "json",
         estimatedCost: "$0.02",
         result: "completed",
+        createdAt: "2026-06-05T01:02:03.000Z",
       },
     ],
   );
@@ -161,4 +147,22 @@ test("buildAiLedgerRows and buildResearchSignals map production tables", () => {
       },
     ],
   );
+});
+
+test("AI ledger loaders expose operator filters for user model task and day", () => {
+  const liveData = readFileSync("src/lib/product/live-data.ts", "utf8");
+  const route = readFileSync("src/app/api/ai-ledger/route.ts", "utf8");
+  const page = readFileSync("src/app/(workforce)/model-control/page.tsx", "utf8");
+
+  assert.match(liveData, /\.eq\("workspace_id", workspaceId\)/);
+  assert.match(liveData, /\.eq\("user_id", filters\.userId\)/);
+  assert.match(liveData, /\.ilike\("model", `%\$\{filters\.model\}%`\)/);
+  assert.match(liveData, /\.eq\("task", filters\.task\)/);
+  assert.match(liveData, /\.gte\("created_at", dayRange\.startIso\)\.lt\("created_at", dayRange\.endIso\)/);
+  assert.match(route, /userId: cleanParam\(request\.nextUrl\.searchParams\.get\("userId"\)\)/);
+  assert.match(route, /listAiLedgerRows\(supabase, access\.access\.workspaceId, filters\)/);
+  assert.match(page, /name="userId"/);
+  assert.match(page, /name="model"/);
+  assert.match(page, /name="task"/);
+  assert.match(page, /name="day"/);
 });

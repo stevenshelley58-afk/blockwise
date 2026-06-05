@@ -7,16 +7,25 @@ import { PromptControlPanel } from "@/components/prompt-control-panel";
 import { StatusPill } from "@/components/status-pill";
 import { getModelControlViewData } from "@/lib/ai/model-profile-store";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listAiLedgerRows } from "@/lib/product/live-data";
+import { listAiLedgerRows, type AiLedgerFilters } from "@/lib/product/live-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function ModelControlPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+
+export default async function ModelControlPage({ searchParams }: { searchParams?: SearchParams }) {
   const { access } = await requirePageSurfaceAccess("model_control");
   const supabase = await createSupabaseServerClient();
+  const params = searchParams ? await Promise.resolve(searchParams) : {};
+  const ledgerFilters: AiLedgerFilters = {
+    userId: firstParam(params.userId),
+    model: firstParam(params.model),
+    task: firstParam(params.task),
+    day: firstParam(params.day),
+  };
   const modelControlData = await getModelControlViewData(supabase);
-  const ledgerRows = await listAiLedgerRows(supabase, access.workspaceId);
+  const ledgerRows = await listAiLedgerRows(supabase, access.workspaceId, ledgerFilters);
   const profileCount = new Set(
     modelControlData.sections.flatMap((section) => section.profiles.map((profile) => profile.key)),
   ).size;
@@ -54,33 +63,80 @@ export default async function ModelControlPage() {
 
       <section className="panel">
         <h2>AI Usage Ledger</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Task</th>
-              <th>Profile</th>
-              <th>Provider</th>
-              <th>Model</th>
-              <th>Status</th>
-              <th>Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ledgerRows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.task}</td>
-                <td>{row.profile}</td>
-                <td>{row.provider}</td>
-                <td>{row.model}</td>
-                <td>
-                  <StatusPill tone={row.result === "completed" ? "green" : "rose"}>{row.result}</StatusPill>
-                </td>
-                <td>{row.estimatedCost}</td>
+        <form className="grid cols-4" method="get">
+          <label>
+            <span>User</span>
+            <input name="userId" defaultValue={ledgerFilters.userId ?? ""} placeholder="User id" />
+          </label>
+          <label>
+            <span>Model</span>
+            <input name="model" defaultValue={ledgerFilters.model ?? ""} placeholder="gpt-4.1" />
+          </label>
+          <label>
+            <span>Task</span>
+            <input name="task" defaultValue={ledgerFilters.task ?? ""} placeholder="adstudio.copy" />
+          </label>
+          <label>
+            <span>Day</span>
+            <input name="day" type="date" defaultValue={ledgerFilters.day ?? ""} />
+          </label>
+          <div className="actions">
+            <button className="button" type="submit">
+              Filter
+            </button>
+            <a className="button secondary" href="/model-control">
+              Clear
+            </a>
+          </div>
+        </form>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Task</th>
+                <th>Profile</th>
+                <th>Provider</th>
+                <th>Model</th>
+                <th>Status</th>
+                <th>Cost</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {ledgerRows.map((row) => (
+                <tr key={row.id}>
+                  <td>{formatDate(row.createdAt)}</td>
+                  <td>{row.user}</td>
+                  <td>{row.task}</td>
+                  <td>{row.profile}</td>
+                  <td>{row.provider}</td>
+                  <td>{row.model}</td>
+                  <td>
+                    <StatusPill tone={row.result === "completed" ? "green" : "rose"}>{row.result}</StatusPill>
+                  </td>
+                  <td>{row.estimatedCost}</td>
+                </tr>
+              ))}
+              {!ledgerRows.length ? (
+                <tr>
+                  <td colSpan={8}>No AI usage rows match these filters.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  const first = Array.isArray(value) ? value[0] : value;
+  const trimmed = first?.trim();
+  return trimmed || undefined;
+}
+
+function formatDate(value: string | null): string {
+  return value ? new Date(value).toLocaleString() : "-";
 }

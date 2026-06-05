@@ -14,9 +14,9 @@ test.describe("MetaAdLibraryCard customer contract", () => {
   });
 
   test("renders public research cards without internal provider fields", async ({ page }) => {
-    await page.goto("/research?q=6008");
+    await page.goto("/ad-radar?q=6008");
 
-    await expect(page.getByRole("heading", { name: "Research" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ad Radar" })).toBeVisible();
     const cards = page.locator(".meta-ad-card");
     test.skip((await cards.count()) === 0, "No seeded research ad cards are available for postcode 6008.");
 
@@ -33,7 +33,7 @@ test.describe("MetaAdLibraryCard customer contract", () => {
   });
 
   test("landing links are external-safe when present", async ({ page }) => {
-    await page.goto("/research?q=6008");
+    await page.goto("/ad-radar?q=6008");
 
     const landingLinks = page.locator(".meta-ad-destination-link");
     test.skip((await landingLinks.count()) === 0, "No seeded research destination links are available for postcode 6008.");
