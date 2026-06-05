@@ -66,7 +66,9 @@ export async function getMetaMonitorData(input: {
   );
 
   if (!metaConnection) {
-    return emptyPayload(range, { connected: false, issue: null });
+    // No ad account yet: show clearly-labelled demo data so the dashboard is
+    // alive on day one. It is replaced by live data the moment Meta connects.
+    return buildSampleMetaMonitorPayload({ range: input.range, now, connected: false });
   }
 
   const tokens = await loadStoredProviderTokens(input.serviceSupabase, metaConnection.id).catch(() => ({
