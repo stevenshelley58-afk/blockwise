@@ -15,7 +15,7 @@ const paths = {
   jsonRules: "src/lib/adstudio/prompts/shared/json_rules.md",
   metaCapture: "hermes/tools/meta-library-capture/src/capture.ts",
   metaCard: "src/components/research/meta-ad-library-card.tsx",
-  researchPage: "src/app/(customer)/research/page.tsx",
+  researchPage: "src/app/(customer)/ad-radar/page.tsx",
 };
 
 const surfacingViews = [
