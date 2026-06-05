@@ -34,7 +34,7 @@ Handy when writing or editing copy: what the product does today, with code sourc
 | Budget actions + pacing (activate, pause, increase_budget) | `202605280001_meta_execution_layer.sql:73`; `BudgetPacingChart.tsx` |
 | Reporting inside Blockwise (KPIs, ad performance, pacing, suburb breakdowns) | `src/components/monitor/` |
 | Lead inbox (quality labels, dedupe) | `/leads` route |
-| Ad radar: search live AU real-estate ads by postcode/suburb/page/ad copy; longest-running sort; save-as-template; trial-accessible | `(customer)/research/page.tsx`; `template-gallery-modal.tsx`; `canAccessSurface` |
+| Ad radar: search live AU real-estate ads by postcode/suburb/page/ad copy; longest-running sort; save-as-template; trial-accessible | `(customer)/ad-radar/page.tsx`; `template-gallery-modal.tsx`; `canAccessSurface` |
 | Compliance checks flag issues; team owns final sign-off | `compliance.ts` — never claim "every campaign is compliant" |
 | After trial: generation pauses (402), drafts stay | `generation-trial.ts` |
 | Managed setup: 15-min call, reply in 1 business day | `demo-form.tsx` |
