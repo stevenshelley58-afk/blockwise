@@ -11,9 +11,11 @@ import { SignInLink } from "@/components/landing/sign-in-link";
  * to real app flows). Product-facts reference (informational, not a gate):
  * docs/landing-copy-spec.md. Copy is freely editable.
  *
- * Hero (2026-06-05): photo background from /public/hero/hero-wide.jpg (desktop)
- * and hero-tall.jpg (≤720px), referenced from landing.css. Perf-card numbers
- * are labeled example data.
+ * Layout (2026-06-05, design mock v2): light hero with the photo as a rounded
+ * card on the right (/public/hero/hero-wide.jpg, hero-tall.jpg on mobile) and
+ * the performance card floating over it; radar cards image-top in a 3-across
+ * row; dark "pipeline" treatment for the four steps; campaign table left of
+ * the control copy. Perf-card numbers are labeled example data.
  */
 
 function TrustPoint({ label }: { label: string }) {
@@ -63,18 +65,25 @@ function RadarCard({ agency, platform, headline, suburb, running, image }: Radar
   );
 }
 
-type StepProps = { n: number; title: string; copy: string; icon: React.ReactNode };
+type PipeStepProps = {
+  label: string;
+  title: string;
+  copy: string;
+  children: React.ReactNode;
+};
 
-function Step({ n, title, copy, icon }: StepProps) {
+function PipeStep({ label, title, copy, children }: PipeStepProps) {
   return (
-    <article className="lp-step">
-      <span className="lp-step-pill">Step {n}</span>
-      <div className="lp-step-icon" aria-hidden>
-        {icon}
+    <div className="lp-pipe-col">
+      <div className="lp-pipe-card" aria-hidden>
+        {children}
       </div>
-      <h3>{title}</h3>
-      <p>{copy}</p>
-    </article>
+      <div className="lp-pipe-caption">
+        <span className="lp-pipe-label">{label}</span>
+        <h3>{title}</h3>
+        <p>{copy}</p>
+      </div>
+    </div>
   );
 }
 
@@ -127,54 +136,12 @@ export default function HomePage() {
           <div className="lp-shell lp-hero-grid">
             <div className="lp-hero-copy">
               <h1 id="hero-title">
-                Your next lead is local.
+                Your next lead <em className="lp-hero-accent">is local.</em>
                 <span className="lp-hero-h1-sub">Run the ads that reach them first.</span>
               </h1>
-              <p className="lp-lead lp-lead-light">
+              <p className="lp-lead">
                 Create and track local Meta ads without opening Ads Manager.
               </p>
-            </div>
-
-            <div className="lp-perf" aria-label="Campaign performance preview (example data)">
-              <div className="lp-perf-top">
-                <h3>Campaign Performance</h3>
-                <div className="lp-perf-top-right">
-                  <span className="lp-badge lp-badge-neutral">Example data</span>
-                  <span className="lp-perf-range">
-                    This Week
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </span>
-                </div>
-              </div>
-              <div className="lp-perf-chart">
-                <svg viewBox="0 0 320 120" role="img" aria-label="Example chart: leads climbing across the week to 23">
-                  <path
-                    d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
-                    fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
-                </svg>
-                <span className="lp-perf-tag">23 Leads</span>
-              </div>
-              <div className="lp-perf-axis" aria-hidden>
-                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-              </div>
-              <div className="lp-perf-stats">
-                <div className="lp-perf-stat"><span>Leads</span><strong>23</strong></div>
-                <div className="lp-perf-stat"><span>Cost per Lead</span><strong>$18</strong></div>
-                <div className="lp-perf-stat"><span>Amount Spent</span><strong>$414</strong></div>
-              </div>
-            </div>
-
-            <div className="lp-hero-actions">
               <div className="lp-cta-row">
                 <CtaLink location="hero" href="/signup" className="lp-btn lp-btn-hero lp-btn-big">
                   Free Trial
@@ -188,21 +155,78 @@ export default function HomePage() {
                 <TrustPoint label="Reporting inside Blockwise" />
               </div>
             </div>
+
+            <div className="lp-hero-media">
+              <picture>
+                <source media="(max-width: 720px)" srcSet="/hero/hero-tall.jpg" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/hero/hero-wide.jpg"
+                  alt="Aerial view of a coastal suburb with waterfront homes"
+                  className="lp-hero-photo"
+                />
+              </picture>
+
+              <div className="lp-perf" aria-label="Campaign performance preview (example data)">
+                <div className="lp-perf-top">
+                  <h3>Campaign Performance</h3>
+                  <div className="lp-perf-top-right">
+                    <span className="lp-badge lp-badge-neutral">Example data</span>
+                    <span className="lp-perf-range">
+                      This Week
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+                <div className="lp-perf-chart">
+                  <svg viewBox="0 0 320 120" role="img" aria-label="Example chart: leads climbing across the week to 23">
+                    <path
+                      d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
+                  </svg>
+                  <span className="lp-perf-tag">23 Leads</span>
+                </div>
+                <div className="lp-perf-axis" aria-hidden>
+                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                </div>
+                <div className="lp-perf-stats">
+                  <div className="lp-perf-stat"><span>Leads</span><strong>23</strong></div>
+                  <div className="lp-perf-stat"><span>Cost per Lead</span><strong>$18</strong></div>
+                  <div className="lp-perf-stat"><span>Amount Spent</span><strong>$414</strong></div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         <section id="radar" className="lp-section">
-          <div className="lp-shell lp-split">
-            <div>
-              <p className="lp-eyebrow">Local Ad Radar</p>
-              <h2 className="lp-h2">See what agencies are advertising in your market.</h2>
-              <p className="lp-lead">
-                Search by suburb, postcode, agency or ad copy. Blockwise shows active real estate ads
-                in your area so you can understand the market before launching your own campaign.
-              </p>
+          <div className="lp-shell">
+            <div className="lp-radar-top">
+              <div>
+                <p className="lp-eyebrow">Local Ad Radar</p>
+                <h2 className="lp-h2">See what agencies are advertising in your market.</h2>
+                <p className="lp-lead">
+                  Search by suburb, postcode, agency or ad copy. Blockwise shows active real estate ads
+                  in your area so you can understand the market before launching your own campaign.
+                </p>
+              </div>
               <div className="lp-radar-box">
                 <div className="lp-location-pill">
                   <span>Perth, WA</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
                 </div>
                 <p className="lp-radar-note">Showing example ads around Perth, WA.</p>
                 <CtaLink location="radar-scan" href="/signup" className="lp-btn lp-btn-primary lp-btn-wide">
@@ -239,45 +263,80 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="how" className="lp-section lp-section-surface">
+        <section id="how" className="lp-section lp-pipeline">
           <div className="lp-shell">
             <div className="lp-center-head">
-              <p className="lp-eyebrow">How it works</p>
-              <h2 className="lp-h2">From brief to live campaign in four steps.</h2>
+              <p className="lp-eyebrow lp-eyebrow-sky">How it works</p>
+              <h2 className="lp-h2 lp-h2-light">From brief to live campaign in four steps.</h2>
             </div>
-            <div className="lp-steps">
-              <Step
-                n={1}
+            <div className="lp-pipe-grid">
+              <PipeStep
+                label="Step 1 — Brief"
                 title="Create the campaign brief"
                 copy="Choose the campaign type, suburb, goal and property details."
-                icon={
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                }
-              />
-              <Step
-                n={2}
+              >
+                <div className="lp-mock">
+                  <div className="lp-mock-head">New campaign</div>
+                  <div className="lp-mock-field"><span>Campaign type</span><strong>Free appraisal</strong></div>
+                  <div className="lp-mock-cols">
+                    <div className="lp-mock-field"><span>Suburb</span><strong>Mount Lawley</strong></div>
+                    <div className="lp-mock-field"><span>Budget</span><strong>$25 / day</strong></div>
+                  </div>
+                  <div className="lp-mock-field"><span>Goal</span><strong>Seller leads</strong></div>
+                </div>
+              </PipeStep>
+              <PipeStep
+                label="Step 2 — Generate"
                 title="Generate the campaign"
                 copy="Blockwise drafts the ads, creative variants, lead form and campaign settings."
-                icon={
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8Z" /><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9Z" /><path d="M5 15l.9 2.1L8 18l-2.1.9L5 21l-.9-2.1L2 18l2.1-.9Z" /></svg>
-                }
-              />
-              <Step
-                n={3}
+              >
+                <div className="lp-mock">
+                  <div className="lp-mock-head">Campaign draft</div>
+                  <div className="lp-mock-row">
+                    <span className="lp-mock-thumb" />
+                    <span className="lp-mock-lines"><span className="lp-mock-bar lp-mock-bar-lg" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
+                    <span className="lp-mock-pill">Ad 1</span>
+                  </div>
+                  <div className="lp-mock-row">
+                    <span className="lp-mock-thumb" />
+                    <span className="lp-mock-lines"><span className="lp-mock-bar" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
+                    <span className="lp-mock-pill">Ad 2</span>
+                  </div>
+                  <div className="lp-mock-row">
+                    <span className="lp-mock-thumb lp-mock-thumb-form" />
+                    <span className="lp-mock-lines"><span className="lp-mock-bar lp-mock-bar-lg" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
+                    <span className="lp-mock-pill lp-mock-pill-blue">Form</span>
+                  </div>
+                </div>
+              </PipeStep>
+              <PipeStep
+                label="Step 3 — Approve"
                 title="Review and approve"
                 copy="Your team checks every claim, disclaimer, image and budget before launch."
-                icon={
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></svg>
-                }
-              />
-              <Step
-                n={4}
-                title="Launch from Blockwise"
-                copy="Connect your ad account, publish the campaign and track performance inside the app."
-                icon={
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2 11 13" /><path d="m22 2-7 20-4-9-9-4Z" /></svg>
-                }
-              />
+              >
+                <div className="lp-mock">
+                  <div className="lp-mock-head">Review &amp; approve</div>
+                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Copy and claims</div>
+                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Images and brand</div>
+                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Budget and schedule</div>
+                  <div className="lp-mock-actions">
+                    <span className="lp-mock-btn">Approve</span>
+                    <span className="lp-mock-btn lp-mock-btn-ghost">Edit</span>
+                  </div>
+                </div>
+              </PipeStep>
+              <div className="lp-pipe-col">
+                <div className="lp-pipe-card lp-pipe-card-dark">
+                  <div className="lp-pipe-launch-icon" aria-hidden>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 2 11 13" />
+                      <path d="m22 2-7 20-4-9-9-4Z" />
+                    </svg>
+                  </div>
+                  <h3>Launch from Blockwise</h3>
+                  <p>Connect your ad account, publish the campaign and track performance inside the app.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -328,7 +387,7 @@ export default function HomePage() {
         </section>
 
         <section className="lp-section lp-section-surface" aria-labelledby="control-title">
-          <div className="lp-shell lp-split">
+          <div className="lp-shell lp-split lp-split-swap">
             <div>
               <p className="lp-eyebrow">Approval and control</p>
               <h2 className="lp-h2" id="control-title">You stay in control before anything goes live.</h2>
@@ -459,7 +518,7 @@ export default function HomePage() {
                 Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
                 your ad account and get everything ready to launch.
               </p>
-              <CtaLink location="faq-walkthrough" href="#demo" className="lp-btn lp-btn-primary">
+              <CtaLink location="faq-walkthrough" href="#demo" className="lp-btn lp-btn-hero">
                 Book a walkthrough
               </CtaLink>
             </aside>
@@ -507,7 +566,21 @@ export default function HomePage() {
             <Link href="/data-deletion">Data deletion</Link>
           </div>
         </div>
-        <div className="lp-shell lp-footer-bottom">© {new Date().getFullYear()} Blockwise. All rights reserved.</div>
+        <div className="lp-shell lp-footer-bottom">
+          <span>© {new Date().getFullYear()} Blockwise. All rights reserved.</span>
+          {/* Social icons are decorative until the profiles exist — swap spans for links then. */}
+          <span className="lp-footer-social" aria-hidden>
+            <span className="lp-social-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+            </span>
+            <span className="lp-social-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.46zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12M7.12 20.45H3.56V9h3.56zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0" /></svg>
+            </span>
+            <span className="lp-social-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069m0-2.163C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12s.014 3.668.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24s3.668-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948s-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0m0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324M12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8m6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881" /></svg>
+            </span>
+          </span>
+        </div>
       </footer>
     </div>
   );
