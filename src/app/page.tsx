@@ -11,7 +11,13 @@ import { SignInLink } from "@/components/landing/sign-in-link";
  * and wired to real app flows). Copy is governed by docs/landing-copy-spec.md:
  * every product claim traces to code (§2 claims register).
  *
- * ⚠️ Launch gate (spec §0a): hero H1, step 4 and the Active dashboard mock assume
+ * Hero reworked 2026-06-05 to the v4 final hero copy (H1 "Your next lead is
+ * local…" / sub "…without opening Ads Manager" — approved claims per v4).
+ * CTA label "Free Trial" chosen in chat over the spec's sitewide "Create Ad".
+ * Hero photos: /public/hero/hero-wide.jpg (desktop) and hero-tall.jpg (≤720px),
+ * referenced from landing.css. Perf-card numbers are labeled example data.
+ *
+ * ⚠️ Launch gate (spec §0a): step 4 and the Active table mock still assume
  * provider writes are enabled. Swap to the spec's fallback strings if this ships
  * before BLOCKWISE_ENABLE_PROVIDER_WRITES=true.
  */
@@ -125,84 +131,67 @@ export default function HomePage() {
       <main id="main">
         <section className="lp-hero" aria-labelledby="hero-title">
           <div className="lp-shell lp-hero-grid">
-            <div>
-              <p className="lp-eyebrow">AI ad platform for real estate teams</p>
-              <h1 id="hero-title">Create and launch real estate ads from one platform.</h1>
-              <p className="lp-lead">
-                Build Facebook and Instagram campaigns from a simple brief. Connect your ad account,
-                approve every ad, set the budget and track results inside Blockwise.
+            <div className="lp-hero-copy">
+              <h1 id="hero-title">
+                Your next lead is local.
+                <span className="lp-hero-h1-sub">Run the ads that reach them first.</span>
+              </h1>
+              <p className="lp-lead lp-lead-light">
+                Create and track local Meta ads without opening Ads Manager.
               </p>
+            </div>
+
+            <div className="lp-perf" aria-label="Campaign performance preview (example data)">
+              <div className="lp-perf-top">
+                <h3>Campaign Performance</h3>
+                <div className="lp-perf-top-right">
+                  <span className="lp-badge lp-badge-neutral">Example data</span>
+                  <span className="lp-perf-range">
+                    This Week
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div className="lp-perf-chart">
+                <svg viewBox="0 0 320 120" role="img" aria-label="Example chart: leads climbing across the week to 23">
+                  <path
+                    d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                  <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                  <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
+                  <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
+                </svg>
+                <span className="lp-perf-tag">23 Leads</span>
+              </div>
+              <div className="lp-perf-axis" aria-hidden>
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              </div>
+              <div className="lp-perf-stats">
+                <div className="lp-perf-stat"><span>Leads</span><strong>23</strong></div>
+                <div className="lp-perf-stat"><span>Cost per Lead</span><strong>$18</strong></div>
+                <div className="lp-perf-stat"><span>Amount Spent</span><strong>$414</strong></div>
+              </div>
+            </div>
+
+            <div className="lp-hero-actions">
               <div className="lp-cta-row">
-                <CtaLink location="hero" href="/signup" className="lp-btn lp-btn-primary lp-btn-big lp-btn-pill">
-                  Create your first campaign
+                <CtaLink location="hero" href="/signup" className="lp-btn lp-btn-hero lp-btn-big">
+                  Free Trial
                   <ArrowRight aria-hidden size={18} />
                 </CtaLink>
-                <a className="lp-btn lp-btn-ghost lp-btn-big lp-btn-pill" href="#campaigns">
-                  See example campaign
-                </a>
               </div>
               <div className="lp-trust-row" aria-label="Product trust points">
                 <TrustPoint label="Use your own ad account" />
                 <TrustPoint label="Agent approval required" />
                 <TrustPoint label="Budget controlled by you" />
                 <TrustPoint label="Reporting inside Blockwise" />
-              </div>
-            </div>
-
-            <div className="lp-dash" aria-label="Blockwise campaign dashboard preview">
-              <div className="lp-dash-top">
-                <div>
-                  <h3>Mt Lawley Appraisal Campaign</h3>
-                  <p>Facebook &amp; Instagram</p>
-                </div>
-                <div className="lp-dash-badges">
-                  <span className="lp-badge lp-badge-neutral">Example data</span>
-                  <span className="lp-badge lp-badge-active">Active</span>
-                </div>
-              </div>
-              <div className="lp-dash-metrics">
-                <div className="lp-metric"><span>Impressions</span><strong>12,847</strong></div>
-                <div className="lp-metric"><span>Clicks</span><strong>247</strong></div>
-                <div className="lp-metric"><span>Leads</span><strong>18</strong></div>
-                <div className="lp-metric"><span>Spent</span><strong>$324</strong></div>
-              </div>
-              <div className="lp-dash-grid">
-                <div className="lp-dash-ad">
-                  <div className="lp-dash-ad-head">
-                    <span className="lp-fb" aria-hidden>f</span>
-                    <strong>Sponsored</strong>
-                  </div>
-                  <p className="lp-dash-ad-copy">
-                    Thinking of selling in Mt Lawley? See what your home could be worth in today&rsquo;s market.
-                  </p>
-                  <div
-                    className="lp-dash-ad-img"
-                    style={{ backgroundImage: 'url("/ads/ad-northstar.jpg")' }}
-                    role="img"
-                    aria-label="Mt Lawley property ad creative"
-                  />
-                  <div className="lp-dash-ad-foot">
-                    <div>
-                      <strong>Get your free appraisal</strong>
-                      <span>Form on Facebook</span>
-                    </div>
-                    <span className="lp-dash-ad-btn">Learn More</span>
-                  </div>
-                </div>
-                <div className="lp-dash-graph">
-                  <p>Performance over time</p>
-                  <svg viewBox="0 0 300 150" role="img" aria-label="Example performance chart" preserveAspectRatio="none">
-                    <path d="M0 140H300" stroke="#edf1f6" />
-                    <path d="M0 100H300" stroke="#edf1f6" />
-                    <path d="M0 60H300" stroke="#edf1f6" />
-                    <path d="M0 20H300" stroke="#edf1f6" />
-                    <path d="M10 140C30 90 70 80 100 80C130 80 140 60 170 50C200 40 220 50 250 20C270 5 290 20 290 20" fill="none" stroke="#123e75" strokeWidth="3" strokeLinecap="round" />
-                    <path d="M10 140C40 120 70 100 100 90C130 80 150 90 180 70C210 50 220 60 250 40C270 30 290 25 290 25" fill="none" stroke="#31c46f" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                  <div className="lp-dash-axis" aria-hidden>
-                    <span>May 1</span><span>May 8</span><span>May 15</span><span>May 22</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
