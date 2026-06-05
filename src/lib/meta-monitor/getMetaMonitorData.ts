@@ -83,10 +83,11 @@ export async function getMetaMonitorData(input: {
 
   const accessToken = tokens.accessToken;
   const accountId = metaConnection.externalAccountId;
+  const datePreset = range.key === "today" || range.key === "yesterday" ? range.key : undefined;
 
   try {
     const [insightRows, adEntities, leadFacts] = await Promise.all([
-      fetchMetaInsightRows({ accessToken, accountId, since: range.since, until: range.until }),
+      fetchMetaInsightRows({ accessToken, accountId, since: range.since, until: range.until, datePreset }),
       fetchMetaAdEntities({ accessToken, accountId }),
       loadLeadFacts(input.serviceSupabase, input.workspaceId, range),
     ]);
@@ -99,6 +100,7 @@ export async function getMetaMonitorData(input: {
         accountId,
         since: range.since,
         until: range.until,
+        datePreset,
         breakdowns: "publisher_platform,platform_position",
       }).catch(() => null),
       fetchMetaInsightBreakdown({
@@ -106,6 +108,7 @@ export async function getMetaMonitorData(input: {
         accountId,
         since: range.since,
         until: range.until,
+        datePreset,
         breakdowns: "impression_device",
       }).catch(() => null),
       buildPreviousPeriod({
@@ -402,7 +405,7 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
   const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
 
   for (const row of insightRows) {
-    const date = row.date_start;
+    const date = range.days === 1 ? range.since : row.date_start;
 
     if (!date) {
       continue;

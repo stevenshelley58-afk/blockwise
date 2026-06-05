@@ -36,6 +36,8 @@ export type MetaCreativeNode = {
   title?: string | null;
 };
 
+type MetaDatePreset = "today" | "yesterday";
+
 type MetaListResponse<T> = {
   data?: T[];
   paging?: {
@@ -132,7 +134,7 @@ export async function fetchMetaReporting(input: {
   const insights = await fetchMetaList<MetaInsightRow>(`/${accountId}/insights`, input.accessToken, {
     level: "ad",
     time_increment: "1",
-    time_range: JSON.stringify({ since: input.range.since, until: input.range.until }),
+    ...resolveInsightDateParams(input.range),
     fields: [
       "ad_id",
       "ad_name",
@@ -253,13 +255,14 @@ export async function fetchMetaInsightRows(input: {
   accountId: string;
   since: string;
   until: string;
+  datePreset?: MetaDatePreset;
 }): Promise<MetaInsightRow[]> {
   const accountId = normalizeAccountId(input.accountId);
 
   return fetchMetaList<MetaInsightRow>(`/${accountId}/insights`, input.accessToken, {
     level: "ad",
     time_increment: "1",
-    time_range: JSON.stringify({ since: input.since, until: input.until }),
+    ...resolveInsightDateParams(input),
     fields: [
       "ad_id",
       "ad_name",
@@ -298,17 +301,28 @@ export async function fetchMetaInsightBreakdown(input: {
   accountId: string;
   since: string;
   until: string;
+  datePreset?: MetaDatePreset;
   breakdowns: "publisher_platform,platform_position" | "impression_device";
 }): Promise<MetaBreakdownRow[]> {
   const accountId = normalizeAccountId(input.accountId);
 
   return fetchMetaList<MetaBreakdownRow>(`/${accountId}/insights`, input.accessToken, {
     level: "ad",
-    time_range: JSON.stringify({ since: input.since, until: input.until }),
+    ...resolveInsightDateParams(input),
     fields: "ad_id,impressions",
     breakdowns: input.breakdowns,
     limit: "1000",
   });
+}
+
+function resolveInsightDateParams(input: { key?: string; since: string; until: string; datePreset?: MetaDatePreset }): Record<string, string> {
+  const datePreset = input.datePreset ?? (input.key === "today" || input.key === "yesterday" ? input.key : null);
+
+  if (datePreset) {
+    return { date_preset: datePreset };
+  }
+
+  return { time_range: JSON.stringify({ since: input.since, until: input.until }) };
 }
 
 function normalizeAccountId(accountId: string): string {

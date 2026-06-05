@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { extractMetaLeadCount, normalizeMetaInsightRows } from "../src/lib/providers/meta-reporting.ts";
+import { extractMetaLeadCount, fetchMetaInsightRows, normalizeMetaInsightRows } from "../src/lib/providers/meta-reporting.ts";
 import { normalizeGoogleAdsRows } from "../src/lib/providers/google-reporting.ts";
 
 test("Meta lead actions are normalized into lead counts", () => {
@@ -34,6 +34,47 @@ test("Meta insight rows normalize spend, clicks, leads, and valid lead placehold
   assert.equal(report.metrics.leads, 6);
   assert.equal(report.metrics.validLeads, 4);
   assert.equal(report.rows[0].validCplAud, 30.13);
+});
+
+test("Meta single-day insight reads use Ads Manager date presets", async () => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+
+  globalThis.fetch = async (url) => {
+    urls.push(String(url));
+
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            ad_id: "ad_1",
+            spend: "0.42",
+            impressions: "201",
+            date_start: "2026-06-05",
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const rows = await fetchMetaInsightRows({
+      accessToken: "token",
+      accountId: "998540809306211",
+      since: "2026-06-05",
+      until: "2026-06-05",
+      datePreset: "today",
+    });
+    const requestUrl = new URL(urls[0]);
+
+    assert.equal(rows.length, 1);
+    assert.match(requestUrl.pathname, /\/act_998540809306211\/insights$/);
+    assert.equal(requestUrl.searchParams.get("date_preset"), "today");
+    assert.equal(requestUrl.searchParams.has("time_range"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("Google Ads rows normalize micros, conversions, CTR, and campaign labels", () => {
