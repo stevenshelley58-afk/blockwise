@@ -131,6 +131,7 @@ type NormalizableProviderReport = Omit<MonitorProviderReport, "metrics" | "daily
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const AU_DASHBOARD_OFFSET_MS = 10 * 60 * 60 * 1000;
 
 const RANGE_LABELS: Record<MonitorRange, string> = {
   today: "Today",
@@ -223,7 +224,7 @@ const DEMO_LEADS: MonitorLeadRow[] = [
 ];
 
 export function resolveMonitorDateRange(range: MonitorRange = "last_30", now = new Date()): MonitorDateRange {
-  const normalizedNow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const normalizedNow = parseDateKey(toAuDashboardDateKey(now));
   const days = RANGE_DAYS[range];
   let end = normalizedNow;
 
@@ -628,6 +629,10 @@ function buildLeadSourceSplit(rows: MonitorLeadRow[]) {
 
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function toAuDashboardDateKey(date: Date): string {
+  return new Date(date.getTime() + AU_DASHBOARD_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 function parseDateKey(value: string): Date {

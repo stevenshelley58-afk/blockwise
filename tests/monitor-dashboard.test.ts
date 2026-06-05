@@ -31,6 +31,27 @@ test("resolveMonitorDateRange returns inclusive AU dashboard periods", () => {
   assert.equal(resolveMonitorDateRange("last_30", now).since, "2026-04-28");
 });
 
+test("resolveMonitorDateRange uses the AU dashboard day before UTC rolls over", () => {
+  const now = new Date("2026-06-04T16:30:00.000Z");
+
+  assert.deepEqual(resolveMonitorDateRange("today", now), {
+    key: "today",
+    label: "Today",
+    since: "2026-06-05",
+    until: "2026-06-05",
+    days: 1,
+  });
+  assert.deepEqual(resolveMonitorDateRange("yesterday", now), {
+    key: "yesterday",
+    label: "Yesterday",
+    since: "2026-06-04",
+    until: "2026-06-04",
+    days: 1,
+  });
+  assert.equal(resolveMonitorDateRange("last_7", now).since, "2026-05-30");
+  assert.equal(resolveMonitorDateRange("last_30", now).since, "2026-05-07");
+});
+
 test("valid lead metrics are zero-safe", () => {
   assert.equal(calculateValidLeadRate(100, 72), 0.72);
   assert.equal(calculateValidLeadRate(0, 0), 0);
