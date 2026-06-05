@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await access.supabase
     .from("adstudio_provider_runs")
-    .select("*")
+    .select("id, workspace_id, job_id, provider_name, provider_type, model_name, prompt_version_id, input_json, output_json, usage_json, cost_estimate, status, error_json, created_at")
     .eq("workspace_id", access.access.workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);

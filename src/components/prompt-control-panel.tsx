@@ -1,6 +1,7 @@
 "use client";
 
 import { RotateCcw, Save, Send, TestTube2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { StatusPill } from "@/components/status-pill";
@@ -42,8 +43,15 @@ type PromptRunRow = {
   provider_name: string | null;
   provider_type: string | null;
   model_name: string | null;
+  task_type: string | null;
+  model_profile: string | null;
+  correlation_id: string | null;
+  user_id: string | null;
+  ai_run_id: string | null;
+  ai_usage_ledger_id: string | null;
   input_json: Record<string, unknown>;
   usage_json: Record<string, unknown>;
+  cost_estimate: number | string | null;
   status: string;
   error_json: Record<string, unknown> | null;
   created_at: string;
@@ -342,7 +350,10 @@ export function PromptControlPanel() {
           </section>
 
           <section className="item-card">
-            <h3>Test</h3>
+            <div className="section-heading compact">
+              <h3>Test</h3>
+              <StatusPill tone="blue">Assemble-only</StatusPill>
+            </div>
             <select value={selectedFixture} onChange={(event) => setSelectedFixture(event.target.value)}>
               {fixtures.map((fixture) => (
                 <option value={fixture.id} key={fixture.id}>
@@ -466,9 +477,12 @@ export function PromptControlPanel() {
               <tr>
                 <th>Time</th>
                 <th>Task</th>
+                <th>Profile</th>
                 <th>Provider</th>
                 <th>Model</th>
+                <th>Cost</th>
                 <th>Status</th>
+                <th>Trace</th>
                 <th>Prompt versions</th>
               </tr>
             </thead>
@@ -476,18 +490,23 @@ export function PromptControlPanel() {
               {recentRuns.map((run) => (
                 <tr key={run.id}>
                   <td>{formatDate(run.created_at)}</td>
-                  <td>{String(run.input_json?.task_type ?? "-")}</td>
+                  <td>{run.task_type ?? String(run.input_json?.task_type ?? "-")}</td>
+                  <td>{run.model_profile ?? String(run.input_json?.model_profile ?? "-")}</td>
                   <td>{run.provider_name ?? "-"}</td>
                   <td>{run.model_name ?? "-"}</td>
+                  <td>{formatCost(run.cost_estimate)}</td>
                   <td>
                     <StatusPill tone={run.status === "completed" ? "green" : "rose"}>{run.status}</StatusPill>
+                  </td>
+                  <td>
+                    <Link href={`/model-control/runs/${run.id}`}>{shortTrace(run.correlation_id)}</Link>
                   </td>
                   <td>{summarizePromptVersions(run.input_json?.prompt_versions)}</td>
                 </tr>
               ))}
               {!recentRuns.length ? (
                 <tr>
-                  <td colSpan={6}>No provider runs recorded yet.</td>
+                  <td colSpan={9}>No provider runs recorded yet.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -521,6 +540,16 @@ function buildLineDiff(left: string, right: string): Array<{ kind: "same" | "add
 
 function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleString() : "-";
+}
+
+function formatCost(value: number | string | null): string {
+  const amount = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(amount) ? `$${amount!.toFixed(2)}` : "-";
+}
+
+function shortTrace(value: string | null): string {
+  if (!value) return "-";
+  return value.length <= 12 ? value : value.slice(0, 12);
 }
 
 function summarizePromptVersions(value: unknown): string {

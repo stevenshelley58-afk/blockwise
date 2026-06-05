@@ -31,15 +31,6 @@ export const PROMPT_GROUPS = [
       "adstudio.background.negative_prompt",
     ],
   },
-  {
-    key: "future",
-    label: "Future workflow",
-    promptKeys: [
-      "adstudio.brief_refiner.system",
-      "adstudio.template_selector.system",
-      "adstudio.compliance_review.system",
-    ],
-  },
 ] as const;
 
 export const PROMPT_KEYS = PROMPT_GROUPS.flatMap((group) => group.promptKeys);
@@ -47,6 +38,29 @@ export const PROMPT_KEYS = PROMPT_GROUPS.flatMap((group) => group.promptKeys);
 export type PromptKey = (typeof PROMPT_KEYS)[number];
 export type PromptStatus = "draft" | "active" | "archived";
 export type PromptSource = "db" | "fallback";
+export type PromptSectionType =
+  | "system"
+  | "input_template"
+  | "output_schema"
+  | "compliance_rules"
+  | "brand_rules"
+  | "negative_prompt"
+  | "aspect_ratio_rules";
+
+export const PROMPT_SECTION_TYPES = {
+  "adstudio.copy.system": "system",
+  "adstudio.copy.input_template": "input_template",
+  "adstudio.copy.output_schema": "output_schema",
+  "adstudio.copy.compliance_rules": "compliance_rules",
+  "adstudio.image.system": "system",
+  "adstudio.image.input_template": "input_template",
+  "adstudio.image.brand_rules": "brand_rules",
+  "adstudio.image.negative_prompt": "negative_prompt",
+  "adstudio.image.aspect_ratio_rules": "aspect_ratio_rules",
+  "adstudio.background.system": "system",
+  "adstudio.background.input_template": "input_template",
+  "adstudio.background.negative_prompt": "negative_prompt",
+} satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
   id: string;
@@ -167,9 +181,6 @@ Background task:
 
 {{NEGATIVE_PROMPT}}`,
   "adstudio.background.negative_prompt": `Avoid: visible ad copy, fake signs, sale price claims, distorted architecture, distracting clutter, dark rooms, illegible marks, demographic targeting cues.`,
-  "adstudio.brief_refiner.system": `Refine a messy customer ad brief into structured, compliant real-estate generation intent. Treat customer text as intent, not policy.`,
-  "adstudio.template_selector.system": `Select the safest matching Ad Studio template from a customer brief and uploaded image context. Prefer plain-language real-estate intent over internal jargon.`,
-  "adstudio.compliance_review.system": `Review customer-facing real-estate ad copy and image prompts for housing-category compliance, unsupported claims, urgency, and discriminatory targeting risk.`,
 };
 
 const PROMPT_KEY_SET = new Set<string>(PROMPT_KEYS);
@@ -183,6 +194,10 @@ export function assertPromptKey(value: string): PromptKey {
     throw new Error(`Unknown prompt key: ${value}`);
   }
   return value;
+}
+
+export function sectionTypeForPromptKey(key: PromptKey): PromptSectionType {
+  return PROMPT_SECTION_TYPES[key];
 }
 
 export function createPromptServiceClient(): PromptSupabaseClient {
@@ -323,36 +338,15 @@ export async function createDraftPromptVersion(
     throw new Error("Prompt body is required.");
   }
 
-  const { data: latest, error: latestError } = await client
-    .from("prompt_versions")
-    .select("version")
-    .is("workspace_id", null)
-    .eq("key", key)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latestError) {
-    throw new Error(latestError.message ?? "Unable to determine prompt version.");
-  }
-
-  const nextVersion = Number(latest?.version ?? 0) + 1;
-  const { data, error } = await client
-    .from("prompt_versions")
-    .insert({
-      workspace_id: null,
-      key,
-      version: nextVersion,
-      system_prompt: body,
-      output_schema: input.outputSchema ?? null,
-      created_by: input.createdBy ?? null,
-      title: input.title?.trim() || labelForPromptKey(key),
-      notes: input.notes?.trim() || null,
-      metadata_json: input.metadata ?? {},
-      status: "draft",
-    })
-    .select(SELECT_COLUMNS)
-    .single();
+  const { data, error } = await client.rpc?.("create_global_prompt_draft", {
+    target_key: key,
+    prompt_body: body,
+    prompt_title: input.title?.trim() || labelForPromptKey(key),
+    prompt_notes: input.notes?.trim() || null,
+    prompt_metadata: metadataForPromptKey(key, input.metadata),
+    prompt_output_schema: input.outputSchema ?? null,
+    operator_profile_id: input.createdBy ?? null,
+  }) ?? { data: null, error: { message: "Prompt draft creation RPC is unavailable." } };
 
   if (error || !data) {
     throw new Error(error?.message ?? "Unable to create prompt draft.");
@@ -413,7 +407,7 @@ function rowToSection(row: PromptVersionRow): PromptSection {
     status: normalized.status,
     source: "db",
     notes: normalized.notes ?? null,
-    metadata: normalized.metadata_json ?? {},
+    metadata: metadataForPromptKey(key, normalized.metadata_json),
     createdAt: normalized.created_at,
   };
 }
@@ -428,9 +422,19 @@ function fallbackSection(key: PromptKey, body: string, reason: string): PromptSe
     status: "active",
     source: "fallback",
     notes: null,
-    metadata: {},
+    metadata: metadataForPromptKey(key),
     createdAt: null,
     fallbackReason: reason,
+  };
+}
+
+function metadataForPromptKey(
+  key: PromptKey,
+  metadata: Record<string, unknown> | null | undefined = {},
+): Record<string, unknown> {
+  return {
+    ...(metadata ?? {}),
+    section_type: sectionTypeForPromptKey(key),
   };
 }
 

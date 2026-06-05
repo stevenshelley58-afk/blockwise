@@ -75,6 +75,26 @@ export type AssembledPrompt = {
   warnings: string[];
 };
 
+export type PromptAssemblyFailureSource = "database" | "fallback";
+
+export class PromptAssemblyError extends Error {
+  readonly key: PromptKey;
+  readonly version: number;
+  readonly source: PromptAssemblyFailureSource;
+  readonly reason: string;
+
+  constructor(input: { key: PromptKey; version: number; source: "db" | "fallback"; reason: string }) {
+    const source = input.source === "db" ? "database" : "fallback";
+    const versionLabel = input.version > 0 ? ` v${input.version}` : "";
+    super(`Prompt ${input.key}${versionLabel} (${source}) failed assembly: ${input.reason}`);
+    this.name = "PromptAssemblyError";
+    this.key = input.key;
+    this.version = input.version;
+    this.source = source;
+    this.reason = input.reason;
+  }
+}
+
 type PlaceholderValueMap = Record<AllowedPlaceholder, string>;
 
 const ALLOWED_PLACEHOLDERS = [
@@ -136,9 +156,7 @@ export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPro
   ].filter(Boolean).join("\n\n");
   const user = renderTemplateSection(
     input.bundle["adstudio.copy.input_template"],
-    PROMPT_FALLBACKS["adstudio.copy.input_template"],
     values,
-    input.runtime !== false,
   );
 
   return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
@@ -183,9 +201,7 @@ export function assembleImagePrompt(input: ImagePromptInput): AssembledPrompt {
   const system = sectionBody(input.bundle, "adstudio.image.system");
   const user = renderTemplateSection(
     input.bundle["adstudio.image.input_template"],
-    PROMPT_FALLBACKS["adstudio.image.input_template"],
     values,
-    input.runtime !== false,
   );
 
   return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
@@ -229,9 +245,7 @@ export function assembleBackgroundPrompt(input: BackgroundPromptInput): Assemble
   const system = sectionBody(input.bundle, "adstudio.background.system");
   const user = renderTemplateSection(
     input.bundle["adstudio.background.input_template"],
-    PROMPT_FALLBACKS["adstudio.background.input_template"],
     values,
-    input.runtime !== false,
   );
 
   return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
@@ -324,24 +338,17 @@ export function formatReferenceAssetContext(referenceAssets: string[]): string {
 
 function renderTemplateSection(
   section: PromptSection,
-  fallbackTemplate: string,
   values: PlaceholderValueMap,
-  runtimeSafe: boolean,
 ): string {
   try {
     return renderTemplate(section.body, values);
   } catch (error) {
-    if (!runtimeSafe) {
-      throw error;
-    }
-    return renderTemplate(fallbackTemplate, values);
+    throw toPromptAssemblyError(section, error);
   }
 }
 
 export function renderTemplate(template: string, values: PlaceholderValueMap): string {
-  const unknown = [...template.matchAll(/{{\s*([A-Z_]+)\s*}}/g)]
-    .map((match) => match[1] ?? "")
-    .filter((placeholder) => !ALLOWED_PLACEHOLDER_SET.has(placeholder));
+  const unknown = findUnknownPlaceholders(template);
 
   if (unknown.length) {
     throw new Error(`Unknown prompt placeholder: ${unknown.join(", ")}`);
@@ -375,7 +382,49 @@ function buildAssembledPrompt(input: {
 }
 
 function sectionBody(bundle: PromptBundle, key: PromptKey): string {
-  return bundle[key]?.body ?? PROMPT_FALLBACKS[key];
+  const section = bundle[key];
+
+  if (section) {
+    assertKnownPlaceholders(section.body, section);
+    return section.body;
+  }
+
+  const fallbackBody = PROMPT_FALLBACKS[key];
+  assertKnownPlaceholders(fallbackBody, { key, version: 0, source: "fallback" });
+  return fallbackBody;
+}
+
+function assertKnownPlaceholders(
+  template: string,
+  context: { key: PromptKey; version: number; source: "db" | "fallback" },
+): void {
+  const unknown = findUnknownPlaceholders(template);
+
+  if (unknown.length) {
+    throw new PromptAssemblyError({
+      ...context,
+      reason: `Unknown prompt placeholder: ${unknown.join(", ")}`,
+    });
+  }
+}
+
+function findUnknownPlaceholders(template: string): string[] {
+  return [...template.matchAll(/{{\s*([A-Z_]+)\s*}}/g)]
+    .map((match) => match[1] ?? "")
+    .filter((placeholder) => !ALLOWED_PLACEHOLDER_SET.has(placeholder));
+}
+
+function toPromptAssemblyError(section: PromptSection, error: unknown): PromptAssemblyError {
+  if (error instanceof PromptAssemblyError) {
+    return error;
+  }
+
+  return new PromptAssemblyError({
+    key: section.key,
+    version: section.version,
+    source: section.source,
+    reason: error instanceof Error ? error.message : "Prompt assembly failed.",
+  });
 }
 
 function formatCurrentCopy(copy: CopyFieldsForPrompt | undefined): string {

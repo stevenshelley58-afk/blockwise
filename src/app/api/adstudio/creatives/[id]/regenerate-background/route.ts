@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createOpenAiImageProvider } from "@/lib/adstudio";
@@ -39,6 +41,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const startedAt = Date.now();
+  const correlationId = randomUUID();
   const creative = await loadCreative(access.supabase, access.access.workspaceId, id);
 
   if (!creative) {
@@ -85,6 +88,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     await recordAdStudioProviderRun({
       workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
+      correlationId,
       taskType: "adstudio.background",
       modelProfile: "image_draft",
       prompt: assembled,
@@ -107,6 +112,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   } catch (error) {
     await recordAdStudioProviderRun({
       workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
+      correlationId,
       taskType: "adstudio.background",
       modelProfile: "image_draft",
       prompt: assembled,
