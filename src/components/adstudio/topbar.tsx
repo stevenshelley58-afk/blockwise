@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Archive, Cloud, Copy, MoreHorizontal, Share2, Trash2 } from "lucide-react";
 
@@ -85,12 +86,16 @@ export function TopBar({
   return (
     <header className="studio-topbar">
       <div className="studio-titlebar">
-        <BlockwiseLogo />
+        <Link className="studio-home-link" href="/home" aria-label="Go to Blockwise home">
+          <BlockwiseLogo />
+        </Link>
         <span className="studio-divider" />
         <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>
       </div>
       <div className="studio-mobile-title">
-        <BlockwiseLogo />
+        <Link className="studio-home-link" href="/home" aria-label="Go to Blockwise home">
+          <BlockwiseLogo />
+        </Link>
         <span className="studio-divider" />
         <strong>Ad Studio</strong>
       </div>

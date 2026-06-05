@@ -11,6 +11,8 @@ export const STYLES = `
 .studio-screen button{cursor:pointer}
 .studio-topbar{position:relative;z-index:4;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line-soft);background:#fff;padding:0 22px}
 .studio-titlebar,.studio-mobile-title,.studio-actions{display:flex;align-items:center;gap:13px;min-width:0}
+.studio-home-link{display:inline-flex;align-items:center;color:inherit;text-decoration:none;border-radius:8px}
+.studio-home-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .studio-titlebar .blockwise-symbol{width:27px;height:27px}
 .studio-titlebar .blockwise-wordmark{font-size:19px}
 .studio-mobile-title{display:none}
