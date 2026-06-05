@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Globe2, Home, LayoutGrid, MapPin, Sparkles, Target, Wand2 } from "lucide-react";
+import { BadgeCheck, Globe2, Home, ImagePlus, LayoutGrid, MapPin, Target, Wand } from "lucide-react";
 
 import type { AdStudioTemplate } from "@/lib/adstudio";
 
@@ -52,7 +52,7 @@ export function CampaignPanel({
         <PanelHeader title="Create ad" detail="Template + one photo = a finished ad." />
         <div className="studio-empty">
           <span className="studio-empty-ic">
-            <Sparkles aria-hidden size={24} />
+            <ImagePlus aria-hidden size={24} />
           </span>
           <strong>Create your first ad</strong>
           <p>
@@ -61,7 +61,7 @@ export function CampaignPanel({
           </p>
           <div className="studio-empty-row">
             <button className="studio-btn publish" type="button" onClick={onCreateAd}>
-              <Wand2 aria-hidden size={16} />
+              <Wand aria-hidden size={16} />
               Create ad
             </button>
             <button className="studio-btn secondary" type="button" onClick={onBrowseTemplates}>

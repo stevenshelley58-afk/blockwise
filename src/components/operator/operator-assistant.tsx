@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Lock, MessageSquare, Send, Sparkles, X } from "lucide-react";
+import { Bot, Lock, MessageSquare, Send, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 export type OperatorAssistantCoverageRow = {
@@ -95,7 +95,6 @@ export function OperatorAssistant({ initialRows, initialPostcode, lastUpdated }:
           <span>Live</span>
         </div>
         <div className="operator-assistant-tools">
-          <Sparkles aria-hidden size={16} />
           <X aria-hidden size={16} />
         </div>
       </div>
