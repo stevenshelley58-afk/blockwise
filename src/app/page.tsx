@@ -7,19 +7,13 @@ import { DemoForm } from "@/components/landing/demo-form";
 import { SignInLink } from "@/components/landing/sign-in-link";
 
 /**
- * Landing page — "Executive Precision" design (source: /stitch export, completed
- * and wired to real app flows). Copy is governed by docs/landing-copy-spec.md:
- * every product claim traces to code (§2 claims register).
+ * Landing page — "Executive Precision" design (source: /stitch export, wired
+ * to real app flows). Product-facts reference (informational, not a gate):
+ * docs/landing-copy-spec.md. Copy is freely editable.
  *
- * Hero reworked 2026-06-05 to the v4 final hero copy (H1 "Your next lead is
- * local…" / sub "…without opening Ads Manager" — approved claims per v4).
- * CTA label "Free Trial" chosen in chat over the spec's sitewide "Create Ad".
- * Hero photos: /public/hero/hero-wide.jpg (desktop) and hero-tall.jpg (≤720px),
- * referenced from landing.css. Perf-card numbers are labeled example data.
- *
- * ⚠️ Launch gate (spec §0a): step 4 and the Active table mock still assume
- * provider writes are enabled. Swap to the spec's fallback strings if this ships
- * before BLOCKWISE_ENABLE_PROVIDER_WRITES=true.
+ * Hero (2026-06-05): photo background from /public/hero/hero-wide.jpg (desktop)
+ * and hero-tall.jpg (≤720px), referenced from landing.css. Perf-card numbers
+ * are labeled example data.
  */
 
 function TrustPoint({ label }: { label: string }) {
