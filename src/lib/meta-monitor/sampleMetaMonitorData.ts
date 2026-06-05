@@ -3,8 +3,10 @@ import { safeCpl, safeRate } from "./calculations.ts";
 import type { MetaAdPerformance, MetaDailyPoint, MetaMonitorPayload, MonitorRange } from "./types.ts";
 
 /**
- * Sample fixtures shown ONLY when NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA === "true".
+ * Demo fixtures shown when NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA === "true", or as
+ * the default "demo data" experience for workspaces with no Meta connection.
  * Internally consistent over 30 days: spend Σ $5,940 · 176 leads · 118 valid.
+ * Demo data is dropped automatically the moment a real connection exists.
  */
 
 const SPEND_30 = [155, 170, 190, 240, 280, 310, 250, 205, 185, 160, 175, 210, 230, 195, 170, 150, 165, 185, 220, 260, 250, 205, 180, 165, 190, 215, 245, 205, 95, 85];
@@ -87,7 +89,11 @@ const SAMPLE_ADS: SampleAd[] = [
   },
 ];
 
-export function buildSampleMetaMonitorPayload(input: { range?: MonitorRange; now?: Date } = {}): MetaMonitorPayload {
+const SAMPLE_CREATIVES = ["/ads/ad-northstar.jpg", "/ads/ad-coastline.jpg", "/ads/ad-hillview.jpg", "/ads/ad-hillco.jpg"];
+
+export function buildSampleMetaMonitorPayload(
+  input: { range?: MonitorRange; now?: Date; connected?: boolean } = {},
+): MetaMonitorPayload {
   const range = resolveMonitorDateRange(input.range ?? "last_30", input.now ?? new Date());
   const days = Math.min(range.days, 30);
   const spendSeries = SPEND_30.slice(30 - days);
@@ -111,7 +117,8 @@ export function buildSampleMetaMonitorPayload(input: { range?: MonitorRange; now
   const leads = sum(leadsSeries);
   const validLeads = sum(validSeries);
 
-  const ads: MetaAdPerformance[] = SAMPLE_ADS.map((ad) => {
+  const ads: MetaAdPerformance[] = SAMPLE_ADS.map((ad, adIndex) => {
+    const creativeImage = SAMPLE_CREATIVES[adIndex % SAMPLE_CREATIVES.length];
     const adSpend = round2(ad.spend * scale);
     const adLeads = Math.round(ad.leads * scale);
     const adValid = Math.min(Math.round(ad.validLeads * scale), adLeads);
@@ -132,8 +139,8 @@ export function buildSampleMetaMonitorPayload(input: { range?: MonitorRange; now
       creative: {
         type: ad.creativeType,
         thumbnailUrl: null,
-        imageUrl: null,
-        videoThumbnailUrl: null,
+        imageUrl: ad.creativeType === "IMAGE" ? creativeImage : null,
+        videoThumbnailUrl: ad.creativeType === "VIDEO" ? creativeImage : null,
         primaryText: null,
         headline: ad.headline,
         description: null,
@@ -185,7 +192,7 @@ export function buildSampleMetaMonitorPayload(input: { range?: MonitorRange; now
   }).filter((row) => row.validLeads > 0);
 
   return {
-    connected: true,
+    connected: input.connected ?? true,
     source: "sample",
     currencyCode: "AUD",
     range,
