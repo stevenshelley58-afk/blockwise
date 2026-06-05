@@ -97,7 +97,6 @@ test("traceability edge migration adds correlation ids across approvals artifact
 
   for (const [tableName, columnName] of [
     ["audit_logs", "correlation_id"],
-    ["approval_requests", "correlation_id"],
     ["agent_runs", "correlation_id"],
     ["agent_artifacts", "correlation_id"],
     ["lead_source_attribution", "correlation_id"],
@@ -108,9 +107,27 @@ test("traceability edge migration adds correlation ids across approvals artifact
   }
 
   assert.match(sql, /alter table public\.agent_runs[\s\S]*add column if not exists user_id uuid references public\.profiles/i);
-  assert.match(sql, /add column if not exists meta_publish_plan_id uuid references public\.meta_publish_plans/i);
-  assert.match(sql, /add column if not exists adstudio_campaign_id uuid references public\.adstudio_campaigns/i);
-  assert.match(sql, /add column if not exists approval_request_id uuid references public\.approval_requests/i);
+  assert.match(sql, /add column if not exists meta_publish_plan_id uuid/i);
+  assert.match(sql, /add column if not exists adstudio_campaign_id uuid/i);
+  assert.match(sql, /add column if not exists approval_request_id uuid/i);
+  assert.match(sql, /to_regclass\('public\.meta_publish_plans'\) is not null/i);
+  assert.match(sql, /references public\.meta_publish_plans \(id\)/i);
+  assert.match(sql, /to_regclass\('public\.adstudio_campaigns'\) is not null/i);
+  assert.match(sql, /references public\.adstudio_campaigns \(id\)/i);
+  assert.match(sql, /to_regclass\('public\.approval_requests'\) is not null/i);
+  assert.match(sql, /references public\.approval_requests \(id\)/i);
+  assert.match(
+    sql,
+    /if to_regclass\('public\.approval_requests'\) is not null then\s*alter table public\.approval_requests\s*add column if not exists correlation_id text;\s*end if;/i,
+  );
+  assert.match(
+    sql,
+    /if to_regclass\('public\.approval_requests'\) is not null then[\s\S]*table_name = 'approval_requests'[\s\S]*approval_requests_target_idx[\s\S]*approval_requests_correlation_idx[\s\S]*end if;\s*end \$\$/i,
+  );
+  assert.match(sql, /to_regclass\('public\.lead_delivery_attempts'\) is not null[\s\S]*alter table public\.lead_delivery_attempts[\s\S]*add column if not exists correlation_id text/i);
+  assert.match(sql, /to_regclass\('public\.lead_export_audits'\) is not null[\s\S]*alter table public\.lead_export_audits[\s\S]*add column if not exists correlation_id text/i);
+  assert.match(sql, /to_regclass\('public\.lead_delivery_attempts'\) is not null[\s\S]*lead_delivery_attempts_trace_idx/i);
+  assert.match(sql, /to_regclass\('public\.lead_export_audits'\) is not null[\s\S]*lead_export_audits_trace_idx/i);
   assert.match(sql, /audit_logs_workspace_correlation_idx/i);
   assert.match(sql, /approval_requests_correlation_idx/i);
   assert.match(sql, /agent_runs_user_correlation_idx/i);
