@@ -1,4 +1,4 @@
-import { ArrowRight, Palette, Plug, WandSparkles } from "lucide-react";
+import { ArrowRight, Palette, PenLine, Plug } from "lucide-react";
 import Link from "next/link";
 
 import { PageHeading } from "@/components/page-heading";
@@ -85,7 +85,7 @@ export default async function SelfServePage() {
 
       <section className="grid cols-3" aria-label="Next actions">
         <article className="item-card">
-          <WandSparkles aria-hidden color="#123e75" size={20} />
+          <PenLine aria-hidden color="#123e75" size={20} />
           <h3>Create</h3>
           <p className="item-meta">Turn one listing photo and a short brief into Meta-ready ad formats.</p>
         </article>

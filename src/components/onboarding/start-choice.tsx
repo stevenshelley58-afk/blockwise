@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Building2, WandSparkles } from "lucide-react";
+import { ArrowRight, Building2, PenLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -15,7 +15,7 @@ type Choice = {
   title: string;
   description: string;
   action: string;
-  icon: typeof WandSparkles;
+  icon: typeof PenLine;
   primary?: boolean;
 };
 
@@ -26,7 +26,7 @@ const choices: Choice[] = [
     title: "Create first ad",
     description: "Start with one image and a short brief. No Meta account is needed until you publish.",
     action: "Create first ad",
-    icon: WandSparkles,
+    icon: PenLine,
     primary: true,
   },
   {

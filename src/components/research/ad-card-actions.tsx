@@ -59,7 +59,7 @@ export function AdCardActions({
         </a>
       ) : null}
       {canSave ? (
-        <a className="button secondary" href={`/research/ads/${observedAdId}`}>
+        <a className="button secondary" href={`/ad-radar/ads/${observedAdId}`}>
           <FileSearch size={14} /> Details
         </a>
       ) : null}
