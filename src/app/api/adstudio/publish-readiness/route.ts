@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
+import { resolveMetaConnectionSetup, validateMetaConnectionSetup } from "@/lib/providers/meta-execution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ type ProviderReadiness = {
 /**
  * Read-only publish readiness check.
  *
- * Reports whether the workspace is set up to publish live ads to Meta/Google
+ * Reports whether the workspace is set up to publish live ads to Meta
  * WITHOUT creating anything. Live publishing stays gated behind
  * BLOCKWISE_ENABLE_PROVIDER_WRITES plus connected accounts and platform app
  * review. This endpoint never writes to a provider.
@@ -30,45 +31,35 @@ export async function GET(request: NextRequest) {
   const writesEnabled = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
   const connections = await listProviderConnections(context.supabase, context.access.workspaceId);
 
-  const toReadiness = (provider: "meta" | "google"): ProviderReadiness => {
-    const match = connections.find((connection) => connection.provider === provider);
-    return {
-      connected: match?.status === "connected",
-      status: match?.status ?? "not_connected",
-      accountId: match?.externalAccountId ?? null,
-    };
-  };
-
-  const providers = {
-    meta: toReadiness("meta"),
-    google: toReadiness("google"),
+  const metaConnection = connections.find((connection) => connection.provider === "meta");
+  const metaSetup = resolveMetaConnectionSetup(metaConnection?.metadata ?? {}, metaConnection?.externalAccountId);
+  const metaSetupBlockers = metaConnection?.status === "connected" ? validateMetaConnectionSetup(metaSetup) : [];
+  const metaReadiness: ProviderReadiness = {
+    connected: metaConnection?.status === "connected",
+    status: metaConnection?.status ?? "not_connected",
+    accountId: metaConnection?.externalAccountId ?? null,
   };
 
   const checklist = [
     {
       id: "meta_connected",
       label: "Connect a Meta ad account",
-      done: providers.meta.connected,
+      done: metaReadiness.connected,
       automatic: true,
     },
-    {
-      id: "google_connected",
-      label: "Connect a Google Ads account",
-      done: providers.google.connected,
-      automatic: true,
-    },
-    {
-      id: "meta_app_review",
-      label: "Meta app review approved (ads_management + leads_retrieval)",
-      done: false,
-      automatic: false,
-    },
-    {
-      id: "google_app_review",
-      label: "Google Ads API developer token / access approved",
-      done: false,
-      automatic: false,
-    },
+    ...(metaReadiness.connected && metaSetupBlockers.length === 0
+      ? [{
+          id: "meta_setup",
+          label: "Complete Meta publishing setup",
+          done: true,
+          automatic: true,
+        }]
+      : metaSetupBlockers.map((blocker, index) => ({
+          id: `meta_setup_${index + 1}`,
+          label: blocker,
+          done: false,
+          automatic: true,
+        }))),
     {
       id: "provider_writes",
       label: "Enable live publishing (set BLOCKWISE_ENABLE_PROVIDER_WRITES=true)",
@@ -77,14 +68,19 @@ export async function GET(request: NextRequest) {
     },
   ];
 
-  const ready = writesEnabled && (providers.meta.connected || providers.google.connected);
+  const blockers = checklist.filter((item) => !item.done).map((item) => item.label);
+  const ready = blockers.length === 0;
 
   return NextResponse.json({
     workspaceId: context.access.workspaceId,
     providerWritesEnabled: writesEnabled,
-    providers,
+    providers: {
+      meta: metaReadiness,
+    },
+    setup: metaSetup,
+    blockers,
     checklist,
     ready,
-    note: "Read-only check - no ads are created. Live publishing remains disabled until every step is complete.",
+    note: "Read-only Meta check - no ads are created. Live publishing remains disabled until every step is complete.",
   });
 }

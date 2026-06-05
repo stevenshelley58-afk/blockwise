@@ -34,7 +34,7 @@ const NORTHSTAR_HTML = `
       <main>
         <h1>Experienced Perth real estate agents you can trust</h1>
         <p>Northstar Realty has helped over 400 Perth families sell their homes. Our team covers Scarborough, Karrinyup, Trigg, and the broader northern suburbs.</p>
-        <p class="badge">Licensed Agent · Reiwa member · 4.9 ★ on Google (230 reviews)</p>
+        <p class="badge">Licensed Agent - Reiwa member - 4.9 stars from client reviews</p>
         <a class="button" href="https://northstar.example/seller-checklist">Get your free seller checklist</a>
         <section>
           <h2>Planning to sell in 2025?</h2>
@@ -73,7 +73,7 @@ export function getAdStudioDemoBundle() {
     city: "Perth",
     state: "WA",
     offerId: "seller_prep_checklist",
-    platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+    platforms: ["meta"],
     variantCount: 5,
   });
 
@@ -117,7 +117,11 @@ export function getAdStudioDemoBundle() {
 
   return {
     brandKit,
-    campaignPack: { ...pack, copyPacks: patchedCopyPacks },
+    campaignPack: {
+      ...pack,
+      campaign: { ...pack.campaign, name: `Sample: ${pack.campaign.name}` },
+      copyPacks: patchedCopyPacks,
+    },
     offers: listOfferTemplates(),
     performance: {
       leads: 43,

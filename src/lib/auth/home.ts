@@ -43,7 +43,7 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
   const onboardingStatus = firstWorkspace?.onboarding_status ?? "complete";
   if (
     firstWorkspace?.mode === "self_serve" &&
-    (onboardingStatus === "not_started" || onboardingStatus === "fast_path" || onboardingStatus === "full_setup")
+    (onboardingStatus === "not_started" || onboardingStatus === "full_setup")
   ) {
     return "/start";
   }

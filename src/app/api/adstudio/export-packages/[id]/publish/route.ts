@@ -213,6 +213,18 @@ async function createAndPersistMetaPlan(input: {
       .update({ target_id: plan.planId })
       .eq("id", approval.id)
       .eq("workspace_id", input.workspaceId);
+    await input.serviceSupabase.from("audit_logs").insert({
+      workspace_id: input.workspaceId,
+      actor_profile_id: input.userId,
+      action: "meta_publish_approval_requested",
+      target_type: "approval_request",
+      target_id: approval.id,
+      metadata: {
+        metaPublishPlanId: plan.planId,
+        campaignName: input.campaignPack.campaign.name,
+        adapter: input.adapter,
+      },
+    });
   }
 
   const persistedPlan: MetaPublishPlan = {

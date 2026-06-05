@@ -185,6 +185,7 @@ export type AdStudioCreative = {
     height: number;
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
+    fabricJson?: Record<string, unknown> | null;
   };
   safeZones: {
     metaStory: boolean;

@@ -114,6 +114,18 @@ export const STYLES = `
 .studio-segment button.active small{color:var(--muted)}
 .studio-control-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .studio-stage{position:relative;flex:0 0 auto;min-height:610px;display:grid;place-items:center;overflow:visible;padding:34px}
+.studio-fabric-editor{width:min(740px,100%);display:grid;justify-items:center;gap:12px}
+.studio-fabric-toolbar{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.08);padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.24)}
+.studio-fabric-toolbar button{width:36px;height:36px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:#e6edf6;display:grid;place-items:center;padding:0}
+.studio-fabric-toolbar button:hover:not(:disabled){background:#fff;color:var(--accent)}
+.studio-fabric-toolbar button:disabled{opacity:.42;cursor:not-allowed}
+.studio-fabric-shell{width:min(560px,88%);max-height:calc(100vh - 250px);display:grid;place-items:center}
+.studio-fabric-shell .canvas-container{max-width:100%;max-height:calc(100vh - 250px)}
+.studio-fabric-shell canvas{display:block;max-width:100%;width:100%;height:auto;max-height:calc(100vh - 250px);object-fit:contain;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-fabric-shell[data-format="9:16"]{width:min(350px,74%)}
+.studio-fabric-shell[data-format="4:5"]{width:min(475px,82%)}
+.studio-fabric-shell[data-format="1:1"]{width:min(520px,84%)}
+.studio-fabric-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
 .studio-preview-device{transform:scale(var(--preview-scale));transform-origin:center;transition:transform .16s ease}
 .studio-story-card{position:relative;width:332px;aspect-ratio:9/16;overflow:hidden;border-radius:24px;background:#111;color:#fff;box-shadow:0 30px 70px rgba(0,0,0,.5)}
 .studio-story-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

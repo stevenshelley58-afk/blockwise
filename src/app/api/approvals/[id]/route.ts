@@ -54,6 +54,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: error?.message ?? "Approval request was not found." }, { status: 404 });
   }
 
+  await serviceSupabase.from("audit_logs").insert({
+    workspace_id: access.access.workspaceId,
+    actor_profile_id: access.access.userId,
+    action: `approval_${body.status}`,
+    target_type: "approval_request",
+    target_id: approval.id,
+    metadata: {
+      targetType: approval.target_type,
+      targetId: approval.target_id,
+      status: body.status,
+    },
+  });
+
   let triggerRunId: string | null = null;
 
   if (body.status === "approved" && approval.target_type === "meta_publish_plan_mutation") {

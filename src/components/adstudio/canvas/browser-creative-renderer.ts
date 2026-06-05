@@ -1,0 +1,220 @@
+"use client";
+
+import type { CreativeExportRender } from "@/lib/adstudio/creative-export.ts";
+import type { AdStudioCampaignPack, AdStudioCanvasObject, AdStudioCreative } from "@/lib/adstudio/types.ts";
+
+const META_EXPORT_FORMATS = new Set(["1:1", "4:5", "9:16"]);
+
+export async function renderCreativeExports(pack: AdStudioCampaignPack): Promise<CreativeExportRender[]> {
+  const renders: CreativeExportRender[] = [];
+
+  for (const creative of pack.creatives) {
+    if (!META_EXPORT_FORMATS.has(creative.format)) continue;
+    renders.push(await renderCreative(creative, "image/png"));
+    renders.push(await renderCreative(creative, "image/jpeg"));
+  }
+
+  return renders;
+}
+
+async function renderCreative(
+  creative: AdStudioCreative,
+  mimeType: CreativeExportRender["mimeType"],
+): Promise<CreativeExportRender> {
+  const canvas = document.createElement("canvas");
+  canvas.width = creative.canvas.width;
+  canvas.height = creative.canvas.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas rendering is unavailable in this browser.");
+
+  ctx.fillStyle = backgroundFill(creative);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (const object of creative.canvas.objects) {
+    if (object.type === "safe_zone") continue;
+    if (object.type === "shape") drawShape(ctx, object);
+    if (object.type === "text") drawText(ctx, object);
+    if (object.type === "image") await drawImageObject(ctx, object);
+    if (object.type === "logo") await drawLogo(ctx, object);
+  }
+
+  return {
+    creativeId: creative.creativeId,
+    variantId: creative.variantId,
+    format: creative.format,
+    width: creative.canvas.width,
+    height: creative.canvas.height,
+    mimeType,
+    dataUrl: canvas.toDataURL(mimeType, mimeType === "image/jpeg" ? 0.92 : undefined),
+  };
+}
+
+function backgroundFill(creative: AdStudioCreative): string {
+  return creative.canvas.objects.find((object) => object.role === "background_shape")?.fill ?? "#F1F5F9";
+}
+
+function drawShape(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+  ctx.save();
+  ctx.fillStyle = object.fill ?? "#123E75";
+  const height = object.height ?? object.width;
+  const radius = object.role === "cta_button" ? 18 : 0;
+  roundedRect(ctx, object.x, object.y, object.width, height, radius);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawText(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+  const fontSize = object.size ?? 36;
+  ctx.save();
+  ctx.fillStyle = object.fill ?? "#131B2E";
+  ctx.font = `${object.role === "headline" ? 800 : 650} ${fontSize}px ${fontFamily(object)}`;
+  ctx.textBaseline = "top";
+  const lineHeight = Math.round(fontSize * (object.role === "headline" ? 1.1 : 1.25));
+  const lines = wrapText(ctx, object.content ?? "", object.width);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, object.x, object.y + index * lineHeight);
+  });
+  ctx.restore();
+}
+
+async function drawImageObject(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+  const width = object.width;
+  const height = object.height ?? object.width;
+  const src = object.content ?? object.assetId;
+
+  if (!src) {
+    drawImagePlaceholder(ctx, object.x, object.y, width, height);
+    return;
+  }
+
+  try {
+    const image = await loadImage(src);
+    drawImageCover(ctx, image, object.x, object.y, width, height);
+  } catch {
+    drawImagePlaceholder(ctx, object.x, object.y, width, height);
+  }
+}
+
+async function drawLogo(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+  const width = object.width;
+  const height = object.height ?? Math.round(width * 0.36);
+
+  if (object.assetId) {
+    try {
+      const image = await loadImage(object.assetId);
+      drawImageContain(ctx, image, object.x, object.y, width, height);
+      return;
+    } catch {
+      // Fall back to a simple locked brand mark.
+    }
+  }
+
+  ctx.save();
+  ctx.fillStyle = "#131B2E";
+  roundedRect(ctx, object.x, object.y, width, height, 12);
+  ctx.fill();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = `800 ${Math.max(18, Math.round(height * 0.42))}px Inter, Arial, sans-serif`;
+  ctx.textBaseline = "middle";
+  ctx.fillText("BRAND", object.x + 18, object.y + height / 2);
+  ctx.restore();
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Image failed to load."));
+    image.src = src;
+  });
+}
+
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = x + (width - drawWidth) / 2;
+  const drawY = y + (height - drawHeight) / 2;
+  ctx.save();
+  roundedRect(ctx, x, y, width, height, 22);
+  ctx.clip();
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  ctx.restore();
+}
+
+function drawImageContain(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+function drawImagePlaceholder(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+  ctx.save();
+  ctx.fillStyle = "#D9E7E3";
+  roundedRect(ctx, x, y, width, height, 22);
+  ctx.fill();
+  ctx.fillStyle = "#68746F";
+  ctx.beginPath();
+  ctx.arc(x + width / 2, y + height * 0.36, Math.min(width, height) * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + width * 0.18, y + height * 0.78);
+  ctx.quadraticCurveTo(x + width * 0.5, y + height * 0.48, x + width * 0.82, y + height * 0.78);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width <= maxWidth || !line) {
+      line = next;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  }
+
+  if (line) lines.push(line);
+  return lines.length > 0 ? lines : [""];
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function fontFamily(object: AdStudioCanvasObject): string {
+  return object.font === "brand_heading" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   Check,
   ChevronDown,
@@ -20,6 +21,8 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
+  AdStudioCreative,
+  AdStudioFormat,
   AdStudioOfferTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
@@ -92,6 +95,33 @@ const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: 
 
 const FIRST_RUN_DIALOG_KEY = "blockwise:first-ad-dialog-dismissed";
 
+const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
+  story: "9:16",
+  feed: "4:5",
+  square: "1:1",
+  landscape: "1.91:1",
+};
+
+const FabricAdEditor = dynamic(
+  () => import("./canvas/fabric-ad-editor").then((mod) => mod.FabricAdEditor),
+  { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
+);
+
+function copyFieldForSelectedElement(element: SelectedElement): "primaryText" | "headline" | "description" | "cta" | null {
+  if (element === "primaryText") return "primaryText";
+  if (element === "headline") return "headline";
+  if (element === "description") return "description";
+  if (element === "cta") return "cta";
+  return null;
+}
+
+function patchActionForSelectedElement(element: SelectedElement): string {
+  if (element === "headline") return "More direct";
+  if (element === "description") return "Less hype";
+  if (element === "cta") return "Sharper";
+  return "Sharper";
+}
+
 export function AdStudioWorkbench({
   brandKit,
   campaignPack: initialPack,
@@ -105,7 +135,7 @@ export function AdStudioWorkbench({
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("story");
-  const previewMode: PreviewMode = "platform";
+  const previewMode: PreviewMode = "creative";
   const zoom = 75;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
   const [campaignGoal, setCampaignGoal] = useState("Get appraisal leads");
@@ -129,6 +159,7 @@ export function AdStudioWorkbench({
     alternates,
     generateCopy,
     applyCopyAssist,
+    patchCopyField,
     applyAlternate,
   } = useCopy(initialPack, studio.setSaveState, studio.showToast, setSelectedElement);
 
@@ -187,6 +218,7 @@ export function AdStudioWorkbench({
     offers,
     market,
     copy,
+    primaryImage,
     offerLabel,
     campaignGoal,   // M4: pass goal so generation includes it
     selectedVariantIndex,
@@ -240,6 +272,17 @@ export function AdStudioWorkbench({
   // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
   const campaignName = pack.campaign.name || "Ad draft";
+  const selectedVariant = pack.variants[selectedVariantIndex] ?? pack.variants[0];
+  const editorFormat = PREVIEW_TO_AD_FORMAT[previewFormat];
+  const currentCreative = useMemo(() => {
+    const variantId = selectedVariant?.variantId;
+    return (
+      pack.creatives.find((creative) => creative.variantId === variantId && creative.format === editorFormat) ??
+      pack.creatives.find((creative) => creative.format === editorFormat) ??
+      pack.creatives[0] ??
+      null
+    );
+  }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
 
   const variants = useMemo(() => {
     const source = pack.variants.length > 0 ? pack.variants : initialPack.variants;
@@ -256,6 +299,28 @@ export function AdStudioWorkbench({
     setSelectedVariantIndex(index);
     setCopy(seedCopy(pack, index));
     setPrimaryImage(MEDIA_ASSETS[index % MEDIA_ASSETS.length].src);
+  }
+
+  function updateCreative(nextCreative: AdStudioCreative) {
+    setPack((current) => ({
+      ...current,
+      creatives: current.creatives.map((creative) =>
+        creative.creativeId === nextCreative.creativeId ? nextCreative : creative,
+      ),
+    }));
+    studio.setSaveState("saving");
+    window.setTimeout(() => studio.setSaveState("saved"), 650);
+  }
+
+  async function patchSelectedLayer() {
+    if (selectedElement === "image") {
+      studio.setSection("media");
+      openFilePicker();
+      return;
+    }
+    const field = copyFieldForSelectedElement(selectedElement);
+    if (!field) return;
+    await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext);
   }
 
   // Adds another generated ad idea from the current defaults.
@@ -422,21 +487,40 @@ export function AdStudioWorkbench({
           />
 
           <div className="studio-stage">
-            <AdPreview
-              brand={brand}
-              domain={domain}
-              initials={initials}
-              copy={copy}
-              image={primaryImage}
-              format={previewFormat}
-              mode={previewMode}
-              zoom={zoom}
-              selectedElement={selectedElement}
-              setSelectedElement={(element) => {
-                setSelectedElement(element);
-                studio.setSection(element === "image" ? "media" : "copy");
-              }}
-            />
+            {currentCreative ? (
+              <FabricAdEditor
+                brandKit={brandKit}
+                copy={copy}
+                creative={currentCreative}
+                imageSrc={primaryImage}
+                selectedElement={selectedElement}
+                onCopyChange={updateCopy}
+                onCreativeChange={updateCreative}
+                onImageChange={setPrimaryImage}
+                onPatchSelectedLayer={patchSelectedLayer}
+                onRequestImageReplace={openFilePicker}
+                onSelectedElementChange={(element) => {
+                  setSelectedElement(element);
+                  studio.setSection(element === "image" ? "media" : "copy");
+                }}
+              />
+            ) : (
+              <AdPreview
+                brand={brand}
+                domain={domain}
+                initials={initials}
+                copy={copy}
+                image={primaryImage}
+                format={previewFormat}
+                mode={previewMode}
+                zoom={zoom}
+                selectedElement={selectedElement}
+                setSelectedElement={(element) => {
+                  setSelectedElement(element);
+                  studio.setSection(element === "image" ? "media" : "copy");
+                }}
+              />
+            )}
             {studio.busy && (
               <div className="studio-busy">
                 <div className="studio-busy-card">
@@ -572,7 +656,7 @@ export function AdStudioWorkbench({
         {/* L5: data-state attribute lets CSS color the save chip; existing .error class also applies */}
         <span className={studio.saveState === "error" ? "error" : ""} data-state={studio.saveState}>{studio.statusText}</span>
         <span>{format.label} | {format.size}</span>
-        <span>{previewMode === "platform" ? "Platform preview" : "Creative preview"}</span>
+        <span>Creative preview</span>
       </footer>
 
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">

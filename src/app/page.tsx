@@ -9,9 +9,11 @@ import { SignInLink } from "@/components/landing/sign-in-link";
 /**
  * Landing page — "Executive Precision" design (source: /stitch export, completed
  * and wired to real app flows). Copy is governed by docs/landing-copy-spec.md:
- * every product claim traces to code (claims register).
- * Launch-language shipped per owner decision 2026-06-04 (provider writes pending
- * Meta review — see spec §3).
+ * every product claim traces to code (§2 claims register).
+ *
+ * ⚠️ Launch gate (spec §0a): hero H1, step 4 and the Active dashboard mock assume
+ * provider writes are enabled. Swap to the spec's fallback strings if this ships
+ * before BLOCKWISE_ENABLE_PROVIDER_WRITES=true.
  */
 
 function TrustPoint({ label }: { label: string }) {
@@ -114,7 +116,7 @@ export default function HomePage() {
           <div className="lp-nav-actions">
             <SignInLink />
             <CtaLink location="nav" href="/signup" className="lp-btn lp-btn-primary">
-              Create campaign
+              Start free trial
             </CtaLink>
           </div>
         </div>

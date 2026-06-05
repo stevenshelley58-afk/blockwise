@@ -5,6 +5,21 @@ export {
   type ExtractBrandKitInput,
 } from "./brand-extraction.ts";
 export { runAdStudioComplianceReview } from "./compliance.ts";
+export {
+  applySelectedLayerPatch,
+  getCreativeDesignJson,
+  saveCreativeDesignJson,
+  syncCreativeWithCopyAndImage,
+  type CreativeCopyFields,
+  type CreativeDesignJson,
+  type CreativeLayerMeta,
+  type CreativeLayerPatch,
+} from "./creative-design-json.ts";
+export { buildCreativeDesignJson } from "./creative-design-builder.ts";
+export {
+  type CreativeExportRender,
+  type CreativeExportFormat,
+} from "./creative-export.ts";
 export { buildAdStudioExportPackage } from "./export-package.ts";
 export { generateAdStudioCampaignPack, type GenerateCampaignPackInput } from "./generator.ts";
 export { AD_STUDIO_TEMPLATES, resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";

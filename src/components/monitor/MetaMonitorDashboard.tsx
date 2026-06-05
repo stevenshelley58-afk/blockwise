@@ -206,11 +206,7 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
             ))}
           </div>
         </>
-      ) : (
-        <section className="panel mm-chart-panel">
-          <p className="mm-chart-empty">No ads reported any delivery in this period.</p>
-        </section>
-      )}
+      ) : null}
     </>
   );
 }

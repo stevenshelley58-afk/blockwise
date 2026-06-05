@@ -118,7 +118,7 @@ export async function loadLiveAdStudioBundle(
         city: "Perth",
         state: brandKit.identity.marketRegion ?? "WA",
         offerId: offers[0]?.offerId ?? "seller_prep_checklist",
-        platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+        platforms: ["meta"],
         variantCount: 5,
       });
 

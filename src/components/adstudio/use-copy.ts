@@ -204,6 +204,33 @@ export function useCopy(
     }
   }
 
+  /** Patches one selected copy field while keeping the rest of the creative intact. */
+  async function patchCopyField(field: keyof CopyState, action: string, context: CopyContext) {
+    if (generating) return;
+    setGenerating(true);
+    try {
+      const result = await requestCopy({ mode: "assist", assistAction: action, copy, context });
+      const value = result.copy?.[field];
+      if (typeof value === "string" && value.trim()) {
+        updateCopy(field, value);
+        showToast("Layer patched");
+        return;
+      }
+      showToast("AI did not return a layer patch");
+    } catch {
+      const fallback = localAssist(action, copy, context.market);
+      const value = fallback[field];
+      if (typeof value === "string" && value.trim()) {
+        updateCopy(field, value);
+        showToast("Layer patched (offline)");
+      } else {
+        showToast("Could not patch selected layer");
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function applyAlternate(field: "headline" | "primaryText", value: string) {
     updateCopy(field, value);
     showToast("Alternate applied");
@@ -221,6 +248,7 @@ export function useCopy(
     alternates,
     generateCopy,
     applyCopyAssist,
+    patchCopyField,
     applyAlternate,
   };
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,20 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await createSupabaseServiceClient().from("audit_logs").insert({
+    workspace_id: null,
+    actor_profile_id: guard.userId,
+    action: "manual_research_job_created",
+    target_type: "research_work_queue",
+    target_id: data.id,
+    metadata: {
+      operatorEmail: guard.email,
+      jobType: data.job_type,
+      queueName: data.queue_name,
+      dedupeKey: data.dedupe_key,
+      advertiserPageId: data.advertiser_page_id,
+    },
+  });
   return NextResponse.json({ job: data }, { status: 201 });
 }
 

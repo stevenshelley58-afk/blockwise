@@ -1,4 +1,10 @@
 import type { AdStudioCampaignPack, AdStudioExportPackage, AdStudioExportManifest } from "./types.ts";
+import {
+  buildRenderMap,
+  decodeCreativeRender,
+  findCreativeRender,
+  type CreativeExportRender,
+} from "./creative-export.ts";
 import { deterministicUuid } from "./id.ts";
 import { svgToBytes } from "./renderer.ts";
 
@@ -10,8 +16,11 @@ type FileInput = {
 
 const TEXT_ENCODER = new TextEncoder();
 
-export async function buildAdStudioExportPackage(pack: AdStudioCampaignPack): Promise<AdStudioExportPackage> {
-  const files = buildExportFiles(pack);
+export async function buildAdStudioExportPackage(
+  pack: AdStudioCampaignPack,
+  options: { creativeRenders?: CreativeExportRender[] } = {},
+): Promise<AdStudioExportPackage> {
+  const files = buildExportFiles(pack, options);
   const manifest: AdStudioExportManifest = {
     exportId: deterministicUuid(`export:${pack.campaign.campaignId}`),
     campaignId: pack.campaign.campaignId,
@@ -47,31 +56,44 @@ export async function buildAdStudioExportPackage(pack: AdStudioCampaignPack): Pr
   };
 }
 
-function buildExportFiles(pack: AdStudioCampaignPack): FileInput[] {
+function buildExportFiles(
+  pack: AdStudioCampaignPack,
+  options: { creativeRenders?: CreativeExportRender[] },
+): FileInput[] {
   const primaryCopy = pack.copyPacks[0];
   const creativesByFormat = new Map(pack.creatives.map((creative) => [creative.format, creative]));
+  const renderMap = buildRenderMap(options.creativeRenders);
   const files: FileInput[] = [];
 
   if (!primaryCopy) {
     throw new Error("Campaign pack has no copy packs to export.");
   }
 
-  addCreative(files, "meta/feed_1x1.png", creativesByFormat.get("1:1"));
-  addCreative(files, "meta/feed_4x5.png", creativesByFormat.get("4:5"));
-  addCreative(files, "meta/story_9x16.png", creativesByFormat.get("9:16"));
+  addCreative(files, "meta/feed_1x1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
+  addCreative(files, "meta/feed_1x1.jpg", creativesByFormat.get("1:1"), renderMap, "image/jpeg");
+  addCreative(files, "meta/feed_4x5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
+  addCreative(files, "meta/feed_4x5.jpg", creativesByFormat.get("4:5"), renderMap, "image/jpeg");
+  addCreative(files, "meta/story_9x16.png", creativesByFormat.get("9:16"), renderMap, "image/png");
+  addCreative(files, "meta/story_9x16.jpg", creativesByFormat.get("9:16"), renderMap, "image/jpeg");
   files.push(jsonFile("meta/copy.json", primaryCopy.meta));
   files.push(jsonFile("meta/lead_form.json", primaryCopy.meta.leadForm));
-  files.push(textFile("google-search/responsive_search_ads.csv", googleSearchCsv(primaryCopy.googleSearch)));
-  files.push(textFile("google-search/keywords.csv", primaryCopy.googleSearch.keywords.join("\n")));
-  files.push(textFile("google-search/negative_keywords.csv", primaryCopy.googleSearch.negativeKeywords.join("\n")));
-  addCreative(files, "google-pmax/landscape_1_91.png", creativesByFormat.get("1.91:1"));
-  addCreative(files, "google-pmax/square_1_1.png", creativesByFormat.get("1:1"));
-  addCreative(files, "google-pmax/portrait_4_5.png", creativesByFormat.get("4:5"));
-  files.push(jsonFile("google-pmax/copy.json", primaryCopy.googlePmax));
-  addCreative(files, "demand-gen/square_1_1.png", creativesByFormat.get("1:1"));
-  addCreative(files, "demand-gen/portrait_4_5.png", creativesByFormat.get("4:5"));
-  addCreative(files, "demand-gen/vertical_9_16.png", creativesByFormat.get("9:16"));
-  files.push(jsonFile("demand-gen/copy.json", primaryCopy.googleDemandGen));
+  if (pack.campaign.platforms.includes("google_search")) {
+    files.push(textFile("google-search/responsive_search_ads.csv", googleSearchCsv(primaryCopy.googleSearch)));
+    files.push(textFile("google-search/keywords.csv", primaryCopy.googleSearch.keywords.join("\n")));
+    files.push(textFile("google-search/negative_keywords.csv", primaryCopy.googleSearch.negativeKeywords.join("\n")));
+  }
+  if (pack.campaign.platforms.includes("google_pmax")) {
+    addCreative(files, "google-pmax/landscape_1_91.png", creativesByFormat.get("1.91:1"), renderMap, "image/png");
+    addCreative(files, "google-pmax/square_1_1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
+    addCreative(files, "google-pmax/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
+    files.push(jsonFile("google-pmax/copy.json", primaryCopy.googlePmax));
+  }
+  if (pack.campaign.platforms.includes("google_demand_gen")) {
+    addCreative(files, "demand-gen/square_1_1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
+    addCreative(files, "demand-gen/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
+    addCreative(files, "demand-gen/vertical_9_16.png", creativesByFormat.get("9:16"), renderMap, "image/png");
+    files.push(jsonFile("demand-gen/copy.json", primaryCopy.googleDemandGen));
+  }
   files.push(jsonFile("landing-page/landing_copy.json", primaryCopy.landingPage));
   files.push(textFile("follow-up/sms_sequence.txt", primaryCopy.followUp.sms.join("\n\n")));
   files.push(
@@ -90,9 +112,26 @@ function buildExportFiles(pack: AdStudioCampaignPack): FileInput[] {
   return files;
 }
 
-function addCreative(files: FileInput[], path: string, creative: { previewSvg: string } | undefined) {
+function addCreative(
+  files: FileInput[],
+  path: string,
+  creative: (AdStudioCampaignPack["creatives"][number] & { previewSvg: string }) | undefined,
+  renderMap: Map<string, CreativeExportRender>,
+  mimeType: CreativeExportRender["mimeType"],
+) {
+  const render = findCreativeRender(renderMap, creative, mimeType);
+
+  if (creative && render) {
+    files.push({
+      path,
+      mimeType,
+      bytes: decodeCreativeRender(render, creative),
+    });
+    return;
+  }
+
   files.push({
-    path,
+    path: path.replace(/\.(png|jpg|jpeg)$/i, ".svg"),
     mimeType: "image/svg+xml",
     bytes: svgToBytes(creative?.previewSvg ?? "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"),
   });

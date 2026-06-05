@@ -45,5 +45,6 @@ test("trial pill refreshes from the first-ad generation event", () => {
 
   assert.match(pill, /blockwise:trial-status-refresh/);
   assert.match(campaignActions, /dispatchEvent\(new Event\("blockwise:trial-status-refresh"\)\)/);
-  assert.match(pill, /href="\/settings#plan"/);
+  assert.match(pill, /status\.upgradeHref/);
+  assert.match(readFileSync("src/app/api/trial/status/route.ts", "utf8"), /\/settings#billing/);
 });

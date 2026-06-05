@@ -32,6 +32,7 @@ function normalizeWorkspace(workspace: MembershipRow["workspaces"]) {
 }
 
 const INCLUDED_AD_PACKS = 10;
+const UPGRADE_HREF = "/settings#billing";
 
 function firstRecord(value: unknown): Record<string, unknown> | null {
   if (Array.isArray(value)) {
@@ -67,7 +68,7 @@ function normalizeRpcTrialStatus(value: unknown): TrialStatus | null {
         ? null
         : numeric(row.trial_days_remaining, 0),
     trialExpired: Boolean(row.trial_expired ?? row.trialExpired),
-    upgradeHref: "/settings#plan",
+    upgradeHref: UPGRADE_HREF,
   };
 }
 
@@ -116,7 +117,7 @@ async function loadInitialTrialStatus(
       trialEndsAt,
       trialDaysRemaining: msRemaining === null ? null : Math.max(0, Math.ceil(msRemaining / 86_400_000)),
       trialExpired: msRemaining !== null && msRemaining <= 0,
-      upgradeHref: "/settings#plan",
+      upgradeHref: UPGRADE_HREF,
     };
   } catch {
     return null;

@@ -23,11 +23,11 @@ export function SampleBanner() {
       role="status"
     >
       <span>
-        <strong>You&#39;re viewing sample data.</strong> Connect your workspace
-        to see your real campaigns.
+        <strong>You&#39;re viewing a sample workspace.</strong> This is demo ad data, not real
+        campaign activity from your account.
       </span>
       <Link href="/onboarding" style={{ fontWeight: 700, color: "#8A5A00", textDecoration: "underline", marginRight: 8 }}>
-        Get started →
+        Set up workspace
       </Link>
       <button
         type="button"
@@ -44,7 +44,7 @@ export function SampleBanner() {
           borderRadius: "4px",
         }}
       >
-        ✕
+        X
       </button>
     </div>
   );

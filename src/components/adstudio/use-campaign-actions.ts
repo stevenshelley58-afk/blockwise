@@ -1,8 +1,10 @@
 "use client";
 
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
+import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import type { AngleCard } from "./angles";
+import { renderCreativeExports } from "./canvas/browser-creative-renderer";
 import { MEDIA_ASSETS } from "./use-media";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
@@ -29,6 +31,7 @@ export type CampaignActionsState = {
   offers: AdStudioOfferTemplate[];
   market: string;
   copy: CopyState;
+  primaryImage: string;
   offerLabel: string;
   campaignGoal: string;
   selectedVariantIndex: number;
@@ -86,6 +89,9 @@ export function useCampaignActions(s: CampaignActionsState) {
           },
         };
       }),
+      creatives: s.pack.creatives.map((creative) =>
+        creative.variantId === variantId ? syncCreativeWithCopyAndImage(creative, s.copy, s.primaryImage) : creative,
+      ),
     };
   }
 
@@ -185,9 +191,14 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const currentPack = buildCurrentPack();
+      const creativeRenders = await renderCreativeExports(currentPack);
       const response = await fetch(
         `/api/adstudio/export-packages/${currentPack.campaign.campaignId}/download`,
-        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ campaignPack: currentPack }) },
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ campaignPack: currentPack, creativeRenders }),
+        },
       );
 
       if (!response.ok) {

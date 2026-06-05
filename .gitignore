@@ -19,3 +19,6 @@ dist
 # Local tooling / cleanup backups (not part of project)
 .claude/
 _archive/
+
+# MCP config (contains API key)
+.mcp.json

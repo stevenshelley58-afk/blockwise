@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { StatusPill } from "@/components/status-pill";
@@ -15,6 +15,42 @@ type Connection = {
   accountName: string | null;
   healthStatus: string;
   lastSyncAt: string | null;
+};
+
+type MetaLeadDestinationType = "webhook" | "crm" | "email" | "manual";
+
+type MetaSetup = {
+  metaAdAccountId: string;
+  pageId: string;
+  instagramActorId: string | null;
+  pixelId: string | null;
+  leadDestination: {
+    type: MetaLeadDestinationType;
+    label: string;
+    config?: {
+      endpoint?: string;
+      [key: string]: unknown;
+    };
+  };
+  privacyPolicyUrl: string;
+  currency: string;
+  timezone: string;
+};
+
+type MetaAssetCatalog = {
+  adAccounts: Array<{ id: string; name: string; currency: string; timezone: string }>;
+  pages: Array<{ id: string; name: string }>;
+  instagramActors: Array<{ id: string; username: string; pageId?: string }>;
+  pixels: Array<{ id: string; name: string }>;
+};
+
+type MetaSetupResponse = {
+  connected?: boolean;
+  setup?: MetaSetup | null;
+  blockers?: string[];
+  ready?: boolean;
+  assets?: MetaAssetCatalog | null;
+  error?: string;
 };
 
 type Member = {
@@ -64,6 +100,7 @@ const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: str
 ];
 
 const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
+const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm", "email"];
 
 function Feedback({ message }: { message: Msg }) {
   if (!message) return null;
@@ -415,15 +452,16 @@ function ConnectionsSection({
         const conn = connections.find((c) => c.provider === prov.key);
         const connected = conn && conn.status !== "revoked" && conn.status !== "not_connected";
         return (
-          <div className="wizard-connect-row" key={prov.key}>
-            <div>
+          <div className="stack" key={prov.key} style={{ gap: 10 }}>
+            <div className="wizard-connect-row">
+              <div>
               <strong>{prov.label}</strong>
               <div className="item-meta">
                 {conn?.accountName ? `${conn.accountName} · ` : ""}
                 {conn ? <StatusPill tone={statusTone(conn.status)}>{conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">not connected</StatusPill>}
               </div>
-            </div>
-            {!prov.enabled ? (
+              </div>
+              {!prov.enabled ? (
               <button className="button secondary" type="button" disabled>
                 Not enabled yet
               </button>
@@ -438,12 +476,252 @@ function ConnectionsSection({
               </div>
             ) : (
               <a className="button" href={prov.connectHref}>Connect</a>
-            )}
+              )}
+            </div>
+            {prov.key === "meta" && connected ? (
+              <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
+            ) : null}
+            {prov.key === "meta" && !connected ? (
+              <p className="wizard-skip-note">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
+            ) : null}
           </div>
         );
       })}
       <Feedback message={message} />
     </Section>
+  );
+}
+
+function emptyMetaSetup(): MetaSetup {
+  return {
+    metaAdAccountId: "",
+    pageId: "",
+    instagramActorId: null,
+    pixelId: null,
+    leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },
+    privacyPolicyUrl: "",
+    currency: "AUD",
+    timezone: "Australia/Perth",
+  };
+}
+
+function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canManage: boolean }) {
+  const [setup, setSetup] = useState<MetaSetup>(() => emptyMetaSetup());
+  const [assets, setAssets] = useState<MetaAssetCatalog | null>(null);
+  const [blockers, setBlockers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<Msg>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    fetch(`/api/integrations/meta/setup?workspaceId=${encodeURIComponent(workspaceId)}`)
+      .then((res) => res.json().catch(() => ({})) as Promise<MetaSetupResponse>)
+      .then((data) => {
+        if (!active) return;
+        if (data.setup) setSetup(data.setup);
+        setAssets(data.assets ?? null);
+        setBlockers(data.blockers ?? []);
+        setMessage(data.error ? { tone: "error", text: data.error } : null);
+      })
+      .catch(() => {
+        if (active) setMessage({ tone: "error", text: "Couldn't load Meta setup." });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [workspaceId]);
+
+  function updateSetup(patch: Partial<MetaSetup>) {
+    setSetup((prev) => ({ ...prev, ...patch }));
+  }
+
+  function updateLeadDestination(patch: Partial<MetaSetup["leadDestination"]>) {
+    setSetup((prev) => ({
+      ...prev,
+      leadDestination: {
+        ...prev.leadDestination,
+        ...patch,
+        config: {
+          ...(prev.leadDestination.config ?? {}),
+          ...(patch.config ?? {}),
+        },
+      },
+    }));
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/integrations/meta/setup?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId, setup }),
+      });
+      const data = (await res.json().catch(() => ({}))) as MetaSetupResponse;
+      setBusy(false);
+      if (!res.ok) {
+        setMessage({ tone: "error", text: data.error ?? "Couldn't save Meta setup." });
+        return;
+      }
+      if (data.setup) setSetup(data.setup);
+      setBlockers(data.blockers ?? []);
+      setMessage({
+        tone: data.ready ? "success" : "error",
+        text: data.ready ? "Meta publishing setup is complete." : "Meta setup saved. Complete the missing requirements below.",
+      });
+    } catch {
+      setBusy(false);
+      setMessage({ tone: "error", text: "Couldn't save Meta setup." });
+    }
+  }
+
+  const selectedAccount = assets?.adAccounts.find((account) => account.id === setup.metaAdAccountId);
+  const availableInstagramActors = assets?.instagramActors.filter((actor) => !actor.pageId || actor.pageId === setup.pageId) ?? [];
+
+  return (
+    <form className="stack" onSubmit={save} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14 }}>
+      <div className="wizard-connect-row" style={{ padding: 0, border: 0 }}>
+        <span>
+          <strong>Meta publishing setup</strong>
+          <div className="item-meta">Required assets for paused Meta lead campaigns.</div>
+        </span>
+        <StatusPill tone={blockers.length === 0 ? "green" : "amber"}>{blockers.length === 0 ? "ready" : "missing setup"}</StatusPill>
+      </div>
+
+      {loading ? <p className="wizard-skip-note">Loading Meta assets.</p> : null}
+
+      <div className="grid cols-2">
+        <label className="wizard-field">
+          <span className="wizard-label">Meta ad account</span>
+          {assets?.adAccounts.length ? (
+            <select
+              value={setup.metaAdAccountId}
+              onChange={(e) => {
+                const account = assets.adAccounts.find((item) => item.id === e.target.value);
+                updateSetup({
+                  metaAdAccountId: e.target.value,
+                  currency: account?.currency || setup.currency,
+                  timezone: account?.timezone || setup.timezone,
+                });
+              }}
+              disabled={!canManage}
+              required
+            >
+              <option value="">Choose an ad account</option>
+              {assets.adAccounts.map((account) => (
+                <option key={account.id} value={account.id}>{account.name} ({account.id})</option>
+              ))}
+            </select>
+          ) : (
+            <input value={setup.metaAdAccountId} onChange={(e) => updateSetup({ metaAdAccountId: e.target.value })} disabled={!canManage} required />
+          )}
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Meta Page</span>
+          {assets?.pages.length ? (
+            <select value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value, instagramActorId: null })} disabled={!canManage} required>
+              <option value="">Choose a Page</option>
+              {assets.pages.map((page) => (
+                <option key={page.id} value={page.id}>{page.name} ({page.id})</option>
+              ))}
+            </select>
+          ) : (
+            <input value={setup.pageId} onChange={(e) => updateSetup({ pageId: e.target.value })} disabled={!canManage} required />
+          )}
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Instagram actor</span>
+          {availableInstagramActors.length ? (
+            <select value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
+              <option value="">None</option>
+              {availableInstagramActors.map((actor) => (
+                <option key={actor.id} value={actor.id}>{actor.username} ({actor.id})</option>
+              ))}
+            </select>
+          ) : (
+            <input value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage} />
+          )}
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Pixel</span>
+          {assets?.pixels.length ? (
+            <select value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage}>
+              <option value="">None</option>
+              {assets.pixels.map((pixel) => (
+                <option key={pixel.id} value={pixel.id}>{pixel.name} ({pixel.id})</option>
+              ))}
+            </select>
+          ) : (
+            <input value={setup.pixelId ?? ""} onChange={(e) => updateSetup({ pixelId: e.target.value || null })} disabled={!canManage} />
+          )}
+        </label>
+      </div>
+
+      <div className="grid cols-2">
+        <label className="wizard-field">
+          <span className="wizard-label">Lead destination type</span>
+          <select value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
+            {META_LEAD_DESTINATION_TYPES.map((type) => (
+              <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Lead destination label</span>
+          <input value={setup.leadDestination.label} onChange={(e) => updateLeadDestination({ label: e.target.value })} disabled={!canManage} required />
+        </label>
+      </div>
+
+      {setup.leadDestination.type !== "manual" ? (
+        <label className="wizard-field">
+          <span className="wizard-label">Lead destination endpoint</span>
+          <input
+            value={setup.leadDestination.config?.endpoint ?? ""}
+            onChange={(e) => updateLeadDestination({ config: { endpoint: e.target.value } })}
+            placeholder="https://example.com/meta-leads"
+            disabled={!canManage}
+            required
+          />
+        </label>
+      ) : null}
+
+      <div className="grid cols-3">
+        <label className="wizard-field">
+          <span className="wizard-label">Privacy policy URL</span>
+          <input type="url" value={setup.privacyPolicyUrl} onChange={(e) => updateSetup({ privacyPolicyUrl: e.target.value })} disabled={!canManage} required />
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Currency</span>
+          <input value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} placeholder={selectedAccount?.currency ?? "AUD"} disabled={!canManage} required />
+        </label>
+        <label className="wizard-field">
+          <span className="wizard-label">Timezone</span>
+          <input value={setup.timezone} onChange={(e) => updateSetup({ timezone: e.target.value })} placeholder={selectedAccount?.timezone ?? "Australia/Perth"} disabled={!canManage} required />
+        </label>
+      </div>
+
+      {blockers.length > 0 ? (
+        <div className="stack" style={{ gap: 6 }}>
+          {blockers.map((blocker) => (
+            <p className="wizard-status error" key={blocker}>{blocker}</p>
+          ))}
+        </div>
+      ) : null}
+      <Feedback message={message} />
+      <div className="wizard-actions">
+        <button className="button" type="submit" disabled={!canManage || busy || loading}>
+          {busy ? "Saving" : "Save Meta setup"}
+        </button>
+      </div>
+    </form>
   );
 }
 

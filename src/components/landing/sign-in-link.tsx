@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 /**
- * C5 fix: "Log in" nav link that prevents Space-key activation.
+ * C5 fix: "Client sign in" nav link that prevents Space-key activation.
  *
  * On the public landing page, pressing Space/PageDown is expected to scroll
  * the page. Standard <a> and Next.js <Link> elements intercept the Space key
@@ -22,7 +22,7 @@ export function SignInLink() {
         }
       }}
     >
-      Log in
+      Client sign in
     </Link>
   );
 }

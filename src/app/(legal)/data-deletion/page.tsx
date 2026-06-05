@@ -1,20 +1,55 @@
 import type { Metadata } from "next";
 
+import { loadDeletionStatus } from "@/lib/meta/data-deletion";
+
 export const metadata: Metadata = {
   title: "Data Deletion · Blockwise",
   description:
     "How to request that Blockwise delete the data we hold about you, including data sourced from Meta lead forms.",
 };
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export default function DataDeletionPage() {
+type PageProps = {
+  searchParams?: Promise<{ code?: string }> | { code?: string };
+};
+
+export default async function DataDeletionPage({ searchParams }: PageProps) {
+  const params = searchParams ? await Promise.resolve(searchParams) : {};
+  const confirmationCode = typeof params.code === "string" ? params.code : null;
+  const deletionStatus = confirmationCode ? await loadDeletionStatus(confirmationCode).catch(() => null) : null;
+
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
         Last updated: 28 May 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Requesting Data Deletion</h1>
+
+      {confirmationCode ? (
+        <section
+          style={{
+            border: "1px solid #cbd5e1",
+            borderRadius: 6,
+            padding: "16px 18px",
+            marginBottom: 28,
+            background: "#f8fafc",
+          }}
+        >
+          <h2 style={{ fontSize: 20, margin: "0 0 8px", fontWeight: 600 }}>Deletion request status</h2>
+          <p style={{ margin: 0 }}>
+            Confirmation code: <code>{confirmationCode}</code>
+            <br />
+            Status: <strong>{deletionStatus?.status ?? "not found"}</strong>
+            {deletionStatus?.completed_at ? (
+              <>
+                <br />
+                Completed: {new Date(deletionStatus.completed_at).toLocaleString("en-AU")}
+              </>
+            ) : null}
+          </p>
+        </section>
+      ) : null}
 
       <p>
         You have the right to request that Blockwise delete the data we hold from or about you. This

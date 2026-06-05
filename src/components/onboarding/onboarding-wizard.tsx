@@ -421,24 +421,20 @@ export function OnboardingWizard({
                 </Link>
               ) : (
                 <button className="button secondary" disabled type="button">
-                  {googleAdsEnabled ? "Owner/admin only" : "Not enabled yet"}
+                  Not needed for Meta launch
                 </button>
               )}
             </div>
-            <p className="wizard-skip-note">You can come back to connections from Settings.</p>
-            {!canOpenCampaigns ? (
-              <p className="wizard-skip-note">Ad creation is available when this workspace is enabled for self-serve.</p>
-            ) : null}
             {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
             <div className="wizard-actions">
               <button className="button secondary" disabled={busy} onClick={back} type="button">
                 Back
               </button>
-              <button className="button secondary" disabled={busy} onClick={() => void finishOnboarding()} type="button">
+              <button className="button secondary" disabled={busy} onClick={finishOnboarding} type="button">
                 Skip for now
               </button>
-              <button className="button" disabled={busy} onClick={() => void finishOnboarding()} type="button">
-                {busy ? "Finishing" : "Create first ad"} <ArrowRight size={16} aria-hidden />
+              <button className="button" disabled={busy} onClick={finishOnboarding} type="button">
+                Open Ad Studio <ArrowRight size={16} aria-hidden />
               </button>
             </div>
           </div>

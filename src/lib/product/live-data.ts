@@ -21,6 +21,7 @@ type ApprovalRow = {
   target_type?: string | null;
   status?: string | null;
   risk_summary?: string | null;
+  created_at?: string | null;
   workspaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
@@ -30,12 +31,19 @@ type ComplianceReportRow = {
 };
 
 type ProviderConnectionRow = {
+  id?: string;
+  workspace_id?: string | null;
   provider?: ProviderKey | string | null;
   status?: string | null;
+  last_sync_at?: string | null;
+  updated_at?: string | null;
+  external_account_name?: string | null;
+  workspaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 type LeadRow = {
   id: string;
+  workspace_id?: string | null;
   full_name?: string | null;
   name?: string | null;
   email?: string | null;
@@ -43,6 +51,7 @@ type LeadRow = {
   suburb?: string | null;
   provider?: ProviderKey | string | null;
   created_at?: string | null;
+  workspaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 type LeadLabelRow = {
@@ -66,8 +75,20 @@ type AgentRunRow = {
   task?: string | null;
   confidence?: number | string | null;
   error_message?: string | null;
+  created_at?: string | null;
   workspaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
   agent_definitions?: { name?: string | null } | Array<{ name?: string | null }> | null;
+};
+
+type WorkspaceOverviewRow = {
+  id: string;
+  name: string;
+  mode?: string | null;
+  region?: string | null;
+  managed_service_enabled?: boolean | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+  workspace_plans?: { name?: string | null; key?: string | null } | Array<{ name?: string | null; key?: string | null }> | null;
 };
 
 type AiLedgerRow = {
@@ -237,6 +258,100 @@ export function buildResearchSignals(rows: ResearchSignalRow[]) {
   }));
 }
 
+export function buildOperatorOverview(input: {
+  workspaceCount: number;
+  leadCount: number;
+  pendingApprovalCount: number;
+  providerIssueCount: number;
+  workspaces: WorkspaceOverviewRow[];
+  providerConnections: ProviderConnectionRow[];
+  approvals: ApprovalRow[];
+  recentLeads: LeadRow[];
+  agentRuns: AgentRunRow[];
+}) {
+  const providersByWorkspace = new Map<string, ProviderConnectionRow[]>();
+
+  for (const connection of input.providerConnections) {
+    if (!connection.workspace_id) continue;
+    const connections = providersByWorkspace.get(connection.workspace_id) ?? [];
+    connections.push(connection);
+    providersByWorkspace.set(connection.workspace_id, connections);
+  }
+
+  const workspaceRows = input.workspaces.map((workspace) => {
+    const providers = providersByWorkspace.get(workspace.id) ?? [];
+    const issueCount = providers.filter((provider) => provider.status === "needs_attention" || provider.status === "not_connected").length;
+    const lastSyncAt = latestDate(providers.map((provider) => provider.last_sync_at ?? provider.updated_at));
+    const plan = one(workspace.workspace_plans);
+
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      mode: workspace.mode === "self_serve" ? "Self serve" : "Monitor",
+      plan: plan?.name ?? plan?.key ?? "Unassigned",
+      region: workspace.region ?? "AU",
+      managedService: workspace.managed_service_enabled ? "Managed" : "Customer-led",
+      providerHealth: providers.length === 0 ? "No providers" : issueCount > 0 ? `${issueCount} issue${issueCount === 1 ? "" : "s"}` : "Healthy",
+      providerTone: providers.length === 0 || issueCount > 0 ? "amber" : "green",
+      lastSync: lastSyncAt ? formatRelativeDate(lastSyncAt) : "No sync yet",
+    };
+  });
+
+  const providerHealthRows = input.providerConnections
+    .filter((connection) => connection.status === "needs_attention" || connection.status === "not_connected")
+    .map((connection) => ({
+      id: connection.id ?? `${connection.workspace_id ?? "workspace"}-${connection.provider ?? "provider"}`,
+      workspace: one(connection.workspaces)?.name ?? "Workspace",
+      provider: formatProviderLabel(connection.provider),
+      status: connection.status === "needs_attention" ? "Needs attention" : "Not connected",
+      tone: connection.status === "needs_attention" ? "rose" : "amber",
+      lastSync: connection.last_sync_at ? formatRelativeDate(connection.last_sync_at) : "No sync yet",
+      account: connection.external_account_name ?? "Account pending",
+    }));
+
+  const recentActivity = [
+    ...input.approvals.map((approval) => ({
+      id: approval.id ?? `${approval.target_type ?? "approval"}-${approval.target_id ?? "unknown"}`,
+      at: approval.created_at ?? "",
+      title: `${approval.target_type ?? "Action"} approval ${approval.status ?? "requested"}`,
+      workspace: one(approval.workspaces)?.name ?? "Workspace",
+      detail: approval.risk_summary ?? "Review required",
+      tone: approval.status === "approved" ? "green" : approval.status === "rejected" ? "rose" : "amber",
+    })),
+    ...input.recentLeads.map((lead) => ({
+      id: lead.id,
+      at: lead.created_at ?? "",
+      title: "Lead received",
+      workspace: one(lead.workspaces)?.name ?? "Workspace",
+      detail: `${lead.full_name ?? lead.name ?? lead.email ?? "Unknown lead"} via ${sourceLabel(lead.provider)}`,
+      tone: "blue",
+    })),
+    ...input.agentRuns.map((run) => ({
+      id: run.id,
+      at: run.created_at ?? "",
+      title: `${one(run.agent_definitions)?.name ?? "Agent"} ${formatAgentStatus(run.status)}`,
+      workspace: one(run.workspaces)?.name ?? "Workspace",
+      detail: run.error_message ?? run.task ?? "Queued task",
+      tone: run.status === "failed" ? "rose" : run.status === "completed" ? "green" : "blue",
+    })),
+  ]
+    .sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime())
+    .slice(0, 8);
+
+  return {
+    metrics: {
+      workspaces: String(input.workspaceCount),
+      leads: String(input.leadCount),
+      pendingApprovals: String(input.pendingApprovalCount),
+      providerIssues: String(input.providerIssueCount),
+    },
+    workspaceRows,
+    providerHealthRows,
+    approvalRows: buildApprovalRows(input.approvals).slice(0, 5),
+    recentActivity,
+  };
+}
+
 export async function listCampaignReadinessRows(supabase: SupabaseServerClient, workspaceId: string) {
   const [{ data: campaigns }, { data: approvals }, { data: complianceReports }, { data: providerConnections }] =
     await Promise.all([
@@ -333,6 +448,62 @@ export async function listResearchSignals(supabase: SupabaseServerClient, _works
   return buildResearchSignals(((data ?? []) as ResearchSignalRow[]).map(toResearchSignalRow));
 }
 
+export async function loadOperatorOverview(supabase: SupabaseServerClient) {
+  const [
+    { count: workspaceCount },
+    { count: leadCount },
+    { count: pendingApprovalCount },
+    { count: providerIssueCount },
+    { data: workspaces },
+    { data: providerConnections },
+    { data: approvals },
+    { data: recentLeads },
+    { data: agentRuns },
+  ] = await Promise.all([
+    supabase.from("workspaces").select("id", { count: "exact", head: true }),
+    supabase.from("leads").select("id", { count: "exact", head: true }),
+    supabase.from("approval_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
+    supabase.from("provider_connections").select("id", { count: "exact", head: true }).in("status", ["needs_attention", "not_connected"]),
+    supabase
+      .from("workspaces")
+      .select("id,name,mode,region,managed_service_enabled,updated_at,created_at,workspace_plans(name,key)")
+      .order("updated_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("provider_connections")
+      .select("id,workspace_id,provider,status,last_sync_at,updated_at,external_account_name,workspaces(name)")
+      .order("updated_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("approval_requests")
+      .select("id,target_type,target_id,status,risk_summary,created_at,workspaces(name)")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("leads")
+      .select("id,workspace_id,full_name,name,email,provider,created_at,workspaces(name)")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("agent_runs")
+      .select("id,status,task,confidence,error_message,created_at,workspaces(name),agent_definitions(name)")
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  return buildOperatorOverview({
+    workspaceCount: workspaceCount ?? 0,
+    leadCount: leadCount ?? 0,
+    pendingApprovalCount: pendingApprovalCount ?? 0,
+    providerIssueCount: providerIssueCount ?? 0,
+    workspaces: (workspaces ?? []) as WorkspaceOverviewRow[],
+    providerConnections: (providerConnections ?? []) as ProviderConnectionRow[],
+    approvals: (approvals ?? []) as ApprovalRow[],
+    recentLeads: (recentLeads ?? []) as LeadRow[],
+    agentRuns: (agentRuns ?? []) as AgentRunRow[],
+  });
+}
+
 function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
   const summary = row.headline ?? firstSentence(row.body) ?? "Creative captured";
   const postcodes = Array.isArray(row.postcodes) && row.postcodes.length > 0 ? `Postcodes ${row.postcodes.join(", ")}` : "Postcode match pending";
@@ -351,6 +522,14 @@ function normalizeProvider(provider: CampaignRow["provider"]): ProviderKey {
 
 function formatProvider(provider: ProviderKey) {
   return provider === "meta" ? "Meta" : "Google";
+}
+
+function formatProviderLabel(provider: ProviderConnectionRow["provider"]) {
+  if (provider === "meta" || provider === "google") {
+    return formatProvider(provider);
+  }
+
+  return provider ? String(provider) : "Provider";
 }
 
 function sourceLabel(provider: LeadRow["provider"]) {
@@ -415,6 +594,35 @@ function formatConfidence(value: number | string | null | undefined): string {
 
 function cents(value: number): string {
   return `$${(value / 100).toFixed(2)}`;
+}
+
+function latestDate(values: Array<string | null | undefined>): string | null {
+  const latest = values
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+
+  return latest ? new Date(latest).toISOString() : null;
+}
+
+function formatRelativeDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60_000));
+
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 48) return `${diffHours}h ago`;
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays}d ago`;
 }
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {

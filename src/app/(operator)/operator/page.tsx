@@ -1,24 +1,30 @@
-import { AlertTriangle, Bot, CheckCircle2, CircleDollarSign, UsersRound } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, RadioTower, UsersRound } from "lucide-react";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
-import { StatusPill } from "@/components/status-pill";
-import { agentRuns, approvalQueue, operatorMetrics, workspaceRows } from "@/lib/product/demo-data";
+import { StatusPill, type StatusTone } from "@/components/status-pill";
+import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { loadOperatorOverview } from "@/lib/product/live-data";
 
-export default function OperatorConsolePage() {
+export const dynamic = "force-dynamic";
+
+export default async function OperatorConsolePage() {
+  const { supabase } = await requirePageSurfaceAccess("operator");
+  const overview = await loadOperatorOverview(supabase);
+
   return (
     <main className="content">
       <PageHeading
         eyebrow="Internal control plane"
         title="Operator Console"
-        description="Manage workspaces, sync health, AI spend, agent work, approval gates, blocked generations, and managed-service actions from one reviewable surface."
+        description="Manage workspace readiness, provider health, lead volume, approval gates, and recent operational activity from one reviewable surface."
       />
 
       <section className="grid cols-4" aria-label="Operator metrics">
-        <MetricCard icon={UsersRound} label={operatorMetrics[0].label} value={operatorMetrics[0].value} note={operatorMetrics[0].note} />
-        <MetricCard icon={CircleDollarSign} label={operatorMetrics[1].label} value={operatorMetrics[1].value} note={operatorMetrics[1].note} />
-        <MetricCard icon={Bot} label={operatorMetrics[2].label} value={operatorMetrics[2].value} note={operatorMetrics[2].note} />
-        <MetricCard icon={AlertTriangle} label={operatorMetrics[3].label} value={operatorMetrics[3].value} note={operatorMetrics[3].note} />
+        <MetricCard icon={UsersRound} label="Workspaces" value={overview.metrics.workspaces} note="Live operator-visible workspaces" />
+        <MetricCard icon={RadioTower} label="Provider issues" value={overview.metrics.providerIssues} note="Connections needing attention" />
+        <MetricCard icon={ClipboardCheck} label="Pending approvals" value={overview.metrics.pendingApprovals} note="Human gates awaiting review" />
+        <MetricCard icon={AlertTriangle} label="Leads" value={overview.metrics.leads} note="Live lead records across workspaces" />
       </section>
 
       <section className="split">
@@ -30,20 +36,22 @@ export default function OperatorConsolePage() {
                 <th>Workspace</th>
                 <th>Mode</th>
                 <th>Plan</th>
-                <th>Sync</th>
-                <th>AI Spend</th>
+                <th>Service</th>
+                <th>Provider Health</th>
+                <th>Last Sync</th>
               </tr>
             </thead>
             <tbody>
-              {workspaceRows.map((row) => (
-                <tr key={row.name}>
+              {overview.workspaceRows.map((row) => (
+                <tr key={row.id}>
                   <td>{row.name}</td>
                   <td>{row.mode}</td>
                   <td>{row.plan}</td>
+                  <td>{row.managedService}</td>
                   <td>
-                    <StatusPill tone={row.statusTone}>{row.sync}</StatusPill>
+                    <StatusPill tone={row.providerTone as StatusTone}>{row.providerHealth}</StatusPill>
                   </td>
-                  <td>{row.spend}</td>
+                  <td>{row.lastSync}</td>
                 </tr>
               ))}
             </tbody>
@@ -51,14 +59,22 @@ export default function OperatorConsolePage() {
         </div>
 
         <div className="panel">
-          <h2>Approval Queue</h2>
+          <h2>Provider Health</h2>
           <div className="stack">
-            {approvalQueue.map((item) => (
-              <article className="item-card" key={item.title}>
-                <h3>{item.title}</h3>
+            {overview.providerHealthRows.length === 0 ? (
+              <article className="item-card">
+                <h3>No provider issues</h3>
+                <p className="item-meta">Live connections are currently healthy or no issue rows are visible.</p>
+                <StatusPill tone="green">Healthy</StatusPill>
+              </article>
+            ) : null}
+            {overview.providerHealthRows.slice(0, 5).map((item) => (
+              <article className="item-card" key={item.id}>
+                <h3>{item.provider}</h3>
                 <p className="item-meta">{item.workspace}</p>
-                <p className="item-meta">{item.risk}</p>
-                <StatusPill tone="amber">{item.status}</StatusPill>
+                <p className="item-meta">{item.account}</p>
+                <p className="item-meta">{item.lastSync}</p>
+                <StatusPill tone={item.tone as StatusTone}>{item.status}</StatusPill>
               </article>
             ))}
           </div>
@@ -66,35 +82,43 @@ export default function OperatorConsolePage() {
       </section>
 
       <section className="panel">
-        <h2>Agent Runs Needing Attention</h2>
+        <h2>Approval Queue</h2>
         <table className="table">
           <thead>
             <tr>
-              <th>Agent</th>
+              <th>Request</th>
               <th>Workspace</th>
-              <th>Task</th>
+              <th>Risk</th>
               <th>Status</th>
-              <th>Cost</th>
-              <th>Confidence</th>
             </tr>
           </thead>
           <tbody>
-            {agentRuns.slice(0, 5).map((run) => (
-              <tr key={`${run.agent}-${run.workspace}`}>
-                <td>{run.agent}</td>
-                <td>{run.workspace}</td>
-                <td>{run.task}</td>
+            {overview.approvalRows.map((item) => (
+              <tr key={item.id}>
+                <td>{item.title}</td>
+                <td>{item.workspace}</td>
+                <td>{item.risk}</td>
                 <td>
-                  <StatusPill tone={run.status === "Complete" ? "green" : run.status === "Running" ? "blue" : "amber"}>
-                    {run.status}
-                  </StatusPill>
+                  <StatusPill tone={item.status === "approved" ? "green" : item.status === "rejected" ? "rose" : "amber"}>{item.status}</StatusPill>
                 </td>
-                <td>{run.cost}</td>
-                <td>{run.confidence}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section className="panel">
+        <h2>Recent Activity</h2>
+        <div className="grid cols-3">
+          {overview.recentActivity.map((item) => (
+            <article className="item-card" key={`${item.title}-${item.id}`}>
+              <h3>{item.title}</h3>
+              <p className="item-meta">{item.workspace}</p>
+              <p className="item-meta">{item.detail}</p>
+              <StatusPill tone={item.tone as StatusTone}>{item.at ? new Date(item.at).toLocaleString("en-AU") : "Latest"}</StatusPill>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="panel">

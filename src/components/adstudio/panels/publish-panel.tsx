@@ -15,6 +15,18 @@ type ReadinessEntry = {
   automatic?: boolean;
 };
 
+type PublishResponse = {
+  publishReady?: boolean;
+  blockers?: string[];
+  providerWritesEnabled?: boolean;
+  triggerRunId?: string | null;
+  status?: string;
+  metaPublishPlan?: {
+    status?: string;
+  } | null;
+  error?: string;
+};
+
 type PublishSetupPanelProps = {
   campaignId: string;
   campaignPack: AdStudioCampaignPack;
@@ -85,6 +97,7 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
     if (!allMet) return;
     setPublishing(true);
     setPublishError("");
+    setPublishDone(false);
     try {
       const res = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
         method: "POST",
@@ -96,9 +109,25 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
           dryRun: false,
         }),
       });
+      const body = (await res.json().catch(() => ({}))) as PublishResponse;
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Publish failed." }));
         throw new Error(body.error ?? "Publish failed.");
+      }
+      const backendPublished = Boolean(body.triggerRunId)
+        || body.status === "published"
+        || body.status === "queued"
+        || body.metaPublishPlan?.status === "paused_live";
+
+      if (!backendPublished) {
+        const blockers = body.blockers?.filter(Boolean) ?? [];
+        if (blockers.length > 0) {
+          setReadiness(blockers.map((label, index) => ({ id: `publish_blocker_${index + 1}`, label, met: false })));
+          throw new Error("Publish is not ready. Resolve the missing requirements above.");
+        }
+        if (body.providerWritesEnabled === false) {
+          throw new Error("Live publishing is ready, but provider writes are not enabled yet.");
+        }
+        throw new Error("Publish was prepared, but the backend did not confirm a queued or completed publish.");
       }
       setPublishDone(true);
     } catch (error) {

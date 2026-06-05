@@ -46,6 +46,10 @@ export async function executeLeadDeliveryAttemptById(input: {
     await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, "manual_review", {
       message: "No delivery endpoint configured.",
     });
+    await persistLeadDeliveryAudit(input.serviceSupabase, {
+      ...attempt,
+      status: "manual_review",
+    });
 
     return { status: "manual_review" as const };
   }
@@ -71,6 +75,10 @@ export async function executeLeadDeliveryAttemptById(input: {
   await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, status, {
     status: response.status,
     payload,
+  });
+  await persistLeadDeliveryAudit(input.serviceSupabase, {
+    ...attempt,
+    status,
   });
 
   return { status, responseStatus: response.status };
@@ -150,4 +158,26 @@ async function updateAttempt(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+async function persistLeadDeliveryAudit(
+  serviceSupabase: SupabaseServiceClient,
+  attempt: Pick<
+    LeadDeliveryAttemptRow,
+    "id" | "workspace_id" | "lead_id" | "destination_type" | "destination_label" | "status" | "approval_request_id"
+  >,
+) {
+  await serviceSupabase.from("audit_logs").insert({
+    workspace_id: attempt.workspace_id,
+    actor_profile_id: null,
+    action: `lead_delivery_${attempt.status}`,
+    target_type: "lead_delivery_attempt",
+    target_id: attempt.id,
+    metadata: {
+      leadId: attempt.lead_id,
+      destinationType: attempt.destination_type,
+      destinationLabel: attempt.destination_label,
+      approvalRequestId: attempt.approval_request_id,
+    },
+  });
 }

@@ -99,7 +99,7 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
       >
         <RefreshCw aria-hidden size={13} style={{ transform: refreshing ? "rotate(90deg)" : undefined }} />
       </button>
-      <Link className="button secondary" href="/settings#plan" style={{ minHeight: 26, padding: "0 9px", fontSize: 12 }}>
+      <Link className="button secondary" href={status.upgradeHref} style={{ minHeight: 26, padding: "0 9px", fontSize: 12 }}>
         Upgrade
       </Link>
     </div>

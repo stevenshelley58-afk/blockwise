@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -83,4 +84,10 @@ EMPTY=
       EMPTY: "",
     },
   );
+});
+
+test("Vercel release gate blocks deploys on env, test, typecheck, or build failures", () => {
+  const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as { buildCommand?: string };
+
+  assert.equal(vercel.buildCommand, "npm run verify-env && npm run check && npm run build");
 });

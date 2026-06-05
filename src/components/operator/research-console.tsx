@@ -584,7 +584,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
                     {skill.cron ? <span className="rops-pill info" style={{ marginLeft: 6 }}>{skill.cron}</span> : null}
                   </p>
                   <p className="desc">{skill.purpose.slice(0, 110)}</p>
-                  <p className="desc" style={{ color: "#8a93a6" }}>{formatBytes(skill.byteSize)} · {formatRelativeTime(skill.updatedAt)}</p>
+                  <p className="desc" style={{ color: "#94a3b8" }}>{formatBytes(skill.byteSize)} · {formatRelativeTime(skill.updatedAt)}</p>
                   <a className="rops-act" style={{ textDecoration: "none", display: "inline-block", marginRight: 6 }} href={`/api/operator/research/skills/${skill.slug}`} target="_blank" rel="noreferrer">Open</a>
                   <a className="rops-act" style={{ textDecoration: "none", display: "inline-block" }} href={`/api/operator/research/skills/${skill.slug}?mode=edit`} target="_blank" rel="noreferrer">Edit</a>
                 </section>

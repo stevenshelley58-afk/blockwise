@@ -18,7 +18,7 @@ type TrialStatus = {
 };
 
 const INCLUDED_AD_PACKS = 10;
-const UPGRADE_HREF = "/settings#plan";
+const UPGRADE_HREF = "/settings#billing";
 
 function firstRecord(value: unknown): Record<string, unknown> | null {
   if (Array.isArray(value)) {
