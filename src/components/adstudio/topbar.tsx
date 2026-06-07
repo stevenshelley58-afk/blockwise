@@ -133,7 +133,7 @@ export function TopBar({
           </button>
           <button type="button" role="menuitem" onClick={handleShare}>
             <Share2 aria-hidden size={16} />
-            Share for review
+            Copy link
           </button>
           <span className="studio-menu-line" />
           <button type="button" role="menuitem" onClick={handleArchive}>

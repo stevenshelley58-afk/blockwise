@@ -34,7 +34,7 @@ export const CONSOLE_STYLES = `
 .rops-navb .rops-cnt{margin-left:auto;font-size:11px;font-weight:650;color:#94a3b8}
 .rops-navb .rops-cnt.bad{color:var(--rops-bad)}
 .rops-main{flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:12px}
-.rops-card{background:#fff;border-radius:12px;box-shadow:var(--rops-sh);padding:14px 16px}
+.rops-card{background:#fff;border-radius:12px;box-shadow:var(--rops-sh);padding:14px 16px;min-width:0}
 .rops-card h3{font-size:14.5px;font-weight:650;margin:0 0 10px;letter-spacing:-.1px}
 .rops-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
 .rops-stat{margin:0;font-size:11px;font-weight:650;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
@@ -79,9 +79,29 @@ export const CONSOLE_STYLES = `
 .rops-cardhead h3{margin:0;margin-right:auto}
 @media(max-width:860px){
   .rops-body{flex-direction:column}
-  .rops-rail{width:100%;display:flex;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line-soft);padding:8px}
+  .rops-rail{width:100%;display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line-soft);padding:8px}
+  .rops-rail>div{display:flex;gap:6px;flex:0 0 auto}
   .rops-rail-label{display:none}
-  .rops-navb{width:auto}
+  .rops-navb{width:auto;flex:0 0 auto;white-space:nowrap}
   .rops-glance{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  .rops{border-radius:12px}
+  .rops-topbar{align-items:flex-start}
+  .rops-divider{display:none}
+  .rops-meta{white-space:normal}
+  .rops-topactions{width:100%;max-width:100%;margin-left:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+  .rops-topactions form{flex:0 0 auto}
+  .rops-input{min-width:84px}
+  .rops-select{min-width:120px}
+  .rops-btn{flex:0 0 auto}
+  .rops-main{padding:12px}
+  .rops-card{overflow-x:auto}
+  .rops-table{min-width:560px}
+  .rops-qtabs{max-width:100%;flex-wrap:nowrap;overflow-x:auto}
+  .rops-qtab{flex:0 0 auto}
+  .rops-glance{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rops-statusbar{flex-wrap:nowrap;overflow-x:auto}
+  .rops-statusbar>*{flex:0 0 auto}
 }
 `;

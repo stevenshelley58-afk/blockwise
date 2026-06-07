@@ -63,7 +63,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
 
       <section className="panel">
         <h2>AI Usage Ledger</h2>
-        <form className="grid cols-4" method="get">
+        <form className="grid cols-4 ledger-filter-form" method="get">
           <label>
             <span>User</span>
             <input name="userId" defaultValue={ledgerFilters.userId ?? ""} placeholder="User id" />
@@ -90,7 +90,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
           </div>
         </form>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table responsive-card-table">
             <thead>
               <tr>
                 <th>Time</th>
@@ -106,16 +106,16 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
             <tbody>
               {ledgerRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{formatDate(row.createdAt)}</td>
-                  <td>{row.user}</td>
-                  <td>{row.task}</td>
-                  <td>{row.profile}</td>
-                  <td>{row.provider}</td>
-                  <td>{row.model}</td>
-                  <td>
+                  <td data-label="Time">{formatDate(row.createdAt)}</td>
+                  <td data-label="User">{row.user}</td>
+                  <td data-label="Task">{row.task}</td>
+                  <td data-label="Profile">{row.profile}</td>
+                  <td data-label="Provider">{row.provider}</td>
+                  <td data-label="Model">{row.model}</td>
+                  <td data-label="Status">
                     <StatusPill tone={row.result === "completed" ? "green" : "rose"}>{row.result}</StatusPill>
                   </td>
-                  <td>{row.estimatedCost}</td>
+                  <td data-label="Cost">{row.estimatedCost}</td>
                 </tr>
               ))}
               {!ledgerRows.length ? (

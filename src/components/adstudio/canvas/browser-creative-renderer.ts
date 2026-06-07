@@ -89,7 +89,8 @@ async function drawImageObject(ctx: CanvasRenderingContext2D, object: AdStudioCa
 
   try {
     const image = await loadImage(src);
-    drawImageCover(ctx, image, object.x, object.y, width, height);
+    const radius = object.x === 0 && object.y === 0 && width === ctx.canvas.width && height === ctx.canvas.height ? 0 : 22;
+    drawImageCover(ctx, image, object.x, object.y, width, height, radius);
   } catch {
     drawImagePlaceholder(ctx, object.x, object.y, width, height);
   }
@@ -137,6 +138,7 @@ function drawImageCover(
   y: number,
   width: number,
   height: number,
+  radius: number,
 ) {
   const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
   const drawWidth = image.naturalWidth * scale;
@@ -144,7 +146,7 @@ function drawImageCover(
   const drawX = x + (width - drawWidth) / 2;
   const drawY = y + (height - drawHeight) / 2;
   ctx.save();
-  roundedRect(ctx, x, y, width, height, 22);
+  roundedRect(ctx, x, y, width, height, radius);
   ctx.clip();
   ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
   ctx.restore();

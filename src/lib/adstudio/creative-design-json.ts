@@ -100,16 +100,37 @@ export function syncCreativeWithCopyAndImage(
   imageSrc: string,
 ): AdStudioCreative {
   const objects = creative.canvas.objects.map((object) => syncObjectWithCopyAndImage(object, copy, imageSrc));
+  const designJson = getCreativeDesignJson(creative);
   const next = {
     ...creative,
     canvas: {
       ...creative.canvas,
       objects,
+      fabricJson: designJson ? syncDesignJsonWithCopyAndImage(designJson, copy, imageSrc) : creative.canvas.fabricJson,
     },
   };
   return {
     ...next,
     previewSvg: renderCreativeSvg(next),
+  };
+}
+
+function syncDesignJsonWithCopyAndImage(
+  designJson: CreativeDesignJson,
+  copy: CreativeCopyFields,
+  imageSrc: string,
+): CreativeDesignJson {
+  return {
+    ...designJson,
+    objects: designJson.objects.map((object) => {
+      const meta = object[BLOCKWISE_FABRIC_META_KEY];
+      if (!meta) return object;
+      if (meta.role === "headline") return { ...object, text: copy.headline };
+      if (meta.role === "subheadline") return { ...object, text: copy.description };
+      if (meta.role === "cta_text" || meta.role === "cta_button") return { ...object, text: copy.cta };
+      if (meta.role === "primary_image") return { ...object, src: imageSrc };
+      return object;
+    }),
   };
 }
 

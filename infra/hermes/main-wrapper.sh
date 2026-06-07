@@ -17,7 +17,16 @@ EOF
 fi
 
 if [ "${BLOCKWISE_RESEARCH_RUNTIME_ENABLED:-true}" = "true" ]; then
-  s6-setuidgid hermes node /app/research-runtime/bin/supabase-supervisor.mjs &
+  (
+    set +e
+    while :; do
+      printf '%s\n' "[blockwise-research-runtime] starting supervisor" >&2
+      s6-setuidgid hermes node /app/research-runtime/bin/supabase-supervisor.mjs
+      status=$?
+      printf '%s\n' "[blockwise-research-runtime] supervisor exited with status ${status}; restarting in 15s" >&2
+      sleep 15
+    done
+  ) &
 fi
 
 cd /opt/data

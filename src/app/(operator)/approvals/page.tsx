@@ -31,7 +31,7 @@ export default async function ApprovalsPage() {
 
       <section className="panel">
         <h2>Approval Queue</h2>
-        <table className="table">
+        <table className="table responsive-card-table">
           <thead>
             <tr>
               <th>Request</th>
@@ -44,13 +44,13 @@ export default async function ApprovalsPage() {
           <tbody>
             {approvalQueue.map((item) => (
               <tr key={item.id}>
-                <td>{item.title}</td>
-                <td>{item.workspace}</td>
-                <td>{item.risk}</td>
-                <td>
+                <td data-label="Request">{item.title}</td>
+                <td data-label="Workspace">{item.workspace}</td>
+                <td data-label="Risk">{item.risk}</td>
+                <td data-label="Status">
                   <StatusPill tone="amber">{item.status}</StatusPill>
                 </td>
-                <td>
+                <td data-label="Actions">
                   <ApprovalActions approvalId={item.id} workspaceId={access.workspaceId} status={item.status} />
                 </td>
               </tr>

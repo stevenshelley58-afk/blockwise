@@ -7,6 +7,7 @@ const schemaMigration = "supabase/migrations/202605280003_research_engine.sql";
 const viewsMigration = "supabase/migrations/202605280004_research_views.sql";
 const zeroAdContractMigration = "supabase/migrations/202606030003_zero_ad_item_count_contract.sql";
 const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_library_ingestion_extensions.sql";
+const buildRunReportDedupeRepairMigration = "supabase/migrations/202606070001_repair_build_run_reports_dedupe_key.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -148,6 +149,22 @@ test("zero-ad diagnostics use Hermes item_count and ignore confirmed absence", (
   assert.match(sql, /array\['item_count',\s*'ads_observed',\s*'adsObserved',\s*'itemCount'\]/i);
   assert.match(sql, /confirmed_absence'\)::boolean,\s*false\)\s*=\s*false/i);
   assert.match(sql, /create or replace view research\.v_operator_zero_ad_anomalies/i);
+});
+
+test("build-run report repair restores the watchdog ON CONFLICT target", () => {
+  const sql = readFileSync(buildRunReportDedupeRepairMigration, "utf8");
+
+  assert.match(
+    sql,
+    /create unique index if not exists build_run_reports_dedupe_key_uidx[\s\S]*on research\.build_run_reports\s*\(\s*dedupe_key\s*\)/i,
+    "watchdog report upserts need a unique dedupe_key conflict target",
+  );
+  assert.match(
+    sql,
+    /row_number\(\)\s+over\s*\([\s\S]*partition by dedupe_key/i,
+    "repair must be safe if live drift created duplicate dedupe keys",
+  );
+  assert.match(sql, /notify pgrst,\s*'reload schema'/i);
 });
 
 test("ad-library extension migration adds validation, swipe, and media-dedupe tables", () => {

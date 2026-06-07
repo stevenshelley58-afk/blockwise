@@ -44,7 +44,7 @@ for collection.
 
 - `hermes/tools/research-runtime`
 - `hermes/tools/meta-library-capture` for resolved-page verification only
-- `browserbase.session`
+- self-hosted browser session (Steel CDP, local Chromium fallback)
 - plain HTTPS fetch
 - `mem0.search`
 - `blockwise.ingest.upsert_advertiser_page`

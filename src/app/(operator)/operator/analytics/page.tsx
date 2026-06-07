@@ -14,7 +14,9 @@ export default async function OperatorSiteAnalyticsPage() {
         title="Site Analytics"
         description="First-party traffic across the marketing site and customer app: visitors, page views, referrers, devices, and countries. Operator surfaces are excluded; bots are filtered."
       />
-      <SiteAnalyticsDashboard />
+      <div className="operator-analytics-surface">
+        <SiteAnalyticsDashboard />
+      </div>
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronDown, ChevronRight, ChevronsLeft } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
+import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
@@ -199,6 +200,14 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
         </header>
         {children}
       </div>
+      <MobileBottomNav
+        variant={variant}
+        account={{
+          email: user.email ?? "",
+          name: accountName,
+          role: roleLabel,
+        }}
+      />
     </div>
   );
 }

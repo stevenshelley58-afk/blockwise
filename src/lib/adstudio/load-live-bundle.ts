@@ -1,7 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { generateAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
-import { rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
+import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -51,15 +51,16 @@ export async function loadLiveAdStudioBundle(
   try {
     const offers = listOfferTemplates();
 
-    const { data: latestCampaign } = await supabase
+    const { data: campaigns } = await supabase
       .from("adstudio_campaigns")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
 
-    if (latestCampaign) {
+    for (const latestCampaign of campaigns ?? []) {
+      if (String(latestCampaign.status ?? "") === "archived") continue;
+
       const campaignId = String(latestCampaign.id);
       const [brandKitRow, variants, creatives, copy, compliance] = await Promise.all([
         supabase
@@ -83,6 +84,8 @@ export async function loadLiveAdStudioBundle(
 
       if (brandKitRow.data) {
         const brandKit = rowToBrandKit(brandKitRow.data);
+        if (isExampleBrandKitSourceUrl(brandKit.source.url)) continue;
+
         const campaignPack = rowToCampaignPack({
           brandKit,
           campaign: latestCampaign,
@@ -99,14 +102,17 @@ export async function loadLiveAdStudioBundle(
       }
     }
 
-    // No usable campaign - try to seed from the workspace's most recent brand kit.
-    const { data: latestBrandKitRow } = await supabase
+    // No usable campaign - try to seed from the workspace's most recent approved non-demo brand kit.
+    const { data: brandKitRows } = await supabase
       .from("adstudio_brand_kits")
       .select("*")
       .eq("workspace_id", workspaceId)
+      .eq("review_status", "approved")
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
+
+    const nonDemoRows = (brandKitRows ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
+    const latestBrandKitRow = nonDemoRows.find((row) => String(row.source_url ?? "").trim()) ?? nonDemoRows[0];
 
     if (latestBrandKitRow) {
       const brandKit = rowToBrandKit(latestBrandKitRow);

@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { createHash, randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
+import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { promisify } from "node:util";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   CLASSIFIER_VERSION,
   classifyCreativeWithModels,
@@ -13,16 +15,17 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 
 const DEFAULT_POSTCODES = ["ALL"];
+const LOCATION_AD_SEARCH_JOB_TYPE = "blockwise-location-ad-search";
 const HANDLED_JOB_TYPES = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
+  LOCATION_AD_SEARCH_JOB_TYPE,
   "blockwise-ad-collector",
   "blockwise-media-collector",
   "blockwise-ad-classifier",
   CONTENT_RUN_JOB_TYPE,
 ];
 const env = process.env;
-const execFileAsync = promisify(execFile);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const now = () => new Date().toISOString();
 const json = (value) => JSON.stringify(value);
@@ -58,6 +61,13 @@ const adPageRefreshEnabled = env.HERMES_AD_PAGE_REFRESH_ENABLED !== "false";
 const adPageRefreshIntervalMinutes = positiveInt("HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES", mode === "build" ? 720 : 360);
 const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", mode === "build" ? 40 : 16);
 const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
+const adPageRefreshScanLimit = Math.max(adPageRefreshBatchSize * 16, adPageRefreshMaxActive + adPageRefreshBatchSize * 4);
+const adPageRefreshMaxConsecutiveFailures = 3;
+const locationAdSearchEnabled = env.HERMES_LOCATION_AD_SEARCH_ENABLED !== "false";
+const locationAdSearchIntervalMinutes = positiveInt("HERMES_LOCATION_AD_SEARCH_INTERVAL_MINUTES", 720);
+const locationAdSearchBatchSize = positiveInt("HERMES_LOCATION_AD_SEARCH_BATCH_SIZE", mode === "build" ? 40 : 12);
+const locationAdSearchMaxActive = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE", mode === "build" ? 120 : 40);
+const locationAdSearchMaxSuburbsPerPostcode = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_SUBURBS_PER_POSTCODE", 8);
 const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const maxRosterUrlsPerPostcode = positiveInt("HERMES_CENSUS_MAX_ROSTER_URLS_PER_POSTCODE", 5);
 const censusQueuePriority = positiveInt("HERMES_CENSUS_QUEUE_PRIORITY", 30);
@@ -67,11 +77,18 @@ const censusRecycleBlockedEnabled = env.HERMES_CENSUS_RECYCLE_BLOCKED_ENABLED !=
 const metaCaptureProvider = env.HERMES_META_CAPTURE_PROVIDER || (env.HERMES_META_CAPTURE_ENDPOINT ? "http_json" : "hermes_browser");
 const metaCaptureEndpoint = env.HERMES_META_CAPTURE_ENDPOINT || "";
 const metaBrowserExecutable = env.HERMES_META_BROWSER_EXECUTABLE || env.CHROMIUM_BIN || "chromium";
+const remoteBrowserCdpUrl = env.HERMES_REMOTE_BROWSER_CDP_URL || "";
+const remoteBrowserFailureCooldownMs = positiveInt("HERMES_REMOTE_BROWSER_FAILURE_COOLDOWN_MS", 30 * 60 * 1000);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const META_BROWSER_SOURCE_PROVIDER = "hermes_meta_page_capture";
 const META_STRUCTURED_SOURCE_PROVIDER = "structured_meta_page_provider";
+const META_LOCATION_SEARCH_SOURCE_PROVIDER = "hermes_meta_location_search";
 const targetAllPostcodes = requestedTargetPostcodes.some((value) => /^(?:all|\*)$/iu.test(value));
 const targetPostcodes = targetAllPostcodes ? [] : requestedTargetPostcodes;
+
+function adRefreshPriorityForPage(page) {
+  return page.status === "resolved_collectable" ? 4 : 8;
+}
 
 const POSTCODE_ROSTER_SOURCES = {
   "6000": [{ suburb: "Perth", slug: "perth" }],
@@ -98,6 +115,14 @@ const POSTCODE_ROSTER_SOURCES = {
   "6158": [{ suburb: "East Fremantle", slug: "east-fremantle" }],
   "6159": [{ suburb: "North Fremantle", slug: "north-fremantle" }],
   "6160": [{ suburb: "Fremantle", slug: "fremantle" }],
+  "6163": [
+    { suburb: "Spearwood", slug: "spearwood" },
+    { suburb: "Hamilton Hill", slug: "hamilton-hill" },
+    { suburb: "Coolbellup", slug: "coolbellup" },
+    { suburb: "Bibra Lake", slug: "bibra-lake" },
+    { suburb: "Kardinya", slug: "kardinya" },
+    { suburb: "North Lake", slug: "north-lake" },
+  ],
   "6166": [
     { suburb: "Coogee", slug: "coogee" },
     { suburb: "Henderson", slug: "henderson" },
@@ -154,16 +179,23 @@ function suburbSlug(value) {
     .replace(/^-+|-+$/gu, "");
 }
 
-function validRosterSuburb(value) {
+function normaliseRosterSuburb(value) {
   const suburb = String(value || "").trim();
-  return suburb && !/^[A-Z]{2,3}\s+\d{4}\b/u.test(suburb) && /[A-Z]/u.test(suburb);
+  const embedded = /^[A-Z]{2,3}\s+\d{4}\s+(?<suburb>.+)$/u.exec(suburb)?.groups?.suburb?.trim();
+  const cleaned = embedded || suburb;
+  if (!cleaned || /^\d{4}$/u.test(cleaned) || /^[A-Z]{2,3}\s+\d{4}\b/u.test(cleaned)) return null;
+  return /[A-Za-z]/u.test(cleaned) ? cleaned : null;
+}
+
+function validRosterSuburb(value) {
+  return Boolean(normaliseRosterSuburb(value));
 }
 
 function buildPostcodeSuburbIndex() {
   const index = new Map();
   for (const row of readAuPostcodes()) {
     if (!row?.postcode || !row?.state || !Array.isArray(row.suburbs)) continue;
-    const suburbs = row.suburbs.filter(validRosterSuburb).map((suburb) => titleCase(suburb));
+    const suburbs = [...new Set(row.suburbs.map(normaliseRosterSuburb).filter(Boolean).map((suburb) => titleCase(suburb)))];
     index.set(`${row.state}:${row.postcode}`, suburbs);
   }
   return index;
@@ -199,6 +231,8 @@ function hasCensusSourceForPolicy(policy) {
 function postgrestIn(values) {
   return values.map((value) => `"${String(value).replace(/"/gu, "")}"`).join(",");
 }
+
+let remoteBrowserDisabledUntil = 0;
 
 function log(message, metadata = {}, level = "info") {
   console.log(json({ ts: now(), component: "blockwise-research-runtime", level, message, ...metadata }));
@@ -423,62 +457,154 @@ async function enqueueDueCensusJobs(buildRunId) {
 
 async function enqueueDueAdPageRefreshJobs(buildRunId) {
   if (!adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
-  const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed,failed,blocked)&limit=${adPageRefreshMaxActive}`);
-  if (activeCollectors.length >= adPageRefreshMaxActive) {
-    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: activeCollectors.length };
+  const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id,priority&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=${Math.max(adPageRefreshMaxActive * 2, adPageRefreshBatchSize)}`);
+  const blockingCollectors = activeCollectors.filter((job) => Number(job.priority || 99) <= adRefreshPriorityForPage({ status: "resolved_collectable" }));
+  if (blockingCollectors.length >= adPageRefreshMaxActive) {
+    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length };
   }
   const activePageIds = new Set(activeCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
   const pages = await rest(
     "research",
-    `advertiser_pages?select=id,page_id,page_name,status,resolution_decision_id,last_checked_at&status=in.(resolved_collectable,no_ads_confirmed)&page_id=not.is.null&order=last_checked_at.asc.nullsfirst&limit=${adPageRefreshBatchSize * 4}`,
+    `advertiser_pages?select=id,page_id,page_name,status,resolution_decision_id,last_checked_at,consecutive_failed_checks&status=in.(resolved_collectable,no_ads_confirmed)&page_id=not.is.null&order=last_checked_at.asc.nullsfirst&limit=${adPageRefreshScanLimit}`,
   );
   const cutoff = Date.now() - adPageRefreshIntervalMinutes * 60_000;
-  const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - activeCollectors.length, adPageRefreshBatchSize));
+  const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
   const candidates = pages.filter((page) => {
     if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
     if (activePageIds.has(page.id)) return false;
+    if ((page.consecutive_failed_checks || 0) >= adPageRefreshMaxConsecutiveFailures) return false;
     if (!page.last_checked_at) return true;
     return Date.parse(page.last_checked_at) < cutoff;
-  }).slice(0, capacity);
+  }).sort((left, right) =>
+    adRefreshPriorityForPage(left) - adRefreshPriorityForPage(right)
+    || Date.parse(left.last_checked_at || "1970-01-01T00:00:00.000Z") - Date.parse(right.last_checked_at || "1970-01-01T00:00:00.000Z")
+  ).slice(0, capacity);
   let enqueued = 0;
   const bucket = Math.floor(Date.now() / Math.max(60_000, adPageRefreshIntervalMinutes * 60_000));
   for (const [index, page] of candidates.entries()) {
-    const created = await rest("research", "work_queue", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: json({
-        queue_name: "research",
-        job_type: "blockwise-ad-collector",
-        dedupe_key: `ad-refresh:${page.id}:${bucket}`,
-        advertiser_page_id: page.id,
-        priority: 8,
-        payload: {
-          advertiserPageId: page.id,
-          metaPageId: String(page.page_id),
-          build_run_id: buildRunId,
-          resolverDecisionId: page.resolution_decision_id || null,
-          realEstateGate: {
-            verified: true,
-            verifiedBySkill: "blockwise-auto-page-refresh",
-            decisionId: page.resolution_decision_id || null,
-            sourceDocumentIds: [],
-            verifiedAt: now(),
-          },
-          country: "AU",
-          activeStatus: "all",
-          resultsLimit: metaCaptureResultsLimit,
+    const queued = await enqueueFollowUp({
+      queue_name: "research",
+      job_type: "blockwise-ad-collector",
+      dedupe_key: `ad-refresh:${page.id}:${bucket}`,
+      advertiser_page_id: page.id,
+      priority: adRefreshPriorityForPage(page),
+      payload: {
+        advertiserPageId: page.id,
+        metaPageId: String(page.page_id),
+        build_run_id: buildRunId,
+        resolverDecisionId: page.resolution_decision_id || null,
+        realEstateGate: {
+          verified: true,
+          verifiedBySkill: "blockwise-auto-page-refresh",
+          decisionId: page.resolution_decision_id || null,
+          sourceDocumentIds: [],
+          verifiedAt: now(),
         },
-        status: "pending",
-        available_at: new Date(Date.now() + index * 2_000).toISOString(),
-        max_attempts: 3,
-      }),
-    });
-    if (created?.[0]?.id) {
+        country: "AU",
+        activeStatus: "all",
+        resultsLimit: metaCaptureResultsLimit,
+      },
+      status: "pending",
+      available_at: new Date(Date.now() + index * 2_000).toISOString(),
+      max_attempts: 3,
+    }, null);
+    if (queued) {
       enqueued += 1;
-      await recordEvent("insert", "work_queue", created[0].id, { job_type: "blockwise-ad-collector", reason: "auto_verified_page_refresh", advertiser_page_id: page.id }, { work_queue_id: created[0].id });
     }
   }
-  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: activeCollectors.length };
+  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length, adRefreshScanned: pages.length };
+}
+
+function locationSuburbsForPolicy(policy) {
+  const configured = (POSTCODE_ROSTER_SOURCES[policy.postcode] || []).map((source) => source.suburb);
+  const indexed = postcodeSuburbIndex.get(`${policy.state || "WA"}:${policy.postcode}`) || [];
+  const seen = new Set();
+  const suburbs = [];
+  for (const suburb of [...configured, ...indexed]) {
+    const clean = normaliseRosterSuburb(suburb);
+    const key = clean ? normalizeName(clean) : "";
+    if (!clean || seen.has(key)) continue;
+    seen.add(key);
+    suburbs.push(titleCase(clean));
+  }
+  return suburbs;
+}
+
+function locationSearchQueriesForPolicy(policy) {
+  const suburbs = locationSuburbsForPolicy(policy).slice(0, locationAdSearchMaxSuburbsPerPostcode);
+  return [
+    ...suburbs.map((suburb) => ({ query: suburb, suburb })),
+    { query: policy.postcode, suburb: null },
+  ].filter((item) => item.query);
+}
+
+async function enqueueDueLocationAdSearchJobs(buildRunId) {
+  if (!locationAdSearchEnabled) return { locationSearchCandidates: 0, locationSearchEnqueued: 0 };
+  const activeSearches = await rest("research", `work_queue?select=id&job_type=eq.${LOCATION_AD_SEARCH_JOB_TYPE}&status=in.(pending,claimed)&limit=${locationAdSearchMaxActive}`);
+  if (activeSearches.length >= locationAdSearchMaxActive) {
+    return { locationSearchCandidates: 0, locationSearchEnqueued: 0, locationSearchSkippedActive: activeSearches.length };
+  }
+
+  const filters = [
+    "active=eq.true",
+    !targetAllPostcodes && targetPostcodes.length ? `postcode=in.(${postgrestIn(targetPostcodes)})` : null,
+    targetStates.length ? `state=in.(${postgrestIn(targetStates)})` : null,
+  ].filter(Boolean).join("&");
+  const policies = await rest(
+    "research",
+    `refresh_policies?select=id,postcode,state,priority,last_refreshed_at&${filters}&order=priority.asc,last_refreshed_at.asc.nullsfirst&limit=${Math.max(locationAdSearchBatchSize * 4, supervisorLimit)}`,
+  );
+  const capacity = Math.max(0, Math.min(locationAdSearchMaxActive - activeSearches.length, locationAdSearchBatchSize));
+  const bucket = Math.floor(Date.now() / Math.max(60_000, locationAdSearchIntervalMinutes * 60_000));
+  let candidates = 0;
+  let enqueued = 0;
+
+  for (const policy of policies) {
+    if (enqueued >= capacity) break;
+    if (!policy.postcode || !hasCensusSourceForPolicy(policy)) continue;
+    for (const [index, item] of locationSearchQueriesForPolicy(policy).entries()) {
+      if (enqueued >= capacity) break;
+      candidates += 1;
+      const dedupeKey = `location-ad-search:${policy.state || "WA"}:${policy.postcode}:${normalizeName(item.query)}:${bucket}`;
+      const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(dedupeKey)}&limit=1`);
+      if (existing.length) continue;
+      const created = await rest("research", "work_queue", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: json({
+          queue_name: "research",
+          job_type: LOCATION_AD_SEARCH_JOB_TYPE,
+          dedupe_key: dedupeKey,
+          priority: Math.max(5, Number(policy.priority || 5) + 2),
+          payload: {
+            postcode: policy.postcode,
+            suburb: item.suburb,
+            state: policy.state || "WA",
+            query: item.query,
+            build_run_id: buildRunId,
+            country: "AU",
+            activeStatus: "all",
+            resultsLimit: metaCaptureResultsLimit,
+            location_search_allowed: true,
+            realEstateGate: {
+              verified: true,
+              verifiedBySkill: LOCATION_AD_SEARCH_JOB_TYPE,
+              verifiedAt: now(),
+            },
+          },
+          status: "pending",
+          available_at: new Date(Date.now() + (enqueued + index) * 2_000).toISOString(),
+          max_attempts: 3,
+        }),
+      });
+      if (created?.[0]?.id) {
+        enqueued += 1;
+        await recordEvent("insert", "work_queue", created[0].id, { dedupeKey, job_type: LOCATION_AD_SEARCH_JOB_TYPE, postcode: policy.postcode, suburb: item.suburb, query: item.query }, { work_queue_id: created[0].id });
+      }
+    }
+  }
+
+  return { locationSearchCandidates: candidates, locationSearchEnqueued: enqueued, locationSearchActive: activeSearches.length };
 }
 
 async function runWatchdogs() {
@@ -659,22 +785,196 @@ function facebookAboutUrl(url) {
 }
 
 async function browserDumpDom(url, budgetMs) {
-  const { stdout } = await execFileAsync(
-    metaBrowserExecutable,
-    [
-      "--headless",
-      "--no-sandbox",
-      "--disable-gpu",
-      `--virtual-time-budget=${Math.min(budgetMs, 45_000)}`,
-      "--dump-dom",
-      url,
-    ],
-    {
-      timeout: budgetMs + 10_000,
-      maxBuffer: 24 * 1024 * 1024,
+  if (remoteBrowserCdpUrl && Date.now() >= remoteBrowserDisabledUntil) {
+    try {
+      const webSocketUrl = await resolveRemoteBrowserWebSocket(remoteBrowserCdpUrl, Math.min(10_000, budgetMs));
+      return await captureDomOverCdp(webSocketUrl, url, Math.min(budgetMs, 45_000));
+    } catch (error) {
+      remoteBrowserDisabledUntil = Date.now() + remoteBrowserFailureCooldownMs;
+      log("Remote browser CDP capture failed; falling back to local Chromium", { error: error.message, cooldownMs: Math.max(0, remoteBrowserDisabledUntil - Date.now()) }, "warning");
+    }
+  }
+  const profileDir = await mkdtemp(join(tmpdir(), "blockwise-meta-"));
+  const browser = spawn(metaBrowserExecutable, [
+    "--headless=new",
+    "--no-sandbox",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--disable-background-networking",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${profileDir}`,
+    "about:blank",
+  ], { stdio: ["ignore", "ignore", "pipe"] });
+  try {
+    const webSocketUrl = await waitForBrowserWebSocket(browser, Math.min(10_000, budgetMs));
+    return await captureDomOverCdp(webSocketUrl, url, Math.min(budgetMs, 45_000));
+  } finally {
+    browser.kill("SIGKILL");
+    await waitForBrowserExit(browser, 2_000).catch(() => {});
+    await rm(profileDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function resolveRemoteBrowserWebSocket(cdpUrl, timeoutMs) {
+  const configured = String(cdpUrl || "").trim();
+  if (!configured) throw new Error("remote browser CDP URL is empty");
+  if (/^wss?:\/\//iu.test(configured)) return configured;
+  if (!/^https?:\/\//iu.test(configured)) throw new Error(`unsupported remote browser CDP URL: ${configured}`);
+
+  const versionUrl = remoteBrowserVersionUrl(configured);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(versionUrl, { signal: controller.signal });
+    const body = await response.text();
+    if (!response.ok) throw new Error(`remote browser version endpoint failed ${response.status}: ${body.slice(0, 500)}`);
+    const version = JSON.parse(body);
+    if (!version.webSocketDebuggerUrl) throw new Error("remote browser version endpoint did not return webSocketDebuggerUrl");
+    return rewriteRemoteBrowserWebSocketHost(version.webSocketDebuggerUrl, configured);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function remoteBrowserVersionUrl(cdpUrl) {
+  const parsed = new URL(cdpUrl);
+  parsed.pathname = `${parsed.pathname.replace(/\/+$/u, "")}/json/version`;
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString();
+}
+
+function rewriteRemoteBrowserWebSocketHost(webSocketUrl, cdpUrl) {
+  const reported = new URL(webSocketUrl);
+  const configured = new URL(cdpUrl);
+  reported.protocol = configured.protocol === "https:" ? "wss:" : "ws:";
+  reported.username = configured.username;
+  reported.password = configured.password;
+  reported.hostname = configured.hostname;
+  reported.port = configured.port;
+  return reported.toString();
+}
+
+async function waitForBrowserWebSocket(browser, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let stderr = "";
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Chromium did not expose DevTools within ${timeoutMs}ms: ${stderr.slice(-500)}`));
+    }, timeoutMs);
+    const onData = (chunk) => {
+      stderr += String(chunk);
+      const match = /DevTools listening on (ws:\/\/[^\s]+)/u.exec(stderr);
+      if (match) {
+        cleanup();
+        resolve(match[1]);
+      }
+    };
+    const onExit = () => {
+      cleanup();
+      reject(new Error(`Chromium exited before DevTools was ready: ${stderr.slice(-500)}`));
+    };
+    const cleanup = () => {
+      clearTimeout(timer);
+      browser.stderr.off("data", onData);
+      browser.off("exit", onExit);
+    };
+    browser.stderr.on("data", onData);
+    browser.once("exit", onExit);
+  });
+}
+
+async function captureDomOverCdp(webSocketUrl, url, budgetMs) {
+  const cdp = await openCdp(webSocketUrl);
+  try {
+    const target = await cdp.send("Target.createTarget", { url: "about:blank" });
+    const attached = await cdp.send("Target.attachToTarget", { targetId: target.targetId, flatten: true });
+    const sessionId = attached.sessionId;
+    await cdp.send("Page.enable", {}, sessionId);
+    await cdp.send("Runtime.enable", {}, sessionId);
+    await cdp.send("Page.navigate", { url }, sessionId);
+    const deadline = Date.now() + budgetMs;
+    let html = "";
+    while (Date.now() < deadline) {
+      await sleep(2_000);
+      html = await evaluateOuterHtml(cdp, sessionId);
+      if (metaSearchResultCount(html) > 0 || metaSearchHasConfirmedNoAds(html)) return html;
+    }
+    await cdp.send("Page.stopLoading", {}, sessionId).catch(() => {});
+    return html || await evaluateOuterHtml(cdp, sessionId);
+  } finally {
+    cdp.close();
+  }
+}
+
+function metaSearchResultCount(html) {
+  const counts = [...String(html || "").matchAll(/search_results_connection"\s*:\s*\{"count"\s*:\s*(\d+)/gu)]
+    .map((match) => Number(match[1]))
+    .filter(Number.isFinite);
+  return counts.length ? Math.max(...counts) : 0;
+}
+
+function metaSearchHasConfirmedNoAds(html) {
+  return /search_results_connection"\s*:\s*\{"count"\s*:\s*0\b/iu.test(String(html || "")) && /\bNo ads\b/iu.test(String(html || ""));
+}
+
+async function openCdp(webSocketUrl) {
+  const socket = new WebSocket(webSocketUrl);
+  const pending = new Map();
+  let nextId = 1;
+  await new Promise((resolve, reject) => {
+    socket.addEventListener("open", resolve, { once: true });
+    socket.addEventListener("error", reject, { once: true });
+  });
+  socket.addEventListener("message", (event) => {
+    const message = JSON.parse(event.data);
+    if (!message.id || !pending.has(message.id)) return;
+    const { resolve, reject, timer } = pending.get(message.id);
+    pending.delete(message.id);
+    clearTimeout(timer);
+    if (message.error) reject(new Error(`${message.error.message}: ${message.error.data || ""}`.trim()));
+    else resolve(message.result || {});
+  });
+  return {
+    send(method, params = {}, sessionId = null) {
+      const id = nextId;
+      nextId += 1;
+      const payload = { id, method, params };
+      if (sessionId) payload.sessionId = sessionId;
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`CDP ${method} timed out`));
+        }, 10_000);
+        pending.set(id, { resolve, reject, timer });
+        socket.send(json(payload));
+      });
     },
-  );
-  return stdout;
+    close() {
+      for (const [id, entry] of pending.entries()) {
+        clearTimeout(entry.timer);
+        entry.reject(new Error("CDP socket closed"));
+        pending.delete(id);
+      }
+      socket.close();
+    },
+  };
+}
+
+async function evaluateOuterHtml(cdp, sessionId) {
+  const evaluated = await cdp.send("Runtime.evaluate", {
+    expression: "document.documentElement ? document.documentElement.outerHTML : ''",
+    returnByValue: true,
+  }, sessionId);
+  return evaluated.result?.value || "";
+}
+
+async function waitForBrowserExit(browser, timeoutMs) {
+  if (browser.exitCode !== null || browser.signalCode !== null) return;
+  await Promise.race([
+    new Promise((resolve) => browser.once("exit", resolve)),
+    sleep(timeoutMs),
+  ]);
 }
 
 function agencyFromPayload(payload) {
@@ -787,7 +1087,9 @@ async function ensureServiceArea(input) {
     });
     return created?.[0]?.id;
   } catch (error) {
-    if (missingSchemaRelation(error, "agent_service_areas")) return null;
+    if (missingSchemaRelation(error, "agent_service_areas")) {
+      throw new Error(`research.agent_service_areas is unavailable through REST; verified service areas cannot be written: ${error.message}`);
+    }
     throw error;
   }
 }
@@ -1192,7 +1494,7 @@ function metaAdLibraryKnownFacebookQueries(urls) {
 
 function metaAdLibraryVerifiedNameUrl(name) {
   const params = new URLSearchParams({
-    active_status: "active",
+    active_status: "all",
     ad_type: "all",
     country: "AU",
     media_type: "all",
@@ -1317,6 +1619,32 @@ function facebookUrlMatchesResolverSubject(pageUrl, subject) {
   const urlText = normalizeName(pageUrl);
   const nameTokens = significantNameTokens(subject.name || "");
   return nameTokens.length > 0 && nameTokens.some((token) => urlText.includes(token));
+}
+
+function facebookUrlMatchesResolverAgency(pageUrl, subject) {
+  if (subject.kind !== "agent" || !subject.agency?.id) return false;
+  const urlText = normalizeName(pageUrl);
+  const agencyTokens = significantNameTokens(subject.agency.name || subject.agency.trading_name || "");
+  if (!agencyTokens.length) return false;
+  const overlap = agencyTokens.filter((token) => urlText.includes(token)).length;
+  return overlap >= Math.min(2, agencyTokens.length);
+}
+
+function resolverSubjectForFacebookPage(pageUrl, subject) {
+  if (facebookUrlMatchesResolverSubject(pageUrl, subject)) {
+    return { pageSubject: subject, agencyPageFallback: false };
+  }
+  if (!facebookUrlMatchesResolverAgency(pageUrl, subject)) return null;
+  return {
+    pageSubject: {
+      kind: "agency",
+      id: subject.agency.id,
+      name: subject.agency.name || subject.agency.trading_name || subject.name,
+      agency: subject.agency,
+      agent: null,
+    },
+    agencyPageFallback: true,
+  };
 }
 
 function domainFromUrl(url) {
@@ -1550,6 +1878,15 @@ async function handlePageResolver(job) {
   const fetched = [];
   const facebookCandidates = new Set();
   const websiteCandidates = new Set();
+  const suppliedFacebookUrl = typeof payload.facebookUrl === "string"
+    ? payload.facebookUrl
+    : typeof payload.pageUrl === "string"
+      ? payload.pageUrl
+      : null;
+  if (suppliedFacebookUrl && /^https:\/\/(?:www\.)?facebook\.com\//iu.test(suppliedFacebookUrl)) {
+    facebookCandidates.add(suppliedFacebookUrl);
+    fetched.push({ url: suppliedFacebookUrl, supplied: "payload_facebook_url" });
+  }
 
   for (const url of [...new Set(evidenceUrlsToFetch)].slice(0, 4)) {
     try {
@@ -1576,32 +1913,43 @@ async function handlePageResolver(job) {
 
   const resolved = [];
   for (const pageUrl of [...facebookCandidates]) {
-    if (!facebookUrlMatchesResolverSubject(pageUrl, subject)) {
+    const subjectMatch = resolverSubjectForFacebookPage(pageUrl, subject);
+    if (!subjectMatch) {
       fetched.push({ url: pageUrl, skipped: "facebook_url_does_not_match_verified_subject" });
       continue;
     }
+    const { pageSubject, agencyPageFallback } = subjectMatch;
+    const pageSubjectMeta = resolverSubjectMetadata(pageSubject);
     const pageSlug = facebookSlugFromUrl(pageUrl);
     let numericId = facebookPageIdFromUrl(pageUrl);
     let facebookSourceDocumentId = null;
     if (!numericId) {
       try {
         const html = await fetchFacebookPageDocument(pageUrl);
-        facebookSourceDocumentId = await sourceDocument("meta_page", pageUrl, html, { ...subjectMeta, work_queue_id: job.id, page_slug: pageSlug });
+        facebookSourceDocumentId = await sourceDocument("meta_page", pageUrl, html, { ...pageSubjectMeta, work_queue_id: job.id, page_slug: pageSlug, source_subject_kind: subject.kind, source_subject_id: subject.id });
         fetched.push({ url: pageUrl, sourceDocumentId: facebookSourceDocumentId });
         numericId = facebookPageIdFromHtml(html, pageSlug);
       } catch (error) {
         fetched.push({ url: pageUrl, error: error.message });
       }
     }
-    const confidence = numericId ? 92 : 78;
+    const confidence = numericId ? (agencyPageFallback ? 88 : 92) : (agencyPageFallback ? 74 : 78);
     const decisionId = await createPageResolutionDecision({
-      subjectKind: subject.kind,
-      subjectId: subject.id,
-      agentId: subject.agent?.id || null,
-      agencyId: subject.agency?.id || null,
+      subjectKind: pageSubject.kind,
+      subjectId: pageSubject.id,
+      agentId: pageSubject.agent?.id || null,
+      agencyId: pageSubject.agency?.id || null,
       confidence,
       sourceDocumentIds: fetched.map((item) => item.sourceDocumentId).filter(Boolean),
-      evidence: { page_url: pageUrl, evidence_urls: fetched.map((item) => item.url), page_slug: pageSlug, numeric_page_id_found: Boolean(numericId), subject_name: subject.name },
+      evidence: {
+        page_url: pageUrl,
+        evidence_urls: fetched.map((item) => item.url),
+        page_slug: pageSlug,
+        numeric_page_id_found: Boolean(numericId),
+        subject_name: pageSubject.name,
+        source_subject_name: subject.name,
+        agency_page_fallback: agencyPageFallback,
+      },
       decision: {
         resolved: Boolean(numericId),
         collectable: Boolean(numericId),
@@ -1609,21 +1957,24 @@ async function handlePageResolver(job) {
         page_id: numericId || pageSlug,
         location_search_allowed: false,
       },
-      rationale: numericId
-        ? "Resolved a verified real-estate subject to a Facebook page from controlled evidence before collection."
-        : "Found a Facebook page link from controlled evidence but could not confirm a numeric Meta page id for collection.",
+      rationale: agencyPageFallback
+        ? "Resolved an agency Facebook page from verified agent evidence; collection is agency-owned so ads are not misattributed to the agent."
+        : numericId
+          ? "Resolved a verified real-estate subject to a Facebook page from controlled evidence before collection."
+          : "Found a Facebook page link from controlled evidence but could not confirm a numeric Meta page id for collection.",
     });
     const advertiserPageId = await upsertAdvertiserPage({
-      agentId: subject.agent?.id || null,
-      agencyId: subject.agency?.id || null,
+      agentId: pageSubject.agent?.id || null,
+      agencyId: pageSubject.agency?.id || null,
       decisionId,
       pageId: numericId || `slug:${pageSlug}`,
       pageSlug,
-      pageName: subject.name,
+      pageName: pageSubject.name,
       pageUrl,
       status: numericId ? "resolved_collectable" : "verified_real_estate_unresolved",
       confidence,
       evidenceUrls: fetched.map((item) => item.url),
+      metadata: agencyPageFallback ? { resolver: "verified_agent_agency_page_fallback", source_subject_kind: subject.kind, source_subject_id: subject.id } : {},
     });
     if (advertiserPageId) {
       await rest("research", "real_estate_verifications", {
@@ -1632,20 +1983,34 @@ async function handlePageResolver(job) {
           subject_type: "advertiser_page",
           subject_id: advertiserPageId,
           advertiser_page_id: advertiserPageId,
-          agent_id: subject.agent?.id || null,
-          agency_id: subject.agency?.id || null,
+          agent_id: pageSubject.agent?.id || null,
+          agency_id: pageSubject.agency?.id || null,
           verification_status: numericId ? "verified" : "needs_review",
           evidence_type: "meta_page",
           evidence_url: pageUrl,
-          evidence: { subject_kind: subject.kind, subject_name: subject.name, agent_name: subject.agent?.full_name || null, agency_name: subject.agency?.name || null, page_slug: pageSlug, numeric_page_id_found: Boolean(numericId) },
+          evidence: {
+            subject_kind: pageSubject.kind,
+            subject_name: pageSubject.name,
+            source_subject_kind: subject.kind,
+            source_subject_name: subject.name,
+            agent_name: pageSubject.agent?.full_name || null,
+            agency_name: pageSubject.agency?.name || null,
+            page_slug: pageSlug,
+            numeric_page_id_found: Boolean(numericId),
+            agency_page_fallback: agencyPageFallback,
+          },
           source_document_id: fetched.find((item) => item.sourceDocumentId)?.sourceDocumentId || null,
           verified_by: "blockwise-page-resolver",
           verified_at: numericId ? now() : null,
           confidence,
-          notes: numericId ? "Hermes deterministic page verification." : "Facebook page link found; numeric page id still required before collection.",
+          notes: agencyPageFallback
+            ? "Hermes deterministic agency page fallback from verified agent evidence."
+            : numericId
+              ? "Hermes deterministic page verification."
+              : "Facebook page link found; numeric page id still required before collection.",
         }),
       });
-      resolved.push({ advertiserPageId, pageUrl, pageSlug, metaPageId: numericId, decisionId });
+      resolved.push({ advertiserPageId, pageUrl, pageSlug, metaPageId: numericId, decisionId, subjectKind: pageSubject.kind });
       if (numericId) {
         await enqueueCollectorForPage({
           advertiserPageId,
@@ -1853,6 +2218,85 @@ function metaAdLibraryPageUrl(input) {
     media_type: "all",
   });
   return `https://www.facebook.com/ads/library/?${params.toString()}`;
+}
+
+function metaAdLibraryLocationSearchUrl(input) {
+  const params = new URLSearchParams({
+    active_status: input.activeStatus || "all",
+    ad_type: "all",
+    country: input.country || "AU",
+    media_type: "all",
+    search_type: "keyword_unordered",
+    q: input.query,
+  });
+  return `https://www.facebook.com/ads/library/?${params.toString()}`;
+}
+
+function locationSearchInput(payload) {
+  return {
+    query: String(payload.query || payload.suburb || payload.postcode || "").trim(),
+    postcode: String(payload.postcode || "").trim(),
+    suburb: payload.suburb ? titleCase(payload.suburb) : null,
+    state: String(payload.state || "WA").toUpperCase(),
+    country: String(payload.country || "AU").toUpperCase(),
+    activeStatus: ["active", "inactive", "all"].includes(payload.activeStatus) ? payload.activeStatus : "all",
+    resultsLimit: Math.max(1, Math.min(Number.parseInt(payload.resultsLimit || `${metaCaptureResultsLimit}`, 10) || metaCaptureResultsLimit, 250)),
+    realEstateGate: payload.realEstateGate,
+  };
+}
+
+async function runHermesLocationSearchCapture(input, job) {
+  const startedAt = now();
+  const url = metaAdLibraryLocationSearchUrl(input);
+  try {
+    const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
+    const sourceDocumentId = await sourceDocument("meta_ad_library_location_search", url, stdout.slice(0, 2_500_000), {
+      work_queue_id: job.id,
+      postcode: input.postcode,
+      suburb: input.suburb,
+      state: input.state,
+      query: input.query,
+      location_search_allowed: true,
+    });
+    const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
+    return {
+      runId: `hermes-location-search-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
+      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+      status: parsed.warnings.length ? "FAILED" : "SUCCEEDED",
+      startedAt,
+      finishedAt: now(),
+      costUsd: 0,
+      itemCount: parsed.items.length,
+      items: parsed.items,
+      rawDatasetId: null,
+      errorMessage: parsed.warnings.join("; ") || null,
+      metadata: {
+        url,
+        html_bytes: Buffer.byteLength(stdout),
+        sourceDocumentId,
+        confirmed_absence: parsed.confirmedAbsence,
+        connection_count: parsed.connectionCount,
+        postcode: input.postcode,
+        suburb: input.suburb,
+        state: input.state,
+        query: input.query,
+      },
+    };
+  } catch (error) {
+    return {
+      runId: `hermes-location-search-failed-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
+      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+      status: "FAILED",
+      startedAt,
+      finishedAt: now(),
+      costUsd: 0,
+      itemCount: 0,
+      items: [],
+      rawDatasetId: null,
+      errorMessage: error.message,
+      metadata: { executable: metaBrowserExecutable, postcode: input.postcode, suburb: input.suburb, state: input.state, query: input.query, url },
+    };
+  }
 }
 
 function normaliseMetaAdLibraryHtml({ html, pageId, limit }) {
@@ -2192,10 +2636,41 @@ async function insertFetchRun(job, buildRunId, input, provider) {
   return created?.[0]?.id;
 }
 
+async function insertLocationSearchFetchRun(job, buildRunId, input) {
+  const row = {
+    build_run_id: buildRunId,
+    work_queue_id: job.id,
+    source_provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+    role: "primary",
+    trigger: "scheduled",
+    target_kind: "advertiser_page",
+    target_value: `location-search:${input.state}:${input.postcode}:${hash(input.query).slice(0, 12)}`,
+    input_payload: input,
+    input_hash: hash(json(input)),
+    status: "running",
+    result_summary: {},
+  };
+  const created = await writeFetchRunWithMissingColumnFallback("ad_fetch_runs", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+  }, row);
+  return created?.[0]?.id;
+}
+
 async function updateFetchRun(id, patch) {
   await writeFetchRunWithMissingColumnFallback(`ad_fetch_runs?id=eq.${id}`, {
     method: "PATCH",
   }, { completed_at: now(), ...patch });
+}
+
+async function markAdvertiserPageCheckFailed(advertiserPageId) {
+  if (!advertiserPageId) return;
+  const page = await rest("research", `advertiser_pages?select=consecutive_failed_checks&id=eq.${advertiserPageId}&limit=1`);
+  const consecutiveFailedChecks = Math.min(99, Number(page?.[0]?.consecutive_failed_checks || 0) + 1);
+  await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
+    method: "PATCH",
+    body: json({ last_checked_at: now(), consecutive_failed_checks: consecutiveFailedChecks }),
+  });
 }
 
 async function writeFetchRunWithMissingColumnFallback(path, options, row) {
@@ -2229,7 +2704,7 @@ function missingSchemaRelation(error, relation) {
   return message.includes("PGRST205") && message.includes(`'research.${relation}'`);
 }
 
-async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob }) {
+async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob, explicitAreaMatch = null }) {
   const rawPayload = ad.rawHostedProvider || ad;
   const payloadHash = hash(json(rawPayload));
   const platforms = normalisePlatforms(ad.publisherPlatform);
@@ -2291,6 +2766,9 @@ async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, so
   if (!adCreative?.id) throw new Error(`ad_creatives upsert did not return an id for ${ad.adArchiveID}`);
   await insertCreativeVersion({ adCreative, observedAdId: observedAd.id, snapshotId: snapshot?.id || null, creative, creativeHash });
   const mediaCount = await upsertMediaAssets({ creativeId: adCreative.id, observedAdId: observedAd.id, snapshotId: snapshot?.id || null, mediaSources: creative.mediaSources });
+  if (explicitAreaMatch) {
+    await upsertExplicitAreaMatchForObservedAd({ observedAdId: observedAd.id, ...explicitAreaMatch });
+  }
   await upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId: observedAd.id });
   return { observed_ad_id: observedAd.id, ad_creative_id: adCreative.id, creative_hash: creativeHash, external_ad_id: ad.adArchiveID, media_sources: mediaCount };
 }
@@ -2432,25 +2910,60 @@ async function patchMediaAsset(id, patch) {
   }
 }
 
+async function upsertExplicitAreaMatchForObservedAd({ observedAdId, postcode, suburb, state, matchType, confidence, evidence }) {
+  if (!observedAdId || !postcode || !suburb) return 0;
+  const safeMatchType = matchType === "landing_url" ? "landing_url" : "copy_mention";
+  try {
+    const existing = await rest("research", `ad_area_matches?select=id&observed_ad_id=eq.${observedAdId}&postcode=eq.${encode(postcode)}&suburb=eq.${encode(suburb)}&match_type=eq.${safeMatchType}&limit=1`);
+    if (existing?.[0]?.id) return 0;
+    await rest("research", "ad_area_matches", {
+      method: "POST",
+      body: json({
+        observed_ad_id: observedAdId,
+        postcode,
+        suburb,
+        state: state || "WA",
+        match_type: safeMatchType,
+        confidence: Math.max(60, Math.min(100, Number(confidence || 92))),
+        evidence: evidence || {},
+      }),
+    });
+    return 1;
+  } catch (error) {
+    if (missingSchemaRelation(error, "ad_area_matches")) {
+      throw new Error(`research.ad_area_matches is unavailable through REST; explicit area attribution cannot be written: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
 async function upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId }) {
   const pages = await rest("research", `advertiser_pages?select=agency_id,agent_id&id=eq.${advertiserPageId}&limit=1`);
   const page = pages?.[0];
   if (!page) return 0;
   const rows = [];
   try {
-    if (page.agency_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agency_id=eq.${page.agency_id}&limit=20`));
-    if (page.agent_id) rows.push(...await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agent_id=eq.${page.agent_id}&limit=20`));
+    if (page.agency_id) {
+      const agencyRows = await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agency_id=eq.${page.agency_id}&agent_id=is.null&limit=1000`);
+      rows.push(...agencyRows.map((row) => ({ ...row, matchType: "agency_service_area" })));
+    }
+    if (page.agent_id) {
+      const agentRows = await rest("research", `agent_service_areas?select=postcode,suburb,state,confidence&agent_id=eq.${page.agent_id}&limit=1000`);
+      rows.push(...agentRows.map((row) => ({ ...row, matchType: "agent_service_area" })));
+    }
   } catch (error) {
-    if (missingSchemaRelation(error, "agent_service_areas")) return 0;
+    if (missingSchemaRelation(error, "agent_service_areas")) {
+      throw new Error(`research.agent_service_areas is unavailable through REST; page area attribution cannot be written: ${error.message}`);
+    }
     throw error;
   }
   let count = 0;
   const seen = new Set();
   for (const row of rows) {
-    const key = `${row.postcode}:${row.suburb}`;
+    const matchType = row.matchType;
+    const key = `${row.postcode}:${row.suburb}:${matchType}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const matchType = page.agent_id ? "agent_service_area" : "agency_service_area";
     try {
       const existing = await rest("research", `ad_area_matches?select=id&observed_ad_id=eq.${observedAdId}&postcode=eq.${encode(row.postcode)}&suburb=eq.${encode(row.suburb)}&match_type=eq.${matchType}&limit=1`);
       if (existing?.[0]?.id) continue;
@@ -2467,12 +2980,246 @@ async function upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId }
         }),
       });
     } catch (error) {
-      if (missingSchemaRelation(error, "ad_area_matches")) return count;
+      if (missingSchemaRelation(error, "ad_area_matches")) {
+        throw new Error(`research.ad_area_matches is unavailable through REST; page area attribution cannot be written: ${error.message}`);
+      }
       throw error;
     }
     count += 1;
   }
   return count;
+}
+
+function includesNormalisedPhrase(text, phrase) {
+  return Boolean(text && phrase && ` ${text} `.includes(` ${phrase} `));
+}
+
+function locationAdSearchText(ad) {
+  const snapshot = ad.snapshot || {};
+  const cardText = objectArray(snapshot.cards).flatMap((card) => [
+    firstString(pick(card, "title", "headline")),
+    firstString(pick(card, "body", "text")),
+    firstString(pick(card, "caption")),
+    firstString(pick(card, "linkUrl", "link_url", "url")),
+  ]);
+  return [
+    ad.pageName,
+    snapshot.title,
+    snapshot.body,
+    snapshot.caption,
+    snapshot.ctaText,
+    snapshot.linkUrl,
+    ...cardText,
+  ].filter(Boolean).join(" ");
+}
+
+function locationAdMatchForInput(ad, input) {
+  const text = normalizeName(locationAdSearchText(ad));
+  const landing = normalizeName(firstString(ad.snapshot?.linkUrl) || "");
+  const suburb = input.suburb ? normalizeName(input.suburb) : "";
+  const query = normalizeName(input.query);
+  const postcode = input.postcode && /^\d{4}$/u.test(input.postcode) ? input.postcode : "";
+
+  if (suburb && includesNormalisedPhrase(text, suburb)) {
+    return { postcode: input.postcode, suburb: input.suburb, matchType: includesNormalisedPhrase(landing, suburb) ? "landing_url" : "copy_mention", reason: "suburb_copy_mention", confidence: 96 };
+  }
+  if (postcode && includesNormalisedPhrase(text, postcode)) {
+    return { postcode, suburb: input.suburb || `Postcode ${postcode}`, matchType: includesNormalisedPhrase(landing, postcode) ? "landing_url" : "copy_mention", reason: "postcode_copy_mention", confidence: 90 };
+  }
+  if (query && !/^\d{4}$/u.test(query) && includesNormalisedPhrase(text, query)) {
+    return { postcode: input.postcode, suburb: input.suburb || titleCase(input.query), matchType: includesNormalisedPhrase(landing, query) ? "landing_url" : "copy_mention", reason: "query_copy_mention", confidence: 88 };
+  }
+  return null;
+}
+
+function hasRealEstateAdSignalForLocation(ad) {
+  const text = normalizeName(locationAdSearchText(ad));
+  return hasRealEstatePageSignal(text) || /\b(for sale|home open|price guide|auction|appraisal|property appraisal|property management|leased|rental appraisal|real estate)\b/iu.test(text);
+}
+
+function pageUrlFromMetaAd(ad) {
+  const raw = ad.rawHostedProvider || {};
+  const snapshot = ad.snapshot || {};
+  return firstString(
+    pick(raw, "pageUrl", "page_url"),
+    pick(snapshot, "page_profile_uri", "pageProfileUri", "page_url"),
+    ad.pageID ? `https://www.facebook.com/${ad.pageID}` : null,
+  );
+}
+
+async function upsertLocationSearchAdvertiserPage(ad, input, match, sourceDocumentId) {
+  const pageId = String(ad.pageID || "").trim();
+  if (!pageId || pageId === "null") return null;
+  const pageName = firstString(ad.pageName, `${input.query} advertiser`);
+  const pageUrl = pageUrlFromMetaAd(ad);
+  const advertiserPageId = await upsertAdvertiserPage({
+    agentId: null,
+    agencyId: null,
+    decisionId: null,
+    pageId,
+    pageSlug: null,
+    pageName,
+    pageUrl,
+    status: "resolved_collectable",
+    confidence: match.confidence,
+    evidenceUrls: [pageUrl, metaAdLibraryLocationSearchUrl(input)].filter(Boolean),
+    metadata: {
+      source: LOCATION_AD_SEARCH_JOB_TYPE,
+      postcode: input.postcode,
+      suburb: input.suburb,
+      state: input.state,
+      query: input.query,
+      location_match: match.reason,
+      ad_archive_id: ad.adArchiveID,
+    },
+  });
+  if (!advertiserPageId) return null;
+
+  await rest("research", "real_estate_verifications", {
+    method: "POST",
+    body: json({
+      subject_type: "advertiser_page",
+      subject_id: advertiserPageId,
+      advertiser_page_id: advertiserPageId,
+      agent_id: null,
+      agency_id: null,
+      verification_status: "verified",
+      evidence_type: "meta_page",
+      evidence_url: metaAdLibraryLocationSearchUrl(input),
+      evidence: {
+        page_id: pageId,
+        page_name: pageName,
+        page_url: pageUrl,
+        postcode: input.postcode,
+        suburb: input.suburb,
+        query: input.query,
+        location_match: match.reason,
+        ad_archive_id: ad.adArchiveID,
+      },
+      source_document_id: sourceDocumentId || null,
+      verified_by: LOCATION_AD_SEARCH_JOB_TYPE,
+      verified_at: now(),
+      confidence: match.confidence,
+      notes: "Verified from a public Meta Ad Library suburb/postcode search with exact visible location and real-estate signals.",
+    }),
+  });
+  return advertiserPageId;
+}
+
+async function handleLocationAdSearch(job) {
+  const payload = job.payload || {};
+  const input = locationSearchInput(payload);
+  if (!payload.location_search_allowed || !input.query || !input.postcode || input.realEstateGate?.verified !== true) {
+    return { status: "blocked", blocked_reason: "location_ad_search_missing_verified_location_gate", result: { handler: LOCATION_AD_SEARCH_JOB_TYPE, collection_started: false } };
+  }
+
+  const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
+  const adFetchRunId = await insertLocationSearchFetchRun(job, buildRunId, input);
+  const outcome = await runHermesLocationSearchCapture(input, job);
+  if (outcome.status !== "SUCCEEDED") {
+    await updateFetchRun(adFetchRunId, { status: "failed", result_summary: { provider: META_LOCATION_SEARCH_SOURCE_PROVIDER, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "location search capture failed", cost_usd: outcome.costUsd || 0 });
+    await insertCoverageDefect({
+      platform: "facebook",
+      postcode: input.postcode,
+      suburb: input.suburb,
+      state: input.state,
+      notes: "Hermes location ad search could not fetch Meta Ad Library results for a public suburb/postcode scan.",
+      reported_by: "system",
+      reporter_identity: workerId,
+      status: "open",
+      resolution: { provider: META_LOCATION_SEARCH_SOURCE_PROVIDER, query: input.query, error: outcome.errorMessage },
+    });
+    throw new Error(outcome.errorMessage || "Meta location search failed");
+  }
+
+  const ingested = [];
+  let filteredNonLocation = 0;
+  let filteredNonRealEstate = 0;
+  for (const ad of outcome.items) {
+    const match = locationAdMatchForInput(ad, input);
+    if (!match) {
+      filteredNonLocation += 1;
+      continue;
+    }
+    if (!hasRealEstateAdSignalForLocation(ad)) {
+      filteredNonRealEstate += 1;
+      continue;
+    }
+    const advertiserPageId = await upsertLocationSearchAdvertiserPage(ad, input, match, outcome.metadata?.sourceDocumentId || null);
+    if (!advertiserPageId) continue;
+    const item = await ingestMetaAd({
+      ad,
+      advertiserPageId,
+      adFetchRunId,
+      buildRunId,
+      sourceProvider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+      parentJob: job,
+      explicitAreaMatch: {
+        postcode: match.postcode,
+        suburb: match.suburb,
+        state: input.state,
+        matchType: match.matchType,
+        confidence: match.confidence,
+        evidence: {
+          source: LOCATION_AD_SEARCH_JOB_TYPE,
+          query: input.query,
+          reason: match.reason,
+          ad_archive_id: ad.adArchiveID,
+        },
+      },
+    });
+    ingested.push(item);
+    if (item.media_sources > 0) {
+      await enqueueFollowUp({
+        queue_name: "research",
+        job_type: "blockwise-media-collector",
+        dedupe_key: `media:${item.ad_creative_id}:${item.creative_hash}`,
+        advertiser_page_id: advertiserPageId,
+        priority: 5,
+        payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId },
+        status: "pending",
+        max_attempts: 3,
+      }, job);
+    }
+    await enqueueFollowUp({
+      queue_name: "research",
+      job_type: "blockwise-ad-classifier",
+      dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
+      advertiser_page_id: advertiserPageId,
+      priority: 5,
+      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
+      status: "pending",
+      max_attempts: 3,
+    }, job);
+  }
+
+  await updateFetchRun(adFetchRunId, {
+    status: "success",
+    result_summary: {
+      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+      item_count: outcome.itemCount,
+      ingested_count: ingested.length,
+      filtered_non_location: filteredNonLocation,
+      filtered_non_real_estate: filteredNonRealEstate,
+      metadata: outcome.metadata || {},
+    },
+    cost_usd: outcome.costUsd || 0,
+  });
+
+  return {
+    status: "complete",
+    result: {
+      handler: LOCATION_AD_SEARCH_JOB_TYPE,
+      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+      query: input.query,
+      postcode: input.postcode,
+      suburb: input.suburb,
+      ads_seen: outcome.itemCount,
+      ingested_count: ingested.length,
+      filtered_non_location: filteredNonLocation,
+      filtered_non_real_estate: filteredNonRealEstate,
+    },
+  };
 }
 
 async function handleAdCollector(job) {
@@ -2503,6 +3250,7 @@ async function handleAdCollector(job) {
   }
   if (outcome.status !== "SUCCEEDED") {
     await updateFetchRun(adFetchRunId, { status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0 });
+    await markAdvertiserPageCheckFailed(payload.advertiserPageId);
     await insertCoverageDefect({
       platform: "facebook",
       notes: "Hermes ad collector could not fetch a verified Meta page.",
@@ -2926,6 +3674,7 @@ async function refreshCreativeStoredMedia(adCreativeId) {
 async function handleJob(job) {
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
   if (job.job_type === "blockwise-page-resolver") return handlePageResolver(job);
+  if (job.job_type === LOCATION_AD_SEARCH_JOB_TYPE) return handleLocationAdSearch(job);
   if (job.job_type === "blockwise-ad-collector") return handleAdCollector(job);
   if (job.job_type === "blockwise-media-collector") return handleMediaCollector(job);
   if (job.job_type === "blockwise-ad-classifier") return handleAdClassifier(job);
@@ -2976,14 +3725,15 @@ async function processOneJob(job) {
 
 async function tick() {
   let buildRunId = null;
-  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0 };
+  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
   let watchdogs = {};
   try {
     buildRunId = await ensureBuildRun();
     const policySeed = await ensureSourceBackedRefreshPolicies();
     const census = await enqueueDueCensusJobs(buildRunId);
     const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
-    supervisor = { ...policySeed, ...census, ...adRefresh };
+    const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
+    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch };
   } catch (error) {
     log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
   }
@@ -2997,7 +3747,7 @@ async function tick() {
 }
 
 async function main() {
-  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive });
+  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive, locationAdSearchEnabled, locationAdSearchIntervalMinutes, locationAdSearchBatchSize, locationAdSearchMaxActive });
   for (;;) {
     try {
       await tick();

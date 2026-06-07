@@ -10,6 +10,22 @@ x-blockwise-research-reset:
     - "Pinned images are required. Do not deploy with floating tags."
 
 services:
+  steel:
+    image: "${STEEL_IMAGE:?Set STEEL_IMAGE to a pinned steel-browser tag or digest}"
+    container_name: blockwise-steel
+    restart: unless-stopped
+    expose: ["3000", "9223"]
+    volumes:
+      - steel-cache:/app/.cache
+    networks: [research]
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
   hermes:
     build:
       context: ../..
@@ -51,8 +67,7 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       MEM0_API_KEY: ${MEM0_API_KEY}
       MEM0_PROJECT_ID: ${MEM0_PROJECT_ID:-blockwise-research}
-      BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY}
-      BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID}
+      HERMES_REMOTE_BROWSER_CDP_URL: ${HERMES_REMOTE_BROWSER_CDP_URL:-http://blockwise-steel:9223}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       HERMES_SUPABASE_URL: ${SUPABASE_URL}
@@ -107,6 +122,7 @@ services:
 
 volumes:
   hermes-data:
+  steel-cache:
   uptime-data:
 
 networks:

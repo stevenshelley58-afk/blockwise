@@ -140,7 +140,7 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
   return (
     <>
       {/* M1: title is "Export" — the download action is the manual export */}
-      <PanelHeader title="Publish" detail="Check readiness, export creatives, or publish live." />
+      <PanelHeader title="Publish" detail="Check readiness, export creatives, or publish." />
 
       {/* M1: Readiness section */}
       {readiness && (
@@ -199,11 +199,11 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
         Export creatives
       </button>
 
-      {/* M1: Publish live — gated behind readiness */}
+      {/* M1: Publish is gated behind readiness */}
       {publishDone ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 8, background: "#ecfdf5", color: "#006d38", border: "1px solid #b7e7cd", fontWeight: 750 }}>
           <Check size={16} aria-hidden />
-          Published live
+          Published
         </div>
       ) : (
         <>
@@ -219,11 +219,11 @@ export function PublishSetupPanel({ campaignId, campaignPack, destinationUrl, on
             onClick={handlePublishLive}
           >
             <Send aria-hidden size={17} />
-            {publishing ? "Publishing..." : "Publish live"}
+            {publishing ? "Publishing..." : "Publish"}
           </button>
           {readiness && !allMet && (
             <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
-              Resolve all readiness items above to enable live publishing.
+              Resolve all readiness items above to enable publishing.
             </p>
           )}
         </>

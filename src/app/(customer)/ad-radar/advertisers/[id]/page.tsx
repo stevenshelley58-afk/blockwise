@@ -18,7 +18,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
   const classifications = unique(ads.map((ad) => ad.creative.adType).filter((value): value is string => Boolean(value)));
 
   return (
-    <main className="content">
+    <main className="content research-page research-advertiser-page">
       <PageHeading
         eyebrow="Advertiser profile"
         title={first?.page.name ?? "Advertiser not found"}
@@ -29,7 +29,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
         }
       />
 
-      <div className="row-between">
+      <div className="row-between research-advertiser-bar">
         <Link className="button secondary" href="/ad-radar">
           Back to ads
         </Link>

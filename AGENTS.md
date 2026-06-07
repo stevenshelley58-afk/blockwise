@@ -38,6 +38,26 @@ behaviour) still hold.
 - Do not avoid hosted-service work because authentication is missing; request/login through the approved tool path instead.
 - Prefer MCPs and plugins over browser scraping, and prefer CLIs over ad hoc API calls when the CLI supports the task.
 
+## Git and Deployment Scope
+
+- The repository owner authorizes broad staging, committing, pushing, and Vercel deployment of all dirty worktree changes when they ask to make GitHub clean, push everything, get it live, or deploy the current workspace state.
+- This authorization is intended to keep release work moving and does not relax the hard rules below for auth behaviour, database schema, public API response shapes, or provider behaviour.
+
+## External Reference Repositories
+
+Use these repositories as reference material when they are relevant to the
+current task:
+
+- https://github.com/affaan-m/ECC
+- https://github.com/multica-ai/andrej-karpathy-skills
+- https://github.com/safishamsi/graphify
+- https://github.com/pbakaus/impeccable
+
+Treat them as guidance only. Do not add dependencies, copy large blocks of
+code, change provider behaviour, change auth behaviour, change public API
+response shapes, or change database schema unless the user explicitly asks for
+that work and it still satisfies the Blockwise rules above.
+
 ## Hard Rules
 
 These always hold, in both modes:

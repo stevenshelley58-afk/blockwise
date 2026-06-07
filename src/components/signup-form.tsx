@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
@@ -186,7 +187,10 @@ export function SignupForm() {
 
         <label className="signup-terms" htmlFor="signup-terms">
           <input id="signup-terms" name="terms" type="checkbox" required />
-          <span>I agree to the terms and understand the trial includes limited ad generations.</span>
+          <span>
+            I agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>, and understand
+            the trial includes 10 free ad packs.
+          </span>
         </label>
 
         <div className="turnstile-box" ref={turnstileRef} />

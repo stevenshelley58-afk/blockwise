@@ -15,10 +15,12 @@ export function PageViewTracker() {
   const lastTracked = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!pathname || lastTracked.current === pathname || !isTrackablePath(pathname)) return;
-    lastTracked.current = pathname;
+    if (!pathname || !isTrackablePath(pathname)) return;
+    const trackedPath = `${pathname}${window.location.search}`;
+    if (lastTracked.current === trackedPath) return;
+    lastTracked.current = trackedPath;
 
-    const payload = JSON.stringify({ path: pathname, referrer: document.referrer || null });
+    const payload = JSON.stringify({ path: trackedPath, referrer: document.referrer || null });
     try {
       if (typeof navigator.sendBeacon === "function") {
         navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));

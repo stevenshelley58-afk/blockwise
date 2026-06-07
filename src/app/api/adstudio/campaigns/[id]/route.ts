@@ -41,9 +41,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const body = await readJsonBody<Record<string, unknown>>(request);
+  const patch = campaignPatch(body);
   const { data, error } = await access.supabase
     .from("adstudio_campaigns")
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("workspace_id", access.access.workspaceId)
     .eq("id", id)
     .select("*")
@@ -52,6 +53,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (error) return errorResponse(error);
 
   return NextResponse.json({ campaign: data });
+}
+
+function campaignPatch(body: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    "name",
+    "goal",
+    "market_json",
+    "audience_intent",
+    "offer_id",
+    "platforms_json",
+    "creative_formats_json",
+    "status",
+  ];
+  return Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {

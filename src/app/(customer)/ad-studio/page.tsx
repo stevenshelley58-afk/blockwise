@@ -24,6 +24,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
     <>
       {isSample && <SampleBanner />}
       <AdStudioWorkbench
+        workspaceId={access.workspaceId}
         brandKit={bundle.brandKit}
         campaignPack={bundle.campaignPack}
         offers={bundle.offers}

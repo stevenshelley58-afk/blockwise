@@ -21,8 +21,8 @@ than silent zero-ad results.
 1. Read verified census roster entries and resolved advertiser pages for the
    postcode.
 2. Sample known pages and recent fetch runs for stale or suspicious results.
-3. Use Browserbase/manual Meta Ad Library browsing only as an independent
-   audit signal.
+3. Use self-hosted browser/manual Meta Ad Library browsing only as an
+   independent audit signal.
 4. Compare what is visible publicly with the verified roster and collected ads.
 5. File `research.coverage_defects` for missing agents, unresolved pages,
    stale checks, provider failures, or visible ads missing from our database.
@@ -42,7 +42,7 @@ than silent zero-ad results.
 ## Tools
 
 - `hermes/tools/research-runtime`
-- `browserbase.session`
+- self-hosted browser session (Steel CDP, local Chromium fallback)
 - scoped read-only research queries
 - `blockwise.ingest.open_audit`
 - `blockwise.ingest.open_defect`

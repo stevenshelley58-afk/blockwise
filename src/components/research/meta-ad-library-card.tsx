@@ -165,8 +165,8 @@ function deliveryDateText(startedAt: string | null, stoppedAt: string | null): s
   const ms = adRunningMs(startedAt, stoppedAt);
   const duration = ms === null ? null : formatAdDuration(ms, !stoppedAt);
 
-  if (started && stopped) return `Started ${started} – stopped ${stopped}${duration ? ` · ${duration}` : ""}`;
-  if (started) return `Started ${started}${duration ? ` · ${duration}` : ""}`;
+  if (started && stopped) return `Started ${started} - stopped ${stopped}${duration ? ` | ${duration}` : ""}`;
+  if (started) return `Started ${started}${duration ? ` | ${duration}` : ""}`;
   if (stopped) return `Stopped ${stopped}`;
   return null;
 }

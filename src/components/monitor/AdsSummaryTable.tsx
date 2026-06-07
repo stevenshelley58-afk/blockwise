@@ -131,6 +131,65 @@ export function AdsSummaryTable({
           </tbody>
         </table>
       </div>
+      <div className="mm-mobile-ad-list" aria-label="Ads summary">
+        {rows.map((ad) => (
+          <button
+            type="button"
+            className="mm-mobile-ad-card"
+            key={ad.adId}
+            onClick={() => onSelectAd(ad.adId)}
+          >
+            <span className="mm-mobile-ad-head">
+              <CreativePreview ad={ad} size={48} />
+              <span className="mm-mobile-ad-title">
+                <span className="mm-mobile-label">Ad</span>
+                <b>{ad.adName}</b>
+                <StatusPill status={ad.status} />
+              </span>
+            </span>
+            <span className="mm-mobile-ad-context">
+              <span>
+                <span className="mm-mobile-label">Campaign</span>
+                <b>{ad.campaignName}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Ad set</span>
+                <b>{ad.adsetName || "-"}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Suburb</span>
+                <b>{ad.suburb ?? "-"}</b>
+              </span>
+            </span>
+            <span className="mm-mobile-ad-metrics">
+              <span>
+                <span className="mm-mobile-label">Spend</span>
+                <b>{formatCurrency(ad.metrics.spend)}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Valid leads</span>
+                <b>{ad.metrics.validLeads}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Valid CPL</span>
+                <b>{ad.metrics.validCpl != null ? formatCurrency(ad.metrics.validCpl) : "-"}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Leads</span>
+                <b>{ad.metrics.leads}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">CTR</span>
+                <b>{ad.metrics.ctr != null ? formatPercent(ad.metrics.ctr, 2) : "-"}</b>
+              </span>
+              <span>
+                <span className="mm-mobile-label">Valid rate</span>
+                <b>{ad.metrics.validRate != null ? formatPercent(ad.metrics.validRate) : "-"}</b>
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

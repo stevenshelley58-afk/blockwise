@@ -11,13 +11,39 @@ import type {
 } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type PersistenceResult = { data: unknown; error: { message: string } | null };
+
+export function isExampleBrandKitSourceUrl(value: string | null | undefined): boolean {
+  const trimmed = value?.trim();
+  if (!trimmed) return false;
+
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const host = url.hostname.toLowerCase();
+    return host === "example" || host.endsWith(".example");
+  } catch {
+    return /(^|[/:.])example(?:[/?#:]|$)/i.test(trimmed);
+  }
+}
+
+export function isExampleBrandKit(brandKit: Pick<AdStudioBrandKit, "source">): boolean {
+  return isExampleBrandKitSourceUrl(brandKit.source.url);
+}
+
+function persistenceError(message: string): PersistenceResult {
+  return { data: null, error: { message } };
+}
 
 export async function persistAdStudioBrandKit(
   supabase: SupabaseServerClient,
   brandKit: AdStudioBrandKit,
   userId: string,
-) {
-  return supabase.from("adstudio_brand_kits").upsert(
+): Promise<PersistenceResult> {
+  if (isExampleBrandKit(brandKit)) {
+    return persistenceError("Demo brand kits cannot be saved to a workspace.");
+  }
+
+  const result = await supabase.from("adstudio_brand_kits").upsert(
     {
       id: brandKit.brandKitId,
       workspace_id: brandKit.workspaceId,
@@ -41,13 +67,19 @@ export async function persistAdStudioBrandKit(
     },
     { onConflict: "id" },
   );
+
+  return result;
 }
 
 export async function persistAdStudioCampaignPack(
   supabase: SupabaseServerClient,
   pack: AdStudioCampaignPack,
   userId: string,
-) {
+): Promise<PersistenceResult> {
+  if (isExampleBrandKit(pack.brandKit)) {
+    return persistenceError("Demo brand kits cannot be used for saved campaigns.");
+  }
+
   const brandKitResult = await persistAdStudioBrandKit(supabase, pack.brandKit, userId);
 
   if (brandKitResult.error) {
@@ -98,8 +130,9 @@ export async function persistAdStudioCampaignPack(
     return variantResult;
   }
 
+  const compactCreatives = compactCreativesForPersistence(pack.creatives);
   const creativeResult = await supabase.from("adstudio_creatives").upsert(
-    pack.creatives.map((creative) => ({
+    compactCreatives.map((creative) => ({
       id: creative.creativeId,
       workspace_id: pack.campaign.workspaceId,
       campaign_id: creative.campaignId,
@@ -109,7 +142,7 @@ export async function persistAdStudioCampaignPack(
       height: creative.canvas.height,
       canvas_json: creative.canvas,
       render_status: "rendered",
-      preview_svg: creative.previewSvg,
+      preview_svg: null,
       updated_at: new Date().toISOString(),
     })),
     { onConflict: "id" },
@@ -141,7 +174,7 @@ export async function persistAdStudioCampaignPack(
     return copyResult;
   }
 
-  return supabase.from("adstudio_compliance_reports").upsert(
+  const complianceResult = await supabase.from("adstudio_compliance_reports").upsert(
     {
       id: pack.compliance.reportId,
       workspace_id: pack.campaign.workspaceId,
@@ -152,6 +185,62 @@ export async function persistAdStudioCampaignPack(
     },
     { onConflict: "id" },
   );
+
+  return complianceResult;
+}
+
+export function compactAdStudioCampaignPackForTransport(pack: AdStudioCampaignPack): AdStudioCampaignPack {
+  return {
+    ...pack,
+    creatives: compactCreativesForPersistence(pack.creatives).map((creative) => ({
+      ...creative,
+      previewSvg: "",
+    })),
+  };
+}
+
+function compactCreativesForPersistence(creatives: AdStudioCreative[]): AdStudioCreative[] {
+  const keptImageByVariant = new Set<string>();
+  const preferred = new Set(
+    creatives
+      .filter((creative) => creative.format === "9:16" && primaryImageSource(creative))
+      .map((creative) => creative.variantId),
+  );
+
+  return creatives.map((creative) => {
+    const primaryImage = primaryImageSource(creative);
+    const keepPrimaryImage =
+      Boolean(primaryImage) &&
+      !keptImageByVariant.has(creative.variantId) &&
+      (creative.format === "9:16" || !preferred.has(creative.variantId));
+
+    if (keepPrimaryImage) keptImageByVariant.add(creative.variantId);
+
+    return {
+      ...creative,
+      canvas: compactCreativeCanvas(creative.canvas, keepPrimaryImage),
+      previewSvg: "",
+    };
+  });
+}
+
+function compactCreativeCanvas(
+  creativeCanvas: AdStudioCreative["canvas"],
+  keepPrimaryImage: boolean,
+): AdStudioCreative["canvas"] {
+  return {
+    ...creativeCanvas,
+    fabricJson: null,
+    objects: creativeCanvas.objects.map((object) => {
+      if (object.role !== "primary_image" || keepPrimaryImage) return object;
+      return { ...object, content: undefined };
+    }),
+  };
+}
+
+function primaryImageSource(creative: AdStudioCreative): string | undefined {
+  const image = creative.canvas.objects.find((object) => object.role === "primary_image");
+  return image?.content || image?.assetId;
 }
 
 export function rowToBrandKit(row: Record<string, unknown>): AdStudioBrandKit {

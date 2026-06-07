@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { isExampleBrandKitSourceUrl } from "@/lib/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,10 +40,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const body = await readJsonBody<Record<string, unknown>>(request);
+  const patch = brandKitPatch(body);
+
+  if (typeof patch.source_url === "string" && isExampleBrandKitSourceUrl(patch.source_url)) {
+    return NextResponse.json({ error: "Demo brand kit URLs cannot be saved." }, { status: 400 });
+  }
+
   const { data, error } = await access.supabase
     .from("adstudio_brand_kits")
     .update({
-      ...body,
+      ...patch,
       updated_at: new Date().toISOString(),
     })
     .eq("workspace_id", access.access.workspaceId)
@@ -53,4 +60,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (error) return errorResponse(error);
 
   return NextResponse.json({ brandKit: data });
+}
+
+function brandKitPatch(body: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    "source_type",
+    "source_url",
+    "business_name",
+    "market_country",
+    "market_region",
+    "identity_json",
+    "logos_json",
+    "colours_json",
+    "typography_json",
+    "tone_json",
+    "visual_style_json",
+    "compliance_json",
+    "contact_json",
+    "review_status",
+    "locked_fields_json",
+  ];
+  return Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
 }

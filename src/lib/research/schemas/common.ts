@@ -54,7 +54,7 @@ export const sourceProviderSchema = z.enum([
   "self_hosted_meta",
   "searchapi_meta",
   "official_meta_archive",
-  "browserbase",
+  "self_hosted_browser",
   "hermes_meta_page_capture",
   "structured_meta_page_provider",
   "metapi",

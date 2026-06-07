@@ -12,7 +12,7 @@ type RouteContext = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  await Promise.resolve(context.params);
+  const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);
 
   if (!access.ok) {
@@ -28,15 +28,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
   }
 
+  if (body.campaignPack.campaign.campaignId !== id) {
+    return NextResponse.json({ error: "Campaign ID does not match export payload." }, { status: 400 });
+  }
+
   const exportPackage = await buildAdStudioExportPackage(body.campaignPack, {
     creativeRenders: body.creativeRenders,
   });
   const zipBlob = new Blob([new Uint8Array(exportPackage.zipBytes).buffer as ArrayBuffer], { type: "application/zip" });
+  const filename = `${slugFileName(body.campaignPack.campaign.name || "adstudio-campaign")}-creatives.zip`;
 
   return new NextResponse(zipBlob, {
     headers: {
       "content-type": "application/zip",
-      "content-disposition": "attachment; filename=\"adstudio-export.zip\"",
+      "content-disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+function slugFileName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "adstudio-campaign";
 }

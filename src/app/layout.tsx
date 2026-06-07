@@ -24,9 +24,9 @@ const manrope = Manrope({
 const META_PIXEL_ID = "1699948581050851";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
-const SITE_TITLE = "Blockwise — Create and launch real estate ads from one platform";
+const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
 const SITE_DESCRIPTION =
-  "Build Facebook and Instagram campaigns from a simple brief. Connect your ad account, approve every ad, set the budget and track results inside Blockwise. Free 7-day trial, no card required.";
+  "Help real estate teams create, approve, launch, and track Meta ad campaigns through their own ad account. Free 7-day trial, no card required.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

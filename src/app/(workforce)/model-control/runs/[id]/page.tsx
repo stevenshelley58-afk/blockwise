@@ -285,7 +285,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
           <div>
             <h3>Prompt versions</h3>
             <div className="table-wrap">
-              <table className="table">
+              <table className="table responsive-card-table">
                 <thead>
                   <tr>
                     <th>Key</th>
@@ -297,10 +297,10 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
                 <tbody>
                   {promptVersions.map((version) => (
                     <tr key={version.id}>
-                      <td>{version.key ?? "-"}</td>
-                      <td>{version.version ?? "-"}</td>
-                      <td>{version.status ?? "-"}</td>
-                      <td>{readString(version.metadata_json, "section_type") ?? "-"}</td>
+                      <td data-label="Key">{version.key ?? "-"}</td>
+                      <td data-label="Version">{version.version ?? "-"}</td>
+                      <td data-label="Status">{version.status ?? "-"}</td>
+                      <td data-label="Section">{readString(version.metadata_json, "section_type") ?? "-"}</td>
                     </tr>
                   ))}
                   {!promptVersions.length ? (
@@ -436,7 +436,7 @@ function TraceTable({
     <div>
       <h3>{title}</h3>
       <div className="table-wrap">
-        <table className="table">
+        <table className="table responsive-card-table">
           <thead>
             <tr>
               {columns.map(([, label]) => (
@@ -447,8 +447,8 @@ function TraceTable({
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                {columns.map(([key]) => (
-                  <td key={key}>{formatCell(row[key])}</td>
+                {columns.map(([key, label]) => (
+                  <td data-label={label} key={key}>{formatCell(row[key])}</td>
                 ))}
               </tr>
             ))}

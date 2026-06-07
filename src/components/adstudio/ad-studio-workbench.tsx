@@ -28,6 +28,7 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
+import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -37,7 +38,8 @@ import { TopBar } from "./topbar";
 import { useAdStudio } from "./use-ad-studio";
 import { useBrandKit } from "./use-brand-kit";
 import { useCampaignActions } from "./use-campaign-actions";
-import { seedCopy, useCopy } from "./use-copy";
+import type { CopyState } from "./use-copy";
+import { seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
@@ -53,6 +55,7 @@ import { NewAdDialog } from "./new-ad-dialog";
 import { FirstRunExplainer } from "./first-run-explainer";
 
 type AdStudioWorkbenchProps = {
+  workspaceId: string;
   brandKit: AdStudioBrandKit;
   campaignPack: AdStudioCampaignPack;
   offers: AdStudioOfferTemplate[];
@@ -108,6 +111,109 @@ const FabricAdEditor = dynamic(
   { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
 );
 
+const GOAL_LABELS: Record<string, string> = {
+  seller_leads: "Generate vendor leads",
+  appraisal_bookings: "Get appraisal leads",
+  buyer_leads: "Buyer demand check",
+  market_update_leads: "Drive market report downloads",
+  downsizer_leads: "Generate vendor leads",
+  investor_leads: "Generate vendor leads",
+  open_home_followup: "Promote open home",
+  listing_nurture: "Promote recent sale",
+};
+
+function initialCampaignGoal(pack: AdStudioCampaignPack): string {
+  return GOAL_LABELS[pack.campaign.goal] ?? "Get appraisal leads";
+}
+
+function initialOfferLabel(pack: AdStudioCampaignPack, offers: AdStudioOfferTemplate[]): string {
+  const variant = pack.variants[0];
+  if (variant?.offer) return variant.offer;
+  return offers.find((offer) => offer.offerId === pack.campaign.offerId)?.name ?? "Free appraisal";
+}
+
+function initialMarket(pack: AdStudioCampaignPack): string {
+  const suburb = pack.campaign.market.suburb || "";
+  const state = pack.campaign.market.state || "";
+  return [suburb, state].filter(Boolean).join(", ") || "Perth, WA";
+}
+
+function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBrandKit): string {
+  const copyPack = pack.copyPacks[0];
+  return (
+    copyPack?.googleSearch.finalUrl ||
+    copyPack?.googlePmax.finalUrl ||
+    copyPack?.googleDemandGen.finalUrl ||
+    brandKit.source.url ||
+    ""
+  );
+}
+
+function labelForImageSrc(src: string): string {
+  const asset = MEDIA_ASSETS.find((item) => item.src === src);
+  if (asset) return asset.label;
+  return src.startsWith("/api/adstudio/media?") || src.startsWith("data:image/") ? "Uploaded image" : "Creative image";
+}
+
+function primaryImageFromCreative(creative: AdStudioCreative | null | undefined): { src: string; label: string } | null {
+  const imageObject = creative?.canvas.objects.find((object) => object.role === "primary_image");
+  const src = imageObject?.content || imageObject?.assetId;
+  return src ? { src, label: labelForImageSrc(src) } : null;
+}
+
+function primaryImageForVariant(
+  pack: AdStudioCampaignPack,
+  variantId: string | undefined,
+  format?: AdStudioFormat,
+): { src: string; label: string } | null {
+  if (!variantId) return null;
+  const creative =
+    (format ? pack.creatives.find((item) => item.variantId === variantId && item.format === format) : null) ??
+    pack.creatives.find((item) => item.variantId === variantId && item.format === "9:16") ??
+    pack.creatives.find((item) => item.variantId === variantId);
+  return primaryImageFromCreative(creative);
+}
+
+function commitVariantEdits(input: {
+  pack: AdStudioCampaignPack;
+  variantId: string | undefined;
+  copy: CopyState;
+  offerLabel: string;
+  primaryImage: string;
+}): AdStudioCampaignPack {
+  if (!input.variantId) return input.pack;
+  return {
+    ...input.pack,
+    variants: input.pack.variants.map((variant) =>
+      variant.variantId === input.variantId
+        ? { ...variant, headline: input.copy.headline, offer: input.offerLabel, cta: input.copy.cta }
+        : variant,
+    ),
+    copyPacks: input.pack.copyPacks.map((copyPack) => {
+      if (copyPack.variantId !== input.variantId) return copyPack;
+      return {
+        ...copyPack,
+        meta: {
+          ...copyPack.meta,
+          primaryText: [input.copy.primaryText, ...copyPack.meta.primaryText.slice(1)],
+          headlines: [input.copy.headline, ...copyPack.meta.headlines.slice(1)],
+          descriptions: [input.copy.description, ...copyPack.meta.descriptions.slice(1)],
+          cta: toMetaCta(input.copy.cta),
+        },
+        landingPage: {
+          ...copyPack.landingPage,
+          headline: input.copy.headline,
+          subheadline: input.copy.description,
+          cta: input.copy.cta,
+        },
+      };
+    }),
+    creatives: input.pack.creatives.map((creative) =>
+      creative.variantId === input.variantId ? syncCreativeWithCopyAndImage(creative, input.copy, input.primaryImage) : creative,
+    ),
+  };
+}
+
 function copyFieldForSelectedElement(element: SelectedElement): "primaryText" | "headline" | "description" | "cta" | null {
   if (element === "primaryText") return "primaryText";
   if (element === "headline") return "headline";
@@ -124,6 +230,7 @@ function patchActionForSelectedElement(element: SelectedElement): string {
 }
 
 export function AdStudioWorkbench({
+  workspaceId,
   brandKit,
   campaignPack: initialPack,
   offers,
@@ -140,12 +247,12 @@ export function AdStudioWorkbench({
   const previewMode: PreviewMode = "creative";
   const zoom = 75;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
-  const [campaignGoal, setCampaignGoal] = useState("Get appraisal leads");
-  const [offerLabel, setOfferLabel] = useState("Free appraisal");
-  const [market, setMarket] = useState("South Perth, WA");
+  const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
+  const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
+  const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
   const [leadDestination, setLeadDestination] = useState("Landing page");
-  const [destinationUrl, setDestinationUrl] = useState("northstarrealty.com.au/free-appraisal");
+  const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
 
   const studio = useAdStudio();
   const { brand, initials, domain } = useBrandKit(brandKit);
@@ -191,16 +298,27 @@ export function AdStudioWorkbench({
     setNewAdTemplateId(undefined);
   }
 
-  const { primaryImage, setPrimaryImage, fileInputRef, replaceImage, openFilePicker } = useMedia(
+  const initialMedia = useMemo(
+    () => primaryImageForVariant(initialPack, initialPack.variants[0]?.variantId, PREVIEW_TO_AD_FORMAT.story),
+    [initialPack],
+  );
+  const { primaryImage, setPrimaryImage, primaryImageName, setPrimaryImageName, fileInputRef, replaceImage, openFilePicker } = useMedia(
     studio.showToast,
     () => {
       setSelectedElement("image");
       studio.setSection("media");
     },
+    {
+      initialImage: initialMedia,
+      workspaceId,
+      brandKitId: brandKit.brandKitId,
+    },
   );
 
   function selectMediaImage(src: string) {
+    const asset = MEDIA_ASSETS.find((item) => item.src === src);
     setPrimaryImage(src);
+    setPrimaryImageName(asset?.label ?? "Uploaded image");
     setSelectedElement("image");
     studio.setSaveState("saving");
     window.setTimeout(() => studio.setSaveState("saved"), 650);
@@ -233,6 +351,7 @@ export function AdStudioWorkbench({
     primaryImage,
     offerLabel,
     campaignGoal,   // M4: pass goal so generation includes it
+    destinationUrl,
     selectedVariantIndex,
     setPack,
     setSelectedVariantIndex,
@@ -296,21 +415,46 @@ export function AdStudioWorkbench({
     );
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
 
+  const getVariantPrimaryImage = useCallback((variantId: string | undefined, sourcePack: AdStudioCampaignPack = pack) => {
+    return primaryImageForVariant(sourcePack, variantId, editorFormat);
+  }, [editorFormat, pack]);
+
   const variants = useMemo(() => {
     const source = pack.variants.length > 0 ? pack.variants : initialPack.variants;
-    return source.slice(0, 4).map((variant, index) => ({
-      ...variant,
-      displayName: `Ad ${index + 1}`,
+    return source.slice(0, 4).map((variant, index) => {
+      const variantImage = getVariantPrimaryImage(variant.variantId);
+      return {
+        ...variant,
+        displayName: `Ad ${index + 1}`,
       // M5: use the variant's own angle field as the label — not an index-offset into ANGLES
-      angleLabel: variant.angle || selectedAngle.variantLabel,
-      image: MEDIA_ASSETS[index % MEDIA_ASSETS.length].src,
-    }));
-  }, [initialPack.variants, pack.variants, selectedAngle.variantLabel]);
+        angleLabel: variant.angle || selectedAngle.variantLabel,
+        image: variantImage?.src ?? (MEDIA_ASSETS.some((item) => item.src === primaryImage) ? MEDIA_ASSETS[index % MEDIA_ASSETS.length].src : primaryImage),
+      };
+    });
+  }, [getVariantPrimaryImage, initialPack.variants, pack.variants, primaryImage, selectedAngle.variantLabel, selectedVariantIndex]);
 
   function selectVariant(index: number) {
+    const nextPack = commitVariantEdits({
+      pack,
+      variantId: selectedVariant?.variantId,
+      copy,
+      offerLabel,
+      primaryImage,
+    });
+    const asset = MEDIA_ASSETS[index % MEDIA_ASSETS.length];
+    const variant = nextPack.variants[index] ?? initialPack.variants[index];
+    const variantImage = getVariantPrimaryImage(variant?.variantId, nextPack);
+    const currentIsLibraryAsset = MEDIA_ASSETS.some((item) => item.src === primaryImage);
+    setPack(nextPack);
     setSelectedVariantIndex(index);
-    setCopy(seedCopy(pack, index));
-    setPrimaryImage(MEDIA_ASSETS[index % MEDIA_ASSETS.length].src);
+    setCopy(seedCopy(nextPack, index));
+    if (variantImage) {
+      setPrimaryImage(variantImage.src);
+      setPrimaryImageName(variantImage.label);
+    } else if (currentIsLibraryAsset) {
+      setPrimaryImage(asset.src);
+      setPrimaryImageName(asset.label);
+    }
   }
 
   // Stable identity: the Fabric editor receives this — a new identity per render
@@ -401,7 +545,16 @@ export function AdStudioWorkbench({
     }
     if (studio.section === "media") {
       // 1a: wire onSelectImage so library tiles actually update the primary image
-      return <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={selectMediaImage} />;
+      return (
+        <MediaPanel
+          primaryImage={primaryImage}
+          primaryImageName={primaryImageName}
+          openFilePicker={openFilePicker}
+          onUploadImage={replaceImage}
+          onUploadRejected={studio.showToast}
+          onSelectImage={selectMediaImage}
+        />
+      );
     }
     if (studio.section === "copy") {
       return (
@@ -446,7 +599,16 @@ export function AdStudioWorkbench({
   return (
     <main className="studio-screen" aria-label="Ad Studio workspace">
       <style>{STYLES}</style>
-      <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(event) => replaceImage(event.target.files)} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(event) => {
+          void replaceImage(event.target.files?.[0]);
+          event.currentTarget.value = "";
+        }}
+      />
 
       <TopBar
         campaignName={campaignName}
@@ -661,7 +823,14 @@ export function AdStudioWorkbench({
 
         {studio.mobileTab === "media" && (
           <div className="studio-mobile-panel">
-            <MediaPanel primaryImage={primaryImage} openFilePicker={openFilePicker} onSelectImage={selectMediaImage} />
+            <MediaPanel
+              primaryImage={primaryImage}
+              primaryImageName={primaryImageName}
+              openFilePicker={openFilePicker}
+              onUploadImage={replaceImage}
+              onUploadRejected={studio.showToast}
+              onSelectImage={selectMediaImage}
+            />
           </div>
         )}
 
@@ -702,6 +871,17 @@ export function AdStudioWorkbench({
         </div>
       </div>
 
+      {studio.busy && (
+        <div className="studio-mobile-busy">
+          <RefreshCw aria-hidden size={20} />
+          <strong>{studio.busyMessage}</strong>
+        </div>
+      )}
+
+      <div className="studio-mobile-status" data-state={studio.saveState}>
+        {studio.statusText}
+      </div>
+
       <footer className="studio-statusbar">
         {/* L5: data-state attribute lets CSS color the save chip; existing .error class also applies */}
         <span className={studio.saveState === "error" ? "error" : ""} data-state={studio.saveState}>{studio.statusText}</span>
@@ -724,6 +904,8 @@ export function AdStudioWorkbench({
       <NewAdDialog
         open={newAdOpen}
         onClose={closeNewAdDialog}
+        brandKit={brandKit}
+        workspaceId={workspaceId}
         templates={AD_STUDIO_TEMPLATES}
         onGenerate={handleGenerateFirstAd}
         initialTemplateId={newAdTemplateId}

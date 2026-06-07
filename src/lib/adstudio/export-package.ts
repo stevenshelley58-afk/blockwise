@@ -24,7 +24,7 @@ export async function buildAdStudioExportPackage(
   const manifest: AdStudioExportManifest = {
     exportId: deterministicUuid(`export:${pack.campaign.campaignId}`),
     campaignId: pack.campaign.campaignId,
-    generatedAt: new Date("2026-05-27T00:00:00.000Z").toISOString(),
+    generatedAt: new Date().toISOString(),
     files: files.map((file) => ({
       path: file.path,
       mimeType: file.mimeType,
@@ -61,13 +61,19 @@ function buildExportFiles(
   options: { creativeRenders?: CreativeExportRender[] },
 ): FileInput[] {
   const primaryCopy = pack.copyPacks[0];
-  const creativesByFormat = new Map(pack.creatives.map((creative) => [creative.format, creative]));
   const renderMap = buildRenderMap(options.creativeRenders);
   const files: FileInput[] = [];
 
   if (!primaryCopy) {
     throw new Error("Campaign pack has no copy packs to export.");
   }
+
+  const exportVariantId = primaryCopy.variantId;
+  const creativesByFormat = new Map(
+    pack.creatives
+      .filter((creative) => creative.variantId === exportVariantId)
+      .map((creative) => [creative.format, creative]),
+  );
 
   addCreative(files, "meta/feed_1x1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
   addCreative(files, "meta/feed_1x1.jpg", creativesByFormat.get("1:1"), renderMap, "image/jpeg");

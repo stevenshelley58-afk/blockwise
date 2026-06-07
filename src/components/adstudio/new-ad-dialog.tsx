@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, X } from "lucide-react";
 
-import type { AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
+import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
+import { uploadAdStudioMedia } from "./media-upload";
 import { BlankTemplateCard, TemplateCard } from "./panels/templates-panel";
 
 type Step = "template" | "brief";
@@ -12,20 +15,18 @@ type Step = "template" | "brief";
 type NewAdDialogProps = {
   open: boolean;
   onClose: () => void;
+  brandKit: AdStudioBrandKit;
+  workspaceId: string;
   templates: AdStudioTemplate[];
   onGenerate: (input: FirstAdInput) => Promise<void>;
   /** Pre-select a template (e.g. launched from the Templates panel). */
   initialTemplateId?: string;
 };
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-export function NewAdDialog({ open, onClose, templates, onGenerate, initialTemplateId }: NewAdDialogProps) {
+export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, onGenerate, initialTemplateId }: NewAdDialogProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("template");
   // undefined = nothing chosen yet; "" = blank (create your own)
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
@@ -95,23 +96,21 @@ export function NewAdDialog({ open, onClose, templates, onGenerate, initialTempl
     setStep("brief");
   }
 
-  async function selectImage(file: File | undefined) {
+  async function selectImage(file: File) {
     setError("");
-    if (!file) return;
-    if (!ACCEPTED_TYPES.has(file.type)) {
-      setError("Use a JPG, PNG, or WebP image.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError("Use an image under 8 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setImageDataUrl(String(event.target?.result ?? ""));
+    try {
+      const uploaded = await uploadAdStudioMedia({
+        file,
+        workspaceId,
+        brandKitId: brandKit.brandKitId,
+      });
+      setImageDataUrl(uploaded.src);
       setImageName(file.name);
-    };
-    reader.readAsDataURL(file);
+    } catch (caught) {
+      setImageDataUrl("");
+      setImageName("");
+      setError(caught instanceof Error ? caught.message : "Could not upload that image.");
+    }
   }
 
   async function submit() {
@@ -195,18 +194,27 @@ export function NewAdDialog({ open, onClose, templates, onGenerate, initialTempl
           {step === "brief" && (
             <div className="studio-newad-own">
               <p className="studio-newad-note">Uses 1 of 10 free ad packs. No Meta account is needed until publish.</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                hidden
-                onChange={(event) => void selectImage(event.target.files?.[0])}
+              <AssetUploadDropzone
+                className="studio-newad-upload"
+                label="Upload one image"
+                actionText="Upload one image"
+                helperText="JPG, PNG, or WebP / up to 8 MB"
+                previewUrl={imageDataUrl}
+                previewAlt=""
+                fileName={imageName}
+                acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+                maxBytes={AD_IMAGE_MAX_BYTES}
+                typeError="Use a JPG, PNG, or WebP image."
+                sizeError="Use an image under 8 MB."
+                capturePagePaste
+                onFileAccepted={selectImage}
+                onFileRejected={setError}
+                onClear={() => {
+                  setImageDataUrl("");
+                  setImageName("");
+                  setError("");
+                }}
               />
-              <button className="studio-newad-drop" type="button" onClick={() => fileInputRef.current?.click()}>
-                <Upload aria-hidden size={26} />
-                <strong>{imageName || "Upload one image"}</strong>
-                <span>JPG, PNG, or WebP</span>
-              </button>
               <label className="studio-newad-field">
                 <span>Short description</span>
                 <textarea

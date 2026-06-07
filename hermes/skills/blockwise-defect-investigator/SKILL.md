@@ -25,7 +25,8 @@ quality, classification, or stale public data.
    - Known subject without a page: queue `blockwise-page-resolver`.
    - Resolved page with failed or stale fetch: queue `blockwise-ad-collector`.
    - Captured creative with weak labels: queue `blockwise-ad-classifier`.
-4. Use Browserbase/manual Meta Ad Library browsing only for evidence capture.
+4. Use self-hosted browser/manual Meta Ad Library browsing only for evidence
+   capture.
 5. Resolve or dismiss the defect with a decision row and source evidence.
 
 ## Output Rules
@@ -47,7 +48,7 @@ If an LLM is needed for evidence summarisation, use OpenRouter through
 ## Tools
 
 - `hermes/tools/research-runtime`
-- `browserbase.session`
+- self-hosted browser session (Steel CDP, local Chromium fallback)
 - scoped read-only research queries
 - `blockwise.ingest.update_defect`
 - `blockwise.ingest.skill_handoff`

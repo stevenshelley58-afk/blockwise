@@ -34,8 +34,11 @@ test("isTrackablePath excludes operator, api, and internal asset paths", () => {
   assert.equal(isTrackablePath("/operators-guide"), true);
 });
 
-test("normalizeTrackedPath validates input and strips query strings", () => {
+test("normalizeTrackedPath validates input and preserves only the PWA source marker", () => {
   assert.equal(normalizeTrackedPath("/pricing?utm_source=meta#top"), "/pricing");
+  assert.equal(normalizeTrackedPath("/pwa?source=pwa"), "/pwa?source=pwa");
+  assert.equal(normalizeTrackedPath("/pwa?source=offline"), "/pwa?source=offline");
+  assert.equal(normalizeTrackedPath("/pwa?source=meta"), "/pwa");
   assert.equal(normalizeTrackedPath(" /pricing "), "/pricing");
   assert.equal(normalizeTrackedPath("pricing"), null);
   assert.equal(normalizeTrackedPath("//evil.example"), null);

@@ -5,8 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import { StatusPill } from "@/components/status-pill";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  LOGO_MAX_BYTES,
+  LOGO_UPLOAD_TYPES,
+  readFileAsDataUrl,
+  sanitizeUploadFileName,
+  validateAssetUploadFile,
+} from "@/lib/upload/asset-file";
 
 type JsonObject = Record<string, unknown>;
 
@@ -65,9 +73,6 @@ const DEFAULT_LOGOS = {
   faviconUrl: null,
 };
 
-const MAX_LOGO_BYTES = 5 * 1024 * 1024;
-const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/svg+xml"]);
-
 export function OnboardingWizard({
   workspaceId,
   agencyName,
@@ -89,6 +94,7 @@ export function OnboardingWizard({
   const [brandColor, setBrandColor] = useState(String(initialColours.primary ?? DEFAULT_COLOURS.primary));
   const [brandTone, setBrandTone] = useState(String(initialTone.voice ?? "professional local expert"));
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
@@ -132,20 +138,17 @@ export function OnboardingWizard({
     }
   }
 
-  function chooseLogo(file: File | undefined) {
+  async function chooseLogo(file: File) {
     setMessage(null);
-    if (!file) {
+    try {
+      const previewUrl = await readFileAsDataUrl(file);
+      setLogoFile(file);
+      setLogoPreviewUrl(previewUrl);
+    } catch {
       setLogoFile(null);
-      return;
+      setLogoPreviewUrl("");
+      throw new Error("Could not read that logo.");
     }
-
-    if (!LOGO_TYPES.has(file.type) || file.size > MAX_LOGO_BYTES) {
-      setLogoFile(null);
-      setMessage({ tone: "error", text: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB." });
-      return;
-    }
-
-    setLogoFile(file);
   }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
@@ -179,9 +182,18 @@ export function OnboardingWizard({
       return;
     }
 
-    if (logoFile && (!LOGO_TYPES.has(logoFile.type) || logoFile.size > MAX_LOGO_BYTES)) {
+    const logoError = logoFile
+      ? validateAssetUploadFile(logoFile, {
+          acceptedTypes: LOGO_UPLOAD_TYPES,
+          maxBytes: LOGO_MAX_BYTES,
+          typeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
+          sizeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
+        })
+      : null;
+    if (logoError) {
       setLogoFile(null);
-      setMessage({ tone: "error", text: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB." });
+      setLogoPreviewUrl("");
+      setMessage({ tone: "error", text: logoError });
       return;
     }
 
@@ -247,7 +259,7 @@ export function OnboardingWizard({
     }
 
     if (logoFile) {
-      const safeName = logoFile.name.replace(/[^a-z0-9._-]/gi, "-").toLowerCase();
+      const safeName = sanitizeUploadFileName(logoFile.name);
       const storagePath = `${workspaceId}/brand/${id}/${crypto.randomUUID()}-${safeName}`;
       const { error: uploadError } = await supabase.storage.from("workspace-artifacts").upload(storagePath, logoFile);
 
@@ -275,6 +287,7 @@ export function OnboardingWizard({
 
     setBrandKitId(id);
     setLogoFile(null);
+    setLogoPreviewUrl("");
     setBusy(false);
     next();
   }
@@ -347,15 +360,30 @@ export function OnboardingWizard({
               <>
                 <label className="wizard-field">
                   <span className="wizard-label">Logo asset</span>
-                  <span className="button secondary wizard-upload">
-                    {logoFile ? `Selected: ${logoFile.name}` : "Upload logo"}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                      hidden
-                      onChange={(event) => chooseLogo(event.target.files?.[0])}
-                    />
-                  </span>
+                  <AssetUploadDropzone
+                    className="wizard-upload"
+                    label="Upload logo"
+                    actionText="Upload logo"
+                    helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
+                    previewUrl={logoPreviewUrl}
+                    previewAlt=""
+                    fileName={logoFile?.name}
+                    fileSize={logoFile?.size}
+                    fileType={logoFile?.type}
+                    acceptedTypes={LOGO_UPLOAD_TYPES}
+                    maxBytes={LOGO_MAX_BYTES}
+                    typeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
+                    sizeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
+                    capturePagePaste
+                    disabled={busy}
+                    onFileAccepted={chooseLogo}
+                    onFileRejected={(text) => setMessage({ tone: "error", text })}
+                    onClear={() => {
+                      setLogoFile(null);
+                      setLogoPreviewUrl("");
+                      setMessage(null);
+                    }}
+                  />
                 </label>
                 <label className="wizard-field">
                   <span className="wizard-label">Brand colour</span>

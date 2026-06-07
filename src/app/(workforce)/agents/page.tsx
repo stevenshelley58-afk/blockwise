@@ -47,7 +47,7 @@ export default async function AgentWorkforcePage() {
 
       <section className="panel">
         <h2>Agent Runs</h2>
-        <table className="table">
+        <table className="table responsive-card-table">
           <thead>
             <tr>
               <th>Agent</th>
@@ -61,16 +61,16 @@ export default async function AgentWorkforcePage() {
           <tbody>
             {agentRuns.map((run) => (
               <tr key={`${run.agent}-${run.status}`}>
-                <td>{run.agent}</td>
-                <td>{run.workspace}</td>
-                <td>{run.task}</td>
-                <td>
+                <td data-label="Agent">{run.agent}</td>
+                <td data-label="Workspace">{run.workspace}</td>
+                <td data-label="Result">{run.task}</td>
+                <td data-label="Status">
                   <StatusPill tone={run.status === "Complete" ? "green" : run.status === "Running" ? "blue" : "amber"}>
                     {run.status}
                   </StatusPill>
                 </td>
-                <td>{run.cost}</td>
-                <td>{run.confidence}</td>
+                <td data-label="Cost">{run.cost}</td>
+                <td data-label="Confidence">{run.confidence}</td>
               </tr>
             ))}
           </tbody>

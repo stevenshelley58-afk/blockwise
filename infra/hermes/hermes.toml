@@ -61,9 +61,6 @@ names = [
   "blockwise-model-router",
 ]
 
-[agent.tools.browserbase]
-enabled = true
-
 [agent.scheduling]
 timezone = "Australia/Perth"
 

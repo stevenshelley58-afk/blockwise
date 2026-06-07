@@ -5,6 +5,8 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
 import { SignInLink } from "@/components/landing/sign-in-link";
+import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
+import { LandingRadarCards } from "@/components/research/landing-radar-cards";
 
 /**
  * Landing page — "Executive Precision" design (source: /stitch export, wired
@@ -13,9 +15,10 @@ import { SignInLink } from "@/components/landing/sign-in-link";
  *
  * Layout (2026-06-05, design mock v2): light hero with the photo as a rounded
  * card on the right (/public/hero/hero-wide.jpg, hero-tall.jpg on mobile) and
- * the performance card floating over it; radar cards image-top in a 3-across
- * row; dark "pipeline" treatment for the four steps; campaign table left of
- * the control copy. Perf-card numbers are labeled example data.
+ * the performance card floating over it; radar row renders live scraped ads
+ * (IP best-guess area, longest-running fallback); dark "pipeline" treatment
+ * for the four steps; campaign table left of the control copy. Perf-card
+ * numbers are labeled example data.
  */
 
 function TrustPoint({ label }: { label: string }) {
@@ -26,42 +29,6 @@ function TrustPoint({ label }: { label: string }) {
       </span>
       {label}
     </span>
-  );
-}
-
-type RadarCardProps = {
-  agency: string;
-  platform: string;
-  headline: string;
-  suburb: string;
-  running: string;
-  image: string;
-};
-
-function RadarCard({ agency, platform, headline, suburb, running, image }: RadarCardProps) {
-  return (
-    <article className="lp-radar-card">
-      <div
-        className="lp-radar-thumb"
-        style={{ backgroundImage: `url("${image}")` }}
-        role="img"
-        aria-label={`${suburb} property ad preview`}
-      />
-      <div className="lp-radar-body">
-        <div className="lp-radar-source">
-          <strong>{agency}</strong>
-          <span>{platform}</span>
-        </div>
-        <h3>{headline}</h3>
-        <div className="lp-radar-meta">
-          <span>{suburb}</span>
-          <span>Running {running}</span>
-        </div>
-        <CtaLink location="radar-use-angle" href="/signup" className="lp-radar-link">
-          Use this angle →
-        </CtaLink>
-      </div>
-    </article>
   );
 }
 
@@ -118,9 +85,9 @@ export default function HomePage() {
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
             <a href="#radar">Ad Radar</a>
-            <a href="#campaigns">Campaigns</a>
-            <a href="#how">How it works</a>
-            <a href="#trial">Free trial</a>
+            <a href="#campaign-types">Campaigns</a>
+            <a href="#workflow">How it works</a>
+            <a href="#free-trial">Free trial</a>
           </nav>
           <div className="lp-nav-actions">
             <SignInLink />
@@ -137,7 +104,7 @@ export default function HomePage() {
             <div className="lp-hero-copy">
               <h1 id="hero-title">
                 Your next lead <em className="lp-hero-accent">is local.</em>
-                <span className="lp-hero-h1-sub">Run the ads that reach them first.</span>
+                <span className="lp-hero-h1-sub">Create property ads from one simple workflow.</span>
               </h1>
               <p className="lp-lead">
                 Create and track local Meta ads without opening Ads Manager.
@@ -209,6 +176,17 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="problem" className="lp-section lp-section-surface">
+          <div className="lp-shell lp-center-head">
+            <p className="lp-eyebrow">The problem</p>
+            <h2 className="lp-h2">Real estate ads are too slow to brief, review, and track.</h2>
+            <p className="lp-lead">
+              Blockwise keeps the workflow in one place so teams can create local ads, approve the details,
+              and understand results without juggling disconnected tools.
+            </p>
+          </div>
+        </section>
+
         <section id="radar" className="lp-section">
           <div className="lp-shell">
             <div className="lp-radar-top">
@@ -221,49 +199,20 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="lp-radar-box">
-                <div className="lp-location-pill">
-                  <span>Perth, WA</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
-                  </svg>
-                </div>
-                <p className="lp-radar-note">Showing example ads around Perth, WA.</p>
-                <CtaLink location="radar-scan" href="/signup" className="lp-btn lp-btn-primary lp-btn-wide">
-                  Scan my suburb
-                </CtaLink>
+                <LandingAdRadarScan
+                  buttonLabel="Scan my suburb"
+                  initialNote="Start with Perth, WA or choose your suburb."
+                  initialValue="Perth, WA"
+                  placeholder="Suburb or postcode"
+                  useBestGuess
+                />
               </div>
             </div>
-            <div className="lp-radar-list">
-              <RadarCard
-                agency="Coastline Property"
-                platform="Meta"
-                headline="Open home campaign for coastal family living."
-                suburb="Cottesloe"
-                running="20 days"
-                image="/ads/ad-coastline.jpg"
-              />
-              <RadarCard
-                agency="Hillview Agents"
-                platform="Instagram"
-                headline="Just listed campaign with city lifestyle angle."
-                suburb="Subiaco"
-                running="14 days"
-                image="/ads/ad-hillview.jpg"
-              />
-              <RadarCard
-                agency="Northstar Realty"
-                platform="Meta"
-                headline="Appraisal campaign aimed at local sellers."
-                suburb="Mount Lawley"
-                running="32 days"
-                image="/ads/ad-northstar.jpg"
-              />
-            </div>
+            <LandingRadarCards />
           </div>
         </section>
 
-        <section id="how" className="lp-section lp-pipeline">
+        <section id="workflow" className="lp-section lp-pipeline">
           <div className="lp-shell">
             <div className="lp-center-head">
               <p className="lp-eyebrow lp-eyebrow-sky">How it works</p>
@@ -341,7 +290,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="campaigns" className="lp-section">
+        <section id="campaign-types" className="lp-section">
           <div className="lp-shell">
             <div className="lp-center-head">
               <p className="lp-eyebrow">Campaigns</p>
@@ -386,7 +335,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="lp-section lp-section-surface" aria-labelledby="control-title">
+        <section id="approval" className="lp-section lp-section-surface" aria-labelledby="control-title">
           <div className="lp-shell lp-split lp-split-swap">
             <div>
               <p className="lp-eyebrow">Approval and control</p>
@@ -438,7 +387,18 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="trial" className="lp-section lp-trial">
+        <section id="reporting" className="lp-section">
+          <div className="lp-shell lp-center-head">
+            <p className="lp-eyebrow">Reporting</p>
+            <h2 className="lp-h2">See campaign status, spend, clicks, and leads in Blockwise.</h2>
+            <p className="lp-lead">
+              The dashboard brings campaign performance back into the same workspace your team uses
+              for campaign creation and approval.
+            </p>
+          </div>
+        </section>
+
+        <section id="free-trial" className="lp-section lp-trial">
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
@@ -457,6 +417,20 @@ export default function HomePage() {
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
+          </div>
+        </section>
+
+        <section id="managed-setup" className="lp-section lp-section-surface" aria-labelledby="demo-title">
+          <div className="lp-shell lp-split">
+            <div>
+              <p className="lp-eyebrow">Managed setup</p>
+              <h2 className="lp-h2" id="demo-title">Want help launching your first campaign?</h2>
+              <p className="lp-lead">
+                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
+                your ad account and review everything before launch.
+              </p>
+            </div>
+            <DemoForm />
           </div>
         </section>
 
@@ -518,24 +492,10 @@ export default function HomePage() {
                 Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
                 your ad account and get everything ready to launch.
               </p>
-              <CtaLink location="faq-walkthrough" href="#demo" className="lp-btn lp-btn-hero">
+              <CtaLink location="faq-walkthrough" href="#managed-setup" className="lp-btn lp-btn-hero">
                 Book a walkthrough
               </CtaLink>
             </aside>
-          </div>
-        </section>
-
-        <section id="demo" className="lp-section lp-section-surface" aria-labelledby="demo-title">
-          <div className="lp-shell lp-split">
-            <div>
-              <p className="lp-eyebrow">Managed setup</p>
-              <h2 className="lp-h2" id="demo-title">Want help launching your first campaign?</h2>
-              <p className="lp-lead">
-                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
-                your ad account and review everything before launch.
-              </p>
-            </div>
-            <DemoForm />
           </div>
         </section>
       </main>
@@ -555,9 +515,9 @@ export default function HomePage() {
           <div>
             <h4>Product</h4>
             <a href="#radar">Ad Radar</a>
-            <a href="#campaigns">Campaigns</a>
-            <a href="#how">How it works</a>
-            <a href="#trial">Free trial</a>
+            <a href="#campaign-types">Campaigns</a>
+            <a href="#workflow">How it works</a>
+            <a href="#free-trial">Free trial</a>
           </div>
           <div>
             <h4>Legal</h4>

@@ -161,7 +161,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
         <section className="panel">
           <h2>Recent Runs</h2>
           <div className="table-wrap">
-            <table className="table">
+            <table className="table responsive-card-table">
               <thead>
                 <tr>
                   <th>Topic</th>
@@ -174,14 +174,14 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id}>
-                    <td>
+                    <td data-label="Topic">
                       <strong>{run.topic}</strong>
                       <p className="item-meta">{run.offer} · {run.primary_cta}</p>
                     </td>
-                    <td><StatusPill tone={toneForStatus(run.status)}>{run.status.replace(/_/g, " ")}</StatusPill></td>
-                    <td>{run.current_step?.replace(/^blockwise-/u, "") ?? "—"}</td>
-                    <td>{formatDate(run.created_at)}</td>
-                    <td>
+                    <td data-label="Status"><StatusPill tone={toneForStatus(run.status)}>{run.status.replace(/_/g, " ")}</StatusPill></td>
+                    <td data-label="Step">{run.current_step?.replace(/^blockwise-/u, "") ?? "—"}</td>
+                    <td data-label="Created">{formatDate(run.created_at)}</td>
+                    <td data-label="Open">
                       <Link className="icon-button" href={`/operator/content-runs/${run.id}`} aria-label={`Open ${run.topic}`} title="Open run">
                         <FileText aria-hidden size={18} />
                       </Link>

@@ -2,6 +2,14 @@
 
 import { useRef, useState } from "react";
 
+import {
+  AD_IMAGE_MAX_BYTES,
+  AD_IMAGE_UPLOAD_TYPES,
+  validateAssetUploadFile,
+} from "@/lib/upload/asset-file";
+
+import { uploadAdStudioMedia } from "./media-upload";
+
 export const MEDIA_ASSETS = [
   { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story" },
   { src: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Property image", ratio: "Feed" },
@@ -9,26 +17,52 @@ export const MEDIA_ASSETS = [
   { src: "/ads/ad-coastline.jpg", label: "River market view", type: "Previously used", ratio: "Landscape" },
 ];
 
-export function useMedia(showToast: (message: string) => void, onImageSelected?: () => void) {
-  const [primaryImage, setPrimaryImage] = useState(MEDIA_ASSETS[0].src);
+export function useMedia(
+  showToast: (message: string) => void,
+  onImageSelected?: () => void,
+  options: {
+    initialImage?: { src: string; label: string } | null;
+    workspaceId: string;
+    brandKitId: string;
+  } = { workspaceId: "", brandKitId: "" },
+) {
+  const [primaryImage, setPrimaryImage] = useState(() => options.initialImage?.src ?? MEDIA_ASSETS[0].src);
+  const [primaryImageName, setPrimaryImageName] = useState(() => options.initialImage?.label ?? MEDIA_ASSETS[0].label);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function replaceImage(files: FileList | null) {
-    const file = files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+  async function replaceImage(file: File | null | undefined) {
+    if (!file) return;
+    const validationError = validateAssetUploadFile(file, {
+      acceptedTypes: AD_IMAGE_UPLOAD_TYPES,
+      maxBytes: AD_IMAGE_MAX_BYTES,
+      typeError: "Use a JPG, PNG, or WebP image.",
+      sizeError: "Use an image under 8 MB.",
+    });
+    if (validationError) {
+      showToast(validationError);
+      throw new Error(validationError);
+    }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPrimaryImage(String(event.target?.result ?? MEDIA_ASSETS[0].src));
+    try {
+      const result = await uploadAdStudioMedia({
+        file,
+        workspaceId: options.workspaceId,
+        brandKitId: options.brandKitId,
+      });
+      setPrimaryImage(result.src);
+      setPrimaryImageName(file.name);
       onImageSelected?.();
       showToast("Image replaced");
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not upload that image.";
+      showToast(message);
+      throw new Error(message);
+    }
   }
 
   function openFilePicker() {
     fileInputRef.current?.click();
   }
 
-  return { primaryImage, setPrimaryImage, fileInputRef, replaceImage, openFilePicker };
+  return { primaryImage, setPrimaryImage, primaryImageName, setPrimaryImageName, fileInputRef, replaceImage, openFilePicker };
 }

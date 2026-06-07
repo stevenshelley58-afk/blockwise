@@ -178,7 +178,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
             </div>
           </div>
           <div className="table-wrap">
-            <table className="table model-table">
+            <table className="table model-table responsive-card-table">
               <thead>
                 <tr>
                   <th>Profile</th>
@@ -199,11 +199,11 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
 
                   return (
                     <tr key={profile.key}>
-                      <td>
+                      <td data-label="Profile">
                         <strong>{profile.label}</strong>
                         <p className="item-meta">{profile.task}</p>
                       </td>
-                      <td>
+                      <td data-label="Primary model">
                         <label className="sr-only" htmlFor={`${profile.key}-model`}>
                           Primary model for {profile.label}
                         </label>
@@ -228,24 +228,24 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                           {option?.provider ?? profile.active.provider} / {option?.model ?? profile.active.model}
                         </p>
                       </td>
-                      <td>
+                      <td data-label="Cost and context">
                         <div className="model-meta-grid">
                           <span>${formatCost(option?.inputUsdPerMillionTokens ?? profile.active.inputUsdPerMillionTokens)} in</span>
                           <span>${formatCost(option?.outputUsdPerMillionTokens ?? profile.active.outputUsdPerMillionTokens)} out</span>
                           <span>{formatTokens(option?.maxContextTokens ?? profile.active.maxContextTokens)} ctx</span>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Fallbacks">
                         <span>{profile.fallbacks.length}</span>
                         <p className="item-meta">{profile.fallbacks.map((fallback) => fallback.model).join(", ") || "None"}</p>
                       </td>
-                      <td>
+                      <td data-label="Status">
                         <StatusPill tone={profile.enabled ? "green" : "rose"}>{profile.enabled ? "Enabled" : "Disabled"}</StatusPill>
                         {rowStatus ? (
                           <p className={`row-status ${rowStatus.tone}`}>{rowStatus.message}</p>
                         ) : null}
                       </td>
-                      <td>
+                      <td data-label="Actions">
                         <div className="actions model-actions">
                           <button
                             className="icon-button"

@@ -12,6 +12,7 @@ export default async function LeadsPage() {
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
   const { rows, incoming } = await listLeadRowsWithDedupe(supabase, access.workspaceId);
   const highIntentCount = rows.filter((lead) => lead.quality === "High intent").length;
+  const duplicateCount = incoming.duplicateIds.length;
 
   return (
     <main className="content">
@@ -28,40 +29,91 @@ export default async function LeadsPage() {
         <MetricCard icon={Download} label="Exports" value="0" note="Exports need approval" />
       </section>
 
-      <section className="panel">
+      <section className="panel leads-panel">
         <h2>Your leads</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Suburb</th>
-              <th>Source</th>
-              <th>Quality</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((lead) => (
-              <tr key={lead.id}>
-                <td>{lead.name}</td>
-                <td>{lead.suburb}</td>
-                <td>{lead.source}</td>
-                <td>{lead.quality}</td>
-                <td>
-                  <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                    {lead.duplicateCandidate ? "possible duplicate" : "new"}
-                  </StatusPill>
-                </td>
+        <div className="leads-table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Suburb</th>
+                <th>Source</th>
+                <th>Quality</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((lead) => (
+                <tr key={lead.id}>
+                  <td>{lead.name}</td>
+                  <td>{lead.suburb}</td>
+                  <td>{lead.source}</td>
+                  <td>{lead.quality}</td>
+                  <td>
+                    <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
+                      {lead.duplicateCandidate ? "possible duplicate" : "new"}
+                    </StatusPill>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="leads-mobile-list" aria-label="Leads">
+          {rows.map((lead) => (
+            <article className="lead-mobile-card" key={lead.id}>
+              <div className="lead-card-title">
+                <div>
+                  <span className="lead-card-label">Name</span>
+                  <strong>{lead.name}</strong>
+                </div>
+                <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
+                  {lead.duplicateCandidate ? "possible duplicate" : "new"}
+                </StatusPill>
+              </div>
+              <dl className="lead-card-fields">
+                <div>
+                  <dt>Suburb</dt>
+                  <dd>{lead.suburb}</dd>
+                </div>
+                <div>
+                  <dt>Source</dt>
+                  <dd>{lead.source}</dd>
+                </div>
+                <div>
+                  <dt>Quality</dt>
+                  <dd>{lead.quality}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{lead.duplicateCandidate ? "Possible duplicate" : "New"}</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <section className="panel">
-        <h2>Duplicate matches</h2>
-        <p className="item-meta">Matched on: {incoming.dedupeKey}</p>
-        <p className="item-meta">Matched leads: {incoming.duplicateIds.join(", ") || "none"}</p>
+      <section className="panel leads-duplicate-panel">
+        <div className="leads-duplicate-summary">
+          <span className="leads-duplicate-count">{duplicateCount}</span>
+          <div>
+            <h2>Duplicate matches</h2>
+            <p className="item-meta">
+              {duplicateCount === 1 ? "1 lead matched the incoming identity." : `${duplicateCount} leads matched the incoming identity.`}
+            </p>
+          </div>
+        </div>
+        <dl className="leads-duplicate-details">
+          <div>
+            <dt>Matched on</dt>
+            <dd>{incoming.dedupeKey || "none"}</dd>
+          </div>
+          <div>
+            <dt>Matched leads</dt>
+            <dd>{incoming.duplicateIds.join(", ") || "none"}</dd>
+          </div>
+        </dl>
       </section>
     </main>
   );

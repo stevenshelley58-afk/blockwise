@@ -398,7 +398,7 @@ export function PromptControlPanel() {
         <section className="panel nested-panel">
           <h3>Drafts</h3>
           <div className="table-wrap">
-            <table className="table">
+            <table className="table responsive-card-table">
               <thead>
                 <tr>
                   <th>Version</th>
@@ -410,10 +410,10 @@ export function PromptControlPanel() {
               <tbody>
                 {draftVersions.map((version) => (
                   <tr key={version.version}>
-                    <td>v{version.version}</td>
-                    <td>{version.title}</td>
-                    <td>{formatDate(version.createdAt)}</td>
-                    <td>
+                    <td data-label="Version">v{version.version}</td>
+                    <td data-label="Title">{version.title}</td>
+                    <td data-label="Created">{formatDate(version.createdAt)}</td>
+                    <td data-label="Actions">
                       <button className="icon-button" type="button" title="Promote" onClick={() => promote(version.version)}>
                         <Send aria-hidden size={16} />
                       </button>
@@ -472,7 +472,7 @@ export function PromptControlPanel() {
           </div>
         </div>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table responsive-card-table">
             <thead>
               <tr>
                 <th>Time</th>
@@ -489,19 +489,19 @@ export function PromptControlPanel() {
             <tbody>
               {recentRuns.map((run) => (
                 <tr key={run.id}>
-                  <td>{formatDate(run.created_at)}</td>
-                  <td>{run.task_type ?? String(run.input_json?.task_type ?? "-")}</td>
-                  <td>{run.model_profile ?? String(run.input_json?.model_profile ?? "-")}</td>
-                  <td>{run.provider_name ?? "-"}</td>
-                  <td>{run.model_name ?? "-"}</td>
-                  <td>{formatCost(run.cost_estimate)}</td>
-                  <td>
+                  <td data-label="Time">{formatDate(run.created_at)}</td>
+                  <td data-label="Task">{run.task_type ?? String(run.input_json?.task_type ?? "-")}</td>
+                  <td data-label="Profile">{run.model_profile ?? String(run.input_json?.model_profile ?? "-")}</td>
+                  <td data-label="Provider">{run.provider_name ?? "-"}</td>
+                  <td data-label="Model">{run.model_name ?? "-"}</td>
+                  <td data-label="Cost">{formatCost(run.cost_estimate)}</td>
+                  <td data-label="Status">
                     <StatusPill tone={run.status === "completed" ? "green" : "rose"}>{run.status}</StatusPill>
                   </td>
-                  <td>
+                  <td data-label="Trace">
                     <Link href={`/model-control/runs/${run.id}`}>{shortTrace(run.correlation_id)}</Link>
                   </td>
-                  <td>{summarizePromptVersions(run.input_json?.prompt_versions)}</td>
+                  <td data-label="Prompt versions">{summarizePromptVersions(run.input_json?.prompt_versions)}</td>
                 </tr>
               ))}
               {!recentRuns.length ? (

@@ -32,6 +32,7 @@ export type GenerateCampaignPackInput = {
   creativeFormats?: AdStudioFormat[];
   variantCount?: number;
   firstAd?: FirstAdInput;
+  sourceImageDataUrl?: string;
 };
 
 const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
@@ -127,13 +128,14 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     };
   });
   const copyPacks = variants.map((variant) => buildCopyPack({ campaign, variant, brandKit: input.brandKit }));
+  const sourceImageDataUrl = input.sourceImageDataUrl ?? input.firstAd?.imageDataUrl;
   const creatives = variants.flatMap((variant) =>
     formats.map((format) => buildCreative({
       campaign,
       variant,
       brandKit: input.brandKit,
       format,
-      sourceImageDataUrl: input.firstAd?.imageDataUrl,
+      sourceImageDataUrl,
     })),
   );
   const compliance = runAdStudioComplianceReview({ campaign, copyPacks });
@@ -307,7 +309,21 @@ function buildCreative(input: {
   sourceImageDataUrl?: string;
 }): AdStudioCreative {
   const size = getCanvasSize(input.format);
-  const headlineSize = input.format === "9:16" ? 68 : input.format === "1.91:1" ? 48 : 62;
+  const isStory = input.format === "9:16";
+  const isLandscape = input.format === "1.91:1";
+  const marginX = Math.round(size.width * (isLandscape ? 0.07 : 0.08));
+  const copyWidth = Math.round(size.width * (isLandscape ? 0.55 : 0.76));
+  const headlineSize = isStory ? 70 : isLandscape ? 50 : 64;
+  const headlineY = Math.round(size.height * (isStory ? 0.53 : isLandscape ? 0.32 : 0.5));
+  const subheadY = headlineY + Math.round(headlineSize * (isLandscape ? 1.55 : 1.8));
+  const ctaHeight = isLandscape ? 66 : 78;
+  const ctaY = Math.min(
+    Math.round(size.height * (isStory ? 0.76 : isLandscape ? 0.66 : 0.73)),
+    size.height - Math.round(size.height * (isStory ? 0.18 : 0.08)) - ctaHeight,
+  );
+  const ctaWidth = Math.min(Math.round(size.width * (isLandscape ? 0.28 : 0.36)), 360);
+  const logoWidth = isLandscape ? 164 : 180;
+  const logoHeight = isLandscape ? 58 : 64;
   const creativeBase: Omit<AdStudioCreative, "previewSvg"> = {
     creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
     campaignId: input.campaign.campaignId,
@@ -329,16 +345,39 @@ function buildCreative(input: {
           locked: true,
         },
         {
+          objectId: "primary_image",
+          type: "image",
+          role: "primary_image",
+          content: input.sourceImageDataUrl,
+          assetId: input.sourceImageDataUrl ? undefined : input.brandKit.assets.listingImages[0] ?? input.brandKit.assets.headshots[0] ?? undefined,
+          x: 0,
+          y: 0,
+          width: size.width,
+          height: size.height,
+          locked: false,
+        },
+        {
+          objectId: "image_scrim",
+          type: "shape",
+          role: "image_scrim",
+          x: 0,
+          y: 0,
+          width: size.width,
+          height: size.height,
+          fill: "rgba(7, 14, 25, 0.48)",
+          locked: true,
+        },
+        {
           objectId: "headline",
           type: "text",
           role: "headline",
           content: input.variant.headline,
-          x: Math.round(size.width * 0.08),
-          y: Math.round(size.height * 0.18),
-          width: Math.round(size.width * 0.72),
+          x: marginX,
+          y: headlineY,
+          width: copyWidth,
           font: "brand_heading",
           size: headlineSize,
-          fill: input.brandKit.colours.text,
+          fill: "#FFFFFF",
           locked: false,
         },
         {
@@ -346,12 +385,12 @@ function buildCreative(input: {
           type: "text",
           role: "subheadline",
           content: `Download the ${input.campaign.market.suburb} seller prep checklist.`,
-          x: Math.round(size.width * 0.08),
-          y: Math.round(size.height * 0.29),
-          width: Math.round(size.width * 0.68),
+          x: marginX,
+          y: subheadY,
+          width: Math.round(copyWidth * 0.9),
           font: "brand_body",
           size: Math.max(28, Math.round(headlineSize * 0.42)),
-          fill: input.brandKit.colours.text,
+          fill: "#FFFFFF",
           locked: false,
         },
         {
@@ -359,10 +398,10 @@ function buildCreative(input: {
           type: "shape",
           role: "cta_button",
           content: input.variant.cta,
-          x: Math.round(size.width * 0.08),
-          y: Math.round(size.height * 0.41),
-          width: 260,
-          height: 78,
+          x: marginX,
+          y: ctaY,
+          width: ctaWidth,
+          height: ctaHeight,
           fill: input.brandKit.colours.primary,
           locked: false,
         },
@@ -371,24 +410,12 @@ function buildCreative(input: {
           type: "text",
           role: "cta_text",
           content: input.variant.cta,
-          x: Math.round(size.width * 0.1),
-          y: Math.round(size.height * 0.41 + 50),
-          width: 220,
+          x: marginX + Math.round(ctaWidth * 0.08),
+          y: ctaY + Math.round(ctaHeight * 0.31),
+          width: Math.round(ctaWidth * 0.84),
           font: "brand_body",
-          size: 28,
+          size: isLandscape ? 24 : 28,
           fill: "#FFFFFF",
-          locked: false,
-        },
-        {
-          objectId: "primary_image",
-          type: "image",
-          role: "primary_image",
-          content: input.sourceImageDataUrl,
-          assetId: input.sourceImageDataUrl ? undefined : input.brandKit.assets.listingImages[0] ?? input.brandKit.assets.headshots[0] ?? undefined,
-          x: Math.round(size.width * 0.52),
-          y: Math.round(size.height * 0.48),
-          width: Math.round(size.width * 0.36),
-          height: Math.round(size.height * 0.34),
           locked: false,
         },
         {
@@ -396,10 +423,10 @@ function buildCreative(input: {
           type: "logo",
           role: "brand_logo",
           assetId: input.brandKit.logos.primaryLogoUrl ?? undefined,
-          x: Math.round(size.width * 0.08),
-          y: Math.round(size.height * 0.88),
-          width: 180,
-          height: 64,
+          x: marginX,
+          y: Math.round(size.height * (isLandscape ? 0.08 : 0.07)),
+          width: logoWidth,
+          height: logoHeight,
           locked: true,
         },
       ],

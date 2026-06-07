@@ -16,7 +16,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
 
   if (error || !ad) {
     return (
-      <main className="content">
+      <main className="content research-page research-detail-page">
         <PageHeading eyebrow="Competitor intelligence" title="Ad not found" description="The selected research ad is no longer available in this workspace view." />
         <Link className="button secondary" href="/ad-radar">
           Back to Ad Radar
@@ -26,7 +26,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
   }
 
   return (
-    <main className="content">
+    <main className="content research-page research-detail-page">
       <PageHeading
         eyebrow="Competitor intelligence"
         title={ad.creative.headline ?? ad.page.name}
@@ -35,7 +35,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
 
       <section className="panel research-detail-layout">
         <div className="research-detail-copy">
-          <div className="row-between">
+          <div className="row-between research-detail-head">
             <div>
               <h2>
                 <Link href={`/ad-radar/advertisers/${ad.page.id}`}>{ad.page.name}</Link>
@@ -85,7 +85,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
       </section>
 
       <section className="panel">
-        <div className="row-between">
+        <div className="row-between research-versions-head">
           <h2>Creative versions</h2>
           {ad.source.snapshotUrl ? (
             <a className="button secondary" href={ad.source.snapshotUrl} target="_blank" rel="noreferrer">
@@ -93,39 +93,41 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
             </a>
           ) : null}
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Version</th>
-              <th>Changed</th>
-              <th>Format</th>
-              <th>Type</th>
-              <th>Intent</th>
-              <th>Display</th>
-              <th>Hash</th>
-            </tr>
-          </thead>
-          <tbody>
-            {versions.map((version) => (
-              <tr key={version.id}>
-                <td>{version.version}</td>
-                <td>{formatDate(version.createdAt)}</td>
-                <td>{version.format ?? "-"}</td>
-                <td>{version.adType ?? "-"}</td>
-                <td>{version.primaryIntent ?? "-"}</td>
-                <td>{version.displayState ?? "-"}</td>
-                <td>
-                  <span className="operator-ad-code">{version.creativeHash.slice(0, 16)}</span>
-                </td>
-              </tr>
-            ))}
-            {versions.length === 0 ? (
+        <div className="research-table-wrap">
+          <table className="table">
+            <thead>
               <tr>
-                <td colSpan={7}>No creative version history has been recorded for this ad.</td>
+                <th>Version</th>
+                <th>Changed</th>
+                <th>Format</th>
+                <th>Type</th>
+                <th>Intent</th>
+                <th>Display</th>
+                <th>Hash</th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {versions.map((version) => (
+                <tr key={version.id}>
+                  <td>{version.version}</td>
+                  <td>{formatDate(version.createdAt)}</td>
+                  <td>{version.format ?? "-"}</td>
+                  <td>{version.adType ?? "-"}</td>
+                  <td>{version.primaryIntent ?? "-"}</td>
+                  <td>{version.displayState ?? "-"}</td>
+                  <td>
+                    <span className="operator-ad-code">{version.creativeHash.slice(0, 16)}</span>
+                  </td>
+                </tr>
+              ))}
+              {versions.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>No creative version history has been recorded for this ad.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );

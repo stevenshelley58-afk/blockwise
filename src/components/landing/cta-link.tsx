@@ -13,11 +13,12 @@ type CtaLinkProps = {
 };
 
 /**
- * Anchor for landing CTAs. Demo links fire a Meta Pixel intent event; signup links do not.
+ * Anchor for landing CTAs. Managed setup links fire a Meta Pixel intent event;
+ * signup and trial-scroll links do not.
  */
-export function CtaLink({ location, href = "#demo", className, children }: CtaLinkProps) {
+export function CtaLink({ location, href = "#managed-setup", className, children }: CtaLinkProps) {
   function handleClick() {
-    if (href === "#demo") {
+    if (href === "#managed-setup") {
       trackDemoCtaClick(location);
     }
   }

@@ -1,11 +1,10 @@
 "use client";
 
-import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
+import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import type { AngleCard } from "./angles";
 import { renderCreativeExports } from "./canvas/browser-creative-renderer";
-import { MEDIA_ASSETS } from "./use-media";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
 import type { StudioSection } from "./use-ad-studio";
@@ -34,6 +33,7 @@ export type CampaignActionsState = {
   primaryImage: string;
   offerLabel: string;
   campaignGoal: string;
+  destinationUrl: string;
   selectedVariantIndex: number;
   setPack: (pack: AdStudioCampaignPack) => void;
   setSelectedVariantIndex: (index: number) => void;
@@ -64,9 +64,22 @@ export function useCampaignActions(s: CampaignActionsState) {
   function buildCurrentPack(): AdStudioCampaignPack {
     const variantId = currentVariant?.variantId;
     if (!variantId) return s.pack;
+    const market = parseMarket();
+    const destinationUrl = normaliseDestinationUrl(s.destinationUrl);
 
     return {
       ...s.pack,
+      campaign: {
+        ...s.pack.campaign,
+        goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
+        market: {
+          ...s.pack.campaign.market,
+          suburb: market.suburb,
+          city: market.city,
+          state: market.state,
+        },
+        offerId: offerIdFromLabel(s.offerLabel, s.offers, s.pack.campaign.offerId),
+      },
       variants: s.pack.variants.map((v) =>
         v.variantId === variantId ? { ...v, headline: s.copy.headline, offer: s.offerLabel, cta: s.copy.cta } : v,
       ),
@@ -87,6 +100,9 @@ export function useCampaignActions(s: CampaignActionsState) {
             subheadline: s.copy.description,
             cta: s.copy.cta,
           },
+          googleSearch: destinationUrl ? { ...cp.googleSearch, finalUrl: destinationUrl } : cp.googleSearch,
+          googlePmax: destinationUrl ? { ...cp.googlePmax, finalUrl: destinationUrl } : cp.googlePmax,
+          googleDemandGen: destinationUrl ? { ...cp.googleDemandGen, finalUrl: destinationUrl } : cp.googleDemandGen,
         };
       }),
       creatives: s.pack.creatives.map((creative) =>
@@ -96,6 +112,7 @@ export function useCampaignActions(s: CampaignActionsState) {
   }
 
   async function generateVariantsForAngle(angle: AngleCard, goalOverride?: string) {
+    const preservedImage = s.primaryImage;
     s.setSelectedAngleId(angle.id);
     s.setBusy(true);
     s.setBusyMessage(`Generating ${angle.name} ad options`);
@@ -104,7 +121,6 @@ export function useCampaignActions(s: CampaignActionsState) {
     try {
       const m = parseMarket();
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
-        brandKit: s.brandKit,
         goal: goalOverride ?? angle.goal,
         campaignGoal: s.campaignGoal,
         suburb: m.suburb,
@@ -113,12 +129,13 @@ export function useCampaignActions(s: CampaignActionsState) {
         offerId: s.offers.some((o) => o.offerId === angle.offerId) ? angle.offerId : s.offers[0]?.offerId,
         platforms: ["meta"],
         variantCount: 3,
+        sourceImageDataUrl: preservedImage,
       });
 
       s.setPack(payload.campaignPack);
       s.setSelectedVariantIndex(0);
       s.setCopy(seedCopy(payload.campaignPack));
-      s.setPrimaryImage(MEDIA_ASSETS[0].src);
+      s.setPrimaryImage(preservedImage);
       s.setSaveState("saved");
       s.setSection("media");
       s.showToast("Generated 3 ads");
@@ -137,7 +154,6 @@ export function useCampaignActions(s: CampaignActionsState) {
     try {
       const m = parseMarket();
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
-        brandKit: s.brandKit,
         firstAd: input,
         suburb: m.suburb,
         city: m.city,
@@ -169,9 +185,10 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const currentPack = buildCurrentPack();
+      const draftPack = compactPackForDraft(currentPack, currentVariant?.variantId);
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>(
         `/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`,
-        { campaignPack: currentPack },
+        { campaignPack: draftPack },
         "PATCH",
       );
       s.setPack(payload.campaignPack);
@@ -191,13 +208,14 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const currentPack = buildCurrentPack();
-      const creativeRenders = await renderCreativeExports(currentPack);
+      const exportPack = packForVariant(currentPack, currentVariant?.variantId);
+      const creativeRenders = await renderCreativeExports(exportPack);
       const response = await fetch(
         `/api/adstudio/export-packages/${currentPack.campaign.campaignId}/download`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ campaignPack: currentPack, creativeRenders }),
+          body: JSON.stringify({ campaignPack: exportPack, creativeRenders }),
         },
       );
 
@@ -210,7 +228,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "free-appraisal-campaign-creatives.zip";
+      link.download = `${slugFileName(currentPack.campaign.name || "adstudio-campaign")}-creatives.zip`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -224,4 +242,81 @@ export function useCampaignActions(s: CampaignActionsState) {
   }
 
   return { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives };
+}
+
+function goalFromLabel(label: string, fallback: AdStudioGoal): AdStudioGoal {
+  const normalised = label.trim().toLowerCase();
+  if (normalised.includes("market")) return "market_update_leads";
+  if (normalised.includes("open")) return "open_home_followup";
+  if (normalised.includes("sale") || normalised.includes("sold")) return "listing_nurture";
+  if (normalised.includes("retarget")) return "listing_nurture";
+  return fallback;
+}
+
+function offerIdFromLabel(label: string, offers: AdStudioOfferTemplate[], fallback: string): string {
+  const normalised = label.trim().toLowerCase();
+  return offers.find((offer) => offer.name.toLowerCase() === normalised || offer.defaultCta.toLowerCase() === normalised)?.offerId ?? fallback;
+}
+
+function normaliseDestinationUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function compactPackForDraft(pack: AdStudioCampaignPack, variantId: string | undefined): AdStudioCampaignPack {
+  return {
+    ...pack,
+    creatives: pack.creatives
+      .filter((creative) => !variantId || creative.variantId === variantId)
+      .map(stripRenderState)
+      .map(stripDuplicateDraftImage()),
+  };
+}
+
+function packForVariant(pack: AdStudioCampaignPack, variantId: string | undefined): AdStudioCampaignPack {
+  if (!variantId) return pack;
+  return {
+    ...pack,
+    variants: pack.variants.filter((variant) => variant.variantId === variantId),
+    copyPacks: pack.copyPacks.filter((copyPack) => copyPack.variantId === variantId),
+    creatives: pack.creatives.filter((creative) => creative.variantId === variantId).map(stripRenderState),
+  };
+}
+
+function stripRenderState(creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] {
+  return {
+    ...creative,
+    canvas: {
+      ...creative.canvas,
+      fabricJson: null,
+    },
+    previewSvg: "",
+  };
+}
+
+function stripDuplicateDraftImage() {
+  const keptByVariant = new Set<string>();
+  return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
+    const image = creative.canvas.objects.find((object) => object.role === "primary_image");
+    const hasImage = Boolean(image?.content || image?.assetId);
+    const keepImage = hasImage && !keptByVariant.has(creative.variantId);
+
+    if (keepImage) keptByVariant.add(creative.variantId);
+    if (keepImage) return creative;
+
+    return {
+      ...creative,
+      canvas: {
+        ...creative.canvas,
+        objects: creative.canvas.objects.map((object) =>
+          object.role === "primary_image" ? { ...object, content: undefined } : object,
+        ),
+      },
+    };
+  };
+}
+
+function slugFileName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "adstudio-campaign";
 }

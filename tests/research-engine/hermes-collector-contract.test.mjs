@@ -6,6 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const supervisorPath = "hermes/tools/research-runtime/bin/supabase-supervisor.mjs";
 const supervisor = readFileSync(join(root, supervisorPath), "utf8");
+const mainWrapper = readFileSync(join(root, "infra/hermes/main-wrapper.sh"), "utf8");
 const collector = functionBody(supervisor, "handleAdCollector");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
 const captureMediaAsset = functionBody(supervisor, "captureMediaAsset");
@@ -14,10 +15,18 @@ const insertMediaBlob = functionBody(supervisor, "insertMediaBlob");
 const agentCensus = functionBody(supervisor, "handleAgentCensus");
 const verifiedSubjectUpsert = functionBody(supervisor, "upsertVerifiedAgency");
 const pageResolver = functionBody(supervisor, "handlePageResolver");
+const adPageRefresh = functionBody(supervisor, "enqueueDueAdPageRefreshJobs");
 const collectorEnqueue = functionBody(supervisor, "enqueueCollectorForPage");
 const resolverExactName = functionBody(supervisor, "resolveMetaAdLibraryVerifiedNameCandidate");
 const resolverSlugQueries = functionBody(supervisor, "metaAdLibraryKnownFacebookQueries");
 const resolverScorer = functionBody(supervisor, "scoreMetaSearchPageCandidate");
+const resolverFacebookSubject = functionBody(supervisor, "resolverSubjectForFacebookPage");
+const serviceAreaWrite = functionBody(supervisor, "ensureServiceArea");
+const locationAdSearchQueue = functionBody(supervisor, "enqueueDueLocationAdSearchJobs");
+const locationAdSearch = functionBody(supervisor, "handleLocationAdSearch");
+const locationSearchUrl = functionBody(supervisor, "metaAdLibraryLocationSearchUrl");
+const locationAdMatch = functionBody(supervisor, "locationAdMatchForInput");
+const rosterSuburbNormaliser = functionBody(supervisor, "normaliseRosterSuburb");
 const metaHtmlParser = functionBody(supervisor, "normaliseMetaAdLibraryHtml");
 const hostedMetaParser = [
   functionBody(supervisor, "normaliseHostedMetaItems"),
@@ -25,6 +34,12 @@ const hostedMetaParser = [
 ].join("\n");
 const captureInput = functionBody(supervisor, "captureInput");
 const metaAdLibraryPageUrl = functionBody(supervisor, "metaAdLibraryPageUrl");
+const areaAttribution = functionBody(supervisor, "upsertAreaMatchesForObservedAd");
+const explicitAreaAttribution = functionBody(supervisor, "upsertExplicitAreaMatchForObservedAd");
+const browserDumpDom = functionBody(supervisor, "browserDumpDom");
+const resolveRemoteBrowserWebSocket = functionBody(supervisor, "resolveRemoteBrowserWebSocket");
+const remoteBrowserVersionUrl = functionBody(supervisor, "remoteBrowserVersionUrl");
+const rewriteRemoteBrowserWebSocketHost = functionBody(supervisor, "rewriteRemoteBrowserWebSocketHost");
 
 test("Hermes active ad collector is page-targeted, not location or search-query targeted", () => {
   assert.match(
@@ -66,6 +81,24 @@ test("Hermes active ad collector supports browser/http_json capture", () => {
     collector,
     /\bbrowser\b|\bcapture[_-]?mode\b|\bprovider\b[\s\S]*http_json/i,
     "collector must preserve browser/http_json capture metadata",
+  );
+});
+
+test("Hermes cools down remote browser capture after failures", () => {
+  assert.match(
+    supervisor,
+    /\bremoteBrowserDisabledUntil\b/,
+    "remote browser failures should set a runtime cooldown instead of retrying the sidecar every capture",
+  );
+  assert.match(
+    browserDumpDom,
+    /\bremoteBrowserDisabledUntil\s*=\s*Date\.now\(\)\s*\+\s*remoteBrowserFailureCooldownMs\b/u,
+    "remote browser failures should cool down the sidecar path before local fallback",
+  );
+  assert.match(
+    browserDumpDom,
+    /\bcooldownMs\b/u,
+    "the fallback log should include cooldown state so operators can see why the sidecar is being skipped",
   );
 });
 
@@ -187,6 +220,78 @@ test("Hermes page resolver searches verified Facebook slugs for agent-run pages"
   );
 });
 
+test("Hermes page resolver can retry an already discovered Facebook URL", () => {
+  assert.match(
+    pageResolver,
+    /\bsuppliedFacebookUrl\b[\s\S]*\bpayload\.facebookUrl\b[\s\S]*\bfacebookCandidates\.add\s*\(\s*suppliedFacebookUrl\s*\)/u,
+    "manual page resolver retries should seed the unresolved Facebook URL directly into candidate resolution",
+  );
+});
+
+test("Hermes page resolver collects agency Facebook pages linked from verified agent evidence", () => {
+  assert.match(
+    resolverFacebookSubject,
+    /\bagent:\s*null\b[\s\S]*\bagencyPageFallback:\s*true\b/u,
+    "agent-linked agency Facebook pages should be re-owned to the verified agency before collection",
+  );
+  assert.match(
+    pageResolver,
+    /\bresolverSubjectForFacebookPage\s*\(\s*pageUrl,\s*subject\s*\)[\s\S]*\bpageSubject\.agent\?\.id\s*\|\|\s*null/u,
+    "page resolver must use the candidate page subject rather than blindly assigning agency pages to the agent",
+  );
+  assert.match(
+    pageResolver,
+    /verified_agent_agency_page_fallback/u,
+    "fallback agency-page resolutions should be traceable in advertiser page metadata",
+  );
+});
+
+test("Hermes location ad search is explicit, gated, and separate from page collection", () => {
+  assert.match(
+    supervisor,
+    /const LOCATION_AD_SEARCH_JOB_TYPE = ["']blockwise-location-ad-search["']/u,
+    "location ad search must be an explicit job type",
+  );
+  assert.match(
+    locationAdSearchQueue,
+    /\brefresh_policies\b[\s\S]*\bpostcode\b[\s\S]*\bsuburb\b/u,
+    "location searches should be queued from the existing postcode refresh policies",
+  );
+  assert.match(
+    locationAdSearch,
+    /\blocation_search_allowed\b[\s\S]*\brealEstateGate\?\.\bverified\b|\brealEstateGate\?\.\bverified\b[\s\S]*\blocation_search_allowed\b/u,
+    "location search collection must require an explicit verified location-search gate",
+  );
+  assert.match(
+    `${locationSearchUrl}\n${locationAdSearch}`,
+    /\bsearch_type\b[\s\S]*\bkeyword_unordered\b[\s\S]*\bq\b/u,
+    "location search must use Meta Ad Library keyword search instead of pretending to be a page collector",
+  );
+  assert.match(
+    locationAdSearch,
+    /\blocationAdMatchForInput\b[\s\S]*\bhasRealEstateAdSignalForLocation\b/u,
+    "location search results must be filtered by exact visible location and real-estate signals before ingest",
+  );
+  assert.match(
+    locationAdSearch,
+    /\bupsertExplicitAreaMatchForObservedAd\b|\bexplicitAreaMatch\b/u,
+    "location search ingestion must attach explicit public area attribution without schema changes",
+  );
+});
+
+test("Hermes postcode source parsing preserves Spearwood for postcode 6163", () => {
+  assert.match(
+    supervisor,
+    /"6163":\s*\[[\s\S]*suburb:\s*["']Spearwood["']/u,
+    "6163 should explicitly seed Spearwood before the per-postcode source cap is applied",
+  );
+  assert.match(
+    rosterSuburbNormaliser,
+    /\^\[A-Z\]\{2,3\}\\s\+\\d\{4\}\\s\+\(\?<suburb>\.\+\)\$/u,
+    "postcode data rows like 'TAS 7264 SPEARWOOD' should be normalised to the suburb name instead of discarded",
+  );
+});
+
 test("Hermes queues and resolves verified agent pages, not just agency pages", () => {
   const resolverBootstrap = `${agentCensus}\n${verifiedSubjectUpsert}`;
   assert.match(
@@ -246,6 +351,67 @@ test("Hermes prioritizes ad collection once a verified page is resolved", () => 
   );
 });
 
+test("Hermes auto-refresh keeps collecting after blocked ad collector failures", () => {
+  assert.match(
+    adPageRefresh,
+    /job_type=eq\.blockwise-ad-collector&status=in\.\(pending,claimed\)/u,
+    "only pending/claimed ad collectors should consume active refresh capacity",
+  );
+  assert.match(
+    adPageRefresh,
+    /\bblockingCollectors\b[\s\S]*\bpriority\b[\s\S]*adRefreshPriorityForPage\(\{\s*status:\s*["']resolved_collectable["']\s*\}\)/u,
+    "low-priority no-ads refresh backlog must not block high-priority resolved page scraping",
+  );
+  assert.match(
+    adPageRefresh,
+    /\bactivePageIds\b[\s\S]*activeCollectors\.map/u,
+    "all pending/claimed collectors should still dedupe by page even when only high-priority jobs consume capacity",
+  );
+  assert.doesNotMatch(
+    adPageRefresh,
+    /job_type=eq\.blockwise-ad-collector&status=in\.\(pending,claimed,failed,blocked\)/u,
+    "blocked collector rows must not permanently suppress future page refreshes",
+  );
+  assert.match(
+    adPageRefresh,
+    /\badPageRefreshScanLimit\b/u,
+    "refresh should scan beyond one small page window so stale blocked pages do not hide later candidates",
+  );
+  assert.match(
+    adPageRefresh,
+    /\bconsecutive_failed_checks\b[\s\S]*\badPageRefreshMaxConsecutiveFailures\b/u,
+    "pages with repeated capture failures should stop filling the refresh queue",
+  );
+  assert.match(
+    adPageRefresh,
+    /\badRefreshPriorityForPage\b[\s\S]*\bpriority:\s*adRefreshPriorityForPage\(page\)/u,
+    "resolved pages should keep collection priority over previously empty pages",
+  );
+  assert.match(
+    adPageRefresh,
+    /\benqueueFollowUp\s*\(/u,
+    "auto-refresh should recycle failed/blocked dedupe rows instead of throwing on conflicts",
+  );
+});
+
+test("Hermes container wrapper restarts the research supervisor if it exits", () => {
+  assert.match(
+    mainWrapper,
+    /while\s+:/u,
+    "wrapper should keep the supervisor under a restart loop",
+  );
+  assert.match(
+    mainWrapper,
+    /s6-setuidgid hermes node \/app\/research-runtime\/bin\/supabase-supervisor\.mjs/u,
+    "wrapper must still run the supervisor as the hermes user",
+  );
+  assert.match(
+    mainWrapper,
+    /supervisor exited with status/u,
+    "wrapper should log supervisor exits before restarting",
+  );
+});
+
 test("Hermes prioritizes saved-ad classification before resolver backlog", () => {
   const followUpSource = `${collector}\n${mediaCollector}`;
   assert.match(
@@ -269,6 +435,106 @@ test("Hermes active ad collector ingests the hard-reset ad tables and media asse
       `collector must reference research.${table} during ingest`,
     );
   }
+});
+
+test("Hermes active ad collector propagates all known service-area postcodes", () => {
+  assert.doesNotMatch(
+    areaAttribution,
+    /agent_service_areas\?select=postcode,suburb,state,confidence[^`]*limit=20/u,
+    "ad area attribution must not cap service areas at the old 20 postcode limit",
+  );
+  assert.match(
+    areaAttribution,
+    /agent_service_areas\?select=postcode,suburb,state,confidence[^`]*limit=1000/u,
+    "ad area attribution should read enough service-area rows for multi-postcode agencies",
+  );
+  assert.match(
+    areaAttribution,
+    /agencyRows\.map\(\(row\) => \(\{ \.\.\.row, matchType: ["']agency_service_area["'] \}\)\)/u,
+    "agency-owned pages should write agency_service_area matches",
+  );
+  assert.match(
+    areaAttribution,
+    /agentRows\.map\(\(row\) => \(\{ \.\.\.row, matchType: ["']agent_service_area["'] \}\)\)/u,
+    "agent-owned pages should write agent_service_area matches",
+  );
+});
+
+test("Hermes area attribution fails loudly if REST cannot see the area tables", () => {
+  assert.doesNotMatch(
+    serviceAreaWrite,
+    /missingSchemaRelation\s*\(\s*error,\s*["']agent_service_areas["']\s*\)\)\s*return\s+null/u,
+    "census service-area writes must not silently vanish when agent_service_areas is missing from REST",
+  );
+  assert.doesNotMatch(
+    explicitAreaAttribution,
+    /missingSchemaRelation\s*\(\s*error,\s*["']ad_area_matches["']\s*\)\)\s*return\s+0/u,
+    "explicit location matches must not silently vanish when ad_area_matches is missing from REST",
+  );
+  assert.doesNotMatch(
+    areaAttribution,
+    /missingSchemaRelation\s*\(\s*error,\s*["']agent_service_areas["']\s*\)\)\s*return\s+0/u,
+    "page service-area matches must not silently vanish when agent_service_areas is missing from REST",
+  );
+  assert.doesNotMatch(
+    areaAttribution,
+    /missingSchemaRelation\s*\(\s*error,\s*["']ad_area_matches["']\s*\)\)\s*return\s+count/u,
+    "partial area writes must not be reported as successful when ad_area_matches disappears",
+  );
+  assert.match(
+    `${serviceAreaWrite}\n${explicitAreaAttribution}\n${areaAttribution}`,
+    /area attribution cannot be written/u,
+    "area schema failures should leave an actionable failed job reason",
+  );
+  assert.match(
+    serviceAreaWrite,
+    /verified service areas cannot be written/u,
+    "census schema failures should leave an actionable failed job reason",
+  );
+});
+
+test("Hermes browser capture uses DevTools capture instead of dump-dom stalls", () => {
+  assert.match(
+    browserDumpDom,
+    /\bremote-debugging-port=0\b[\s\S]*\bcaptureDomOverCdp\b/u,
+    "Meta captures should read DOM through CDP instead of waiting for chromium --dump-dom to finish",
+  );
+});
+
+test("Hermes browser capture uses configured remote CDP before local Chromium", () => {
+  assert.match(
+    browserDumpDom,
+    /\bremoteBrowserCdpUrl\b[\s\S]*\bresolveRemoteBrowserWebSocket\b[\s\S]*\bcaptureDomOverCdp\b/u,
+    "browser-rendered captures should use the configured remote CDP endpoint before local Chromium",
+  );
+  assert.match(
+    browserDumpDom,
+    /\bspawn\s*\(\s*metaBrowserExecutable\b[\s\S]*\bcaptureDomOverCdp\b/u,
+    "local Chromium fallback should keep the shared CDP DOM capture path",
+  );
+  assert.match(
+    resolveRemoteBrowserWebSocket,
+    /\bremoteBrowserVersionUrl\b[\s\S]*\bwebSocketDebuggerUrl\b/u,
+    "HTTP CDP endpoints should resolve the browser WebSocket through /json/version",
+  );
+  assert.match(
+    remoteBrowserVersionUrl,
+    /json\/version/u,
+    "HTTP CDP endpoint resolution should query /json/version",
+  );
+  assert.match(
+    rewriteRemoteBrowserWebSocketHost,
+    /\bhostname\s*=\s*configured\.hostname\b[\s\S]*\bport\s*=\s*configured\.port\b/u,
+    "reported localhost WebSocket URLs should be rewritten to the configured remote host",
+  );
+});
+
+test("Hermes ad collector records page-level capture failures for refresh backoff", () => {
+  assert.match(
+    collector,
+    /\bmarkAdvertiserPageCheckFailed\s*\(\s*payload\.advertiserPageId\s*\)/u,
+    "failed captures should increment advertiser_pages.consecutive_failed_checks",
+  );
 });
 
 test("Hermes active ad collector queues media and classifier follow-up jobs", () => {

@@ -14,8 +14,8 @@ export default async function SwipeFilePage() {
   const ads = await loadCustomerAdsByIds(supabase, saved.map((row) => row.observedAdId));
 
   return (
-    <main className="content">
-      <div className="row-between">
+    <main className="content research-page swipe-file-page">
+      <div className="row-between swipe-file-heading">
         <div>
           <p className="eyebrow">Competitor intelligence</p>
           <h1>Saved swipe file</h1>
@@ -34,7 +34,7 @@ export default async function SwipeFilePage() {
       ) : null}
 
       <section className="panel">
-        <div className="row-between">
+        <div className="row-between swipe-file-panel-head">
           <h2>{saved.length} saved ad{saved.length === 1 ? "" : "s"}</h2>
           <Bookmark size={18} />
         </div>

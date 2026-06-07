@@ -8,9 +8,11 @@ DEPLOY_REF="${DEPLOY_REF:-codex/research-hard-reset-live}"
 BLOCKWISE_GIT_URL="${BLOCKWISE_GIT_URL:-https://github.com/stevenshelley58-afk/blockwise.git}"
 HERMES_BASE_IMAGE="${HERMES_BASE_IMAGE:-ghcr.io/nousresearch/hermes-agent:v2026.5.29.2}"
 BLOCKWISE_HERMES_IMAGE="${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:${DEPLOY_REF##*/}}"
+STEEL_IMAGE="${STEEL_IMAGE:-ghcr.io/steel-dev/steel-browser@sha256:a00aab6f14689b4a873c5a581714ce8aa233956eb73f283099cb7b0345043f30}"
 UPTIME_KUMA_IMAGE="${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1.23.16}"
 HERMES_DEFAULT_MODEL="${HERMES_DEFAULT_MODEL:-openai/gpt-5.5}"
 HERMES_ESCALATION_MODEL="${HERMES_ESCALATION_MODEL:-openai/gpt-5.5-pro}"
+HERMES_REMOTE_BROWSER_CDP_URL="${HERMES_REMOTE_BROWSER_CDP_URL:-http://blockwise-steel:9223}"
 
 old=/opt/blockwise
 stamp="$(date +%Y%m%d-%H%M%S)"
@@ -42,8 +44,6 @@ set +a
 : "${SUPABASE_SERVICE_ROLE_KEY:?missing SUPABASE_SERVICE_ROLE_KEY in /opt/blockwise/.env}"
 : "${OPENROUTER_API_KEY:?missing OPENROUTER_API_KEY in /opt/blockwise/.env}"
 : "${MEM0_API_KEY:?missing MEM0_API_KEY in /opt/blockwise/.env}"
-: "${BROWSERBASE_API_KEY:?missing BROWSERBASE_API_KEY in /opt/blockwise/.env}"
-: "${BROWSERBASE_PROJECT_ID:?missing BROWSERBASE_PROJECT_ID in /opt/blockwise/.env}"
 : "${HERMES_WEBHOOK_SECRET:?missing HERMES_WEBHOOK_SECRET in /opt/blockwise/.env}"
 HERMES_API_SERVER_KEY="${HERMES_API_SERVER_KEY:-$HERMES_WEBHOOK_SECRET}"
 
@@ -53,8 +53,7 @@ SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 OPENROUTER_API_KEY=$OPENROUTER_API_KEY
 MEM0_API_KEY=$MEM0_API_KEY
 MEM0_PROJECT_ID=${MEM0_PROJECT_ID:-blockwise-research}
-BROWSERBASE_API_KEY=$BROWSERBASE_API_KEY
-BROWSERBASE_PROJECT_ID=$BROWSERBASE_PROJECT_ID
+HERMES_REMOTE_BROWSER_CDP_URL=$HERMES_REMOTE_BROWSER_CDP_URL
 HERMES_WEBHOOK_SECRET=$HERMES_WEBHOOK_SECRET
 HERMES_API_SERVER_KEY=$HERMES_API_SERVER_KEY
 HERMES_PROVIDER=openrouter
@@ -76,6 +75,7 @@ HERMES_SUPABASE_URL=$SUPABASE_URL
 HERMES_SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 HERMES_BASE_IMAGE=$HERMES_BASE_IMAGE
 BLOCKWISE_HERMES_IMAGE=$BLOCKWISE_HERMES_IMAGE
+STEEL_IMAGE=$STEEL_IMAGE
 UPTIME_KUMA_IMAGE=$UPTIME_KUMA_IMAGE
 BLOCKWISE_RESEARCH_RUNTIME_OWNER=hermes
 BLOCKWISE_RESEARCH_RUNTIME_ENABLED=true
@@ -94,9 +94,9 @@ chmod 600 .env.next
 mv .env ".env.pre-hard-reset-runtime-$stamp"
 mv .env.next .env
 
-docker rm -f blockwise-orchestrator blockwise-meta-ad-library-collector blockwise-hermes >/dev/null 2>&1 || true
+docker rm -f blockwise-orchestrator blockwise-meta-ad-library-collector blockwise-hermes blockwise-steel >/dev/null 2>&1 || true
 docker compose --env-file .env -f infra/coolify/docker-compose.research.yml config --quiet
-docker compose --env-file .env -f infra/coolify/docker-compose.research.yml up -d --build hermes uptime-kuma
+docker compose --env-file .env -f infra/coolify/docker-compose.research.yml up -d --build steel hermes uptime-kuma
 
 echo "manual_backup=$manual_backup"
 docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'

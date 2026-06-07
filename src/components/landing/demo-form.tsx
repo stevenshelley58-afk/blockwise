@@ -54,7 +54,7 @@ export function DemoForm() {
   if (status === "success") {
     return (
       <div className="demo-form-success" role="status" aria-live="polite">
-        <strong>Thanks — we&apos;ve got it.</strong>
+        <strong>Thanks - we&apos;ve got it.</strong>
         <p>We&apos;ll be in touch within one business day to book your 15-minute walkthrough.</p>
       </div>
     );
@@ -85,7 +85,7 @@ export function DemoForm() {
         </div>
       </div>
 
-      {/* Honeypot — visually hidden, ignored by humans, catches bots. */}
+      {/* Honeypot - visually hidden, ignored by humans, catches bots. */}
       <div aria-hidden className="demo-honeypot">
         <label htmlFor="demo-company-website">Company website</label>
         <input id="demo-company-website" name="company_website" type="text" tabIndex={-1} autoComplete="off" />

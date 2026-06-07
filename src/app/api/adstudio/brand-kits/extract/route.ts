@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/lib/adstudio";
-import { persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
+import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const normalizedUrl = /^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`;
+    if (isExampleBrandKitSourceUrl(normalizedUrl)) {
+      return NextResponse.json({ error: "Use your real agency website, not a demo domain." }, { status: 400 });
+    }
     const html = body.html ?? (await fetchWebsiteHtml(normalizedUrl));
     const brandKit = extractBrandKitFromWebsite({
       workspaceId: context.access.workspaceId,

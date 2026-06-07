@@ -7,7 +7,7 @@ import {
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
-import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
@@ -25,14 +25,23 @@ type CreateCampaignBody = {
   creativeFormats?: AdStudioFormat[];
   variantCount?: number;
   firstAd?: FirstAdInput;
+  sourceImageDataUrl?: string;
 };
+
+function isAdStudioImageSrc(value: string | undefined): boolean {
+  return Boolean(
+    value?.startsWith("data:image/") ||
+      value?.startsWith("/api/adstudio/media?") ||
+      value?.startsWith("/ads/"),
+  );
+}
 
 function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (!firstAd) return null;
   if (firstAd.mode !== "template" && firstAd.mode !== "custom") return "Invalid first ad start mode.";
   if (!firstAd.description?.trim()) return "A short description is required.";
   if (firstAd.description.length > 500) return "Description must be 500 characters or less.";
-  if (!firstAd.imageDataUrl?.startsWith("data:image/")) return "An uploaded image is required.";
+  if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "An uploaded image is required.";
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story, Feed, and Square.";
   }
@@ -116,6 +125,7 @@ export async function POST(request: NextRequest) {
       creativeFormats: body.creativeFormats,
       variantCount: body.variantCount ?? 5,
       firstAd: body.firstAd,
+      sourceImageDataUrl: body.sourceImageDataUrl,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
 
@@ -124,7 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     const liveResult = buildAdStudioLiveResult({
-      data: pack,
+      data: compactAdStudioCampaignPackForTransport(pack),
       persistenceError: persisted.error?.message,
     });
 

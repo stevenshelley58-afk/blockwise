@@ -7,13 +7,26 @@ export function isTrackablePath(path: string): boolean {
   return !UNTRACKED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
-/** Validates a client-supplied path and strips query strings and fragments. */
+/** Validates a client-supplied path and strips query strings except the PWA launch source. */
 export function normalizeTrackedPath(path: unknown): string | null {
   if (typeof path !== "string") return null;
   const trimmed = path.trim();
   if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
-  const bare = trimmed.split(/[?#]/, 1)[0] ?? trimmed;
+  const withoutHash = trimmed.split("#", 1)[0] ?? trimmed;
+  let url: URL;
+  try {
+    url = new URL(withoutHash, "https://blockwise.local");
+  } catch {
+    return null;
+  }
+  const bare = url.pathname;
   if (bare.length === 0 || bare.length > 512) return null;
+
+  const source = url.searchParams.get("source");
+  if (bare === "/pwa" && (source === "pwa" || source === "offline")) {
+    return `${bare}?source=${source}`;
+  }
+
   return bare;
 }
 

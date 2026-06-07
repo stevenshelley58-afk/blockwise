@@ -1,6 +1,6 @@
 # Hermes VPS Deployment
 
-Date: 2026-06-02
+Date: 2026-06-07
 
 This is the deployment contract for the hard-reset research runtime. This agent
 did not run these commands.
@@ -12,6 +12,7 @@ The active compose stack contains:
 | Service | Container name | Port binding |
 | --- | --- | --- |
 | `hermes` | `blockwise-hermes` | `127.0.0.1:8642:8642`, `127.0.0.1:9119:9119` |
+| `steel` | `blockwise-steel` | none; exposes `3000` and `9223` on the internal `research` network only |
 | `uptime-kuma` | `blockwise-uptime-kuma` | `127.0.0.1:3001:3001` |
 
 The stack does not include `research-orchestrator` or
@@ -24,11 +25,14 @@ Set these before deploying:
 ```bash
 HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:v2026.5.29.2
 BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-06-02
+STEEL_IMAGE=ghcr.io/steel-dev/steel-browser@sha256:a00aab6f14689b4a873c5a581714ce8aa233956eb73f283099cb7b0345043f30
 UPTIME_KUMA_IMAGE=louislam/uptime-kuma:1.23.16
 ```
 
 `HERMES_BASE_IMAGE` must be a concrete version tag or digest. Do not use
-`:latest`. `v2026.5.29.2` is Hermes Agent v0.15.2.
+`:latest`. `v2026.5.29.2` is Hermes Agent v0.15.2. `STEEL_IMAGE` must be a
+concrete digest or pinned tag. Steel needs about 4 GB of host RAM headroom;
+confirm VPS capacity before raising the compose memory limit.
 
 ## Required Environment
 
@@ -53,8 +57,7 @@ HERMES_RESEARCH_SCREENSHOTS_BUCKET=research-screenshots
 HERMES_META_CAPTURE_RESULTS_LIMIT=250
 MEM0_API_KEY=<key>
 MEM0_PROJECT_ID=blockwise-research
-BROWSERBASE_API_KEY=<key>
-BROWSERBASE_PROJECT_ID=<project-id>
+HERMES_REMOTE_BROWSER_CDP_URL=http://blockwise-steel:9223
 HERMES_WEBHOOK_SECRET=<secret>
 BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false
 ```
@@ -71,7 +74,7 @@ Operator-only sequence:
 ```bash
 cd /opt/blockwise
 docker compose -f infra/coolify/docker-compose.research.yml config --quiet
-docker compose -f infra/coolify/docker-compose.research.yml up -d --build hermes uptime-kuma
+docker compose -f infra/coolify/docker-compose.research.yml up -d --build steel hermes uptime-kuma
 ```
 
 The end-to-end helper script is:
@@ -106,7 +109,9 @@ curl -fsS http://127.0.0.1:3001
 Expected:
 
 1. `blockwise-hermes` is running.
-2. `blockwise-uptime-kuma` is running.
-3. No active container named `research-orchestrator`.
-4. No active container named `meta-ad-library-collector`.
-5. No active container bind-mounts `workers/**`.
+2. `blockwise-steel` is running with no public port binding for `3000` or
+   `9223`.
+3. `blockwise-uptime-kuma` is running.
+4. No active container named `research-orchestrator`.
+5. No active container named `meta-ad-library-collector`.
+6. No active container bind-mounts `workers/**`.

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
-import { COPY_LIMITS } from "./use-copy";
+import { COPY_LIMITS, toMetaCta } from "./use-copy";
 import type { CopyState } from "./use-copy";
 
 export type ReadinessItem = {
@@ -54,7 +54,11 @@ export function useReadiness({
       {
         label: "Call to action",
         detail: copy.cta ? copy.cta : "Add CTA",
-        state: (["SIGN_UP", "DOWNLOAD", "CONTACT_US", "LEARN_MORE"] as string[]).includes(copy.cta) ? "done" : copy.cta ? "warn" : "todo",
+        state: copy.cta
+          ? (["SIGN_UP", "DOWNLOAD", "CONTACT_US", "LEARN_MORE"] as string[]).includes(toMetaCta(copy.cta))
+            ? "done"
+            : "warn"
+          : "todo",
       },
       {
         label: "Compliance",

@@ -30,7 +30,7 @@ export default async function OperatorConsolePage() {
       <section className="split">
         <div className="panel">
           <h2>Workspace Oversight</h2>
-          <table className="table">
+          <table className="table responsive-card-table">
             <thead>
               <tr>
                 <th>Workspace</th>
@@ -44,14 +44,14 @@ export default async function OperatorConsolePage() {
             <tbody>
               {overview.workspaceRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.name}</td>
-                  <td>{row.mode}</td>
-                  <td>{row.plan}</td>
-                  <td>{row.managedService}</td>
-                  <td>
+                  <td data-label="Workspace">{row.name}</td>
+                  <td data-label="Mode">{row.mode}</td>
+                  <td data-label="Plan">{row.plan}</td>
+                  <td data-label="Service">{row.managedService}</td>
+                  <td data-label="Provider Health">
                     <StatusPill tone={row.providerTone as StatusTone}>{row.providerHealth}</StatusPill>
                   </td>
-                  <td>{row.lastSync}</td>
+                  <td data-label="Last Sync">{row.lastSync}</td>
                 </tr>
               ))}
             </tbody>
@@ -83,7 +83,7 @@ export default async function OperatorConsolePage() {
 
       <section className="panel">
         <h2>Approval Queue</h2>
-        <table className="table">
+        <table className="table responsive-card-table">
           <thead>
             <tr>
               <th>Request</th>
@@ -95,10 +95,10 @@ export default async function OperatorConsolePage() {
           <tbody>
             {overview.approvalRows.map((item) => (
               <tr key={item.id}>
-                <td>{item.title}</td>
-                <td>{item.workspace}</td>
-                <td>{item.risk}</td>
-                <td>
+                <td data-label="Request">{item.title}</td>
+                <td data-label="Workspace">{item.workspace}</td>
+                <td data-label="Risk">{item.risk}</td>
+                <td data-label="Status">
                   <StatusPill tone={item.status === "approved" ? "green" : item.status === "rejected" ? "rose" : "amber"}>{item.status}</StatusPill>
                 </td>
               </tr>

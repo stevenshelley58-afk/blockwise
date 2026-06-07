@@ -6,14 +6,16 @@ Source files are listed at the end of this document.
 
 ## 1. Overview
 
-The research engine runs as a single Docker container (`blockwise-hermes`) on a
-Hostinger VPS, deployed via Coolify with a pinned image. The container holds
-two cooperating runtimes:
+The research engine runs as a Hermes worker container (`blockwise-hermes`) plus
+an internal Steel browser sidecar (`blockwise-steel`) on a Hostinger VPS,
+deployed via Coolify with pinned images. The Hermes container holds two
+cooperating runtimes:
 
 | Runtime | What it is | What it does today |
 | --- | --- | --- |
-| Hermes agent | Nous Research `hermes-agent` base image, wrapped by `main-wrapper.sh` | Gateway API (:8642), dashboard (:9119), loads the 7 SKILL.md files, owns cron scheduling, OpenRouter/Browserbase/mem0 integration |
+| Hermes agent | Nous Research `hermes-agent` base image, wrapped by `main-wrapper.sh` | Gateway API (:8642), dashboard (:9119), loads the 7 SKILL.md files, owns cron scheduling, OpenRouter/mem0 integration, local browser mode |
 | Research supervisor | `hermes/tools/research-runtime/bin/supabase-supervisor.mjs` (Node, ~3,000 lines), started as a background process by the wrapper | The deterministic queue worker that performs census, page resolution, ad collection, media capture, and classification |
+| Steel browser sidecar | `ghcr.io/steel-dev/steel-browser`, configured by `STEEL_IMAGE` | Internal-only browser API (:3000) and CDP (:9223) on the `research` Docker network; no host port binding |
 
 Supabase is the system of record (schema `research`); the Next.js app's
 `/operator` console is the control surface. `blockwise-uptime-kuma` provides
@@ -156,12 +158,12 @@ Each stage queues the next; every gate is enforced in code.
 
 | Skill | Role | Notable tools |
 | --- | --- | --- |
-| blockwise-agent-census | Roster owner; only path to `is_real_estate = true`; sources: WA licence registers, REIWA suburb pages, agency sites, Domain/REA corroboration | HTTPS fetch, browserbase.session, mem0.search, ingest API |
-| blockwise-page-resolver | Verified subject → real Meta advertiser page; brand/site/social search only | HTTPS fetch, meta-library-capture (verification only), browserbase, mem0 |
+| blockwise-agent-census | Roster owner; only path to `is_real_estate = true`; sources: WA licence registers, REIWA suburb pages, agency sites, Domain/REA corroboration | HTTPS fetch, self-hosted browser session, mem0.search, ingest API |
+| blockwise-page-resolver | Verified subject → real Meta advertiser page; brand/site/social search only | HTTPS fetch, meta-library-capture (verification only), self-hosted browser, mem0 |
 | blockwise-ad-collector | Page-gated Ad Library capture; refuses location inputs outright | meta-library-capture, ingest API |
 | blockwise-ad-classifier | Strict-JSON classification contract; repair_once_then_fail; below-threshold → review + defect | research-runtime OpenRouter, ingest API |
-| blockwise-coverage-auditor | Samples coverage; browsing files defects, never creates data | browserbase, read-only queries, ingest API |
-| blockwise-defect-investigator | Operator-triggered replay; routes repair to the owning skill; supersedes bad decisions | browserbase, read-only queries, ingest API |
+| blockwise-coverage-auditor | Samples coverage; browsing files defects, never creates data | self-hosted browser, read-only queries, ingest API |
+| blockwise-defect-investigator | Operator-triggered replay; routes repair to the owning skill; supersedes bad decisions | self-hosted browser, read-only queries, ingest API |
 | blockwise-operator-chat | Stub — NL over `research.v_*` views only; no writes, no paid actions without confirmation | supabase.query, pgvector (future), write_decision |
 
 Shared rules (hermes/README.md): census-first; no location-based Ad Library
@@ -232,8 +234,8 @@ real-estate display gate lives there.
 
 Storage buckets: `research-ad-creatives` (media collector writes; checksum +
 content-hash dedup; auto-created), `research-screenshots` and
-`research-raw-evidence` (env-wired for agent-layer/Browserbase capture and
-future adapters; not written by the deterministic loop today).
+`research-raw-evidence` (env-wired for agent-layer browser capture and future
+adapters; not written by the deterministic loop today).
 
 ## 9. Operator controls (`/operator` + API routes)
 

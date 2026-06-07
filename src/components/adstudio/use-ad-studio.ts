@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 export type StudioSection =
   | "campaign"
@@ -20,7 +20,10 @@ export function useAdStudio() {
   const [busy, setBusy] = useState(false);
   const [busyMessage, setBusyMessage] = useState("Generating ad");
   const [toast, setToast] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [saveState, setSaveStateInternal] = useState<SaveState>("saved");
+  // null until a save actually happens client-side — rendering a wall-clock time
+  // during SSR caused a hydration text mismatch on every page load.
+  const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("campaign");
 
@@ -32,17 +35,22 @@ export function useAdStudio() {
     toastTimer.current = setTimeout(() => setToast(null), 2400);
   }
 
-  // L5: include save timestamp for better user feedback
-  function formatSaveTime() {
-    return `at ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`;
-  }
+  // L5: include save timestamp for better user feedback (set on save, not on render)
+  const setSaveState = useCallback((state: SaveState) => {
+    setSaveStateInternal(state);
+    if (state === "saved") {
+      setSavedAtLabel(`at ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`);
+    }
+  }, []);
 
   const statusText =
     saveState === "saving"
       ? "Saving..."
       : saveState === "error"
         ? `Could not save: ${saveError}`
-        : `Saved ${formatSaveTime()}`;
+        : savedAtLabel
+          ? `Saved ${savedAtLabel}`
+          : "Saved";
 
   return {
     section,

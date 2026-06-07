@@ -54,36 +54,45 @@ export function FabricAdEditor({
   const canvasElementRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const creativeRef = useRef(creative);
+  const copyRef = useRef(copy);
+  const imageSrcRef = useRef(imageSrc);
   const historyRef = useRef<ReturnType<typeof useCreativeHistory> | null>(null);
+  const callbacksRef = useRef({ onCopyChange, onCreativeChange, onImageChange, onSelectedElementChange });
   const suppressCommitRef = useRef(false);
   const mountedKeyRef = useRef("");
   const creativeKey = `${creative.creativeId}:${creative.format}`;
+  // Captured once per creative/format. Live copy + image edits are applied to the
+  // mounted canvas via the sync effects below, never by rebuilding the canvas.
   const initialDesign = useMemo(
     () => getCreativeDesignJson(creative) ?? buildCreativeDesignJson({ creative, brandKit, copy, imageSrc }),
     [brandKit, creativeKey],
   );
   const history = useCreativeHistory(initialDesign);
 
+  // Keep the latest props in refs so canvas event handlers and the mount effect
+  // stay identity-stable. Without this, parent re-renders (new handler identities)
+  // disposed and rebuilt the canvas on every keystroke, reverting all edits.
   useEffect(() => {
     creativeRef.current = creative;
+    copyRef.current = copy;
+    imageSrcRef.current = imageSrc;
     historyRef.current = history;
+    callbacksRef.current = { onCopyChange, onCreativeChange, onImageChange, onSelectedElementChange };
   });
 
-  const commitCanvas = useCallback(
-    (options: { pushHistory?: boolean } = {}) => {
-      const canvas = fabricRef.current;
-      if (!canvas || suppressCommitRef.current) return;
+  const commitCanvas = useCallback((options: { pushHistory?: boolean } = {}) => {
+    const canvas = fabricRef.current;
+    if (!canvas || suppressCommitRef.current) return;
 
-      const activeCreative = creativeRef.current;
-      const designJson = readCanvasJson(canvas, activeCreative);
-      if (options.pushHistory !== false) historyRef.current?.push(designJson);
-      const nextCreative = saveCreativeDesignJson(activeCreative, designJson);
-      onCreativeChange(nextCreative);
-      syncCopyFromCanvasJson(designJson, onCopyChange);
-      syncImageFromCanvasJson(designJson, onImageChange);
-    },
-    [onCopyChange, onCreativeChange, onImageChange],
-  );
+    const activeCreative = creativeRef.current;
+    const designJson = readCanvasJson(canvas, activeCreative);
+    if (options.pushHistory !== false) historyRef.current?.push(designJson);
+    const nextCreative = saveCreativeDesignJson(activeCreative, designJson);
+    const callbacks = callbacksRef.current;
+    callbacks.onCreativeChange(nextCreative);
+    syncCopyFromCanvasJson(designJson, (key, value) => callbacks.onCopyChange(key, value));
+    syncImageFromCanvasJson(designJson, (src) => callbacks.onImageChange(src));
+  }, []);
 
   useEffect(() => {
     const canvasElement = canvasElementRef.current;
@@ -91,35 +100,44 @@ export function FabricAdEditor({
 
     const key = creativeKey;
     mountedKeyRef.current = key;
+    const mountCreative = creativeRef.current;
     const canvas = new Canvas(canvasElement, {
-      width: creative.canvas.width,
-      height: creative.canvas.height,
-      backgroundColor: backgroundFill(creative),
+      width: mountCreative.canvas.width,
+      height: mountCreative.canvas.height,
+      backgroundColor: backgroundFill(mountCreative),
       preserveObjectStacking: true,
       selection: false,
       enableRetinaScaling: true,
     });
     fabricRef.current = canvas;
     suppressCommitRef.current = true;
-    applyDisplaySize(canvas, creative);
+    applyDisplaySize(canvas, mountCreative);
 
     let disposed = false;
     const resize = () => applyDisplaySize(canvas, creativeRef.current);
     window.addEventListener("resize", resize);
+    const selectElement = (element: SelectedElement) => callbacksRef.current.onSelectedElementChange(element);
     const disposers = [
-      canvas.on("selection:created", () => syncSelection(canvas, onSelectedElementChange)),
-      canvas.on("selection:updated", () => syncSelection(canvas, onSelectedElementChange)),
-      canvas.on("selection:cleared", () => onSelectedElementChange("headline")),
+      canvas.on("selection:created", () => syncSelection(canvas, selectElement)),
+      canvas.on("selection:updated", () => syncSelection(canvas, selectElement)),
+      canvas.on("selection:cleared", () => selectElement("headline")),
       canvas.on("object:modified", () => commitCanvas()),
       canvas.on("text:changed", () => commitCanvas()),
     ];
 
-    void loadDesign(canvas, initialDesign, brandKit).then(() => {
+    void loadDesign(canvas, initialDesign, brandKit).then(async () => {
       if (disposed || mountedKeyRef.current !== key) return;
-      addSafeAreaOverlay(canvas, creative);
+      addSafeAreaOverlay(canvas, creativeRef.current);
+      // Apply state that changed while the design was loading (e.g. an upload or
+      // copy edit in flight), so nothing is swallowed by the suppress window.
+      updateTextRole(canvas, "headline", copyRef.current.headline);
+      updateTextRole(canvas, "subheadline", copyRef.current.description);
+      updateTextRole(canvas, "cta_text", copyRef.current.cta);
+      await replaceImageLayerIfNeeded(canvas, imageSrcRef.current, { select: false });
+      if (disposed || mountedKeyRef.current !== key) return;
       canvas.requestRenderAll();
-      const designJson = readCanvasJson(canvas, creative);
-      history.reset(designJson);
+      const designJson = readCanvasJson(canvas, creativeRef.current);
+      historyRef.current?.reset(designJson);
       suppressCommitRef.current = false;
     });
 
@@ -130,16 +148,7 @@ export function FabricAdEditor({
       fabricRef.current = null;
       void canvas.dispose();
     };
-  }, [
-    brandKit,
-    commitCanvas,
-    creative.canvas.height,
-    creative.canvas.width,
-    creative.format,
-    creativeKey,
-    initialDesign,
-    onSelectedElementChange,
-  ]);
+  }, [brandKit, commitCanvas, creativeKey, initialDesign]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -149,12 +158,13 @@ export function FabricAdEditor({
     updateTextRole(canvas, "cta_text", copy.cta);
     canvas.requestRenderAll();
     commitCanvas({ pushHistory: false });
-  }, [copy.cta, copy.description, copy.headline]);
+  }, [commitCanvas, copy.cta, copy.description, copy.headline]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas || suppressCommitRef.current) return;
-    void replaceImageLayer(canvas, imageSrc).then(() => {
+    void replaceImageLayerIfNeeded(canvas, imageSrc).then((changed) => {
+      if (!changed || fabricRef.current !== canvas) return;
       canvas.requestRenderAll();
       commitCanvas({ pushHistory: false });
     });
@@ -165,12 +175,13 @@ export function FabricAdEditor({
     if (!canvas || !json) return;
     suppressCommitRef.current = true;
     void loadDesign(canvas, json, brandKit).then(() => {
-      addSafeAreaOverlay(canvas, creative);
+      if (fabricRef.current !== canvas) return;
+      addSafeAreaOverlay(canvas, creativeRef.current);
       canvas.requestRenderAll();
       suppressCommitRef.current = false;
       commitCanvas({ pushHistory: false });
     });
-  }, [brandKit, commitCanvas, creative]);
+  }, [brandKit, commitCanvas]);
 
   return (
     <div className="studio-fabric-editor">
@@ -363,7 +374,30 @@ function addSafeAreaOverlay(canvas: Canvas, creative: AdStudioCreative) {
   canvas.add(top, bottom);
 }
 
-async function replaceImageLayer(canvas: Canvas, src: string) {
+function normalizeSrc(value: string): string {
+  if (!value) return value;
+  try {
+    return new URL(value, window.location.href).href;
+  } catch {
+    return value;
+  }
+}
+
+/** Replaces the primary image only when the canvas shows a different source. */
+async function replaceImageLayerIfNeeded(
+  canvas: Canvas,
+  src: string,
+  options: { select?: boolean } = {},
+): Promise<boolean> {
+  if (!src) return false;
+  const current = canvas.getObjects().find((object) => getMeta(object)?.role === "primary_image");
+  if (!current) return false;
+  if (current instanceof FabricImage && normalizeSrc(current.getSrc()) === normalizeSrc(src)) return false;
+  await replaceImageLayer(canvas, src, options);
+  return true;
+}
+
+async function replaceImageLayer(canvas: Canvas, src: string, options: { select?: boolean } = {}) {
   const current = canvas.getObjects().find((object) => getMeta(object)?.role === "primary_image");
   const meta = current ? getMeta(current) : null;
   if (!current || !meta) return;
@@ -388,7 +422,7 @@ async function replaceImageLayer(canvas: Canvas, src: string) {
     fitImageToFrame(image, frame.width, frame.height);
     attachMeta(image, meta);
     canvas.add(image);
-    canvas.setActiveObject(image);
+    if (options.select !== false) canvas.setActiveObject(image);
   } catch {
     addImagePlaceholder(canvas, frame, meta);
   }

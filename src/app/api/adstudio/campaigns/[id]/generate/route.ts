@@ -7,7 +7,7 @@ import {
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
-import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 
@@ -26,7 +26,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return access.response;
   }
 
-  const body = await readJsonBody<{ brandKit?: AdStudioBrandKit; variantCount?: number; suburb?: string }>(request);
+  const body = await readJsonBody<{
+    brandKit?: AdStudioBrandKit;
+    variantCount?: number;
+    suburb?: string;
+    sourceImageDataUrl?: string;
+  }>(request);
   let trialReservation: AdStudioGenerationTrialReservation | null = null;
 
   try {
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // Google Ads parked for Meta-only v1 (see src/lib/config/feature-flags.ts). Was: ["meta", "google_search", "google_pmax", "google_demand_gen"]
       platforms: ["meta"],
       variantCount: body.variantCount ?? 5,
+      sourceImageDataUrl: body.sourceImageDataUrl,
     });
     const persisted = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);
 
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const liveResult = buildAdStudioLiveResult({
-      data: pack,
+      data: compactAdStudioCampaignPackForTransport(pack),
       persistenceError: persisted.error?.message,
     });
 

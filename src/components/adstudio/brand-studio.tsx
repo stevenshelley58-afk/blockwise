@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  LOGO_MAX_BYTES,
+  LOGO_UPLOAD_TYPES,
+  readFileAsDataUrl,
+  sanitizeUploadFileName,
+  validateAssetUploadFile,
+} from "@/lib/upload/asset-file";
 
 /* ------------------------------------------------------------------ */
 /* colour helpers                                                      */
@@ -238,6 +247,8 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   const [scanUrl, setScanUrl] = useState(() => initialKit.source.url.replace(/^https?:\/\//, ""));
   const [busy, setBusy] = useState<"" | "scan" | "save" | "approve">("");
   const [notice, setNotice] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(initialKit.logos.primaryLogoUrl ?? "");
   const headlineSample = "What's your home worth in today's market?";
 
   useEffect(() => {
@@ -285,6 +296,39 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
     });
   }
 
+  async function chooseLogo(file: File) {
+    const previewUrl = await readFileAsDataUrl(file);
+    setLogoFile(file);
+    setLogoPreviewUrl(previewUrl);
+    flash("ok", "Logo ready to save.");
+  }
+
+  async function uploadLogoAsset(file: File) {
+    const supabase = createSupabaseBrowserClient();
+    const safeName = sanitizeUploadFileName(file.name);
+    const storagePath = `${kit.workspaceId}/brand/${kit.brandKitId}/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from("workspace-artifacts").upload(storagePath, file);
+
+    if (uploadError) throw new Error("We couldn't upload that logo. Try another file.");
+
+    const response = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}/assets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assetType: "logo",
+        storagePath,
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+      }),
+    });
+
+    if (!response.ok) {
+      const json = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error || "We uploaded the logo but couldn't attach it to your brand.");
+    }
+  }
+
   async function scanSite() {
     if (busy) return;
     const websiteUrl = scanUrl.trim();
@@ -313,6 +357,22 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
 
   async function saveKit(nextStatus?: "approved") {
     if (busy) return;
+    const logoError = logoFile
+      ? validateAssetUploadFile(logoFile, {
+          acceptedTypes: LOGO_UPLOAD_TYPES,
+          maxBytes: LOGO_MAX_BYTES,
+          typeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
+          sizeError: "Upload a PNG, JPG, WebP, or SVG logo under 5 MB.",
+        })
+      : null;
+    if (logoError) {
+      setLogoFile(null);
+      setLogoPreviewUrl(kit.logos.primaryLogoUrl ?? "");
+      flash("err", logoError);
+      return;
+    }
+
+    const logoToUpload = logoFile;
     setBusy(nextStatus ? "approve" : "save");
     try {
       const res = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}`, {
@@ -335,11 +395,15 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(json.error || `Save failed (${res.status})`);
       }
+      if (logoToUpload) {
+        await uploadLogoAsset(logoToUpload);
+        setLogoFile(null);
+      }
       if (nextStatus) {
         setKit((current) => ({ ...current, reviewStatus: "approved" }));
-        flash("ok", "Brand kit approved — it now guards every ad.");
+        flash("ok", logoToUpload ? "Brand kit approved - logo saved." : "Brand kit approved - it now guards every ad.");
       } else {
-        flash("ok", "Saved.");
+        flash("ok", logoToUpload ? "Saved with logo." : "Saved.");
       }
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not save the kit.");
@@ -352,6 +416,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
   const initial = brandName.charAt(0).toUpperCase();
   const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
+  const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
 
   return (
     <main className="bs-screen" aria-label="Brand Studio">
@@ -401,7 +466,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         <div className="bs-logo-proof">
           <div className="lp">
             <div className="face" style={{ background: "#fff", color: kit.colours.primary }}>
-              {initial}★ {brandName.split(" ")[0]?.toLowerCase()}
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}★ ${brandName.split(" ")[0]?.toLowerCase()}`}
             </div>
             <small>
               <b>Primary</b>
@@ -428,6 +493,37 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
 
         <div className="bs-body">
           <div className="bs-main">
+            <section className="bs-card">
+              <h3>Logo</h3>
+              <AssetUploadDropzone
+                className="bs-logo-upload"
+                label="Upload logo"
+                actionText="Upload logo"
+                helperText="PNG, JPG, WebP, or SVG / up to 5 MB"
+                previewUrl={logoPreviewUrl}
+                previewAlt=""
+                fileName={logoDisplayName}
+                fileSize={logoFile?.size}
+                fileType={logoFile?.type}
+                acceptedTypes={LOGO_UPLOAD_TYPES}
+                maxBytes={LOGO_MAX_BYTES}
+                typeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
+                sizeError="Upload a PNG, JPG, WebP, or SVG logo under 5 MB."
+                capturePagePaste
+                disabled={busy !== ""}
+                onFileAccepted={chooseLogo}
+                onFileRejected={(message) => flash("err", message)}
+                onClear={
+                  logoFile
+                    ? () => {
+                        setLogoFile(null);
+                        setLogoPreviewUrl(kit.logos.primaryLogoUrl ?? "");
+                      }
+                    : undefined
+                }
+              />
+            </section>
+
             <section className="bs-card">
               <h3>Colours</h3>
               <div className="bs-swrow">
@@ -656,6 +752,8 @@ const BRAND_STYLES = `
 .bs-screen *{box-sizing:border-box}
 .bs-screen button,.bs-screen input,.bs-screen textarea{font:inherit}
 .bs-screen button{cursor:pointer;border:0;background:none;color:inherit}
+.bs-screen .asset-upload-trigger{border:1.5px dashed var(--line);background:#fff;color:var(--ink)}
+.bs-screen .asset-upload-clear{border:1px solid var(--line);background:#fff;color:var(--muted)}
 .bs-screen .btn{height:38px;padding:0 16px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
 .bs-screen .btn.pri{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(31,58,110,.28)}
 .bs-screen .btn.pri:hover{background:var(--accent-strong)}
@@ -687,6 +785,7 @@ const BRAND_STYLES = `
 .bs-logo-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:740px;margin:-50px 28px 0;position:relative;z-index:2}
 .bs-logo-proof .lp{border-radius:14px;box-shadow:0 12px 34px rgba(15,23,41,.16);overflow:hidden;background:#fff}
 .bs-logo-proof .face{height:90px;display:grid;place-items:center;font-weight:800;font-size:21px;letter-spacing:-.3px}
+.bs-logo-proof .face img{display:block;max-width:78%;max-height:58px;object-fit:contain}
 .bs-logo-proof .face.photo{background:linear-gradient(160deg,#3a608f,#0d3263);color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
 .bs-logo-proof small{display:flex;justify-content:space-between;padding:8px 12px;font-size:11px;color:var(--muted);background:#fff}
 .bs-logo-proof small b{font-weight:650;color:var(--ink)}

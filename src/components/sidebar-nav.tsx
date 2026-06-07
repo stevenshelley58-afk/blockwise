@@ -20,7 +20,7 @@ import { usePathname } from "next/navigation";
 
 export type SidebarVariant = "operator" | "self_serve" | "monitor";
 
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
@@ -57,13 +57,13 @@ const monitorNavItems: NavItem[] = [
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
-const navByVariant: Record<SidebarVariant, NavItem[]> = {
+export const navByVariant: Record<SidebarVariant, NavItem[]> = {
   operator: operatorNavItems,
   self_serve: selfServeNavItems,
   monitor: monitorNavItems,
 };
 
-function isItemActive(pathname: string, href: string) {
+export function isItemActive(pathname: string, href: string) {
   if (pathname === href) {
     return true;
   }

@@ -155,6 +155,45 @@ test("generateAdStudioCampaignPack creates five compliant seller checklist varia
   assert.equal(pack.compliance.status, "approved");
 });
 
+test("first-ad generation uses the uploaded image as the full creative visual", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const uploadedImage = "data:image/png;base64,iVBORw0KGgo=";
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 3,
+    firstAd: {
+      mode: "custom",
+      description: "Open home this weekend with a renovated kitchen.",
+      imageDataUrl: uploadedImage,
+      formats: ["9:16", "4:5", "1:1"],
+    },
+  });
+  const story = pack.creatives.find((creative) => creative.format === "9:16");
+  assert.ok(story);
+
+  const image = story.canvas.objects.find((object) => object.role === "primary_image");
+  assert.deepEqual(
+    { content: image?.content, x: image?.x, y: image?.y, width: image?.width, height: image?.height },
+    { content: uploadedImage, x: 0, y: 0, width: story.canvas.width, height: story.canvas.height },
+  );
+  assert.ok(story.canvas.objects.findIndex((object) => object.role === "primary_image") < story.canvas.objects.findIndex((object) => object.role === "headline"));
+  assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
+});
+
 test("scoreAdStudioVariant weights offer clarity, relevance, intent, brand fit, compliance, and hierarchy", () => {
   const score = scoreAdStudioVariant({
     offerClarity: 18,

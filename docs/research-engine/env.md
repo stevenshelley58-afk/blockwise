@@ -1,6 +1,6 @@
 # Research Engine Environment Variables
 
-Date: 2026-06-02
+Date: 2026-06-07
 
 These variables describe the hard-reset runtime in
 `infra/coolify/docker-compose.research.yml`. Do not print real secret values in
@@ -11,11 +11,14 @@ logs or docs.
 ```bash
 HERMES_BASE_IMAGE=ghcr.io/nousresearch/hermes-agent:v2026.5.29.2
 BLOCKWISE_HERMES_IMAGE=blockwise/hermes-research:2026-06-02
+STEEL_IMAGE=ghcr.io/steel-dev/steel-browser@sha256:a00aab6f14689b4a873c5a581714ce8aa233956eb73f283099cb7b0345043f30
 UPTIME_KUMA_IMAGE=louislam/uptime-kuma:1.23.16
 ```
 
 `HERMES_BASE_IMAGE` must not be `:latest`. `v2026.5.29.2` is Hermes Agent
-v0.15.2.
+v0.15.2. `STEEL_IMAGE` must be a concrete digest or pinned tag. Steel runs on
+the internal `research` Docker network only; confirm the VPS has about 4 GB of
+free host RAM before raising the service memory limit.
 
 ## Hermes Runtime
 
@@ -37,9 +40,11 @@ HERMES_DAILY_SPEND_LIMIT_USD=25
 OPENROUTER_API_KEY=<key>
 MEM0_API_KEY=<key>
 MEM0_PROJECT_ID=blockwise-research
-BROWSERBASE_API_KEY=<key>
-BROWSERBASE_PROJECT_ID=<project-id>
+HERMES_REMOTE_BROWSER_CDP_URL=http://blockwise-steel:9223
 ```
+
+`HERMES_REMOTE_BROWSER_CDP_URL` is optional. When unset, the supervisor uses
+the Chromium binary installed in the Hermes image.
 
 ## Research Runtime Placeholders
 

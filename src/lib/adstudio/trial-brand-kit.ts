@@ -2,7 +2,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { deterministicUuid } from "./id.ts";
 import { approveAdStudioBrandKitForUse } from "./live-workflow.ts";
-import { persistAdStudioBrandKit, rowToBrandKit } from "./persistence.ts";
+import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "./persistence.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -25,26 +25,15 @@ export async function resolveAdStudioGenerationBrandKit(input: ResolveGeneration
   error: string;
   status: 400 | 409;
 }> {
+  const approvedBrandKit = await loadApprovedBrandKit(input.supabase, input.workspaceId);
+
   if (!input.isTrialWorkspace) {
-    if (!input.submittedBrandKit) {
+    if (!approvedBrandKit) {
       return { ok: false, error: "Approved brandKit is required.", status: 400 };
     }
 
-    if (input.submittedBrandKit.reviewStatus !== "approved") {
-      return { ok: false, error: "Brand kit must be approved before campaign generation.", status: 409 };
-    }
-
-    return {
-      ok: true,
-      brandKit: {
-        ...input.submittedBrandKit,
-        workspaceId: input.workspaceId,
-        reviewStatus: "approved",
-      },
-    };
+    return { ok: true, brandKit: approvedBrandKit };
   }
-
-  const approvedBrandKit = await loadApprovedBrandKit(input.supabase, input.workspaceId);
 
   if (approvedBrandKit) {
     return { ok: true, brandKit: approvedBrandKit };
@@ -155,14 +144,18 @@ async function loadApprovedBrandKit(
     .eq("workspace_id", workspaceId)
     .eq("review_status", "approved")
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data ? rowToBrandKit(data) : null;
+  const rows = data ?? [];
+  const nonDemoRows = rows.filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
+  const realSourceRow = nonDemoRows.find((row) => String(row.source_url ?? "").trim());
+  const selectedRow = realSourceRow ?? nonDemoRows[0];
+
+  return selectedRow ? rowToBrandKit(selectedRow) : null;
 }
 
 function cleanWorkspaceName(value: string | undefined): string {

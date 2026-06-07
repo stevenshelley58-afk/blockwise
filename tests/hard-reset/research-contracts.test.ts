@@ -72,6 +72,21 @@ test("customer research view exposes only the safe public card contract", () => 
   );
 });
 
+test("customer research view shows saved scraped ad history for verified pages", () => {
+  const customerCardView = latestViewDefinition("v_customer_meta_ad_library_cards");
+
+  assert.match(
+    customerCardView,
+    /ap\.status\s+in\s*\(\s*'resolved_collectable'\s*,\s*'no_ads_confirmed'\s*\)/i,
+    "saved ads on verified pages must remain visible after a later no-ads refresh",
+  );
+  assert.doesNotMatch(
+    customerCardView,
+    /where\s+oa\.active_status\s*=\s*'active'/i,
+    "public radar should use the active_status field instead of hiding inactive scraped ads",
+  );
+});
+
 test("customer research UI does not render internal ad-library identifiers or raw contract fields", () => {
   const page = `${read(paths.researchPage)}\n${read(paths.metaCard)}`;
   const renderedInternals = [

@@ -153,7 +153,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
           <h2>Trace</h2>
           <RotateCcw aria-hidden size={18} />
         </div>
-        <table className="table">
+        <table className="table responsive-card-table">
           <thead>
             <tr>
               <th>Skill</th>
@@ -164,9 +164,9 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
           <tbody>
             {promptRuns.slice(0, 12).map((runItem) => (
               <tr key={String(runItem.id)}>
-                <td>{String(runItem.skill_name).replace(/^blockwise-/u, "")}</td>
-                <td>{String(runItem.model_used ?? "—")}</td>
-                <td>{String(runItem.prompt_version ?? "—")}</td>
+                <td data-label="Skill">{String(runItem.skill_name).replace(/^blockwise-/u, "")}</td>
+                <td data-label="Model">{String(runItem.model_used ?? "—")}</td>
+                <td data-label="Prompt">{String(runItem.prompt_version ?? "—")}</td>
               </tr>
             ))}
             {promptRuns.length === 0 ? (

@@ -26,17 +26,27 @@ test("new ad dialog explains trial credit use without requiring Meta", () => {
 
   assert.match(dialog, /Uses 1 of 10 free ad packs/);
   assert.match(dialog, /No Meta account is needed until publish/);
+  assert.match(dialog, /AssetUploadDropzone/);
+  assert.match(dialog, /capturePagePaste/);
 });
 
-test("landing CTA tracking only fires for demo links", () => {
+test("onboarding logo upload previews flexible file input", () => {
+  const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
+
+  assert.match(wizard, /AssetUploadDropzone/);
+  assert.match(wizard, /logoPreviewUrl/);
+  assert.match(wizard, /capturePagePaste/);
+});
+
+test("landing CTA tracking only fires for managed setup links", () => {
   const ctaLink = readFileSync("src/components/landing/cta-link.tsx", "utf8");
   const homepage = readFileSync("src/app/page.tsx", "utf8");
 
-  assert.match(ctaLink, /if \(href === "#demo"\)/);
+  assert.match(ctaLink, /if \(href === "#managed-setup"\)/);
   assert.match(ctaLink, /trackDemoCtaClick\(location\)/);
   assert.doesNotMatch(ctaLink, /onClick=\{\(\) => trackDemoCtaClick\(location\)\}/);
   assert.match(homepage, /href="\/signup"/);
-  assert.match(homepage, /href="#demo"/);
+  assert.match(homepage, /href="#managed-setup"/);
 });
 
 test("trial pill refreshes from the first-ad generation event", () => {

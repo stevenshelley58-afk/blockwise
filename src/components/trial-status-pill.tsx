@@ -55,6 +55,7 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
 
   return (
     <div
+      className="trial-status-pill"
       aria-label="Trial status"
       style={{
         display: "inline-flex",

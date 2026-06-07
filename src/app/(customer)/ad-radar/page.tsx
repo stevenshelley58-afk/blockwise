@@ -1,10 +1,17 @@
-import { Bookmark, Clock3, FileSearch, ImageIcon, MapPin, Search, Users } from "lucide-react";
+import { Bookmark, Clock3, FileSearch, ImageIcon, MapPin, Users } from "lucide-react";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
+import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import {
+  pickAdRadarCardsForLocation,
+  resolveAdRadarLocationGuess,
+  resolveAdRadarLocationSearch,
+} from "@/lib/research/ad-radar-location";
 import {
   adRunningMs,
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
@@ -21,11 +28,13 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ResearchPage({ searchParams }: { searchParams?: SearchParams }) {
   const { supabase } = await requirePageSurfaceAccess("monitor");
+  const requestHeaders = await headers();
   const params = searchParams ? await searchParams : {};
   const searchTerm = firstParam(params.q ?? params.postcode).trim();
   const sort: ResearchSort = firstParam(params.sort) === "longest" ? "longest" : "recent";
+  const locationGuess = searchTerm ? resolveAdRadarLocationSearch(searchTerm) : resolveAdRadarLocationGuess(requestHeaders);
 
-  const { cards, loadError } = await loadCustomerMetaAdLibraryCards(supabase, searchTerm, sort);
+  const { cards, loadError, matchedLocation } = await loadCustomerMetaAdLibraryCards(supabase, searchTerm, sort, locationGuess);
   const advertiserCount = unique(cards.map((card) => card.pageId ?? card.pageName)).length;
   const allPostcodes = unique(cards.flatMap((card) => card.postcodes));
   const mediaReady = cards.filter((card) => card.media.length > 0).length;
@@ -44,21 +53,13 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
       />
 
       <section className="panel research-search-panel">
-        <form className="research-search-form" action="/ad-radar">
-          <label htmlFor="research-query">
-            Search
-            <input
-              id="research-query"
-              name="q"
-              defaultValue={searchTerm}
-              placeholder="6008, Subiaco, Ray White, appraisal"
-              autoComplete="off"
-            />
-          </label>
-          <button className="button" type="submit">
-            <Search size={14} /> Search
-          </button>
-        </form>
+        <AdRadarLocationForm
+          buttonLabel="Search"
+          initialNote={researchLocationNote(searchTerm, locationGuess?.label ?? "Perth, WA", locationGuess?.source ?? "fallback", matchedLocation)}
+          initialValue={searchTerm || locationGuess?.label || "Perth, WA"}
+          placeholder="6008, Subiaco, Ray White, appraisal"
+          surface="research"
+        />
         <div className="research-freshness">
           <Clock3 size={14} />
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
@@ -82,7 +83,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
       <section className="research-results-section">
         <div className="section-title-row">
           <div>
-            <h2>{searchTerm ? `Results for "${searchTerm}"` : "Latest Ad Library cards"}</h2>
+            <h2>{searchTerm ? `Results for "${searchTerm}"` : `Ads near ${locationGuess?.label ?? "Perth, WA"}`}</h2>
             <p className="item-meta">
               {cards.length} ad{cards.length === 1 ? "" : "s"} across {advertiserCount} advertiser page
               {advertiserCount === 1 ? "" : "s"}.
@@ -130,7 +131,8 @@ async function loadCustomerMetaAdLibraryCards(
   supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"],
   searchTerm: string,
   sort: ResearchSort,
-): Promise<{ cards: CustomerMetaAdLibraryCard[]; loadError: string | null }> {
+  locationGuess: ReturnType<typeof resolveAdRadarLocationGuess> | ReturnType<typeof resolveAdRadarLocationSearch>,
+): Promise<{ cards: CustomerMetaAdLibraryCard[]; loadError: string | null; matchedLocation: boolean }> {
   // Page through the view in batches so results are not silently capped.
   const rows: CustomerMetaAdLibraryCardRow[] = [];
   for (let from = 0; from < FETCH_CEILING; from += FETCH_BATCH_SIZE) {
@@ -142,7 +144,7 @@ async function loadCustomerMetaAdLibraryCards(
       .range(from, from + FETCH_BATCH_SIZE - 1);
 
     if (error) {
-      return { cards: [], loadError: "Ad Radar data is temporarily unavailable." };
+      return { cards: [], loadError: "Ad Radar data is temporarily unavailable.", matchedLocation: false };
     }
 
     const batch = (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];
@@ -150,12 +152,27 @@ async function loadCustomerMetaAdLibraryCards(
     if (batch.length < FETCH_BATCH_SIZE) break;
   }
 
-  const allCards = rows.map(normaliseCustomerMetaAdLibraryCard);
-  const filtered = searchTerm
-    ? allCards.filter((card) => cardMatches(card, searchTerm))
-    : allCards.filter((card) => !card.state || card.state.toUpperCase() === "WA");
+  const allCards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
 
-  return { cards: sortCards(dedupeCards(filtered), sort), loadError: null };
+  if (searchTerm) {
+    const directMatches = allCards.filter((card) => cardMatches(card, searchTerm));
+    if (directMatches.length > 0) {
+      return { cards: sortCards(directMatches, sort), loadError: null, matchedLocation: false };
+    }
+
+    if (locationGuess) {
+      const picked = pickAdRadarCardsForLocation(allCards, locationGuess, sort);
+      if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
+    }
+
+    return { cards: [], loadError: null, matchedLocation: false };
+  }
+
+  const picked = locationGuess
+    ? pickAdRadarCardsForLocation(allCards, locationGuess, sort)
+    : { cards: sortCards(allCards, sort), matchedLocation: false };
+
+  return { cards: picked.cards, loadError: null, matchedLocation: picked.matchedLocation };
 }
 
 function sortCards(cards: CustomerMetaAdLibraryCard[], sort: ResearchSort): CustomerMetaAdLibraryCard[] {
@@ -221,6 +238,13 @@ function formatDateTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function researchLocationNote(searchTerm: string, label: string, source: "ip" | "fallback" | "query", matchedLocation: boolean): string {
+  if (searchTerm && matchedLocation) return `Showing scraped ads around ${label}.`;
+  if (searchTerm) return `Searching scraped ads for "${searchTerm}".`;
+  if (source === "fallback") return `Best guess unavailable. Showing current Perth coverage.`;
+  return `Best guess: ${label}. Showing closest scraped ads.`;
 }
 
 function unique(values: string[]): string[] {

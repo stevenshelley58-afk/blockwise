@@ -23,8 +23,9 @@ skill allowed to set or request `research.agencies.is_real_estate = true`.
 - Public agency websites and team pages.
 - Domain/REA public profiles where needed for corroboration.
 
-Use plain HTTPS first. Use Browserbase only when a public source needs browser
-rendering. Do not use Meta Ad Library providers for roster discovery.
+Use plain HTTPS first. Use a self-hosted browser session (Steel CDP, local
+Chromium fallback) only when a public source needs browser rendering. Do not
+use Meta Ad Library providers for roster discovery.
 
 ## Output Rules
 
@@ -51,7 +52,7 @@ rendering. Do not use Meta Ad Library providers for roster discovery.
 
 - `hermes/tools/research-runtime`
 - plain HTTPS fetch
-- `browserbase.session`
+- self-hosted browser session (Steel CDP, local Chromium fallback)
 - `mem0.search`
 - `blockwise.ingest.upsert_agency`
 - `blockwise.ingest.upsert_agent`

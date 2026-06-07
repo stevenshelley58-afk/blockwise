@@ -130,7 +130,7 @@ export type AdStudioCampaign = {
   offerId: string;
   platforms: AdStudioPlatform[];
   creativeFormats: AdStudioFormat[];
-  status: "draft" | "generating" | "ready" | "blocked" | "exported";
+  status: "draft" | "generating" | "ready" | "blocked" | "exported" | "archived";
 };
 
 export type AdStudioVariantScore = {

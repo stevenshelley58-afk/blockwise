@@ -242,7 +242,7 @@ export const STYLES = `
 .studio-statusbar [data-state="saving"]{color:var(--muted)}
 .studio-statusbar [data-state="error"]{color:#ba1a1a}
 .studio-toast{position:fixed;left:50%;bottom:54px;z-index:200;transform:translateX(-50%);border-radius:10px;background:#001b3d;color:#fff;padding:11px 16px;font-weight:600;font-size:13px;box-shadow:var(--st-sh-2)}
-.studio-mobile-body,.studio-mobile-bottom{display:none}
+.studio-mobile-body,.studio-mobile-bottom,.studio-mobile-status,.studio-mobile-busy{display:none}
 
 /* Template gallery (Templates panel + New Ad dialog step) */
 .studio-tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
@@ -350,6 +350,11 @@ export const STYLES = `
   .studio-mobile-bottom{position:fixed;left:0;right:0;bottom:0;z-index:150;height:78px;border-top:1px solid var(--line-soft);background:#fff;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 12px 10px}
   .studio-mobile-bottom button{border:0;border-radius:10px;background:transparent;color:var(--muted);display:grid;place-items:center;gap:2px;font-size:11.5px;font-weight:600}
   .studio-mobile-bottom button.active{background:var(--accent-tint);color:var(--accent)}
+  .studio-mobile-status{position:fixed;left:12px;right:12px;bottom:84px;z-index:151;min-height:34px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;box-shadow:var(--st-sh-1);display:flex;align-items:center;justify-content:center;padding:7px 12px;color:var(--muted);font-size:12.5px;font-weight:650;text-align:center}
+  .studio-mobile-status[data-state="saved"]{color:var(--st-good)}
+  .studio-mobile-status[data-state="error"]{color:#ba1a1a;border-color:#ffdad6;background:#fff7f6}
+  .studio-mobile-busy{position:fixed;left:12px;right:12px;top:82px;z-index:181;min-height:44px;border-radius:12px;background:#001b3d;color:#fff;box-shadow:var(--st-sh-2);display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;font-size:13px}
+  .studio-mobile-busy svg{animation:studio-spin 1s linear infinite}
   .studio-more-menu{right:12px;top:66px;width:min(286px,calc(100vw - 24px))}
   .studio-newad{width:100%;border-radius:14px}
   .studio-tpl-grid{grid-template-columns:repeat(2,1fr)}
