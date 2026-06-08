@@ -3482,7 +3482,8 @@ async function runHermesLocationSearchCapture(input, job) {
       location_search_allowed: true,
     });
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
-    const errorMessage = parsed.warnings.join("; ") || null;
+    const countOnly = parsed.items.length === 0 && !parsed.confirmedAbsence && Number(parsed.connectionCount) > 0;
+    const errorMessage = countOnly ? null : parsed.warnings.join("; ") || null;
     const rawEvidence = errorMessage
       ? await safeWriteBrowserRawEvidence("location-search", input, {
         url,
@@ -3492,6 +3493,7 @@ async function runHermesLocationSearchCapture(input, job) {
         sourceDocumentId,
         confirmed_absence: parsed.confirmedAbsence,
         connection_count: parsed.connectionCount,
+        count_only: countOnly,
         postcode: input.postcode,
         suburb: input.suburb,
         state: input.state,
@@ -3501,7 +3503,7 @@ async function runHermesLocationSearchCapture(input, job) {
     return {
       runId: `hermes-location-search-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
       provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
-      status: parsed.warnings.length ? "FAILED" : "SUCCEEDED",
+      status: errorMessage ? "FAILED" : "SUCCEEDED",
       startedAt,
       finishedAt: now(),
       costUsd: 0,
@@ -3515,6 +3517,7 @@ async function runHermesLocationSearchCapture(input, job) {
         sourceDocumentId,
         confirmed_absence: parsed.confirmedAbsence,
         connection_count: parsed.connectionCount,
+        count_only: countOnly,
         postcode: input.postcode,
         suburb: input.suburb,
         state: input.state,

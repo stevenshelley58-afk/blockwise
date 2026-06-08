@@ -6,6 +6,7 @@ const dropMigration = "supabase/migrations/202605280002_research_drop_legacy.sql
 const schemaMigration = "supabase/migrations/202605280003_research_engine.sql";
 const viewsMigration = "supabase/migrations/202605280004_research_views.sql";
 const zeroAdContractMigration = "supabase/migrations/202606030003_zero_ad_item_count_contract.sql";
+const zeroAdCountOnlyMigration = "supabase/migrations/202606080002_ignore_count_only_zero_ad_anomalies.sql";
 const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_library_ingestion_extensions.sql";
 const buildRunReportDedupeRepairMigration = "supabase/migrations/202606070001_repair_build_run_reports_dedupe_key.sql";
 const apifyCostControlMigration = "supabase/migrations/202606080001_apify_cost_control_schema.sql";
@@ -149,6 +150,13 @@ test("zero-ad diagnostics use Hermes item_count and ignore confirmed absence", (
   assert.match(sql, /watchdog_record_zero_ad_anomalies/i);
   assert.match(sql, /array\['item_count',\s*'ads_observed',\s*'adsObserved',\s*'itemCount'\]/i);
   assert.match(sql, /confirmed_absence'\)::boolean,\s*false\)\s*=\s*false/i);
+  assert.match(sql, /create or replace view research\.v_operator_zero_ad_anomalies/i);
+});
+
+test("zero-ad diagnostics ignore count-only Meta location search shells", () => {
+  const sql = readFileSync(zeroAdCountOnlyMigration, "utf8");
+  assert.match(sql, /watchdog_record_zero_ad_anomalies/i);
+  assert.match(sql, /metadata'->>'count_only'\)::boolean,\s*false\)\s*=\s*false/i);
   assert.match(sql, /create or replace view research\.v_operator_zero_ad_anomalies/i);
 });
 

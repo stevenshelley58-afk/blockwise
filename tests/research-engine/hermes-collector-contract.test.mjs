@@ -449,6 +449,11 @@ test("Hermes location ad search is explicit, gated, and separate from page colle
     "location search must use Meta Ad Library keyword search instead of pretending to be a page collector",
   );
   assert.match(
+    browserLocationSearchCapture,
+    /const countOnly = parsed\.items\.length === 0[\s\S]*Number\(parsed\.connectionCount\) > 0[\s\S]*status:\s*errorMessage \? ["']FAILED["'] : ["']SUCCEEDED["']/u,
+    "count-only location search shells should complete instead of retrying a parser failure with no ad rows",
+  );
+  assert.match(
     locationAdSearch,
     /\blocationAdMatchForInput\b[\s\S]*\bhasRealEstateAdSignalForLocation\b/u,
     "location search results must be filtered by exact visible location and real-estate signals before ingest",
