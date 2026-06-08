@@ -1,7 +1,7 @@
 "use client";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { sanitizeUploadFileName } from "@/lib/upload/asset-file";
+import { downscaleImageForUpload, sanitizeUploadFileName } from "@/lib/upload/asset-file";
 
 export async function uploadAdStudioMedia(input: {
   file: File;
@@ -9,9 +9,12 @@ export async function uploadAdStudioMedia(input: {
   brandKitId: string;
 }): Promise<{ src: string; storagePath: string }> {
   const supabase = createSupabaseBrowserClient();
-  const safeName = sanitizeUploadFileName(input.file.name);
+  // Downscale big photos before they hit the wire: faster upload, and small
+  // enough that the vision model always receives the image (see MAX_INLINE_IMAGE_BYTES).
+  const uploadFile = await downscaleImageForUpload(input.file);
+  const safeName = sanitizeUploadFileName(uploadFile.name);
   const storagePath = `${input.workspaceId}/adstudio/${input.brandKitId}/${crypto.randomUUID()}-${safeName}`;
-  const { error } = await supabase.storage.from("workspace-artifacts").upload(storagePath, input.file);
+  const { error } = await supabase.storage.from("workspace-artifacts").upload(storagePath, uploadFile);
 
   if (error) {
     throw new Error("We couldn't upload that image. Try another file.");
@@ -24,8 +27,8 @@ export async function uploadAdStudioMedia(input: {
       assetType: "listing_image",
       storagePath,
       fileName: input.file.name,
-      contentType: input.file.type,
-      size: input.file.size,
+      contentType: uploadFile.type,
+      size: uploadFile.size,
     }),
   });
 

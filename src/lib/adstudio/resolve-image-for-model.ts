@@ -6,7 +6,12 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient
 // media is served through an auth-gated proxy (`/api/adstudio/media?path=...`) from a
 // private storage bucket, so it must be inlined as a data URL before it reaches a
 // provider. `data:` and absolute http(s) URLs are already model-consumable.
-const MAX_INLINE_IMAGE_BYTES = 6_000_000;
+//
+// This must cover the full upload ceiling (8 MB; see AD_IMAGE_MAX_BYTES) so an
+// in-policy photo is never silently dropped before reaching the model. New uploads
+// are also downscaled in the browser, so this mainly backstops pre-existing and
+// brand-kit assets. base64 of 8 MB (~11 MB) stays within the vision model's limit.
+const MAX_INLINE_IMAGE_BYTES = 9_000_000;
 
 export async function resolveAdStudioImageForModel(
   supabase: SupabaseServerClient,

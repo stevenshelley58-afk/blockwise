@@ -63,3 +63,49 @@ export function formatUploadFileSize(bytes: number): string {
   if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${bytes} B`;
 }
+
+const DOWNSCALE_MAX_EDGE = 1600;
+const DOWNSCALE_QUALITY = 0.82;
+// Photos at or under this size are already small enough to upload as-is.
+const DOWNSCALE_SKIP_BYTES = 1_200_000;
+
+// Shrinks large camera/phone photos in the browser before upload so they travel
+// fast and stay small enough for the vision model to actually read. Uses only
+// native canvas APIs (no dependency). Every failure path returns the original
+// file unchanged, so a decode or encode hiccup never blocks an upload.
+export async function downscaleImageForUpload(file: File): Promise<File> {
+  if (typeof document === "undefined" || typeof createImageBitmap !== "function") return file;
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  if (file.size <= DOWNSCALE_SKIP_BYTES) return file;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+
+  const longestEdge = Math.max(bitmap.width, bitmap.height);
+  const scale = longestEdge > DOWNSCALE_MAX_EDGE ? DOWNSCALE_MAX_EDGE / longestEdge : 1;
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    bitmap.close?.();
+    return file;
+  }
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), "image/jpeg", DOWNSCALE_QUALITY);
+  });
+  if (!blob || blob.size >= file.size) return file;
+
+  const baseName = file.name.replace(/\.[^./\\]+$/, "");
+  return new File([blob], `${baseName}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+}

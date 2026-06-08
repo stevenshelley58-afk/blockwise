@@ -325,6 +325,38 @@ export function AdStudioWorkbench({
         ),
     },
   );
+
+  // Magic moment: the first time a new user adds a photo to an untouched ad, write
+  // copy grounded in that photo straight away, so uploading visibly produces an ad
+  // instead of just a toast. Gated to first-run + copy still untouched + once per
+  // session, so it can never overwrite copy someone has already written or generated.
+  const seededCopyRef = useRef(copy);
+  const autoDesignedRef = useRef(false);
+  async function handleUploadImage(file: File | null | undefined) {
+    let uploaded: { src: string; label: string } | undefined;
+    try {
+      uploaded = await replaceImage(file);
+    } catch {
+      return; // replaceImage already surfaced the failure to the user
+    }
+    if (!uploaded) return;
+    const copyUntouched =
+      copy.primaryText === seededCopyRef.current.primaryText &&
+      copy.headline === seededCopyRef.current.headline &&
+      copy.description === seededCopyRef.current.description &&
+      copy.cta === seededCopyRef.current.cta;
+    if (autoDesignedRef.current || generating || !firstRun || !copyUntouched) return;
+    autoDesignedRef.current = true;
+    studio.setSection("copy");
+    studio.setBusy(true);
+    studio.setBusyMessage("Designing your ad from your photo…");
+    try {
+      await generateCopy("ai", copyContext, uploaded.src);
+    } finally {
+      studio.setBusy(false);
+    }
+  }
+
   const workspaceMediaAssets = useMemo(
     () =>
       [
@@ -674,7 +706,7 @@ export function AdStudioWorkbench({
           primaryImage={primaryImage}
           primaryImageName={primaryImageName}
           openFilePicker={openFilePicker}
-          onUploadImage={replaceImage}
+          onUploadImage={handleUploadImage}
           onUploadRejected={studio.showToast}
           onSelectImage={selectMediaImage}
           mediaAssets={mediaAssets}
@@ -732,7 +764,7 @@ export function AdStudioWorkbench({
         accept="image/jpeg,image/png,image/webp"
         hidden
         onChange={(event) => {
-          void replaceImage(event.target.files?.[0]);
+          void handleUploadImage(event.target.files?.[0]);
           event.currentTarget.value = "";
         }}
       />
@@ -954,7 +986,7 @@ export function AdStudioWorkbench({
               primaryImage={primaryImage}
               primaryImageName={primaryImageName}
               openFilePicker={openFilePicker}
-              onUploadImage={replaceImage}
+              onUploadImage={handleUploadImage}
               onUploadRejected={studio.showToast}
               onSelectImage={selectMediaImage}
               mediaAssets={mediaAssets}

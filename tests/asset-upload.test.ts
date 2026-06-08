@@ -47,6 +47,7 @@ test("asset upload UI supports picker, drop, paste, previews, and editable-targe
   const newAdDialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const mediaPanel = readFileSync("src/components/adstudio/panels/media-panel.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const mediaHook = readFileSync("src/components/adstudio/use-media.ts", "utf8");
   const onboarding = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
   const brandStudio = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
   const globals = readFileSync("src/app/globals.css", "utf8");
@@ -59,7 +60,10 @@ test("asset upload UI supports picker, drop, paste, previews, and editable-targe
   assert.match(dropzone, /previewUrl \? <img/);
   assert.match(newAdDialog, /<AssetUploadDropzone[\s\S]*capturePagePaste/);
   assert.match(mediaPanel, /<AssetUploadDropzone[\s\S]*onFileAccepted=\{onUploadImage\}/);
-  assert.match(workbench, /void replaceImage\(event\.target\.files\?\.\[0\]\)/);
+  assert.match(workbench, /void handleUploadImage\(event\.target\.files\?\.\[0\]\)/);
+  assert.match(mediaHook, /uploadRequestRef/);
+  assert.match(mediaHook, /isCurrentUpload/);
+  assert.match(mediaHook, /committedPrimaryImageRef/);
   assert.match(workbench, /getVariantPrimaryImage/);
   assert.match(workbench, /variantImage\?\.src/);
   assert.match(globals, /studio-newad-upload\[data-has-file="true"\]/);

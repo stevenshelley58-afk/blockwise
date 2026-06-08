@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
   return new NextResponse(data, {
     headers: {
       "content-type": data.type || "application/octet-stream",
-      "cache-control": "private, max-age=300",
+      // Storage paths are content-addressed (UUID per upload) and never change,
+      // so the browser can cache aggressively instead of re-pulling the bytes
+      // through this function on every view.
+      "cache-control": "private, max-age=31536000, immutable",
     },
   });
 }

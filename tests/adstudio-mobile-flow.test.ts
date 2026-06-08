@@ -15,7 +15,7 @@ test("mobile media tab renders the real upload and library panel", () => {
 
   assert.ok(mediaStart > -1);
   assert.ok(copyStart > mediaStart);
-  assert.match(mediaBlock, /<MediaPanel[\s\S]*primaryImage=\{primaryImage\}[\s\S]*onUploadImage=\{replaceImage\}[\s\S]*onSelectImage=\{selectMediaImage\}/);
+  assert.match(mediaBlock, /<MediaPanel[\s\S]*primaryImage=\{primaryImage\}[\s\S]*onUploadImage=\{handleUploadImage\}[\s\S]*onSelectImage=\{selectMediaImage\}/);
   assert.doesNotMatch(mediaBlock, /<VariantStrip/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
