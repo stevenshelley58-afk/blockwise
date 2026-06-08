@@ -59,6 +59,9 @@ const apifyMetaPageCapture = functionBody(supervisor, "runApifyMetaPageCapture")
 const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor");
 const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
 const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
+const browserPageCapture = functionBody(supervisor, "runHermesBrowserCapture");
+const browserLocationSearchCapture = functionBody(supervisor, "runHermesLocationSearchCapture");
+const browserRawEvidence = functionBody(supervisor, "writeBrowserRawEvidence");
 const configuredMetaFallbackSourceProvider = functionBody(supervisor, "configuredMetaFallbackSourceProvider");
 const fallbackMetaPageCapture = functionBody(supervisor, "runFallbackMetaPageCapture");
 const officialMetaPageApiCapture = functionBody(supervisor, "runOfficialMetaPageApiCapture");
@@ -132,6 +135,15 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
   assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
   assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
+});
+
+test("Hermes browser parse failures store raw evidence pointers", () => {
+  assert.match(browserPageCapture, /safeWriteBrowserRawEvidence\(["']page-capture["']/u, "page capture parse failures must save browser raw evidence");
+  assert.match(browserPageCapture, /\braw_evidence\b/u, "page capture metadata must expose raw evidence pointers");
+  assert.match(browserLocationSearchCapture, /safeWriteBrowserRawEvidence\(["']location-search["']/u, "location search parse failures must save browser raw evidence");
+  assert.match(browserLocationSearchCapture, /\braw_evidence\b/u, "location search metadata must expose raw evidence pointers");
+  assert.match(browserRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "browser evidence must use the configured raw evidence bucket");
+  assert.match(browserRawEvidence, /["']browser["']/u, "browser evidence should be stored under a browser prefix for operator review");
 });
 
 test("Hermes active ad collector can fail over from free capture to Apify", () => {

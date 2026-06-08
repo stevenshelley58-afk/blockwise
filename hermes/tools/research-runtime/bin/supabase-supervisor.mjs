@@ -2452,6 +2452,17 @@ async function runHermesBrowserCapture(input) {
   try {
     const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: input.metaPageId, limit: input.resultsLimit });
+    const errorMessage = parsed.warnings.join("; ") || null;
+    const rawEvidence = errorMessage
+      ? await safeWriteBrowserRawEvidence("page-capture", input, {
+        url,
+        html: stdout,
+        warnings: parsed.warnings,
+        html_bytes: Buffer.byteLength(stdout),
+        confirmed_absence: parsed.confirmedAbsence,
+        connection_count: parsed.connectionCount,
+      })
+      : null;
     return {
       runId: `hermes-browser-${input.metaPageId}-${Date.now()}`,
       provider: META_BROWSER_SOURCE_PROVIDER,
@@ -2462,7 +2473,7 @@ async function runHermesBrowserCapture(input) {
       itemCount: parsed.items.length,
       items: parsed.items,
       rawDatasetId: null,
-      errorMessage: parsed.warnings.join("; ") || null,
+      errorMessage,
       metadata: {
         url,
         html_bytes: Buffer.byteLength(stdout),
@@ -2470,9 +2481,16 @@ async function runHermesBrowserCapture(input) {
         connection_count: parsed.connectionCount,
         advertiserPageId: input.advertiserPageId,
         resolverDecisionId: input.resolverDecisionId,
+        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
+        raw_evidence_error: rawEvidence?.error || null,
       },
     };
   } catch (error) {
+    const rawEvidence = await safeWriteBrowserRawEvidence("page-capture-error", input, {
+      url,
+      error: error.message,
+      executable: metaBrowserExecutable,
+    });
     return {
       runId: `hermes-browser-failed-${input.metaPageId}-${Date.now()}`,
       provider: META_BROWSER_SOURCE_PROVIDER,
@@ -2484,7 +2502,13 @@ async function runHermesBrowserCapture(input) {
       items: [],
       rawDatasetId: null,
       errorMessage: error.message,
-      metadata: { executable: metaBrowserExecutable, advertiserPageId: input.advertiserPageId, resolverDecisionId: input.resolverDecisionId },
+      metadata: {
+        executable: metaBrowserExecutable,
+        advertiserPageId: input.advertiserPageId,
+        resolverDecisionId: input.resolverDecisionId,
+        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
+        raw_evidence_error: rawEvidence?.error || null,
+      },
     };
   }
 }
@@ -3024,6 +3048,22 @@ async function runHermesLocationSearchCapture(input, job) {
       location_search_allowed: true,
     });
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
+    const errorMessage = parsed.warnings.join("; ") || null;
+    const rawEvidence = errorMessage
+      ? await safeWriteBrowserRawEvidence("location-search", input, {
+        url,
+        html: stdout,
+        warnings: parsed.warnings,
+        html_bytes: Buffer.byteLength(stdout),
+        sourceDocumentId,
+        confirmed_absence: parsed.confirmedAbsence,
+        connection_count: parsed.connectionCount,
+        postcode: input.postcode,
+        suburb: input.suburb,
+        state: input.state,
+        query: input.query,
+      })
+      : null;
     return {
       runId: `hermes-location-search-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
       provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
@@ -3034,7 +3074,7 @@ async function runHermesLocationSearchCapture(input, job) {
       itemCount: parsed.items.length,
       items: parsed.items,
       rawDatasetId: null,
-      errorMessage: parsed.warnings.join("; ") || null,
+      errorMessage,
       metadata: {
         url,
         html_bytes: Buffer.byteLength(stdout),
@@ -3045,9 +3085,20 @@ async function runHermesLocationSearchCapture(input, job) {
         suburb: input.suburb,
         state: input.state,
         query: input.query,
+        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
+        raw_evidence_error: rawEvidence?.error || null,
       },
     };
   } catch (error) {
+    const rawEvidence = await safeWriteBrowserRawEvidence("location-search-error", input, {
+      url,
+      error: error.message,
+      executable: metaBrowserExecutable,
+      postcode: input.postcode,
+      suburb: input.suburb,
+      state: input.state,
+      query: input.query,
+    });
     return {
       runId: `hermes-location-search-failed-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
       provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
@@ -3059,7 +3110,16 @@ async function runHermesLocationSearchCapture(input, job) {
       items: [],
       rawDatasetId: null,
       errorMessage: error.message,
-      metadata: { executable: metaBrowserExecutable, postcode: input.postcode, suburb: input.suburb, state: input.state, query: input.query, url },
+      metadata: {
+        executable: metaBrowserExecutable,
+        postcode: input.postcode,
+        suburb: input.suburb,
+        state: input.state,
+        query: input.query,
+        url,
+        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
+        raw_evidence_error: rawEvidence?.error || null,
+      },
     };
   }
 }
@@ -4523,6 +4583,36 @@ async function writeApifyRawEvidence(input, actorId, evidence) {
     RAW_EVIDENCE_BUCKET,
     objectPath,
     Buffer.from(json({ actorId, input, evidence }), "utf8"),
+    "application/json",
+  );
+  return { bucket: RAW_EVIDENCE_BUCKET, objectPath };
+}
+
+async function safeWriteBrowserRawEvidence(kind, input, evidence) {
+  try {
+    return await writeBrowserRawEvidence(kind, input, evidence);
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+async function writeBrowserRawEvidence(kind, input, evidence) {
+  await ensureRawEvidenceBucket();
+  const target = input.metaPageId
+    || [input.state, input.postcode, input.query ? hash(String(input.query)).slice(0, 12) : null]
+      .filter(Boolean)
+      .join("-")
+    || "unknown-target";
+  const objectPath = [
+    "browser",
+    kind,
+    target,
+    `${Date.now()}-${hash(json({ kind, input, evidence })).slice(0, 16)}.json`,
+  ].join("/");
+  await uploadStorageObject(
+    RAW_EVIDENCE_BUCKET,
+    objectPath,
+    Buffer.from(json({ kind, input, evidence }), "utf8"),
     "application/json",
   );
   return { bucket: RAW_EVIDENCE_BUCKET, objectPath };
