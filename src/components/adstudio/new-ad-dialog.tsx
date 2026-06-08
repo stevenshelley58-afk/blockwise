@@ -289,10 +289,4 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
 }
 
 function formatTrialCreditNote(status: TrialStatus | null): string {
-  if (status?.isTrial && Number.isFinite(status.includedAdPacks) && status.includedAdPacks > 0) {
-    return `Uses 1 of ${status.includedAdPacks} free ad packs. No Meta account is needed until publish.`;
-  }
-
-  return "Uses one ad pack. No Meta account is needed until publish.";
-}
-// NewAdDialog: template gallery → details (image + description) → generate.
+  if (status?.is

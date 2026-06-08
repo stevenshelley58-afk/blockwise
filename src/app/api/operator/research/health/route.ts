@@ -127,5 +127,4 @@ function ageMinutes(value: string | null | undefined): number | null {
   if (!value) return null;
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) return null;
-  return Math.max(0, Math.round((Date.now() - parsed) / 60_000));
-}
+  return Math

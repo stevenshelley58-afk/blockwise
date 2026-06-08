@@ -1021,27 +1021,4 @@ export function AdStudioWorkbench({
 
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
         {MOBILE_NAV.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => studio.setMobileTab(item.id)}>
-              <Icon aria-hidden size={22} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <NewAdDialog
-        open={newAdOpen}
-        onClose={closeNewAdDialog}
-        brandKit={brandKit}
-        workspaceId={workspaceId}
-        templates={AD_STUDIO_TEMPLATES}
-        onGenerate={handleGenerateFirstAd}
-        initialTemplateId={newAdTemplateId}
-      />
-
-      {studio.toast && <div className="studio-toast">{studio.toast}</div>}
-    </main>
-  );
-}
+          c

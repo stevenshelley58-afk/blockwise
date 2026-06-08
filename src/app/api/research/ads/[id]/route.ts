@@ -44,8 +44,4 @@ export async function GET(
     .order("version", { ascending: false })
     .limit(20);
 
-  return NextResponse.json({
-    ad,
-    versions: versions ?? [],
-  });
-}
+  return NextRespo

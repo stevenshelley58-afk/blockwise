@@ -346,24 +346,4 @@ function stripDuplicateDraftImage() {
   const keptByVariant = new Set<string>();
   return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
     const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-    const hasImage = Boolean(image?.content || image?.assetId);
-    const keepImage = hasImage && !keptByVariant.has(creative.variantId);
-
-    if (keepImage) keptByVariant.add(creative.variantId);
-    if (keepImage) return creative;
-
-    return {
-      ...creative,
-      canvas: {
-        ...creative.canvas,
-        objects: creative.canvas.objects.map((object) =>
-          object.role === "primary_image" ? { ...object, content: undefined } : object,
-        ),
-      },
-    };
-  };
-}
-
-function slugFileName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "adstudio-campaign";
-}
+    const hasImage = Boolean(image?.content || image?.a

@@ -133,14 +133,4 @@ services:
       - uptime-data:/app/data
     networks: [research]
     logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-volumes:
-  hermes-data:
-  steel-cache:
-  uptime-data:
-
-networks:
-  research:
-    driver: bridge
+     

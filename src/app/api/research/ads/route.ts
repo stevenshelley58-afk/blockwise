@@ -108,5 +108,4 @@ function adMatches(ad: ReturnType<typeof normaliseResearchAd>, q: string): boole
     ...ad.creative.hooks,
   ]
     .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(q));
-}
+    .some((va

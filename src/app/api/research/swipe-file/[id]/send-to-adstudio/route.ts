@@ -74,5 +74,4 @@ export async function POST(
     .single();
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-  return NextResponse.json({ savedAd: updated, adStudioInspiration: inspiration });
-}
+  return NextResponse.json({ saved

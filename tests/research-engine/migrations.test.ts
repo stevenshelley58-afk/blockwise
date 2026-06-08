@@ -246,48 +246,4 @@ test("apify cost-control migration adds capture actor registry and seed actors",
     "constructive_calm/facebook-ad-library-pro",
     "curious_coder/facebook-ads-library-scraper",
   ]) {
-    assert.match(sql, new RegExp(`'${actor}'[\\s\\S]*?'candidate'`, "i"), `expected candidate actor ${actor}`);
-  }
-  assert.match(sql, /'apify\/facebook-ads-scraper'[\s\S]*?'banned'/i);
-  assert.match(sql, /on conflict \(actor_id\) do update[\s\S]*set status = 'banned'/i);
-  assert.match(sql, /grant select, insert, update, delete on research\.capture_actors to service_role/i);
-  assert.doesNotMatch(sql, /grant\s+[^;]*on research\.capture_actors to authenticated/i);
-});
-
-test("apify cost-control migration creates minimal health surface for spend controls", () => {
-  const sql = readFileSync(apifyCostControlMigration, "utf8");
-
-  assert.match(sql, /create or replace view research\.v_health/i);
-  for (const field of [
-    "latest_fetch_started_at",
-    "latest_ingest_at",
-    "due_backlog_size",
-    "blocked_job_count",
-    "open_report_count",
-    "apify_mtd_spend_usd",
-    "apify_state",
-    "paid_spend_without_ingest",
-  ]) {
-    assert.match(sql, new RegExp(`\\b${field}\\b`, "i"), `expected v_health.${field}`);
-  }
-  assert.match(sql, /source_provider like 'apify:%'/i);
-  assert.match(sql, /sum\(coalesce\(afr\.cost_usd, 0\)\)/i);
-  assert.match(sql, /first_seen_provider like 'apify:%'/i);
-  assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
-});
-
-test("active Apify health migration scopes paid-spend red state to the selected provider", () => {
-  const sql = readFileSync(activeApifyHealthMigration, "utf8");
-
-  assert.match(sql, /create or replace view research\.v_health/i);
-  assert.match(sql, /where rs\.setting_key = 'apify_actor_id'/i);
-  assert.match(sql, /'apify:' \|\| actor_id/i);
-  assert.match(sql, /active_paid_apify_24h/i);
-  assert.match(sql, /active_positive_apify_24h/i);
-  assert.match(sql, /afr\.source_provider = active\.source_provider/i);
-  assert.match(sql, /research\.jsonb_int\(afr\.result_summary, array\['ingested_count'/i);
-  assert.match(sql, /research\.jsonb_int\(afr\.result_summary, array\['item_count', 'valid_ad_count'/i);
-  assert.doesNotMatch(sql, /from research\.observed_ads/i);
-  assert.match(sql, /paid_spend_without_ingest/i);
-  assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
-});
+    assert.match(sql, new RegExp(`'${actor}'[\\s\\S]*?'c

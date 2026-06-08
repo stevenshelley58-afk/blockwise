@@ -89,8 +89,4 @@ function brandKitPatch(body: Record<string, unknown>): Record<string, unknown> {
     "visual_style_json",
     "compliance_json",
     "contact_json",
-    "review_status",
-    "locked_fields_json",
-  ];
-  return Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
-}
+    "r

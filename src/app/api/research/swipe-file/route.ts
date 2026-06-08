@@ -103,5 +103,4 @@ async function loadAds(
     .in("observed_ad_id", observedIds)
     .limit(200);
 
-  return ((data ?? []) as unknown as ResearchAdListRow[]).map(normaliseResearchAd);
-}
+  return ((data ?? []) as unknown 

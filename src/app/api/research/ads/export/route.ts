@@ -48,8 +48,4 @@ export async function GET(request: NextRequest) {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": "attachment; filename=blockwise-research-ads.csv",
       },
-    });
-  }
-
-  return NextResponse.json({ ads });
-}
+  
