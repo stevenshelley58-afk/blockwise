@@ -95,6 +95,47 @@ test("customer research view shows saved scraped ad history for verified pages",
   );
 });
 
+test("customer authenticated research history uses the same safe ad contract as customer cards", () => {
+  const agentHistoryView = latestViewDefinition("v_customer_agent_ad_history");
+  const sql = allMigrationSql();
+
+  assert.match(
+    agentHistoryView,
+    /\bac\.display_state\b/i,
+    "authenticated research history must expose display_state because the API selects it",
+  );
+  assert.match(
+    agentHistoryView,
+    /ap\.status\s+in\s*\(\s*'resolved_collectable'\s*,\s*'no_ads_confirmed'\s*\)/i,
+    "saved ads on verified pages must remain visible after a later no-ads refresh",
+  );
+  assert.match(agentHistoryView, /research\.valid_external_ad_id\s*\(\s*oa\.external_ad_id\s*\)/i);
+  assert.match(agentHistoryView, /research\.page_is_verified_real_estate\s*\(\s*ap\.id\s*\)/i);
+  assert.match(agentHistoryView, /research\.creative_is_real_estate\s*\(\s*ac\.classification,\s*ac\.ad_type,\s*ac\.primary_intent\s*\)/i);
+  assert.match(agentHistoryView, /ac\.display_state\s*=\s*'displayable'/i);
+  assert.match(
+    agentHistoryView,
+    /exists\s*\([\s\S]*from\s+research\.ad_area_matches\s+am[\s\S]*am\.observed_ad_id\s*=\s*oa\.id[\s\S]*\)/i,
+    "authenticated research history must not surface displayable ads until explicit area attribution exists",
+  );
+  assert.match(sql, /grant select on research\.v_customer_agent_ad_history\s+to authenticated, service_role/i);
+  assert.doesNotMatch(sql, /grant select on research\.v_customer_agent_ad_history\s+to[^;]*anon/i);
+});
+
+test("customer research APIs read the customer-safe history view", () => {
+  const sources = [
+    read("src/app/api/research/ads/route.ts"),
+    read("src/app/api/research/ads/[id]/route.ts"),
+    read("src/app/api/research/ads/export/route.ts"),
+    read("src/app/api/research/swipe-file/route.ts"),
+    read("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"),
+    read("src/lib/research/customer-ad-library-pages.ts"),
+  ].join("\n");
+
+  assert.match(sources, /CUSTOMER_RESEARCH_AD_HISTORY_VIEW/);
+  assert.doesNotMatch(sources, /\.from\(["']v_agent_ad_history["']\)/);
+});
+
 test("customer research UI does not render internal ad-library identifiers or raw contract fields", () => {
   const page = `${read(paths.researchPage)}\n${read(paths.metaCard)}`;
   const renderedInternals = [

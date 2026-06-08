@@ -1,6 +1,12 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { RESEARCH_AD_SELECT, normaliseResearchAd, type ResearchAdApiRecord, type ResearchAdListRow } from "./ad-library-api.ts";
+import {
+  CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
+  RESEARCH_AD_SELECT,
+  normaliseResearchAd,
+  type ResearchAdApiRecord,
+  type ResearchAdListRow,
+} from "./ad-library-api.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -58,7 +64,7 @@ export async function loadCustomerResearchAdDetail(
 ): Promise<{ ad: ResearchAdApiRecord | null; versions: CustomerCreativeVersion[]; error: string | null }> {
   const { data: row, error } = await supabase
     .schema("research")
-    .from("v_agent_ad_history")
+    .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .eq("observed_ad_id", adId)
     .maybeSingle();
@@ -87,7 +93,7 @@ export async function loadCustomerAdvertiserAds(
 ): Promise<{ ads: ResearchAdApiRecord[]; error: string | null }> {
   const { data, error } = await supabase
     .schema("research")
-    .from("v_agent_ad_history")
+    .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .eq("advertiser_page_id", advertiserPageId)
     .order("last_seen_at", { ascending: false, nullsFirst: false })
@@ -118,7 +124,7 @@ export async function loadCustomerAdsByIds(
   if (adIds.length === 0) return [];
   const { data } = await supabase
     .schema("research")
-    .from("v_agent_ad_history")
+    .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .in("observed_ad_id", adIds)
     .limit(200);

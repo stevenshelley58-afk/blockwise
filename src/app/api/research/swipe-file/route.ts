@@ -2,7 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { RESEARCH_AD_SELECT, normaliseResearchAd, type ResearchAdListRow } from "@/lib/research/ad-library-api";
+import {
+  CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
+  RESEARCH_AD_SELECT,
+  normaliseResearchAd,
+  type ResearchAdListRow,
+} from "@/lib/research/ad-library-api";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +98,7 @@ async function loadAds(
 ) {
   const { data } = await supabase
     .schema("research")
-    .from("v_agent_ad_history")
+    .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
     .select(RESEARCH_AD_SELECT)
     .in("observed_ad_id", observedIds)
     .limit(200);

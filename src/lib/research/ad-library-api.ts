@@ -1,3 +1,5 @@
+export const CUSTOMER_RESEARCH_AD_HISTORY_VIEW = "v_customer_agent_ad_history";
+
 export const RESEARCH_AD_SELECT = [
   "agency_id",
   "agency_name",
