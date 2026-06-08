@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check for NUL-byte corruption
+        run: npm run check:nul
+
       - name: Run hard-reset verification
         run: npm run verify:hard-reset
 
