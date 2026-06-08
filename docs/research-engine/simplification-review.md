@@ -54,7 +54,7 @@ next_check_at when it's due
 last_success_at, consecutive_failures, last_error, enabled
 ```
 
-This single table **replaces** work_queue, refresh_policies, build_runs, build_run_reports, dedupe keys, claim tokens, watchdogs, job recycling, and the build/maintain modes. Retry = `next_check_at = now() + backoff`. "Blocked" = `consecutive_failures` high → interval stretches (never silently removed). Multi-worker later = add `FOR UPDATE SKIP LOCKED` to one query.
+This single table **replaces** work_queue, refresh_policies, build_runs, build_run_reports, dedupe keys, claim tokens, watchdogs, job recycling, and the build/maintain modes. Retry = `next_check_at = now() + backoff`. "Blocked" = `consecutive_failures` high → interval stretches (never silently removed). The due-targets select uses `FOR UPDATE SKIP LOCKED` from day one — one clause, and a deploy overlap or accidental second worker can never double-process (or double-spend on paid capture).
 
 ### One loop
 
@@ -67,7 +67,9 @@ every tick:
   success: next_check_at += interval   failure: backoff, failures++, last_error set
 ```
 
-Geo tiers (Perth → WA → capitals → national) are just target priorities — seeded as data, advanced by the agent.
+Geo tiers (Perth → WA → capitals → national) are just target priorities — seeded as data, advanced by the agent. Brand-name searches ("Ray White Subiaco") are ordinary `search` targets — this replaces the entire resolver pipeline for finding an agency's page. The loop runs targets with bounded concurrency (≈4 in flight) and a hard per-target timeout, so one hung browser session can never stall the system.
+
+**Crash-only by design.** The worker holds no state — everything lives in Supabase, every ingest step is an idempotent upsert (ads by external id, media by content hash, classification by creative + version). The process can be killed at any moment and restarted with zero corruption; "backfill" isn't a subsystem, it's just re-running ingest over stored rows.
 
 ### Capture: one function, two providers
 
@@ -75,7 +77,9 @@ Try self-hosted browser (free). On parse failure: save DOM + screenshot to `rese
 
 ### Ingest: inline steps, not queued jobs
 
-upsert ad/snapshot/creative → fetch media inline (per-asset failures recorded on the asset, retried on the target's next pass) → classify (regex prefilter, cheap LLM on copy + page name, vision only if inconclusive; census/roster match upgrades confidence) → attribute (≥1 `ad_area_matches` row: the search area that found it, copy mentions, landing URL, service areas) → link agency/agent from roster.
+upsert ad/creative → write a new snapshot **only when the content hash changes** (otherwise just bump `last_seen_at` — keeps storage flat at national scale) → fetch media inline (per-asset failures recorded on the asset, retried on the target's next pass) → classify (regex prefilter, cheap LLM on copy + page name, vision only if inconclusive; census/roster match upgrades confidence) → attribute (≥1 `ad_area_matches` row: the search area that found it, copy mentions, landing URL, service areas — search-derived matches carry low `confidence`, corroborated ones high, using the column that already exists) → link agency/agent from roster.
+
+Ad lifecycle: only a **successful full page capture** may mark that page's missing ads inactive; search results never imply absence (a search is a sample, not a census of the page).
 
 This deletes media-collector and classifier as queue concepts (currently 35,000+ job rows of bookkeeping for what are function calls).
 
@@ -89,8 +93,27 @@ The census-first chain, payload gate contracts (censusDecisionId / realEstateGat
 
 1. Failures live on the target row (last_error, consecutive_failures) — the console's first screen is "what's failing and why", straight from `targets`. No defect workflow, no triage process: **coverage_defects stops being written and is dropped after cutover.**
 2. One audit stream: `agent_decisions` for judgments (classification verdicts, agent actions, provider flips). Mechanical write-logging (ingest_events) is deleted.
-3. `v_health` (one row): heartbeat age, due backlog, failing targets, parse-fail rate 24h, % ads attributed, % displayable, paid spend MTD, paid-spend-without-ingest. `/api/operator/research/health` returns 503 when red → existing uptime-kuma alerts (email/webhook, zero new infra).
-4. Suspect "no ads" pages: their targets simply stay scheduled; nothing is ever concluded permanently from a failed provider.
+3. `v_health` (one row): heartbeat age, due backlog, failing targets, parse-fail rate 24h, % ads attributed, % displayable, paid spend MTD, paid-spend-without-ingest. `/api/operator/research/health` (on **Vercel**, reading Supabase) returns 503 when red.
+4. Alerting that survives the VPS dying: a free external monitor (UptimeRobot or similar) pings the Vercel health endpoint. The worker writes its heartbeat to Supabase, Vercel reads Supabase, the monitor reads Vercel — no link in that chain lives on the VPS. This **deletes the uptime-kuma container** (the current monitor runs on the same host it monitors, so it dies with the patient).
+5. Suspect "no ads" pages: their targets simply stay scheduled; nothing is ever concluded permanently from a failed provider.
+
+### Failure-mode walkthrough (top-down / bottom-up check)
+
+| Failure | What happens, with no special machinery |
+| --- | --- |
+| Meta changes payload shape | evidence saved → paid fallback serves the target → trailing fail-rate flips provider order → alert; ads keep flowing |
+| Meta walls the VPS IP | same path; the saved DOM shows the wall, so the cause is diagnosable, not guessed |
+| Paid actor breaks / schema drifts | >5% mapping failure = capture failure with raw payload saved; browser still primary |
+| Budget cap hit | fail-closed, browser-only, health shows it |
+| Supabase down | worker idles and retries; health endpoint fails → external monitor alerts |
+| VPS dies | heartbeat goes stale → health 503 → external monitor alerts (monitor is off-box) |
+| Worker crashes mid-ingest | crash-only + idempotent upserts: restart finishes the job, nothing corrupts |
+| Hung browser session | per-target timeout + bounded concurrency; the tick never stalls |
+| Duplicate worker (deploy overlap) | `SKIP LOCKED` — double processing impossible |
+| Classifier LLM down | regex prefilter still runs; creatives stay pending (not hidden), counted in health, retried |
+| Classifier drifts wrong | daily 20-sample precision check → prompt version rollback |
+| Ambiguous suburb names (wrong-state ads) | search-derived area matches carry low confidence; views/threshold filter them until corroborated |
+| Target volume at national scale (~50k rows) | indexed due-time query; trivial for Postgres |
 
 ## 5. Hermes self-improvement — one skill, full autonomy
 
@@ -118,13 +141,14 @@ Free path is primary (browser). **Fallback-only dispatch** means paid capture us
 | Unreachable auditor/investigator skills, stale SKILL.md rulebook | one self-review skill |
 | v1 additions: canary subsystem, defect triage, actor benchmark loop | trailing fail-rate, target rows, fixed actor + caps |
 | ~55 of 67 env vars | ~10 env (secrets/bootstrap) + settings table |
+| uptime-kuma container (monitors the host it runs on) | free external monitor pinging the Vercel health endpoint |
 | Stale docs (system-map, vps doc claims, known-limitations) + root plan files + `_archive` legacy orchestrator | one regenerated `SYSTEM.md` |
 
 **Concept count: 5 control tables → 1 (+settings). 9 job types → 3 target kinds. 5 statuses → 0 enums. 2 modes → 0. 3 audit streams → 1. 67 env vars → ~10. Supervisor 4,559 → ~1,000 LOC (same file layout — no file explosion).** Data tables (agencies, agents, service areas, pages, ads, snapshots, creatives, media, area matches, source documents) keep their shape; customer-facing views unchanged in shape. Net production LOC decreases.
 
 ## 8. Rollout — five small phases, each gated
 
-**P0 (day 1).** Evidence-on-parse-failure + `v_health` + 503 endpoint + uptime-kuma alert on the *current* loop; fix runtime env (build posture, single mode). *Accept: induced failure alerts in 30 min; backlog drains.*
+**P0 (day 1).** Evidence-on-parse-failure + `v_health` + 503 endpoint + free external monitor on the *current* loop; fix runtime env (build posture, single mode). *Accept: induced failure alerts in 30 min; backlog drains.*
 **P1 (week 1).** Lean core cutover: `targets` + one loop + capture chain (browser→paid, capped) + inline ingest. Seed targets from existing pages/policies; stop writing old control tables; fix parser from stored evidence; requeue the 309 + re-check the 230 "no-ads" pages as ordinary due targets. *Accept: parse-fail <5%; old control tables idle; supervisor ≤ ~1,500 LOC and falling.*
 **P2 (week 2).** Classifier-led gate + attribution backfill of the 1,840 unattributed ads + agency/agent link backfill; console first screen = failing targets + health. *Accept: ≥95% ads attributed; agent/agency/location queries return data.*
 **P3 (week 3).** Self-review skill + settings autonomy + prompt versioning. *Accept: 7 unattended days of morning reports, no manual interventions.*
@@ -139,3 +163,7 @@ Schema work explicitly requested; additive first (targets, settings, v_health), 
 1. Fallback vendor final pick (one cheap actor; trial credits first).
 2. Classifier model slot (any sub-cent vision-capable OpenRouter model).
 3. Apify $199/mo subscription — downgrade decision after P1 volume is known.
+
+## 11. The one honest unknown
+
+The architecture's only structural bet is that the **free browser path stays viable** against Meta's anti-bot posture from a datacenter IP. The design absorbs failure either way (evidence + fallback + visible cost), but if the browser path turns out permanently walled, paid capture becomes primary and the cost profile changes: roughly $0.0005–0.001 per charged ad means low tens of dollars/month at Perth scale but potentially $200–400/month at full national scale with twice-daily checks. That is a **pricing decision, not an architecture change** — the P1 exit produces the real numbers (parse-fail rate by provider, ads/check, cost/1k), and the options at that point are: add a residential proxy to the browser (small monthly cost, keeps free-primary), accept paid-primary with longer check intervals for cold areas, or hybrid (paid for discovery sweeps, browser for page refreshes). Decide then, with data; build nothing for it now.
