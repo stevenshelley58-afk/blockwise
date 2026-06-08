@@ -1069,7 +1069,7 @@ async function resolveRemoteBrowserWebSocket(cdpUrl, timeoutMs) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(versionUrl, { signal: controller.signal });
+    const response = await fetch(versionUrl, { signal: controller.signal, headers: remoteBrowserVersionHeaders(configured) });
     const body = await response.text();
     if (!response.ok) throw new Error(`remote browser version endpoint failed ${response.status}: ${body.slice(0, 500)}`);
     const version = JSON.parse(body);
@@ -1078,6 +1078,13 @@ async function resolveRemoteBrowserWebSocket(cdpUrl, timeoutMs) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function remoteBrowserVersionHeaders(cdpUrl) {
+  const parsed = new URL(cdpUrl);
+  return /^(localhost|127\.0\.0\.1|\[::1\]|::1)$/iu.test(parsed.hostname)
+    ? {}
+    : { Host: "localhost" };
 }
 
 function remoteBrowserVersionUrl(cdpUrl) {
