@@ -254,6 +254,7 @@ export function AdStudioWorkbench({
   const [leadDestination, setLeadDestination] = useState("Landing page");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
   const [generatingBackground, setGeneratingBackground] = useState(false);
+  const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
@@ -316,6 +317,12 @@ export function AdStudioWorkbench({
       initialImage: initialMedia,
       workspaceId,
       brandKitId: brandKit.brandKitId,
+      onUploaded: (asset) =>
+        setUploadedAssets((prev) =>
+          prev.some((item) => item.src === asset.src)
+            ? prev
+            : [{ src: asset.src, label: asset.label, type: "Uploaded", ratio: "Just now" }, ...prev],
+        ),
     },
   );
   const workspaceMediaAssets = useMemo(
@@ -342,7 +349,9 @@ export function AdStudioWorkbench({
       ],
     [brandKit.assets.headshots, brandKit.assets.listingImages, brandKit.assets.officeImages],
   );
-  const mediaAssets = workspaceMediaAssets.length > 0 ? workspaceMediaAssets : MEDIA_ASSETS;
+  // Uploads land at the front of the library so the image you just added is
+  // visible and reselectable right away, not only after a reload.
+  const mediaAssets = [...uploadedAssets, ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : MEDIA_ASSETS)];
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);

@@ -24,6 +24,7 @@ export function useMedia(
     initialImage?: { src: string; label: string } | null;
     workspaceId: string;
     brandKitId: string;
+    onUploaded?: (asset: { src: string; label: string }) => void;
   } = { workspaceId: "", brandKitId: "" },
 ) {
   const [primaryImage, setPrimaryImage] = useState(() => options.initialImage?.src ?? MEDIA_ASSETS[0].src);
@@ -51,8 +52,9 @@ export function useMedia(
       });
       setPrimaryImage(result.src);
       setPrimaryImageName(file.name);
+      options.onUploaded?.({ src: result.src, label: file.name });
       onImageSelected?.();
-      showToast("Image replaced");
+      showToast("Image added to this ad");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not upload that image.";
       showToast(message);

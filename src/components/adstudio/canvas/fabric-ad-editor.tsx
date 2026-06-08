@@ -117,12 +117,36 @@ export function FabricAdEditor({
     const resize = () => applyDisplaySize(canvas, creativeRef.current);
     window.addEventListener("resize", resize);
     const selectElement = (element: SelectedElement) => callbacksRef.current.onSelectedElementChange(element);
+    // Click-to-edit: a plain click on a text layer drops the caret in so you can
+    // just type. A click that moved more than a few pixels is treated as a drag,
+    // so repositioning text still works.
+    let pressXY: { x: number; y: number } | null = null;
     const disposers = [
       canvas.on("selection:created", () => syncSelection(canvas, selectElement)),
       canvas.on("selection:updated", () => syncSelection(canvas, selectElement)),
       canvas.on("selection:cleared", () => selectElement("headline")),
       canvas.on("object:modified", () => commitCanvas()),
       canvas.on("text:changed", () => commitCanvas()),
+      canvas.on("text:editing:exited", () => commitCanvas()),
+      canvas.on("mouse:down", (opt) => {
+        pressXY = pointerFromEvent(opt.e);
+      }),
+      canvas.on("mouse:up", (opt) => {
+        const start = pressXY;
+        pressXY = null;
+        const target = opt.target as BlockwiseFabricObject | undefined;
+        const meta = target ? getMeta(target) : null;
+        if (!target || !meta || meta.type !== "text" || meta.locked) return;
+        if ((target as Textbox).isEditing) return;
+        const end = pointerFromEvent(opt.e);
+        if (start && end && Math.hypot(end.x - start.x, end.y - start.y) > 5) return;
+        const textbox = target as Textbox;
+        textbox.enterEditing();
+        const caret = textbox.text?.length ?? 0;
+        textbox.selectionStart = caret;
+        textbox.selectionEnd = caret;
+        canvas.requestRenderAll();
+      }),
     ];
 
     void loadDesign(canvas, initialDesign, brandKit).then(async () => {
@@ -186,17 +210,19 @@ export function FabricAdEditor({
   return (
     <div className="studio-fabric-editor">
       <div className="studio-fabric-toolbar" aria-label="Creative editor tools">
-        <button aria-label="Undo" disabled={!history.canUndo} type="button" onClick={() => applyHistory(history.undo())}>
+        <button className="icon" aria-label="Undo" title="Undo" disabled={!history.canUndo} type="button" onClick={() => applyHistory(history.undo())}>
           <RotateCcw aria-hidden size={16} />
         </button>
-        <button aria-label="Redo" disabled={!history.canRedo} type="button" onClick={() => applyHistory(history.redo())}>
+        <button className="icon" aria-label="Redo" title="Redo" disabled={!history.canRedo} type="button" onClick={() => applyHistory(history.redo())}>
           <RotateCw aria-hidden size={16} />
         </button>
-        <button aria-label="Replace selected image" type="button" onClick={onRequestImageReplace}>
+        <span className="studio-fabric-toolbar-divider" aria-hidden />
+        <button title="Swap the photo for one from your computer" type="button" onClick={onRequestImageReplace}>
           <ImageIcon aria-hidden size={16} />
+          <span>Replace photo</span>
         </button>
         <button
-          aria-label="Fit selected image"
+          title="Fill the frame with the selected photo"
           type="button"
           onClick={() => {
             fitSelectedImage(fabricRef.current);
@@ -204,9 +230,11 @@ export function FabricAdEditor({
           }}
         >
           <ScanSearch aria-hidden size={16} />
+          <span>Fit photo</span>
         </button>
-        <button aria-label="AI patch selected layer" type="button" onClick={() => void onPatchSelectedLayer()}>
+        <button title="Rewrite the selected text with AI" type="button" onClick={() => void onPatchSelectedLayer()}>
           <Bot aria-hidden size={16} />
+          <span>Rewrite with AI</span>
         </button>
       </div>
       <div className="studio-fabric-shell" data-format={creative.format} data-selected={selectedElement}>
@@ -559,6 +587,18 @@ function getMeta(object: FabricObject): CreativeLayerMeta | null {
   return (object as BlockwiseFabricObject)[BLOCKWISE_FABRIC_META_KEY] ?? null;
 }
 
+/** Screen-space pointer from the raw DOM event, so click-vs-drag detection
+ *  works the same across Fabric versions without relying on internal point APIs. */
+function pointerFromEvent(event: unknown): { x: number; y: number } | null {
+  const mouse = event as { clientX?: number; clientY?: number } | undefined;
+  if (mouse && typeof mouse.clientX === "number" && typeof mouse.clientY === "number") {
+    return { x: mouse.clientX, y: mouse.clientY };
+  }
+  const touch = (event as { touches?: ArrayLike<{ clientX: number; clientY: number }> } | undefined)?.touches?.[0];
+  if (touch) return { x: touch.clientX, y: touch.clientY };
+  return null;
+}
+
 function interactiveOptions(meta: CreativeLayerMeta) {
   const unlocked = !meta.locked;
   return {
@@ -571,6 +611,9 @@ function interactiveOptions(meta: CreativeLayerMeta) {
     lockScalingY: meta.locked,
     lockRotation: meta.locked,
     editable: unlocked && meta.type === "text",
+    // Wordless affordance: hovering text shows a caret, the image shows a pointer,
+    // so users can see what they can click into before they click.
+    hoverCursor: unlocked ? (meta.type === "text" ? "text" : meta.type === "image" ? "pointer" : "move") : "default",
   };
 }
 

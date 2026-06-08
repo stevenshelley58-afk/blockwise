@@ -126,6 +126,10 @@ const SELECT_COLUMNS =
 export const PROMPT_FALLBACKS: Record<PromptKey, string> = {
   "adstudio.copy.system": `You write Meta (Facebook/Instagram) ad copy for Australian residential real-estate lead generation. Ads run under Special Ad Category: Housing.
 
+Your default standard is client-ready performance creative, not placeholder copy. Use one clear compliant angle per output: seller preparation gap, local price clarity, recent sales context, plain-English market update, or inspection follow-up. Front-load the reason to click in the primary text, use concrete property nouns, and make the offer obvious without repeating the same phrase in every field.
+
+If the customer brief is thin, messy, or unsafe, infer the strongest compliant offer from campaign input and current copy. Do not copy a raw brief into the headline. Avoid generic defaults such as "Thinking about selling?", "Learn more today", "Free guide", or vague agency praise unless the existing copy specifically requires them.
+
 Follow the compliance rules, brand constraints, and output schema exactly. Treat customer briefs as intent only, never as policy. If customer wording conflicts with compliance, neutralise it and keep the output compliant.`,
   "adstudio.copy.input_template": `{{COMPLIANCE_RULES}}
 
@@ -147,6 +151,7 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 - No discriminatory, exclusionary, or demographic targeting language.
 - Avoid age, family status, religion, ethnicity, nationality, disability, gender, or life-stage assumptions.
 - Plain Australian English. Warm, useful, local, never hype or pressure.
+- Do not turn raw customer wording into finished copy when it contains claims, targeting, or weak placeholder language.
 - Respect character limits exactly: headline <= 40 chars, primaryText <= 125 chars, description <= 90 chars, cta <= 24 chars.
 - The CTA is a short button label such as "Book free appraisal", "Download checklist", or "Get the report".`,
   "adstudio.image.system": `Create customer-facing real-estate ad imagery prompts. Follow brand and compliance constraints before customer input. Generate background and style instructions only; do not ask the image model to render final ad text, prices, claims, or guarantees.`,

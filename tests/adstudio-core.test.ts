@@ -152,7 +152,39 @@ test("generateAdStudioCampaignPack creates five compliant seller checklist varia
   assert.equal(pack.campaign.goal, "seller_leads");
   assert.equal(pack.variants.length, 5);
   assert.equal(pack.copyPacks[0]?.meta.specialAdCategory, "housing");
+  assert.doesNotMatch(pack.copyPacks[0]?.meta.primaryText[0] ?? "", /^Thinking about selling/i);
+  assert.match(pack.copyPacks[0]?.meta.primaryText[0] ?? "", /Before you list in Scarborough/);
+  assert.equal(pack.copyPacks[0]?.meta.cta, "DOWNLOAD");
   assert.equal(pack.creatives.every((creative) => creative.canvas.objects.every((object) => String(object.type) !== "ai_text_image")), true);
+  assert.equal(pack.compliance.status, "approved");
+});
+
+test("generateAdStudioCampaignPack keeps appraisal defaults offer-aware", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "appraisal_bookings",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "home_value_update",
+    platforms: ["meta"],
+    variantCount: 5,
+  });
+
+  assert.equal(pack.campaign.offerId, "home_value_update");
+  assert.equal(pack.variants.length, 5);
+  assert.match(pack.copyPacks[0]?.meta.primaryText[0] ?? "", /price update/);
+  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Scarborough price update");
+  assert.doesNotMatch(pack.copyPacks[0]?.landingPage.subheadline ?? "", /seller checklist/i);
   assert.equal(pack.compliance.status, "approved");
 });
 
@@ -187,10 +219,15 @@ test("first-ad generation uses the uploaded image as the full creative visual", 
   assert.ok(story);
 
   const image = story.canvas.objects.find((object) => object.role === "primary_image");
+  const subhead = story.canvas.objects.find((object) => object.role === "subheadline");
   assert.deepEqual(
     { content: image?.content, x: image?.x, y: image?.y, width: image?.width, height: image?.height },
     { content: uploadedImage, x: 0, y: 0, width: story.canvas.width, height: story.canvas.height },
   );
+  assert.equal(pack.campaign.offerId, "open_home_followup");
+  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Open-home follow-up guide");
+  assert.equal(subhead?.content, pack.copyPacks[0]?.landingPage.subheadline);
+  assert.doesNotMatch(String(subhead?.content ?? ""), /seller prep checklist/i);
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "primary_image") < story.canvas.objects.findIndex((object) => object.role === "headline"));
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
 });
