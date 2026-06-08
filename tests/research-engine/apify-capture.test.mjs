@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  apifyCircuitOpenUntilIso,
   createApifyRun,
   ensureApifyAccountLimit,
+  evaluateApifyCircuitRecovery,
   guardApifyBudget,
   inferApifySchemaMap,
   ledgerCostFromApifyRunDetail,
@@ -352,6 +354,51 @@ test("Apify schema_map inference maps common actor result shapes", async () => {
   assert.equal(mapped.metadata.mapping_failure_rate, 0);
   assert.equal(mapped.items[0].external_ad_id, "123456789012345");
   assert.equal(mapped.items[1].external_ad_id, "223456789012345");
+});
+
+test("Apify circuit recovery waits for the cooldown window then auto-recovers", () => {
+  const base = {
+    apify_state: "circuit_open",
+    apify_monthly_cap_usd: 25,
+    apify_circuit_open_until: new Date(10_000).toISOString(),
+  };
+
+  const cooling = evaluateApifyCircuitRecovery(base, { now: 5_000, monthlySpendUsd: 0 });
+  assert.equal(cooling.recover, false);
+  assert.equal(cooling.reason, "cooling_down");
+
+  const recovered = evaluateApifyCircuitRecovery(base, { now: 20_000, monthlySpendUsd: 0 });
+  assert.equal(recovered.recover, true);
+  assert.equal(recovered.reason, "cooldown_elapsed");
+});
+
+test("Apify circuit recovery heals legacy opens that carry no cooldown stamp", () => {
+  const legacy = { apify_state: "circuit_open", apify_monthly_cap_usd: 25 };
+  const decision = evaluateApifyCircuitRecovery(legacy, { monthlySpendUsd: 1.5 });
+  assert.equal(decision.recover, true);
+  assert.equal(decision.reason, "no_cooldown_recorded");
+});
+
+test("Apify circuit recovery never overrides the monthly spend cap", () => {
+  const atCap = {
+    apify_state: "circuit_open",
+    apify_monthly_cap_usd: 25,
+    apify_circuit_open_until: new Date(0).toISOString(),
+  };
+  const decision = evaluateApifyCircuitRecovery(atCap, { now: 1_000, monthlySpendUsd: 25 });
+  assert.equal(decision.recover, false);
+  assert.equal(decision.reason, "monthly_cap_reached");
+});
+
+test("Apify circuit recovery is a no-op when the circuit is already closed", () => {
+  const decision = evaluateApifyCircuitRecovery({ apify_state: "ready" });
+  assert.equal(decision.recover, false);
+  assert.equal(decision.reason, "circuit_not_open");
+});
+
+test("apifyCircuitOpenUntilIso stamps a future resume time from the cooldown window", () => {
+  assert.equal(apifyCircuitOpenUntilIso(0, 60_000), new Date(60_000).toISOString());
+  assert.equal(Date.parse(apifyCircuitOpenUntilIso(1_000_000, 3_600_000)), 1_000_000 + 3_600_000);
 });
 
 function jsonResponse(body, status = 200) {

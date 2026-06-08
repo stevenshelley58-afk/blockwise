@@ -14,8 +14,11 @@ import {
   shouldWaitForMediaClassification,
 } from "./ad-classifier.mjs";
 import {
+  APIFY_CIRCUIT_OPEN_UNTIL_SETTING,
+  apifyCircuitOpenUntilIso,
   createApifyRun,
   ensureApifyAccountLimit,
+  evaluateApifyCircuitRecovery,
   extractApifyRunCost,
   fetchApifyDatasetItems,
   guardApifyBudget,
@@ -121,6 +124,7 @@ const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research
 const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_enabled",
   "apify_state",
+  "apify_circuit_open_until",
   "apify_monthly_cap_usd",
   "apify_per_run_cap_usd",
   "apify_account_limit_usd",
@@ -2798,13 +2802,41 @@ function captureModeForSourceProvider(sourceProvider, suffix = "") {
   return suffix ? `${modeName}_${suffix}` : modeName;
 }
 
+// Self-heal the paid-capture circuit: once the cooldown elapses (and we are under
+// the monthly spend cap), flip apify_state back to "ready" so the already-approved
+// actor resumes serving. Without this the circuit stays open forever once tripped.
+async function recoverApifyCircuitIfDue(settings) {
+  if (runtimeSettingString(settings, "apify_state") !== "circuit_open") return settings;
+
+  let monthlySpendUsd = null;
+  try {
+    const reference = new Date();
+    const monthStart = new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1));
+    monthlySpendUsd = await readApifyLedgerSpendUsd({ since: monthStart, until: reference });
+  } catch {
+    monthlySpendUsd = null;
+  }
+
+  const decision = evaluateApifyCircuitRecovery(settings, { monthlySpendUsd });
+  if (!decision.recover) return settings;
+
+  await setRuntimeSetting("apify_state", "ready", {
+    reason: "apify_circuit_auto_recovered",
+    recovery_reason: decision.reason,
+    monthly_spend_usd: monthlySpendUsd,
+  });
+  log("Apify paid circuit auto-recovered", { recovery_reason: decision.reason, monthly_spend_usd: monthlySpendUsd });
+  return { ...settings, apify_state: "ready" };
+}
+
 async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit = false } = {}) {
   const startedAt = now();
   if (!apifyToken) {
     return explicit ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, "APIFY_TOKEN is not configured", { explicit }) : null;
   }
 
-  const settings = await readRuntimeSettings(APIFY_RUNTIME_SETTING_KEYS);
+  let settings = await readRuntimeSettings(APIFY_RUNTIME_SETTING_KEYS);
+  settings = await recoverApifyCircuitIfDue(settings);
   const parsedSettings = normaliseApifySettings(settings);
   if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
     return explicit
@@ -3234,6 +3266,7 @@ async function openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd
     error: reason,
   };
   await setRuntimeSetting("apify_state", "circuit_open", defect);
+  await setRuntimeSetting(APIFY_CIRCUIT_OPEN_UNTIL_SETTING, apifyCircuitOpenUntilIso(), { reason: "apify_spend_without_ingest", scope });
   await insertCoverageDefect({
     platform: "facebook",
     notes: "Apify paid capture spent money without ingesting ads; paid circuit opened.",

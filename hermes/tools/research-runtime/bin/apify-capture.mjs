@@ -3,6 +3,8 @@ export const DEFAULT_APIFY_RESULT_LIMIT = 250;
 export const DEFAULT_APIFY_PER_RUN_CAP_USD = 1;
 export const DEFAULT_APIFY_MONTHLY_CAP_USD = 25;
 export const DEFAULT_APIFY_ACCOUNT_LIMIT_USD = 30;
+export const DEFAULT_APIFY_CIRCUIT_COOLDOWN_MS = 60 * 60 * 1000;
+export const APIFY_CIRCUIT_OPEN_UNTIL_SETTING = "apify_circuit_open_until";
 export const BANNED_APIFY_ACTOR_IDS = Object.freeze(["apify/facebook-ads-scraper"]);
 
 const TERMINAL_RUN_STATUSES = new Set(["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"]);
@@ -450,6 +452,37 @@ export function normaliseApifySettings(settings = {}) {
     accountLimitUsd: settingNumber(settings, "apify_account_limit_usd", DEFAULT_APIFY_ACCOUNT_LIMIT_USD),
     state: settingString(settings, "apify_state", "ready"),
   };
+}
+
+// Absolute timestamp at which an opened circuit becomes eligible to auto-recover.
+export function apifyCircuitOpenUntilIso(now = Date.now(), cooldownMs = DEFAULT_APIFY_CIRCUIT_COOLDOWN_MS) {
+  const base = Number.isFinite(now) ? now : Date.now();
+  const windowMs = Number.isFinite(cooldownMs) && cooldownMs >= 0 ? cooldownMs : DEFAULT_APIFY_CIRCUIT_COOLDOWN_MS;
+  return new Date(base + windowMs).toISOString();
+}
+
+// Pure decision for self-healing the Apify paid-capture circuit.
+// - Stays open while a recorded cooldown window is still in the future.
+// - Never recovers while monthly spend is at/over the cap (the budget guard wins).
+// - Otherwise recovers, which also heals legacy opens that carry no cooldown stamp.
+export function evaluateApifyCircuitRecovery(settings = {}, { now = Date.now(), monthlySpendUsd = null } = {}) {
+  const parsed = normaliseApifySettings(settings);
+  if (parsed.state !== "circuit_open") {
+    return { recover: false, reason: "circuit_not_open" };
+  }
+
+  const reference = Number.isFinite(now) ? now : Date.now();
+  const openUntil = Date.parse(settingString(settings, APIFY_CIRCUIT_OPEN_UNTIL_SETTING, ""));
+  if (Number.isFinite(openUntil) && reference < openUntil) {
+    return { recover: false, reason: "cooling_down", openUntil };
+  }
+
+  const spend = Number(monthlySpendUsd);
+  if (monthlySpendUsd !== null && Number.isFinite(spend) && spend >= parsed.monthlyCapUsd) {
+    return { recover: false, reason: "monthly_cap_reached", monthlySpendUsd: spend };
+  }
+
+  return { recover: true, reason: Number.isFinite(openUntil) ? "cooldown_elapsed" : "no_cooldown_recorded" };
 }
 
 export function normaliseApifyLimits(limits = {}) {
