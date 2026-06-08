@@ -1,177 +1,141 @@
-# Research Engine Simplification Review
+# Research Engine Simplification Review (v2 — lean core)
 
 Date: 2026-06-08
 Status: proposal for approval — no code changed yet
-Scope: full review of the Hermes ad-research system with the goals of (1) radical simplification, (2) zero silent failure, (3) maximum use of Hermes self-improvement, (4) cheapest-possible capture costs.
+v2 note: v1 of this review added control machinery (canary subsystem, defect triage workflow, actor benchmarking). v2 removes those: the goal is fewer concepts, not better-managed complexity. Where v1 said "manage it", v2 says "delete the structure that makes it possible".
 
-Owner decisions already made (recorded from review session):
+Owner decisions (recorded):
 
-1. **Capture source**: cheapest paid service that works, free wherever possible.
-2. **Trust gate**: census-first is too strict — use a cheap LLM agent reviewing ad copy / page name / image to decide real-estate visibility; census becomes enrichment.
-3. **Agent autonomy**: full autonomy for the Hermes self-improvement loop (within data/config boundaries; never code, secrets, schema, or auth).
+1. **Capture**: cheapest paid service that works, free wherever possible.
+2. **Trust gate**: census-first is too strict — cheap LLM review of copy/page/image decides; census is enrichment.
+3. **Autonomy**: full autonomy for Hermes within data/config boundaries (never code, secrets, schema, auth).
+4. **Simplicity**: less, not more. Fewer steps, fewer rules. (This version.)
 
 ---
 
 ## 1. Why it keeps failing — root causes with evidence
 
-**RC1. One 4,559-line file does everything.** `supabase-supervisor.mjs` implements 9 job types, 3 capture providers, all parsers, watchdogs, retries, and ingestion. 67 unique env vars configure it. Any change risks everything, so every "fix attempt" by a different agent session has added code instead of changing it. A parallel TypeScript library (`research-runtime/src/`, 428 LOC) is dead code — never imported by the deployed `.mjs` files.
+**RC1. A distributed-systems control plane for one worker.** One VPS process runs the whole pipeline, yet it carries: a work_queue with dedupe keys, claim tokens, claim TTLs, a claims RPC with REST fallback, five watchdog functions to un-stick its own queue, job recycling, refresh_policies, build_runs with build/maintain modes (currently both open at once), and 9 job types passing signed payload contracts to each other. Every one of these is a place to get stuck — and they are where it *is* stuck: 563 due jobs sitting, 1,430 blocked, 25 orphaned jobs of a type with no code. The queue exists to coordinate workers that don't exist.
 
-**RC2. Failure is recorded but never consumed.** Live numbers (2026-06-08): 3,163 coverage defects created in the last 7 days, **0 resolved**. 2,891 open + 272 blocked. `ingest_events`, watchdog anomaly rows, `media_assets.capture_status='failed'`, `consecutive_failed_checks`, and 1,359 hidden creatives have **no reader** — no console view, no alert, nothing. The system is a write-only failure log. This is the definition of silent failing.
+**RC2. Failure is recorded into landfills nobody reads.** 3,163 coverage defects filed in 7 days, 0 resolved — plus watchdog anomaly rows, ingest_events, media failure flags, and 1,359 hidden creatives, none surfaced anywhere. Three overlapping audit streams (agent_decisions, ingest_events, coverage_defects), zero alerts.
 
-**RC3. The only viable ad source has a single fragile parser and no evidence trail.** Meta's official Ad Library API cannot return AU commercial ads (ALL is EU-only; HOUSING_ADS is US-only), so browser capture of the public Ad Library is the only real source. When Meta changed the embedded payload shape, 309 jobs blocked with the identical error *"Meta Ad Library page loaded but no ad result payload could be parsed"* — and the failing DOM was never saved (the `research-raw-evidence` bucket is env-wired but never written), so the parser can't even be fixed from evidence. Meanwhile ~280 LOC of official-API code sits enabled-by-default doing nothing useful for AU.
+**RC3. One fragile parser, no evidence, no fallback.** Meta's official API cannot return AU commercial ads (EU/US-only programs), so browser capture is the only real source. When Meta changed payload shape, 309 jobs blocked with one identical error and the failing DOM was never saved. ~280 LOC of useless official-API code sits enabled by default.
 
-**RC4. The strict census-first gate starves the database.** 598 pages are verified-real-estate-but-unresolved; 992 resolver jobs are blocked "no verified meta page". Of 2,785 stored ads: only 945 (34%) have any location attribution, 580 (21%) link to an agency, 192 (7%) link to an agent. The customer view inner-joins `ad_area_matches`, so two-thirds of collected ads are invisible to location queries. **This is why you cannot query by agent, agency, or location** — the ads exist but the joins don't.
+**RC4. The census-first gate starves the database.** 598 pages verified-but-unresolved, 992 resolver jobs dead-ended. Of 2,785 ads: 34% have location attribution, 21% an agency link, 7% an agent link. The customer view requires the missing joins — which is why you can't query by agent, agency, or location.
 
-**RC5. Docs, tests, and code disagree.** The system map says 5 handled job types and "no location-based discovery anywhere"; the code handles 9 job types including `blockwise-location-ad-search` (1,410 completed location-search fetch runs in production). `hermes-vps-deployment.md` forbids Meta API tokens that the supervisor actively reads. Every new agent session "fixes" toward whichever document it read first. **This contradiction loop is why repeated attempts keep failing.**
+**RC5. Docs, tests, and code disagree.** Docs say 5 job types and "no location discovery"; code runs 9 types including location search (1,410 completed runs). Every fresh agent session "fixes" toward whichever doc it read — this contradiction loop is why repeated attempts made it worse.
 
-**RC6. The runtime ships throttled.** The deployment contract sets `HERMES_RESEARCH_MODE=maintain` (claim 1 job/tick default) and `BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false`. Two build_runs are open simultaneously (one build, one maintain — the mode has flapped). 563 due jobs sit pending right now. Nothing measures "is the backlog draining"; uptime-kuma only checks the container responds, so the pipeline can be dead while monitoring is green.
-
----
+**RC6. The runtime ships throttled and unmeasured.** Deployment contract: maintain mode, `BLOCKWISE_RESEARCH_RUNTIME_ENABLED=false`. Monitoring checks "container up", never "work done".
 
 ## 2. Live evidence snapshot (2026-06-08)
 
-| Metric | Value | Meaning |
-| --- | --- | --- |
-| Coverage defects open / blocked | 2,891 / 272 | nothing consumes them |
-| Defects created vs resolved, 7d | 3,163 vs 0 | write-only failure log |
-| Ads stored | 2,785 | collection partially works |
-| Ads with location attribution | 945 (34%) | location queries blind to 66% |
-| Ads linked to agency / agent | 580 (21%) / 192 (7%) | agent/agency queries mostly empty |
-| Creatives hidden / displayable | 1,359 / 1,426 | half of everything invisible, no review queue |
-| Jobs blocked on one parser error | 309 | single point of failure, no evidence saved |
-| Resolver jobs blocked | 992 | census-first dead end |
-| Due jobs sitting pending | 563 | runtime throttled / not draining |
-| Pages: unresolved / collectable / no-ads | 598 / 42 / 230 | funnel inverted |
+| Metric | Value |
+| --- | --- |
+| Defects created vs resolved, 7d | 3,163 vs 0 |
+| Ads with location / agency / agent attribution | 34% / 21% / 7% |
+| Creatives hidden with no review surface | 1,359 of 2,785 |
+| Jobs blocked on one parser error | 309 |
+| Due jobs sitting unprocessed | 563 |
+| Supervisor LOC (+ dead twin library) | 4,559 (+428) |
+| Env vars / job types / page statuses / control tables | 67 / 9 / 5 / 5 |
 
 ---
 
-## 3. Target design — one loop, four verbs
+## 3. The lean core: one table, one loop, one rule
 
-Replace the census→resolver→collector chain-of-gates with a single ranked work loop:
+### One table drives everything: `research.targets`
 
 ```
-DISCOVER  →  CAPTURE  →  ATTRIBUTE  →  REVIEW
-(location search,   (one provider     (location + agency   (cheap LLM gate,
- page refresh,       chain with        + agent links,        sampling QA,
- ranked geo tiers)   auto-failover)    mandatory)            census enrich)
+kind          page | search | roster
+ref           page_id, or query + area, or area
+priority      1..5 (geo tier + value)
+interval_min  per-target cadence
+next_check_at when it's due
+last_success_at, consecutive_failures, last_error, enabled
 ```
 
-**DISCOVER.** Geographic tiers stored as data (Perth metro → WA → AU capitals → national). Location-ad-search (already implemented and producing 1,410 runs) becomes the primary discovery engine; page refresh keeps known pages current. Pages discovered by location search are auto-created as candidate pages — no census prerequisite. Census continues as roster *enrichment* (agency/agent identity), not a gate.
+This single table **replaces** work_queue, refresh_policies, build_runs, build_run_reports, dedupe keys, claim tokens, watchdogs, job recycling, and the build/maintain modes. Retry = `next_check_at = now() + backoff`. "Blocked" = `consecutive_failures` high → interval stretches (never silently removed). Multi-worker later = add `FOR UPDATE SKIP LOCKED` to one query.
 
-**CAPTURE.** One provider chain, config-as-data: `self-hosted browser (free, primary) → paid endpoint (fallback) `. Every parse failure saves the DOM + screenshot to `research-raw-evidence` (already wired, currently unwritten). A canary capture (a page known to always run ads, e.g. a national portal) runs every 30 minutes; on canary failure the supervisor pauses mass capture, flips provider, and raises an alert — this kills the 309-identical-errors pattern permanently. Delete the official-API path (~280 LOC): it cannot serve AU commercial ads.
+### One loop
 
-**ATTRIBUTE.** An ad is not "ingested" until it has: ≥1 `ad_area_matches` row (minimum: the search area that found it — new additive match_type `source_search_area`, plus `copy_mention`/`landing_url`/service-area inference), and a page→agency/agent link attempt. Backfill the 1,840 unattributed ads from existing copy, landing URLs, and the roster. Customer view keeps the inner join — but now everything qualifies.
+```
+every tick:
+  take N due targets by priority
+  page   → capture ads for page          → ingest
+  search → capture ads for location query → ingest (new pages found become page targets)
+  roster → scrape area roster              → upsert agencies/agents/service-areas
+  success: next_check_at += interval   failure: backoff, failures++, last_error set
+```
 
-**REVIEW.** The trust gate becomes the classifier (per your decision): deterministic regex as cheap prefilter, then a cheap OpenRouter model (the `ad_classification` model slot already exists) over copy + page name, vision call only when text is inconclusive. Census verification upgrades confidence when it lands. Hidden creatives get a visible review queue, and the agent samples both hidden and displayable daily to measure its own precision.
+Geo tiers (Perth → WA → capitals → national) are just target priorities — seeded as data, advanced by the agent.
 
-**Status model.** Replace the 5 conflated page statuses with two orthogonal fields: `identity` (candidate / verified) and `collection_health` (never_checked / ok / no_ads_confirmed / failing), plus `last_capture_at` / `next_check_at`. Console shows plain language; "checked: no ads returned (via <provider>, <date>)" replaces "no_ads_confirmed".
+### Capture: one function, two providers
 
-**Config-as-data.** Replace ~50 of the 67 env vars with a `research.runtime_settings` table read each tick (cadences, batch sizes, provider order, geo tier, pause flags, spend caps). Env keeps only secrets + bootstrapping (~15 vars). This is also what makes full agent autonomy safe — see §5.
+Try self-hosted browser (free). On parse failure: save DOM + screenshot to `research-raw-evidence`, try the paid endpoint (capped). Both fail = target failure with evidence. If the trailing parse-fail rate over the last 20 browser captures exceeds 50%, the loop flips provider order in settings and alerts — **no canary subsystem; the work itself is the canary.** "No ads" is recorded only when the empty-state marker is actually parsed; zero-without-proof is a failure.
 
----
+### Ingest: inline steps, not queued jobs
 
-## 4. The no-silent-failure contract
+upsert ad/snapshot/creative → fetch media inline (per-asset failures recorded on the asset, retried on the target's next pass) → classify (regex prefilter, cheap LLM on copy + page name, vision only if inconclusive; census/roster match upgrades confidence) → attribute (≥1 `ad_area_matches` row: the search area that found it, copy mentions, landing URL, service areas) → link agency/agent from roster.
 
-One rule, enforced in code: **every failure ends in exactly one of (a) capped retry, (b) automatic repair, (c) a defect with evidence + owner + next action, or (d) an operator alert. Nothing else is permitted to exist.**
+This deletes media-collector and classifier as queue concepts (currently 35,000+ job rows of bookkeeping for what are function calls).
 
-1. **`research.v_health`** — one row: heartbeat age, due-backlog size, blocked count by signature, parse-fail rate (24h), canary status, % ads attributed, % creatives reviewed, open defect count. The only health surface; console renders it as the first screen.
-2. **`/api/operator/research/health`** returns HTTP 503 whenever any v_health field is red. Point the already-deployed uptime-kuma at it — uptime-kuma natively sends email/Telegram/webhook notifications. Alerting with zero new dependencies.
-3. **Absence requires proof.** "No ads" is only recorded when the page loaded AND the empty-state marker parsed. Zero-results-without-proof is a capture failure with stored evidence. Nightly re-check of `no_ads_confirmed` pages older than 7 days (the current 230 were judged by the broken parser and are suspect).
-4. **Defects become a workflow, not a landfill.** Every defect carries a signature; the self-review skill clusters by signature daily, mass-resolves clusters whose root cause is fixed, and escalates *new* signatures to the morning report. Standing target: <100 open defects.
-5. **No more swallow-and-complete.** Media-collector jobs that fail every asset must file a defect, not complete; schema-mismatch silent column-dropping (`patchMediaAsset`, `insertCoverageDefect`) becomes a hard failure; hidden creatives appear in a review queue with counts on v_health.
-6. **Pages that stop being checked must say so.** `consecutive_failed_checks >= 3` currently silently removes a page from refresh forever; instead it sets `collection_health=failing`, files a defect, and the self-review loop retries weekly.
+### One rule (replaces the guardrail rulebook)
 
----
+> An ad is displayable iff it has an external id, a page, ≥1 location, and a passing classification. Anything less is pending, counted in health, and retried on the target's next pass. Every failure must be visible on its target row.
 
-## 5. Hermes self-improvement — full autonomy, safely bounded
+The census-first chain, payload gate contracts (censusDecisionId / realEstateGate handoffs), location prohibitions, and 5-value page status enum are deleted. Page identity = classification score; collection health = `last_success_at` + `consecutive_failures`. Plain timestamps and counts, no enums.
 
-What exists today (verified): skills hot-reload (`auto_reload=true`), mem0 wired (read-only), OpenRouter per-task model slots, prompt-manager skill with version/activate/rollback, model-router skill, two cron jobs, coverage-auditor + defect-investigator skills (currently unreachable — no handler). The agent can already write queue rows, defects, and decisions; it cannot touch code, env, or schema. Keep that hard boundary; widen the middle with **settings-as-data**:
+## 4. No silent failure — by construction, not by process
 
-**The autonomy surface** (all writes audited as `agent_decisions` rows):
+1. Failures live on the target row (last_error, consecutive_failures) — the console's first screen is "what's failing and why", straight from `targets`. No defect workflow, no triage process: **coverage_defects stops being written and is dropped after cutover.**
+2. One audit stream: `agent_decisions` for judgments (classification verdicts, agent actions, provider flips). Mechanical write-logging (ingest_events) is deleted.
+3. `v_health` (one row): heartbeat age, due backlog, failing targets, parse-fail rate 24h, % ads attributed, % displayable, paid spend MTD, paid-spend-without-ingest. `/api/operator/research/health` returns 503 when red → existing uptime-kuma alerts (email/webhook, zero new infra).
+4. Suspect "no ads" pages: their targets simply stay scheduled; nothing is ever concluded permanently from a failed provider.
 
-| Agent may autonomously | Mechanism |
+## 5. Hermes self-improvement — one skill, full autonomy
+
+Daily self-review cron (the only new skill): read `v_health` + deltas vs yesterday (mem0) → retry/stretch failing targets, flip provider order, advance geo tier when current tier is green, sample 20 classifications and roll the classifier prompt version if precision <95% (prompt-manager already exists), check paid spend → morning report (decision row + webhook). Weekly: re-attempt long-failing targets, seed next tier's targets.
+
+Autonomy surface = `targets`, `runtime_settings`, prompt versions, model choice — all audited. Code, env, schema, auth remain off-limits. The unreachable coverage-auditor/defect-investigator skills are deleted (self-review replaces both).
+
+## 6. Costs — cheapest that works
+
+Free path is primary (browser). **Fallback-only dispatch** means paid capture uses one chosen cheap actor (~$0.49–0.75/1k ads — not the $4.30/1k official actor that burned $219), called per due target only when the free path fails. Hard caps, all enforced in code: per-run `maxTotalChargedUsd` ≤ $1 + result cap 250; monthly cap (default $25) checked against Apify's limits API (`GET /v2/users/me/limits`) + our ledger (`ad_fetch_runs.cost_usd`) before every dispatch, fail-closed; Apify account limit ~$30 as backstop; spend-without-ingest is a red health flag. Hermes price-polls monthly and reports — actor auto-shopping/benchmarking is **deferred** (machinery we don't need yet). Review the $199/mo Apify subscription once real fallback volume is known. Classifier costs cents/day on a sub-cent model.
+
+## 7. What gets deleted (the heart of the plan)
+
+| Deleted | Replaced by |
 | --- | --- |
-| Flip capture provider / pause mass capture | `runtime_settings` |
-| Tune cadences, batch sizes, concurrency within caps | `runtime_settings` |
-| Advance geo tier when coverage targets met | `runtime_settings` |
-| Requeue / recycle blocked job clusters | work_queue writes |
-| Re-check suspect no-ads pages, retry failing pages | work_queue writes |
-| Mass-resolve defect clusters with fixed root cause | coverage_defects |
-| Version and roll back its own classifier prompt | prompt-manager (exists) |
-| Choose models per task within spend cap | model-router (exists) |
-| Remember per-target quirks and yesterday's state | mem0 (enable writes) |
+| work_queue machinery (claims, TTLs, dedupe, recycling, 5 watchdogs) | due-time loop on `targets` |
+| refresh_policies, build_runs, build_run_reports, build/maintain modes | `targets` + settings |
+| coverage_defects workflow (3,163/week write-only) | failures on target rows + v_health |
+| ingest_events (duplicate audit stream) | agent_decisions only |
+| 9 job types + payload gate contracts | 3 target kinds, plain handlers |
+| census-first gate + resolver dead-ends | classifier-led rule; roster as enrichment |
+| 5-value page status enum (incl. my v1 two-axis proposal) | timestamps + counts + scores |
+| Official Meta API path (~280 LOC) + its test | nothing — it can't serve AU |
+| Dead TS library (428 LOC) | nothing |
+| Unreachable auditor/investigator skills, stale SKILL.md rulebook | one self-review skill |
+| v1 additions: canary subsystem, defect triage, actor benchmark loop | trailing fail-rate, target rows, fixed actor + caps |
+| ~55 of 67 env vars | ~10 env (secrets/bootstrap) + settings table |
+| Stale docs (system-map, vps doc claims, known-limitations) + root plan files + `_archive` legacy orchestrator | one regenerated `SYSTEM.md` |
 
-**Daily self-review cron** (new skill, the keystone): read v_health and deltas vs yesterday (mem0) → requeue transient clusters → run canary decision → sample 20 classifications (10 hidden / 10 displayable), grade with the critic model, roll the prompt version if precision <95% → triage defect signatures → write a morning report (decision row + alert webhook). **Weekly**: re-give coverage-auditor its cron, re-resolve a sample of the 598 unresolved pages, and evaluate geo-tier advancement.
+**Concept count: 5 control tables → 1 (+settings). 9 job types → 3 target kinds. 5 statuses → 0 enums. 2 modes → 0. 3 audit streams → 1. 67 env vars → ~10. Supervisor 4,559 → ~1,000 LOC (same file layout — no file explosion).** Data tables (agencies, agents, service areas, pages, ads, snapshots, creatives, media, area matches, source documents) keep their shape; customer-facing views unchanged in shape. Net production LOC decreases.
 
-Spend stays bounded by `HERMES_DAILY_SPEND_LIMIT_USD` plus a per-provider monthly cap in settings.
+## 8. Rollout — five small phases, each gated
 
----
-
-## 6. Cost plan — cheapest that works
-
-**Free (the default path).** Self-hosted Steel browser capture stays primary; classifier prefilter is regex (free); cheap-model classification of ~3k ads costs single-digit dollars once, then cents/day; all alerting via existing uptime-kuma.
-
-**Paid (fallback + verification only).** Wire the existing `HERMES_META_CAPTURE_ENDPOINT` (`http_json` provider — already built) to one vendor adapter:
-
-| Vendor | Price | Notes |
-| --- | --- | --- |
-| Apify actors (e.g. automly, constructive_calm) | ~$0.49–0.75 / 1,000 ads | cheapest credible; pay-per-result |
-| ScrapeCreators | pay-as-you-go, no monthly minimum | simplest API; good fallback fit |
-| SearchAPI.io | $2–4 / 1,000 searches (~25 ads/search) | pricier; strong docs |
-
-Used only when the canary trips or as a weekly cross-check, expect **$5–20/month** early, ~$50–80/month at full WA scale only if the free path is down often. Start pay-as-you-go; no subscription until usage proves it.
-
-### Apify cost controls (mandatory if Apify is the vendor)
-
-Post-mortem of the June blowout: $219.28 went to `apify/facebook-ads-scraper` (the official actor, effectively ~$4.30/1k ads — 7–9× dearer than automly/constructive_calm) via uncapped runs on day 1 of the billing period; ~51k ad events were charged and **none of them appear in the research DB** (no Apify provider rows exist in `ad_fetch_runs`). The Apify account hard limit stopped it at $220. Lessons baked into the design:
-
-1. **Per-run hard cap.** Every Apify run is created with `maxTotalChargedUsd` (≤ $1) on the run-creation API call, plus the actor input's own `count`/`maxResults` cap (mirror `HERMES_META_CAPTURE_RESULTS_LIMIT`, 250) and a timeout. A runaway run cannot exceed $1 even if everything else fails.
-2. **Pre-dispatch budget check.** Before any Apify call the supervisor reads `GET /v2/users/me/limits` (returns `monthlyUsageUsd` vs `maxMonthlyUsageUsd`) and our own ledger; if month-to-date ≥ the provider cap in `runtime_settings` (default $25), the provider is circuit-broken: fall back to browser or pause + alert. Our soft cap sits *below* the Apify account limit so we always stop first.
-3. **Own ledger.** `ad_fetch_runs.cost_usd` (column already exists) records the charged amount per run; `v_health` shows month-to-date spend per provider; the morning report includes it. Spend with no ingested rows (the June failure mode) is itself a red health condition.
-4. **Account backstop.** Keep Apify's custom monthly limit set low (e.g. $30 — adjustable via `PUT /v2/users/me/limits` or the UI) with email notifications on. Two independent brakes: ours (smart, early) and Apify's (dumb, final).
-5. **Right actor, right plan.** Use a ~$0.49–0.75/1k actor, not the $4.30/1k official one. The current $199/month prepaid subscription dwarfs expected usage — review/downgrade once P1 proves real fallback volume.
-6. **Fallback-only dispatch.** Apify is never a primary firehose: it is called per due page/search with dedupe, only when the canary trips or for the weekly cross-check, so spend is bounded by work the pipeline actually needs.
-
----
-
-## 7. Deletions and cleanups
-
-| Item | Saving |
-| --- | --- |
-| Dead TS library `research-runtime/src/` | 428 LOC |
-| Official Meta API path + config + its test | ~310 LOC |
-| `_archive/research-orchestrator-legacy-20260530/` | ~50 MB |
-| Orphan `blockwise-page-recovery` queue rows (25) | DB noise |
-| Stale docs (system-map, vps doc, known-limitations claims) → regenerate one canonical `SYSTEM.md` | kills the contradiction loop |
-| Root-level done/obsolete plan files (HERMES-FIXES-PROMPT.md, CODEX-BROWSERBASE-REMOVAL-PLAN.md, HANDOFF.md) → archive | repo clarity |
-| Env vars 67 → ~15 (+ settings table) | config surface |
-| Close stale open build_runs; single mode source of truth | state clarity |
-| Supervisor target after refactor | ≤ ~2,000 LOC in same file layout (no 1→5 file explosion) |
-
-Tests: update the collector-contract and system-map-derived tests to the new contract (location discovery first-class; collector still page-targeted per capture; classifier-led gate). Add: ingestion requires area match; absence requires proof; parse failure stores evidence; canary circuit breaker; health endpoint turns red.
-
----
-
-## 8. Rollout — each phase gated by acceptance, next phase blocked until green
-
-**P0 — Stop the bleed (day 1).** Evidence-on-parse-failure; canary + circuit breaker; `v_health` + 503 health endpoint + uptime-kuma alert; set build mode + runtime-enabled in one place; close the stale build_run. *Accept: induced parser failure alerts within 30 min and pauses capture; backlog visibly drains.*
-
-**P1 — Capture reliability (week 1).** Fix the parser against stored evidence; vendor adapter on `http_json` + auto-failover; requeue the 309 parse-fail blocks; re-check all 230 no-ads pages. *Accept: parse-fail rate <5%; canary green 72h; no_ads list re-verified.*
-
-**P2 — Attribution & trust gate (week 2).** Classifier-led gate (cheap LLM); mandatory area attribution on ingest + backfill 1,840 ads; agency/agent link backfill; two-axis page status + console relabel; hidden-creative review queue. *Accept: ≥95% of ads have location attribution; agent/agency/location queries return data; hidden count visible and falling.*
-
-**P3 — Self-improvement (week 3).** `runtime_settings` table; daily self-review cron with full-autonomy surface; defect signature triage; classifier prompt versioning + precision sampling; mem0 writes. *Accept: 7 unattended days of morning reports; open defects <100; zero manual interventions required.*
-
-**P4 — Scale.** Geo tier advancement Perth → WA → capitals → national, agent-driven against coverage targets and health greenness.
-
----
+**P0 (day 1).** Evidence-on-parse-failure + `v_health` + 503 endpoint + uptime-kuma alert on the *current* loop; fix runtime env (build posture, single mode). *Accept: induced failure alerts in 30 min; backlog drains.*
+**P1 (week 1).** Lean core cutover: `targets` + one loop + capture chain (browser→paid, capped) + inline ingest. Seed targets from existing pages/policies; stop writing old control tables; fix parser from stored evidence; requeue the 309 + re-check the 230 "no-ads" pages as ordinary due targets. *Accept: parse-fail <5%; old control tables idle; supervisor ≤ ~1,500 LOC and falling.*
+**P2 (week 2).** Classifier-led gate + attribution backfill of the 1,840 unattributed ads + agency/agent link backfill; console first screen = failing targets + health. *Accept: ≥95% ads attributed; agent/agency/location queries return data.*
+**P3 (week 3).** Self-review skill + settings autonomy + prompt versioning. *Accept: 7 unattended days of morning reports, no manual interventions.*
+**P4.** Drop old control tables (after backup), delete dead code/docs, scale tiers Perth → national, agent-driven. *Accept: concept counts in §7 verified; AGENTS.md LOC report shows net decrease.*
 
 ## 9. AGENTS.md compliance
 
-Schema work is explicitly requested (additive only: `runtime_settings`, new match_type values, `v_health`, status columns; migration assertions included). No new dependencies (vendor adapter is plain `fetch`; alerting is existing uptime-kuma). Public API response shapes preserved (views change additively). Auth untouched. Net production LOC: deletions (~740 LOC + dead archive) offset additions; report per-PR numbers as required. This is explicitly-requested feature/cleanup work — not a "simplification PR" in the AGENTS.md sense (that label forbids schema changes), so tag PRs accordingly.
+Schema work explicitly requested; additive first (targets, settings, v_health), drops only in P4 after backup, all with migration assertions. No new dependencies. Public view shapes preserved. Net production LOC decreases — report per-PR. Tag as explicitly-requested rebuild work (not "simplification PR" per AGENTS.md's narrow definition, which forbids schema changes).
 
-## 10. Open items for the owner
+## 10. Open items
 
-1. Pick the fallback vendor (recommend starting ScrapeCreators PAYG or the cheapest Apify actor after a 100-ad trial of each — both have free trial credits).
-2. Choose the cheap classifier model slot (any sub-cent vision-capable model on OpenRouter; configurable, never pinned in code).
-3. Confirm the canary page(s) — ideally 2–3 large advertisers that never stop running ads (e.g. national portals/franchise groups).
+1. Fallback vendor final pick (one cheap actor; trial credits first).
+2. Classifier model slot (any sub-cent vision-capable OpenRouter model).
+3. Apify $199/mo subscription — downgrade decision after P1 volume is known.

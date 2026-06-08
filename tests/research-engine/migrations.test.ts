@@ -8,6 +8,7 @@ const viewsMigration = "supabase/migrations/202605280004_research_views.sql";
 const zeroAdContractMigration = "supabase/migrations/202606030003_zero_ad_item_count_contract.sql";
 const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_library_ingestion_extensions.sql";
 const buildRunReportDedupeRepairMigration = "supabase/migrations/202606070001_repair_build_run_reports_dedupe_key.sql";
+const apifyCostControlMigration = "supabase/migrations/202606080001_apify_cost_control_schema.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -176,4 +177,81 @@ test("ad-library extension migration adds validation, swipe, and media-dedupe ta
   assert.match(sql, /enable row level security/i);
   assert.match(sql, /grant select, insert, update on research\.media_blobs to service_role/i);
   assert.match(sql, /grant select, insert, update, delete on public\.research_saved_ads to authenticated, service_role/i);
+});
+
+test("apify cost-control migration adds runtime settings without opening table access", () => {
+  const sql = readFileSync(apifyCostControlMigration, "utf8");
+
+  assert.match(sql, /create table if not exists research\.runtime_settings/i);
+  for (const key of [
+    "apify_enabled",
+    "apify_state",
+    "apify_monthly_cap_usd",
+    "apify_per_run_cap_usd",
+    "apify_account_limit_usd",
+    "apify_actor_id",
+    "apify_result_limit",
+    "apify_canary_max_results",
+    "apify_canary_per_run_cap_usd",
+  ]) {
+    assert.match(sql, new RegExp(`'${key}'`, "i"), `expected runtime setting ${key}`);
+  }
+
+  assert.match(sql, /alter table research\.runtime_settings enable row level security/i);
+  assert.match(sql, /revoke all on research\.runtime_settings from public, anon, authenticated/i);
+  assert.match(sql, /grant select, insert, update, delete on research\.runtime_settings to service_role/i);
+  assert.doesNotMatch(sql, /grant\s+[^;]*on research\.runtime_settings to authenticated/i);
+});
+
+test("apify cost-control migration adds capture actor registry and seed actors", () => {
+  const sql = readFileSync(apifyCostControlMigration, "utf8");
+
+  assert.match(sql, /create table if not exists research\.capture_actors/i);
+  for (const column of [
+    "actor_id",
+    "status",
+    "price_per_1k_usd",
+    "pricing_checked_at",
+    "schema_map",
+    "last_benchmark",
+    "notes",
+    "updated_at",
+  ]) {
+    assert.match(sql, new RegExp(`\\b${column}\\b`, "i"), `expected capture_actors.${column}`);
+  }
+  assert.match(sql, /status in \('candidate', 'approved', 'rejected', 'banned'\)/i);
+
+  for (const actor of [
+    "automly/facebook-ad-library-scraper",
+    "constructive_calm/facebook-ad-library-pro",
+    "curious_coder/facebook-ads-library-scraper",
+  ]) {
+    assert.match(sql, new RegExp(`'${actor}'[\\s\\S]*?'candidate'`, "i"), `expected candidate actor ${actor}`);
+  }
+  assert.match(sql, /'apify\/facebook-ads-scraper'[\s\S]*?'banned'/i);
+  assert.match(sql, /on conflict \(actor_id\) do update[\s\S]*set status = 'banned'/i);
+  assert.match(sql, /grant select, insert, update, delete on research\.capture_actors to service_role/i);
+  assert.doesNotMatch(sql, /grant\s+[^;]*on research\.capture_actors to authenticated/i);
+});
+
+test("apify cost-control migration creates minimal health surface for spend controls", () => {
+  const sql = readFileSync(apifyCostControlMigration, "utf8");
+
+  assert.match(sql, /create or replace view research\.v_health/i);
+  for (const field of [
+    "latest_fetch_started_at",
+    "latest_ingest_at",
+    "due_backlog_size",
+    "blocked_job_count",
+    "open_report_count",
+    "apify_mtd_spend_usd",
+    "apify_state",
+    "paid_spend_without_ingest",
+  ]) {
+    assert.match(sql, new RegExp(`\\b${field}\\b`, "i"), `expected v_health.${field}`);
+  }
+  assert.match(sql, /source_provider like 'apify:%'/i);
+  assert.match(sql, /sum\(coalesce\(afr\.cost_usd, 0\)\)/i);
+  assert.match(sql, /first_seen_provider like 'apify:%'/i);
+  assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
 });

@@ -149,7 +149,7 @@ function checkHermesQueueWorkerContract() {
     failures.push("Hermes ResearchSupervisor must include a media queue planner between collector and classifier");
   }
 
-  const collectorRuntime = `${runtimeText.types}\n${runtimeText.supervisor}\n${runtimeText.capture}\n${runtimeText.captureTypes}`;
+  const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "locationSearchGateSchema")}\n${runtimeText.capture}\n${runtimeText.captureTypes}`;
   const forbiddenCollectionInputs = [
     /\bsearchQuery\b/i,
     /\bsearch_query\b/i,
@@ -160,6 +160,13 @@ function checkHermesQueueWorkerContract() {
   if (forbiddenCollectionInputs.length > 0) {
     failures.push(`Hermes active collection runtime accepts location/search-query inputs: ${forbiddenCollectionInputs.join(", ")}`);
   }
+}
+
+function schemaBlock(text, startName, nextName) {
+  const start = text.indexOf(`export const ${startName}`);
+  if (start < 0) return "";
+  const end = text.indexOf(`export const ${nextName}`, start + 1);
+  return end < 0 ? text.slice(start) : text.slice(start, end);
 }
 
 function filesUnder(roots) {

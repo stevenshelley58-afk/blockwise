@@ -19,6 +19,15 @@ June billing blowout: $219.28 charged by `apify/facebook-ads-scraper` (~$4.30/1k
 
 In the active rebuild plan, add under the capture phase: (1) per-run cost caps, (2) pre-dispatch budget guard, (3) spend ledger + health surfacing, (4) autonomous actor selection (below), (5) account backstop. Mark `apify/facebook-ads-scraper` as banned (price). Note the dependency: `runtime_settings` and `v_health` come from the simplification review P0/P3 — if they don't exist yet, create minimal versions in this task.
 
+### Capture-phase canary contract
+
+The paid fallback must be gated by known-good ad canaries before any mass capture changes:
+
+1. **Canary set.** Store canaries as data with `meta_page_id` or `page_url`, market, `expected_min_ads = 1`, `last_known_good_ad_id`, `last_known_good_run_id`, `last_known_good_at`, and raw-evidence pointers. Seed the initial candidates from stable, high-volume real-estate advertisers: national portal `realestate.com.au`, national portal `Domain`, franchise group `Ray White Group`, and one WA branch page chosen from the last 30 days of successful Blockwise captures.
+2. **Promotion rule.** A candidate becomes a known-good active canary only after two consecutive green captures inside 24 hours with at least one active ad and saved DOM/screenshot evidence in `research-raw-evidence`.
+3. **Failure rule.** Zero results from a known-good canary are valid absence only when Meta's explicit empty-state marker is parsed. Otherwise the canary fails, mass capture pauses, the provider flips or circuit-breaks, and an alert/defect is raised.
+4. **Freshness rule.** Rotate out any active canary that has gone 7 days without fresh ad-positive proof, and promote a replacement through the same evidence rule.
+
 ## Deliverable B — implementation
 
 ### B1. Apify capture adapter
