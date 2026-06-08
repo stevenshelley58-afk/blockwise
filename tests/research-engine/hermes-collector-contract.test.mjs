@@ -455,6 +455,11 @@ test("Hermes location ad search is explicit, gated, and separate from page colle
   );
   assert.match(
     locationAdSearch,
+    /confirmed_absence:\s*outcome\.metadata\?\.confirmed_absence === true[\s\S]*count_only:\s*outcome\.metadata\?\.count_only === true/u,
+    "location search summaries should expose absence and count-only proofs for watchdog health checks",
+  );
+  assert.match(
+    locationAdSearch,
     /\blocationAdMatchForInput\b[\s\S]*\bhasRealEstateAdSignalForLocation\b/u,
     "location search results must be filtered by exact visible location and real-estate signals before ingest",
   );

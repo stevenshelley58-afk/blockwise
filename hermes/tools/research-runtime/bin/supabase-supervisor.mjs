@@ -4514,6 +4514,8 @@ async function handleLocationAdSearch(job) {
       ingested_count: ingested.length,
       filtered_non_location: filteredNonLocation,
       filtered_non_real_estate: filteredNonRealEstate,
+      confirmed_absence: outcome.metadata?.confirmed_absence === true,
+      count_only: outcome.metadata?.count_only === true,
       metadata: outcome.metadata || {},
     },
     cost_usd: outcome.costUsd || 0,
