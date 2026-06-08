@@ -71,6 +71,7 @@ const areaAttribution = functionBody(supervisor, "upsertAreaMatchesForObservedAd
 const explicitAreaAttribution = functionBody(supervisor, "upsertExplicitAreaMatchForObservedAd");
 const browserDumpDom = functionBody(supervisor, "browserDumpDom");
 const captureDomOverCdp = functionBody(supervisor, "captureDomOverCdp");
+const metaSearchAdPayloadCount = functionBody(supervisor, "metaSearchAdPayloadCount");
 const scrollMetaAdLibraryResults = functionBody(supervisor, "scrollMetaAdLibraryResults");
 const resolveRemoteBrowserWebSocket = functionBody(supervisor, "resolveRemoteBrowserWebSocket");
 const remoteBrowserVersionUrl = functionBody(supervisor, "remoteBrowserVersionUrl");
@@ -882,8 +883,13 @@ test("Hermes browser capture scrolls Meta results before accepting a batch", () 
   );
   assert.match(
     captureDomOverCdp,
-    /\bstableResultPolls\b[\s\S]*\bmetaSearchResultCount\b/u,
-    "CDP capture should wait for result counts to stabilize after scrolling",
+    /\bstableAdPayloadPolls\b[\s\S]*\bmetaSearchAdPayloadCount\b/u,
+    "CDP capture should wait for actual parsed ad payloads to stabilize after scrolling",
+  );
+  assert.match(
+    metaSearchAdPayloadCount,
+    /\bnormaliseHostedMetaItems\b/u,
+    "positive browser batches must be based on ingestable ad payloads, not only Meta's headline count",
   );
   assert.match(
     scrollMetaAdLibraryResults,

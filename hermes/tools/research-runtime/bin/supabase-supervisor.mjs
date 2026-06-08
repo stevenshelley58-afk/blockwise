@@ -1141,20 +1141,25 @@ async function captureDomOverCdp(webSocketUrl, url, budgetMs) {
     let html = "";
     let bestHtml = "";
     let bestResultCount = 0;
-    let stableResultPolls = 0;
+    let bestAdPayloadCount = 0;
+    let stableAdPayloadPolls = 0;
     while (Date.now() < deadline) {
       await sleep(2_000);
       html = await evaluateOuterHtml(cdp, sessionId);
       const resultCount = metaSearchResultCount(html);
-      if (html.length > bestHtml.length || resultCount > bestResultCount) bestHtml = html;
+      const adPayloadCount = metaSearchAdPayloadCount(html);
+      if (html.length > bestHtml.length || adPayloadCount > bestAdPayloadCount) bestHtml = html;
       if (metaSearchHasConfirmedNoAds(html)) return html;
       if (resultCount > bestResultCount) {
         bestResultCount = resultCount;
-        stableResultPolls = 0;
-      } else if (resultCount > 0) {
-        stableResultPolls += 1;
       }
-      if (resultCount > 0 && stableResultPolls >= 3) return bestHtml || html;
+      if (adPayloadCount > bestAdPayloadCount) {
+        bestAdPayloadCount = adPayloadCount;
+        stableAdPayloadPolls = 0;
+      } else if (adPayloadCount > 0) {
+        stableAdPayloadPolls += 1;
+      }
+      if (adPayloadCount > 0 && stableAdPayloadPolls >= 3) return bestHtml || html;
       await scrollMetaAdLibraryResults(cdp, sessionId).catch(() => {});
     }
     await cdp.send("Page.stopLoading", {}, sessionId).catch(() => {});
@@ -1192,6 +1197,19 @@ function metaSearchResultCount(html) {
     .map((match) => Number(match[1]))
     .filter(Number.isFinite);
   return counts.length ? Math.max(...counts) : 0;
+}
+
+function metaSearchAdPayloadCount(html) {
+  try {
+    const bodies = [
+      ...extractJsonObjectsAfterKey(html, "__bbox"),
+      ...extractJsonObjectsAfterKey(html, "__bbox_result"),
+      ...extractJsonObjectsAfterKey(html, "result"),
+    ];
+    return normaliseHostedMetaItems({ body: bodies, pageId: null, limit: 50 }).items.length;
+  } catch {
+    return 0;
+  }
 }
 
 function metaSearchHasConfirmedNoAds(html) {
