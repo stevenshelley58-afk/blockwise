@@ -34,7 +34,7 @@ The paid fallback must be gated by known-good ad canaries before any mass captur
 
 New module `hermes/tools/research-runtime/bin/apify-capture.mjs` (keep the supervisor file from growing):
 
-- `createApifyRun({ actorId, input, maxTotalChargedUsd, timeoutSecs })` → `POST https://api.apify.com/v2/acts/{actorId}/runs?maxTotalChargedUsd=...` — **every** run MUST set `maxTotalChargedUsd` (from settings, default 1.00) and the actor input's result cap (`count`/`maxResults` per the actor's schema, default 250 to mirror `HERMES_META_CAPTURE_RESULTS_LIMIT`).
+- `createApifyRun({ actorId, input, maxTotalChargedUsd, timeoutSecs })` → `POST https://api.apify.com/v2/acts/{actorId}/runs?maxTotalChargeUsd=...` — **every** run MUST set Apify's `maxTotalChargeUsd` query parameter (from settings, default 1.00) and the actor input's result cap (`count`/`maxResults` per the actor's schema, default 250 to mirror `HERMES_META_CAPTURE_RESULTS_LIMIT`).
 - Poll run status; on success `GET .../dataset/items`; map items through a per-actor `schema_map` (jsonb field-mapping, see B4) into the same capture-outcome contract the browser parser returns (`items[]`, `confirmed_absence`, `metadata.provider = "apify:<actorId>"`).
 - Any mapping shortfall (required field missing on >5% of items) = capture failure with the raw payload saved to the `research-raw-evidence` bucket — never silently ingest partial junk.
 
@@ -67,7 +67,7 @@ Seed rows: `automly/facebook-ad-library-scraper`, `constructive_calm/facebook-ad
 Selection loop (runs inside the daily self-review; supervisor executes, agent decides):
 
 1. **Price poll (daily, free):** `GET /v2/acts/{actorId}` → `pricingInfos` (PAY_PER_EVENT `pricePerEvent` / PRICE_PER_DATASET_ITEM tiers) → update `price_per_1k_usd`.
-2. **Benchmark (monthly, or when any price moves >20%, or a new candidate appears):** run each non-banned actor against one canary page with `maxTotalChargedUsd = 0.25`, `maxResults = 50`. Score = cost per **valid** ad, where valid = passes the ingest contract (external ad id, page id, creative text or media URL present; duplicate ratio <10%), plus failure rate and latency. Persist to `last_benchmark`.
+2. **Benchmark (monthly, or when any price moves >20%, or a new candidate appears):** run each non-banned actor against one canary page with Apify `maxTotalChargeUsd = 0.25`, `maxResults = 50`. Score = cost per **valid** ad, where valid = passes the ingest contract (external ad id, page id, creative text or media URL present; duplicate ratio <10%), plus failure rate and latency. Persist to `last_benchmark`.
 3. **Choose:** cheapest actor with status `approved` and a passing benchmark → write `apify_actor_id` to `runtime_settings` with an `agent_decisions` row (rationale + benchmark evidence). Tie/missing data → keep current.
 4. **Promotion:** a `candidate` whose benchmark passes AND whose output maps through the generic field-mapper at ≥95% becomes `approved` (decision row). A candidate needing bespoke mapping code gets a defect proposing adapter work — **code changes stay with humans/Codex, not Hermes**.
 5. **Discovery (weekly):** `GET /v2/store?search=facebook ad library` to find new candidates; insert as `candidate` only — never auto-run an unvetted actor outside the capped benchmark.
@@ -78,7 +78,7 @@ At boot and in the daily loop, assert the Apify account limit: if `maxMonthlyUsa
 
 ### B6. Tests (extend `tests/research-engine/`)
 
-1. Run-creation always includes `maxTotalChargedUsd` and a results cap (reject dispatch without them).
+1. Run-creation always includes Apify `maxTotalChargeUsd` and a results cap (reject dispatch without them).
 2. Budget guard blocks at cap; fail-closed when limits API errors.
 3. Ledger written from run detail; `paid_spend_without_ingest` flag computed.
 4. Field-mapper contract test per approved actor using stored fixtures; >5% mapping failure = capture failure with evidence write.

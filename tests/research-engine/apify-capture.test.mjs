@@ -12,7 +12,7 @@ import {
   selectCheapestApifyActor,
 } from "../../hermes/tools/research-runtime/bin/apify-capture.mjs";
 
-test("Apify run creation always sends maxTotalChargedUsd and an actor result cap", async () => {
+test("Apify run creation always sends maxTotalChargeUsd and an actor result cap", async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url: new URL(String(url)), init });
@@ -34,11 +34,11 @@ test("Apify run creation always sends maxTotalChargedUsd and an actor result cap
   });
 
   assert.equal(calls[0].url.pathname, "/v2/acts/automly~facebook-ad-library-scraper/runs");
-  assert.equal(calls[0].url.searchParams.get("maxTotalChargedUsd"), "0.75");
+  assert.equal(calls[0].url.searchParams.get("maxTotalChargeUsd"), "0.75");
   assert.equal(calls[0].url.searchParams.get("timeout"), "90");
   assert.equal(JSON.parse(calls[0].init.body).count, 50);
 
-  assert.equal(calls[1].url.searchParams.get("maxTotalChargedUsd"), "1");
+  assert.equal(calls[1].url.searchParams.get("maxTotalChargeUsd"), "1");
   assert.equal(JSON.parse(calls[1].init.body).maxResults, 250);
 
   await assert.rejects(

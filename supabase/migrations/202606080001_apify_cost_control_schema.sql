@@ -41,7 +41,7 @@ values
   ('apify_enabled', 'true'::jsonb, 'Allows the runtime to consider Apify as a paid fallback when budget and actor checks pass.'),
   ('apify_state', to_jsonb('ready'::text), 'Current Apify circuit state; circuit_open blocks paid dispatch.'),
   ('apify_monthly_cap_usd', '25'::jsonb, 'Blockwise soft monthly Apify cap, below the account hard limit.'),
-  ('apify_per_run_cap_usd', '1.00'::jsonb, 'Required maxTotalChargedUsd cap for each Apify run.'),
+  ('apify_per_run_cap_usd', '1.00'::jsonb, 'Required maxTotalChargeUsd cap for each Apify run.'),
   ('apify_account_limit_usd', '30'::jsonb, 'Expected Apify account monthly hard limit.'),
   ('apify_actor_id', 'null'::jsonb, 'Selected approved Apify actor; null until a capped benchmark promotes an actor.'),
   ('apify_result_limit', '250'::jsonb, 'Default result cap for paid fallback runs.'),

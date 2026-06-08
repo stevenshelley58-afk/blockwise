@@ -47,7 +47,7 @@ This is the single entry point. Work top to bottom. Do not start coding until th
 
 1. Additive migration: `research.targets`, `research.runtime_settings` (+ `capture_actors` seed if implementing the canary/benchmark data there). Migration assertions required.
 2. One loop: due-targets select with `FOR UPDATE SKIP LOCKED`, bounded concurrency (~4), hard per-target timeout. Three handlers (page / search / roster) calling capture + inline ingest. Crash-only: every step an idempotent upsert.
-3. Capture chain: browser → on parse failure, evidence + Apify fallback (per-run `maxTotalChargedUsd` ≤ $1, result cap 250, budget guard, ledger to `ad_fetch_runs.cost_usd`). Trailing parse-fail rate >50% over last 20 browser captures flips provider order in settings + alerts. Canary contract per the cost-controls spec — prefer implementing canaries as flagged high-priority `targets` rows rather than a new table.
+3. Capture chain: browser → on parse failure, evidence + Apify fallback (per-run Apify `maxTotalChargeUsd` ≤ $1, result cap 250, budget guard, ledger to `ad_fetch_runs.cost_usd`). Trailing parse-fail rate >50% over last 20 browser captures flips provider order in settings + alerts. Canary contract per the cost-controls spec — prefer implementing canaries as flagged high-priority `targets` rows rather than a new table.
 4. Ingest: snapshot only on content-hash change; lifecycle rule (only successful full page capture marks missing ads inactive; searches never imply absence); area match on every ad (search-derived = low confidence); agency/agent link from roster.
 5. Seed targets from existing pages + refresh policies + Perth-tier suburb searches + brand searches for known agencies (replaces resolver). Stop writing work_queue/refresh_policies/build_runs. Fix the browser parser against the evidence captured in PR-0.
 6. Delete in this PR: official Meta API path (~280 LOC), dead TS library (428 LOC), orphan `blockwise-page-recovery` rows.
@@ -78,7 +78,7 @@ Backup, then drop old control tables; delete coverage_defects/ingest_events writ
 2. No schema changes beyond the additive ones specified (+ P4 drops after backup).
 3. No changes to auth, public API response shapes, or customer view shapes.
 4. Never commit secrets; never bypass Meta login walls/CAPTCHAs (public data only).
-5. No Apify run without `maxTotalChargedUsd` + result cap — test-enforced.
+5. No Apify run without `maxTotalChargeUsd` + result cap — test-enforced.
 6. Don't "improve" by adding subsystems. If a fix wants a new table/queue/workflow, re-read review §7 and find the deletion instead.
 
 ## Per-PR reporting (AGENTS.md)

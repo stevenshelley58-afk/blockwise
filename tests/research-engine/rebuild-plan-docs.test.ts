@@ -34,7 +34,7 @@ test("research rebuild docs make Apify a capped fallback capture path", () => {
   const docs = `${simplificationReview}\n${apifyTask}`;
 
   for (const phrase of [
-    "maxTotalChargedUsd",
+    "maxTotalChargeUsd",
     "maxResults",
     "HERMES_META_CAPTURE_RESULTS_LIMIT",
     "GET /v2/users/me/limits",
@@ -67,7 +67,7 @@ test("research rebuild docs ban the expensive official Apify actor", () => {
   );
   assert.match(
     docs,
-    /maxTotalChargedUsd\s*(?:<=|=)\s*0\.25[\s\S]{0,120}maxResults\s*(?:<=|=)\s*50/i,
+    /maxTotalChargeUsd\s*(?:<=|=)\s*0\.25[\s\S]{0,120}maxResults\s*(?:<=|=)\s*50/i,
     "actor benchmarks must be capped below production run limits",
   );
   assert.match(

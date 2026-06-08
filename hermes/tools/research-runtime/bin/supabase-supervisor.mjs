@@ -2793,13 +2793,17 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
       },
     };
   } catch (error) {
+    const costUsd = costUsdFromApifyError(error);
+    if (costUsd > 0) {
+      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason: error.message, scope: "page_capture_failure" });
+    }
     return failedCaptureOutcome(sourceProvider, input, startedAt, error.message, {
       explicit,
       actor_id: actorId,
       selection_reason: selection.reason,
       previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
       details: error.details || null,
-    });
+    }, costUsd);
   }
 }
 
@@ -3052,9 +3056,14 @@ async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId
       last_benchmark: benchmark,
     });
     if (passed) await setRuntimeSetting("apify_actor_id", actorId, { reason: "apify_canary_passed", benchmark });
+    else if (costUsd > 0) {
+      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason, scope: "canary_benchmark" });
+    }
     log("Apify candidate benchmark complete", { actor_id: actorId, status: benchmark.status, reason, ingested_count: ingested.length, cost_usd: costUsd });
     return { status: benchmark.status, actor_id: actorId, reason, ingested_count: ingested.length, cost_usd: costUsd };
   } catch (error) {
+    const failedCostUsd = costUsdFromApifyError(error);
+    if (failedCostUsd > 0) costUsd = failedCostUsd;
     const benchmark = apifyBenchmarkFailure(error.message, startedAt, {
       canary_page_id: input.metaPageId,
       known_external_ad_id: input.canaryKnownAdId || null,
@@ -3070,6 +3079,9 @@ async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId
         error: error.message,
         cost_usd: costUsd,
       });
+    }
+    if (costUsd > 0) {
+      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason: error.message, scope: "canary_benchmark_failure" });
     }
     log("Apify candidate benchmark failed", { actor_id: actorId, error: error.message, cost_usd: costUsd }, "warn");
     return { status: "failed", actor_id: actorId, reason: error.message, cost_usd: costUsd };
@@ -3087,10 +3099,37 @@ function apifyBenchmarkFailure(reason, startedAt, metadata = {}) {
   };
 }
 
+function costUsdFromApifyError(error) {
+  const detail = error?.details?.detail || error?.details?.runDetail || error?.details;
+  return Number(extractApifyRunCost(detail).costUsd || 0) || 0;
+}
+
 async function patchApifyCaptureActor(actorId, patch) {
   await rest("research", `capture_actors?actor_id=eq.${encode(actorId)}`, {
     method: "PATCH",
     body: json(patch),
+  });
+}
+
+async function openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason, scope }) {
+  const defect = {
+    reason: "apify_spend_without_ingest",
+    actor_id: actorId,
+    meta_page_id: input?.metaPageId || null,
+    advertiser_page_id: input?.advertiserPageId || null,
+    cost_usd: costUsd,
+    scope,
+    error: reason,
+  };
+  await setRuntimeSetting("apify_state", "circuit_open", defect);
+  await insertCoverageDefect({
+    platform: "facebook",
+    notes: "Apify paid capture spent money without ingesting ads; paid circuit opened.",
+    reported_by: "system",
+    reporter_identity: workerId,
+    status: "open",
+    resolution: defect,
+    resolved_advertiser_page_id: input?.advertiserPageId || null,
   });
 }
 

@@ -38,7 +38,7 @@ export async function createApifyRun({
   const perRunCap = assertPositiveNumber(maxTotalChargedUsd, "maxTotalChargedUsd");
   const cappedInput = applyApifyResultCap(input, { resultLimit, resultLimitField, resultLimitKeys });
   const url = new URL(`${baseUrl}/acts/${apifyActorPathId(cleanActorId)}/runs`);
-  url.searchParams.set("maxTotalChargedUsd", moneyParam(perRunCap));
+  url.searchParams.set("maxTotalChargeUsd", moneyParam(perRunCap));
   if (timeoutSecs !== undefined) url.searchParams.set("timeout", String(assertPositiveInteger(timeoutSecs, "timeoutSecs")));
 
   return apifyFetchJson(fetchImpl, url, {

@@ -61,6 +61,8 @@ const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor"
 const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBenchmarkIfNeeded");
 const apifyActorBenchmark = functionBody(supervisor, "benchmarkApifyCandidateActor");
 const apifyCanaryInput = functionBody(supervisor, "readApifyCanaryCaptureInput");
+const apifyErrorCost = functionBody(supervisor, "costUsdFromApifyError");
+const apifySpendCircuit = functionBody(supervisor, "openApifyCircuitAfterSpendWithoutIngest");
 const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
 const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
 const browserPageCapture = functionBody(supervisor, "runHermesBrowserCapture");
@@ -139,6 +141,11 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
   assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
   assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
+  assert.match(apifyMetaPageCapture, /\bcostUsdFromApifyError\(error\)/u, "failed Apify captures must still ledger any charged run cost");
+  assert.match(apifyMetaPageCapture, /\bopenApifyCircuitAfterSpendWithoutIngest\b/u, "charged failed Apify captures must open the paid circuit");
+  assert.match(apifyErrorCost, /\bextractApifyRunCost\b/u, "Apify error cost extraction must reuse the run-detail cost parser");
+  assert.match(apifySpendCircuit, /\bsetRuntimeSetting\(["']apify_state["'],\s*["']circuit_open["']/u, "spend without ingest must open the Apify circuit");
+  assert.match(apifySpendCircuit, /\binsertCoverageDefect\b/u, "spend without ingest must leave an operator defect");
   assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
   assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
 });
@@ -167,6 +174,8 @@ test("Hermes Apify fallback only promotes actors after capped known-good canarie
   assert.match(apifyActorBenchmark, /\bensureApifyAccountLimit\b/u, "canary benchmark must keep the account-level spend backstop");
   assert.match(apifyActorBenchmark, /\bguardApifyBudget\b/u, "canary benchmark must use the same ledger budget guard as paid fallback");
   assert.match(apifyActorBenchmark, /maxTotalChargedUsd:\s*canaryPerRunCapUsd/u, "canary benchmark must pass the small canary cap to Apify");
+  assert.match(apifyActorBenchmark, /\bcostUsdFromApifyError\(error\)/u, "failed canary runs must still ledger any charged run cost");
+  assert.match(apifyActorBenchmark, /\bopenApifyCircuitAfterSpendWithoutIngest\b/u, "charged failed canaries must open the paid circuit");
   assert.match(apifyActorBenchmark, /\binferApifySchemaMap\b[\s\S]*\bmapApifyDatasetItems\b/u, "canary benchmark must infer and validate the actor schema map");
   assert.match(apifyActorBenchmark, /\bingestMetaAd\b[\s\S]*\bingested\.length > 0/u, "actor promotion must require at least one ingested ad");
   assert.match(apifyActorBenchmark, /status:\s*passed \? ["']approved["'] : ["']candidate["']/u, "failed canaries must stay candidate, not become selectable");
