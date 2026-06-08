@@ -237,7 +237,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       if (!saved) return;
       const currentPack = buildCurrentPack();
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
-      const creativeRenders = await renderCreativeExports(exportPack);
+      const creativeRenders = await renderCreativeExports(exportPack, { storeInWorkspace: true });
       const response = await fetch(
         `/api/adstudio/export-packages/${currentPack.campaign.campaignId}/download`,
         {

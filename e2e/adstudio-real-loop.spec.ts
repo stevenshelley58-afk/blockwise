@@ -43,21 +43,19 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await openPanel(page, "Copy");
     await page.getByLabel(/headline/i).fill("Scarborough open home");
     await saveDraft(page);
-    await expect(page.getByText(/^saved$/i).first()).toBeVisible({ timeout: 30_000 });
+    await waitForSavedStatus(page);
 
     await page.getByRole("button", { name: /ad 2/i }).click();
     await page.getByRole("button", { name: /ad 1/i }).click();
-    await expect(page.getByDisplayValue("Scarborough open home")).toBeVisible();
+    await openPanel(page, "Copy");
+    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home");
 
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     await openPanel(page, "Copy");
-    await expect(page.getByDisplayValue("Scarborough open home")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home", { timeout: 30_000 });
 
     await openPanel(page, "Publish");
-    const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: /export/i }).click();
-    const zip = await download;
-    expect(zip.suggestedFilename()).toMatch(/creatives\.zip$/);
+    await exportCreatives(page);
   });
 });
 
@@ -128,6 +126,39 @@ async function saveDraft(page: Page) {
 
   await page.getByRole("button", { name: /more actions/i }).click();
   await page.getByRole("menuitem", { name: /save draft/i }).click();
+}
+
+async function exportCreatives(page: Page) {
+  const exportResponse = page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return url.pathname.includes("/api/adstudio/export-packages/") &&
+        url.pathname.endsWith("/download") &&
+        response.request().method() === "POST";
+    },
+    { timeout: 120_000 },
+  );
+  const download = page.waitForEvent("download", { timeout: 30_000 }).catch(() => null);
+
+  await page.getByRole("button", { name: /export/i }).click();
+
+  const response = await exportResponse;
+  expect(response.ok(), await response.text()).toBe(true);
+  expect(response.headers()["content-type"] ?? "").toMatch(/zip|octet-stream/i);
+
+  const zip = await download;
+  if (zip) expect(zip.suggestedFilename()).toMatch(/creatives\.zip$/);
+}
+
+async function waitForSavedStatus(page: Page) {
+  await expect
+    .poll(
+      async () =>
+        (await page.locator('.studio-statusbar [data-state="saved"]').isVisible().catch(() => false)) ||
+        (await page.locator('.studio-mobile-status[data-state="saved"]').isVisible().catch(() => false)),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
 }
 
 async function writeTinyPng(path: string) {

@@ -9,7 +9,8 @@ export type CreativeExportRender = {
   width: number;
   height: number;
   mimeType: "image/png" | "image/jpeg";
-  dataUrl: string;
+  dataUrl?: string;
+  storagePath?: string;
 };
 
 export function renderKey(input: Pick<CreativeExportRender, "creativeId" | "mimeType">) {
@@ -42,6 +43,10 @@ export function decodeCreativeRender(
   }
   if (render.width !== expected.canvas.width || render.height !== expected.canvas.height) {
     throw new Error(`Creative render for ${expected.format} has invalid dimensions.`);
+  }
+
+  if (!render.dataUrl) {
+    throw new Error("Creative render data is missing.");
   }
 
   const prefix = `data:${render.mimeType};base64,`;

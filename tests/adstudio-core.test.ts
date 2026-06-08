@@ -13,6 +13,7 @@ import {
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
 } from "../src/lib/adstudio/index.ts";
+import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
 
 const sampleHtml = `
   <html>
@@ -312,4 +313,78 @@ test("buildAdStudioExportPackage emits the required manifest and file paths", as
   assert.ok(exportPackage.files["demand-gen/copy.json"]);
   assert.ok(exportPackage.files["compliance/compliance_report.pdf"].byteLength > 40);
   assert.ok(exportPackage.zipBytes.byteLength > 100);
+});
+
+test("stored creative export renders hydrate from workspace storage before packaging", async () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+  });
+  const creative = pack.creatives.find((item) => item.format === "1:1");
+  assert.ok(creative);
+
+  const storagePath = "workspace_demo/adstudio/exports/campaign/render.png";
+  const storedBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const hydrated = await hydrateStoredCreativeExportRenders(
+    {
+      storage: {
+        from(bucket: string) {
+          assert.equal(bucket, "workspace-artifacts");
+          return {
+            async download(path: string) {
+              assert.equal(path, storagePath);
+              return { data: new Blob([storedBytes], { type: "image/png" }), error: null };
+            },
+          };
+        },
+      },
+    },
+    "workspace_demo",
+    [
+      {
+        creativeId: creative.creativeId,
+        variantId: creative.variantId,
+        format: creative.format,
+        width: creative.canvas.width,
+        height: creative.canvas.height,
+        mimeType: "image/png",
+        storagePath,
+      },
+    ],
+  );
+
+  assert.match(hydrated?.[0]?.dataUrl ?? "", /^data:image\/png;base64,/);
+  const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: hydrated });
+  assert.deepEqual([...exportPackage.files["meta/feed_1x1.png"]], [...storedBytes]);
+
+  await assert.rejects(
+    () =>
+      hydrateStoredCreativeExportRenders({ storage: { from: () => ({ download: async () => ({ data: null }) }) } }, "workspace_demo", [
+        {
+          creativeId: creative.creativeId,
+          variantId: creative.variantId,
+          format: creative.format,
+          width: creative.canvas.width,
+          height: creative.canvas.height,
+          mimeType: "image/png",
+          storagePath: "other_workspace/adstudio/exports/render.png",
+        },
+      ]),
+    /not found/,
+  );
 });

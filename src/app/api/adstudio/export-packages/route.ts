@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { buildAdStudioExportPackage } from "@/lib/adstudio";
+import { hydrateStoredCreativeExportRenders } from "@/lib/adstudio/export-render-storage";
 import { errorResponse, requireAdStudioRequest } from "@/lib/adstudio/http";
 import type { AdStudioCampaignPack, CreativeExportRender } from "@/lib/adstudio";
 
@@ -24,9 +25,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
     }
 
-    const exportPackage = await buildAdStudioExportPackage(body.campaignPack, {
-      creativeRenders: body.creativeRenders,
-    });
+    const creativeRenders = await hydrateStoredCreativeExportRenders(
+      access.supabase,
+      access.access.workspaceId,
+      body.creativeRenders,
+    );
+    const exportPackage = await buildAdStudioExportPackage(body.campaignPack, { creativeRenders });
 
     return NextResponse.json({ exportPackage: { manifest: exportPackage.manifest } }, { status: 201 });
   } catch (error) {

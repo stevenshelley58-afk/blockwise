@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { buildAdStudioExportPackage } from "@/lib/adstudio";
+import { hydrateStoredCreativeExportRenders } from "@/lib/adstudio/export-render-storage";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import type { AdStudioCampaignPack, CreativeExportRender } from "@/lib/adstudio";
 
@@ -32,9 +33,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Campaign ID does not match export payload." }, { status: 400 });
   }
 
-  const exportPackage = await buildAdStudioExportPackage(body.campaignPack, {
-    creativeRenders: body.creativeRenders,
-  });
+  const creativeRenders = await hydrateStoredCreativeExportRenders(
+    access.supabase,
+    access.access.workspaceId,
+    body.creativeRenders,
+  );
+  const exportPackage = await buildAdStudioExportPackage(body.campaignPack, { creativeRenders });
   const zipBlob = new Blob([new Uint8Array(exportPackage.zipBytes).buffer as ArrayBuffer], { type: "application/zip" });
   const filename = `${slugFileName(body.campaignPack.campaign.name || "adstudio-campaign")}-creatives.zip`;
 

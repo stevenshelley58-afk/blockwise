@@ -1,6 +1,7 @@
 "use client";
 
 import type { CreativeExportRender } from "@/lib/adstudio/creative-export.ts";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
@@ -10,7 +11,10 @@ import type {
 
 const META_EXPORT_FORMATS = new Set(["1:1", "4:5", "9:16"]);
 
-export async function renderCreativeExports(pack: AdStudioCampaignPack): Promise<CreativeExportRender[]> {
+export async function renderCreativeExports(
+  pack: AdStudioCampaignPack,
+  options: { storeInWorkspace?: boolean } = {},
+): Promise<CreativeExportRender[]> {
   const renders: CreativeExportRender[] = [];
 
   for (const creative of pack.creatives) {
@@ -19,7 +23,8 @@ export async function renderCreativeExports(pack: AdStudioCampaignPack): Promise
     renders.push(await renderCreative(creative, "image/jpeg", pack.brandKit));
   }
 
-  return renders;
+  if (!options.storeInWorkspace) return renders;
+  return uploadCreativeRenders(pack, renders);
 }
 
 async function renderCreative(
@@ -53,6 +58,57 @@ async function renderCreative(
     mimeType,
     dataUrl: canvas.toDataURL(mimeType, mimeType === "image/jpeg" ? 0.92 : undefined),
   };
+}
+
+async function uploadCreativeRenders(
+  pack: AdStudioCampaignPack,
+  renders: CreativeExportRender[],
+): Promise<CreativeExportRender[]> {
+  const supabase = createSupabaseBrowserClient();
+  const refs: CreativeExportRender[] = [];
+
+  for (const render of renders) {
+    if (!render.dataUrl) throw new Error("Creative render data is missing.");
+
+    const extension = render.mimeType === "image/png" ? "png" : "jpg";
+    const mimeLabel = render.mimeType === "image/png" ? "png" : "jpg";
+    const storagePath = [
+      pack.campaign.workspaceId,
+      "adstudio",
+      "exports",
+      pack.campaign.campaignId,
+      render.variantId,
+      `${render.creativeId}-${safePathPart(render.format)}-${mimeLabel}.${extension}`,
+    ].join("/");
+    const { error } = await supabase.storage
+      .from("workspace-artifacts")
+      .upload(storagePath, dataUrlToBlob(render.dataUrl, render.mimeType), {
+        contentType: render.mimeType,
+        upsert: true,
+      });
+
+    if (error) throw new Error("Creative export failed while preparing images.");
+
+    const { dataUrl, ...ref } = render;
+    refs.push({ ...ref, storagePath });
+  }
+
+  return refs;
+}
+
+function dataUrlToBlob(dataUrl: string, mimeType: CreativeExportRender["mimeType"]): Blob {
+  const prefix = `data:${mimeType};base64,`;
+  if (!dataUrl.startsWith(prefix)) throw new Error("Creative render data is invalid.");
+  const binary = atob(dataUrl.slice(prefix.length));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+function safePathPart(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "creative";
 }
 
 function backgroundFill(creative: AdStudioCreative): string {
