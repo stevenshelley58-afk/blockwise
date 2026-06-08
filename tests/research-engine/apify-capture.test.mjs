@@ -8,6 +8,7 @@ import {
   inferApifySchemaMap,
   ledgerCostFromApifyRunDetail,
   mapApifyDatasetItems,
+  runApifyCapture,
   scoreApifyActor,
   selectCheapestApifyActor,
 } from "../../hermes/tools/research-runtime/bin/apify-capture.mjs";
@@ -234,6 +235,89 @@ test("Apify schema_map fails capture when required-field mapping failures exceed
   assert.equal(evidence.rawItemCount, 20);
   assert.equal(evidence.failedCount, 2);
   assert.equal(evidence.failureRate, 0.1);
+});
+
+test("Apify capture preserves run cost when dataset mapping fails after a charged run", async () => {
+  const fetchImpl = async (url, init) => {
+    const href = String(url);
+    if (href.includes("/acts/")) {
+      return jsonResponse({ data: { id: "run-1", defaultDatasetId: "dataset-1" } });
+    }
+    if (href.includes("/actor-runs/run-1")) {
+      return jsonResponse({
+        data: {
+          id: "run-1",
+          status: "SUCCEEDED",
+          defaultDatasetId: "dataset-1",
+          usageTotalUsd: 0.05,
+          chargedEventCounts: { "actor-start": 1 },
+        },
+      });
+    }
+    if (href.includes("/datasets/dataset-1/items")) {
+      return jsonResponse([{ ad: { id: "" }, page: { id: "" }, body: "" }]);
+    }
+    throw new Error(`unexpected ${init.method} ${href}`);
+  };
+
+  await assert.rejects(
+    () => runApifyCapture({
+      actorId: "automly/facebook-ad-library-scraper",
+      input: { urls: ["https://www.facebook.com/ads/library/?id=123"] },
+      schemaMap: {
+        external_ad_id: "ad.id",
+        page_id: "page.id",
+        creative_text: "body",
+      },
+      fetchImpl,
+      pollOptions: { intervalMs: 1, timeoutMs: 100 },
+    }),
+    (error) => {
+      assert.equal(error.details.costUsd, 0.05);
+      assert.equal(error.details.runId, "run-1");
+      assert.equal(error.details.rawDatasetId, "dataset-1");
+      return /schema_map failed/u.test(error.message);
+    },
+  );
+});
+
+test("Apify capture wraps plain post-run failures with charged run cost", async () => {
+  const fetchImpl = async (url, init) => {
+    const href = String(url);
+    if (href.includes("/acts/")) {
+      return jsonResponse({ data: { id: "run-1", defaultDatasetId: "dataset-1" } });
+    }
+    if (href.includes("/actor-runs/run-1")) {
+      return jsonResponse({
+        data: {
+          id: "run-1",
+          status: "SUCCEEDED",
+          defaultDatasetId: "dataset-1",
+          usageTotalUsd: 0.05,
+          chargedEventCounts: { "actor-start": 1 },
+        },
+      });
+    }
+    if (href.includes("/datasets/dataset-1/items")) {
+      throw new Error("dataset network timeout");
+    }
+    throw new Error(`unexpected ${init.method} ${href}`);
+  };
+
+  await assert.rejects(
+    () => runApifyCapture({
+      actorId: "automly/facebook-ad-library-scraper",
+      input: { urls: ["https://www.facebook.com/ads/library/?id=123"] },
+      fetchImpl,
+      pollOptions: { intervalMs: 1, timeoutMs: 100 },
+    }),
+    (error) => {
+      assert.equal(error.details.costUsd, 0.05);
+      assert.equal(error.details.runId, "run-1");
+      assert.equal(error.details.rawDatasetId, "dataset-1");
+      return /failed after actor run/u.test(error.message);
+    },
+  );
 });
 
 test("Apify schema_map inference maps common actor result shapes", async () => {

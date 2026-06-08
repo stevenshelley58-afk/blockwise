@@ -154,17 +154,38 @@ export async function runApifyCapture({
   if (!runId) throw new ApifyCaptureError("Apify run creation response did not include a run id", { actorId, run });
 
   const detail = await pollApifyRun({ runId, token, fetchImpl, baseUrl, ...pollOptions });
-  const datasetId = detail?.defaultDatasetId || run?.defaultDatasetId;
-  if (!datasetId) throw new ApifyCaptureError("Apify run did not expose a default dataset id", { actorId, run, detail });
-
-  const rawItems = await fetchApifyDatasetItems({ datasetId, limit: resultLimit, token, fetchImpl, baseUrl });
-  const outcome = await mapApifyDatasetItems({
-    actorId,
-    items: rawItems,
-    schemaMap,
-    writeRawEvidence,
-  });
   const cost = extractApifyRunCost(detail);
+  const datasetId = detail?.defaultDatasetId || run?.defaultDatasetId;
+  if (!datasetId) throw new ApifyCaptureError("Apify run did not expose a default dataset id", { actorId, run, detail, costUsd: cost.costUsd });
+
+  let rawItems;
+  let outcome;
+  try {
+    rawItems = await fetchApifyDatasetItems({ datasetId, limit: resultLimit, token, fetchImpl, baseUrl });
+    outcome = await mapApifyDatasetItems({
+      actorId,
+      items: rawItems,
+      schemaMap,
+      writeRawEvidence,
+    });
+  } catch (error) {
+    const failureDetails = {
+      actorId,
+      runId,
+      rawDatasetId: datasetId,
+      detail,
+      costUsd: cost.costUsd,
+      chargedEventCounts: cost.chargedEventCounts,
+    };
+    if (error instanceof ApifyCaptureError) {
+      error.details = {
+        ...(error.details || {}),
+        ...failureDetails,
+      };
+      throw error;
+    }
+    throw new ApifyCaptureError(`Apify capture failed after actor run: ${error.message}`, failureDetails);
+  }
 
   return {
     ...outcome,

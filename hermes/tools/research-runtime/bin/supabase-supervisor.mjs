@@ -3100,6 +3100,8 @@ function apifyBenchmarkFailure(reason, startedAt, metadata = {}) {
 }
 
 function costUsdFromApifyError(error) {
+  const explicitCost = Number(error?.details?.costUsd || error?.details?.cost_usd || 0);
+  if (Number.isFinite(explicitCost) && explicitCost > 0) return explicitCost;
   const detail = error?.details?.detail || error?.details?.runDetail || error?.details;
   return Number(extractApifyRunCost(detail).costUsd || 0) || 0;
 }
@@ -3131,6 +3133,22 @@ async function openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd
     resolution: defect,
     resolved_advertiser_page_id: input?.advertiserPageId || null,
   });
+}
+
+async function openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd, ingestedCount, reason, scope }) {
+  if (!isApifySourceProvider(sourceProvider)) return;
+  if (!(Number(costUsd) > 0) || Number(ingestedCount) > 0) return;
+  await openApifyCircuitAfterSpendWithoutIngest({
+    actorId: sourceProvider.slice(META_APIFY_SOURCE_PROVIDER_PREFIX.length),
+    input,
+    costUsd: Number(costUsd),
+    reason,
+    scope,
+  });
+}
+
+function isApifySourceProvider(sourceProvider) {
+  return typeof sourceProvider === "string" && sourceProvider.startsWith(META_APIFY_SOURCE_PROVIDER_PREFIX);
 }
 
 async function insertApifyBenchmarkFetchRun(buildRunId, input, actorId, resultLimit) {
@@ -3174,12 +3192,14 @@ function apifyMetaPageInput(input, resultLimit) {
   return {
     searchUrl: url,
     url,
+    urls: [url],
     startUrls: [{ url }],
     pageId: input.metaPageId,
     country: input.country,
     activeStatus: input.activeStatus,
     maxResults: resultLimit,
     count: resultLimit,
+    maxAds: resultLimit,
   };
 }
 
@@ -4554,17 +4574,52 @@ async function handleAdCollector(job) {
       checkedAt,
     });
     await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "success", result_summary: { provider: sourceProvider, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {}, reconciliation }, cost_usd: outcome.costUsd || 0 });
+    await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: 0, reason: "confirmed_absence", scope: "page_capture_confirmed_absence" });
     await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
       method: "PATCH",
       body: json({ status: "no_ads_confirmed", last_checked_at: checkedAt, last_successful_check_at: checkedAt, consecutive_failed_checks: 0 }),
     });
     return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, confirmed_absence: true, reconciliation, ingest_tables: ingestTables } };
   }
+  if (isApifySourceProvider(sourceProvider)) {
+    await updateFetchRun(adFetchRunId, {
+      source_provider: sourceProvider,
+      status: "partial",
+      result_summary: {
+        provider: sourceProvider,
+        item_count: outcome.itemCount,
+        ingested_count: 0,
+        raw_dataset_id: outcome.rawDatasetId,
+        metadata: outcome.metadata || {},
+        ingest_pending: true,
+      },
+      cost_usd: outcome.costUsd || 0,
+    });
+  }
   const ingested = [];
-  for (const ad of outcome.items) {
-    const item = await ingestMetaAd({ ad, advertiserPageId: payload.advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob: job });
-    ingested.push(item);
-    await enqueuePostIngestJobs(item, payload.advertiserPageId, buildRunId, job);
+  try {
+    for (const ad of outcome.items) {
+      const item = await ingestMetaAd({ ad, advertiserPageId: payload.advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob: job });
+      ingested.push(item);
+      await enqueuePostIngestJobs(item, payload.advertiserPageId, buildRunId, job);
+    }
+  } catch (error) {
+    await updateFetchRun(adFetchRunId, {
+      source_provider: sourceProvider,
+      status: "partial",
+      result_summary: {
+        provider: sourceProvider,
+        item_count: outcome.itemCount,
+        ingested_count: ingested.length,
+        raw_dataset_id: outcome.rawDatasetId,
+        metadata: outcome.metadata || {},
+        ingest_error: error.message,
+      },
+      error: `ingest failed after capture: ${error.message}`,
+      cost_usd: outcome.costUsd || 0,
+    });
+    await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: ingested.length, reason: error.message, scope: "page_ingest_failure" });
+    throw error;
   }
   const reconciliation = await reconcileMissingObservedAds({
     advertiserPageId: payload.advertiserPageId,
@@ -4572,6 +4627,7 @@ async function handleAdCollector(job) {
     checkedAt,
   });
   await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "success", result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {}, reconciliation }, cost_usd: outcome.costUsd || 0 });
+  await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: ingested.length, reason: "zero_ingested_after_successful_capture", scope: "page_capture_success" });
   if (outcome.metadata?.truncated || (sourceProvider !== META_OFFICIAL_SOURCE_PROVIDER && outcome.itemCount >= input.resultsLimit)) {
     log("Meta capture may be truncated", {
       advertiser_page_id: payload.advertiserPageId,

@@ -61,8 +61,10 @@ const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor"
 const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBenchmarkIfNeeded");
 const apifyActorBenchmark = functionBody(supervisor, "benchmarkApifyCandidateActor");
 const apifyCanaryInput = functionBody(supervisor, "readApifyCanaryCaptureInput");
+const apifyPageInput = functionBody(supervisor, "apifyMetaPageInput");
 const apifyErrorCost = functionBody(supervisor, "costUsdFromApifyError");
 const apifySpendCircuit = functionBody(supervisor, "openApifyCircuitAfterSpendWithoutIngest");
+const apifySpendCircuitGuard = functionBody(supervisor, "openCircuitIfPaidSpendWithoutIngest");
 const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
 const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
 const browserPageCapture = functionBody(supervisor, "runHermesBrowserCapture");
@@ -141,11 +143,15 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
   assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
   assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
+  assert.match(apifyPageInput, /\burls:\s*\[\s*url\s*\]/u, "Apify actors that require input.urls must receive the Meta Ad Library URL");
+  assert.match(apifyPageInput, /\bmaxAds:\s*resultLimit\b/u, "Apify actor-specific maxAds defaults must be capped with the shared result limit");
   assert.match(apifyMetaPageCapture, /\bcostUsdFromApifyError\(error\)/u, "failed Apify captures must still ledger any charged run cost");
   assert.match(apifyMetaPageCapture, /\bopenApifyCircuitAfterSpendWithoutIngest\b/u, "charged failed Apify captures must open the paid circuit");
   assert.match(apifyErrorCost, /\bextractApifyRunCost\b/u, "Apify error cost extraction must reuse the run-detail cost parser");
   assert.match(apifySpendCircuit, /\bsetRuntimeSetting\(["']apify_state["'],\s*["']circuit_open["']/u, "spend without ingest must open the Apify circuit");
   assert.match(apifySpendCircuit, /\binsertCoverageDefect\b/u, "spend without ingest must leave an operator defect");
+  assert.match(apifySpendCircuitGuard, /\bisApifySourceProvider\b/u, "generic circuit helper must only react to Apify providers");
+  assert.match(apifySpendCircuitGuard, /Number\(costUsd\)\s*>\s*0[\s\S]*Number\(ingestedCount\)\s*>\s*0/u, "paid circuit helper must require positive spend and zero ingested rows");
   assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
   assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
 });
@@ -1006,6 +1012,24 @@ test("Hermes active ad collector queues media and classifier follow-up jobs", ()
       `post-ingest helper must enqueue ${jobType} follow-up work after ingest`,
     );
   }
+});
+
+test("Hermes active ad collector ledgers paid capture cost before ingest can fail", () => {
+  assert.match(
+    collector,
+    /if \(isApifySourceProvider\(sourceProvider\)\)[\s\S]*status:\s*["']partial["'][\s\S]*ingest_pending:\s*true[\s\S]*cost_usd:\s*outcome\.costUsd \|\| 0/u,
+    "paid capture cost must be written before ingesting ads",
+  );
+  assert.match(
+    collector,
+    /catch \(error\)[\s\S]*ingest failed after capture[\s\S]*cost_usd:\s*outcome\.costUsd \|\| 0[\s\S]*openCircuitIfPaidSpendWithoutIngest/u,
+    "ingest failures after paid capture must retain cost and open circuit when no ads were ingested",
+  );
+  assert.match(
+    collector,
+    /updateFetchRun\(adFetchRunId,[\s\S]*status:\s*["']success["'][\s\S]*openCircuitIfPaidSpendWithoutIngest/u,
+    "paid successful captures with zero ingested ads must still open the paid circuit",
+  );
 });
 
 test("Hermes active ad collector reconciles disappeared ads after successful captures", () => {
