@@ -135,3 +135,15 @@ test("paid-service watchdog is scheduled on Vercel and guarded by CRON_SECRET", 
   assert.match(route, /process\.env\.CRON_SECRET/);
   assert.match(route, /authorization !== `Bearer \$\{secret\}`/);
 });
+
+test("Vercel watchdog observes Hermes paid-capture state instead of running Apify", () => {
+  const watchdog = readFileSync("src/lib/alerts/paid-service-watchdog.ts", "utf8");
+  const route = readFileSync("src/app/api/alerts/paid-service-watchdog/route.ts", "utf8");
+  const appSideWatchdog = `${watchdog}\n${route}`;
+
+  assert.match(watchdog, /research\.from\("v_health"\)\.select\("apify_mtd_spend_usd,apify_state"\)/);
+  assert.doesNotMatch(appSideWatchdog, /APIFY_(?:API_)?TOKEN/u);
+  assert.doesNotMatch(appSideWatchdog, /api\.apify\.com/u);
+  assert.doesNotMatch(appSideWatchdog, /\b(?:createApifyRun|runApifyCapture|fetchApifyDatasetItems)\b/u);
+  assert.doesNotMatch(appSideWatchdog, /\b(?:ensureApifyAccountLimit|guardApifyBudget)\b/u);
+});
