@@ -154,6 +154,7 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifySpendCircuitGuard, /Number\(costUsd\)\s*>\s*0[\s\S]*Number\(ingestedCount\)\s*>\s*0/u, "paid circuit helper must require positive spend and zero ingested rows");
   assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
   assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
+  assert.match(apifyActorBenchmark, /item_count:\s*normalisedAds\.length[\s\S]*raw_item_count:\s*rawItems\.length[\s\S]*valid_ad_count:\s*normalisedAds\.length/u, "Apify canaries should write the canonical item_count used by zero-ad watchdogs");
 });
 
 test("Hermes browser parse failures store raw evidence pointers", () => {

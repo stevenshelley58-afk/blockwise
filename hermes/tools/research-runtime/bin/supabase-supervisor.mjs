@@ -3023,6 +3023,7 @@ async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId
       known_external_ad_id: input.canaryKnownAdId || null,
       run_id: run.id,
       raw_dataset_id: datasetId,
+      item_count: normalisedAds.length,
       raw_item_count: rawItems.length,
       mapped_item_count: mapped.items.length,
       valid_ad_count: normalisedAds.length,
