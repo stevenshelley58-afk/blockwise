@@ -680,6 +680,49 @@ function locationSearchQueriesForPolicy(policy) {
   ].filter((item) => item.query);
 }
 
+function canRecycleBlockedLocationSearch(job) {
+  const payload = job.payload || {};
+  if (payload.recycled_after_parser_fix_at) return false;
+  if (payload.location_search_allowed !== true || payload.realEstateGate?.verified !== true) return false;
+  if (!payload.postcode || !payload.query) return false;
+  const priorFailure = `${job.blocked_reason || ""} ${job.last_error || ""} ${json(job.result || {})}`;
+  return /Meta Ad Library page loaded but no ad result payload could be parsed|claim_expired_max_attempts/iu.test(priorFailure);
+}
+
+async function recycleBlockedLocationSearchJobs(limit) {
+  const capacity = Math.max(0, Number(limit) || 0);
+  if (capacity <= 0) return 0;
+  const rows = await rest(
+    "research",
+    `work_queue?select=id,payload,blocked_reason,last_error,result&job_type=eq.${LOCATION_AD_SEARCH_JOB_TYPE}&status=eq.blocked&blocked_reason=in.(handler_failed_max_attempts,claim_expired_max_attempts)&order=updated_at.asc&limit=${Math.max(capacity * 4, capacity)}`,
+  );
+  let recycled = 0;
+  for (const job of rows) {
+    if (recycled >= capacity) break;
+    if (!canRecycleBlockedLocationSearch(job)) continue;
+    await rest("research", `work_queue?id=eq.${job.id}`, {
+      method: "PATCH",
+      body: json({
+        payload: { ...(job.payload || {}), recycled_after_parser_fix_at: now() },
+        status: "pending",
+        attempts: 0,
+        available_at: new Date(Date.now() + recycled * 3_000).toISOString(),
+        claimed_at: null,
+        claimed_by: null,
+        claim_token: null,
+        claim_expires_at: null,
+        blocked_reason: null,
+        last_error: null,
+        result: {},
+        completed_at: null,
+      }),
+    });
+    await recordEvent("requeue", "work_queue", job.id, { job_type: LOCATION_AD_SEARCH_JOB_TYPE, reason: "location_search_parser_fix_recycle" }, { work_queue_id: job.id });
+    recycled += 1;
+  }
+  return recycled;
+}
+
 async function enqueueDueLocationAdSearchJobs(buildRunId) {
   if (!locationAdSearchEnabled) return { locationSearchCandidates: 0, locationSearchEnqueued: 0 };
   const activeSearches = await rest("research", `work_queue?select=id&job_type=eq.${LOCATION_AD_SEARCH_JOB_TYPE}&status=in.(pending,claimed)&limit=${locationAdSearchMaxActive}`);
@@ -697,15 +740,17 @@ async function enqueueDueLocationAdSearchJobs(buildRunId) {
     `refresh_policies?select=id,postcode,state,priority,last_refreshed_at&${filters}&order=priority.asc,last_refreshed_at.asc.nullsfirst&limit=${Math.max(locationAdSearchBatchSize * 4, supervisorLimit)}`,
   );
   const capacity = Math.max(0, Math.min(locationAdSearchMaxActive - activeSearches.length, locationAdSearchBatchSize));
+  const recycled = await recycleBlockedLocationSearchJobs(capacity);
+  const remainingCapacity = Math.max(0, capacity - recycled);
   const bucket = Math.floor(Date.now() / Math.max(60_000, locationAdSearchIntervalMinutes * 60_000));
   let candidates = 0;
   let enqueued = 0;
 
   for (const policy of policies) {
-    if (enqueued >= capacity) break;
+    if (enqueued >= remainingCapacity) break;
     if (!policy.postcode || !hasCensusSourceForPolicy(policy)) continue;
     for (const [index, item] of locationSearchQueriesForPolicy(policy).entries()) {
-      if (enqueued >= capacity) break;
+      if (enqueued >= remainingCapacity) break;
       candidates += 1;
       const dedupeKey = `location-ad-search:${policy.state || "WA"}:${policy.postcode}:${normalizeName(item.query)}:${bucket}`;
       const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(dedupeKey)}&limit=1`);
@@ -746,7 +791,7 @@ async function enqueueDueLocationAdSearchJobs(buildRunId) {
     }
   }
 
-  return { locationSearchCandidates: candidates, locationSearchEnqueued: enqueued, locationSearchActive: activeSearches.length };
+  return { locationSearchCandidates: candidates, locationSearchEnqueued: enqueued, locationSearchRecycled: recycled, locationSearchActive: activeSearches.length };
 }
 
 async function runWatchdogs() {

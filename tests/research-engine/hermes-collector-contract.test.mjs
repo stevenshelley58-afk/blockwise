@@ -33,6 +33,8 @@ const resolverScorer = functionBody(supervisor, "scoreMetaSearchPageCandidate");
 const resolverFacebookSubject = functionBody(supervisor, "resolverSubjectForFacebookPage");
 const serviceAreaWrite = functionBody(supervisor, "ensureServiceArea");
 const locationAdSearchQueue = functionBody(supervisor, "enqueueDueLocationAdSearchJobs");
+const locationSearchRecycle = functionBody(supervisor, "recycleBlockedLocationSearchJobs");
+const locationSearchRecycleGate = functionBody(supervisor, "canRecycleBlockedLocationSearch");
 const locationAdSearchPriority = functionBody(supervisor, "locationAdSearchPriorityForPolicy");
 const locationAdSearch = functionBody(supervisor, "handleLocationAdSearch");
 const locationSearchUrl = functionBody(supervisor, "metaAdLibraryLocationSearchUrl");
@@ -465,6 +467,12 @@ test("Hermes location ad search is explicit, gated, and separate from page colle
     /\blocationAdMatchForInput\b[\s\S]*\bhasRealEstateAdSignalForLocation\b/u,
     "location search results must be filtered by exact visible location and real-estate signals before ingest",
   );
+  assert.match(
+    `${locationAdSearchQueue}\n${locationSearchRecycle}\n${locationSearchRecycleGate}`,
+    /recycled_after_parser_fix_at[\s\S]*Meta Ad Library page loaded but no ad result payload could be parsed/u,
+    "old location-search parser failures should recycle once through the normal active-cap gate",
+  );
+  assert.match(locationAdSearchQueue, /locationSearchRecycled:\s*recycled/u);
   assert.match(
     locationRealEstateSignal,
     /\bpropertyType\b[\s\S]*\bmarketAction\b/u,
