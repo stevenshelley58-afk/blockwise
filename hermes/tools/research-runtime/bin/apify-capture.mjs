@@ -506,6 +506,42 @@ export function mapSchemaFields(item, schemaMap = {}) {
   return mapped;
 }
 
+export function inferApifySchemaMap(items = []) {
+  const rows = Array.isArray(items) ? items.filter(isObject).slice(0, 25) : [];
+  const paths = rows.flatMap((item) => collectApifyValuePaths(item));
+  const fields = {};
+  const confidence = {};
+
+  for (const targetField of [
+    "external_ad_id",
+    "page_id",
+    "page_name",
+    "creative_text",
+    "headline",
+    "landing_url",
+    "media_url",
+    "image_url",
+    "video_url",
+    "ad_snapshot_url",
+    "startDate",
+    "endDate",
+    "status",
+  ]) {
+    const candidates = bestApifyFieldPaths(targetField, paths);
+    if (candidates.length) {
+      fields[targetField] = candidates.length === 1 ? candidates[0].path : { paths: candidates.map((candidate) => candidate.path) };
+      confidence[targetField] = candidates[0].score;
+    }
+  }
+
+  return {
+    fields,
+    inferred: true,
+    sample_size: rows.length,
+    confidence,
+  };
+}
+
 export async function fetchApifyActorDetails({
   actorId,
   token = defaultApifyToken(),
@@ -748,6 +784,126 @@ function resolveMapSpec(item, spec) {
   if (spec.type === "number" && value !== undefined && value !== null) value = Number(value);
   if (spec.trim === false) return value;
   return value;
+}
+
+function collectApifyValuePaths(value, path = "", out = []) {
+  if (Array.isArray(value)) {
+    if (path) out.push({ path, key: lastPathKey(path), value });
+    value.slice(0, 3).forEach((entry, index) => collectApifyValuePaths(entry, `${path}[${index}]`, out));
+    return out;
+  }
+  if (isObject(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      const nextPath = path ? `${path}.${key}` : key;
+      collectApifyValuePaths(entry, nextPath, out);
+    }
+    return out;
+  }
+  if (path && hasUsefulValue(value)) out.push({ path, key: lastPathKey(path), value });
+  return out;
+}
+
+function bestApifyFieldPaths(targetField, paths) {
+  const seen = new Set();
+  const scored = paths
+    .map((entry) => ({ ...entry, score: scoreApifyFieldPath(targetField, entry) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.path.length - b.path.length);
+  const bestScore = scored[0]?.score || 0;
+  const floor = Math.max(40, bestScore * 0.6);
+  const out = [];
+  for (const entry of scored) {
+    if (entry.score < floor || seen.has(entry.path)) continue;
+    seen.add(entry.path);
+    out.push({ path: entry.path, score: entry.score });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+function scoreApifyFieldPath(targetField, { path, key, value }) {
+  const normalisedPath = path.toLowerCase();
+  const normalisedKey = key.toLowerCase();
+  const textValues = arrayValues(value).map((entry) => String(entry || "").trim()).filter(Boolean);
+  const firstText = textValues[0] || "";
+  const isNumericId = textValues.some((entry) => /^\d{8,}$/u.test(entry));
+  const isUrl = textValues.some((entry) => /^https?:\/\//iu.test(entry));
+  const isLongText = textValues.some((entry) => /[a-z]/iu.test(entry) && entry.length >= 20);
+  const contains = (...needles) => needles.some((needle) => normalisedPath.includes(needle) || normalisedKey.includes(needle));
+
+  if (targetField === "external_ad_id") {
+    if (!isNumericId) return 0;
+    if (contains("adarchiveid", "ad_archive_id", "archive_id", "library_id")) return 120;
+    if (contains("ad.id", "ad_id", "adid", "ad.id")) return 95;
+    if (normalisedKey === "id" && contains("ad", "creative")) return 70;
+    return normalisedKey === "id" ? 20 : 0;
+  }
+
+  if (targetField === "page_id") {
+    if (!isNumericId) return 0;
+    if (contains("pageid", "page_id", "page.id", "page_id")) return 110;
+    if (normalisedKey === "id" && contains("page")) return 80;
+    return 0;
+  }
+
+  if (targetField === "page_name") {
+    if (!isLongText && firstText.length < 3) return 0;
+    return contains("page_name", "pagename", "page.name") ? 90 : 0;
+  }
+
+  if (targetField === "creative_text") {
+    if (!isLongText) return 0;
+    if (contains("creative_text", "body", "message", "text", "ad_creative_bodies")) return 100;
+    if (contains("description", "caption")) return 40;
+    return 0;
+  }
+
+  if (targetField === "headline") {
+    if (!firstText || firstText.length > 180 || isUrl) return 0;
+    return contains("headline", "title", "link_title") ? 80 : 0;
+  }
+
+  if (targetField === "landing_url") {
+    if (!isUrl) return 0;
+    return contains("landing", "link_url", "url", "destination") && !contains("image", "video", "media", "thumbnail", "snapshot")
+      ? 90
+      : 0;
+  }
+
+  if (targetField === "media_url" || targetField === "image_url" || targetField === "video_url") {
+    if (!isUrl) return 0;
+    const mediaScore = contains("media", "image", "video", "thumbnail", "picture", "originalimageurl", "videohdurl") ? 90 : 0;
+    if (targetField === "image_url" && contains("image", "picture", "originalimageurl")) return mediaScore + 15;
+    if (targetField === "video_url" && contains("video", "videohdurl", "videosdurl")) return mediaScore + 15;
+    return targetField === "media_url" ? mediaScore : 0;
+  }
+
+  if (targetField === "ad_snapshot_url") {
+    return isUrl && contains("snapshot", "ad_snapshot") ? 80 : 0;
+  }
+
+  if (targetField === "startDate") {
+    return firstText && contains("start", "delivery_start") ? 60 : 0;
+  }
+
+  if (targetField === "endDate") {
+    return firstText && contains("end", "stop", "delivery_stop") ? 60 : 0;
+  }
+
+  if (targetField === "status") {
+    return /^(active|inactive|ended|stopped)$/iu.test(firstText) && contains("status") ? 60 : 0;
+  }
+
+  return 0;
+}
+
+function arrayValues(value) {
+  return Array.isArray(value) ? value.flatMap(arrayValues) : [value];
+}
+
+function lastPathKey(path) {
+  const withoutIndex = String(path).replace(/\[\d+\]$/u, "");
+  return withoutIndex.split(".").pop() || withoutIndex;
 }
 
 function readPath(source, path) {

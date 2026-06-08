@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createApifyRun,
   guardApifyBudget,
+  inferApifySchemaMap,
   ledgerCostFromApifyRunDetail,
   mapApifyDatasetItems,
   scoreApifyActor,
@@ -206,6 +207,40 @@ test("Apify schema_map fails capture when required-field mapping failures exceed
   assert.equal(evidence.rawItemCount, 20);
   assert.equal(evidence.failedCount, 2);
   assert.equal(evidence.failureRate, 0.1);
+});
+
+test("Apify schema_map inference maps common actor result shapes", async () => {
+  const rawItems = [
+    {
+      adArchiveID: "123456789012345",
+      pageID: "998877665544332",
+      pageName: "Example Realty",
+      body: "Just listed in Perth with home opens this weekend.",
+      imageUrl: "https://example.com/ad.jpg",
+      linkUrl: "https://example.com/property",
+      adSnapshotUrl: "https://www.facebook.com/ads/library/?id=123456789012345",
+    },
+    {
+      ad: { id: "223456789012345" },
+      page: { id: "998877665544332", name: "Example Realty" },
+      creative: { text: "Property appraisal campaign for Perth homeowners.", media_url: "https://example.com/ad2.jpg" },
+    },
+  ];
+
+  const schemaMap = inferApifySchemaMap(rawItems);
+  const mapped = await mapApifyDatasetItems({
+    actorId: "automly/facebook-ad-library-scraper",
+    items: rawItems,
+    schemaMap,
+  });
+
+  assert.equal(schemaMap.inferred, true);
+  assert.deepEqual(schemaMap.fields.external_ad_id, { paths: ["adArchiveID", "ad.id"] });
+  assert.deepEqual(schemaMap.fields.page_id, { paths: ["pageID", "page.id"] });
+  assert.equal(mapped.items.length, 2);
+  assert.equal(mapped.metadata.mapping_failure_rate, 0);
+  assert.equal(mapped.items[0].external_ad_id, "123456789012345");
+  assert.equal(mapped.items[1].external_ad_id, "223456789012345");
 });
 
 function jsonResponse(body, status = 200) {

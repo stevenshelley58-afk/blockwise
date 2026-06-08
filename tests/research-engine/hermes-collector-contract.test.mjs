@@ -11,6 +11,7 @@ const mainWrapper = readFileSync(join(root, "infra/hermes/main-wrapper.sh"), "ut
 const researchCompose = readFileSync(join(root, "infra/coolify/docker-compose.research.yml"), "utf8");
 const recordEvent = functionBody(supervisor, "recordEvent");
 const collector = functionBody(supervisor, "handleAdCollector");
+const postIngestJobs = functionBody(supervisor, "enqueuePostIngestJobs");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
 const captureMediaAsset = functionBody(supervisor, "captureMediaAsset");
@@ -57,6 +58,9 @@ const configuredMetaPageCapture = functionBody(supervisor, "runMetaPageCapture")
 const paidFailoverCapture = functionBody(supervisor, "captureWithPaidApifyFailover");
 const apifyMetaPageCapture = functionBody(supervisor, "runApifyMetaPageCapture");
 const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor");
+const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBenchmarkIfNeeded");
+const apifyActorBenchmark = functionBody(supervisor, "benchmarkApifyCandidateActor");
+const apifyCanaryInput = functionBody(supervisor, "readApifyCanaryCaptureInput");
 const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
 const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
 const browserPageCapture = functionBody(supervisor, "runHermesBrowserCapture");
@@ -153,6 +157,20 @@ test("Hermes active ad collector can fail over from free capture to Apify", () =
   assert.match(paidFailoverCapture, /fallbackOutcome\.status !== ["']SUCCEEDED["']/u, "paid failover should only run after primary fallback failure");
   assert.match(paidFailoverCapture, /\brunApifyMetaPageCapture\(input, fallbackOutcome\)/u, "failed browser/http_json capture should be eligible for Apify fallback");
   assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the final provider");
+});
+
+test("Hermes Apify fallback only promotes actors after capped known-good canaries", () => {
+  assert.match(apifyCandidateBenchmark, /\bif \(!apifyToken\) return \{ status: ["']skipped["'], reason: ["']token_missing["'] \}/u, "benchmark must not run without an Apify token");
+  assert.match(apifyCandidateBenchmark, /\bresolveApifyCaptureActor\(settings\)/u, "benchmark should skip when an approved actor already exists");
+  assert.match(apifyCandidateBenchmark, /\breadApifyCanaryCaptureInput\(settings\)/u, "benchmark must target a known-good canary page from stored ads");
+  assert.match(apifyCanaryInput, /observed_ads\?select=advertiser_page_id,external_ad_id[\s\S]*active_status=eq\.active/u, "canary input should come from ads already observed as active");
+  assert.match(apifyActorBenchmark, /\bensureApifyAccountLimit\b/u, "canary benchmark must keep the account-level spend backstop");
+  assert.match(apifyActorBenchmark, /\bguardApifyBudget\b/u, "canary benchmark must use the same ledger budget guard as paid fallback");
+  assert.match(apifyActorBenchmark, /maxTotalChargedUsd:\s*canaryPerRunCapUsd/u, "canary benchmark must pass the small canary cap to Apify");
+  assert.match(apifyActorBenchmark, /\binferApifySchemaMap\b[\s\S]*\bmapApifyDatasetItems\b/u, "canary benchmark must infer and validate the actor schema map");
+  assert.match(apifyActorBenchmark, /\bingestMetaAd\b[\s\S]*\bingested\.length > 0/u, "actor promotion must require at least one ingested ad");
+  assert.match(apifyActorBenchmark, /status:\s*passed \? ["']approved["'] : ["']candidate["']/u, "failed canaries must stay candidate, not become selectable");
+  assert.match(apifyActorBenchmark, /\bsetRuntimeSetting\(["']apify_actor_id["'], actorId/u, "a passing canary should select the approved actor for future fallback");
 });
 
 test("Hermes active ad collector can prefer official paginated Meta page API", () => {
@@ -964,14 +982,19 @@ test("Hermes ad collector records page-level capture failures for refresh backof
 });
 
 test("Hermes active ad collector queues media and classifier follow-up jobs", () => {
+  assert.match(
+    collector,
+    /\benqueuePostIngestJobs\s*\(\s*item,\s*payload\.advertiserPageId,\s*buildRunId,\s*job\s*\)/u,
+    "collector must run post-ingest follow-up enqueueing after each ad ingest",
+  );
   for (const jobType of [
     "blockwise-media-collector",
     "blockwise-ad-classifier",
   ]) {
     assert.match(
-      collector,
+      postIngestJobs,
       new RegExp(`enqueueFollowUp[\\s\\S]*job_type:\\s*["']${escapeRegExp(jobType)}["']`, "i"),
-      `collector must enqueue ${jobType} follow-up work after ingest`,
+      `post-ingest helper must enqueue ${jobType} follow-up work after ingest`,
     );
   }
 });

@@ -10,6 +10,8 @@ import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
 import type { StudioSection } from "./use-ad-studio";
 
+const EXPORT_RENDER_TIMEOUT_MS = 45_000;
+
 function getMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Ad Studio request failed.";
 }
@@ -237,7 +239,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       if (!saved) return;
       const currentPack = buildCurrentPack();
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
-      const creativeRenders = await renderCreativeExports(exportPack, { storeInWorkspace: true });
+      const creativeRenders = await renderExportsWithFallback(exportPack);
       const response = await fetch(
         `/api/adstudio/export-packages/${currentPack.campaign.campaignId}/download`,
         {
@@ -270,6 +272,23 @@ export function useCampaignActions(s: CampaignActionsState) {
   }
 
   return { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives };
+}
+
+async function renderExportsWithFallback(pack: AdStudioCampaignPack) {
+  try {
+    return await withTimeout(renderCreativeExports(pack, { storeInWorkspace: true }), EXPORT_RENDER_TIMEOUT_MS);
+  } catch {
+    return [];
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error("Creative render timed out.")), timeoutMs);
+    promise
+      .then(resolve, reject)
+      .finally(() => window.clearTimeout(timeout));
+  });
 }
 
 function goalFromLabel(label: string, fallback: AdStudioGoal): AdStudioGoal {

@@ -10,6 +10,7 @@ import type {
 } from "@/lib/adstudio/types.ts";
 
 const META_EXPORT_FORMATS = new Set(["1:1", "4:5", "9:16"]);
+const IMAGE_LOAD_TIMEOUT_MS = 12_000;
 
 export async function renderCreativeExports(
   pack: AdStudioCampaignPack,
@@ -187,9 +188,20 @@ async function drawLogo(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObj
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
+    const timeout = window.setTimeout(() => {
+      image.onload = null;
+      image.onerror = null;
+      reject(new Error("Image timed out while loading."));
+    }, IMAGE_LOAD_TIMEOUT_MS);
     image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Image failed to load."));
+    image.onload = () => {
+      window.clearTimeout(timeout);
+      resolve(image);
+    };
+    image.onerror = () => {
+      window.clearTimeout(timeout);
+      reject(new Error("Image failed to load."));
+    };
     image.src = src;
   });
 }

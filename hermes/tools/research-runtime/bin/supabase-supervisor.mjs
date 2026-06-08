@@ -14,11 +14,18 @@ import {
   shouldWaitForMediaClassification,
 } from "./ad-classifier.mjs";
 import {
+  createApifyRun,
   ensureApifyAccountLimit,
+  extractApifyRunCost,
+  fetchApifyDatasetItems,
   guardApifyBudget,
+  inferApifySchemaMap,
+  mapApifyDatasetItems,
   normaliseApifySettings,
+  pollApifyRun,
   runApifyCapture,
   selectCheapestApifyActor,
+  summariseBenchmarkItems,
 } from "./apify-capture.mjs";
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 
@@ -118,6 +125,9 @@ const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_account_limit_usd",
   "apify_actor_id",
   "apify_result_limit",
+  "apify_canary_max_results",
+  "apify_canary_per_run_cap_usd",
+  "apify_canary_page_id",
 ];
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
   "id",
@@ -370,6 +380,11 @@ function runtimeSettingPositiveInt(settings, key, fallback) {
   return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
 }
 
+function runtimeSettingPositiveNumber(settings, key, fallback) {
+  const value = Number(runtimeSettingValue(settings, key, fallback));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 async function readApifyLedgerSpendUsd({ since, until } = {}) {
   const params = [
     "select=cost_usd",
@@ -390,6 +405,18 @@ async function readApifyCaptureActors(actorId = null) {
     return await rest(
       "research",
       `capture_actors?select=actor_id,status,price_per_1k_usd,schema_map,last_benchmark,notes&${filter}&order=price_per_1k_usd.asc.nullslast`,
+    ) || [];
+  } catch (error) {
+    if (missingSchemaRelation(error, "capture_actors")) return [];
+    throw error;
+  }
+}
+
+async function readApifyBenchmarkCandidates(limit = 3) {
+  try {
+    return await rest(
+      "research",
+      `capture_actors?select=actor_id,status,price_per_1k_usd,schema_map,last_benchmark,notes&status=eq.candidate&order=price_per_1k_usd.asc.nullslast&limit=${limit}`,
     ) || [];
   } catch (error) {
     if (missingSchemaRelation(error, "capture_actors")) return [];
@@ -1698,6 +1725,31 @@ async function enqueueFollowUp(input, parentJob) {
   return Boolean(created?.[0]?.id);
 }
 
+async function enqueuePostIngestJobs(item, advertiserPageId, buildRunId, parentJob) {
+  if (item.media_sources > 0) {
+    await enqueueFollowUp({
+      queue_name: "research",
+      job_type: "blockwise-media-collector",
+      dedupe_key: `media:${item.ad_creative_id}:${item.creative_hash}`,
+      advertiser_page_id: advertiserPageId,
+      priority: 5,
+      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId },
+      status: "pending",
+      max_attempts: 3,
+    }, parentJob);
+  }
+  await enqueueFollowUp({
+    queue_name: "research",
+    job_type: "blockwise-ad-classifier",
+    dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
+    advertiser_page_id: advertiserPageId,
+    priority: 5,
+    payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
+    status: "pending",
+    max_attempts: 3,
+  }, parentJob);
+}
+
 function extractLinks(html) {
   const out = new Set();
   const pattern = /href\s*=\s*["']([^"']+)["']/giu;
@@ -2768,6 +2820,305 @@ async function resolveApifyCaptureActor(settings) {
   const selected = selectCheapestApifyActor(actors);
   if (selected.actor) return { actor: selected.actor, reason: selected.reason, scores: selected.scores };
   return { actor: null, reason: selected.reason, scores: selected.scores, errorMessage: "No approved Apify actor passed benchmark selection" };
+}
+
+async function runApifyCandidateBenchmarkIfNeeded(buildRunId) {
+  if (!apifyToken) return { status: "skipped", reason: "token_missing" };
+
+  const settings = await readRuntimeSettings(APIFY_RUNTIME_SETTING_KEYS);
+  const parsedSettings = normaliseApifySettings(settings);
+  if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
+    return { status: "skipped", reason: parsedSettings.enabled ? "circuit_open" : "disabled" };
+  }
+
+  const currentSelection = await resolveApifyCaptureActor(settings);
+  if (currentSelection.actor) {
+    return { status: "skipped", reason: "approved_actor_available", actor_id: currentSelection.actor.actor_id };
+  }
+
+  const candidates = await readApifyBenchmarkCandidates(6);
+  const actor = candidates.find(apifyBenchmarkDue);
+  if (!actor) return { status: "skipped", reason: candidates.length ? "candidate_recently_benchmarked" : "no_candidate_actor" };
+
+  const input = await readApifyCanaryCaptureInput(settings);
+  if (!input) {
+    return { status: "skipped", reason: "no_known_good_canary_page" };
+  }
+
+  return benchmarkApifyCandidateActor({ actor, input, settings, buildRunId });
+}
+
+function apifyBenchmarkDue(actor) {
+  const benchmark = actor?.last_benchmark && typeof actor.last_benchmark === "object" && !Array.isArray(actor.last_benchmark)
+    ? actor.last_benchmark
+    : {};
+  if (benchmark.status === "passed" || benchmark.passed === true) return false;
+  const startedAt = Date.parse(String(benchmark.started_at || benchmark.startedAt || benchmark.finished_at || benchmark.finishedAt || ""));
+  if (!Number.isFinite(startedAt)) return true;
+  const retryMs = benchmark.status === "running" ? 30 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  return Date.now() - startedAt > retryMs;
+}
+
+async function readApifyCanaryCaptureInput(settings) {
+  const resultLimit = Math.min(runtimeSettingPositiveInt(settings, "apify_canary_max_results", 50), 50);
+  const explicitPageId = runtimeSettingString(settings, "apify_canary_page_id");
+  if (explicitPageId) {
+    const explicitPage = await readCanaryAdvertiserPage({ pageId: explicitPageId });
+    if (explicitPage) return canaryInputFromPage(explicitPage, { resultLimit, knownAdId: null });
+  }
+
+  const activeAds = await rest(
+    "research",
+    "observed_ads?select=advertiser_page_id,external_ad_id,last_seen_at&active_status=eq.active&order=last_seen_at.desc.nullslast&limit=25",
+  );
+  for (const ad of activeAds || []) {
+    const page = await readCanaryAdvertiserPage({ advertiserPageId: ad.advertiser_page_id });
+    if (page) return canaryInputFromPage(page, { resultLimit, knownAdId: ad.external_ad_id });
+  }
+
+  const recentAds = await rest(
+    "research",
+    "observed_ads?select=advertiser_page_id,external_ad_id,last_seen_at&order=last_seen_at.desc.nullslast&limit=25",
+  );
+  for (const ad of recentAds || []) {
+    const page = await readCanaryAdvertiserPage({ advertiserPageId: ad.advertiser_page_id });
+    if (page) return canaryInputFromPage(page, { resultLimit, knownAdId: ad.external_ad_id });
+  }
+
+  return null;
+}
+
+async function readCanaryAdvertiserPage({ advertiserPageId = null, pageId = null } = {}) {
+  const filter = advertiserPageId
+    ? `id=eq.${encode(advertiserPageId)}`
+    : `page_id=eq.${encode(pageId)}`;
+  const rows = await rest(
+    "research",
+    `advertiser_pages?select=id,page_id,page_name,resolution_decision_id,status&${filter}&page_id=not.is.null&limit=1`,
+  );
+  return rows?.[0] || null;
+}
+
+function canaryInputFromPage(page, { resultLimit, knownAdId }) {
+  const input = captureInput({
+    advertiserPageId: page.id,
+    metaPageId: page.page_id,
+    country: "AU",
+    activeStatus: "active",
+    resultsLimit: resultLimit,
+    resolverDecisionId: page.resolution_decision_id || null,
+    realEstateGate: { verified: true, source: "known_good_canary" },
+  });
+  return {
+    ...input,
+    canaryKnownAdId: knownAdId || null,
+    canaryPageName: page.page_name || null,
+    canaryPageStatus: page.status || null,
+  };
+}
+
+async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId }) {
+  const actorId = actor.actor_id;
+  const sourceProvider = `${META_APIFY_SOURCE_PROVIDER_PREFIX}${actorId}`;
+  const resultLimit = Math.min(input.resultsLimit, runtimeSettingPositiveInt(settings, "apify_canary_max_results", 50), 50);
+  const canaryPerRunCapUsd = Math.min(
+    runtimeSettingPositiveNumber(settings, "apify_canary_per_run_cap_usd", 0.25),
+    runtimeSettingPositiveNumber(settings, "apify_per_run_cap_usd", 1),
+  );
+  const startedAt = now();
+  let adFetchRunId = null;
+  let costUsd = 0;
+
+  await patchApifyCaptureActor(actorId, {
+    last_benchmark: {
+      status: "running",
+      started_at: startedAt,
+      canary_page_id: input.metaPageId,
+      known_external_ad_id: input.canaryKnownAdId || null,
+      result_limit: resultLimit,
+      max_total_charged_usd: canaryPerRunCapUsd,
+    },
+  });
+
+  try {
+    const accountLimitCheck = await ensureApifyAccountLimit({ settings, token: apifyToken });
+    const guard = await guardApifyBudget({
+      settings,
+      limits: accountLimitCheck.limits,
+      token: apifyToken,
+      readLedgerSpendUsd: readApifyLedgerSpendUsd,
+      setRuntimeSetting,
+      fileDefect: (defect) => insertCoverageDefect({
+        platform: "facebook",
+        notes: "Apify canary budget guard blocked candidate actor benchmarking.",
+        reported_by: "system",
+        reporter_identity: workerId,
+        status: "open",
+        resolution: { ...defect, actor_id: actorId, meta_page_id: input.metaPageId },
+        resolved_advertiser_page_id: input.advertiserPageId,
+      }),
+    });
+    if (!guard.allowed) {
+      const benchmark = apifyBenchmarkFailure("budget_guard_blocked", startedAt, {
+        guard,
+        account_limit_check: accountLimitCheck,
+        canary_page_id: input.metaPageId,
+        known_external_ad_id: input.canaryKnownAdId || null,
+      });
+      await patchApifyCaptureActor(actorId, { last_benchmark: benchmark });
+      return { status: "blocked", actor_id: actorId, reason: benchmark.reason };
+    }
+
+    adFetchRunId = await insertApifyBenchmarkFetchRun(buildRunId, input, actorId, resultLimit);
+    if (!adFetchRunId) throw new Error("Apify canary ledger row was not created");
+    const run = await createApifyRun({
+      actorId,
+      input: apifyMetaPageInput(input, resultLimit),
+      maxTotalChargedUsd: canaryPerRunCapUsd,
+      resultLimit,
+      timeoutSecs: Math.max(60, Math.ceil(metaCaptureTimeoutMs / 1000)),
+      token: apifyToken,
+    });
+    const detail = await pollApifyRun({
+      runId: run.id,
+      token: apifyToken,
+      timeoutMs: Math.max(metaCaptureTimeoutMs * 3, 120_000),
+    });
+    const cost = extractApifyRunCost(detail);
+    costUsd = Number(cost.costUsd || 0) || 0;
+    const datasetId = detail?.defaultDatasetId || run?.defaultDatasetId;
+    if (!datasetId) throw new Error("Apify canary run did not expose a default dataset id");
+
+    const rawItems = await fetchApifyDatasetItems({ datasetId, limit: resultLimit, token: apifyToken });
+    const schemaMap = inferApifySchemaMap(rawItems);
+    const mapped = await mapApifyDatasetItems({
+      actorId,
+      items: rawItems,
+      schemaMap,
+      writeRawEvidence: (evidence) => writeApifyRawEvidence(input, actorId, { ...evidence, canary: true }),
+    });
+    const normalisedAds = normaliseApifyMappedMetaItems(mapped.items || [], input, resultLimit);
+    const benchmarkSummary = summariseBenchmarkItems(mapped.items || []);
+    const ingested = [];
+    for (const ad of normalisedAds) {
+      const item = await ingestMetaAd({ ad, advertiserPageId: input.advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob: null });
+      ingested.push(item);
+      await enqueuePostIngestJobs(item, input.advertiserPageId, buildRunId, null);
+    }
+
+    const mappingPassRate = 1 - Number(mapped.metadata?.mapping_failure_rate || 0);
+    const duplicateRatio = Number(benchmarkSummary.duplicateRatio || 0);
+    const passed = ingested.length > 0 && mappingPassRate >= 0.95 && duplicateRatio < 0.1;
+    const reason = passed
+      ? "passed"
+      : ingested.length === 0
+        ? "no_ingestable_ads"
+        : mappingPassRate < 0.95
+          ? "mapping_pass_rate_too_low"
+          : "duplicate_ratio_too_high";
+    const benchmark = {
+      status: passed ? "passed" : "failed",
+      passed,
+      reason,
+      started_at: startedAt,
+      finished_at: now(),
+      canary_page_id: input.metaPageId,
+      canary_page_name: input.canaryPageName || null,
+      known_external_ad_id: input.canaryKnownAdId || null,
+      run_id: run.id,
+      raw_dataset_id: datasetId,
+      raw_item_count: rawItems.length,
+      mapped_item_count: mapped.items.length,
+      valid_ad_count: normalisedAds.length,
+      ingested_count: ingested.length,
+      failure_rate: 1 - mappingPassRate,
+      mapping_pass_rate: mappingPassRate,
+      duplicate_ratio: duplicateRatio,
+      cost_usd: costUsd,
+      cost_per_valid_ad_usd: ingested.length ? costUsd / ingested.length : null,
+      max_total_charged_usd: canaryPerRunCapUsd,
+    };
+    await updateFetchRun(adFetchRunId, {
+      status: ingested.length ? "success" : "failed",
+      source_provider: sourceProvider,
+      result_summary: { ...benchmark, schema_map: schemaMap, account_limit_check: accountLimitCheck },
+      error: passed ? null : reason,
+      cost_usd: costUsd,
+    });
+
+    await patchApifyCaptureActor(actorId, {
+      status: passed ? "approved" : "candidate",
+      schema_map: passed ? schemaMap : actor.schema_map || {},
+      last_benchmark: benchmark,
+    });
+    if (passed) await setRuntimeSetting("apify_actor_id", actorId, { reason: "apify_canary_passed", benchmark });
+    log("Apify candidate benchmark complete", { actor_id: actorId, status: benchmark.status, reason, ingested_count: ingested.length, cost_usd: costUsd });
+    return { status: benchmark.status, actor_id: actorId, reason, ingested_count: ingested.length, cost_usd: costUsd };
+  } catch (error) {
+    const benchmark = apifyBenchmarkFailure(error.message, startedAt, {
+      canary_page_id: input.metaPageId,
+      known_external_ad_id: input.canaryKnownAdId || null,
+      cost_usd: costUsd,
+      details: error.details || null,
+    });
+    await patchApifyCaptureActor(actorId, { last_benchmark: benchmark });
+    if (adFetchRunId) {
+      await updateFetchRun(adFetchRunId, {
+        status: "failed",
+        source_provider: sourceProvider,
+        result_summary: benchmark,
+        error: error.message,
+        cost_usd: costUsd,
+      });
+    }
+    log("Apify candidate benchmark failed", { actor_id: actorId, error: error.message, cost_usd: costUsd }, "warn");
+    return { status: "failed", actor_id: actorId, reason: error.message, cost_usd: costUsd };
+  }
+}
+
+function apifyBenchmarkFailure(reason, startedAt, metadata = {}) {
+  return {
+    status: "failed",
+    passed: false,
+    reason,
+    started_at: startedAt,
+    finished_at: now(),
+    ...metadata,
+  };
+}
+
+async function patchApifyCaptureActor(actorId, patch) {
+  await rest("research", `capture_actors?actor_id=eq.${encode(actorId)}`, {
+    method: "PATCH",
+    body: json(patch),
+  });
+}
+
+async function insertApifyBenchmarkFetchRun(buildRunId, input, actorId, resultLimit) {
+  const sourceProvider = `${META_APIFY_SOURCE_PROVIDER_PREFIX}${actorId}`;
+  const row = {
+    build_run_id: buildRunId,
+    source_provider: sourceProvider,
+    role: "verifier",
+    trigger: "watchdog",
+    target_kind: "advertiser_page",
+    target_value: input.advertiserPageId,
+    input_payload: {
+      provider: sourceProvider,
+      benchmark: true,
+      meta_page_id: input.metaPageId,
+      known_external_ad_id: input.canaryKnownAdId || null,
+      result_limit: resultLimit,
+    },
+    input_hash: hash(json({ actorId, input, resultLimit, benchmark: true })),
+    status: "running",
+    result_summary: {},
+  };
+  const created = await writeFetchRunWithMissingColumnFallback("ad_fetch_runs", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+  }, row);
+  return created?.[0]?.id || null;
 }
 
 function hasApifySchemaMap(schemaMap) {
@@ -4098,28 +4449,7 @@ async function handleLocationAdSearch(job) {
       },
     });
     ingested.push(item);
-    if (item.media_sources > 0) {
-      await enqueueFollowUp({
-        queue_name: "research",
-        job_type: "blockwise-media-collector",
-        dedupe_key: `media:${item.ad_creative_id}:${item.creative_hash}`,
-        advertiser_page_id: advertiserPageId,
-        priority: 5,
-        payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId },
-        status: "pending",
-        max_attempts: 3,
-      }, job);
-    }
-    await enqueueFollowUp({
-      queue_name: "research",
-      job_type: "blockwise-ad-classifier",
-      dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
-      advertiser_page_id: advertiserPageId,
-      priority: 5,
-      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
-      status: "pending",
-      max_attempts: 3,
-    }, job);
+    await enqueuePostIngestJobs(item, advertiserPageId, buildRunId, job);
   }
 
   await updateFetchRun(adFetchRunId, {
@@ -4195,28 +4525,7 @@ async function handleAdCollector(job) {
   for (const ad of outcome.items) {
     const item = await ingestMetaAd({ ad, advertiserPageId: payload.advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob: job });
     ingested.push(item);
-    if (item.media_sources > 0) {
-      await enqueueFollowUp({
-        queue_name: "research",
-        job_type: "blockwise-media-collector",
-        dedupe_key: `media:${item.ad_creative_id}:${item.creative_hash}`,
-        advertiser_page_id: payload.advertiserPageId,
-        priority: 5,
-        payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId },
-        status: "pending",
-        max_attempts: 3,
-      }, job);
-    }
-    await enqueueFollowUp({
-      queue_name: "research",
-      job_type: "blockwise-ad-classifier",
-      dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
-      advertiser_page_id: payload.advertiserPageId,
-      priority: 5,
-      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
-      status: "pending",
-      max_attempts: 3,
-    }, job);
+    await enqueuePostIngestJobs(item, payload.advertiserPageId, buildRunId, job);
   }
   const reconciliation = await reconcileMissingObservedAds({
     advertiserPageId: payload.advertiserPageId,
@@ -5042,7 +5351,7 @@ async function processOneJob(job) {
 
 async function tick() {
   let buildRunId = null;
-  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
+  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0, apifyBenchmark: null };
   let watchdogs = {};
   try {
     buildRunId = await ensureBuildRun();
@@ -5050,7 +5359,8 @@ async function tick() {
     const census = await enqueueDueCensusJobs(buildRunId);
     const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
     const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
-    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch };
+    const apifyBenchmark = await runApifyCandidateBenchmarkIfNeeded(buildRunId);
+    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch, apifyBenchmark };
   } catch (error) {
     log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
   }
