@@ -37,7 +37,7 @@
     "@types/node": "^22.15.30",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
-    "@trigger.dev/sdk": "^4.4.6",
+    "@trigger.dev/sdk": "4.4.6",
     "typescript": "^5.8.3"
   },
   "overrides": {

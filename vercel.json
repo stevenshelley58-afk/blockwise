@@ -3,6 +3,12 @@
   "buildCommand": "npm run verify-env && npm run check && npm run build",
   "installCommand": "npm install",
   "regions": ["syd1"],
+  "crons": [
+    {
+      "path": "/api/alerts/paid-service-watchdog",
+      "schedule": "0 */2 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

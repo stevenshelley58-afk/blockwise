@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 import {
   budgetStatus,
   checkFailedStatus,
+  checkHttpHealthTarget,
   diffForAlerts,
   formatAlert,
   levelForPct,
+  parseVpsHealthTargets,
   toState,
   type ServiceStatus,
 } from "../src/lib/alerts/paid-service-watchdog.ts";
@@ -87,4 +90,48 @@ test("verifyVercelSignature accepts a valid HMAC and rejects others", () => {
   assert.equal(verifyVercelSignature(body, good, secret), true);
   assert.equal(verifyVercelSignature(body, "deadbeef", secret), false);
   assert.equal(verifyVercelSignature(body, null, secret), false);
+});
+
+test("parseVpsHealthTargets supports labelled VPS and Hermes endpoints", () => {
+  const targets = parseVpsHealthTargets("Hermes VPS|https://hermes.example/health,https://browser.example/health");
+  assert.deepEqual(targets, [
+    { service: "vps-health-hermes-vps", label: "Hermes VPS", url: "https://hermes.example/health" },
+    { service: "vps-health-vps-health-2", label: "VPS health 2", url: "https://browser.example/health" },
+  ]);
+});
+
+test("checkHttpHealthTarget reports reachable, unhealthy, and invalid VPS endpoints", async () => {
+  const ok = await checkHttpHealthTarget(
+    { service: "vps-health-hermes", label: "Hermes VPS", url: "https://hermes.example/health" },
+    async () => new Response("ok", { status: 200 }),
+  );
+  assert.equal(ok.level, "ok");
+  assert.match(ok.summary, /HTTP 200/);
+
+  const down = await checkHttpHealthTarget(
+    { service: "vps-health-hermes", label: "Hermes VPS", url: "https://hermes.example/health" },
+    async () => new Response("down", { status: 503 }),
+  );
+  assert.equal(down.level, "critical");
+
+  const invalid = await checkHttpHealthTarget({
+    service: "vps-health-hermes",
+    label: "Hermes VPS",
+    url: "file:///etc/passwd",
+  });
+  assert.equal(invalid.level, "critical");
+});
+
+test("paid-service watchdog is scheduled on Vercel and guarded by CRON_SECRET", () => {
+  const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8")) as {
+    crons?: Array<{ path?: string; schedule?: string }>;
+  };
+  const route = readFileSync("src/app/api/alerts/paid-service-watchdog/route.ts", "utf8");
+
+  assert.deepEqual(vercelConfig.crons?.find((cron) => cron.path === "/api/alerts/paid-service-watchdog"), {
+    path: "/api/alerts/paid-service-watchdog",
+    schedule: "0 */2 * * *",
+  });
+  assert.match(route, /process\.env\.CRON_SECRET/);
+  assert.match(route, /authorization !== `Bearer \$\{secret\}`/);
 });

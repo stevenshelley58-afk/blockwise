@@ -3,7 +3,7 @@
 Blockwise warns by **email + WhatsApp** before any paid service hits its limit,
 and immediately when a provider outage would break ad creation.
 
-Two mechanisms:
+Three mechanisms:
 
 1. **Watchdog** — Trigger.dev scheduled task `paid-service-watchdog`
    (`trigger/paid-service-watchdog.ts`), every 2 hours. Polls usage and health,
@@ -17,6 +17,9 @@ Two mechanisms:
 2. **Vercel Spend Management webhook** — `/api/alerts/vercel-spend` re-sends
    Vercel's 50/75/100% spend notifications through the same channels.
 
+3. **Vercel Cron fallback** - `/api/alerts/paid-service-watchdog` runs the same
+   watchdog every 2 hours from Vercel when `CRON_SECRET` is configured.
+
 ## What the watchdog covers
 
 | Service | Signal | Limit compared against |
@@ -25,6 +28,7 @@ Two mechanisms:
 | OpenAI spend | `GET /v1/organization/costs` month-to-date | `OPENAI_MONTHLY_BUDGET_USD` (default $50) |
 | OpenAI API health | `GET /v1/models` with the runtime key | 401/403/5xx → critical, 429 → warn |
 | Apify | `research.v_health.apify_mtd_spend_usd` + circuit state | `apify_monthly_cap_usd` runtime setting ($25); circuit open → warn |
+| VPS / Hermes host | `VPS_HEALTH_URLS` HTTP checks | non-2xx/timeout -> warn or critical |
 | Vercel | Spend Management webhook (not polled) | Spend amount set in Vercel dashboard |
 
 Checks with missing env vars are skipped; check failures alert rather than
@@ -62,7 +66,20 @@ platform.openai.com → Settings → Organization → Admin keys, set it as
 budget. Also set a hard **budget limit** in the OpenAI dashboard (Billing →
 Limits) as the backstop.
 
-### 4. Vercel Spend Management
+### 4. VPS / Hermes health
+
+Set `VPS_HEALTH_URLS` in Trigger.dev to one or more comma-separated health
+endpoints. Use `Label|URL` when you want readable alert names, for example:
+
+```
+VPS_HEALTH_URLS=Hermes VPS|https://<vps-health-domain>/health,Steel CDP|https://<browser-health-domain>/health
+```
+
+Prefer off-box/public health URLs so the alert still fires if the VPS itself is
+down. The existing `/api/health/research` endpoint on Vercel remains the
+Supabase-backed research health surface for external uptime monitors.
+
+### 5. Vercel Spend Management
 
 Vercel dashboard → Team Settings → Billing → **Spend Management**: set a spend
 amount, enable email/SMS notifications, and add the webhook URL
@@ -70,17 +87,18 @@ amount, enable email/SMS notifications, and add the webhook URL
 `VERCEL_SPEND_WEBHOOK_SECRET` in Vercel env. Decide whether "pause production
 deployments at 100%" should stay on. Docs: https://vercel.com/docs/spend-management
 
-### 5. Deploy the watchdog
+### 6. Deploy the watchdog
 
 ```
 npx trigger.dev deploy
 ```
 
 Then confirm `paid-service-watchdog` appears in the Trigger.dev dashboard and
-copy all the env vars above into the Trigger.dev project environment (the task
-runs there, not on Vercel).
+copy all the env vars above into the Trigger.dev project environment, including
+`VPS_HEALTH_URLS` if VPS/Hermes host health should be polled (the task runs
+there, not on Vercel).
 
-### 6. Native alerts to switch on (no code, do once)
+### 7. Native alerts to switch on (no code, do once)
 
 - **Supabase** (main + Hermes projects): no public usage API — keep the spend
   cap on (Project → Billing) and usage notification emails enabled. Going over

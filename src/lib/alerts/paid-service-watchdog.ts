@@ -29,6 +29,12 @@ export type ServiceStatus = {
   pctUsed: number | null;
 };
 
+export type HealthTarget = {
+  service: string;
+  label: string;
+  url: string;
+};
+
 export const WARN_PCT = 80;
 export const CRITICAL_PCT = 95;
 
@@ -66,6 +72,23 @@ export function checkFailedStatus(service: string, label: string, reason: string
     summary: `${label}: check failed — ${reason}`,
     pctUsed: null,
   };
+}
+
+export function parseVpsHealthTargets(value = process.env.VPS_HEALTH_URLS ?? ""): HealthTarget[] {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry, index) => {
+      const separator = entry.indexOf("|");
+      const label = separator >= 0 ? entry.slice(0, separator).trim() : `VPS health ${index + 1}`;
+      const url = separator >= 0 ? entry.slice(separator + 1).trim() : entry;
+      return {
+        service: `vps-health-${safeServiceKey(label || String(index + 1))}`,
+        label: label || `VPS health ${index + 1}`,
+        url,
+      };
+    });
 }
 
 export type WatchdogState = Record<string, AlertLevel>;
@@ -143,6 +166,50 @@ async function fetchJson(url: string, init: RequestInit): Promise<{ status: numb
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   const body = (await res.json().catch(() => null)) as unknown;
   return { status: res.status, body };
+}
+
+export async function checkHttpHealthTarget(
+  target: HealthTarget,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ServiceStatus> {
+  let url: URL;
+  try {
+    url = new URL(target.url);
+  } catch {
+    return checkFailedStatus(target.service, target.label, "invalid health URL");
+  }
+
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return checkFailedStatus(target.service, target.label, "health URL must use http(s)");
+  }
+
+  const startedAt = Date.now();
+  try {
+    const res = await fetchImpl(url.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json,text/plain,*/*" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    const elapsedMs = Date.now() - startedAt;
+
+    if (res.ok) {
+      return {
+        service: target.service,
+        level: "ok",
+        summary: `${target.label}: HTTP ${res.status} in ${elapsedMs}ms`,
+        pctUsed: null,
+      };
+    }
+
+    return {
+      service: target.service,
+      level: res.status >= 500 ? "critical" : "warn",
+      summary: `${target.label}: HTTP ${res.status} from ${url.hostname}`,
+      pctUsed: null,
+    };
+  } catch (err) {
+    return checkFailedStatus(target.service, target.label, err instanceof Error ? err.message : String(err));
+  }
 }
 
 /**
@@ -288,13 +355,26 @@ export async function checkApifySpend(supabase: SupabaseClient): Promise<Service
   }
 }
 
+export async function checkVpsHealth(): Promise<ServiceStatus[]> {
+  const targets = parseVpsHealthTargets();
+  if (targets.length === 0) return [];
+  return Promise.all(targets.map((target) => checkHttpHealthTarget(target)));
+}
+
 /** Runs every poller; unconfigured services are skipped, failures become statuses. */
 export async function collectPaidServiceStatuses(supabase: SupabaseClient): Promise<ServiceStatus[]> {
-  const results = await Promise.all([
+  const [openRouter, openAiSpend, openAiApi, apifySpend, vpsHealth] = await Promise.all([
     checkOpenRouterCredits(),
     checkOpenAiSpend(),
     checkOpenAiApiHealth(),
     checkApifySpend(supabase),
+    checkVpsHealth(),
   ]);
-  return results.filter((status): status is ServiceStatus => status !== null);
+  return [openRouter, openAiSpend, openAiApi, apifySpend, ...vpsHealth].filter(
+    (status): status is ServiceStatus => status !== null,
+  );
+}
+
+function safeServiceKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "endpoint";
 }

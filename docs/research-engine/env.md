@@ -41,6 +41,7 @@ OPENROUTER_API_KEY=<key>
 MEM0_API_KEY=<key>
 MEM0_PROJECT_ID=blockwise-research
 HERMES_REMOTE_BROWSER_CDP_URL=http://blockwise-steel:9223
+RESEND_API_KEY=<key>
 ```
 
 `HERMES_REMOTE_BROWSER_CDP_URL` is optional. When unset, the supervisor uses
