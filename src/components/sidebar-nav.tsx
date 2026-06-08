@@ -8,7 +8,6 @@ import {
   ClipboardCheck,
   Images,
   LayoutDashboard,
-  PenLine,
   Radar,
   Settings2,
   SlidersHorizontal,
@@ -31,7 +30,6 @@ const operatorNavItems: NavItem[] = [
   { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
-  { href: "/self-serve", label: "Create", icon: PenLine },
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
   { href: "/leads", label: "Leads", icon: UsersRound },
@@ -43,7 +41,6 @@ const operatorNavItems: NavItem[] = [
 
 const selfServeNavItems: NavItem[] = [
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
-  { href: "/self-serve", label: "Create", icon: PenLine },
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
   { href: "/leads", label: "Leads", icon: UsersRound },

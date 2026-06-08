@@ -23,13 +23,11 @@ type MobileNavItem = NavItem & {
 
 const primaryHrefsByVariant: Record<SidebarVariant, string[]> = {
   monitor: ["/results", "/ad-radar", "/leads", "/settings"],
-  self_serve: ["/self-serve", "/ad-studio", "/results", "/leads"],
+  self_serve: ["/ad-studio", "/results", "/leads"],
   operator: ["/operator", "/operator/research", "/approvals", "/model-control"],
 };
 
 const mobileLabels: Record<string, string> = {
-  "/self-serve": "Home",
-  "/ad-studio": "Create",
   "/operator/research": "Research",
   "/model-control": "Model",
 };
