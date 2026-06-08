@@ -1,0 +1,300 @@
+/**
+ * Paid-service usage watchdog.
+ *
+ * Polls every paid service that exposes usage programmatically and converts
+ * each one into a ServiceStatus with an alert level:
+ *
+ *   - OpenRouter  – GET https://openrouter.ai/api/v1/credits
+ *   - OpenAI cost – GET https://api.openai.com/v1/organization/costs (admin key)
+ *   - OpenAI API  – GET https://api.openai.com/v1/models (the key ad creation uses)
+ *   - Apify       – research.v_health (apify_mtd_spend_usd) vs runtime_settings caps
+ *
+ * Vercel and Supabase do not expose simple usage APIs; Vercel is covered by the
+ * Spend Management webhook (src/app/api/alerts/vercel-spend/route.ts) and
+ * Supabase by its built-in usage emails (see docs/runbooks/paid-service-alerts.md).
+ *
+ * All network failures are converted into statuses (never thrown) so one broken
+ * provider cannot stop the other checks from running.
+ */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type AlertLevel = "ok" | "warn" | "critical";
+
+export type ServiceStatus = {
+  /** Stable key used for alert de-duplication, e.g. "openrouter-credits". */
+  service: string;
+  level: AlertLevel;
+  summary: string;
+  pctUsed: number | null;
+};
+
+export const WARN_PCT = 80;
+export const CRITICAL_PCT = 95;
+
+const LEVEL_RANK: Record<AlertLevel, number> = { ok: 0, warn: 1, critical: 2 };
+
+export function levelForPct(pctUsed: number): AlertLevel {
+  if (pctUsed >= CRITICAL_PCT) return "critical";
+  if (pctUsed >= WARN_PCT) return "warn";
+  return "ok";
+}
+
+/** Builds a status for "used X of budget Y" style services. */
+export function budgetStatus(
+  service: string,
+  label: string,
+  usedUsd: number,
+  budgetUsd: number,
+): ServiceStatus {
+  if (!Number.isFinite(budgetUsd) || budgetUsd <= 0) {
+    return { service, level: "ok", summary: `${label}: no budget configured`, pctUsed: null };
+  }
+  const pctUsed = (usedUsd / budgetUsd) * 100;
+  return {
+    service,
+    level: levelForPct(pctUsed),
+    summary: `${label}: $${usedUsd.toFixed(2)} of $${budgetUsd.toFixed(2)} (${pctUsed.toFixed(0)}%)`,
+    pctUsed,
+  };
+}
+
+export function checkFailedStatus(service: string, label: string, reason: string): ServiceStatus {
+  return {
+    service,
+    level: "critical",
+    summary: `${label}: check failed — ${reason}`,
+    pctUsed: null,
+  };
+}
+
+export type WatchdogState = Record<string, AlertLevel>;
+
+export type AlertDiff = {
+  escalations: ServiceStatus[];
+  recoveries: ServiceStatus[];
+};
+
+/**
+ * A service alerts when its level rises above the previously alerted level
+ * (ok→warn, warn→critical, ok→critical) and sends a recovery note when it
+ * returns to ok. Staying at the same level stays silent, so a service sitting
+ * at 85% does not re-alert every run.
+ */
+export function diffForAlerts(previous: WatchdogState, current: ServiceStatus[]): AlertDiff {
+  const escalations: ServiceStatus[] = [];
+  const recoveries: ServiceStatus[] = [];
+
+  for (const status of current) {
+    const prevLevel = previous[status.service] ?? "ok";
+    if (LEVEL_RANK[status.level] > LEVEL_RANK[prevLevel]) {
+      escalations.push(status);
+    } else if (status.level === "ok" && prevLevel !== "ok") {
+      recoveries.push(status);
+    }
+  }
+
+  return { escalations, recoveries };
+}
+
+export function toState(statuses: ServiceStatus[]): WatchdogState {
+  const state: WatchdogState = {};
+  for (const status of statuses) {
+    state[status.service] = status.level;
+  }
+  return state;
+}
+
+export function formatAlert(diff: AlertDiff, all: ServiceStatus[]): {
+  subject: string;
+  text: string;
+} {
+  const worst = diff.escalations.reduce<AlertLevel>(
+    (acc, s) => (LEVEL_RANK[s.level] > LEVEL_RANK[acc] ? s.level : acc),
+    "ok",
+  );
+  const subject =
+    diff.escalations.length > 0
+      ? `[Blockwise ${worst.toUpperCase()}] ${diff.escalations.map((s) => s.service).join(", ")}`
+      : `[Blockwise OK] ${diff.recoveries.map((s) => s.service).join(", ")} recovered`;
+
+  const lines: string[] = [];
+  if (diff.escalations.length > 0) {
+    lines.push("Paid services need attention:");
+    for (const s of diff.escalations) lines.push(`  • [${s.level.toUpperCase()}] ${s.summary}`);
+  }
+  if (diff.recoveries.length > 0) {
+    lines.push("Recovered:");
+    for (const s of diff.recoveries) lines.push(`  • ${s.summary}`);
+  }
+  lines.push("", "Full picture:");
+  for (const s of all) lines.push(`  • [${s.level.toUpperCase()}] ${s.summary}`);
+
+  return { subject, text: lines.join("\n") };
+}
+
+/* ------------------------------------------------------------------ */
+/* Pollers                                                             */
+/* ------------------------------------------------------------------ */
+
+const FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchJson(url: string, init: RequestInit): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  const body = (await res.json().catch(() => null)) as unknown;
+  return { status: res.status, body };
+}
+
+/**
+ * OpenRouter funds Hermes and Ad Studio generation. Alerts on the lifetime
+ * usage ratio and on an absolute remaining-credit floor, and goes critical on
+ * auth failure because that means generation requests are already failing.
+ */
+export async function checkOpenRouterCredits(): Promise<ServiceStatus | null> {
+  const service = "openrouter-credits";
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+
+  const minRemaining = Number(process.env.OPENROUTER_MIN_CREDITS_USD ?? "5");
+
+  try {
+    const { status, body } = await fetchJson("https://openrouter.ai/api/v1/credits", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (status === 401 || status === 403) {
+      return checkFailedStatus(service, "OpenRouter", `auth rejected (${status}) — generation will fail`);
+    }
+    if (status !== 200) {
+      return checkFailedStatus(service, "OpenRouter", `HTTP ${status}`);
+    }
+    const data = (body as { data?: { total_credits?: number; total_usage?: number } })?.data;
+    const credits = Number(data?.total_credits ?? 0);
+    const usage = Number(data?.total_usage ?? 0);
+    const remaining = credits - usage;
+
+    if (remaining <= 0) {
+      return {
+        service,
+        level: "critical",
+        summary: `OpenRouter: $${remaining.toFixed(2)} remaining — generation will fail`,
+        pctUsed: 100,
+      };
+    }
+    if (remaining < minRemaining) {
+      return {
+        service,
+        level: "critical",
+        summary: `OpenRouter: only $${remaining.toFixed(2)} remaining (floor $${minRemaining})`,
+        pctUsed: credits > 0 ? (usage / credits) * 100 : null,
+      };
+    }
+    const base = budgetStatus(service, "OpenRouter credits used", usage, credits);
+    return { ...base, summary: `${base.summary}, $${remaining.toFixed(2)} remaining` };
+  } catch (err) {
+    return checkFailedStatus(service, "OpenRouter", err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** Month-to-date OpenAI organization cost vs OPENAI_MONTHLY_BUDGET_USD. */
+export async function checkOpenAiSpend(): Promise<ServiceStatus | null> {
+  const service = "openai-spend";
+  const adminKey = process.env.OPENAI_ADMIN_KEY;
+  if (!adminKey) return null;
+
+  const budget = Number(process.env.OPENAI_MONTHLY_BUDGET_USD ?? "50");
+  const monthStart = Math.floor(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1) / 1000);
+
+  try {
+    const { status, body } = await fetchJson(
+      `https://api.openai.com/v1/organization/costs?start_time=${monthStart}&limit=31`,
+      { headers: { Authorization: `Bearer ${adminKey}` } },
+    );
+    if (status !== 200) {
+      return checkFailedStatus(service, "OpenAI spend", `HTTP ${status}`);
+    }
+    const buckets = (body as { data?: Array<{ results?: Array<{ amount?: { value?: number } }> }> })?.data ?? [];
+    const usedUsd = buckets
+      .flatMap((bucket) => bucket.results ?? [])
+      .reduce((sum, result) => sum + Number(result.amount?.value ?? 0), 0);
+    return budgetStatus(service, "OpenAI month-to-date", usedUsd, budget);
+  } catch (err) {
+    return checkFailedStatus(service, "OpenAI spend", err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
+ * Cheap liveness probe for the OpenAI key Ad Studio uses. A 401/403/5xx here
+ * means a customer pressing "generate" is already getting errors.
+ */
+export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {
+  const service = "openai-api";
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const { status } = await fetchJson("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (status === 200) {
+      return { service, level: "ok", summary: "OpenAI API: reachable, key valid", pctUsed: null };
+    }
+    if (status === 401 || status === 403) {
+      return checkFailedStatus(service, "OpenAI API", `key rejected (${status}) — ad generation will fail`);
+    }
+    if (status === 429) {
+      return { service, level: "warn", summary: "OpenAI API: rate limited (429)", pctUsed: null };
+    }
+    return checkFailedStatus(service, "OpenAI API", `HTTP ${status}`);
+  } catch (err) {
+    return checkFailedStatus(service, "OpenAI API", err instanceof Error ? err.message : String(err));
+  }
+}
+
+type RuntimeSettingRow = { setting_key: string; setting_value: unknown };
+
+/** Apify month-to-date spend (research.v_health) vs the caps in runtime_settings. */
+export async function checkApifySpend(supabase: SupabaseClient): Promise<ServiceStatus | null> {
+  const service = "apify-spend";
+  try {
+    const research = supabase.schema("research");
+    const [health, settings] = await Promise.all([
+      research.from("v_health").select("apify_mtd_spend_usd,apify_state").maybeSingle(),
+      research
+        .from("runtime_settings")
+        .select("setting_key,setting_value")
+        .in("setting_key", ["apify_monthly_cap_usd", "apify_enabled"]),
+    ]);
+
+    if (health.error) {
+      return checkFailedStatus(service, "Apify", health.error.message);
+    }
+    if (!health.data) return null;
+
+    const rows = (settings.data ?? []) as RuntimeSettingRow[];
+    const enabled = rows.find((r) => r.setting_key === "apify_enabled")?.setting_value === true;
+    if (!enabled) return null;
+
+    const capUsd = Number(rows.find((r) => r.setting_key === "apify_monthly_cap_usd")?.setting_value ?? 25);
+    const usedUsd = Number((health.data as { apify_mtd_spend_usd?: number }).apify_mtd_spend_usd ?? 0);
+    const state = String((health.data as { apify_state?: string }).apify_state ?? "unknown");
+
+    const status = budgetStatus(service, "Apify month-to-date", usedUsd, capUsd);
+    if (state === "circuit_open" && status.level === "ok") {
+      return { ...status, level: "warn", summary: `${status.summary} — circuit OPEN, paid dispatch blocked` };
+    }
+    return status;
+  } catch (err) {
+    return checkFailedStatus(service, "Apify", err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** Runs every poller; unconfigured services are skipped, failures become statuses. */
+export async function collectPaidServiceStatuses(supabase: SupabaseClient): Promise<ServiceStatus[]> {
+  const results = await Promise.all([
+    checkOpenRouterCredits(),
+    checkOpenAiSpend(),
+    checkOpenAiApiHealth(),
+    checkApifySpend(supabase),
+  ]);
+  return results.filter((status): status is ServiceStatus => status !== null);
+}
