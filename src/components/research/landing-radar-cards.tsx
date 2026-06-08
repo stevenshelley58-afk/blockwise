@@ -50,7 +50,7 @@ const S: Record<string, CSSProperties> = {
  * real scraped ads near them; fall back to the longest-running ads we track.
  * Each card is styled as a real Facebook feed ad (advertiser + Sponsored, the
  * scraped creative, headline + CTA) from the data we scraped from the Meta Ad
- * Library — no research chrome. The whole card links to signup. Never renders
+ * Library - no research chrome. The whole card links to signup. Never renders
  * invented ads: skeletons while loading, one quiet line if the API is down.
  */
 export function LandingRadarCards() {
