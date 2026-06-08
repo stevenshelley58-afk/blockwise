@@ -1351,6 +1351,16 @@ function recordMetaBrowserChallenge(kind, input) {
   }, "warning");
 }
 
+function isMetaBrowserChallengeError(value) {
+  return /Meta Ad Library returned a browser verification challenge/iu.test(String(value || ""));
+}
+
+function shouldDeferMetaBrowserChallengeJob(job) {
+  return metaBrowserChallengeCooldownRemaining() > 0
+    && (job.job_type === LOCATION_AD_SEARCH_JOB_TYPE || job.job_type === "blockwise-ad-collector")
+    && isMetaBrowserChallengeError(job.last_error);
+}
+
 async function openCdp(webSocketUrl) {
   const socket = new WebSocket(webSocketUrl);
   const pending = new Map();
@@ -5519,9 +5529,36 @@ async function processClaimedJobs() {
   return handled;
 }
 
+async function deferMetaBrowserChallengeJob(job) {
+  const cooldownMs = Math.max(60_000, metaBrowserChallengeCooldownRemaining());
+  const previousAttempts = Math.max(0, Number(job.attempts || 0) - 1);
+  await finishJob(job, "pending", {
+    attempts: previousAttempts,
+    available_at: new Date(Date.now() + cooldownMs).toISOString(),
+    last_error: job.last_error,
+    blocked_reason: null,
+    result: {
+      handler: "meta-browser-challenge-cooldown",
+      cooldown_ms: cooldownMs,
+      previous_attempts: previousAttempts,
+      worker_id: workerId,
+    },
+  }, "update");
+  log("deferred Meta capture job during browser challenge cooldown", {
+    jobId: job.id,
+    jobType: job.job_type,
+    cooldownMs,
+    attempts: previousAttempts,
+  }, "warning");
+}
+
 async function processOneJob(job) {
   const started = Date.now();
   try {
+    if (shouldDeferMetaBrowserChallengeJob(job)) {
+      await deferMetaBrowserChallengeJob(job);
+      return;
+    }
     const outcome = await handleJob(job);
     const result = { ...outcome.result, duration_ms: Date.now() - started, worker_id: workerId };
     if (outcome.status === "complete") await finishJob(job, "complete", { result, last_error: null, blocked_reason: null });

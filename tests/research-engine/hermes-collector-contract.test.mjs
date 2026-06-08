@@ -90,6 +90,9 @@ const remoteBrowserVersionUrl = functionBody(supervisor, "remoteBrowserVersionUr
 const rewriteRemoteBrowserWebSocketHost = functionBody(supervisor, "rewriteRemoteBrowserWebSocketHost");
 const metaChallengeDetector = functionBody(supervisor, "metaAdLibraryChallengeDetected");
 const metaChallengeRecorder = functionBody(supervisor, "recordMetaBrowserChallenge");
+const metaChallengeJobGate = functionBody(supervisor, "shouldDeferMetaBrowserChallengeJob");
+const metaChallengeJobDeferral = functionBody(supervisor, "deferMetaBrowserChallengeJob");
+const processOneJob = functionBody(supervisor, "processOneJob");
 
 test("Hermes active ad collector is page-targeted, not location or search-query targeted", () => {
   assert.match(
@@ -196,6 +199,21 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
     metaChallengeRecorder,
     /metaBrowserChallengeDisabledUntil[\s\S]*cooldownMs/u,
     "challenge recorder must expose cooldown state in logs instead of silently pausing work",
+  );
+  assert.match(
+    processOneJob,
+    /shouldDeferMetaBrowserChallengeJob\(\s*job\s*\)[\s\S]*deferMetaBrowserChallengeJob\(\s*job\s*\)/u,
+    "already-queued challenge retries should be deferred before capture handling",
+  );
+  assert.match(
+    metaChallengeJobGate,
+    /LOCATION_AD_SEARCH_JOB_TYPE[\s\S]*blockwise-ad-collector[\s\S]*isMetaBrowserChallengeError\(job\.last_error\)/u,
+    "challenge deferral should only apply to Meta capture jobs with an explicit challenge error",
+  );
+  assert.match(
+    metaChallengeJobDeferral,
+    /attempts:\s*previousAttempts[\s\S]*available_at:[\s\S]*cooldownMs/u,
+    "challenge deferral must preserve the job and avoid consuming attempts while cooling down",
   );
 });
 
