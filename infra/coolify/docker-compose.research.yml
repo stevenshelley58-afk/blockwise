@@ -14,6 +14,8 @@ services:
     image: "${STEEL_IMAGE:?Set STEEL_IMAGE to a pinned steel-browser tag or digest}"
     container_name: blockwise-steel
     restart: unless-stopped
+    environment:
+      SKIP_FINGERPRINT_INJECTION: ${STEEL_SKIP_FINGERPRINT_INJECTION:-true}
     expose: ["3000", "9223"]
     volumes:
       - steel-cache:/app/.cache
@@ -36,6 +38,8 @@ services:
     container_name: blockwise-hermes
     command: ["gateway", "run", "--replace", "--accept-hooks"]
     restart: unless-stopped
+    depends_on:
+      - steel
     ports:
       - "127.0.0.1:${HERMES_GATEWAY_HOST_PORT:-8642}:8642"
       - "127.0.0.1:${HERMES_DASHBOARD_HOST_PORT:-9119}:9119"

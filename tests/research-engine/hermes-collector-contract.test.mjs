@@ -931,6 +931,19 @@ test("Hermes browser capture uses configured remote CDP before local Chromium", 
   );
 });
 
+test("Hermes compose starts Steel CDP with stable browser settings", () => {
+  assert.match(
+    researchCompose,
+    /\bsteel:\s*[\s\S]*\bSKIP_FINGERPRINT_INJECTION:\s*\$\{STEEL_SKIP_FINGERPRINT_INJECTION:-true\}/u,
+    "Steel should default fingerprint injection off because the pinned image fails launch when fingerprint generation is inconsistent",
+  );
+  assert.match(
+    researchCompose,
+    /\bhermes:\s*[\s\S]*\bdepends_on:\s*[\s\S]*-\s*steel/u,
+    "starting Hermes should also start the Steel CDP sidecar",
+  );
+});
+
 test("Hermes ad collector records page-level capture failures for refresh backoff", () => {
   assert.match(
     collector,
