@@ -130,6 +130,7 @@ const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_canary_per_run_cap_usd",
   "apify_canary_page_id",
 ];
+const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
   "id",
   "ad_archive_id",
@@ -370,6 +371,15 @@ async function setRuntimeSetting(settingKey, settingValue, metadata = {}) {
     await recordEvent("update", "runtime_settings", runtimeSettingAuditRowId(settingKey), { setting_key: settingKey, setting_value: settingValue, metadata });
   } catch (error) {
     if (!missingSchemaRelation(error, "runtime_settings")) throw error;
+  }
+}
+
+async function refreshMetaBrowserChallengeCooldownFromSettings() {
+  const settings = await readRuntimeSettings([META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING]);
+  const value = settings[META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING];
+  const parsed = Date.parse(typeof value === "string" ? value : "");
+  if (Number.isFinite(parsed) && parsed > Date.now()) {
+    metaBrowserChallengeDisabledUntil = Math.max(metaBrowserChallengeDisabledUntil, parsed);
   }
 }
 
@@ -1340,11 +1350,19 @@ function metaBrowserChallengeCooldownRemaining() {
   return Math.max(0, metaBrowserChallengeDisabledUntil - Date.now());
 }
 
-function recordMetaBrowserChallenge(kind, input) {
+async function recordMetaBrowserChallenge(kind, input) {
   metaBrowserChallengeDisabledUntil = Math.max(metaBrowserChallengeDisabledUntil, Date.now() + metaBrowserChallengeCooldownMs);
+  const disabledUntil = new Date(metaBrowserChallengeDisabledUntil).toISOString();
+  await setRuntimeSetting(META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING, disabledUntil, {
+    kind,
+    postcode: input?.postcode || null,
+    query: input?.query || null,
+    metaPageId: input?.metaPageId || null,
+  });
   log("Meta Ad Library browser challenge detected; cooling down free browser capture", {
     kind,
     cooldownMs: metaBrowserChallengeCooldownRemaining(),
+    disabledUntil,
     postcode: input?.postcode || null,
     query: input?.query || null,
     metaPageId: input?.metaPageId || null,
@@ -2638,7 +2656,7 @@ async function runHermesBrowserCapture(input) {
   try {
     const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: input.metaPageId, limit: input.resultsLimit });
-    if (parsed.challengeDetected) recordMetaBrowserChallenge("page-capture", input);
+    if (parsed.challengeDetected) await recordMetaBrowserChallenge("page-capture", input);
     const errorMessage = parsed.warnings.join("; ") || null;
     const rawEvidence = errorMessage
       ? await safeWriteBrowserRawEvidence("page-capture", input, {
@@ -3581,7 +3599,7 @@ async function runHermesLocationSearchCapture(input, job) {
       location_search_allowed: true,
     });
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
-    if (parsed.challengeDetected) recordMetaBrowserChallenge("location-search", input);
+    if (parsed.challengeDetected) await recordMetaBrowserChallenge("location-search", input);
     const countOnly = parsed.items.length === 0 && !parsed.confirmedAbsence && Number(parsed.connectionCount) > 0;
     const errorMessage = countOnly ? null : parsed.warnings.join("; ") || null;
     const rawEvidence = errorMessage
@@ -5582,6 +5600,7 @@ async function tick() {
     buildRunId = await ensureBuildRun();
     const policySeed = await ensureSourceBackedRefreshPolicies();
     const census = await enqueueDueCensusJobs(buildRunId);
+    await refreshMetaBrowserChallengeCooldownFromSettings();
     const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
     const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
     const apifyBenchmark = await runApifyCandidateBenchmarkIfNeeded(buildRunId);

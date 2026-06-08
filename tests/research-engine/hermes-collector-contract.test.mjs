@@ -93,6 +93,8 @@ const metaChallengeRecorder = functionBody(supervisor, "recordMetaBrowserChallen
 const metaChallengeJobGate = functionBody(supervisor, "shouldDeferMetaBrowserChallengeJob");
 const metaChallengeJobDeferral = functionBody(supervisor, "deferMetaBrowserChallengeJob");
 const processOneJob = functionBody(supervisor, "processOneJob");
+const metaChallengeCooldownRefresh = functionBody(supervisor, "refreshMetaBrowserChallengeCooldownFromSettings");
+const tick = functionBody(supervisor, "tick");
 
 test("Hermes active ad collector is page-targeted, not location or search-query targeted", () => {
   assert.match(
@@ -197,8 +199,13 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
   );
   assert.match(
     metaChallengeRecorder,
-    /metaBrowserChallengeDisabledUntil[\s\S]*cooldownMs/u,
-    "challenge recorder must expose cooldown state in logs instead of silently pausing work",
+    /setRuntimeSetting\(\s*META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING[\s\S]*disabledUntil[\s\S]*cooldownMs/u,
+    "challenge recorder must persist and expose cooldown state instead of silently pausing work",
+  );
+  assert.match(
+    `${metaChallengeCooldownRefresh}\n${tick}`,
+    /readRuntimeSettings\(\s*\[META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING\]\s*\)[\s\S]*refreshMetaBrowserChallengeCooldownFromSettings\(\)[\s\S]*enqueueDueAdPageRefreshJobs/u,
+    "challenge cooldown must survive restarts and be read before capture scheduling",
   );
   assert.match(
     processOneJob,
