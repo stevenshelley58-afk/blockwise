@@ -207,8 +207,8 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
   );
   assert.match(
     metaChallengeJobGate,
-    /LOCATION_AD_SEARCH_JOB_TYPE[\s\S]*blockwise-ad-collector[\s\S]*isMetaBrowserChallengeError\(job\.last_error\)/u,
-    "challenge deferral should only apply to Meta capture jobs with an explicit challenge error",
+    /metaBrowserChallengeCooldownRemaining\(\)[\s\S]*LOCATION_AD_SEARCH_JOB_TYPE[\s\S]*blockwise-ad-collector[\s\S]*metaCaptureProvider === ["']hermes_browser["']/u,
+    "challenge deferral should apply to free-browser Meta capture jobs while cooldown is active",
   );
   assert.match(
     metaChallengeJobDeferral,

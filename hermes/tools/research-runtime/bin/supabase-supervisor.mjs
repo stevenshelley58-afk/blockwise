@@ -1351,14 +1351,12 @@ function recordMetaBrowserChallenge(kind, input) {
   }, "warning");
 }
 
-function isMetaBrowserChallengeError(value) {
-  return /Meta Ad Library returned a browser verification challenge/iu.test(String(value || ""));
-}
-
 function shouldDeferMetaBrowserChallengeJob(job) {
   return metaBrowserChallengeCooldownRemaining() > 0
-    && (job.job_type === LOCATION_AD_SEARCH_JOB_TYPE || job.job_type === "blockwise-ad-collector")
-    && isMetaBrowserChallengeError(job.last_error);
+    && (
+      job.job_type === LOCATION_AD_SEARCH_JOB_TYPE
+      || (job.job_type === "blockwise-ad-collector" && metaCaptureProvider === "hermes_browser")
+    );
 }
 
 async function openCdp(webSocketUrl) {
