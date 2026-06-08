@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createApifyRun,
+  ensureApifyAccountLimit,
   guardApifyBudget,
   inferApifySchemaMap,
   ledgerCostFromApifyRunDetail,
@@ -79,6 +80,32 @@ test("Apify budget guard meters pipeline ledger spend separately from old accoun
   assert.equal(result.reason, "within_budget");
   assert.equal(result.spendUsd, 0);
   assert.equal(result.apifyReportedUsageUsd, 219.93);
+});
+
+test("Apify account limit check tolerates rejected lower-limit updates", async () => {
+  const calls = [];
+  const result = await ensureApifyAccountLimit({
+    settings: { apify_account_limit_usd: 30 },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), method: init.method });
+      if (init.method === "GET") {
+        return jsonResponse({
+          data: {
+            current: { monthlyUsageUsd: 219.93 },
+            limits: { maxMonthlyUsageUsd: 250 },
+          },
+        });
+      }
+      return jsonResponse({ error: { message: "cannot lower limit" } }, 400);
+    },
+  });
+
+  assert.equal(calls.length, 2);
+  assert.equal(result.updated, false);
+  assert.equal(result.updateFailed, true);
+  assert.equal(result.warning, "account_limit_lowering_rejected");
+  assert.equal(result.maxMonthlyUsageUsd, 250);
+  assert.equal(result.desiredMaxMonthlyUsageUsd, 30);
 });
 
 test("Apify budget guard opens the circuit at local cap or account backstop", async () => {

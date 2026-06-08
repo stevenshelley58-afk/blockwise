@@ -269,7 +269,30 @@ export async function ensureApifyAccountLimit({
     return { updated: false, maxMonthlyUsageUsd: current.maxMonthlyUsageUsd, limits: current };
   }
 
-  const updated = await updateApifyLimits({ maxMonthlyUsageUsd: desired, token, fetchImpl, baseUrl });
+  if (current.maxMonthlyUsageUsd < desired) {
+    return {
+      updated: false,
+      maxMonthlyUsageUsd: current.maxMonthlyUsageUsd,
+      desiredMaxMonthlyUsageUsd: desired,
+      limits: current,
+      warning: "existing_account_limit_below_configured_ceiling",
+    };
+  }
+
+  let updated;
+  try {
+    updated = await updateApifyLimits({ maxMonthlyUsageUsd: desired, token, fetchImpl, baseUrl });
+  } catch (error) {
+    return {
+      updated: false,
+      updateFailed: true,
+      maxMonthlyUsageUsd: current.maxMonthlyUsageUsd,
+      desiredMaxMonthlyUsageUsd: desired,
+      limits: current,
+      warning: "account_limit_lowering_rejected",
+      errorMessage: error.message,
+    };
+  }
   return {
     updated: true,
     previousMaxMonthlyUsageUsd: current.maxMonthlyUsageUsd,
