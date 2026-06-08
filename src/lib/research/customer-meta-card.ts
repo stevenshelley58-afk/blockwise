@@ -95,7 +95,7 @@ export type CustomerMetaAdLibraryCard = {
 
 export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryCard {
   const libraryId = cleanString(row.library_id);
-  const pageName = cleanString(row.page_name) ?? "Unknown page";
+  const pageName = cleanCustomerMetaDisplayText(row.page_name) ?? "Unknown page";
   const fallbackId = [cleanString(row.page_id), pageName, cleanString(row.last_seen_at)].filter(Boolean).join(":");
   const id = cleanString(row.card_id) ?? libraryId ?? fallbackId;
   const activeStatus = normaliseActiveStatus(row.active_status);
@@ -114,18 +114,41 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     // so the UI never shows "Stopped <today>" next to an Active pill.
     stoppedAt: resolveDeliveryStoppedAt(activeStatus, cleanString(row.ad_delivery_stopped_at)),
     lastSeenAt: cleanString(row.last_seen_at),
-    platforms: uniqueStrings(row.publisher_platforms).map(formatPlatformLabel),
-    postcode: cleanString(row.postcode),
-    suburb: cleanString(row.suburb),
-    state: cleanString(row.state),
-    postcodes: uniqueStrings([...(row.postcodes ?? []), row.postcode].filter(Boolean)),
-    headline: cleanString(row.headline),
-    body: cleanString(row.body),
-    description: cleanString(row.description),
-    cta: cleanString(row.cta),
+    platforms: uniqueStrings(row.publisher_platforms).map(formatPlatformLabel).map(cleanCustomerMetaDisplayText).filter(isString),
+    postcode: cleanCustomerMetaDisplayText(row.postcode),
+    suburb: cleanCustomerMetaDisplayText(row.suburb),
+    state: cleanCustomerMetaDisplayText(row.state),
+    postcodes: uniqueStrings([...(row.postcodes ?? []), row.postcode].filter(Boolean)).map(cleanCustomerMetaDisplayText).filter(isString),
+    headline: cleanCustomerMetaDisplayText(row.headline),
+    body: cleanCustomerMetaDisplayText(row.body),
+    description: cleanCustomerMetaDisplayText(row.description),
+    cta: cleanCustomerMetaDisplayText(row.cta),
     destinationUrl: normalisePublicUrl(row.destination_url) ?? normalisePublicUrl(row.cta_url),
     media: resolveMedia(row),
   };
+}
+
+const UNRESOLVED_TEMPLATE_MARKER = /\{\{|\}\}/u;
+const UNRESOLVED_TEMPLATE_TOKEN = /\{\{[^{}]*\}\}/gu;
+const DISPLAY_CONTENT = /[\p{L}\p{N}]/u;
+
+export function hasUnresolvedTemplateMarker(value: string): boolean {
+  return UNRESOLVED_TEMPLATE_MARKER.test(value);
+}
+
+export function cleanCustomerMetaDisplayText(value: unknown): string | null {
+  const text = cleanString(value);
+  if (!text) return null;
+  if (!hasUnresolvedTemplateMarker(text)) return text;
+
+  const cleaned = text
+    .replace(UNRESOLVED_TEMPLATE_TOKEN, " ")
+    .replace(/\s+([,.!?;:])/gu, "$1")
+    .replace(/^[\s,;:|/\\-]+|[\s,;:|/\\-]+$/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+
+  return cleaned && DISPLAY_CONTENT.test(cleaned) && !hasUnresolvedTemplateMarker(cleaned) ? cleaned : null;
 }
 
 function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryMedia[] {
@@ -227,14 +250,20 @@ function uniqueStrings(values: Array<string | null | undefined> | null | undefin
   return Array.from(new Set((values ?? []).map(cleanString).filter((value): value is string => Boolean(value))));
 }
 
+function isString(value: string | null): value is string {
+  return Boolean(value);
+}
+
 function normalisePublicUrl(value: unknown): string | null {
   const url = cleanString(value);
+  if (url && hasUnresolvedTemplateMarker(url)) return null;
   if (!url || !/^https?:\/\//i.test(url)) return null;
   return url;
 }
 
 function normaliseMediaUrl(value: unknown): string | null {
   const url = cleanString(value);
+  if (url && hasUnresolvedTemplateMarker(url)) return null;
   if (!url) return null;
   if (/^https?:\/\//i.test(url)) return url;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");

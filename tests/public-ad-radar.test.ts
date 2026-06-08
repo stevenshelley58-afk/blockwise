@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { loadPublicAdRadarCards, toPublicAdRadarCard } from "../src/lib/research/public-ad-radar.ts";
-import type { CustomerMetaAdLibraryCard, CustomerMetaAdLibraryCardRow } from "../src/lib/research/customer-meta-card.ts";
+import {
+  normaliseCustomerMetaAdLibraryCard,
+  type CustomerMetaAdLibraryCard,
+  type CustomerMetaAdLibraryCardRow,
+} from "../src/lib/research/customer-meta-card.ts";
 import { resolveAdRadarLocationSearch } from "../src/lib/research/ad-radar-location.ts";
 
 test("public Ad Radar card exposes display fields without internal identifiers", () => {
@@ -25,6 +29,74 @@ test("public Ad Radar card exposes display fields without internal identifiers",
   assert.equal(publicCard.durationLabel, "5 days running");
   assert.deepEqual(publicCard.postcodes, ["6050"]);
   assert.deepEqual(Object.keys(publicCard).filter((key) => /libraryId|pageId|pageUrl/i.test(key)), []);
+});
+
+test("customer Meta ad card normalizer removes arbitrary template markers before frontend rendering", () => {
+  const card = normaliseCustomerMetaAdLibraryCard(row({
+    card_id: "normalized-template-card",
+    page_name: "{{page.name}}",
+    page_url: "https://facebook.com/{{page.slug}}",
+    page_image_url: "https://cdn.example/{{avatar}}.jpg",
+    publisher_platforms: ["facebook", "{{platform.name}}"],
+    postcode: "{{postcode}}",
+    suburb: "Perth {{suburb.detail}}",
+    state: "{{state}}",
+    postcodes: ["6000", "{{postcode.extra}}"],
+    headline: "{{ad.headline}}",
+    body: "Attention {{audience.segment}} landlords",
+    description: "Rental report - {{report.name}}",
+    cta: "{{cta.label}}",
+    destination_url: "https://example.com/{{landing.slug}}",
+    media_assets: [{ kind: "image", url: "https://cdn.example/{{creative}}.jpg" }],
+  }));
+
+  assert.equal(card.pageName, "Unknown page");
+  assert.equal(card.pageUrl, null);
+  assert.equal(card.pageImageUrl, null);
+  assert.deepEqual(card.platforms, ["Facebook"]);
+  assert.equal(card.postcode, null);
+  assert.equal(card.suburb, "Perth");
+  assert.equal(card.state, null);
+  assert.deepEqual(card.postcodes, ["6000"]);
+  assert.equal(card.headline, null);
+  assert.equal(card.body, "Attention landlords");
+  assert.equal(card.description, "Rental report");
+  assert.equal(card.cta, null);
+  assert.equal(card.destinationUrl, null);
+  assert.deepEqual(card.media, []);
+  assert.doesNotMatch(JSON.stringify(card), /\{\{|\}\}/u);
+});
+
+test("public Ad Radar card never exposes unresolved template markers in frontend fields", () => {
+  const publicCard = toPublicAdRadarCard(
+    card({
+      id: "public-template-card",
+      pageName: "{{page.name}}",
+      pageImageUrl: "https://cdn.example/{{avatar}}.jpg",
+      platforms: ["Facebook", "{{platform.name}}"],
+      headline: "{{ad.headline}}",
+      body: "Owner update {{offer.name}} for Perth sellers.",
+      description: "{{ad.description}}",
+      cta: "{{cta.label}}",
+      destinationUrl: "https://example.com/{{landing.slug}}",
+      media: [
+        { id: "bad-image", kind: "image", url: "https://cdn.example/{{creative}}.jpg", posterUrl: null },
+        { id: "good-image", kind: "image", url: "https://cdn.example/creative.jpg", posterUrl: "https://cdn.example/{{poster}}.jpg" },
+      ],
+    }),
+  );
+
+  assert.equal(publicCard.pageName, "Unknown page");
+  assert.equal(publicCard.pageImageUrl, null);
+  assert.deepEqual(publicCard.platforms, ["Facebook"]);
+  assert.equal(publicCard.headline, null);
+  assert.equal(publicCard.body, "Owner update for Perth sellers.");
+  assert.equal(publicCard.description, null);
+  assert.equal(publicCard.cta, null);
+  assert.equal(publicCard.destinationUrl, null);
+  assert.equal(publicCard.destinationDomain, null);
+  assert.deepEqual(publicCard.media, [{ kind: "image", url: "https://cdn.example/creative.jpg", posterUrl: null }]);
+  assert.doesNotMatch(JSON.stringify(publicCard), /\{\{|\}\}/u);
 });
 
 test("public Ad Radar card keeps structured multiple postcode attribution", () => {

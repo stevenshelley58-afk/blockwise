@@ -27,6 +27,19 @@ type CampaignPanelProps = {
 
 const EMPTY_STATE_GRADIENTS = ["studio-tpl-g0", "studio-tpl-g2", "studio-tpl-g4", "studio-tpl-g5"];
 
+// Goal drives the offer: pick a goal and the offer list narrows to what fits it,
+// defaulting to the primary offer for that goal. Keeps the two fields in sync.
+const ALL_OFFERS = ["Free appraisal", "Market update", "Recent sales report", "Buyer demand check", "Home value estimate"];
+const GOAL_OFFERS: Record<string, { offers: string[]; default: string }> = {
+  "Get appraisal leads": { offers: ["Free appraisal", "Home value estimate"], default: "Free appraisal" },
+  "Promote recent sale": { offers: ["Recent sales report", "Home value estimate"], default: "Recent sales report" },
+  "Generate vendor leads": { offers: ["Free appraisal", "Home value estimate", "Recent sales report"], default: "Free appraisal" },
+  "Promote open home": { offers: ["Buyer demand check", "Free appraisal"], default: "Buyer demand check" },
+  "Drive market report downloads": { offers: ["Market update", "Recent sales report"], default: "Market update" },
+  "Retarget warm audience": { offers: ["Free appraisal", "Buyer demand check", "Recent sales report"], default: "Free appraisal" },
+};
+const CAMPAIGN_GOALS = Object.keys(GOAL_OFFERS);
+
 export function CampaignPanel({
   campaignGoal,
   setCampaignGoal,
@@ -86,26 +99,32 @@ export function CampaignPanel({
     );
   }
 
+  const goalConfig = GOAL_OFFERS[campaignGoal] ?? { offers: ALL_OFFERS, default: offerLabel };
+  const goalOptions = CAMPAIGN_GOALS.includes(campaignGoal) ? CAMPAIGN_GOALS : [campaignGoal, ...CAMPAIGN_GOALS];
+  const offerOptions = goalConfig.offers.includes(offerLabel) ? goalConfig.offers : [offerLabel, ...goalConfig.offers];
+
+  function changeGoal(nextGoal: string) {
+    setCampaignGoal(nextGoal);
+    const config = GOAL_OFFERS[nextGoal];
+    // Keep the offer in step with the goal unless the current offer already fits.
+    if (config && !config.offers.includes(offerLabel)) setOfferLabel(config.default);
+  }
+
   return (
     <>
-      <PanelHeader title="Ad settings" detail="Review the defaults before export or launch." />
+      <PanelHeader title="Ad settings" detail="Goal and offer stay in sync — pick a goal and the offer follows." />
       <FieldShell label="Goal" icon={Target}>
-        <select value={campaignGoal} onChange={(event) => setCampaignGoal(event.target.value)}>
-          <option>Get appraisal leads</option>
-          <option>Promote recent sale</option>
-          <option>Generate vendor leads</option>
-          <option>Promote open home</option>
-          <option>Drive market report downloads</option>
-          <option>Retarget warm audience</option>
+        <select value={campaignGoal} onChange={(event) => changeGoal(event.target.value)}>
+          {goalOptions.map((goal) => (
+            <option key={goal}>{goal}</option>
+          ))}
         </select>
       </FieldShell>
       <FieldShell label="Offer" icon={BadgeCheck}>
         <select value={offerLabel} onChange={(event) => setOfferLabel(event.target.value)}>
-          <option>Free appraisal</option>
-          <option>Market update</option>
-          <option>Recent sales report</option>
-          <option>Buyer demand check</option>
-          <option>Home value estimate</option>
+          {offerOptions.map((offer) => (
+            <option key={offer}>{offer}</option>
+          ))}
         </select>
       </FieldShell>
       <FieldShell label="Market / Location" icon={MapPin}>

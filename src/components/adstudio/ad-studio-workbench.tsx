@@ -97,8 +97,6 @@ const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: 
   { id: "publish", label: "Publish", icon: Send },
 ];
 
-const FIRST_RUN_DIALOG_KEY = "blockwise:first-ad-dialog-dismissed";
-
 const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
   feed: "4:5",
@@ -239,11 +237,12 @@ export function AdStudioWorkbench({
   const [pack, setPack] = useState(initialPack);
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
+  const [newAdStep, setNewAdStep] = useState<"source" | "template">("source");
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-  const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("story");
+  const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
   const previewMode: PreviewMode = "creative";
   const zoom = 75;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
@@ -290,15 +289,13 @@ export function AdStudioWorkbench({
     neverSay: brandKit.tone.avoid,
   };
 
-  function openNewAd(templateId?: string) {
+  function openNewAd(templateId?: string, step: "source" | "template" = "source") {
     setNewAdTemplateId(templateId);
+    setNewAdStep(step);
     setNewAdOpen(true);
   }
 
   function closeNewAdDialog() {
-    if (firstRun) {
-      window.localStorage.setItem(FIRST_RUN_DIALOG_KEY, "1");
-    }
     setNewAdOpen(false);
     setNewAdTemplateId(undefined);
   }
@@ -345,7 +342,9 @@ export function AdStudioWorkbench({
       copy.headline === seededCopyRef.current.headline &&
       copy.description === seededCopyRef.current.description &&
       copy.cta === seededCopyRef.current.cta;
-    if (autoDesignedRef.current || generating || !firstRun || !copyUntouched) return;
+    // Fire on a fresh, untouched ad (first run or no variants yet); never clobber written copy.
+    const isNewAd = firstRun || pack.variants.length === 0;
+    if (autoDesignedRef.current || generating || !isNewAd || !copyUntouched) return;
     autoDesignedRef.current = true;
     studio.setSection("copy");
     studio.setBusy(true);
@@ -491,24 +490,15 @@ export function AdStudioWorkbench({
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
 
+  // First open with no ad yet → show the New Ad popup (templates / reuse / radar).
   useEffect(() => {
-    if (!firstRun || promptedForFirstAd) return;
-
-    if (window.localStorage.getItem(FIRST_RUN_DIALOG_KEY) === "1") {
-      setPromptedForFirstAd(true);
-      return;
-    }
-
+    if (promptedForFirstAd) return;
     setPromptedForFirstAd(true);
-    setNewAdOpen(true);
-  }, [firstRun, promptedForFirstAd]);
-
-  useEffect(() => {
-    if (!firstRun && !promptedForFirstAd && pack.variants.length === 0) {
-      setPromptedForFirstAd(true);
+    if (pack.variants.length === 0) {
+      setNewAdStep("source");
       setNewAdOpen(true);
     }
-  }, [firstRun, pack.variants.length, promptedForFirstAd]);
+  }, [pack.variants.length, promptedForFirstAd]);
 
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
@@ -818,7 +808,7 @@ export function AdStudioWorkbench({
                     className={studio.section === item.id ? "active" : ""}
                     key={item.id}
                     type="button"
-                    onClick={() => (item.id === "templates" ? openNewAd() : studio.setSection(item.id))}
+                    onClick={() => (item.id === "templates" ? openNewAd(undefined, "template") : studio.setSection(item.id))}
                   >
                     <Icon aria-hidden size={18} />
                     <span>{item.label}</span>
@@ -1071,6 +1061,7 @@ export function AdStudioWorkbench({
         templates={AD_STUDIO_TEMPLATES}
         onGenerate={handleGenerateFirstAd}
         initialTemplateId={newAdTemplateId}
+        initialStep={newAdStep}
       />
 
       {studio.toast && <div className="studio-toast">{studio.toast}</div>}

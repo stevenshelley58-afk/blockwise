@@ -8,7 +8,9 @@ import {
 import {
   adRunningMs,
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
+  cleanCustomerMetaDisplayText,
   formatAdDuration,
+  hasUnresolvedTemplateMarker,
   normaliseCustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
@@ -146,33 +148,48 @@ export function toPublicAdRadarCard(
   const runningMs = adRunningMs(card.startedAt, card.stoppedAt, now);
   const postcodes = resolvePublicPostcodes(card, locationGuess);
   const suburb = resolvePublicSuburb(card, locationGuess, postcodes);
+  const destinationUrl = normalisePublicAdRadarUrl(card.destinationUrl);
 
   return {
     id: card.id,
-    pageName: card.pageName,
-    pageImageUrl: card.pageImageUrl,
+    pageName: cleanCustomerMetaDisplayText(card.pageName) ?? "Unknown page",
+    pageImageUrl: normalisePublicAdRadarUrl(card.pageImageUrl),
     activeStatus: card.activeStatus,
     startedAt: card.startedAt,
     stoppedAt: card.stoppedAt,
     lastSeenAt: card.lastSeenAt,
     durationLabel: runningMs === null ? null : formatAdDuration(runningMs, !card.stoppedAt),
-    platforms: card.platforms,
+    platforms: card.platforms.map(cleanCustomerMetaDisplayText).filter(isString),
     postcode: card.postcode ?? postcodes[0] ?? null,
     postcodes,
-    suburb,
-    state: card.state,
-    headline: card.headline,
-    body: card.body,
-    description: card.description,
-    cta: card.cta,
-    destinationUrl: card.destinationUrl,
-    destinationDomain: card.destinationUrl ? displayDomain(card.destinationUrl) : null,
-    media: card.media.slice(0, 4).map((media) => ({
-      kind: media.kind,
-      url: media.url,
-      posterUrl: media.posterUrl,
-    })),
+    suburb: cleanCustomerMetaDisplayText(suburb),
+    state: cleanCustomerMetaDisplayText(card.state),
+    headline: cleanCustomerMetaDisplayText(card.headline),
+    body: cleanCustomerMetaDisplayText(card.body),
+    description: cleanCustomerMetaDisplayText(card.description),
+    cta: cleanCustomerMetaDisplayText(card.cta),
+    destinationUrl,
+    destinationDomain: destinationUrl ? displayDomain(destinationUrl) : null,
+    media: card.media.flatMap((media) => {
+      const url = normalisePublicAdRadarUrl(media.url);
+      if (!url) return [];
+      return [{
+        kind: media.kind,
+        url,
+        posterUrl: normalisePublicAdRadarUrl(media.posterUrl),
+      }];
+    }).slice(0, 4),
   };
+}
+
+function normalisePublicAdRadarUrl(value: string | null): string | null {
+  const url = value?.trim();
+  if (!url || hasUnresolvedTemplateMarker(url) || !/^https?:\/\//i.test(url)) return null;
+  return url;
+}
+
+function isString(value: string | null): value is string {
+  return Boolean(value);
 }
 
 function resolvePublicSuburb(
