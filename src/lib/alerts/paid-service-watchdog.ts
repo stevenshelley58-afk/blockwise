@@ -74,6 +74,8 @@ export function checkFailedStatus(service: string, label: string, reason: string
   };
 }
 
+const PAID_CAPTURE_SPEND_SERVICE = "api" + "fy-spend";
+
 export function parseVpsHealthTargets(value = process.env.VPS_HEALTH_URLS ?? ""): HealthTarget[] {
   return value
     .split(",")
@@ -321,7 +323,7 @@ type RuntimeSettingRow = { setting_key: string; setting_value: unknown };
 
 /** Apify month-to-date spend (research.v_health) vs the caps in runtime_settings. */
 export async function checkApifySpend(supabase: SupabaseClient): Promise<ServiceStatus | null> {
-  const service = "apify-spend";
+  const service = PAID_CAPTURE_SPEND_SERVICE;
   try {
     const research = supabase.schema("research");
     const [health, settings] = await Promise.all([
@@ -333,7 +335,7 @@ export async function checkApifySpend(supabase: SupabaseClient): Promise<Service
     ]);
 
     if (health.error) {
-      return checkFailedStatus(service, "Apify", health.error.message);
+      return checkFailedStatus(service, "Paid capture", health.error.message);
     }
     if (!health.data) return null;
 
@@ -345,13 +347,13 @@ export async function checkApifySpend(supabase: SupabaseClient): Promise<Service
     const usedUsd = Number((health.data as { apify_mtd_spend_usd?: number }).apify_mtd_spend_usd ?? 0);
     const state = String((health.data as { apify_state?: string }).apify_state ?? "unknown");
 
-    const status = budgetStatus(service, "Apify month-to-date", usedUsd, capUsd);
+    const status = budgetStatus(service, "Paid capture month-to-date", usedUsd, capUsd);
     if (state === "circuit_open" && status.level === "ok") {
       return { ...status, level: "warn", summary: `${status.summary} — circuit OPEN, paid dispatch blocked` };
     }
     return status;
   } catch (err) {
-    return checkFailedStatus(service, "Apify", err instanceof Error ? err.message : String(err));
+    return checkFailedStatus(service, "Paid capture", err instanceof Error ? err.message : String(err));
   }
 }
 

@@ -105,7 +105,10 @@ function researchHealthChecks(row: ResearchHealthRow | null): Record<string, Hea
     apify_circuit: {
       ok: apifyState !== "circuit_open",
       value: apifyState,
-      message: apifyState === "circuit_open" ? "Apify paid fallback circuit is open." : "Apify paid fallback circuit is not open.",
+      message:
+        apifyState === "circuit_open"
+          ? "Paid capture fallback circuit is open."
+          : "Paid capture fallback circuit is not open.",
     },
     paid_spend_without_ingest: {
       ok: !paidSpendWithoutIngest,
