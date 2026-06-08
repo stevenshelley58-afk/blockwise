@@ -144,6 +144,8 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
   assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
   assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
+  assert.match(apifyMetaPageCapture, /\bapify_paid_capture_mode\b/u, "paid capture must be runtime-gated so approved canaries do not automatically unlock broad spend");
+  assert.match(apifyMetaPageCapture, /paidCaptureMode\s*!==\s*["']approved_fallback["'][\s\S]*return explicit[\s\S]*:\s*null/u, "non-explicit paid failover must stop when Apify is in canary-only mode");
   assert.match(apifyPageInput, /\burls:\s*\[\s*url\s*\]/u, "Apify actors that require input.urls must receive the Meta Ad Library URL");
   assert.match(apifyPageInput, /\bmaxAds:\s*resultLimit\b/u, "Apify actor-specific maxAds defaults must be capped with the shared result limit");
   assert.match(apifyMetaPageCapture, /\bcostUsdFromApifyError\(error\)/u, "failed Apify captures must still ledger any charged run cost");

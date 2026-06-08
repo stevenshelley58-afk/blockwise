@@ -128,6 +128,7 @@ const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_canary_max_results",
   "apify_canary_per_run_cap_usd",
   "apify_canary_page_id",
+  "apify_paid_capture_mode",
 ];
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
   "id",
@@ -2707,6 +2708,12 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
   if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
     return explicit
       ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture is ${parsedSettings.enabled ? parsedSettings.state : "disabled"}`, { explicit, apify_state: parsedSettings.state })
+      : null;
+  }
+  const paidCaptureMode = runtimeSettingString(settings, "apify_paid_capture_mode", "approved_fallback");
+  if (paidCaptureMode !== "approved_fallback") {
+    return explicit
+      ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture mode is ${paidCaptureMode}`, { explicit, apify_paid_capture_mode: paidCaptureMode })
       : null;
   }
 
