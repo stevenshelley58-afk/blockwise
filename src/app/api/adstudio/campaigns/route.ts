@@ -9,6 +9,7 @@ import {
 } from "@/lib/adstudio/generation-trial";
 import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, resolveAdStudioTemplate, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
@@ -129,6 +130,11 @@ export async function POST(request: NextRequest) {
       sourceImageDataUrl: body.sourceImageDataUrl,
     });
     const template = body.firstAd?.mode === "template" ? resolveAdStudioTemplate(body.firstAd.templateId) : null;
+    const sourceImageUrl = await resolveAdStudioImageForModel(
+      context.supabase,
+      context.access.workspaceId,
+      body.sourceImageDataUrl ?? body.firstAd?.imageDataUrl,
+    );
     pack = await enrichCampaignPackCopyWithAi({
       pack,
       workspaceId: context.access.workspaceId,
@@ -136,6 +142,7 @@ export async function POST(request: NextRequest) {
       brief: body.firstAd?.description,
       templateName: template?.name,
       templateHint: template?.promptHint,
+      sourceImageUrl,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
 

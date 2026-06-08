@@ -6395,4 +6395,15 @@ a.operator-file-row {
 }
 @media (max-width: 720px) {
   .lp-shell { width: calc(100% - 40px); }
-  
+  .lp-nav { gap: 16px; }
+  .lp-nav-links { display: none; }
+  .lp-section { padding: 64px 0; }
+  .lp-hero { padding: 48px 0 64px; }
+  .lp-dash { padding: 18px; }
+  .lp-dash-metrics { grid-template-columns: repeat(2, 1fr); }
+  .lp-dash-grid { grid-template-columns: 1fr; }
+  .lp-steps, .lp-features, .lp-trial-grid { grid-template-columns: 1fr; }
+  .lp-cta-row .lp-btn { width: 100%; }
+  .lp-footer-grid { grid-template-columns: 1fr; gap: 32px; padding: 44px 0 32px; }
+  .lp-center-head { margin-bottom: 44px; }
+}

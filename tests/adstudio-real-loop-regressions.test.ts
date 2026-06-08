@@ -179,7 +179,7 @@ test("renderCreativeSvg renders the real logo image or brand name, not a BRAND p
   assert.doesNotMatch(svg, />BRAND</);
 });
 
-test("campaign creation uses shared fail-open AI copy enrichment without changing copy route response shape", () => {
+test("campaign creation uses shared AI copy enrichment without changing copy route response shape", () => {
   const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generateRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/generate/route.ts", "utf8");
@@ -189,7 +189,9 @@ test("campaign creation uses shared fail-open AI copy enrichment without changin
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
   assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(enrichment, /catch \{/);
+  assert.match(enrichment, /catch \(error\)/);
+  assert.match(enrichment, /let lastError: unknown = null/);
+  assert.match(enrichment, /if \(lastError\) throw lastError/);
   assert.match(enrichment, /return input\.pack/);
 });
 

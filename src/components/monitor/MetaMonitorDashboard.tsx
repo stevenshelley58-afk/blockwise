@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { BadgePercent, MousePointerClick, Tag, UserCheck, UserPlus, Wallet } from "lucide-react";
 import { useState } from "react";
 
@@ -8,13 +10,16 @@ import type { MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types"
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdsSummaryTable } from "./AdsSummaryTable";
-import { BudgetPacingChart } from "./BudgetPacingChart";
 import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
-import { SmoothAreaChart } from "./SmoothAreaChart";
 import { SuburbBarChart } from "./SuburbBarChart";
+
+// Recharts is heavy; load the chart bundles on demand so they don't ship in the
+// initial /results JS on mobile. Behaviour is unchanged — charts still render client-side.
+const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
+const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 
 const SPEND_COLOR = "#123e75";
 const LEADS_COLOR = "#31c46f";

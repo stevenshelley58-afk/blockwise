@@ -165,7 +165,7 @@ export function useCopy(
   }
 
   /** AI writes the full copy set — from campaign context ("ai") or the user's brief ("brief"). */
-  async function generateCopy(kind: "ai" | "brief", context: CopyContext) {
+  async function generateCopy(kind: "ai" | "brief", context: CopyContext, imageSrc?: string) {
     if (generating) return;
     if (kind === "brief" && !brief.trim()) {
       setFeedback({ tone: "error", message: "Add a brief before generating copy." });
@@ -180,6 +180,7 @@ export function useCopy(
         brief: kind === "brief" ? brief.trim() : undefined,
         copy,
         context,
+        sourceImageUrl: imageSrc,
       });
       applyCopySet(result.copy ?? {}, result.alternates);
       setFeedback({ tone: "success", message: kind === "brief" ? "Copy updated from your brief." : "Copy updated." });
@@ -194,11 +195,11 @@ export function useCopy(
   }
 
   /** One-tap adjustments. Tries AI first; falls back to local transforms offline. */
-  async function applyCopyAssist(action: string, context: CopyContext) {
+  async function applyCopyAssist(action: string, context: CopyContext, imageSrc?: string) {
     if (generating) return;
     setGenerating(true);
     try {
-      const result = await requestCopy({ mode: "assist", assistAction: action, copy, context });
+      const result = await requestCopy({ mode: "assist", assistAction: action, copy, context, sourceImageUrl: imageSrc });
       applyCopySet(result.copy ?? {});
       showToast(action);
     } catch {
@@ -215,11 +216,11 @@ export function useCopy(
   }
 
   /** Patches one selected copy field while keeping the rest of the creative intact. */
-  async function patchCopyField(field: keyof CopyState, action: string, context: CopyContext) {
+  async function patchCopyField(field: keyof CopyState, action: string, context: CopyContext, imageSrc?: string) {
     if (generating) return;
     setGenerating(true);
     try {
-      const result = await requestCopy({ mode: "assist", assistAction: action, copy, context });
+      const result = await requestCopy({ mode: "assist", assistAction: action, copy, context, sourceImageUrl: imageSrc });
       const value = result.copy?.[field];
       if (typeof value === "string" && value.trim()) {
         updateCopy(field, value);

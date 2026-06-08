@@ -100,4 +100,4 @@ docker compose --env-file .env -f infra/coolify/docker-compose.research.yml conf
 docker compose --env-file .env -f infra/coolify/docker-compose.research.yml up -d --build steel hermes uptime-kuma
 
 echo "manual_backup=$manual_backup"
-docker ps --format '{{
+docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}'

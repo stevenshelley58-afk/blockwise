@@ -101,3 +101,4 @@ from research.observed_ads a;
 -- paid spend this month
 select coalesce(sum(cost_usd),0) from research.ad_fetch_runs
 where source_provider like 'apify:%' and started_at >= date_trunc('month', now());
+```

@@ -17,9 +17,12 @@ export async function enrichCampaignPackCopyWithAi(input: {
   templateName?: string;
   templateHint?: string;
   propertyType?: string;
+  /** Resolved, model-consumable image (data: or absolute URL) to ground copy in. */
+  sourceImageUrl?: string;
 }): Promise<AdStudioCampaignPack> {
   let pack = input.pack;
   let changed = false;
+  let lastError: unknown = null;
 
   for (const variant of pack.variants) {
     const copyPack = pack.copyPacks.find((candidate) => candidate.variantId === variant.variantId);
@@ -32,6 +35,7 @@ export async function enrichCampaignPackCopyWithAi(input: {
         mode: input.brief ? "brief" : "generate",
         brief: input.brief,
         copy: copyFieldsFromPack(copyPack),
+        sourceImageUrl: input.sourceImageUrl,
         context: {
           goal: pack.campaign.goal,
           offer: variant.offer,
@@ -47,12 +51,17 @@ export async function enrichCampaignPackCopyWithAi(input: {
       });
       pack = applyGeneratedCopy(pack, variant.variantId, generated.copy);
       changed = true;
-    } catch {
+    } catch (error) {
+      lastError = error;
       break;
     }
   }
 
-  if (!changed) return input.pack;
+  // Surface a real failure instead of silently shipping the unwritten template copy.
+  if (!changed) {
+    if (lastError) throw lastError;
+    return input.pack;
+  }
 
   const compliance = runAdStudioComplianceReview({ campaign: pack.campaign, copyPacks: pack.copyPacks });
   return {

@@ -239,7 +239,7 @@
   font-size: 10.5px; font-weight: 700; color: var(--lp-faint); text-align: right;
 }
 .lp-radar-note { margin: 12px 2px 18px; font-size: 13px; color: var(--lp-muted); }
-.lp-radar-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 56px; }
+.lp-radar-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 56px; align-items: start; }
 .lp-radar-card {
   display: flex; flex-direction: column;
   background: #fff; border: 1px solid var(--lp-border); border-radius: 16px;
@@ -247,16 +247,14 @@
 }
 .lp-radar-thumb { width: 100%; height: 168px; flex: none; background: #e9eef6 center / cover no-repeat; }
 .lp-radar-body { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 18px 18px 16px; }
-.lp-radar-source { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.lp-radar-source strong { font-size: 13.5px; color: var(--lp-ink); }
-.lp-radar-source span { font-size: 12px; color: var(--lp-faint); }
-.lp-radar-body h3 { margin: 0 0 8px; font-size: 14.5px; font-weight: 650; line-height: 1.4; font-family: var(--font-inter), Inter, sans-serif; color: var(--lp-body); }
-.lp-radar-meta { display: flex; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--lp-muted); }
-.lp-radar-link { margin-top: auto; font-size: 12.5px; font-weight: 700; color: var(--lp-primary); text-decoration: none; }
-.lp-radar-link:hover { color: var(--lp-primary-light); }
 .lp-radar-context { margin: 48px 2px 0; font-size: 13px; color: var(--lp-muted); }
 .lp-radar-context + .lp-radar-list { margin-top: 16px; }
-.lp-radar-thumb-empty { display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; color: var(--lp-faint); }
+/* Each radar card is the real Meta Ad Library unit (.meta-ad-* in globals.css)
+   wrapped in a single signup link. */
+.lp-radar-ad-link { display: block; text-decoration: none; color: inherit; border-radius: 8px; }
+.lp-radar-ad-link:focus-visible { outline: 2px solid var(--lp-primary); outline-offset: 3px; }
+.lp-radar-ad-link .meta-ad-card { height: 100%; transition: border-color 120ms ease, box-shadow 120ms ease; }
+.lp-radar-ad-link:hover .meta-ad-card { border-color: var(--lp-primary); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10); }
 .lp-radar-skeleton .lp-radar-thumb { animation: lp-radar-pulse 1.4s ease-in-out infinite; }
 .lp-radar-skeleton .lp-radar-body span { display: block; height: 12px; margin-bottom: 10px; border-radius: 6px; background: #e9eef6; animation: lp-radar-pulse 1.4s ease-in-out infinite; }
 .lp-radar-skeleton .lp-radar-body span:nth-child(2) { width: 80%; }
@@ -835,3 +833,4 @@
   .lp-footer-bottom { flex-direction: column; align-items: flex-start; }
   .lp-center-head { margin-bottom: 44px; }
 }
+                                                                                                                                                                                                                                                                                   

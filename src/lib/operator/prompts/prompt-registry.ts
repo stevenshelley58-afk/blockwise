@@ -435,4 +435,32 @@ function fallbackSection(key: PromptKey, body: string, reason: string): PromptSe
 
 function metadataForPromptKey(
   key: PromptKey,
-  metadata: Record<string, unknown> |
+  metadata: Record<string, unknown> | null | undefined = {},
+): Record<string, unknown> {
+  return {
+    ...(metadata ?? {}),
+    section_type: sectionTypeForPromptKey(key),
+  };
+}
+
+function normalizeRow(row: PromptVersionRow): PromptVersionRow & { status: PromptStatus; metadata_json: Record<string, unknown> } {
+  return {
+    ...row,
+    status: row.status ?? "draft",
+    metadata_json: row.metadata_json ?? {},
+  };
+}
+
+function labelForPromptKey(key: PromptKey): string {
+  return key
+    .replace(/^adstudio\./, "")
+    .split(".")
+    .map((part) => part.replace(/_/g, " "))
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" / ");
+}
+
+function stringFromMetadata(metadata: Record<string, unknown> | null | undefined, key: string): string {
+  const value = metadata?.[key];
+  return typeof value === "string" ? value : "";
+}

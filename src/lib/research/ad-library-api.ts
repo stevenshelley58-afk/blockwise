@@ -259,4 +259,6 @@ function uniqueStrings(values: unknown[]): string[] {
 }
 
 function csvCell(value: string): string {
-  if (!/[",\n\r]
+  if (!/[",\n\r]/u.test(value)) return value;
+  return `"${value.replace(/"/g, "\"\"")}"`;
+}

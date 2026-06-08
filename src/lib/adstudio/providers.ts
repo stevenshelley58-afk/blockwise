@@ -26,6 +26,11 @@ export type TextProviderRequest = {
   system: string;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   schemaName: ProviderSchemaName;
+  /**
+   * Optional image (a `data:` URL or absolute http(s) URL) attached to the final
+   * user message for vision-capable models. Ignored by text-only providers.
+   */
+  imageUrl?: string;
 };
 
 export type TextProviderResponse = {

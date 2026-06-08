@@ -358,4 +358,12 @@ export const STYLES = `
   .studio-mobile-busy{position:fixed;left:12px;right:12px;top:82px;z-index:181;min-height:44px;border-radius:12px;background:#001b3d;color:#fff;box-shadow:var(--st-sh-2);display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;font-size:13px}
   .studio-mobile-busy svg{animation:studio-spin 1s linear infinite}
   .studio-more-menu{right:12px;top:66px;width:min(286px,calc(100vw - 24px))}
-  .studio-newad{width:10
+  .studio-newad{width:100%;border-radius:14px}
+  .studio-tpl-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:380px){
+  .studio-story-headline{font-size:31px}
+  .studio-story-body{font-size:19px}
+  .studio-mobile-body{padding-left:14px;padding-right:14px}
+}
+`;

@@ -587,4 +587,62 @@ function getMeta(object: FabricObject): CreativeLayerMeta | null {
   return (object as BlockwiseFabricObject)[BLOCKWISE_FABRIC_META_KEY] ?? null;
 }
 
-/** Screen-space pointer from the raw DOM event, so click-vs-dr
+/** Screen-space pointer from the raw DOM event, so click-vs-drag detection
+ *  works the same across Fabric versions without relying on internal point APIs. */
+function pointerFromEvent(event: unknown): { x: number; y: number } | null {
+  const mouse = event as { clientX?: number; clientY?: number } | undefined;
+  if (mouse && typeof mouse.clientX === "number" && typeof mouse.clientY === "number") {
+    return { x: mouse.clientX, y: mouse.clientY };
+  }
+  const touch = (event as { touches?: ArrayLike<{ clientX: number; clientY: number }> } | undefined)?.touches?.[0];
+  if (touch) return { x: touch.clientX, y: touch.clientY };
+  return null;
+}
+
+function interactiveOptions(meta: CreativeLayerMeta) {
+  const unlocked = !meta.locked;
+  return {
+    selectable: unlocked,
+    evented: unlocked,
+    hasControls: unlocked,
+    lockMovementX: meta.locked,
+    lockMovementY: meta.locked,
+    lockScalingX: meta.locked,
+    lockScalingY: meta.locked,
+    lockRotation: meta.locked,
+    editable: unlocked && meta.type === "text",
+    // Wordless affordance: hovering text shows a caret, the image shows a pointer,
+    // so users can see what they can click into before they click.
+    hoverCursor: unlocked ? (meta.type === "text" ? "text" : meta.type === "image" ? "pointer" : "move") : "default",
+  };
+}
+
+function backgroundFill(creative: AdStudioCreative) {
+  return creative.canvas.objects.find((object) => object.role === "background_shape")?.fill ?? "#F1F5F9";
+}
+
+function applyDisplaySize(canvas: Canvas, creative: AdStudioCreative) {
+  const maxWidthByFormat: Record<string, number> = {
+    "9:16": 350,
+    "4:5": 475,
+    "1:1": 520,
+    "1.91:1": 560,
+  };
+  const viewportHeight = typeof window === "undefined" ? 900 : window.innerHeight;
+  const maxWidth = maxWidthByFormat[creative.format] ?? 520;
+  const maxHeight = Math.max(360, viewportHeight - 250);
+  const scale = Math.min(maxWidth / creative.canvas.width, maxHeight / creative.canvas.height, 1);
+  canvas.setDimensions(
+    {
+      width: `${Math.round(creative.canvas.width * scale)}px`,
+      height: `${Math.round(creative.canvas.height * scale)}px`,
+    },
+    { cssOnly: true },
+  );
+}
+
+function numberOr(value: unknown, fallback: number): number;
+function numberOr(value: unknown, fallback: undefined): undefined;
+function numberOr(value: unknown, fallback: number | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}

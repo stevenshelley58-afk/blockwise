@@ -45,4 +45,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
   return new NextResponse(zipBlob, {
     headers: {
       "content-type": "application/zip",
-      "content-disposition": `attachm
+      "content-disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}
+
+function slugFileName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "adstudio-campaign";
+}

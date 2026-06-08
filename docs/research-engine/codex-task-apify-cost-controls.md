@@ -75,4 +75,27 @@ Selection loop (runs inside the daily self-review; supervisor executes, agent de
 
 ### B5. Account backstop
 
-At boot and in th
+At boot and in the daily loop, assert the Apify account limit: if `maxMonthlyUsageUsd` differs from settings key `apify_account_limit_usd` (default 30), `PUT /v2/users/me/limits` to set it. The agent may lower it autonomously; raising it above the settings ceiling requires the operator to change the ceiling.
+
+### B6. Tests (extend `tests/research-engine/`)
+
+1. Run-creation always includes Apify `maxTotalChargeUsd` and a results cap (reject dispatch without them).
+2. Budget guard blocks at cap; fail-closed when limits API errors.
+3. Ledger written from run detail; `paid_spend_without_ingest` flag computed.
+4. Field-mapper contract test per approved actor using stored fixtures; >5% mapping failure = capture failure with evidence write.
+5. Benchmark scorer picks cheapest passing actor; banned actors never selected; unvetted candidates never run outside benchmark caps.
+6. Migration assertions for `capture_actors` (+ `runtime_settings` if created here); public view shapes unchanged.
+
+Run: `npm run test:research`, `npm run test:hard-reset`, `npm run typecheck`.
+
+## Acceptance
+
+1. Induced price spike on the selected actor → next daily loop switches to the cheaper passing actor, with a decision row recording why.
+2. Simulated month-to-date spend ≥ cap → zero further Apify dispatches, circuit-open defect filed once, health shows `apify_state=circuit_open`, browser fallback continues.
+3. No code path can create an Apify run without per-run cost + result caps (test-enforced).
+4. `v_health` shows Apify MTD spend; morning report includes it.
+5. AGENTS.md reporting block in the PR (LOC before/after, files created/deleted, behaviour changed: yes).
+
+## Out of scope
+
+Making Apify primary; auto-adopting unvetted actors into production rotation; any non-Apify vendor (ScrapeCreators adapter is a separate task if chosen); plan downgrade decision (operator).

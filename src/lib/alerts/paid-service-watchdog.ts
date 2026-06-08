@@ -321,4 +321,62 @@ export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {
 
 type RuntimeSettingRow = { setting_key: string; setting_value: unknown };
 
-/** Apify month-to-date spend (research.v_heal
+/** Apify month-to-date spend (research.v_health) vs the caps in runtime_settings. */
+export async function checkApifySpend(supabase: SupabaseClient): Promise<ServiceStatus | null> {
+  const service = PAID_CAPTURE_SPEND_SERVICE;
+  try {
+    const research = supabase.schema("research");
+    const [health, settings] = await Promise.all([
+      research.from("v_health").select("apify_mtd_spend_usd,apify_state").maybeSingle(),
+      research
+        .from("runtime_settings")
+        .select("setting_key,setting_value")
+        .in("setting_key", ["apify_monthly_cap_usd", "apify_enabled"]),
+    ]);
+
+    if (health.error) {
+      return checkFailedStatus(service, "Paid capture", health.error.message);
+    }
+    if (!health.data) return null;
+
+    const rows = (settings.data ?? []) as RuntimeSettingRow[];
+    const enabled = rows.find((r) => r.setting_key === "apify_enabled")?.setting_value === true;
+    if (!enabled) return null;
+
+    const capUsd = Number(rows.find((r) => r.setting_key === "apify_monthly_cap_usd")?.setting_value ?? 25);
+    const usedUsd = Number((health.data as { apify_mtd_spend_usd?: number }).apify_mtd_spend_usd ?? 0);
+    const state = String((health.data as { apify_state?: string }).apify_state ?? "unknown");
+
+    const status = budgetStatus(service, "Paid capture month-to-date", usedUsd, capUsd);
+    if (state === "circuit_open" && status.level === "ok") {
+      return { ...status, level: "warn", summary: `${status.summary} — circuit OPEN, paid dispatch blocked` };
+    }
+    return status;
+  } catch (err) {
+    return checkFailedStatus(service, "Paid capture", err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function checkVpsHealth(): Promise<ServiceStatus[]> {
+  const targets = parseVpsHealthTargets();
+  if (targets.length === 0) return [];
+  return Promise.all(targets.map((target) => checkHttpHealthTarget(target)));
+}
+
+/** Runs every poller; unconfigured services are skipped, failures become statuses. */
+export async function collectPaidServiceStatuses(supabase: SupabaseClient): Promise<ServiceStatus[]> {
+  const [openRouter, openAiSpend, openAiApi, apifySpend, vpsHealth] = await Promise.all([
+    checkOpenRouterCredits(),
+    checkOpenAiSpend(),
+    checkOpenAiApiHealth(),
+    checkApifySpend(supabase),
+    checkVpsHealth(),
+  ]);
+  return [openRouter, openAiSpend, openAiApi, apifySpend, ...vpsHealth].filter(
+    (status): status is ServiceStatus => status !== null,
+  );
+}
+
+function safeServiceKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "endpoint";
+}

@@ -23,6 +23,11 @@ export type AdStudioCopyRequestBody = {
   brief?: string;
   assistAction?: string;
   copy?: Partial<AdStudioCopyFields>;
+  /**
+   * Image the copy should be grounded in, already resolved to a model-consumable
+   * reference (`data:` URL or absolute http(s) URL). See resolveAdStudioImageForModel.
+   */
+  sourceImageUrl?: string;
   context?: {
     goal?: string;
     offer?: string;
@@ -60,6 +65,9 @@ type CopyGenerationResult = {
   attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }>;
 };
 
+const IMAGE_GROUNDING_INSTRUCTION =
+  "An image of the advertised property is attached. Ground the copy in what is actually visible in it — the property's style, setting, and standout features — and do not invent details that contradict the image.";
+
 const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.system",
   "adstudio.copy.input_template",
@@ -88,10 +96,12 @@ export async function generateAdStudioCopy(
     currentCopy: input.copy,
     assistAction: input.assistAction,
   });
+  const imageUrl = usableModelImage(input.sourceImageUrl);
+  const userPrompt = imageUrl ? `${assembled.user}\n\n${IMAGE_GROUNDING_INSTRUCTION}` : assembled.user;
   let generation: CopyGenerationResult | null = null;
 
   try {
-    generation = await generateCopyWithProfile(assembled.system, assembled.user);
+    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl);
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
     const current = input.copy ?? {};
@@ -178,7 +188,17 @@ function clampList(value: unknown, limit: number): string[] {
     .map((item) => (item.length > limit ? item.slice(0, limit).trimEnd() : item.trim()));
 }
 
-async function generateCopyWithProfile(system: string, user: string): Promise<CopyGenerationResult> {
+// Only forward references a vision model can actually read.
+function usableModelImage(ref: string | undefined): string | undefined {
+  if (!ref) return undefined;
+  return ref.startsWith("data:image/") || /^https?:\/\//i.test(ref) ? ref : undefined;
+}
+
+async function generateCopyWithProfile(
+  system: string,
+  user: string,
+  imageUrl?: string,
+): Promise<CopyGenerationResult> {
   const profile = await resolveRuntimeModelProfile("structured_json");
   const attempts: CopyGenerationResult["attempts"] = [];
   let lastError: unknown = null;
@@ -192,6 +212,7 @@ async function generateCopyWithProfile(system: string, user: string): Promise<Co
         system,
         schemaName: "metaLeadAdPack",
         messages: [{ role: "user", content: user }],
+        imageUrl,
       });
       attempts[attempts.length - 1] = { provider: provider.providerName, model: candidate.model, status: "completed" };
       return {
@@ -220,6 +241,7 @@ async function generateCopyWithProfile(system: string, user: string): Promise<Co
         system,
         schemaName: "metaLeadAdPack",
         messages: [{ role: "user", content: user }],
+        imageUrl,
       });
       attempts[attempts.length - 1] = { provider: legacyProvider.providerName, model: "env_default", status: "completed" };
       return {

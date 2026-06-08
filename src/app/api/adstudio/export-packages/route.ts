@@ -30,4 +30,10 @@ export async function POST(request: NextRequest) {
       access.access.workspaceId,
       body.creativeRenders,
     );
-    const exportPackage = await buildAdStudioExportPa
+    const exportPackage = await buildAdStudioExportPackage(body.campaignPack, { creativeRenders });
+
+    return NextResponse.json({ exportPackage: { manifest: exportPackage.manifest } }, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}

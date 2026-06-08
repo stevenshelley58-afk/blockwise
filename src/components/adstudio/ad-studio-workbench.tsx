@@ -571,7 +571,7 @@ export function AdStudioWorkbench({
     }
     const field = copyFieldForSelectedElement(selectedElement);
     if (!field) return;
-    await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext);
+    await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext, primaryImage);
   }
 
   async function generateBackgroundImage() {
@@ -696,8 +696,8 @@ export function AdStudioWorkbench({
           feedback={feedback}
           alternates={alternates}
           context={copyContext}
-          onGenerate={(kind, context) => void generateCopy(kind, context)}
-          onAssist={(action, context) => void applyCopyAssist(action, context)}
+          onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
+          onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
           onApplyAlternate={applyAlternate}
         />
       );
@@ -977,8 +977,8 @@ export function AdStudioWorkbench({
               feedback={feedback}
               alternates={alternates}
               context={copyContext}
-              onGenerate={(kind, context) => void generateCopy(kind, context)}
-              onAssist={(action, context) => void applyCopyAssist(action, context)}
+              onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
+              onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
               onApplyAlternate={applyAlternate}
             />
           </div>
@@ -1021,4 +1021,27 @@ export function AdStudioWorkbench({
 
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
         {MOBILE_NAV.map((item) => {
-          c
+          const Icon = item.icon;
+          return (
+            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => studio.setMobileTab(item.id)}>
+              <Icon aria-hidden size={22} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <NewAdDialog
+        open={newAdOpen}
+        onClose={closeNewAdDialog}
+        brandKit={brandKit}
+        workspaceId={workspaceId}
+        templates={AD_STUDIO_TEMPLATES}
+        onGenerate={handleGenerateFirstAd}
+        initialTemplateId={newAdTemplateId}
+      />
+
+      {studio.toast && <div className="studio-toast">{studio.toast}</div>}
+    </main>
+  );
+}

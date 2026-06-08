@@ -20,4 +20,9 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: `${nodeExecutable} node_modules/next/dist/bin/next dev --hostname 127.0.0.
+        command: `${nodeExecutable} node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port ${port}`,
+        url: localBaseUrl,
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
+});

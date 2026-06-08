@@ -154,4 +154,8 @@ function normaliseSavedAd(row: SavedAdRow): CustomerSavedResearchAd {
     observedAdId: row.observed_ad_id,
     note: row.note,
     sourceSnapshotUrl: row.source_snapshot_url,
-    handoffStatus: row.
+    handoffStatus: row.handoff_status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}

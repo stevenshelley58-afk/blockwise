@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   typescript: { ignoreBuildErrors: true },
+  // Tree-shake heavy barrel-export libs so only used modules ship to the client.
+  // lucide-react is already optimized by Next's defaults; recharts is not.
+  experimental: { optimizePackageImports: ["recharts"] },
   async redirects() {
     return [
       { source: "/monitor", destination: "/results", permanent: false },

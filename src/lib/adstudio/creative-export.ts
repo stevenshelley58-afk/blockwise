@@ -51,4 +51,8 @@ export function decodeCreativeRender(
 
   const prefix = `data:${render.mimeType};base64,`;
   if (!render.dataUrl.startsWith(prefix)) {
-    throw new Error("Creative render must be a base64 data URL."
+    throw new Error("Creative render must be a base64 data URL.");
+  }
+
+  return Uint8Array.from(Buffer.from(render.dataUrl.slice(prefix.length), "base64"));
+}

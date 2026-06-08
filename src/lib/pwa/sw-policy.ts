@@ -222,12 +222,16 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.map((key) => (key.startsWith(PWA_CACHE_PREFIX) && key !== STATIC_CACHE_NAME ? caches.delete(key) : undefined))),
-      )
-      .then(() => self.clients.claim()),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.map((key) => (key.startsWith(PWA_CACHE_PREFIX) && key !== STATIC_CACHE_NAME ? caches.delete(key) : undefined)),
+      );
+      if (self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+      await self.clients.claim();
+    })(),
   );
 });
 
@@ -235,7 +239,16 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
 
   if (canUseOfflineFallbackForNavigation(request)) {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_FALLBACK_URL).then((fallback) => fallback || Response.error())));
+    event.respondWith(
+      (async () => {
+        try {
+          const preloaded = await event.preloadResponse;
+          return preloaded || (await fetch(request));
+        } catch (error) {
+          return (await caches.match(OFFLINE_FALLBACK_URL)) || Response.error();
+        }
+      })(),
+    );
     return;
   }
 

@@ -63,4 +63,8 @@ export function useMedia(
   }
 
   function openFilePicker() {
-    fileInputRef.current?.click
+    fileInputRef.current?.click();
+  }
+
+  return { primaryImage, setPrimaryImage, primaryImageName, setPrimaryImageName, fileInputRef, replaceImage, openFilePicker };
+}

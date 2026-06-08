@@ -1,11 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { Activity, Eye, MousePointerClick, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { MetricCard } from "@/components/metric-card";
-import { SmoothAreaChart } from "@/components/monitor/SmoothAreaChart";
 import type { AnalyticsSummary } from "@/lib/analytics/summarize";
+
+// Load the recharts-backed chart on demand instead of in the initial bundle.
+const SmoothAreaChart = dynamic(() => import("@/components/monitor/SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
 
 const RANGE_OPTIONS = [
   { days: 7, label: "7 days" },

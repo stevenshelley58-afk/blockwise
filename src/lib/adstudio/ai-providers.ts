@@ -328,10 +328,7 @@ async function postChatCompletion(input: {
     },
     body: JSON.stringify({
       model: input.model,
-      messages: [
-        { role: "system", content: input.input.system },
-        ...input.input.messages,
-      ],
+      messages: buildChatMessages(input.input),
       response_format: { type: "json_object" },
       temperature: 0.4,
     }),
@@ -360,6 +357,40 @@ async function postChatCompletion(input: {
       schemaName: input.input.schemaName,
     },
   };
+}
+
+// Builds the chat payload. When an image is supplied, it is attached to the final
+// user message as a multimodal content array (OpenAI/OpenRouter vision format).
+function buildChatMessages(request: TextProviderRequest): unknown[] {
+  const system = { role: "system", content: request.system };
+
+  if (!request.imageUrl) {
+    return [system, ...request.messages];
+  }
+
+  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = request.messages.map(
+    (message) => ({ role: message.role, content: message.content }),
+  );
+  const imagePart = { type: "image_url", image_url: { url: request.imageUrl } };
+
+  let lastUserIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "user") {
+      lastUserIndex = index;
+      break;
+    }
+  }
+
+  if (lastUserIndex >= 0) {
+    messages[lastUserIndex] = {
+      role: "user",
+      content: [{ type: "text", text: String(messages[lastUserIndex].content) }, imagePart],
+    };
+  } else {
+    messages.push({ role: "user", content: [imagePart] });
+  }
+
+  return [system, ...messages];
 }
 
 function parseJson(rawText: string): unknown {
