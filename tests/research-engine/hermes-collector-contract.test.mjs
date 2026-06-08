@@ -15,6 +15,7 @@ const collector = functionBody(supervisor, "handleAdCollector");
 const postIngestJobs = functionBody(supervisor, "enqueuePostIngestJobs");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
+const adClassifier = functionBody(supervisor, "handleAdClassifier");
 const captureMediaAsset = functionBody(supervisor, "captureMediaAsset");
 const freshMediaUrlForAsset = functionBody(supervisor, "freshMediaUrlForAsset");
 const findMediaBlob = functionBody(supervisor, "findMediaBlob");
@@ -850,6 +851,14 @@ test("Hermes classification backfill cannot starve older unclassified creatives"
     backfillSource,
     /shouldReclassifyCreative\(row\)/u,
     "the backfill scheduler should still use the classifier predicate before enqueueing",
+  );
+});
+
+test("Hermes classifier treats stale creative jobs as no-op completions", () => {
+  assert.match(
+    adClassifier,
+    /if \(!creative\) return \{ status: ["']complete["'][\s\S]*stale_creative_skipped/u,
+    "classifier jobs for deleted creatives should not stay blocked forever",
   );
 });
 

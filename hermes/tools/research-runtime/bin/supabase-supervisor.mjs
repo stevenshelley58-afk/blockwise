@@ -4794,7 +4794,7 @@ async function handleAdClassifier(job) {
   }
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
-  if (!creative) return { status: "blocked", blocked_reason: "classifier_creative_not_found", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId } };
+  if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
   const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
   if (shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
