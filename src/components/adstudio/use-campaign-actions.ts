@@ -168,6 +168,8 @@ export function useCampaignActions(s: CampaignActionsState) {
       const m = parseMarket();
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
         firstAd: input,
+        goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
+        offerId: offerIdFromLabel(s.offerLabel, s.offers, s.pack.campaign.offerId),
         suburb: m.suburb,
         city: m.city,
         state: m.state,
@@ -293,15 +295,26 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 function goalFromLabel(label: string, fallback: AdStudioGoal): AdStudioGoal {
   const normalised = label.trim().toLowerCase();
+  if (normalised.includes("appraisal") || normalised.includes("value")) return "appraisal_bookings";
+  if (normalised.includes("buyer")) return "buyer_leads";
   if (normalised.includes("market")) return "market_update_leads";
   if (normalised.includes("open")) return "open_home_followup";
   if (normalised.includes("sale") || normalised.includes("sold")) return "listing_nurture";
   if (normalised.includes("retarget")) return "listing_nurture";
+  if (normalised.includes("vendor") || normalised.includes("seller")) return "seller_leads";
   return fallback;
 }
 
 function offerIdFromLabel(label: string, offers: AdStudioOfferTemplate[], fallback: string): string {
   const normalised = label.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    "free appraisal": "home_value_update",
+    "home value estimate": "home_value_update",
+    "market update": "suburb_market_report",
+    "buyer demand check": "buyer_inspection_checklist",
+    "buyer inspection checklist": "buyer_inspection_checklist",
+  };
+  if (aliases[normalised]) return aliases[normalised];
   return offers.find((offer) => offer.name.toLowerCase() === normalised || offer.defaultCta.toLowerCase() === normalised)?.offerId ?? fallback;
 }
 

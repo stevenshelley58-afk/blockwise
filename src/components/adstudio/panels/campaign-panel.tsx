@@ -2,7 +2,7 @@
 
 import { BadgeCheck, Globe2, Home, ImagePlus, LayoutGrid, MapPin, Target, Wand } from "lucide-react";
 
-import type { AdStudioTemplate } from "@/lib/adstudio";
+import type { AdStudioOfferTemplate, AdStudioTemplate } from "@/lib/adstudio";
 
 import { FieldShell, PanelHeader } from "../inspector";
 
@@ -19,6 +19,7 @@ type CampaignPanelProps = {
   setLeadDestination: (value: string) => void;
   destinationUrl: string;
   setDestinationUrl: (value: string) => void;
+  offers: AdStudioOfferTemplate[];
   variantCount: number;
   onCreateAd: () => void;
   onBrowseTemplates: () => void;
@@ -29,14 +30,14 @@ const EMPTY_STATE_GRADIENTS = ["studio-tpl-g0", "studio-tpl-g2", "studio-tpl-g4"
 
 // Goal drives the offer: pick a goal and the offer list narrows to what fits it,
 // defaulting to the primary offer for that goal. Keeps the two fields in sync.
-const ALL_OFFERS = ["Free appraisal", "Market update", "Recent sales report", "Buyer demand check", "Home value estimate"];
 const GOAL_OFFERS: Record<string, { offers: string[]; default: string }> = {
   "Get appraisal leads": { offers: ["Free appraisal", "Home value estimate"], default: "Free appraisal" },
   "Promote recent sale": { offers: ["Recent sales report", "Home value estimate"], default: "Recent sales report" },
   "Generate vendor leads": { offers: ["Free appraisal", "Home value estimate", "Recent sales report"], default: "Free appraisal" },
-  "Promote open home": { offers: ["Buyer demand check", "Free appraisal"], default: "Buyer demand check" },
+  "Promote open home": { offers: ["Open-home follow-up guide", "Free appraisal"], default: "Open-home follow-up guide" },
   "Drive market report downloads": { offers: ["Market update", "Recent sales report"], default: "Market update" },
   "Retarget warm audience": { offers: ["Free appraisal", "Buyer demand check", "Recent sales report"], default: "Free appraisal" },
+  "Buyer demand check": { offers: ["Buyer inspection checklist", "Open-home follow-up guide"], default: "Buyer inspection checklist" },
 };
 const CAMPAIGN_GOALS = Object.keys(GOAL_OFFERS);
 
@@ -53,6 +54,7 @@ export function CampaignPanel({
   setLeadDestination,
   destinationUrl,
   setDestinationUrl,
+  offers,
   variantCount,
   onCreateAd,
   onBrowseTemplates,
@@ -69,7 +71,7 @@ export function CampaignPanel({
           </span>
           <strong>Create your first ad</strong>
           <p>
-            Pick a template, add one photo, and Blockwise writes the copy and builds Story, Feed and Square — ready
+            Pick a template, reuse an ad, or copy from Ad Radar. Add one photo and Blockwise builds Story, Feed and Square, ready
             for Meta in about a minute.
           </p>
           <div className="studio-empty-row">
@@ -99,9 +101,11 @@ export function CampaignPanel({
     );
   }
 
-  const goalConfig = GOAL_OFFERS[campaignGoal] ?? { offers: ALL_OFFERS, default: offerLabel };
+  const offerNames = offers.map((offer) => offer.name);
+  const allOfferOptions = mergeOptions([...Object.values(GOAL_OFFERS).flatMap((config) => config.offers), ...offerNames]);
+  const goalConfig = GOAL_OFFERS[campaignGoal] ?? { offers: allOfferOptions, default: offerLabel };
   const goalOptions = CAMPAIGN_GOALS.includes(campaignGoal) ? CAMPAIGN_GOALS : [campaignGoal, ...CAMPAIGN_GOALS];
-  const offerOptions = goalConfig.offers.includes(offerLabel) ? goalConfig.offers : [offerLabel, ...goalConfig.offers];
+  const offerOptions = mergeOptions(goalConfig.offers.includes(offerLabel) ? goalConfig.offers : [offerLabel, ...goalConfig.offers]);
 
   function changeGoal(nextGoal: string) {
     setCampaignGoal(nextGoal);
@@ -112,7 +116,7 @@ export function CampaignPanel({
 
   return (
     <>
-      <PanelHeader title="Ad settings" detail="Goal and offer stay in sync — pick a goal and the offer follows." />
+      <PanelHeader title="Ad settings" detail="Goal and offer stay in sync. Pick a goal and the offer follows." />
       <FieldShell label="Goal" icon={Target}>
         <select value={campaignGoal} onChange={(event) => changeGoal(event.target.value)}>
           {goalOptions.map((goal) => (
@@ -154,4 +158,8 @@ export function CampaignPanel({
       </button>
     </>
   );
+}
+
+function mergeOptions(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
 }

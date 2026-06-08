@@ -243,8 +243,8 @@ export function AdStudioWorkbench({
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
-  const previewMode: PreviewMode = "creative";
-  const zoom = 75;
+  const previewMode: PreviewMode = "platform";
+  const zoom = previewFormat === "feed" ? 58 : 68;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
   const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
@@ -283,7 +283,7 @@ export function AdStudioWorkbench({
     market,
     propertyType,
     businessName: brand,
-    // Brand kit governs wording style — sent verbatim with every generation.
+    // Brand kit governs wording style; sent verbatim with every generation.
     voice: brandKit.tone.voice,
     preferredPhrases: brandKit.tone.preferredPhrases,
     neverSay: brandKit.tone.avoid,
@@ -348,7 +348,7 @@ export function AdStudioWorkbench({
     autoDesignedRef.current = true;
     studio.setSection("copy");
     studio.setBusy(true);
-    studio.setBusyMessage("Designing your ad from your photo…");
+    studio.setBusyMessage("Designing your ad from your photo...");
     try {
       await generateCopy("ai", copyContext, uploaded.src);
     } finally {
@@ -405,9 +405,9 @@ export function AdStudioWorkbench({
   });
 
   // API routes used in campaign actions:
-  //   POST /api/adstudio/campaigns — Generate variants
-  //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft — save draft
-  //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download — Export creatives
+  //   POST /api/adstudio/campaigns - Generate variants
+  //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft - save draft
+  //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
   // Campaign readiness checklist lives in the publish panel.
   const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives } = useCampaignActions({
@@ -477,7 +477,7 @@ export function AdStudioWorkbench({
     };
   }, []);
 
-  // H9: delete campaign with confirmation — lives in publish panel (ownership boundary)
+  // H9: delete campaign with confirmation; lives in publish panel (ownership boundary)
   async function deleteCampaign() {
     if (!window.confirm("Delete this campaign? This cannot be undone.")) return;
     const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}`, { method: "DELETE" });
@@ -490,7 +490,7 @@ export function AdStudioWorkbench({
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
 
-  // First open with no ad yet → show the New Ad popup (templates / reuse / radar).
+  // First open with no ad yet: show the New Ad popup (templates / reuse / radar).
   useEffect(() => {
     if (promptedForFirstAd) return;
     setPromptedForFirstAd(true);
@@ -501,7 +501,7 @@ export function AdStudioWorkbench({
   }, [pack.variants.length, promptedForFirstAd]);
 
   // M6: derive per-section completion state from readiness items for rail indicators
-  // Computed inline at render time — no extra memo needed (readinessItems is already memoised)
+  // Computed inline at render time; no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
   const campaignName = pack.campaign.name || "Ad draft";
   const selectedVariant = pack.variants[selectedVariantIndex] ?? pack.variants[0];
@@ -527,7 +527,7 @@ export function AdStudioWorkbench({
       return {
         ...variant,
         displayName: `Ad ${index + 1}`,
-      // M5: use the variant's own angle field as the label — not an index-offset into ANGLES
+      // M5: use the variant's own angle field as the label, not an index-offset into ANGLES
         angleLabel: variant.angle || selectedAngle.variantLabel,
         image: variantImage?.src ?? (MEDIA_ASSETS.some((item) => item.src === primaryImage) ? MEDIA_ASSETS[index % MEDIA_ASSETS.length].src : primaryImage),
       };
@@ -566,7 +566,7 @@ export function AdStudioWorkbench({
     }
   }
 
-  // Stable identity: the Fabric editor receives this — a new identity per render
+  // Stable identity: the Fabric editor receives this; a new identity per render
   // would force the canvas to remount and lose in-progress edits.
   const { setSaveState } = studio;
   const updateCreative = useCallback((nextCreative: AdStudioCreative) => {
@@ -658,6 +658,7 @@ export function AdStudioWorkbench({
         setLeadDestination={setLeadDestination}
         destinationUrl={destinationUrl}
         setDestinationUrl={setDestinationUrl}
+        offers={offers}
         variantCount={pack.variants.length}
         onCreateAd={() => {
           if (options?.mobileSheet) setMobileAdDetailsOpen(false);

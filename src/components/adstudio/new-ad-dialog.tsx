@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Copy, ExternalLink, LayoutGrid, Radar, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Copy, LayoutGrid, Radar, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -10,7 +10,8 @@ import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-fi
 import { uploadAdStudioMedia } from "./media-upload";
 import { BlankTemplateCard, TemplateCard } from "./panels/templates-panel";
 
-type Step = "source" | "template" | "reuse" | "radar" | "brief";
+type StartStep = "source" | "template" | "reuse" | "radar";
+type Step = StartStep | "brief";
 
 type TrialStatus = {
   isTrial: boolean;
@@ -33,7 +34,6 @@ type RadarAd = {
   body: string;
   cta: string;
   thumb: string | null;
-  sourceUrl: string | null;
 };
 
 type NewAdDialogProps = {
@@ -46,7 +46,7 @@ type NewAdDialogProps = {
   /** Pre-select a template (e.g. launched from a template card). */
   initialTemplateId?: string;
   /** Where the dialog opens: the source chooser, or straight to the template gallery. */
-  initialStep?: "source" | "template";
+  initialStep?: Extract<StartStep, "source" | "template">;
 };
 
 export function NewAdDialog({
@@ -63,7 +63,7 @@ export function NewAdDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const [step, setStep] = useState<Step>("source");
-  const [briefFrom, setBriefFrom] = useState<Step>("source");
+  const [briefFrom, setBriefFrom] = useState<StartStep>("source");
   // undefined = nothing chosen yet; "" = blank (create your own)
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
@@ -133,7 +133,7 @@ export function NewAdDialog({
         const response = await fetch("/api/adstudio/campaigns", { cache: "no-store" });
         const payload = (await response.json().catch(() => ({}))) as { campaigns?: Array<Record<string, unknown>>; error?: string };
         if (!response.ok) throw new Error(payload.error || "Could not load your ads.");
-        if (!cancelled) setReuseAds((payload.campaigns ?? []).map(toReuseAd));
+        if (!cancelled) setReuseAds((payload.campaigns ?? []).map(toReuseAd).filter((ad): ad is ReuseAd => ad !== null));
       } catch (caught) {
         if (!cancelled) {
           setReuseAds([]);
@@ -218,10 +218,14 @@ export function NewAdDialog({
   }
 
   function chooseRadar(ad: RadarAd) {
-    const brief = [ad.headline, ad.body].map((part) => part.trim()).filter(Boolean).join("\n\n").slice(0, 480);
+    const brief = [ad.headline, ad.body, ad.cta ? `CTA: ${ad.cta}` : ""]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join("\n\n")
+      .slice(0, 480);
     setTemplateId("");
     setDescription(brief);
-    setSourceNote(`Copied from ${ad.pageName} on Ad Radar — add your own photo and we'll write your version.`);
+    setSourceNote(`Copied from ${ad.pageName} on Ad Radar. Add your own photo and Blockwise will write your version.`);
     setError("");
     setBriefFrom("radar");
     setStep("brief");
@@ -306,14 +310,14 @@ export function NewAdDialog({
               ? sourceNote
                 ? "Make it yours"
                 : "Describe your ad"
-              : `${selectedTemplate?.name ?? "Template"} — add your details`;
+              : `${selectedTemplate?.name ?? "Template"} - add your details`;
 
   const footHint =
     step === "brief"
       ? "Blockwise will generate Story, Feed, and Square."
       : step === "source"
-        ? "Three ways to start — you can change everything later."
-        : "Pick a starting point — you can change everything later.";
+        ? "Three ways to start. You can change everything later."
+        : "Pick a starting point. You can change everything later.";
 
   return (
     <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -384,7 +388,7 @@ export function NewAdDialog({
           {step === "reuse" && (
             <div className="studio-newad-list">
               {reuseAds === null ? (
-                <p className="studio-newad-listmsg">Loading your ads…</p>
+                <p className="studio-newad-listmsg">Loading your ads...</p>
               ) : reuseAds.length === 0 ? (
                 <p className="studio-newad-listmsg">
                   {reuseError || "No previous ads yet. Start from a template or Ad Radar instead."}
@@ -395,7 +399,7 @@ export function NewAdDialog({
                     <span className="studio-newad-item-thumb reuse"><Copy aria-hidden size={18} /></span>
                     <span className="studio-newad-item-main">
                       <strong>{ad.name}</strong>
-                      <small>{[formatGoal(ad.goal), formatStatus(ad.status), formatDate(ad.createdAt)].filter(Boolean).join(" · ")}</small>
+                      <small>{[formatGoal(ad.goal), formatStatus(ad.status), formatDate(ad.createdAt)].filter(Boolean).join(" / ")}</small>
                     </span>
                     <ArrowUpRight aria-hidden size={16} />
                   </button>
@@ -407,7 +411,7 @@ export function NewAdDialog({
           {step === "radar" && (
             <div className="studio-newad-list">
               {radarAds === null ? (
-                <p className="studio-newad-listmsg">Loading saved Ad Radar ads…</p>
+                <p className="studio-newad-listmsg">Loading saved Ad Radar ads...</p>
               ) : radarAds.length === 0 ? (
                 <p className="studio-newad-listmsg">
                   {radarError || "No saved ads yet. Save ads from Ad Radar, then copy them here."}{" "}
@@ -494,8 +498,10 @@ export function NewAdDialog({
   );
 }
 
-function toReuseAd(row: Record<string, unknown>): ReuseAd {
+function toReuseAd(row: Record<string, unknown>): ReuseAd | null {
   const id = String(row.id ?? row.campaign_id ?? "");
+  if (!id) return null;
+  if (row.status === "archived") return null;
   return {
     id,
     name: typeof row.name === "string" && row.name.trim() ? row.name : "Ad draft",
@@ -511,22 +517,29 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
         creative?: { headline?: string | null; body?: string | null; cta?: string | null };
         page?: { name?: string | null };
         media?: RadarMedia[];
-        source?: { snapshotUrl?: string | null };
       }
     | null
     | undefined;
   if (!ad) return null;
   const savedId = String(entry.id ?? "");
   if (!savedId) return null;
-  const image = (ad.media ?? []).find((item) => item.kind === "image" && typeof item.url === "string" && /^https?:\/\//i.test(item.url));
+  const headline = ad.creative?.headline?.trim() ?? "";
+  const body = ad.creative?.body?.trim() ?? "";
+  const cta = ad.creative?.cta?.trim() ?? "";
+  if (!headline && !body) return null;
+  const image = (ad.media ?? []).find(
+    (item) =>
+      (item.kind === "image" || item.kind === "thumbnail") &&
+      typeof item.url === "string" &&
+      /^https?:\/\//i.test(item.url),
+  );
   return {
     savedId,
     pageName: ad.page?.name?.trim() || "Unknown advertiser",
-    headline: ad.creative?.headline?.trim() ?? "",
-    body: ad.creative?.body?.trim() ?? "",
-    cta: ad.creative?.cta?.trim() ?? "",
+    headline,
+    body,
+    cta,
     thumb: image?.url ?? null,
-    sourceUrl: ad.source?.snapshotUrl ?? null,
   };
 }
 
@@ -554,4 +567,4 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
 
   return "Uses one ad pack. No Meta account is needed until publish.";
 }
-// NewAdDialog: source chooser (template / reuse / Ad Radar) → details (image + description) → generate.
+// NewAdDialog: source chooser (template / reuse / Ad Radar) to details, then generate.
