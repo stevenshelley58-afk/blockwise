@@ -12,6 +12,8 @@ const DEFAULT_REQUIRED_SCHEMA_GROUPS = Object.freeze([
   Object.freeze(["creative_text", "media_url"]),
 ]);
 
+const defaultApifyToken = () => process.env.APIFY_TOKEN || process.env.APIFY_API_TOKEN;
+
 export class ApifyCaptureError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -28,7 +30,7 @@ export async function createApifyRun({
   resultLimit = DEFAULT_APIFY_RESULT_LIMIT,
   resultLimitField,
   resultLimitKeys,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {
@@ -60,7 +62,7 @@ export async function createBudgetedApifyRun(options = {}) {
 
 export async function pollApifyRun({
   runId,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
   intervalMs = 2000,
@@ -89,7 +91,7 @@ export async function pollApifyRun({
 
 export async function fetchApifyRunDetails({
   runId,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {
@@ -104,7 +106,7 @@ export async function fetchApifyDatasetItems({
   datasetId,
   limit = DEFAULT_APIFY_RESULT_LIMIT,
   clean = true,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {
@@ -132,7 +134,7 @@ export async function runApifyCapture({
   maxTotalChargedUsd,
   timeoutSecs,
   resultLimit = DEFAULT_APIFY_RESULT_LIMIT,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
   pollOptions = {},
@@ -217,7 +219,7 @@ export function ledgerCostFromApifyRunDetail(runDetail) {
 }
 
 export async function fetchApifyLimits({
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {
@@ -230,7 +232,7 @@ export async function fetchApifyLimits({
 
 export async function updateApifyLimits({
   maxMonthlyUsageUsd,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {
@@ -246,7 +248,7 @@ export async function updateApifyLimits({
 export async function ensureApifyAccountLimit({
   settings = {},
   desiredMaxMonthlyUsageUsd,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
   limits,
@@ -283,7 +285,7 @@ export async function guardApifyBudget({
   readLedgerSpendUsd,
   setRuntimeSetting,
   fileDefect,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
   now = () => new Date(),
@@ -339,20 +341,26 @@ export async function guardApifyBudget({
   }
 
   const apifyReportedUsageUsd = assertNonNegativeNumber(checkedLimits.monthlyUsageUsd, "monthlyUsageUsd");
-  const spendUsd = Math.max(localSpendUsd, apifyReportedUsageUsd);
+  const accountBackstopThresholdUsd = Number.isFinite(checkedLimits.maxMonthlyUsageUsd)
+    ? checkedLimits.maxMonthlyUsageUsd * 0.9
+    : Number.POSITIVE_INFINITY;
   const warnings = [];
   if (parsedSettings.monthlyCapUsd >= checkedLimits.maxMonthlyUsageUsd) {
     warnings.push("apify_monthly_cap_not_below_account_limit");
   }
 
-  if (spendUsd >= parsedSettings.monthlyCapUsd) {
+  const localCapExceeded = localSpendUsd >= parsedSettings.monthlyCapUsd;
+  const accountBackstopExceeded = apifyReportedUsageUsd >= accountBackstopThresholdUsd;
+  if (localCapExceeded || accountBackstopExceeded) {
     const defect = {
       signature: "apify_budget_cap",
       reason: "apify_budget_cap",
       provider: "apify",
+      limitType: localCapExceeded ? "local_monthly_cap" : "account_backstop",
       localSpendUsd,
       apifyReportedUsageUsd,
       monthlyCapUsd: parsedSettings.monthlyCapUsd,
+      accountBackstopThresholdUsd,
     };
     const sideEffects = await settleBudgetSideEffects([
       setRuntimeSetting?.("apify_state", "circuit_open", defect),
@@ -366,7 +374,9 @@ export async function guardApifyBudget({
       circuitOpen: true,
       localSpendUsd,
       apifyReportedUsageUsd,
-      spendUsd,
+      spendUsd: localSpendUsd,
+      accountBackstopThresholdUsd,
+      limitType: defect.limitType,
       limits: checkedLimits,
       warnings,
       sideEffects,
@@ -380,7 +390,8 @@ export async function guardApifyBudget({
     failClosed: false,
     localSpendUsd,
     apifyReportedUsageUsd,
-    spendUsd,
+    spendUsd: localSpendUsd,
+    accountBackstopThresholdUsd,
     limits: checkedLimits,
     warnings,
     ...parsedSettings,
@@ -497,7 +508,7 @@ export function mapSchemaFields(item, schemaMap = {}) {
 
 export async function fetchApifyActorDetails({
   actorId,
-  token = process.env.APIFY_TOKEN,
+  token = defaultApifyToken(),
   fetchImpl = fetch,
   baseUrl = APIFY_BASE_URL,
 } = {}) {

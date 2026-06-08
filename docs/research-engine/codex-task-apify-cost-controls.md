@@ -43,7 +43,8 @@ New module `hermes/tools/research-runtime/bin/apify-capture.mjs` (keep the super
 - Read `GET https://api.apify.com/v2/users/me/limits` → `current.monthlyUsageUsd`, `limits.maxMonthlyUsageUsd`.
 - Read local ledger: `sum(ad_fetch_runs.cost_usd)` this calendar month where `source_provider like 'apify:%'`.
 - Settings keys (defaults): `apify_monthly_cap_usd` = 25, `apify_per_run_cap_usd` = 1.00, `apify_enabled` = true.
-- If `max(localSpend, apifyReportedUsage) >= apify_monthly_cap_usd` → set `apify_state = circuit_open` in settings, file ONE defect (signature `apify_budget_cap`), skip dispatch, fall back to browser or defer the job. Re-check daily.
+- Circuit-open when **either**: `localSpend >= apify_monthly_cap_usd` (our pipeline's own budget), **or** `apifyReportedUsage >= 0.9 × limits.maxMonthlyUsageUsd` (approaching the account hard brake, whatever consumed it). Set `apify_state = circuit_open`, file ONE defect (signature `apify_budget_cap`), skip dispatch, fall back to browser or defer. Re-check daily.
+- Rationale: account-level MTD already includes ~$219.93 of pre-rebuild waste this June; our ledger starts at $0. The pipeline cap must meter what *we* spend, not what was already burned — otherwise the fallback is dead until the billing reset for no reason.
 - Our cap must stay below the Apify account limit; assert and warn in health if not.
 
 ### B3. Spend ledger

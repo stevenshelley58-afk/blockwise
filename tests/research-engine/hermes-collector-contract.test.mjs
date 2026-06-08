@@ -8,6 +8,7 @@ const supervisorPath = "hermes/tools/research-runtime/bin/supabase-supervisor.mj
 const supervisor = readFileSync(join(root, supervisorPath), "utf8");
 const runtimeTypes = readFileSync(join(root, "hermes/tools/research-runtime/src/types.ts"), "utf8");
 const mainWrapper = readFileSync(join(root, "infra/hermes/main-wrapper.sh"), "utf8");
+const researchCompose = readFileSync(join(root, "infra/coolify/docker-compose.research.yml"), "utf8");
 const recordEvent = functionBody(supervisor, "recordEvent");
 const collector = functionBody(supervisor, "handleAdCollector");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
@@ -53,6 +54,11 @@ const hostedMetaParser = [
 const captureInput = functionBody(supervisor, "captureInput");
 const metaAdLibraryPageUrl = functionBody(supervisor, "metaAdLibraryPageUrl");
 const configuredMetaPageCapture = functionBody(supervisor, "runMetaPageCapture");
+const paidFailoverCapture = functionBody(supervisor, "captureWithPaidApifyFailover");
+const apifyMetaPageCapture = functionBody(supervisor, "runApifyMetaPageCapture");
+const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor");
+const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
+const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
 const configuredMetaFallbackSourceProvider = functionBody(supervisor, "configuredMetaFallbackSourceProvider");
 const fallbackMetaPageCapture = functionBody(supervisor, "runFallbackMetaPageCapture");
 const officialMetaPageApiCapture = functionBody(supervisor, "runOfficialMetaPageApiCapture");
@@ -109,6 +115,30 @@ test("Hermes active ad collector supports browser/http_json capture", () => {
     /\bbrowser\b|\bcapture[_-]?mode\b|\bprovider\b[\s\S]*http_json/i,
     "collector must preserve browser/http_json capture metadata",
   );
+});
+
+test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
+  const apifySource = `${apifyMetaPageCapture}\n${apifyActorResolution}\n${apifyLedgerSpend}\n${apifyRawEvidence}`;
+  assert.match(supervisor, /from\s+["']\.\/apify-capture\.mjs["']/u, "supervisor must import the standalone Apify adapter");
+  assert.match(supervisor, /\benv\.APIFY_TOKEN\s*\|\|\s*env\.APIFY_API_TOKEN\b/u, "supervisor must accept the operator-owned Apify token aliases");
+  assert.match(researchCompose, /\bAPIFY_TOKEN:\s*\$\{APIFY_TOKEN:-\}/u, "Hermes compose service must pass APIFY_TOKEN into the container");
+  assert.match(researchCompose, /\bAPIFY_API_TOKEN:\s*\$\{APIFY_API_TOKEN:-\}/u, "Hermes compose service must pass APIFY_API_TOKEN into the container");
+  assert.match(apifyMetaPageCapture, /\bguardApifyBudget\b/u, "paid capture must run the budget guard before dispatch");
+  assert.match(apifyMetaPageCapture, /\bensureApifyAccountLimit\b/u, "paid capture must assert the account-level spend backstop before dispatch");
+  assert.match(apifyMetaPageCapture, /\breadLedgerSpendUsd:\s*readApifyLedgerSpendUsd/u, "budget guard must read the local ad_fetch_runs ledger");
+  assert.match(apifyLedgerSpend, /source_provider=like/u, "ledger spend must use a provider-prefix filter");
+  assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
+  assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
+  assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
+  assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
+  assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
+});
+
+test("Hermes active ad collector can fail over from free capture to Apify", () => {
+  assert.match(configuredMetaPageCapture, /\bcaptureWithPaidApifyFailover\b/u);
+  assert.match(paidFailoverCapture, /fallbackOutcome\.status !== ["']SUCCEEDED["']/u, "paid failover should only run after primary fallback failure");
+  assert.match(paidFailoverCapture, /\brunApifyMetaPageCapture\(input, fallbackOutcome\)/u, "failed browser/http_json capture should be eligible for Apify fallback");
+  assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the final provider");
 });
 
 test("Hermes active ad collector can prefer official paginated Meta page API", () => {

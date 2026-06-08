@@ -61,6 +61,63 @@ test("Apify budget guard fails closed when the paid account state cannot be veri
   assert.equal(result.reason, "apify_limits_unavailable");
 });
 
+test("Apify budget guard meters pipeline ledger spend separately from old account spend", async () => {
+  const result = await guardApifyBudget({
+    ledgerSpendUsd: 0,
+    settings: {
+      apify_monthly_cap_usd: 25,
+      apify_account_limit_usd: 300,
+    },
+    limits: {
+      monthlyUsageUsd: 219.93,
+      maxMonthlyUsageUsd: 300,
+    },
+  });
+
+  assert.equal(result.allowed, true);
+  assert.equal(result.reason, "within_budget");
+  assert.equal(result.spendUsd, 0);
+  assert.equal(result.apifyReportedUsageUsd, 219.93);
+});
+
+test("Apify budget guard opens the circuit at local cap or account backstop", async () => {
+  const sideEffects = [];
+  const localCap = await guardApifyBudget({
+    ledgerSpendUsd: 25,
+    settings: {
+      apify_monthly_cap_usd: 25,
+      apify_account_limit_usd: 300,
+    },
+    limits: {
+      monthlyUsageUsd: 100,
+      maxMonthlyUsageUsd: 300,
+    },
+    setRuntimeSetting: async (...args) => sideEffects.push(args),
+  });
+
+  assert.equal(localCap.allowed, false);
+  assert.equal(localCap.reason, "apify_budget_cap");
+  assert.equal(localCap.limitType, "local_monthly_cap");
+  assert.equal(localCap.circuitOpen, true);
+
+  const accountBackstop = await guardApifyBudget({
+    ledgerSpendUsd: 0,
+    settings: {
+      apify_monthly_cap_usd: 25,
+      apify_account_limit_usd: 300,
+    },
+    limits: {
+      monthlyUsageUsd: 270,
+      maxMonthlyUsageUsd: 300,
+    },
+  });
+
+  assert.equal(accountBackstop.allowed, false);
+  assert.equal(accountBackstop.reason, "apify_budget_cap");
+  assert.equal(accountBackstop.limitType, "account_backstop");
+  assert.equal(accountBackstop.accountBackstopThresholdUsd, 270);
+});
+
 test("Apify ledger cost is extracted from run detail", () => {
   const ledger = ledgerCostFromApifyRunDetail({
     data: {
