@@ -113,7 +113,7 @@ function researchHealthChecks(row: ResearchHealthRow | null): Record<string, Hea
     paid_spend_without_ingest: {
       ok: !paidSpendWithoutIngest,
       value: paidSpendWithoutIngest,
-      message: paidSpendWithoutIngest ? "Paid capture spend was recorded without ingested ads." : "No paid-spend-without-ingest condition detected.",
+      message: paidSpendWithoutIngest ? "Active paid capture source spent money without a positive-result run." : "No active paid-spend-without-ingest condition detected.",
     },
   };
 }

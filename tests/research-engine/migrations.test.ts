@@ -11,6 +11,7 @@ const zeroAdProofBackfillMigration = "supabase/migrations/202606080003_backfill_
 const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_library_ingestion_extensions.sql";
 const buildRunReportDedupeRepairMigration = "supabase/migrations/202606070001_repair_build_run_reports_dedupe_key.sql";
 const apifyCostControlMigration = "supabase/migrations/202606080001_apify_cost_control_schema.sql";
+const activeApifyHealthMigration = "supabase/migrations/202606080004_scope_active_apify_health.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -272,5 +273,21 @@ test("apify cost-control migration creates minimal health surface for spend cont
   assert.match(sql, /source_provider like 'apify:%'/i);
   assert.match(sql, /sum\(coalesce\(afr\.cost_usd, 0\)\)/i);
   assert.match(sql, /first_seen_provider like 'apify:%'/i);
+  assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
+});
+
+test("active Apify health migration scopes paid-spend red state to the selected provider", () => {
+  const sql = readFileSync(activeApifyHealthMigration, "utf8");
+
+  assert.match(sql, /create or replace view research\.v_health/i);
+  assert.match(sql, /where rs\.setting_key = 'apify_actor_id'/i);
+  assert.match(sql, /'apify:' \|\| actor_id/i);
+  assert.match(sql, /active_paid_apify_24h/i);
+  assert.match(sql, /active_positive_apify_24h/i);
+  assert.match(sql, /afr\.source_provider = active\.source_provider/i);
+  assert.match(sql, /research\.jsonb_int\(afr\.result_summary, array\['ingested_count'/i);
+  assert.match(sql, /research\.jsonb_int\(afr\.result_summary, array\['item_count', 'valid_ad_count'/i);
+  assert.doesNotMatch(sql, /from research\.observed_ads/i);
+  assert.match(sql, /paid_spend_without_ingest/i);
   assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
 });

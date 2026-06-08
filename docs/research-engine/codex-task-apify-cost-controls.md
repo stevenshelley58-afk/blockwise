@@ -51,7 +51,7 @@ New module `hermes/tools/research-runtime/bin/apify-capture.mjs` (keep the super
 ### B3. Spend ledger
 
 - After each run, fetch run detail (`usageTotalUsd` / charged event counts) and write it to `ad_fetch_runs.cost_usd` (column exists).
-- Add to `v_health`: `apify_mtd_spend_usd`, `apify_state`, and red flag `paid_spend_without_ingest` (cost recorded in 24h with zero observed_ads ingested from that provider — the June failure mode).
+- Add to `v_health`: `apify_mtd_spend_usd`, `apify_state`, and red flag `paid_spend_without_ingest` (active paid provider cost recorded in 24h with no successful positive-result run - the June failure mode without conflating quarantined candidate trials).
 
 ### B4. Autonomous cheapest-actor selection (the Hermes part)
 
