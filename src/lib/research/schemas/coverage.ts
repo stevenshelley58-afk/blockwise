@@ -50,7 +50,7 @@ export const defectReporterSchema = z.enum([
   "investigator",
   "system",
 ]);
-export const defectStatusSchema = z.enum(["open", "investigating", "resolved", "dismissed"]);
+export const defectStatusSchema = z.enum(["open", "investigating", "resolved", "dismissed", "blocked"]);
 
 export const coverageDefectSchema = z.object({
   id: uuidSchema,
@@ -83,7 +83,7 @@ export const refreshPolicySchema = z.object({
   id: uuidSchema,
   postcode: postcodeSchema,
   state: australianStateSchema.default("WA"),
-  priority: z.number().int().min(1).max(5).default(3),
+  priority: z.number().int().min(1).max(6).default(3),
   refreshCadenceMinutes: z.number().int().min(15).max(60 * 24 * 30).default(1440),
   lastRefreshedAt: isoTimestampSchema.nullable().optional(),
   nextRefreshAt: isoTimestampSchema,

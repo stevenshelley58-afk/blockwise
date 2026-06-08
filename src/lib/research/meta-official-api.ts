@@ -8,6 +8,7 @@ export type OfficialMetaAdLibrarySearchInput = {
   searchTerms?: string[];
   pageIds?: string[];
   limit?: number;
+  maxPagesPerSearch?: number;
 };
 
 export type OfficialMetaAdLibraryValidation = {
@@ -68,13 +69,14 @@ export async function validateOfficialMetaAdLibraryCoverage(
   const country = (input.country ?? "AU").toUpperCase();
   const adType = input.adType ?? "HOUSING_ADS";
   const limit = Math.max(1, Math.min(input.limit ?? 10, 50));
+  const maxPagesPerSearch = Math.max(1, Math.min(input.maxPagesPerSearch ?? 3, 10));
   const searchPlan = buildSearchPlan(input);
   const warnings: string[] = [];
   const sample: MetaAdLibraryAd[] = [];
   let failed = 0;
 
   for (const item of searchPlan) {
-    const url = buildAdsArchiveUrl({
+    let url: string | null = buildAdsArchiveUrl({
       accessToken,
       apiVersion: input.apiVersion ?? "v20.0",
       country,
@@ -82,17 +84,29 @@ export async function validateOfficialMetaAdLibraryCoverage(
       limit,
       item,
     });
+    let page = 0;
 
-    const response = await fetchImpl(url);
-    const body = (await response.json().catch(() => null)) as GraphAdsArchiveResponse | null;
-    if (!response.ok || body?.error) {
-      failed += 1;
-      warnings.push(`${item.kind}:${item.value} failed: ${body?.error?.message ?? response.status}`);
-      continue;
-    }
+    while (url && page < maxPagesPerSearch) {
+      page += 1;
+      const response = await fetchImpl(url);
+      const body = (await response.json().catch(() => null)) as GraphAdsArchiveResponse | null;
+      if (!response.ok || body?.error) {
+        failed += 1;
+        warnings.push(`${item.kind}:${item.value} page ${page} failed: ${body?.error?.message ?? response.status}`);
+        break;
+      }
 
-    for (const raw of body?.data ?? []) {
-      sample.push(normaliseOfficialMetaAd(raw));
+      for (const raw of body?.data ?? []) {
+        sample.push(normaliseOfficialMetaAd(raw));
+      }
+
+      url = safeNextAdsArchiveUrl(body?.paging?.next);
+      if (body?.paging?.next && !url) {
+        warnings.push(`${item.kind}:${item.value} returned an unsafe paging URL; pagination stopped.`);
+      }
+      if (url && page >= maxPagesPerSearch) {
+        warnings.push(`${item.kind}:${item.value} still had more pages after ${maxPagesPerSearch} page(s); validation sample is truncated.`);
+      }
     }
   }
 
@@ -115,6 +129,19 @@ export async function validateOfficialMetaAdLibraryCoverage(
     sample,
     error: status === "failed" ? warnings.join("; ") || "Official API validation returned no ads." : null,
   };
+}
+
+function safeNextAdsArchiveUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+    if (url.hostname !== "graph.facebook.com") return null;
+    if (!/\/ads_archive$/u.test(url.pathname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 function buildSearchPlan(input: OfficialMetaAdLibrarySearchInput): SearchPlanItem[] {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Archive, Cloud, Copy, MoreHorizontal, Share2, Trash2 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
@@ -11,7 +11,7 @@ type TopBarProps = {
   campaignName: string;
   showMore: boolean;
   setShowMore: (value: boolean | ((prev: boolean) => boolean)) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<unknown>;
   onDelete?: () => void;
   showToast?: (message: string) => void;
 };
@@ -26,6 +26,7 @@ export function TopBar({
   showToast = () => {},
 }: TopBarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [campaigns, setCampaigns] = useState<Array<{ id: string; name?: string; status?: string }>>([]);
 
   useEffect(() => {
     if (!showMore) return;
@@ -39,6 +40,24 @@ export function TopBar({
   }, [showMore, setShowMore]);
 
   useEffect(() => {
+    fetch("/api/adstudio/campaigns", { cache: "no-store" })
+      .then((response) => response.json().catch(() => null))
+      .then((payload) => {
+        if (!Array.isArray(payload?.campaigns)) return;
+        setCampaigns(
+          payload.campaigns
+            .filter((campaign: { id?: unknown; status?: unknown }) => typeof campaign.id === "string" && campaign.status !== "archived")
+            .map((campaign: { id: string; name?: unknown; status?: unknown }) => ({
+              id: campaign.id,
+              name: typeof campaign.name === "string" ? campaign.name : "Campaign",
+              status: typeof campaign.status === "string" ? campaign.status : undefined,
+            })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!showMore) return;
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") setShowMore(false);
@@ -47,12 +66,20 @@ export function TopBar({
     return () => document.removeEventListener("keydown", handleKey);
   }, [showMore, setShowMore]);
 
+  async function flushDraft() {
+    await onSave();
+  }
+
   async function handleDuplicate() {
     setShowMore(false);
     try {
+      await flushDraft();
       const res = await fetch(`/api/adstudio/campaigns/${campaignId}/duplicate`, { method: "POST" });
       if (!res.ok) throw new Error("Failed");
+      const json = (await res.json().catch(() => ({}))) as { duplicate?: { location?: string } };
+      const location = res.headers.get("Location") ?? json.duplicate?.location;
       showToast("Ad duplicated");
+      if (location) window.location.href = location;
     } catch {
       showToast("Could not duplicate campaign");
     }
@@ -66,7 +93,10 @@ export function TopBar({
   async function handleShare() {
     setShowMore(false);
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await flushDraft();
+      const url = new URL(window.location.href);
+      if (campaignId) url.searchParams.set("campaignId", campaignId);
+      await navigator.clipboard.writeText(url.toString());
       showToast("Link copied to clipboard");
     } catch {
       showToast("Could not copy link");
@@ -76,6 +106,7 @@ export function TopBar({
   async function handleArchive() {
     setShowMore(false);
     try {
+      await flushDraft();
       const res = await fetch(`/api/adstudio/campaigns/${campaignId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -83,6 +114,7 @@ export function TopBar({
       });
       if (!res.ok) throw new Error("Failed");
       showToast("Ad archived");
+      window.location.href = "/ad-studio";
     } catch {
       showToast("Could not archive campaign");
     }
@@ -96,6 +128,36 @@ export function TopBar({
         </Link>
         <span className="studio-divider" />
         <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>
+        {campaigns.length > 1 && (
+          <select
+            aria-label="Switch campaign"
+            value={campaignId}
+            onChange={(event) => {
+              const nextCampaignId = event.target.value;
+              if (!nextCampaignId) return;
+              void flushDraft().then(() => {
+                window.location.href = `/ad-studio?campaignId=${encodeURIComponent(nextCampaignId)}`;
+              });
+            }}
+            style={{
+              height: 32,
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              background: "#fff",
+              color: "var(--ink)",
+              fontSize: 12.5,
+              fontWeight: 650,
+              padding: "0 8px",
+              maxWidth: 220,
+            }}
+          >
+            {campaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name ?? "Campaign"}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="studio-mobile-title">
         <Link className="studio-home-link" href="/home" aria-label="Go to Blockwise home">

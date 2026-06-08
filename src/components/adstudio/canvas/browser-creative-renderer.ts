@@ -1,7 +1,12 @@
 "use client";
 
 import type { CreativeExportRender } from "@/lib/adstudio/creative-export.ts";
-import type { AdStudioCampaignPack, AdStudioCanvasObject, AdStudioCreative } from "@/lib/adstudio/types.ts";
+import type {
+  AdStudioBrandKit,
+  AdStudioCampaignPack,
+  AdStudioCanvasObject,
+  AdStudioCreative,
+} from "@/lib/adstudio/types.ts";
 
 const META_EXPORT_FORMATS = new Set(["1:1", "4:5", "9:16"]);
 
@@ -10,8 +15,8 @@ export async function renderCreativeExports(pack: AdStudioCampaignPack): Promise
 
   for (const creative of pack.creatives) {
     if (!META_EXPORT_FORMATS.has(creative.format)) continue;
-    renders.push(await renderCreative(creative, "image/png"));
-    renders.push(await renderCreative(creative, "image/jpeg"));
+    renders.push(await renderCreative(creative, "image/png", pack.brandKit));
+    renders.push(await renderCreative(creative, "image/jpeg", pack.brandKit));
   }
 
   return renders;
@@ -20,6 +25,7 @@ export async function renderCreativeExports(pack: AdStudioCampaignPack): Promise
 async function renderCreative(
   creative: AdStudioCreative,
   mimeType: CreativeExportRender["mimeType"],
+  brandKit: AdStudioBrandKit,
 ): Promise<CreativeExportRender> {
   const canvas = document.createElement("canvas");
   canvas.width = creative.canvas.width;
@@ -33,9 +39,9 @@ async function renderCreative(
   for (const object of creative.canvas.objects) {
     if (object.type === "safe_zone") continue;
     if (object.type === "shape") drawShape(ctx, object);
-    if (object.type === "text") drawText(ctx, object);
+    if (object.type === "text") drawText(ctx, object, brandKit);
     if (object.type === "image") await drawImageObject(ctx, object);
-    if (object.type === "logo") await drawLogo(ctx, object);
+    if (object.type === "logo") await drawLogo(ctx, object, brandKit);
   }
 
   return {
@@ -63,11 +69,11 @@ function drawShape(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) 
   ctx.restore();
 }
 
-function drawText(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+function drawText(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject, brandKit: AdStudioBrandKit) {
   const fontSize = object.size ?? 36;
   ctx.save();
   ctx.fillStyle = object.fill ?? "#131B2E";
-  ctx.font = `${object.role === "headline" ? 800 : 650} ${fontSize}px ${fontFamily(object)}`;
+  ctx.font = `${object.role === "headline" ? 800 : 650} ${fontSize}px ${fontFamily(object, brandKit)}`;
   ctx.textBaseline = "top";
   const lineHeight = Math.round(fontSize * (object.role === "headline" ? 1.1 : 1.25));
   const lines = wrapText(ctx, object.content ?? "", object.width);
@@ -96,13 +102,14 @@ async function drawImageObject(ctx: CanvasRenderingContext2D, object: AdStudioCa
   }
 }
 
-async function drawLogo(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+async function drawLogo(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject, brandKit: AdStudioBrandKit) {
   const width = object.width;
   const height = object.height ?? Math.round(width * 0.36);
+  const src = object.assetId;
 
-  if (object.assetId) {
+  if (src) {
     try {
-      const image = await loadImage(object.assetId);
+      const image = await loadImage(src);
       drawImageContain(ctx, image, object.x, object.y, width, height);
       return;
     } catch {
@@ -115,9 +122,9 @@ async function drawLogo(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObj
   roundedRect(ctx, object.x, object.y, width, height, 12);
   ctx.fill();
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `800 ${Math.max(18, Math.round(height * 0.42))}px Inter, Arial, sans-serif`;
+  ctx.font = `800 ${Math.max(18, Math.round(height * 0.42))}px ${fontFamily(object, brandKit)}`;
   ctx.textBaseline = "middle";
-  ctx.fillText("BRAND", object.x + 18, object.y + height / 2);
+  ctx.fillText(brandLabel(object, brandKit), object.x + 18, object.y + height / 2);
   ctx.restore();
 }
 
@@ -217,6 +224,16 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width:
   ctx.closePath();
 }
 
-function fontFamily(object: AdStudioCanvasObject): string {
-  return object.font === "brand_heading" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+function fontFamily(object: AdStudioCanvasObject, brandKit: AdStudioBrandKit): string {
+  if (object.font === "brand_heading") {
+    const fallback = brandKit.typography.fallbackHeading === "serif" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+    return brandKit.typography.headingFont ? `${brandKit.typography.headingFont}, ${fallback}` : fallback;
+  }
+
+  const fallback = brandKit.typography.fallbackBody === "serif" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+  return brandKit.typography.bodyFont ? `${brandKit.typography.bodyFont}, ${fallback}` : fallback;
+}
+
+function brandLabel(object: AdStudioCanvasObject, brandKit: AdStudioBrandKit): string {
+  return object.content ?? brandKit.identity.tradingName ?? brandKit.identity.businessName ?? "Brand";
 }

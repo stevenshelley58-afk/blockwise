@@ -138,7 +138,6 @@ export function useCopy(
     setCopy((current) => ({ ...current, [key]: value }));
     setSelectedElement?.(key);
     setSaveState("saving");
-    window.setTimeout(() => setSaveState("saved"), 650);
   }, [setSaveState, setSelectedElement]);
 
   function applyCopySet(next: Partial<CopyState>, nextAlternates?: Partial<CopyAlternates>) {
@@ -150,7 +149,6 @@ export function useCopy(
       });
     }
     setSaveState("saving");
-    window.setTimeout(() => setSaveState("saved"), 650);
   }
 
   async function requestCopy(payload: Record<string, unknown>): Promise<CopyEndpointResponse> {

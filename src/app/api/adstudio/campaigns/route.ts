@@ -7,9 +7,10 @@ import {
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
+import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
-import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
+import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, resolveAdStudioTemplate, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: brandKitResult.error }, { status: brandKitResult.status });
     }
 
-    const pack = generateAdStudioCampaignPack({
+    let pack = generateAdStudioCampaignPack({
       workspaceId: context.access.workspaceId,
       brandKit: brandKitResult.brandKit,
       goal: body.goal ?? "seller_leads",
@@ -126,6 +127,15 @@ export async function POST(request: NextRequest) {
       variantCount: body.variantCount ?? 5,
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
+    });
+    const template = body.firstAd?.mode === "template" ? resolveAdStudioTemplate(body.firstAd.templateId) : null;
+    pack = await enrichCampaignPackCopyWithAi({
+      pack,
+      workspaceId: context.access.workspaceId,
+      userId: context.access.userId,
+      brief: body.firstAd?.description,
+      templateName: template?.name,
+      templateHint: template?.promptHint,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
 

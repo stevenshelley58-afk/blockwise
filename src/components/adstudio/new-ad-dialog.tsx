@@ -12,6 +12,11 @@ import { BlankTemplateCard, TemplateCard } from "./panels/templates-panel";
 
 type Step = "template" | "brief";
 
+type TrialStatus = {
+  isTrial: boolean;
+  includedAdPacks: number;
+};
+
 type NewAdDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -35,6 +40,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
   const [imageName, setImageName] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +58,26 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
     setError("");
     window.setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open, initialTemplateId]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    async function loadTrialStatus() {
+      try {
+        const response = await fetch("/api/trial/status", { cache: "no-store" });
+        const payload = (await response.json().catch(() => ({}))) as { trial?: TrialStatus | null };
+        if (!cancelled) setTrialCreditNote(formatTrialCreditNote(response.ok ? payload.trial ?? null : null));
+      } catch {
+        if (!cancelled) setTrialCreditNote(formatTrialCreditNote(null));
+      }
+    }
+
+    void loadTrialStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -193,7 +219,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
 
           {step === "brief" && (
             <div className="studio-newad-own">
-              <p className="studio-newad-note">Uses 1 of 10 free ad packs. No Meta account is needed until publish.</p>
+              <p className="studio-newad-note">{trialCreditNote}</p>
               <AssetUploadDropzone
                 className="studio-newad-upload"
                 label="Upload one image"
@@ -249,5 +275,13 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
       </div>
     </div>
   );
+}
+
+function formatTrialCreditNote(status: TrialStatus | null): string {
+  if (status?.isTrial && Number.isFinite(status.includedAdPacks) && status.includedAdPacks > 0) {
+    return `Uses 1 of ${status.includedAdPacks} free ad packs. No Meta account is needed until publish.`;
+  }
+
+  return "Uses one ad pack. No Meta account is needed until publish.";
 }
 // NewAdDialog: template gallery → details (image + description) → generate.

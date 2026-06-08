@@ -9,21 +9,27 @@ import { MEDIA_ASSETS } from "../use-media";
 type MediaPanelProps = {
   primaryImage: string;
   primaryImageName?: string;
+  mediaAssets?: typeof MEDIA_ASSETS;
   openFilePicker: () => void;
   onUploadImage: (file: File) => void | Promise<void>;
   onUploadRejected: (message: string) => void;
   onSelectImage?: (src: string) => void;
+  onGenerateBackground?: () => void;
+  generatingBackground?: boolean;
 };
 
 export function MediaPanel({
   primaryImage,
   primaryImageName,
+  mediaAssets = MEDIA_ASSETS,
   openFilePicker,
   onUploadImage,
   onUploadRejected,
   onSelectImage,
+  onGenerateBackground,
+  generatingBackground = false,
 }: MediaPanelProps) {
-  const selectedAsset = MEDIA_ASSETS.find((asset) => asset.src === primaryImage);
+  const selectedAsset = mediaAssets.find((asset) => asset.src === primaryImage);
   const currentLabel = selectedAsset?.label ?? primaryImageName ?? "Uploaded image";
 
   return (
@@ -56,8 +62,13 @@ export function MediaPanel({
         onFileAccepted={onUploadImage}
         onFileRejected={onUploadRejected}
       />
+      {onGenerateBackground && (
+        <button className="studio-btn secondary block" type="button" disabled={generatingBackground} onClick={onGenerateBackground}>
+          {generatingBackground ? "Generating background..." : "Generate background"}
+        </button>
+      )}
       <div className="studio-media-grid">
-        {MEDIA_ASSETS.map((asset) => (
+        {mediaAssets.map((asset) => (
           <button
             className={primaryImage === asset.src ? "active" : ""}
             key={asset.src}

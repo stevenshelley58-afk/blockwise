@@ -107,6 +107,12 @@ export type ConsoleAdLibrary = {
   cardsWithStoredMedia: number;
 };
 
+export type ConsoleOfficialMetaApi = {
+  configured: boolean;
+  tokenName: string | null;
+  maxPagesPerSearch: number;
+};
+
 export type ConsoleSkill = {
   slug: string;
   title: string;
@@ -130,6 +136,7 @@ export type ResearchConsoleProps = {
   inventory: ConsoleInventory;
   entity: ConsoleEntityCounts;
   adLibrary: ConsoleAdLibrary;
+  officialMetaApi: ConsoleOfficialMetaApi;
   skills: ConsoleSkill[];
   nowIso: string;
 };
@@ -154,7 +161,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [openDecision, setOpenDecision] = useState<string | null>(null);
 
-  const { heartbeat, spend, policy, stats, pipeline, stalePagesDue, coverage, queue, defects, decisions, inventory, entity, adLibrary, skills } = props;
+  const { heartbeat, spend, policy, stats, pipeline, stalePagesDue, coverage, queue, defects, decisions, inventory, entity, adLibrary, officialMetaApi, skills } = props;
 
   const spendPercent = spend.cap > 0 ? Math.min(100, Math.round((spend.today / spend.cap) * 100)) : 0;
   const heartbeatTone = heartbeat.ageSeconds === null ? "bad" : heartbeat.ageSeconds < 60 ? "" : heartbeat.ageSeconds < 600 ? "warn" : "bad";
@@ -237,6 +244,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
                 <StatCard label="active jobs" value={String(stats.activeJobs)} />
                 <StatCard label="coverage" value={`${stats.coveragePercent}%`} />
                 <StatCard label="live ads" value={stats.liveAds.toLocaleString()} />
+                <StatCard label="official api" value={officialMetaApi.configured ? "Ready" : "Missing token"} tone={officialMetaApi.configured ? undefined : "warn"} />
                 <StatCard label="spend 24h" value={`$${spend.today.toFixed(2)}`} />
               </div>
               <section className="rops-card">
@@ -555,6 +563,17 @@ export function ResearchConsole(props: ResearchConsoleProps) {
                     <tr>
                       <td>Customer-visible ad cards</td>
                       <td style={{ color: "var(--muted)" }}>{adLibrary.activeCards} active of {adLibrary.totalCards} ({adLibrary.cardsWithStoredMedia} with media)</td>
+                    </tr>
+                    <tr>
+                      <td>Official Meta API</td>
+                      <td style={{ color: "var(--muted)" }}>
+                        <span className={`rops-pill ${officialMetaApi.configured ? "ok" : "warn"}`}>
+                          {officialMetaApi.configured ? "ready" : "missing token"}
+                        </span>{" "}
+                        {officialMetaApi.configured
+                          ? `${officialMetaApi.tokenName} · ${officialMetaApi.maxPagesPerSearch} validation pages/search`
+                          : "required for paginated exhaustive collection"}
+                      </td>
                     </tr>
                     <tr>
                       <td>Failed media captures</td>

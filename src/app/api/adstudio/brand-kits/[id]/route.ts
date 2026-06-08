@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import { isExampleBrandKitSourceUrl } from "@/lib/adstudio/persistence";
+import { rowToBrandKit } from "@/lib/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +30,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (error) return errorResponse(error);
   if (!data) return NextResponse.json({ error: "Brand kit not found." }, { status: 404 });
 
-  return NextResponse.json({ brandKit: data });
+  const brandKit = applyBrandAssetRows(
+    rowToBrandKit(data),
+    await loadAdStudioBrandAssetRows(access.supabase, access.access.workspaceId, id),
+  );
+
+  return NextResponse.json({ brandKit });
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -59,7 +66,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   if (error) return errorResponse(error);
 
-  return NextResponse.json({ brandKit: data });
+  const brandKit = applyBrandAssetRows(
+    rowToBrandKit(data),
+    await loadAdStudioBrandAssetRows(access.supabase, access.access.workspaceId, id),
+  );
+
+  return NextResponse.json({ brandKit });
 }
 
 function brandKitPatch(body: Record<string, unknown>): Record<string, unknown> {

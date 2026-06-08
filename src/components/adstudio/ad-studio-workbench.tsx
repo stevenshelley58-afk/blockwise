@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   AdStudioBrandKit,
@@ -253,6 +253,10 @@ export function AdStudioWorkbench({
   const [propertyType, setPropertyType] = useState("Houses");
   const [leadDestination, setLeadDestination] = useState("Landing page");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
+  const [generatingBackground, setGeneratingBackground] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
+  const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
 
   const studio = useAdStudio();
   const { brand, initials, domain } = useBrandKit(brandKit);
@@ -314,14 +318,38 @@ export function AdStudioWorkbench({
       brandKitId: brandKit.brandKitId,
     },
   );
+  const workspaceMediaAssets = useMemo(
+    () =>
+      [
+        ...brandKit.assets.listingImages.map((src, index) => ({
+          src,
+          label: `Workspace image ${index + 1}`,
+          type: "Workspace asset",
+          ratio: "Image",
+        })),
+        ...brandKit.assets.officeImages.map((src, index) => ({
+          src,
+          label: `Office image ${index + 1}`,
+          type: "Brand asset",
+          ratio: "Image",
+        })),
+        ...brandKit.assets.headshots.map((src, index) => ({
+          src,
+          label: `Agent image ${index + 1}`,
+          type: "Brand asset",
+          ratio: "Image",
+        })),
+      ],
+    [brandKit.assets.headshots, brandKit.assets.listingImages, brandKit.assets.officeImages],
+  );
+  const mediaAssets = workspaceMediaAssets.length > 0 ? workspaceMediaAssets : MEDIA_ASSETS;
 
   function selectMediaImage(src: string) {
-    const asset = MEDIA_ASSETS.find((item) => item.src === src);
+    const asset = mediaAssets.find((item) => item.src === src);
     setPrimaryImage(src);
     setPrimaryImageName(asset?.label ?? "Uploaded image");
     setSelectedElement("image");
     studio.setSaveState("saving");
-    window.setTimeout(() => studio.setSaveState("saved"), 650);
     studio.showToast("Image selected");
   }
 
@@ -367,12 +395,54 @@ export function AdStudioWorkbench({
     showToast: studio.showToast,
   });
 
+  useEffect(() => {
+    saveDraftRef.current = saveDraft;
+    saveStateRef.current = studio.saveState;
+  }, [saveDraft, studio.saveState]);
+
+  useEffect(() => {
+    if (studio.saveState !== "saving") return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    const timer = setTimeout(() => {
+      void saveDraft({ silent: true });
+    }, 900);
+    autoSaveTimerRef.current = timer;
+    return () => clearTimeout(timer);
+  }, [
+    campaignGoal,
+    copy,
+    destinationUrl,
+    market,
+    offerLabel,
+    pack,
+    primaryImage,
+    saveDraft,
+    selectedVariantIndex,
+    studio.saveState,
+  ]);
+
+  useEffect(() => {
+    function flushPendingDraft() {
+      if (saveStateRef.current === "saving") {
+        void saveDraftRef.current?.({ silent: true });
+      }
+    }
+
+    window.addEventListener("pagehide", flushPendingDraft);
+    window.addEventListener("beforeunload", flushPendingDraft);
+    return () => {
+      flushPendingDraft();
+      window.removeEventListener("pagehide", flushPendingDraft);
+      window.removeEventListener("beforeunload", flushPendingDraft);
+    };
+  }, []);
+
   // H9: delete campaign with confirmation — lives in publish panel (ownership boundary)
   async function deleteCampaign() {
     if (!window.confirm("Delete this campaign? This cannot be undone.")) return;
     const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}`, { method: "DELETE" });
     if (res.ok) {
-      window.location.href = "/";
+      window.location.href = "/ad-studio";
     } else {
       studio.showToast("Could not delete campaign");
     }
@@ -422,7 +492,7 @@ export function AdStudioWorkbench({
   const variants = useMemo(() => {
     const source = pack.variants.length > 0 ? pack.variants : initialPack.variants;
     return source.slice(0, 4).map((variant, index) => {
-      const variantImage = getVariantPrimaryImage(variant.variantId);
+        const variantImage = getVariantPrimaryImage(variant.variantId);
       return {
         ...variant,
         displayName: `Ad ${index + 1}`,
@@ -445,6 +515,14 @@ export function AdStudioWorkbench({
     const variant = nextPack.variants[index] ?? initialPack.variants[index];
     const variantImage = getVariantPrimaryImage(variant?.variantId, nextPack);
     const currentIsLibraryAsset = MEDIA_ASSETS.some((item) => item.src === primaryImage);
+    void saveDraft({
+      silent: true,
+      packOverride: nextPack,
+      variantIdOverride: selectedVariant?.variantId,
+      copyOverride: copy,
+      primaryImageOverride: primaryImage,
+      offerLabelOverride: offerLabel,
+    });
     setPack(nextPack);
     setSelectedVariantIndex(index);
     setCopy(seedCopy(nextPack, index));
@@ -468,7 +546,6 @@ export function AdStudioWorkbench({
       ),
     }));
     setSaveState("saving");
-    window.setTimeout(() => setSaveState("saved"), 650);
   }, [setSaveState]);
 
   const { setSection } = studio;
@@ -486,6 +563,44 @@ export function AdStudioWorkbench({
     const field = copyFieldForSelectedElement(selectedElement);
     if (!field) return;
     await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext);
+  }
+
+  async function generateBackgroundImage() {
+    if (!currentCreative || generatingBackground) return;
+    setGeneratingBackground(true);
+    studio.setBusy(true);
+    studio.setBusyMessage("Generating background");
+    try {
+      const response = await fetch("/api/adstudio/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: [copy.headline, copy.description, market, propertyType, "real estate advertising background"]
+            .filter(Boolean)
+            .join(" | "),
+          aspectRatio: currentCreative.format,
+          stylePreset: "premium_editorial_real_estate",
+          brandKitId: brandKit.brandKitId,
+          brand: {
+            palette: [brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent].filter(Boolean),
+            styleTags: brandKit.visualStyle.styleTags,
+            imageTreatment: brandKit.visualStyle.imageTreatment,
+          },
+        }),
+      });
+      const json = (await response.json().catch(() => ({}))) as { image?: string; error?: string };
+      if (!response.ok || !json.image) throw new Error(json.error || "Could not generate background.");
+      setPrimaryImage(json.image);
+      setPrimaryImageName("Generated background");
+      setSelectedElement("image");
+      studio.setSaveState("saving");
+      studio.showToast("Background generated");
+    } catch (error) {
+      studio.showToast(error instanceof Error ? error.message : "Could not generate background");
+    } finally {
+      setGeneratingBackground(false);
+      studio.setBusy(false);
+    }
   }
 
   // Adds another generated ad idea from the current defaults.
@@ -553,6 +668,9 @@ export function AdStudioWorkbench({
           onUploadImage={replaceImage}
           onUploadRejected={studio.showToast}
           onSelectImage={selectMediaImage}
+          mediaAssets={mediaAssets}
+          onGenerateBackground={() => void generateBackgroundImage()}
+          generatingBackground={generatingBackground}
         />
       );
     }
@@ -830,6 +948,9 @@ export function AdStudioWorkbench({
               onUploadImage={replaceImage}
               onUploadRejected={studio.showToast}
               onSelectImage={selectMediaImage}
+              mediaAssets={mediaAssets}
+              onGenerateBackground={() => void generateBackgroundImage()}
+              generatingBackground={generatingBackground}
             />
           </div>
         )}

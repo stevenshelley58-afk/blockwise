@@ -1,0 +1,225 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+import {
+  extractBrandKitFromWebsite,
+  generateAdStudioCampaignPack,
+} from "../src/lib/adstudio/index.ts";
+import {
+  applyBrandAssetRows,
+  mediaUrlForStoragePath,
+} from "../src/lib/adstudio/assets.ts";
+import { cloneCampaignPack } from "../src/lib/adstudio/campaign-clone.ts";
+import { mergeDraftResponsePack } from "../src/lib/adstudio/client-pack.ts";
+import { normalizeAndValidateExtractionUrl } from "../src/lib/adstudio/extraction-url.ts";
+import { dataUrlToUploadBytes } from "../src/lib/adstudio/generated-media.ts";
+import { buildReadinessItems } from "../src/lib/adstudio/readiness.ts";
+import { renderCreativeSvg } from "../src/lib/adstudio/renderer.ts";
+
+const html = `
+  <html>
+    <head>
+      <title>Realty Plus</title>
+      <meta property="og:site_name" content="Realty Plus">
+      <link rel="icon" href="/favicon.ico">
+      <style>body{font-family:Inter,sans-serif}.btn{background:#123E75}</style>
+    </head>
+    <body>
+      <img src="/logo.svg" alt="Realty Plus logo">
+      <img src="/listing.jpg" alt="Scarborough listing">
+      <a href="tel:0891234567">(08) 9123 4567</a>
+      <p>Information is general only. Speak with a licensed local agent.</p>
+    </body>
+  </html>
+`;
+
+function approvedKit() {
+  return {
+    ...extractBrandKitFromWebsite({
+      workspaceId: "workspace_real",
+      websiteUrl: "https://realtyplus.example.com",
+      marketCountry: "AU",
+      htmlByUrl: { "https://realtyplus.example.com": html },
+    }),
+    reviewStatus: "approved" as const,
+  };
+}
+
+function pack() {
+  return generateAdStudioCampaignPack({
+    workspaceId: "workspace_real",
+    brandKit: approvedKit(),
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 3,
+    sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
+  });
+}
+
+test("mergeDraftResponsePack keeps local creatives when the draft response is compacted", () => {
+  const current = pack();
+  const selectedVariantId = current.variants[0]?.variantId;
+  assert.ok(selectedVariantId);
+  const compactResponse = {
+    ...current,
+    creatives: current.creatives.filter((creative) => creative.variantId === selectedVariantId),
+  };
+
+  const merged = mergeDraftResponsePack(current, compactResponse);
+
+  assert.equal(merged.creatives.length, current.creatives.length);
+  assert.deepEqual(
+    new Set(merged.creatives.map((creative) => creative.creativeId)),
+    new Set(current.creatives.map((creative) => creative.creativeId)),
+  );
+});
+
+test("applyBrandAssetRows maps workspace asset rows into brand kit assets and logo URLs", () => {
+  const kit = approvedKit();
+  const withAssets = applyBrandAssetRows(kit, [
+    {
+      asset_type: "logo",
+      storage_path: "workspace_real/brand/kit/logo.svg",
+      source_url: null,
+    },
+    {
+      asset_type: "listing_image",
+      storage_path: "workspace_real/adstudio/kit/listing.jpg",
+      source_url: null,
+    },
+    {
+      asset_type: "headshot",
+      storage_path: null,
+      source_url: "https://cdn.example.com/agent.jpg",
+    },
+  ]);
+
+  assert.equal(withAssets.logos.primaryLogoUrl, "/api/adstudio/media?path=workspace_real%2Fbrand%2Fkit%2Flogo.svg");
+  assert.ok(withAssets.assets.listingImages.includes("/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg"));
+  assert.deepEqual(withAssets.assets.headshots, ["https://cdn.example.com/agent.jpg"]);
+});
+
+test("mediaUrlForStoragePath rejects paths outside the active workspace", () => {
+  assert.equal(
+    mediaUrlForStoragePath("workspace_real", "workspace_real/adstudio/kit/listing.jpg"),
+    "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
+  );
+  assert.equal(mediaUrlForStoragePath("workspace_real", "other/adstudio/kit/listing.jpg"), null);
+  assert.equal(mediaUrlForStoragePath("workspace_real", "workspace_real/../secret.jpg"), null);
+});
+
+test("buildReadinessItems does not mark needs-review compliance as done and maps CTA labels to Meta enums", () => {
+  const current = pack();
+  const items = buildReadinessItems({
+    campaignGoal: "Generate vendor leads",
+    offerLabel: "Seller checklist",
+    market: "Scarborough, WA",
+    propertyType: "Houses",
+    destinationUrl: "https://realtyplus.example.com/checklist",
+    primaryImage: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
+    copy: {
+      primaryText: "Thinking about selling in Scarborough?",
+      headline: "What is your home worth?",
+      description: "Free appraisal. No pressure.",
+      cta: "Learn more",
+    },
+    pack: {
+      ...current,
+      compliance: { ...current.compliance, status: "needs_review" },
+    },
+  });
+
+  assert.equal(items.find((item) => item.label === "Call to action")?.state, "done");
+  assert.equal(items.find((item) => item.label === "Compliance")?.state, "warn");
+});
+
+test("normalizeAndValidateExtractionUrl rejects local, private, non-http, and demo URLs", () => {
+  assert.equal(normalizeAndValidateExtractionUrl("realtyplus.com.au").ok, true);
+  for (const value of ["ftp://realtyplus.com.au", "localhost:3000", "127.0.0.1", "10.0.0.5", "northstar.example"]) {
+    const result = normalizeAndValidateExtractionUrl(value);
+    assert.equal(result.ok, false, value);
+  }
+});
+
+test("dataUrlToUploadBytes decodes generated image payloads for storage upload", () => {
+  const decoded = dataUrlToUploadBytes("data:image/png;base64,SGVsbG8=");
+
+  assert.equal(decoded.contentType, "image/png");
+  assert.equal(new TextDecoder().decode(decoded.bytes), "Hello");
+});
+
+test("cloneCampaignPack creates a persisted duplicate shape without reusing child ids", () => {
+  const original = pack();
+  const cloned = cloneCampaignPack(original, {
+    campaignId: "campaign_clone",
+    now: "2026-06-08T00:00:00.000Z",
+  });
+
+  assert.equal(cloned.campaign.campaignId, "campaign_clone");
+  assert.equal(cloned.campaign.name, `${original.campaign.name} copy`);
+  assert.notEqual(cloned.variants[0]?.variantId, original.variants[0]?.variantId);
+  assert.notEqual(cloned.creatives[0]?.creativeId, original.creatives[0]?.creativeId);
+  assert.equal(cloned.creatives[0]?.campaignId, "campaign_clone");
+  assert.equal(cloned.copyPacks[0]?.campaignId, "campaign_clone");
+});
+
+test("renderCreativeSvg renders the real logo image or brand name, not a BRAND placeholder", () => {
+  const current = pack();
+  const creative = current.creatives[0];
+  assert.ok(creative);
+
+  const svg = renderCreativeSvg(creative, current.brandKit);
+
+  assert.match(svg, /<image[^>]+href=/);
+  assert.doesNotMatch(svg, />BRAND</);
+});
+
+test("campaign creation uses shared fail-open AI copy enrichment without changing copy route response shape", () => {
+  const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
+  const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const generateRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/generate/route.ts", "utf8");
+  const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
+
+  assert.match(copyRoute, /generateAdStudioCopy/);
+  assert.match(copyRoute, /NextResponse\.json\(result\)/);
+  assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
+  assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
+  assert.match(enrichment, /catch \{/);
+  assert.match(enrichment, /return input\.pack/);
+});
+
+test("publish readiness hides internal provider-write env wording from customer labels", () => {
+  const source = readFileSync("src/app/api/adstudio/publish-readiness/route.ts", "utf8");
+  const labelBlock = source.slice(source.indexOf('id: "provider_writes"'), source.indexOf("done: writesEnabled"));
+
+  assert.match(labelBlock, /Enable live publishing for this workspace/);
+  assert.doesNotMatch(labelBlock, /BLOCKWISE_ENABLE_PROVIDER_WRITES/);
+});
+
+test("production repair script is dry-run first and repairs by campaign variant instead of assuming Story creatives", () => {
+  const source = readFileSync("scripts/adstudio-repair-production-data.mjs", "utf8");
+
+  assert.match(source, /process\.argv\.includes\("--execute"\)/);
+  assert.match(source, /Dry run only/);
+  assert.match(source, /variant_id/);
+  assert.doesNotMatch(source, /format === "9:16"/);
+});
+
+test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {
+  const brandKitRoute = readFileSync("src/app/api/adstudio/brand-kits/[id]/route.ts", "utf8");
+  const campaignRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/route.ts", "utf8");
+
+  assert.match(brandKitRoute, /function brandKitPatch/);
+  assert.match(brandKitRoute, /const allowed = \[/);
+  assert.match(brandKitRoute, /logos_json/);
+  assert.doesNotMatch(brandKitRoute, /Object\.fromEntries\(Object\.entries\(body\)/);
+  assert.match(campaignRoute, /function campaignPatch/);
+  assert.match(campaignRoute, /const allowed = \[/);
+  assert.match(campaignRoute, /status/);
+  assert.doesNotMatch(campaignRoute, /Object\.fromEntries\(Object\.entries\(body\)/);
+});

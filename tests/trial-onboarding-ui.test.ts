@@ -24,7 +24,10 @@ test("onboarding wizard completes setup into first ad flow", () => {
 test("new ad dialog explains trial credit use without requiring Meta", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
 
-  assert.match(dialog, /Uses 1 of 10 free ad packs/);
+  assert.match(dialog, /\/api\/trial\/status/);
+  assert.match(dialog, /includedAdPacks/);
+  assert.match(dialog, /Uses 1 of \$\{status\.includedAdPacks\} free ad packs/);
+  assert.doesNotMatch(dialog, /Uses 1 of 10 free ad packs/);
   assert.match(dialog, /No Meta account is needed until publish/);
   assert.match(dialog, /AssetUploadDropzone/);
   assert.match(dialog, /capturePagePaste/);

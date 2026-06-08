@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
+import { mediaUrlForStoragePath } from "@/lib/adstudio/assets";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   LOGO_MAX_BYTES,
@@ -303,7 +304,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
     flash("ok", "Logo ready to save.");
   }
 
-  async function uploadLogoAsset(file: File) {
+  async function uploadLogoAsset(file: File): Promise<string> {
     const supabase = createSupabaseBrowserClient();
     const safeName = sanitizeUploadFileName(file.name);
     const storagePath = `${kit.workspaceId}/brand/${kit.brandKitId}/${crypto.randomUUID()}-${safeName}`;
@@ -327,6 +328,10 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
       const json = (await response.json().catch(() => ({}))) as { error?: string };
       throw new Error(json.error || "We uploaded the logo but couldn't attach it to your brand.");
     }
+
+    const mediaUrl = mediaUrlForStoragePath(kit.workspaceId, storagePath);
+    if (!mediaUrl) throw new Error("We couldn't prepare that logo URL.");
+    return mediaUrl;
   }
 
   async function scanSite() {
@@ -375,6 +380,10 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
     const logoToUpload = logoFile;
     setBusy(nextStatus ? "approve" : "save");
     try {
+      const uploadedLogoUrl = logoToUpload ? await uploadLogoAsset(logoToUpload) : null;
+      const nextLogos = uploadedLogoUrl
+        ? { ...kit.logos, primaryLogoUrl: uploadedLogoUrl }
+        : kit.logos;
       const res = await fetch(`/api/adstudio/brand-kits/${kit.brandKitId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -383,6 +392,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
           source_url: /^https?:\/\//.test(scanUrl) ? scanUrl : `https://${scanUrl}`,
           market_region: kit.identity.marketRegion,
           identity_json: kit.identity,
+          logos_json: nextLogos,
           colours_json: kit.colours,
           typography_json: kit.typography,
           tone_json: kit.tone,
@@ -395,8 +405,9 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(json.error || `Save failed (${res.status})`);
       }
-      if (logoToUpload) {
-        await uploadLogoAsset(logoToUpload);
+      if (uploadedLogoUrl) {
+        setKit((current) => ({ ...current, logos: { ...current.logos, primaryLogoUrl: uploadedLogoUrl } }));
+        setLogoPreviewUrl(uploadedLogoUrl);
         setLogoFile(null);
       }
       if (nextStatus) {

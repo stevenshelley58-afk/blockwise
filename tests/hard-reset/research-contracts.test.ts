@@ -8,6 +8,7 @@ const migrationsDir = join(root, "supabase", "migrations");
 
 const paths = {
   adSchema: "src/lib/research/schemas/ads.ts",
+  adRadarLocation: "src/lib/research/ad-radar-location.ts",
   classifierSkill: "hermes/skills/blockwise-ad-classifier/SKILL.md",
   commonSchema: "src/lib/research/schemas/common.ts",
   entitiesSchema: "src/lib/research/schemas/entities.ts",
@@ -15,7 +16,14 @@ const paths = {
   jsonRules: "src/lib/adstudio/prompts/shared/json_rules.md",
   metaCapture: "hermes/tools/meta-library-capture/src/capture.ts",
   metaCard: "src/components/research/meta-ad-library-card.tsx",
+  censusSources: "src/lib/research/census-sources.ts",
+  coverageSchema: "src/lib/research/schemas/coverage.ts",
+  defectInvestigateRoute: "src/app/api/operator/research/defects/[id]/investigate/route.ts",
+  operatorResearchConsole: "src/components/operator/research-console.tsx",
+  operatorResearchPage: "src/app/(operator)/operator/research/page.tsx",
+  policiesRoute: "src/app/api/operator/research/policies/route.ts",
   researchPage: "src/app/(customer)/ad-radar/page.tsx",
+  refreshNowRoute: "src/app/api/operator/research/refresh-now/route.ts",
 };
 
 const surfacingViews = [
@@ -106,6 +114,16 @@ test("customer research UI does not render internal ad-library identifiers or ra
   );
 });
 
+test("customer research page ranks specific location searches before direct text fallback", () => {
+  const researchPage = read(paths.researchPage);
+  const locationPriorityIndex = researchPage.indexOf("shouldPrioritiseAdRadarLocationSearch(searchTerm, locationGuess)");
+  const directMatchIndex = researchPage.indexOf("const directMatches = allCards.filter");
+
+  assert.ok(locationPriorityIndex >= 0, "specific postcode/suburb searches must use the location-ranked path");
+  assert.ok(directMatchIndex >= 0, "research page should still keep a direct text fallback");
+  assert.ok(locationPriorityIndex < directMatchIndex, "location-ranked results must be attempted before broad text matches");
+});
+
 test("legacy worker runtime is archived only and active collectors are page-first", () => {
   const sourceSchema = stripComments(read(paths.commonSchema));
   const capture = `${stripComments(read(paths.metaCapture))}\n${stripComments(read("hermes/tools/meta-library-capture/src/types.ts"))}`;
@@ -140,6 +158,184 @@ test("work queue claiming is atomic and has no legacy orchestrator fallback path
   assert.match(claimSql, /for\s+update\s+skip\s+locked/i, "queue claim RPC must use FOR UPDATE SKIP LOCKED");
   assert.match(claimSql, /update\s+research\.work_queue/i, "claim RPC must mark claimed jobs in the same transaction");
   assert.doesNotMatch(read(paths.hardResetMigration), /orchestrator_list_due_pages/i, "legacy orchestrator claim RPC must not be recreated in the hard reset migration");
+});
+
+test("operator postcode refresh creates a due policy and one-off census job", () => {
+  const route = read(paths.refreshNowRoute);
+  const censusSources = read(paths.censusSources);
+
+  assert.match(
+    route,
+    /resolveAdRadarLocationSearch/,
+    "postcode refresh must infer state from the national postcode index instead of assuming one market",
+  );
+  assert.match(
+    route,
+    /refresh_policies[\s\S]*upsert[\s\S]*onConflict:\s*["']postcode,state["']/,
+    "refresh-now must create a refresh policy when the postcode was not pre-seeded",
+  );
+  assert.match(
+    route,
+    /hasEnabledCensusSourceForState\(state\)/,
+    "refresh-now must not manually queue census work for states without an enabled source",
+  );
+  assert.match(
+    censusSources,
+    /type !== ["']agent_roster["'][\s\S]*typeof source\.state !== ["']string["'][\s\S]*source\.state\.trim\(\)\.toUpperCase\(\)/,
+    "operator source checks must use enabled agent roster source states, not assume national coverage",
+  );
+  assert.match(
+    route,
+    /sourceBacked[\s\S]*queuePostcodeCensusRefresh\(research, postcode, state\)[\s\S]*recordUnsupportedPostcodeRefresh\(research, postcode, state, guard\.email\)/,
+    "source-backed manual refreshes must queue census work, while unsupported states become visible defects",
+  );
+  assert.match(
+    route,
+    /const dedupeKey = `census:\$\{state\}:\$\{postcode\}`[\s\S]*work_queue[\s\S]*job_type:\s*["']blockwise-agent-census["'][\s\S]*dedupe_key:\s*dedupeKey/,
+    "source-backed refresh-now must queue a direct census job so manual runs still work while scheduled policies are paused or missing",
+  );
+  assert.match(
+    route,
+    /select\(["']id,status,claim_expires_at["']\)[\s\S]*\.in\(["']status["'],\s*\[\s*["']pending["'],\s*["']claimed["'],\s*["']failed["'],\s*["']blocked["']\s*\]\)/,
+    "refresh-now must inspect active or stuck census dedupe keys before inserting",
+  );
+  assert.match(
+    route,
+    /status:\s*["']pending["'][\s\S]*attempts:\s*0[\s\S]*last_error:\s*null[\s\S]*blocked_reason:\s*null/,
+    "refresh-now must recycle failed, blocked, or stale-claimed census jobs instead of treating duplicates as success",
+  );
+  assert.match(
+    route,
+    /location_search_allowed:\s*false[\s\S]*legacy_discovery_allowed:\s*false/,
+    "manual postcode refresh must remain verified-roster-first, not broad location scraping",
+  );
+  assert.match(
+    route,
+    /coverage_defects[\s\S]*reason:\s*["']missing_census_source["'][\s\S]*location_search_allowed:\s*false/,
+    "unsupported manual refreshes must file a visible coverage defect instead of silently doing nothing",
+  );
+});
+
+test("operator refresh policy validation matches the held national rollout priority range", () => {
+  const nationalRollout = read("ops/national-rollout/202606020001_seed_national_postcodes.sql");
+  const route = read(paths.policiesRoute);
+  const coverageSchema = read(paths.coverageSchema);
+
+  assert.match(
+    nationalRollout,
+    /refresh_policies_priority_check check \(priority between 1 and 6\)/,
+    "national rollout widens refresh policy priority for lower-priority states",
+  );
+  assert.match(
+    route,
+    /priority:\s*z\.number\(\)\.int\(\)\.min\(1\)\.max\(6\)/,
+    "operator policy API must accept every priority used by the held national rollout",
+  );
+  assert.match(
+    coverageSchema,
+    /priority:\s*z\.number\(\)\.int\(\)\.min\(1\)\.max\(6\)\.default\(3\)/,
+    "refresh policy schema must parse every priority used by the held national rollout",
+  );
+});
+
+test("coverage defect schema accepts blocked defects surfaced by repair automation", () => {
+  const coverageSchema = read(paths.coverageSchema);
+  const hardResetMigration = read(paths.hardResetMigration);
+
+  assert.match(
+    hardResetMigration,
+    /coverage_defects[\s\S]*status in \('open', 'investigating', 'resolved', 'dismissed', 'blocked'\)/,
+    "hard-reset schema treats blocked coverage defects as visible operator work",
+  );
+  assert.match(
+    coverageSchema,
+    /defectStatusSchema = z\.enum\(\[\s*["']open["'],\s*["']investigating["'],\s*["']resolved["'],\s*["']dismissed["'],\s*["']blocked["']\s*\]\)/,
+    "TypeScript schema must parse blocked coverage defects emitted by Hermes/operator repair paths",
+  );
+});
+
+test("operator defect investigation recycles stuck investigation jobs", () => {
+  const route = read(paths.defectInvestigateRoute);
+
+  assert.match(
+    route,
+    /const dedupeKey = `defect-investigate:\$\{defectId\}`[\s\S]*job_type:\s*["']blockwise-defect-investigator["'][\s\S]*dedupe_key:\s*dedupeKey/,
+    "defect investigation must use one stable dedupe key per coverage defect",
+  );
+  assert.match(
+    route,
+    /select\(["']id,status,claim_expires_at["']\)[\s\S]*\.in\(["']status["'],\s*\[\s*["']pending["'],\s*["']claimed["'],\s*["']failed["'],\s*["']blocked["']\s*\]\)/,
+    "defect investigation must inspect active or stuck dedupe keys before inserting",
+  );
+  assert.match(
+    route,
+    /status:\s*["']pending["'][\s\S]*attempts:\s*0[\s\S]*last_error:\s*null[\s\S]*blocked_reason:\s*null/,
+    "defect investigation must recycle failed, blocked, or stale-claimed jobs",
+  );
+  assert.match(
+    route,
+    /return NextResponse\.json\(\{ ok: true, defect: id, alreadyQueued \}\)/,
+    "defect investigation should preserve the existing response shape",
+  );
+});
+
+test("operator research console uses exact backlog counts instead of the display sample", () => {
+  const page = read(paths.operatorResearchPage);
+
+  assert.match(page, /\.from\(["']v_coverage_status["']\)[\s\S]*\.limit\(5000\)/);
+  assert.doesNotMatch(page, /\.from\(["']v_coverage_status["']\)[\s\S]*\.limit\(60\)/);
+  assert.match(page, /loadQueueStats/);
+  assert.match(page, /loadPipelineStats/);
+  assert.match(page, /loadDefectStats/);
+  assert.match(page, /select\(["']id["'],\s*\{\s*count:\s*["']exact["'],\s*head:\s*true\s*\}\)/);
+  assert.match(page, /select\(["']card_id["'],\s*\{\s*count:\s*["']exact["'],\s*head:\s*true\s*\}\)/);
+  assert.match(
+    page,
+    /row\.live_advertiser_pages\s*\?\?\s*row\.listings\s*\?\?\s*0/,
+    "operator coverage must use the coverage view listings fallback when live_advertiser_pages is absent",
+  );
+  assert.doesNotMatch(
+    page,
+    /const\s+runningJobs\s*=\s*workQueue\.filter/,
+    "summary counts must not be derived from the limited diagnostics table sample",
+  );
+});
+
+test("operator research console exposes official Meta API readiness without secrets", () => {
+  const page = read(paths.operatorResearchPage);
+  const consoleSource = read(paths.operatorResearchConsole);
+
+  assert.match(page, /META_AD_LIBRARY_ACCESS_TOKEN/);
+  assert.match(page, /META_AD_LIBRARY_TOKEN/);
+  assert.match(page, /loadOfficialMetaApiStatus/);
+  assert.match(consoleSource, /official api/);
+  assert.match(consoleSource, /Missing token/);
+  assert.match(consoleSource, /required for paginated exhaustive collection/);
+  assert.doesNotMatch(
+    consoleSource,
+    /process\.env\.META_AD_LIBRARY|accessToken/,
+    "client console must receive readiness only, not token values",
+  );
+});
+
+test("app-side research data loaders use statically scoped bundled data files", () => {
+  const adRadarLocation = read(paths.adRadarLocation);
+  const censusSources = read(paths.censusSources);
+
+  assert.match(adRadarLocation, /createRequire\(import\.meta\.url\)/);
+  assert.match(adRadarLocation, /requireJson\(["']\.\.\/\.\.\/\.\.\/hermes\/data\/au-postcodes\.json["']\)/);
+  assert.doesNotMatch(
+    adRadarLocation,
+    /join\(process\.cwd\(\),\s*["']hermes["']/,
+    "postcode lookup must not make Vercel trace the whole project from process.cwd()",
+  );
+  assert.match(censusSources, /createRequire\(import\.meta\.url\)/);
+  assert.match(censusSources, /requireJson\(["']\.\.\/\.\.\/\.\.\/hermes\/data\/agent-sources\.json["']\)/);
+  assert.doesNotMatch(
+    censusSources,
+    /join\(process\.cwd\(\),\s*["']hermes["']/,
+    "operator census source lookup must not make Vercel trace the whole project from process.cwd()",
+  );
 });
 
 test("media asset contract is strict, durable, and surfaced to the research card", () => {

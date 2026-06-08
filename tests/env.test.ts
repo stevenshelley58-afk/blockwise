@@ -91,3 +91,13 @@ test("Vercel release gate blocks deploys on env, test, typecheck, or build failu
 
   assert.equal(vercel.buildCommand, "npm run verify-env && npm run check && npm run build");
 });
+
+test("Vercel route bundles are loadable by the CommonJS serverless launcher", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { type?: string };
+
+  assert.notEqual(
+    pkg.type,
+    "module",
+    'root package.json must not force emitted Next route ".js" bundles to be treated as ESM on Vercel',
+  );
+});

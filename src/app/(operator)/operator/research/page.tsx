@@ -4,6 +4,7 @@ import {
   type ConsoleCoverageRow,
   type ConsoleDecisionRow,
   type ConsoleDefectRow,
+  type ConsoleOfficialMetaApi,
   type ConsolePipelineStage,
   type ConsoleQueueRow,
   type ConsoleSkill,
@@ -28,6 +29,7 @@ type CoverageRow = {
   last_audit_score: number | null;
   live_active_ads: number;
   live_advertiser_pages?: number;
+  listings?: number;
   health: string;
 };
 
@@ -81,6 +83,18 @@ const SKILL_CRON: Record<string, string> = {
 const STALE_PAGE_INTERVAL_MINUTES = 360;
 const DAILY_SPEND_CAP_USD = Number(process.env.HERMES_DAILY_SPEND_LIMIT_USD ?? 25);
 
+type QueueStats = {
+  runningJobs: number;
+  queuedJobs: number;
+  blockedJobs: number;
+  failedJobs: number;
+  staleJobs: number;
+};
+
+type DefectStats = {
+  openDefects: number;
+};
+
 async function loadCoverage(supabase: ResearchSupabaseClient) {
   const { data } = await supabase
     .schema("research")
@@ -88,7 +102,7 @@ async function loadCoverage(supabase: ResearchSupabaseClient) {
     .select("*")
     .order("priority")
     .order("postcode")
-    .limit(60);
+    .limit(5000);
   return (data ?? []) as CoverageRow[];
 }
 
@@ -111,6 +125,54 @@ async function loadDefects(supabase: ResearchSupabaseClient) {
     .order("created_at", { ascending: false })
     .limit(40);
   return (data ?? []) as DefectRow[];
+}
+
+async function countResearchRows(
+  supabase: ResearchSupabaseClient,
+  table: string,
+  applyFilter: (query: any) => any = (query) => query,
+) {
+  const { count } = await applyFilter(
+    supabase.schema("research").from(table).select("id", { count: "exact", head: true }),
+  );
+  return count ?? 0;
+}
+
+async function loadQueueStats(supabase: ResearchSupabaseClient): Promise<QueueStats> {
+  const [runningJobs, queuedJobs, blockedJobs, failedJobs, staleJobs] = await Promise.all([
+    countResearchRows(supabase, "work_queue", (query) => query.eq("status", "claimed")),
+    countResearchRows(supabase, "work_queue", (query) => query.eq("status", "pending")),
+    countResearchRows(supabase, "work_queue", (query) => query.eq("status", "blocked")),
+    countResearchRows(supabase, "work_queue", (query) => query.eq("status", "failed")),
+    countResearchRows(supabase, "v_operator_work_queue_diagnostics", (query) => query.eq("is_stale_claim", true)),
+  ]);
+  return { runningJobs, queuedJobs, blockedJobs, failedJobs, staleJobs };
+}
+
+async function loadPipelineStats(supabase: ResearchSupabaseClient): Promise<ConsolePipelineStage[]> {
+  return Promise.all(SUPERVISOR_STAGES.map(async (stage) => {
+    const [pending, claimed, failed, blocked] = await Promise.all([
+      countResearchRows(supabase, "work_queue", (query) => query.eq("job_type", stage.key).eq("status", "pending")),
+      countResearchRows(supabase, "work_queue", (query) => query.eq("job_type", stage.key).eq("status", "claimed")),
+      countResearchRows(supabase, "work_queue", (query) => query.eq("job_type", stage.key).eq("status", "failed")),
+      countResearchRows(supabase, "work_queue", (query) => query.eq("job_type", stage.key).eq("status", "blocked")),
+    ]);
+    return {
+      key: stage.key,
+      label: stage.label,
+      pending,
+      claimed,
+      failed,
+      blocked,
+    };
+  }));
+}
+
+async function loadDefectStats(supabase: ResearchSupabaseClient): Promise<DefectStats> {
+  const openDefects = await countResearchRows(supabase, "coverage_defects", (query) =>
+    query.in("status", ["open", "investigating", "blocked"]),
+  );
+  return { openDefects };
 }
 
 async function loadDecisions(supabase: ResearchSupabaseClient) {
@@ -200,20 +262,26 @@ async function loadEntityCounts(supabase: ResearchSupabaseClient) {
 }
 
 async function loadAdLibraryStats(supabase: ResearchSupabaseClient) {
-  const { data } = await supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
-    .select("active_status,image_storage_path,video_storage_path,media_assets")
-    .limit(1000);
+  const research = supabase.schema("research");
+  const [{ count: totalCards }, { count: activeCards }, { data }] = await Promise.all([
+    research.from("v_customer_meta_ad_library_cards").select("card_id", { count: "exact", head: true }),
+    research
+      .from("v_customer_meta_ad_library_cards")
+      .select("card_id", { count: "exact", head: true })
+      .ilike("active_status", "active"),
+    research
+      .from("v_customer_meta_ad_library_cards")
+      .select("image_storage_path,video_storage_path,media_assets")
+      .limit(10000),
+  ]);
   const rows = (data ?? []) as {
-    active_status: string | null;
     image_storage_path: string | null;
     video_storage_path: string | null;
     media_assets: unknown;
   }[];
   return {
-    activeCards: rows.filter((row) => String(row.active_status ?? "").toLowerCase() === "active").length,
-    totalCards: rows.length,
+    activeCards: activeCards ?? 0,
+    totalCards: totalCards ?? 0,
     cardsWithStoredMedia: rows.filter(
       (row) =>
         Boolean(row.image_storage_path || row.video_storage_path) ||
@@ -222,15 +290,32 @@ async function loadAdLibraryStats(supabase: ResearchSupabaseClient) {
   };
 }
 
+function loadOfficialMetaApiStatus(): ConsoleOfficialMetaApi {
+  const tokenName = process.env.META_AD_LIBRARY_ACCESS_TOKEN?.trim()
+    ? "META_AD_LIBRARY_ACCESS_TOKEN"
+    : process.env.META_AD_LIBRARY_TOKEN?.trim()
+      ? "META_AD_LIBRARY_TOKEN"
+      : null;
+
+  return {
+    configured: Boolean(tokenName),
+    tokenName,
+    maxPagesPerSearch: 3,
+  };
+}
+
 export default async function OperatorResearchPage() {
   await requirePageSurfaceAccess("operator");
   const supabase = createSupabaseServiceClient();
 
-  const [coverage, workQueue, defects, decisions, heartbeat, spendToday, stalePagesDue, policy, skills, entity, adLibrary] =
+  const [coverage, workQueue, queueStats, pipeline, defects, defectStats, decisions, heartbeat, spendToday, stalePagesDue, policy, skills, entity, adLibrary] =
     await Promise.all([
       loadCoverage(supabase).catch(() => [] as CoverageRow[]),
       loadWorkQueue(supabase).catch(() => [] as WorkQueueRow[]),
+      loadQueueStats(supabase).catch(() => ({ runningJobs: 0, queuedJobs: 0, blockedJobs: 0, failedJobs: 0, staleJobs: 0 })),
+      loadPipelineStats(supabase).catch(() => SUPERVISOR_STAGES.map((stage) => ({ ...stage, pending: 0, claimed: 0, failed: 0, blocked: 0 }))),
       loadDefects(supabase).catch(() => [] as DefectRow[]),
+      loadDefectStats(supabase).catch(() => ({ openDefects: 0 })),
       loadDecisions(supabase).catch(() => [] as DecisionRow[]),
       loadHeartbeat(supabase).catch(() => ({ ageSeconds: null, mode: "maintain" })),
       loadSpend24h(supabase).catch(() => 0),
@@ -249,34 +334,19 @@ export default async function OperatorResearchPage() {
     skillFiles: skills.length,
   }));
 
-  const runningJobs = workQueue.filter((job) => job.status === "claimed" && !job.is_stale_claim).length;
-  const queuedJobs = workQueue.filter((job) => job.status === "pending").length;
-  const blockedJobs = workQueue.filter((job) => job.status === "blocked").length;
-  const failedJobs = workQueue.filter((job) => job.status === "failed").length;
-  const staleJobs = workQueue.filter((job) => Boolean(job.is_stale_claim)).length;
+  const { runningJobs, queuedJobs, blockedJobs, failedJobs, staleJobs } = queueStats;
   const activeJobs = runningJobs + queuedJobs;
-  const needsAttention = failedJobs + blockedJobs + staleJobs + defects.filter((defect) => defect.status !== "investigating").length;
-  const coveredRows = coverage.filter((row) => row.live_active_ads > 0 || row.last_refreshed_at || row.last_audit_status).length;
+  const needsAttention = failedJobs + blockedJobs + staleJobs + defectStats.openDefects;
+  const coveredRows = coverage.filter((row) => row.live_active_ads > 0 || coverageAdvertiserPages(row) > 0 || row.last_refreshed_at || row.last_audit_status).length;
   const coveragePercent = coverage.length ? Math.round((coveredRows / coverage.length) * 100) : 0;
-
-  const pipeline: ConsolePipelineStage[] = SUPERVISOR_STAGES.map((stage) => {
-    const jobs = workQueue.filter((job) => job.job_type === stage.key);
-    return {
-      key: stage.key,
-      label: stage.label,
-      pending: jobs.filter((job) => job.status === "pending").length,
-      claimed: jobs.filter((job) => job.status === "claimed").length,
-      failed: jobs.filter((job) => job.status === "failed").length,
-      blocked: jobs.filter((job) => job.status === "blocked").length,
-    };
-  });
+  const officialMetaApi = loadOfficialMetaApiStatus();
 
   const consoleCoverage: ConsoleCoverageRow[] = coverage.map((row) => ({
     postcode: row.postcode,
     state: row.state,
     score: coverageScore(row),
     activeAds: row.live_active_ads ?? 0,
-    advertiserPages: row.live_advertiser_pages ?? 0,
+    advertiserPages: coverageAdvertiserPages(row),
     nextRefreshAt: row.next_refresh_at,
     lastRefreshedAt: row.last_refreshed_at,
     health: row.health,
@@ -366,6 +436,7 @@ export default async function OperatorResearchPage() {
         inventory={inventory}
         entity={entity}
         adLibrary={adLibrary}
+        officialMetaApi={officialMetaApi}
         skills={consoleSkills}
         nowIso={new Date().toISOString()}
       />
@@ -385,10 +456,17 @@ function coverageScore(row: CoverageRow): number {
   if (row.live_active_ads > 0) {
     return clamp(55 + row.live_active_ads * 8, 55, 100);
   }
+  if (coverageAdvertiserPages(row) > 0) {
+    return 45;
+  }
   if (row.last_refreshed_at) {
     return 35;
   }
   return 0;
+}
+
+function coverageAdvertiserPages(row: CoverageRow): number {
+  return row.live_advertiser_pages ?? row.listings ?? 0;
 }
 
 function jobSubject(job: WorkQueueRow): string {

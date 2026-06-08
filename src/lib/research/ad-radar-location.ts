@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 import { adRunningMs, type CustomerMetaAdLibraryCard } from "./customer-meta-card.ts";
 
 export type AdRadarLocationGuess = {
@@ -17,6 +19,14 @@ type HeaderReader = {
 type ScoredCard = {
   card: CustomerMetaAdLibraryCard;
   score: number;
+};
+
+type PostcodeAreaHint = { stateCode: string; suburbs: string[] };
+type SuburbAreaHint = { stateCode: string | null; postcodes: string[]; suburbs?: string[] };
+type AuPostcodeRow = { postcode?: unknown; state?: unknown; suburbs?: unknown };
+type PostcodeDirectory = {
+  byPostcode: Map<string, PostcodeAreaHint>;
+  bySuburb: Map<string, Map<string, Set<string>>>;
 };
 
 const STATE_BY_REGION: Record<string, { code: string; name: string; defaultPostcodes: string[] }> = {
@@ -47,15 +57,15 @@ const CITY_DEFAULT_POSTCODES: Record<string, string[]> = {
   sydney: ["2000"],
 };
 
-const POSTCODE_AREA_HINTS: Record<string, { stateCode: string; suburbs: string[] }> = {
+const CURATED_POSTCODE_AREA_HINTS: Record<string, PostcodeAreaHint> = {
   "6163": {
     stateCode: "WA",
     suburbs: ["Spearwood", "Hamilton Hill", "Coolbellup", "Bibra Lake", "Kardinya", "North Lake", "North Coogee", "Hilton"],
   },
 };
 
-const SUBURB_AREA_HINTS: Record<string, { stateCode: string; postcodes: string[]; suburbs?: string[] }> = {
-  spearwood: { stateCode: "WA", postcodes: ["6163"], suburbs: POSTCODE_AREA_HINTS["6163"].suburbs },
+const CURATED_SUBURB_AREA_HINTS: Record<string, SuburbAreaHint> = {
+  spearwood: { stateCode: "WA", postcodes: ["6163"], suburbs: CURATED_POSTCODE_AREA_HINTS["6163"].suburbs },
 };
 
 const IGNORED_LOCATION_TEXT_TERMS = new Set(["act", "au", "australia", "australian", "nsw", "nt", "qld", "sa", "tas", "vic", "wa"]);
@@ -86,6 +96,9 @@ const FALLBACK_LOCATION: AdRadarLocationGuess = {
   terms: ["Perth", "WA", "Western Australia", "6000", "6008"],
   source: "fallback",
 };
+
+let postcodeDirectoryCache: PostcodeDirectory | null = null;
+const requireJson = createRequire(import.meta.url);
 
 export function resolveAdRadarLocationGuess(headers: HeaderReader): AdRadarLocationGuess {
   const countryCode = readHeader(headers, "x-vercel-ip-country")?.toUpperCase() ?? null;
@@ -129,11 +142,11 @@ export function resolveAdRadarLocationSearch(value: string): AdRadarLocationGues
   const postcode = cleaned.match(/\b\d{4}\b/)?.[0] ?? null;
   const explicitState = resolveAustralianStateFromText(cleaned);
   const postcodeState = postcode ? resolveAustralianStateFromPostcode(postcode) : null;
-  const postcodeHint = postcode ? POSTCODE_AREA_HINTS[postcode] ?? null : null;
+  const postcodeHint = postcode ? postcodeAreaHint(postcode) : null;
   let state = explicitState ?? postcodeState;
   const city = resolveCityFromSearch(cleaned, state?.code ?? null, state?.name ?? null, postcode);
-  const suburbHint = city ? SUBURB_AREA_HINTS[normaliseTerm(city)] ?? null : null;
-  state ??= suburbHint
+  const suburbHint = city ? suburbAreaHint(city, state?.code ?? postcodeHint?.stateCode ?? null) : null;
+  state ??= suburbHint?.stateCode
     ? STATE_BY_REGION[suburbHint.stateCode] ?? null
     : postcodeHint
       ? STATE_BY_REGION[postcodeHint.stateCode] ?? null
@@ -154,6 +167,18 @@ export function resolveAdRadarLocationSearch(value: string): AdRadarLocationGues
     terms,
     source: "query",
   };
+}
+
+export function shouldPrioritiseAdRadarLocationSearch(value: string, guess: AdRadarLocationGuess | null): boolean {
+  if (!guess) return false;
+  const cleaned = cleanLocationValue(value);
+  if (!cleaned) return false;
+  if (/\b\d{4}\b/u.test(cleaned)) return true;
+
+  const input = normaliseTerm(cleaned);
+  const city = guess.city ? normaliseTerm(guess.city) : null;
+  const hasPostcodeTerm = guess.terms.some((term) => /^\d{4}$/u.test(term));
+  return Boolean(hasPostcodeTerm && city && textIncludesNormalisedPhrase(input, city));
 }
 
 export function pickAdRadarCardsForLocation(
@@ -313,6 +338,99 @@ function resolveAustralianStateFromPostcode(postcode: string): { code: string; n
   return range ? STATE_BY_REGION[range.code] ?? null : null;
 }
 
+function postcodeAreaHint(postcode: string): PostcodeAreaHint | null {
+  const indexed = postcodeDirectory().byPostcode.get(postcode) ?? null;
+  const curated = CURATED_POSTCODE_AREA_HINTS[postcode] ?? null;
+  if (!indexed && !curated) return null;
+
+  return {
+    stateCode: curated?.stateCode ?? indexed?.stateCode ?? "WA",
+    suburbs: uniqueTerms([...(curated?.suburbs ?? []), ...(indexed?.suburbs ?? [])]),
+  };
+}
+
+function suburbAreaHint(suburb: string, preferredStateCode: string | null): SuburbAreaHint | null {
+  const key = normaliseTerm(suburb);
+  const curated = CURATED_SUBURB_AREA_HINTS[key] ?? null;
+  const indexed = postcodeDirectory().bySuburb.get(key) ?? null;
+  if (!indexed && !curated) return null;
+
+  const preferredState = preferredStateCode?.toUpperCase() ?? curated?.stateCode ?? null;
+  const indexedStates = indexed ? [...indexed.keys()] : [];
+  const stateCode = preferredState && indexed?.has(preferredState)
+    ? preferredState
+    : curated?.stateCode
+      ?? (indexedStates.length === 1 ? indexedStates[0] : null);
+
+  const postcodes = uniqueTerms([
+    ...(curated?.postcodes ?? []),
+    ...(
+      stateCode && indexed?.has(stateCode)
+        ? [...(indexed.get(stateCode) ?? [])]
+        : indexed
+          ? [...indexed.values()].flatMap((values) => [...values])
+          : []
+    ),
+  ]);
+  const relatedSuburbs = uniqueTerms([
+    ...(curated?.suburbs ?? []),
+    ...postcodes.flatMap((postcode) => postcodeAreaHint(postcode)?.suburbs ?? []),
+  ]);
+
+  return { stateCode, postcodes, suburbs: relatedSuburbs };
+}
+
+function postcodeDirectory(): PostcodeDirectory {
+  if (postcodeDirectoryCache) return postcodeDirectoryCache;
+
+  const byPostcode = new Map<string, PostcodeAreaHint>();
+  const bySuburb = new Map<string, Map<string, Set<string>>>();
+
+  for (const row of readAuPostcodeRows()) {
+    if (typeof row.postcode !== "string" || !/^\d{4}$/u.test(row.postcode)) continue;
+    if (typeof row.state !== "string" || !STATE_BY_REGION[row.state.toUpperCase()]) continue;
+    if (!Array.isArray(row.suburbs)) continue;
+
+    const stateCode = row.state.toUpperCase();
+    const suburbs = uniqueTerms(row.suburbs.map(normalisePostcodeSuburb).filter((value): value is string => Boolean(value)));
+    if (suburbs.length === 0) continue;
+    byPostcode.set(row.postcode, { stateCode, suburbs });
+
+    for (const suburb of suburbs) {
+      const suburbKey = normaliseTerm(suburb);
+      if (!suburbKey) continue;
+      const stateMap = bySuburb.get(suburbKey) ?? new Map<string, Set<string>>();
+      const postcodes = stateMap.get(stateCode) ?? new Set<string>();
+      postcodes.add(row.postcode);
+      stateMap.set(stateCode, postcodes);
+      bySuburb.set(suburbKey, stateMap);
+    }
+  }
+
+  postcodeDirectoryCache = { byPostcode, bySuburb };
+  return postcodeDirectoryCache;
+}
+
+function readAuPostcodeRows(): AuPostcodeRow[] {
+  try {
+    const parsed = requireJson("../../../hermes/data/au-postcodes.json") as unknown;
+    if (Array.isArray(parsed)) return parsed as AuPostcodeRow[];
+  } catch {
+    return [];
+  }
+
+  return [];
+}
+
+function normalisePostcodeSuburb(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const suburb = value.trim();
+  const embedded = /^[A-Z]{2,3}\s+\d{4}\s+(?<suburb>.+)$/u.exec(suburb)?.groups?.suburb?.trim();
+  const cleaned = embedded || suburb;
+  if (!cleaned || /^\d{4}$/u.test(cleaned) || /^[A-Z]{2,3}\s+\d{4}\b/u.test(cleaned)) return null;
+  return /[A-Za-z]/u.test(cleaned) ? titleCase(cleaned) : null;
+}
+
 function resolveCityFromSearch(value: string, stateCode: string | null, stateName: string | null, postcode: string | null): string | null {
   let candidate = value.split(",")[0]?.trim() || value.trim();
   if (postcode) candidate = candidate.replace(new RegExp(`\\b${escapeRegExp(postcode)}\\b`, "i"), " ");
@@ -358,6 +476,12 @@ function uniqueTerms(values: Array<string | null | undefined>): string[] {
 
 function normaliseTerm(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function titleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b[a-z]/gu, (letter) => letter.toUpperCase());
 }
 
 function textIncludesNormalisedPhrase(text: string, phrase: string): boolean {

@@ -1,6 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { generateAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
+import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
 import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
@@ -45,18 +46,17 @@ const EMPTY_PERFORMANCE = {
 export async function loadLiveAdStudioBundle(
   supabase: SupabaseServerClient,
   workspaceId: string,
+  requestedCampaignId?: string | null,
 ): Promise<AdStudioBundle | null> {
   if (!workspaceId) return null;
 
   try {
     const offers = listOfferTemplates();
 
-    const { data: campaigns } = await supabase
-      .from("adstudio_campaigns")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const campaignQuery = supabase.from("adstudio_campaigns").select("*").eq("workspace_id", workspaceId);
+    const { data: campaigns } = requestedCampaignId
+      ? await campaignQuery.eq("id", requestedCampaignId).limit(1)
+      : await campaignQuery.order("created_at", { ascending: false }).limit(10);
 
     for (const latestCampaign of campaigns ?? []) {
       if (String(latestCampaign.status ?? "") === "archived") continue;
@@ -83,7 +83,10 @@ export async function loadLiveAdStudioBundle(
       ]);
 
       if (brandKitRow.data) {
-        const brandKit = rowToBrandKit(brandKitRow.data);
+        const brandKit = applyBrandAssetRows(
+          rowToBrandKit(brandKitRow.data),
+          await loadAdStudioBrandAssetRows(supabase, workspaceId, String(latestCampaign.brand_kit_id)),
+        );
         if (isExampleBrandKitSourceUrl(brandKit.source.url)) continue;
 
         const campaignPack = rowToCampaignPack({
@@ -115,7 +118,10 @@ export async function loadLiveAdStudioBundle(
     const latestBrandKitRow = nonDemoRows.find((row) => String(row.source_url ?? "").trim()) ?? nonDemoRows[0];
 
     if (latestBrandKitRow) {
-      const brandKit = rowToBrandKit(latestBrandKitRow);
+      const brandKit = applyBrandAssetRows(
+        rowToBrandKit(latestBrandKitRow),
+        await loadAdStudioBrandAssetRows(supabase, workspaceId, String(latestBrandKitRow.id)),
+      );
       const campaignPack = generateAdStudioCampaignPack({
         workspaceId,
         brandKit: { ...brandKit, reviewStatus: "approved" },

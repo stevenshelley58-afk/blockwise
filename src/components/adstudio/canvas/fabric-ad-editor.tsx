@@ -228,7 +228,7 @@ async function loadDesign(canvas: Canvas, designJson: CreativeDesignJson, brandK
     } else if (meta.type === "text") {
       addTextObject(canvas, object, meta);
     } else if (meta.type === "logo") {
-      addLogoObject(canvas, object, meta, brandKit);
+      await addLogoObject(canvas, object, meta, brandKit);
     } else {
       addRectObject(canvas, object, meta);
     }
@@ -322,23 +322,55 @@ function addImagePlaceholder(canvas: Canvas, frame: { left: number; top: number;
   canvas.add(rect);
 }
 
-function addLogoObject(canvas: Canvas, object: CreativeDesignObjectJson, meta: CreativeLayerMeta, brandKit: AdStudioBrandKit) {
+async function addLogoObject(canvas: Canvas, object: CreativeDesignObjectJson, meta: CreativeLayerMeta, brandKit: AdStudioBrandKit) {
+  const frame = {
+    left: numberOr(object.left, 0),
+    top: numberOr(object.top, 0),
+    width: numberOr(object.width, 180),
+    height: numberOr(object.height, 64),
+  };
+  const src = typeof object.src === "string" && object.src ? object.src : brandKit.logos.primaryLogoUrl ?? "";
+
+  if (src) {
+    try {
+      const image = await FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+      image.set({
+        ...interactiveOptions(meta),
+        left: frame.left,
+        top: frame.top,
+        originX: "left",
+        originY: "top",
+        clipPath: clipRect(frame),
+      });
+      fitImageContainToFrame(image, frame.width, frame.height);
+      attachMeta(image, meta);
+      canvas.add(image);
+      return;
+    } catch {
+      // Fall through to text mark when the stored logo cannot be loaded.
+    }
+  }
+
   addRectObject(canvas, object, meta);
-  const height = numberOr(object.height, 64);
-  const label = new Textbox(brandKit.identity.tradingName || brandKit.identity.businessName || "BRAND", {
-    left: numberOr(object.left, 0) + 16,
-    top: numberOr(object.top, 0) + Math.max(8, height * 0.24),
-    width: Math.max(80, numberOr(object.width, 180) - 28),
+  const label = new Textbox(brandLabel(object, brandKit), {
+    left: frame.left + 16,
+    top: frame.top + Math.max(8, frame.height * 0.24),
+    width: Math.max(80, frame.width - 28),
     originX: "left",
     originY: "top",
     fill: "#FFFFFF",
     fontFamily: "Inter",
-    fontSize: Math.max(16, Math.round(height * 0.28)),
+    fontSize: Math.max(16, Math.round(frame.height * 0.28)),
     fontWeight: 800,
     selectable: false,
     evented: false,
   });
   canvas.add(label);
+}
+
+function brandLabel(object: CreativeDesignObjectJson, brandKit: AdStudioBrandKit): string {
+  if (typeof object.text === "string" && object.text.trim()) return object.text.trim();
+  return brandKit.identity.tradingName || brandKit.identity.businessName || "Brand";
 }
 
 function addSafeAreaOverlay(canvas: Canvas, creative: AdStudioCreative) {
@@ -443,6 +475,16 @@ function fitImageToFrame(object: BlockwiseFabricObject, frameWidth: number, fram
   const sourceWidth = numberOr(object.width, frameWidth);
   const sourceHeight = numberOr(object.height, frameHeight);
   const scale = Math.max(frameWidth / sourceWidth, frameHeight / sourceHeight);
+  object.set({
+    scaleX: scale,
+    scaleY: scale,
+  });
+}
+
+function fitImageContainToFrame(object: BlockwiseFabricObject, frameWidth: number, frameHeight: number) {
+  const sourceWidth = numberOr(object.width, frameWidth);
+  const sourceHeight = numberOr(object.height, frameHeight);
+  const scale = Math.min(frameWidth / sourceWidth, frameHeight / sourceHeight);
   object.set({
     scaleX: scale,
     scaleY: scale,

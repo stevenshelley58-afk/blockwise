@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildAdStudioLiveResult, extractBrandKitFromWebsite } from "@/lib/adstudio";
+import { normalizeAndValidateExtractionUrl } from "@/lib/adstudio/extraction-url";
 import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
 
 export const runtime = "nodejs";
@@ -31,7 +32,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const normalizedUrl = /^https?:\/\//i.test(websiteUrl) ? websiteUrl : `https://${websiteUrl}`;
+    const validated = normalizeAndValidateExtractionUrl(websiteUrl);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
+    const normalizedUrl = validated.url;
     if (isExampleBrandKitSourceUrl(normalizedUrl)) {
       return NextResponse.json({ error: "Use your real agency website, not a demo domain." }, { status: 400 });
     }
@@ -75,5 +80,38 @@ async function fetchWebsiteHtml(url: string): Promise<string> {
     throw new Error(`Website extraction failed with ${response.status}.`);
   }
 
-  return response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType && !/text\/html|application\/xhtml\+xml/i.test(contentType)) {
+    throw new Error("Website extraction requires an HTML page.");
+  }
+
+  return readCappedText(response, 1_000_000);
+}
+
+async function readCappedText(response: Response, maxBytes: number): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return response.text();
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error("Website extraction page is too large.");
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }

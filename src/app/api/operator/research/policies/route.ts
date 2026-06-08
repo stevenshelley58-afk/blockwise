@@ -21,7 +21,7 @@ export async function GET() {
 const upsertSchema = z.object({
   postcode: z.string().regex(/^\d{4}$/u),
   state: z.string().default("WA"),
-  priority: z.number().int().min(1).max(5),
+  priority: z.number().int().min(1).max(6),
   refreshCadenceMinutes: z.number().int().min(15).max(60 * 24 * 30),
   active: z.boolean().default(true),
   notes: z.string().nullable().optional(),

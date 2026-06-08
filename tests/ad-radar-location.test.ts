@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -6,8 +7,15 @@ import {
   pickAdRadarCardsForLocation,
   resolveAdRadarLocationGuess,
   resolveAdRadarLocationSearch,
+  shouldPrioritiseAdRadarLocationSearch,
 } from "../src/lib/research/ad-radar-location.ts";
 import type { CustomerMetaAdLibraryCard } from "../src/lib/research/customer-meta-card.ts";
+
+type PostcodeSeedRow = { postcode: string; state: string; suburbs: string[] };
+
+const postcodeSeedRows = JSON.parse(
+  readFileSync(new URL("../hermes/data/au-postcodes.json", import.meta.url), "utf8"),
+) as PostcodeSeedRow[];
 
 test("Ad Radar resolves an Australian city and state from Vercel IP headers", () => {
   const guess = resolveAdRadarLocationGuess(
@@ -128,7 +136,30 @@ test("Ad Radar keeps postcode-only search labels specific", () => {
   assert.equal(guess.stateCode, "WA");
   assert.equal(guess.label, "6166, WA");
   assert.ok(guess.terms.includes("6166"));
+  assert.ok(guess.terms.includes("Coogee"));
+  assert.ok(guess.terms.includes("Lake Coogee"));
   assert.equal(guess.terms.includes("6163"), false);
+});
+
+test("Ad Radar resolves suburb-only searches from national postcode data", () => {
+  const guess = resolveAdRadarLocationSearch("Mount Lawley");
+
+  assert.ok(guess);
+  assert.equal(guess.source, "query");
+  assert.equal(guess.city, "Mount Lawley");
+  assert.equal(guess.stateCode, "WA");
+  assert.equal(guess.label, "Mount Lawley, WA");
+  assert.ok(guess.terms.includes("6050"));
+});
+
+test("Ad Radar prioritises location scoring only for specific location searches", () => {
+  const postcodeGuess = resolveAdRadarLocationSearch("6166");
+  const suburbGuess = resolveAdRadarLocationSearch("Mount Lawley WA");
+  const copyGuess = resolveAdRadarLocationSearch("appraisal");
+
+  assert.equal(shouldPrioritiseAdRadarLocationSearch("6166", postcodeGuess), true);
+  assert.equal(shouldPrioritiseAdRadarLocationSearch("Mount Lawley WA", suburbGuess), true);
+  assert.equal(shouldPrioritiseAdRadarLocationSearch("appraisal", copyGuess), false);
 });
 
 test("Ad Radar expands postcode 6163 to its local suburbs without nearby postcode leakage", () => {
@@ -141,6 +172,34 @@ test("Ad Radar expands postcode 6163 to its local suburbs without nearby postcod
   assert.ok(guess.terms.includes("North Coogee"));
   assert.ok(guess.terms.includes("6163"));
   assert.equal(guess.terms.includes("6166"), false);
+});
+
+test("Ad Radar postcode data does not include corrupted cross-state suburb joins", () => {
+  const subiaco = resolveAdRadarLocationSearch("6008");
+  const lancelin = resolveAdRadarLocationSearch("6044");
+  const forrestfield = resolveAdRadarLocationSearch("6058");
+
+  assert.ok(subiaco);
+  assert.ok(subiaco.terms.includes("Daglish"));
+  assert.equal(subiaco.terms.includes("Cunjurong Point Daglish"), false);
+
+  assert.ok(lancelin);
+  assert.ok(lancelin.terms.includes("Lancelin"));
+  assert.ok(lancelin.terms.includes("Nilgen"));
+  assert.equal(lancelin.terms.includes("Lake Hume Village Lancelin"), false);
+  assert.equal(lancelin.terms.includes("New Lambton Heights Nilgen"), false);
+
+  assert.ok(forrestfield);
+  assert.ok(forrestfield.terms.includes("Forrestfield"));
+  assert.equal(forrestfield.terms.includes("Flinders University Forrestfield"), false);
+});
+
+test("Ad Radar postcode seed rejects embedded state/postcode fragments", () => {
+  const corruptedSuburbs = postcodeSeedRows
+    .flatMap((row) => row.suburbs.map((suburb) => ({ row, suburb })))
+    .filter(({ suburb }) => /\b(?:ACT|NSW|NT|QLD|SA|TAS|VIC|WA)\s+\d{4}\b/u.test(suburb));
+
+  assert.deepEqual(corruptedSuburbs, []);
 });
 
 test("Ad Radar matches a selected Google location label to scraped cards", () => {

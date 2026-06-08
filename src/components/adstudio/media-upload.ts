@@ -17,6 +17,22 @@ export async function uploadAdStudioMedia(input: {
     throw new Error("We couldn't upload that image. Try another file.");
   }
 
+  const response = await fetch(`/api/adstudio/brand-kits/${input.brandKitId}/assets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      assetType: "listing_image",
+      storagePath,
+      fileName: input.file.name,
+      contentType: input.file.type,
+      size: input.file.size,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("We uploaded the image but couldn't attach it to your workspace.");
+  }
+
   return {
     src: `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`,
     storagePath,

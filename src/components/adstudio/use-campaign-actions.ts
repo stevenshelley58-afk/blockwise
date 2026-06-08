@@ -1,6 +1,7 @@
 "use client";
 
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
+import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
 import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import type { AngleCard } from "./angles";
@@ -61,52 +62,62 @@ export function useCampaignActions(s: CampaignActionsState) {
     };
   }
 
-  function buildCurrentPack(): AdStudioCampaignPack {
-    const variantId = currentVariant?.variantId;
-    if (!variantId) return s.pack;
+  function buildCurrentPack(options: {
+    pack?: AdStudioCampaignPack;
+    variantId?: string;
+    copy?: CopyState;
+    offerLabel?: string;
+    primaryImage?: string;
+  } = {}): AdStudioCampaignPack {
+    const sourcePack = options.pack ?? s.pack;
+    const variantId = options.variantId ?? currentVariant?.variantId;
+    const copy = options.copy ?? s.copy;
+    const offerLabel = options.offerLabel ?? s.offerLabel;
+    const primaryImage = options.primaryImage ?? s.primaryImage;
+    if (!variantId) return sourcePack;
     const market = parseMarket();
     const destinationUrl = normaliseDestinationUrl(s.destinationUrl);
 
     return {
-      ...s.pack,
+      ...sourcePack,
       campaign: {
-        ...s.pack.campaign,
-        goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
+        ...sourcePack.campaign,
+        goal: goalFromLabel(s.campaignGoal, sourcePack.campaign.goal),
         market: {
-          ...s.pack.campaign.market,
+          ...sourcePack.campaign.market,
           suburb: market.suburb,
           city: market.city,
           state: market.state,
         },
-        offerId: offerIdFromLabel(s.offerLabel, s.offers, s.pack.campaign.offerId),
+        offerId: offerIdFromLabel(offerLabel, s.offers, sourcePack.campaign.offerId),
       },
-      variants: s.pack.variants.map((v) =>
-        v.variantId === variantId ? { ...v, headline: s.copy.headline, offer: s.offerLabel, cta: s.copy.cta } : v,
+      variants: sourcePack.variants.map((v) =>
+        v.variantId === variantId ? { ...v, headline: copy.headline, offer: offerLabel, cta: copy.cta } : v,
       ),
-      copyPacks: s.pack.copyPacks.map((cp) => {
+      copyPacks: sourcePack.copyPacks.map((cp) => {
         if (cp.variantId !== variantId) return cp;
         return {
           ...cp,
           meta: {
             ...cp.meta,
-            primaryText: [s.copy.primaryText, ...cp.meta.primaryText.slice(1)],
-            headlines: [s.copy.headline, ...cp.meta.headlines.slice(1)],
-            descriptions: [s.copy.description, ...cp.meta.descriptions.slice(1)],
-            cta: toMetaCta(s.copy.cta),
+            primaryText: [copy.primaryText, ...cp.meta.primaryText.slice(1)],
+            headlines: [copy.headline, ...cp.meta.headlines.slice(1)],
+            descriptions: [copy.description, ...cp.meta.descriptions.slice(1)],
+            cta: toMetaCta(copy.cta),
           },
           landingPage: {
             ...cp.landingPage,
-            headline: s.copy.headline,
-            subheadline: s.copy.description,
-            cta: s.copy.cta,
+            headline: copy.headline,
+            subheadline: copy.description,
+            cta: copy.cta,
           },
           googleSearch: destinationUrl ? { ...cp.googleSearch, finalUrl: destinationUrl } : cp.googleSearch,
           googlePmax: destinationUrl ? { ...cp.googlePmax, finalUrl: destinationUrl } : cp.googlePmax,
           googleDemandGen: destinationUrl ? { ...cp.googleDemandGen, finalUrl: destinationUrl } : cp.googleDemandGen,
         };
       }),
-      creatives: s.pack.creatives.map((creative) =>
-        creative.variantId === variantId ? syncCreativeWithCopyAndImage(creative, s.copy, s.primaryImage) : creative,
+      creatives: sourcePack.creatives.map((creative) =>
+        creative.variantId === variantId ? syncCreativeWithCopyAndImage(creative, copy, primaryImage) : creative,
       ),
     };
   }
@@ -179,26 +190,41 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  async function saveDraft() {
+  async function saveDraft(options: {
+    silent?: boolean;
+    packOverride?: AdStudioCampaignPack;
+    variantIdOverride?: string;
+    copyOverride?: CopyState;
+    primaryImageOverride?: string;
+    offerLabelOverride?: string;
+  } = {}) {
     s.setSaveState("saving");
     s.setSaveError("");
 
     try {
-      const currentPack = buildCurrentPack();
-      const draftPack = compactPackForDraft(currentPack, currentVariant?.variantId);
+      const currentPack = buildCurrentPack({
+        pack: options.packOverride,
+        variantId: options.variantIdOverride,
+        copy: options.copyOverride,
+        primaryImage: options.primaryImageOverride,
+        offerLabel: options.offerLabelOverride,
+      });
+      const draftPack = compactPackForDraft(currentPack, options.variantIdOverride ?? currentVariant?.variantId);
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>(
         `/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`,
         { campaignPack: draftPack },
         "PATCH",
       );
-      s.setPack(payload.campaignPack);
+      s.setPack(mergeDraftResponsePack(currentPack, payload.campaignPack));
       s.setSaveState("saved");
-      s.showToast("Draft saved");
+      if (!options.silent) s.showToast("Draft saved");
+      return true;
     } catch (error) {
       const message = getMessage(error);
       s.setSaveError(message);
       s.setSaveState("error");
       s.showToast(message);
+      return false;
     }
   }
 
@@ -207,6 +233,8 @@ export function useCampaignActions(s: CampaignActionsState) {
     s.setBusyMessage("Preparing creative export");
 
     try {
+      const saved = await saveDraft({ silent: true });
+      if (!saved) return;
       const currentPack = buildCurrentPack();
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
       const creativeRenders = await renderCreativeExports(exportPack);

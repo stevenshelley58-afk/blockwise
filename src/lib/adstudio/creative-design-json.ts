@@ -255,6 +255,9 @@ function objectFromDesignObject(
     next.size = Math.round(numberOr(object.fontSize, fallback.size ?? 32));
   } else if (next.type === "image") {
     next.content = typeof object.src === "string" ? object.src : fallback.content;
+  } else if (next.type === "logo") {
+    next.assetId = typeof object.src === "string" ? object.src : fallback.assetId;
+    next.content = typeof object.text === "string" ? object.text : fallback.content;
   } else if (next.type === "shape" && meta.editableKind === "cta") {
     next.content = typeof object.text === "string" ? object.text : fallback.content;
   }

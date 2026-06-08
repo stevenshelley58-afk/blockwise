@@ -7,6 +7,7 @@ import {
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
+import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: brandKitResult.error }, { status: brandKitResult.status });
     }
 
-    const pack = generateAdStudioCampaignPack({
+    let pack = generateAdStudioCampaignPack({
       workspaceId: access.access.workspaceId,
       brandKit: brandKitResult.brandKit,
       goal: "seller_leads",
@@ -74,6 +75,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       platforms: ["meta"],
       variantCount: body.variantCount ?? 5,
       sourceImageDataUrl: body.sourceImageDataUrl,
+    });
+    pack = await enrichCampaignPackCopyWithAi({
+      pack,
+      workspaceId: access.access.workspaceId,
+      userId: access.access.userId,
     });
     const persisted = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);
 

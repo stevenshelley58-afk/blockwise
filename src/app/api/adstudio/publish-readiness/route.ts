@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         }))),
     {
       id: "provider_writes",
-      label: "Enable live publishing (set BLOCKWISE_ENABLE_PROVIDER_WRITES=true)",
+      label: "Enable live publishing for this workspace",
       done: writesEnabled,
       automatic: true,
     },

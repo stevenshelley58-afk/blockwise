@@ -1,4 +1,4 @@
-import type { AdStudioCreative, AdStudioFormat } from "./types.ts";
+import type { AdStudioBrandKit, AdStudioCanvasObject, AdStudioCreative, AdStudioFormat } from "./types.ts";
 
 const FORMAT_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
   "1:1": { width: 1080, height: 1080 },
@@ -11,7 +11,10 @@ export function getCanvasSize(format: AdStudioFormat) {
   return FORMAT_SIZE[format];
 }
 
-export function renderCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">): string {
+export function renderCreativeSvg(
+  creative: Omit<AdStudioCreative, "previewSvg">,
+  brandKit?: Pick<AdStudioBrandKit, "identity" | "typography">,
+): string {
   const { width, height, objects } = creative.canvas;
   const background = objects.find((object) => object.role === "background_shape");
   const fills = {
@@ -23,11 +26,19 @@ export function renderCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">
     .filter((object) => object.type !== "safe_zone")
     .map((object) => {
       if (object.type === "text") {
-        return `<text x="${object.x}" y="${object.y}" font-family="Inter, Arial, sans-serif" font-size="${object.size ?? 48}" font-weight="${object.role === "headline" ? 850 : 650}" fill="${escapeXml(object.fill ?? fills.text)}">${escapeXml(object.content ?? "")}</text>`;
+        return `<text x="${object.x}" y="${object.y}" font-family="${escapeXml(svgFontFamily(object, brandKit))}" font-size="${object.size ?? 48}" font-weight="${object.role === "headline" ? 850 : 650}" fill="${escapeXml(object.fill ?? fills.text)}">${escapeXml(object.content ?? "")}</text>`;
       }
 
       if (object.type === "logo") {
-        return `<rect x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width * 0.35}" rx="10" fill="${fills.text}"/><text x="${object.x + 20}" y="${object.y + 42}" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="850" fill="#fff">BRAND</text>`;
+        const height = object.height ?? object.width * 0.35;
+        const src = object.assetId;
+
+        if (src && isRenderableImageSrc(src)) {
+          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" href="${escapeXml(src)}" preserveAspectRatio="xMidYMid meet"/>`;
+        }
+
+        const label = object.content ?? brandKit?.identity.tradingName ?? brandKit?.identity.businessName ?? "Brand";
+        return `<rect x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" rx="10" fill="${fills.text}"/><text x="${object.x + 20}" y="${object.y + height * 0.62}" font-family="${escapeXml(svgFontFamily(object, brandKit))}" font-size="${Math.max(18, Math.round(height * 0.48))}" font-weight="850" fill="#fff">${escapeXml(label)}</text>`;
       }
 
       if (object.type === "image") {
@@ -44,6 +55,19 @@ export function renderCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">
     .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${fills.bg}"/><circle cx="${width - 170}" cy="140" r="150" fill="#FFFFFF" opacity="0.55"/><rect x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.58)}" width="${Math.round(width * 0.46)}" height="${Math.round(height * 0.22)}" rx="24" fill="#FFFFFF" opacity="0.88"/><path d="M${Math.round(width * 0.17)} ${Math.round(height * 0.58)} L${Math.round(width * 0.33)} ${Math.round(height * 0.44)} L${Math.round(width * 0.49)} ${Math.round(height * 0.58)} Z" fill="#FFFFFF" opacity="0.88"/>${nodes}</svg>`;
+}
+
+function svgFontFamily(
+  object: AdStudioCanvasObject,
+  brandKit: Pick<AdStudioBrandKit, "typography"> | undefined,
+): string {
+  if (object.font === "brand_heading") {
+    const fallback = brandKit?.typography.fallbackHeading === "serif" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+    return brandKit?.typography.headingFont ? `${brandKit.typography.headingFont}, ${fallback}` : fallback;
+  }
+
+  const fallback = brandKit?.typography.fallbackBody === "serif" ? "Georgia, serif" : "Inter, Arial, sans-serif";
+  return brandKit?.typography.bodyFont ? `${brandKit.typography.bodyFont}, ${fallback}` : fallback;
 }
 
 function isRenderableImageSrc(value: string): boolean {

@@ -422,6 +422,7 @@ function buildCreative(input: {
           objectId: "brand_logo",
           type: "logo",
           role: "brand_logo",
+          content: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
           assetId: input.brandKit.logos.primaryLogoUrl ?? undefined,
           x: marginX,
           y: Math.round(size.height * (isLandscape ? 0.08 : 0.07)),
@@ -439,7 +440,7 @@ function buildCreative(input: {
 
   return {
     ...creativeBase,
-    previewSvg: renderCreativeSvg(creativeBase),
+    previewSvg: renderCreativeSvg(creativeBase, input.brandKit),
   };
 }
 

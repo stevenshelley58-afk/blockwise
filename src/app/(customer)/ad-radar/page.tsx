@@ -11,6 +11,7 @@ import {
   pickAdRadarCardsForLocation,
   resolveAdRadarLocationGuess,
   resolveAdRadarLocationSearch,
+  shouldPrioritiseAdRadarLocationSearch,
 } from "@/lib/research/ad-radar-location";
 import {
   adRunningMs,
@@ -155,6 +156,11 @@ async function loadCustomerMetaAdLibraryCards(
   const allCards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
 
   if (searchTerm) {
+    if (locationGuess && shouldPrioritiseAdRadarLocationSearch(searchTerm, locationGuess)) {
+      const picked = pickAdRadarCardsForLocation(allCards, locationGuess, sort);
+      if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
+    }
+
     const directMatches = allCards.filter((card) => cardMatches(card, searchTerm));
     if (directMatches.length > 0) {
       return { cards: sortCards(directMatches, sort), loadError: null, matchedLocation: false };

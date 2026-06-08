@@ -7,6 +7,7 @@ const state = z.string().min(2).max(3).transform((value) => value.toUpperCase())
 export const researchJobKinds = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
+  "blockwise-location-ad-search",
   "blockwise-ad-collector",
   "blockwise-media-collector",
   "blockwise-ad-classifier",
@@ -53,6 +54,25 @@ export const adCollectorPayloadSchema = z.object({
   resolverDecisionId: idString,
 }).strict();
 
+export const locationSearchGateSchema = z.object({
+  verified: z.literal(true),
+  verifiedBySkill: z.literal("blockwise-location-ad-search"),
+  verifiedAt: z.string().min(1).optional(),
+}).strict();
+
+export const locationAdSearchPayloadSchema = z.object({
+  postcode,
+  state,
+  suburb: z.string().min(1).nullable().optional(),
+  query: z.string().min(1),
+  build_run_id: idString.optional(),
+  country: z.string().length(2).default("AU"),
+  activeStatus: z.enum(["active", "inactive", "all"]).default("all"),
+  resultsLimit: z.number().int().positive().max(250).default(250),
+  location_search_allowed: z.literal(true),
+  realEstateGate: locationSearchGateSchema,
+}).passthrough();
+
 export const mediaCollectorPayloadSchema = z.object({
   adCreativeId: idString,
   observedAdId: idString,
@@ -74,6 +94,7 @@ export const contentRunPayloadSchema = z.object({
 export const researchJobInputSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("blockwise-agent-census"), payload: agentCensusPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-page-resolver"), payload: pageResolverPayloadSchema }).passthrough(),
+  z.object({ kind: z.literal("blockwise-location-ad-search"), payload: locationAdSearchPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-ad-collector"), payload: adCollectorPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-media-collector"), payload: mediaCollectorPayloadSchema }).passthrough(),
   z.object({ kind: z.literal("blockwise-ad-classifier"), payload: adClassifierPayloadSchema }).passthrough(),

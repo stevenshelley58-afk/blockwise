@@ -60,6 +60,87 @@ test("official Meta API validation fails closed on empty or failed coverage", as
   assert.match(validation.error ?? "", /Unsupported request/);
 });
 
+test("official Meta API validation follows safe paging links", async () => {
+  const requestedUrls: string[] = [];
+  const validation = await validateOfficialMetaAdLibraryCoverage(
+    {
+      accessToken: "token",
+      country: "AU",
+      adType: "HOUSING_ADS",
+      searchTerms: ["property appraisal"],
+      limit: 2,
+      maxPagesPerSearch: 3,
+    },
+    async (url) => {
+      const requestedUrl = typeof url === "string" || url instanceof URL ? url.toString() : url.url;
+      requestedUrls.push(requestedUrl);
+      if (requestedUrls.length === 1) {
+        return jsonResponse({
+          data: [
+            {
+              id: "1001",
+              page_id: "page-1",
+              page_name: "First Real Estate",
+              ad_creative_bodies: ["Book a property appraisal."],
+            },
+          ],
+          paging: {
+            next: "https://graph.facebook.com/v20.0/ads_archive?after=page-two",
+          },
+        });
+      }
+
+      return jsonResponse({
+        data: [
+          {
+            id: "1002",
+            page_id: "page-2",
+            page_name: "Second Property Group",
+              ad_creative_bodies: ["Just listed homes near you."],
+          },
+        ],
+      });
+    },
+  );
+
+  assert.equal(requestedUrls.length, 2);
+  assert.match(requestedUrls[1] ?? "", /after=page-two/);
+  assert.equal(validation.status, "success");
+  assert.equal(validation.summary.adsReturned, 2);
+  assert.equal(validation.summary.realEstateSignals, 2);
+  assert.deepEqual(validation.summary.warnings, []);
+});
+
+test("official Meta API validation caps pagination and reports truncation", async () => {
+  const validation = await validateOfficialMetaAdLibraryCoverage(
+    {
+      accessToken: "token",
+      country: "AU",
+      adType: "HOUSING_ADS",
+      searchTerms: ["rental appraisal"],
+      limit: 1,
+      maxPagesPerSearch: 2,
+    },
+    async () => jsonResponse({
+      data: [
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          page_id: "page",
+          page_name: "Rental Property Management",
+          ad_creative_bodies: ["Free rental appraisal."],
+        },
+      ],
+      paging: {
+        next: "https://graph.facebook.com/v20.0/ads_archive?after=more",
+      },
+    }),
+  );
+
+  assert.equal(validation.status, "success");
+  assert.equal(validation.summary.adsReturned, 2);
+  assert.match(validation.summary.warnings.join(" "), /still had more pages after 2 page/);
+});
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,

@@ -78,6 +78,8 @@ export function objectToDesignJson(
       rx: 12,
       ry: 12,
       fill: brandKit.colours.text,
+      src: object.assetId ?? brandKit.logos.primaryLogoUrl ?? undefined,
+      text: object.content ?? brandKit.identity.tradingName ?? brandKit.identity.businessName,
     };
   }
 

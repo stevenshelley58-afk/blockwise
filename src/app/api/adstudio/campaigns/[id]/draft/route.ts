@@ -8,6 +8,7 @@ import {
   rowToBrandKit,
   rowToCampaignPack,
 } from "@/lib/adstudio/persistence";
+import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 
@@ -77,8 +78,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const campaignPack = mergeCampaignPack(existingPack, submittedPack);
 
     const persisted = await persistAdStudioCampaignPack(access.supabase, campaignPack, access.access.userId);
+    const responsePack = persisted.error
+      ? campaignPack
+      : (await loadExistingCampaignPack(access.supabase, access.access.workspaceId, id)) ?? campaignPack;
     const liveResult = buildAdStudioLiveResult({
-      data: compactAdStudioCampaignPackForTransport(campaignPack),
+      data: compactAdStudioCampaignPackForTransport(responsePack),
       persistenceError: persisted.error?.message,
     });
 
@@ -134,8 +138,13 @@ async function loadExistingCampaignPack(
   if (compliance.error) throw new Error(compliance.error.message);
   if (!brandKitRow.data) return null;
 
+  const brandKit = applyBrandAssetRows(
+    rowToBrandKit(brandKitRow.data),
+    await loadAdStudioBrandAssetRows(supabase, workspaceId, String(campaign.brand_kit_id)),
+  );
+
   return rowToCampaignPack({
-    brandKit: rowToBrandKit(brandKitRow.data),
+    brandKit,
     campaign,
     variants: variants.data ?? [],
     creatives: creatives.data ?? [],

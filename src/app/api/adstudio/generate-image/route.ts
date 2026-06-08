@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createOpenAiImageProvider, generateMixedImageVariantsInParallel } from "@/lib/adstudio";
 import { createImageProviderForCandidate } from "@/lib/adstudio/ai-providers";
+import { dataUrlToUploadBytes } from "@/lib/adstudio/generated-media";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "@/lib/adstudio/providers";
 import { assembleImagePrompt } from "@/lib/operator/prompts/assemble-prompt";
@@ -21,6 +22,7 @@ type GenerateImageBody = {
   stylePreset?: string;
   referenceAssets?: string[];
   variantCount?: number;
+  brandKitId?: string;
   /** Brand kit visual context - appended so scenes match the brand look. */
   brand?: {
     palette?: string[];
@@ -136,11 +138,24 @@ export async function POST(request: NextRequest) {
         status: "completed",
       });
 
+      const storedVariants = await Promise.all(
+        variants.variants.map((variant) =>
+          persistGeneratedImage({
+            supabase: context.supabase,
+            workspaceId: context.access.workspaceId,
+            brandKitId: body.brandKitId,
+            assetUrl: variant.assetUrl,
+            fileNameSeed: `${correlationId}-${variant.seed}`,
+          }),
+        ),
+      );
+      const storedFirst = storedVariants[variants.variants.indexOf(first)] ?? first.assetUrl;
+
       return NextResponse.json({
-        image: first.assetUrl,
+        image: storedFirst,
         model: first.model,
         variants: variants.variants.map((variant, index) => ({
-          image: variant.assetUrl,
+          image: storedVariants[index] ?? variant.assetUrl,
           model: variant.model,
           provider: variant.providerMetadata.provider,
           index,
@@ -202,7 +217,15 @@ export async function POST(request: NextRequest) {
       status: "completed",
     });
 
-    return NextResponse.json({ image: generation.result.assetUrl, model: generation.result.model });
+    const storedImage = await persistGeneratedImage({
+      supabase: context.supabase,
+      workspaceId: context.access.workspaceId,
+      brandKitId: body.brandKitId,
+      assetUrl: generation.result.assetUrl,
+      fileNameSeed: correlationId,
+    });
+
+    return NextResponse.json({ image: storedImage, model: generation.result.model });
   } catch (error) {
     await recordAdStudioProviderRun({
       workspaceId: context.access.workspaceId,
@@ -230,6 +253,76 @@ export async function POST(request: NextRequest) {
     });
     return errorResponse(error, 500);
   }
+}
+
+async function persistGeneratedImage(input: {
+  supabase: any;
+  workspaceId: string;
+  brandKitId?: string;
+  assetUrl: string;
+  fileNameSeed: string;
+}): Promise<string> {
+  if (!input.assetUrl) return input.assetUrl;
+
+  let storedUrl = input.assetUrl;
+  let storagePath: string | null = null;
+  let contentType: string | null = null;
+
+  if (input.assetUrl.startsWith("data:image/")) {
+    const decoded = dataUrlToUploadBytes(input.assetUrl);
+    contentType = decoded.contentType;
+    storagePath = `${input.workspaceId}/adstudio/generated/${input.fileNameSeed}.${decoded.extension}`;
+    const { error } = await input.supabase.storage
+      .from("workspace-artifacts")
+      .upload(storagePath, decoded.bytes, { contentType: decoded.contentType, upsert: false });
+    if (error) throw new Error("Generated image could not be stored.");
+    storedUrl = `/api/adstudio/media?path=${encodeURIComponent(storagePath)}`;
+  }
+
+  if (input.brandKitId) {
+    await recordGeneratedAsset({
+      supabase: input.supabase,
+      workspaceId: input.workspaceId,
+      brandKitId: input.brandKitId,
+      sourceUrl: storedUrl.startsWith("/api/adstudio/media?") ? undefined : storedUrl,
+      storagePath,
+      metadata: {
+        generated: true,
+        contentType,
+      },
+    });
+  }
+
+  return storedUrl;
+}
+
+async function recordGeneratedAsset(input: {
+  supabase: any;
+  workspaceId: string;
+  brandKitId: string;
+  sourceUrl?: string;
+  storagePath: string | null;
+  metadata: Record<string, unknown>;
+}) {
+  const { data: brandKit, error: brandError } = await input.supabase
+    .from("adstudio_brand_kits")
+    .select("id")
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.brandKitId)
+    .maybeSingle();
+
+  if (brandError) throw new Error(brandError.message);
+  if (!brandKit) return;
+
+  const { error } = await input.supabase.from("adstudio_brand_assets").insert({
+    workspace_id: input.workspaceId,
+    brand_kit_id: input.brandKitId,
+    asset_type: "listing_image",
+    source_url: input.sourceUrl,
+    storage_path: input.storagePath,
+    metadata_json: input.metadata,
+  });
+  if (error) throw new Error(error.message);
 }
 
 async function generateMixedDraftVariants(input: ImageProviderRequest): Promise<{

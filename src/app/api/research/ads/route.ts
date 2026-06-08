@@ -6,6 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type AreaCardIdRow = {
+  card_id: string | null;
+};
+
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const access = await requireWorkspaceAccess(supabase, {
@@ -61,18 +65,27 @@ async function loadAreaFilteredIds(
 ): Promise<string[] | null> {
   if (!input.postcode && !input.suburb) return null;
 
-  let query = supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
-    .select("card_id")
-    .limit(1000);
+  const loadIds = async (applyFilter: (query: any) => any) => {
+    let query = supabase
+      .schema("research")
+      .from("v_customer_meta_ad_library_cards")
+      .select("card_id")
+      .limit(1000);
 
-  if (input.postcode) query = query.eq("postcode", input.postcode);
-  if (input.suburb) query = query.ilike("suburb", `%${input.suburb}%`);
+    if (input.suburb) query = query.ilike("suburb", `%${input.suburb}%`);
+    const { data, error } = await applyFilter(query);
+    if (error) return [];
+    return ((data ?? []) as AreaCardIdRow[]).map((row) => row.card_id).filter((id): id is string => Boolean(id));
+  };
 
-  const { data, error } = await query;
-  if (error) return [];
-  return [...new Set((data ?? []).map((row) => row.card_id).filter((id): id is string => Boolean(id)))];
+  const batches = input.postcode
+    ? await Promise.all([
+        loadIds((query) => query.eq("postcode", input.postcode)),
+        loadIds((query) => query.overlaps("postcodes", [input.postcode])),
+      ])
+    : [await loadIds((query) => query)];
+
+  return [...new Set(batches.flat())];
 }
 
 function adMatches(ad: ReturnType<typeof normaliseResearchAd>, q: string): boolean {

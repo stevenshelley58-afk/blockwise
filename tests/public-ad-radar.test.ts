@@ -62,6 +62,28 @@ test("public Ad Radar card prefers search-relevant postcodes over noisy structur
   assert.deepEqual(publicCard.postcodes, ["6008"]);
 });
 
+test("public Ad Radar card replaces noisy stored suburb with the searched postcode suburb from ad copy", () => {
+  const locationGuess = resolveAdRadarLocationSearch("6008");
+  assert.ok(locationGuess);
+
+  const publicCard = toPublicAdRadarCard(
+    card({
+      id: "noisy-suburb-card",
+      postcode: null,
+      postcodes: ["2304", "0433", "6008"],
+      suburb: "Cunjurong Point Daglish",
+      headline: "JUST LISTED",
+      body: "2304/4 Seddon Street, Subiaco is now available.",
+    }),
+    new Date("2026-06-06T00:00:00Z").getTime(),
+    locationGuess,
+  );
+
+  assert.equal(publicCard.postcode, "6008");
+  assert.deepEqual(publicCard.postcodes, ["6008"]);
+  assert.equal(publicCard.suburb, "Subiaco");
+});
+
 test("public Ad Radar card derives a postcode from local copy when structured attribution is absent", () => {
   const publicCard = toPublicAdRadarCard(
     card({
@@ -143,6 +165,50 @@ test("public Ad Radar loader keeps exact location score ahead of newer broad mat
   assert.deepEqual(
     response.ads.map((ad) => ad.id),
     ["older-exact", "newer-broad"],
+  );
+});
+
+test("public Ad Radar loader asks for postcode arrays and national postcode suburbs", async () => {
+  const fake = fakeInspectableSupabaseRows([]);
+
+  await loadPublicAdRadarCards(fake.client, { location: "6166", limit: 1 });
+
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("in").some((args) => args[0] === "postcode" && sameArray(args[1], ["6166"]))),
+    "postcode searches should query direct ad_area_matches postcode rows",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("overlaps").some((args) => args[0] === "postcodes" && sameArray(args[1], ["6166"]))),
+    "postcode searches should query rows where the safe view exposes the postcode array",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Coogee")),
+    "postcode searches should expand to suburbs from the national postcode dataset",
+  );
+});
+
+test("public Ad Radar loader stops after exact postcode rows", async () => {
+  const fake = fakeInspectableSupabaseRows([
+    row({
+      card_id: "exact-postcode",
+      page_name: "Local Realty",
+      postcode: "6163",
+      suburb: "Spearwood",
+      body: "Local campaign for Spearwood sellers.",
+    }),
+  ]);
+
+  const response = await loadPublicAdRadarCards(fake.client, { location: "6163", limit: 1 });
+
+  assert.deepEqual(response.ads.map((ad) => ad.id), ["exact-postcode"]);
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("in").some((args) => args[0] === "postcode" && sameArray(args[1], ["6163"]))),
+    "exact postcode searches should query direct postcode rows",
+  );
+  assert.equal(
+    fake.queries.some((query) => query.callArgs("ilike").length > 0),
+    false,
+    "exact postcode hits should not fan out into suburb or broad text queries",
   );
 });
 
@@ -289,6 +355,7 @@ class FakeQuery {
   range(...args: unknown[]) { return this.record("range", args); }
   ilike(...args: unknown[]) { return this.record("ilike", args); }
   in(...args: unknown[]) { return this.record("in", args); }
+  overlaps(...args: unknown[]) { return this.record("overlaps", args); }
   contains(...args: unknown[]) { return this.record("contains", args); }
   eq(...args: unknown[]) { return this.record("eq", args); }
   not(...args: unknown[]) { return this.record("not", args); }
@@ -306,4 +373,8 @@ class FakeQuery {
   then(resolve: (value: { data: CustomerMetaAdLibraryCardRow[]; error: null }) => unknown, reject?: (reason: unknown) => unknown) {
     return Promise.resolve({ data: this.rows, error: null }).then(resolve, reject);
   }
+}
+
+function sameArray(value: unknown, expected: string[]): boolean {
+  return Array.isArray(value) && value.length === expected.length && value.every((item, index) => item === expected[index]);
 }

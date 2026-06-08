@@ -12,6 +12,7 @@ const bodySchema = z.object({
   searchTerms: z.array(z.string()).optional(),
   pageIds: z.array(z.string()).optional(),
   limit: z.number().int().min(1).max(50).optional(),
+  maxPagesPerSearch: z.number().int().min(1).max(10).optional(),
 });
 
 export async function POST(req: Request) {

@@ -68,13 +68,18 @@ type CandidateBatch = {
   maybeMore: boolean;
 };
 
+type CandidateQueryGroups = {
+  exact: Array<(offset: number, limit: number) => Promise<CustomerMetaAdLibraryCardRow[]>>;
+  related: Array<(offset: number, limit: number) => Promise<CustomerMetaAdLibraryCardRow[]>>;
+};
+
 const DEFAULT_LIMIT = 18;
 const MAX_LIMIT = 36;
 const CANDIDATE_WINDOW = 90;
 const MAX_WINDOWS_PER_REQUEST = 3;
 const TEXT_FALLBACK_WINDOW = 18;
 const LONGEST_RUNNING_WINDOW = 150;
-const TEXT_SEARCH_COLUMNS = ["page_name", "headline", "body"] as const;
+const TEXT_SEARCH_COLUMNS = ["suburb", "page_name", "headline", "body", "description", "destination_url"] as const;
 const IGNORED_DIRECT_SEARCH_TERMS = new Set([
   "act",
   "au",
@@ -140,6 +145,7 @@ export function toPublicAdRadarCard(
 ): PublicAdRadarCard {
   const runningMs = adRunningMs(card.startedAt, card.stoppedAt, now);
   const postcodes = resolvePublicPostcodes(card, locationGuess);
+  const suburb = resolvePublicSuburb(card, locationGuess, postcodes);
 
   return {
     id: card.id,
@@ -153,7 +159,7 @@ export function toPublicAdRadarCard(
     platforms: card.platforms,
     postcode: card.postcode ?? postcodes[0] ?? null,
     postcodes,
-    suburb: card.suburb,
+    suburb,
     state: card.state,
     headline: card.headline,
     body: card.body,
@@ -167,6 +173,54 @@ export function toPublicAdRadarCard(
       posterUrl: media.posterUrl,
     })),
   };
+}
+
+function resolvePublicSuburb(
+  card: CustomerMetaAdLibraryCard,
+  locationGuess: AdRadarLocationGuess | undefined,
+  postcodes: string[],
+): string | null {
+  const suburb = card.suburb?.trim() || null;
+  if (!locationGuess || !hasPostcodeTerm(locationGuess)) return suburb;
+
+  const relevantPostcodes = uniquePostcodes(locationGuess.terms);
+  if (
+    relevantPostcodes.length > 0 &&
+    postcodes.length > 0 &&
+    !postcodes.some((postcode) => relevantPostcodes.includes(postcode))
+  ) {
+    return suburb;
+  }
+
+  const candidates = structuredSuburbTerms(locationGuess);
+  if (candidates.length === 0) return suburb;
+
+  const storedSuburb = suburb ? normaliseSearch(suburb) : "";
+  const adCopy = normaliseSearch([
+    card.headline,
+    card.body,
+    card.description,
+    card.destinationUrl,
+  ]
+    .filter(Boolean)
+    .join(" "));
+
+  const ranked = candidates
+    .map((candidate) => {
+      const key = normaliseSearch(candidate);
+      if (!key) return null;
+
+      let score = 0;
+      if (storedSuburb === key) score += 120;
+      else if (storedSuburb && textIncludesNormalisedTerm(storedSuburb, key)) score += 20;
+      if (textIncludesNormalisedTerm(adCopy, key)) score += 90;
+
+      return { candidate, key, score };
+    })
+    .filter((entry): entry is { candidate: string; key: string; score: number } => entry !== null && entry.score > 0)
+    .sort((a, b) => b.score - a.score || b.key.length - a.key.length);
+
+  return ranked[0]?.candidate ?? suburb;
 }
 
 function resolvePublicPostcodes(card: CustomerMetaAdLibraryCard, locationGuess?: AdRadarLocationGuess): string[] {
@@ -269,49 +323,51 @@ async function loadCandidateRows(
   limit: number,
 ): Promise<CandidateBatch> {
   const structuredQueryLoaders = structuredLocationCandidateQueries(supabase, locationGuess);
-  const structuredBatches = await Promise.all(structuredQueryLoaders.map((query) => query(offset, limit)));
-  const structuredRows = dedupeRows(structuredBatches.flat());
+  const exactBatches = await Promise.all(structuredQueryLoaders.exact.map((query) => query(offset, limit)));
+  let structuredRows = dedupeRows(exactBatches.flat());
+  let maybeMore = exactBatches.some((batch) => batch.length >= limit);
 
-  if (structuredRows.length >= Math.min(limit, DEFAULT_LIMIT)) {
-    return {
-      rows: structuredRows,
-      maybeMore: structuredBatches.some((batch) => batch.length >= limit),
-    };
+  if (structuredRows.length === 0) {
+    const relatedBatches = await Promise.all(structuredQueryLoaders.related.map((query) => query(offset, limit)));
+    structuredRows = dedupeRows(relatedBatches.flat());
+    maybeMore = maybeMore || relatedBatches.some((batch) => batch.length >= limit);
   }
 
-  const fallbackRows = offset === 0
+  const fallbackRows = offset === 0 && structuredRows.length === 0 && !hasPostcodeTerm(locationGuess)
     ? await loadTextFallbackRows(supabase, locationGuess)
     : [];
   const rows = dedupeRows([...structuredRows, ...fallbackRows]);
 
   return {
     rows,
-    maybeMore: structuredBatches.some((batch) => batch.length >= limit),
+    maybeMore,
   };
 }
 
 function structuredLocationCandidateQueries(
   supabase: SupabaseClient,
   locationGuess: AdRadarLocationGuess,
-): Array<(offset: number, limit: number) => Promise<CustomerMetaAdLibraryCardRow[]>> {
-  const queries: Array<(offset: number, limit: number) => Promise<CustomerMetaAdLibraryCardRow[]>> = [];
-  const city = locationGuess.city?.trim();
+): CandidateQueryGroups {
+  const exact: CandidateQueryGroups["exact"] = [];
+  const related: CandidateQueryGroups["related"] = [];
+  const suburbTerms = structuredSuburbTerms(locationGuess);
   const state = locationGuess.stateCode?.trim().toUpperCase();
   const postcodes = locationGuess.terms.filter((term) => /^\d{4}$/.test(term));
 
-  if (city) {
-    queries.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.eq("suburb", city)));
-  }
-
   if (postcodes.length > 0) {
-    queries.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.in("postcode", postcodes)));
+    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.in("postcode", postcodes)));
+    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.overlaps("postcodes", postcodes)));
   }
 
-  if (!city && postcodes.length === 0 && state) {
-    queries.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.eq("state", state)));
+  for (const suburb of suburbTerms) {
+    related.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.ilike("suburb", escapeLikeTerm(suburb))));
   }
 
-  return queries;
+  if (suburbTerms.length === 0 && postcodes.length === 0 && state) {
+    related.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.eq("state", state)));
+  }
+
+  return { exact, related };
 }
 
 async function loadTextFallbackRows(
@@ -321,7 +377,7 @@ async function loadTextFallbackRows(
   const city = locationGuess.city?.trim();
   const postcodes = locationGuess.terms.filter((term) => /^\d{4}$/.test(term));
   const areaTextTerms = locationGuess.terms.filter((term) => isAreaTextSearchTerm(term, city, locationGuess));
-  const terms = [...new Set([city, ...postcodes.slice(0, 2), ...areaTextTerms.slice(0, 3)].filter(Boolean))] as string[];
+  const terms = [...new Set([city, ...postcodes.slice(0, 2), ...areaTextTerms.slice(0, 5)].filter(Boolean))] as string[];
   const rows: CustomerMetaAdLibraryCardRow[] = [];
 
   for (const term of terms) {
@@ -350,11 +406,30 @@ function isRecoverableTextFallbackError(error: unknown): boolean {
 function isAreaTextSearchTerm(term: string, city: string | undefined, locationGuess: AdRadarLocationGuess): boolean {
   const clean = term.trim();
   const normalised = normaliseSearch(clean);
-  if (!normalised || /^\d{4}$/.test(clean) || IGNORED_DIRECT_SEARCH_TERMS.has(normalised)) return false;
+  if (!normalised || /\b\d{4}\b/.test(clean) || IGNORED_DIRECT_SEARCH_TERMS.has(normalised)) return false;
   if (city && normalised === normaliseSearch(city)) return false;
   if (locationGuess.stateCode && normalised === normaliseSearch(locationGuess.stateCode)) return false;
   if (locationGuess.stateName && normalised === normaliseSearch(locationGuess.stateName)) return false;
   return true;
+}
+
+function hasPostcodeTerm(locationGuess: AdRadarLocationGuess): boolean {
+  return locationGuess.terms.some((term) => /^\d{4}$/.test(term));
+}
+
+function structuredSuburbTerms(locationGuess: AdRadarLocationGuess): string[] {
+  const seen = new Set<string>();
+  const suburbs: string[] = [];
+
+  for (const term of locationGuess.terms) {
+    if (!isAreaTextSearchTerm(term, undefined, locationGuess)) continue;
+    const key = normaliseSearch(term);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    suburbs.push(term);
+  }
+
+  return suburbs.slice(0, 10);
 }
 
 async function fetchRows(
