@@ -315,6 +315,16 @@ test("Hermes census failures are visible and backed off", () => {
     /insertCoverageDefect[\s\S]*census could not verify/u,
     "failed census runs should remain operator-visible as coverage defects",
   );
+  assert.match(
+    agentCensus,
+    /census_deferred:\s*true[\s\S]*defect_recorded:\s*true/u,
+    "failed census runs should finish the queue item after writing the visible defect",
+  );
+  assert.doesNotMatch(
+    agentCensus,
+    /blocked_reason:\s*reason/u,
+    "census dead ends should not duplicate the same failure as both a defect and a blocked job",
+  );
 });
 
 test("Hermes Meta parser explicitly handles search_results_connection collated_results arrays", () => {
@@ -395,6 +405,19 @@ test("Hermes page resolver can retry an already discovered Facebook URL", () => 
     pageResolver,
     /\bsuppliedFacebookUrl\b[\s\S]*\bpayload\.facebookUrl\b[\s\S]*\bfacebookCandidates\.add\s*\(\s*suppliedFacebookUrl\s*\)/u,
     "manual page resolver retries should seed the unresolved Facebook URL directly into candidate resolution",
+  );
+});
+
+test("Hermes page resolver records unresolved pages as defects instead of blocked queue work", () => {
+  assert.match(
+    pageResolver,
+    /insertCoverageDefect[\s\S]*page resolver could not find a Facebook page[\s\S]*unresolved_recorded:\s*true[\s\S]*defect_recorded:\s*true/u,
+    "resolver no-page outcomes should be visible in defects without permanently blocking the queue",
+  );
+  assert.doesNotMatch(
+    pageResolver,
+    /blocked_reason:\s*["']page_resolver_no_verified_meta_page["']/u,
+    "no-page resolver outcomes should not duplicate the visible defect as a blocked job",
   );
 });
 

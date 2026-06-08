@@ -2275,7 +2275,7 @@ async function handleAgentCensus(job) {
   const reason = errors.length ? "census_evidence_fetch_failed" : "census_requires_verified_evidence";
   await deferCensusPolicy(payload.postcode, payload.state || "WA", reason, errors.length ? 6 : 24, true);
   await insertCoverageDefect({ postcode: payload.postcode, state: payload.state || "WA", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } });
-  return { status: "blocked", blocked_reason: reason, result: { handler: "blockwise-agent-census", reason, errors, location_search_allowed: false } };
+  return { status: "complete", result: { handler: "blockwise-agent-census", reason, verified_agencies: 0, queued_page_resolvers: 0, census_deferred: true, defect_recorded: true, errors, location_search_allowed: false } };
 }
 
 async function handlePageResolver(job) {
@@ -2545,7 +2545,7 @@ async function handlePageResolver(job) {
     resolved_agent_id: subject.agent?.id || null,
     resolved_agency_id: subject.agency?.id || null,
   });
-  return { status: "blocked", blocked_reason: "page_resolver_no_verified_meta_page", result: { handler: "blockwise-page-resolver", subject_kind: subject.kind, subject_id: subject.id, agent_id: subject.agent?.id || null, agency_id: subject.agency?.id || null, fetched, location_search_allowed: false } };
+  return { status: "complete", result: { handler: "blockwise-page-resolver", subject_kind: subject.kind, subject_id: subject.id, agent_id: subject.agent?.id || null, agency_id: subject.agency?.id || null, resolved_pages: 0, collectable_pages: 0, collection_started: false, unresolved_recorded: true, defect_recorded: true, fetched, location_search_allowed: false } };
 }
 
 function captureInput(payload) {
