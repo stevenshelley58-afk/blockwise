@@ -109,6 +109,7 @@ const metaOfficialMaxPagesPerCapture = Math.min(positiveInt("HERMES_META_OFFICIA
 const metaBrowserExecutable = env.HERMES_META_BROWSER_EXECUTABLE || env.CHROMIUM_BIN || "chromium";
 const remoteBrowserCdpUrl = env.HERMES_REMOTE_BROWSER_CDP_URL || "";
 const remoteBrowserFailureCooldownMs = positiveInt("HERMES_REMOTE_BROWSER_FAILURE_COOLDOWN_MS", 30 * 60 * 1000);
+const metaBrowserChallengeCooldownMs = positiveInt("HERMES_META_BROWSER_CHALLENGE_COOLDOWN_MS", 15 * 60 * 1000);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const META_OFFICIAL_SOURCE_PROVIDER = "official_meta_archive";
 const META_BROWSER_SOURCE_PROVIDER = "hermes_meta_page_capture";
@@ -293,6 +294,7 @@ function postgrestIn(values) {
 }
 
 let remoteBrowserDisabledUntil = 0;
+let metaBrowserChallengeDisabledUntil = 0;
 
 function log(message, metadata = {}, level = "info") {
   console.log(json({ ts: now(), component: "blockwise-research-runtime", level, message, ...metadata }));
@@ -599,6 +601,10 @@ async function enqueueDueCensusJobs(buildRunId) {
 
 async function enqueueDueAdPageRefreshJobs(buildRunId) {
   if (!adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
+  const challengeCooldownMs = metaBrowserChallengeCooldownRemaining();
+  if (challengeCooldownMs > 0) {
+    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedChallengeCooldown: true, adRefreshChallengeCooldownMs: challengeCooldownMs };
+  }
   const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id,priority&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=${Math.max(adPageRefreshMaxActive * 2, adPageRefreshBatchSize)}`);
   const blockingCollectors = activeCollectors.filter((job) => Number(job.priority || 99) <= adRefreshPriorityForPage({ status: "resolved_collectable" }));
   if (blockingCollectors.length >= adPageRefreshMaxActive) {
@@ -725,6 +731,10 @@ async function recycleBlockedLocationSearchJobs(limit) {
 
 async function enqueueDueLocationAdSearchJobs(buildRunId) {
   if (!locationAdSearchEnabled) return { locationSearchCandidates: 0, locationSearchEnqueued: 0 };
+  const challengeCooldownMs = metaBrowserChallengeCooldownRemaining();
+  if (challengeCooldownMs > 0) {
+    return { locationSearchCandidates: 0, locationSearchEnqueued: 0, locationSearchRecycled: 0, locationSearchSkippedChallengeCooldown: true, locationSearchChallengeCooldownMs: challengeCooldownMs };
+  }
   const activeSearches = await rest("research", `work_queue?select=id&job_type=eq.${LOCATION_AD_SEARCH_JOB_TYPE}&status=in.(pending,claimed)&limit=${locationAdSearchMaxActive}`);
   if (activeSearches.length >= locationAdSearchMaxActive) {
     return { locationSearchCandidates: 0, locationSearchEnqueued: 0, locationSearchSkippedActive: activeSearches.length };
@@ -1236,12 +1246,24 @@ async function captureDomOverCdp(webSocketUrl, url, budgetMs) {
     let bestResultCount = 0;
     let bestAdPayloadCount = 0;
     let stableAdPayloadPolls = 0;
+    let challengePolls = 0;
     while (Date.now() < deadline) {
       await sleep(2_000);
       html = await evaluateOuterHtml(cdp, sessionId);
+      if (metaAdLibraryChallengeDetected(html)) {
+        challengePolls += 1;
+        if (!bestHtml) bestHtml = html;
+        if (challengePolls <= 2 && Date.now() + 3_000 < deadline) {
+          await sleep(3_000);
+          await cdp.send("Page.reload", { ignoreCache: true }, sessionId).catch(() => {});
+          continue;
+        }
+      } else {
+        challengePolls = 0;
+      }
       const resultCount = metaSearchResultCount(html);
       const adPayloadCount = metaSearchAdPayloadCount(html);
-      if (html.length > bestHtml.length || adPayloadCount > bestAdPayloadCount) bestHtml = html;
+      if (!metaAdLibraryChallengeDetected(html) && (html.length > bestHtml.length || adPayloadCount > bestAdPayloadCount)) bestHtml = html;
       if (metaSearchHasConfirmedNoAds(html)) return html;
       if (resultCount > bestResultCount) {
         bestResultCount = resultCount;
@@ -1307,6 +1329,26 @@ function metaSearchAdPayloadCount(html) {
 
 function metaSearchHasConfirmedNoAds(html) {
   return /search_results_connection"\s*:\s*\{"count"\s*:\s*0\b/iu.test(String(html || "")) && /\bNo ads\b/iu.test(String(html || ""));
+}
+
+function metaAdLibraryChallengeDetected(html) {
+  const text = String(html || "");
+  return /\/__rd_verify_[^"'\s<]+/iu.test(text) || /\bexecuteChallenge\s*\(/iu.test(text) || /\bchallenge=3\b/iu.test(text);
+}
+
+function metaBrowserChallengeCooldownRemaining() {
+  return Math.max(0, metaBrowserChallengeDisabledUntil - Date.now());
+}
+
+function recordMetaBrowserChallenge(kind, input) {
+  metaBrowserChallengeDisabledUntil = Math.max(metaBrowserChallengeDisabledUntil, Date.now() + metaBrowserChallengeCooldownMs);
+  log("Meta Ad Library browser challenge detected; cooling down free browser capture", {
+    kind,
+    cooldownMs: metaBrowserChallengeCooldownRemaining(),
+    postcode: input?.postcode || null,
+    query: input?.query || null,
+    metaPageId: input?.metaPageId || null,
+  }, "warning");
 }
 
 async function openCdp(webSocketUrl) {
@@ -2588,6 +2630,7 @@ async function runHermesBrowserCapture(input) {
   try {
     const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: input.metaPageId, limit: input.resultsLimit });
+    if (parsed.challengeDetected) recordMetaBrowserChallenge("page-capture", input);
     const errorMessage = parsed.warnings.join("; ") || null;
     const rawEvidence = errorMessage
       ? await safeWriteBrowserRawEvidence("page-capture", input, {
@@ -2596,6 +2639,7 @@ async function runHermesBrowserCapture(input) {
         warnings: parsed.warnings,
         html_bytes: Buffer.byteLength(stdout),
         confirmed_absence: parsed.confirmedAbsence,
+        challenge_detected: parsed.challengeDetected,
         connection_count: parsed.connectionCount,
       })
       : null;
@@ -2614,6 +2658,7 @@ async function runHermesBrowserCapture(input) {
         url,
         html_bytes: Buffer.byteLength(stdout),
         confirmed_absence: parsed.confirmedAbsence,
+        challenge_detected: parsed.challengeDetected,
         connection_count: parsed.connectionCount,
         advertiserPageId: input.advertiserPageId,
         resolverDecisionId: input.resolverDecisionId,
@@ -3528,6 +3573,7 @@ async function runHermesLocationSearchCapture(input, job) {
       location_search_allowed: true,
     });
     const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
+    if (parsed.challengeDetected) recordMetaBrowserChallenge("location-search", input);
     const countOnly = parsed.items.length === 0 && !parsed.confirmedAbsence && Number(parsed.connectionCount) > 0;
     const errorMessage = countOnly ? null : parsed.warnings.join("; ") || null;
     const rawEvidence = errorMessage
@@ -3538,6 +3584,7 @@ async function runHermesLocationSearchCapture(input, job) {
         html_bytes: Buffer.byteLength(stdout),
         sourceDocumentId,
         confirmed_absence: parsed.confirmedAbsence,
+        challenge_detected: parsed.challengeDetected,
         connection_count: parsed.connectionCount,
         count_only: countOnly,
         postcode: input.postcode,
@@ -3562,6 +3609,7 @@ async function runHermesLocationSearchCapture(input, job) {
         html_bytes: Buffer.byteLength(stdout),
         sourceDocumentId,
         confirmed_absence: parsed.confirmedAbsence,
+        challenge_detected: parsed.challengeDetected,
         connection_count: parsed.connectionCount,
         count_only: countOnly,
         postcode: input.postcode,
@@ -3612,14 +3660,18 @@ function normaliseMetaAdLibraryHtml({ html, pageId, limit }) {
   const bodies = connections.length ? connections : [html];
   const normalised = normaliseHostedMetaItems({ body: bodies, pageId, limit });
   const counts = connections.map((connection) => Number(connection?.count)).filter(Number.isFinite);
+  const challengeDetected = metaAdLibraryChallengeDetected(html);
   const confirmedAbsence = connections.some((connection) => Number(connection?.count) === 0 && objectArray(connection?.edges).length === 0)
     || metaSearchHasConfirmedNoAds(html);
   if (!normalised.items.length && !confirmedAbsence) {
-    normalised.warnings.push("Meta Ad Library page loaded but no ad result payload could be parsed.");
+    normalised.warnings.push(challengeDetected
+      ? "Meta Ad Library returned a browser verification challenge."
+      : "Meta Ad Library page loaded but no ad result payload could be parsed.");
   }
   return {
     ...normalised,
     confirmedAbsence,
+    challengeDetected,
     connectionCount: counts.length ? Math.max(...counts) : null,
   };
 }

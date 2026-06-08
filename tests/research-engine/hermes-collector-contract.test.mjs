@@ -88,6 +88,8 @@ const resolveRemoteBrowserWebSocket = functionBody(supervisor, "resolveRemoteBro
 const remoteBrowserProbeCdpUrl = functionBody(supervisor, "remoteBrowserProbeCdpUrl");
 const remoteBrowserVersionUrl = functionBody(supervisor, "remoteBrowserVersionUrl");
 const rewriteRemoteBrowserWebSocketHost = functionBody(supervisor, "rewriteRemoteBrowserWebSocketHost");
+const metaChallengeDetector = functionBody(supervisor, "metaAdLibraryChallengeDetected");
+const metaChallengeRecorder = functionBody(supervisor, "recordMetaBrowserChallenge");
 
 test("Hermes active ad collector is page-targeted, not location or search-query targeted", () => {
   assert.match(
@@ -167,6 +169,34 @@ test("Hermes browser parse failures store raw evidence pointers", () => {
   assert.match(browserLocationSearchCapture, /\braw_evidence\b/u, "location search metadata must expose raw evidence pointers");
   assert.match(browserRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "browser evidence must use the configured raw evidence bucket");
   assert.match(browserRawEvidence, /["']browser["']/u, "browser evidence should be stored under a browser prefix for operator review");
+});
+
+test("Hermes Meta browser challenges cool down capture instead of masquerading as no ads", () => {
+  assert.match(
+    metaChallengeDetector,
+    /__rd_verify_[\s\S]*executeChallenge|executeChallenge[\s\S]*__rd_verify_/u,
+    "Meta challenge detector must identify the short /__rd_verify challenge page saved in raw evidence",
+  );
+  assert.match(
+    metaHtmlParser,
+    /metaAdLibraryChallengeDetected[\s\S]*browser verification challenge[\s\S]*challengeDetected/u,
+    "challenge captures should be labelled explicitly instead of as generic parser failures",
+  );
+  assert.match(
+    `${browserPageCapture}\n${browserLocationSearchCapture}`,
+    /recordMetaBrowserChallenge[\s\S]*challenge_detected/u,
+    "browser capture paths must record challenge cooldowns and keep challenge evidence visible",
+  );
+  assert.match(
+    `${adPageRefresh}\n${locationAdSearchQueue}`,
+    /metaBrowserChallengeCooldownRemaining[\s\S]*SkippedChallengeCooldown/u,
+    "capture schedulers must stop feeding new browser captures while the challenge cooldown is active",
+  );
+  assert.match(
+    metaChallengeRecorder,
+    /metaBrowserChallengeDisabledUntil[\s\S]*cooldownMs/u,
+    "challenge recorder must expose cooldown state in logs instead of silently pausing work",
+  );
 });
 
 test("Hermes active ad collector only spends on Apify when Apify is explicitly configured", () => {
