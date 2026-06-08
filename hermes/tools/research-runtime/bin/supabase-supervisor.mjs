@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
+import { lookup } from "node:dns/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -1065,26 +1066,32 @@ async function resolveRemoteBrowserWebSocket(cdpUrl, timeoutMs) {
   if (/^wss?:\/\//iu.test(configured)) return configured;
   if (!/^https?:\/\//iu.test(configured)) throw new Error(`unsupported remote browser CDP URL: ${configured}`);
 
-  const versionUrl = remoteBrowserVersionUrl(configured);
+  const probeCdpUrl = await remoteBrowserProbeCdpUrl(configured);
+  const versionUrl = remoteBrowserVersionUrl(probeCdpUrl);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(versionUrl, { signal: controller.signal, headers: remoteBrowserVersionHeaders(configured) });
+    const response = await fetch(versionUrl, { signal: controller.signal });
     const body = await response.text();
     if (!response.ok) throw new Error(`remote browser version endpoint failed ${response.status}: ${body.slice(0, 500)}`);
     const version = JSON.parse(body);
     if (!version.webSocketDebuggerUrl) throw new Error("remote browser version endpoint did not return webSocketDebuggerUrl");
-    return rewriteRemoteBrowserWebSocketHost(version.webSocketDebuggerUrl, configured);
+    return rewriteRemoteBrowserWebSocketHost(version.webSocketDebuggerUrl, probeCdpUrl);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-function remoteBrowserVersionHeaders(cdpUrl) {
+async function remoteBrowserProbeCdpUrl(cdpUrl) {
   const parsed = new URL(cdpUrl);
-  return /^(localhost|127\.0\.0\.1|\[::1\]|::1)$/iu.test(parsed.hostname)
-    ? {}
-    : { Host: "localhost" };
+  if (remoteBrowserHostIsAllowed(parsed.hostname)) return parsed.toString();
+  const { address } = await lookup(parsed.hostname);
+  parsed.hostname = address;
+  return parsed.toString();
+}
+
+function remoteBrowserHostIsAllowed(hostname) {
+  return /^(localhost|127\.0\.0\.1|\[::1\]|::1|\d{1,3}(?:\.\d{1,3}){3})$/iu.test(hostname);
 }
 
 function remoteBrowserVersionUrl(cdpUrl) {

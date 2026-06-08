@@ -74,7 +74,7 @@ const captureDomOverCdp = functionBody(supervisor, "captureDomOverCdp");
 const metaSearchAdPayloadCount = functionBody(supervisor, "metaSearchAdPayloadCount");
 const scrollMetaAdLibraryResults = functionBody(supervisor, "scrollMetaAdLibraryResults");
 const resolveRemoteBrowserWebSocket = functionBody(supervisor, "resolveRemoteBrowserWebSocket");
-const remoteBrowserVersionHeaders = functionBody(supervisor, "remoteBrowserVersionHeaders");
+const remoteBrowserProbeCdpUrl = functionBody(supervisor, "remoteBrowserProbeCdpUrl");
 const remoteBrowserVersionUrl = functionBody(supervisor, "remoteBrowserVersionUrl");
 const rewriteRemoteBrowserWebSocketHost = functionBody(supervisor, "rewriteRemoteBrowserWebSocketHost");
 
@@ -927,13 +927,13 @@ test("Hermes browser capture uses configured remote CDP before local Chromium", 
   );
   assert.match(
     resolveRemoteBrowserWebSocket,
-    /\bremoteBrowserVersionHeaders\b/u,
-    "remote browser probes should use the Steel-compatible host header helper",
+    /\bremoteBrowserProbeCdpUrl\b/u,
+    "remote browser probes should use the Steel-compatible probe URL helper",
   );
   assert.match(
-    remoteBrowserVersionHeaders,
-    /Host:\s*["']localhost["']/u,
-    "Steel rejects Docker service-name Host headers, so probes should connect by service name but send Host: localhost",
+    remoteBrowserProbeCdpUrl,
+    /\blookup\s*\(\s*parsed\.hostname\s*\)/u,
+    "Steel rejects Docker service-name hosts, so probes should resolve the service name to a container IP",
   );
   assert.match(
     rewriteRemoteBrowserWebSocketHost,
