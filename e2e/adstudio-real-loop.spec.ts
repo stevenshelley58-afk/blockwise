@@ -10,6 +10,7 @@ const describeAdStudioRealLoop = canRun ? test.describe : test.describe.skip;
 
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
+  test.setTimeout(180_000);
 
   test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
@@ -24,23 +25,35 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await chooseBlankTemplate(page);
     await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
     await page.getByLabel(/short description/i).fill("Open home this Saturday, renovated family home in Scarborough.");
+    const generationResponse = page.waitForResponse(
+      (response) => {
+        const url = new URL(response.url());
+        return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
+      },
+      { timeout: 90_000 },
+    );
     await page.getByRole("button", { name: /generate ad/i }).click();
+    const generated = await generationResponse;
+    expect(generated.ok(), await generated.text()).toBe(true);
+    const generatedPayload = (await generated.json()) as { campaignPack?: { campaign?: { campaignId?: string } } };
+    const campaignId = generatedPayload.campaignPack?.campaign?.campaignId;
+    expect(campaignId).toBeTruthy();
 
-    await expect(page.getByText(/generated story, feed, and square/i)).toBeVisible({ timeout: 60_000 });
-    await page.getByRole("button", { name: /copy/i }).click();
+    await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
+    await openPanel(page, "Copy");
     await page.getByLabel(/headline/i).fill("Scarborough open home");
-    await page.getByRole("button", { name: /^save$/i }).click();
+    await saveDraft(page);
     await expect(page.getByText(/^saved$/i).first()).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole("button", { name: /ad 2/i }).click();
     await page.getByRole("button", { name: /ad 1/i }).click();
     await expect(page.getByDisplayValue("Scarborough open home")).toBeVisible();
 
-    const campaignId = campaignIdFromUrl(page) ?? await selectedCampaignId(page);
-    expect(campaignId).toBeTruthy();
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
+    await openPanel(page, "Copy");
     await expect(page.getByDisplayValue("Scarborough open home")).toBeVisible({ timeout: 30_000 });
 
+    await openPanel(page, "Publish");
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: /export/i }).click();
     const zip = await download;
@@ -65,13 +78,29 @@ async function approveBrandKit(page: Page) {
 }
 
 async function openNewAd(page: Page) {
-  const button = page.getByRole("button", { name: /create ad|new ad/i }).first();
-  await expect(button).toBeEnabled({ timeout: 30_000 });
-  await button.click();
+  const button = page.getByRole("button", { name: /create ad|new ad|add ad/i }).first();
+  if (await button.isVisible().catch(() => false)) {
+    await expect(button).toBeEnabled({ timeout: 30_000 });
+    await button.click();
+    return;
+  }
+
+  const mobileDetails = page.locator(".studio-mobile-campaign-btn");
+  if (await mobileDetails.isVisible().catch(() => false)) {
+    await mobileDetails.click();
+    const browse = page.getByRole("button", { name: /browse templates/i }).first();
+    await expect(browse).toBeEnabled({ timeout: 30_000 });
+    await browse.click();
+    return;
+  }
+
+  const browse = page.getByRole("button", { name: /browse templates/i }).first();
+  await expect(browse).toBeEnabled({ timeout: 30_000 });
+  await browse.click();
 }
 
 async function chooseBlankTemplate(page: Page) {
-  const blank = page.getByRole("button", { name: /blank|create your own|describe your ad/i }).first();
+  const blank = page.getByRole("button", { name: /start blank|blank|create your own|describe your ad/i }).first();
   if (await blank.isVisible().catch(() => false)) {
     await blank.click();
   }
@@ -79,16 +108,26 @@ async function chooseBlankTemplate(page: Page) {
 
 async function uploadGeneratedListingImage(page: Page, path: string) {
   await writeTinyPng(path);
-  await page.setInputFiles('input[type="file"]', path);
+  await page.setInputFiles('.studio-newad input[type="file"]', path);
+  await expect(page.getByRole("button", { name: /listing\.png[\s\S]*selected file/i })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
-async function selectedCampaignId(page: Page): Promise<string> {
-  const value = await page.getByLabel(/switch campaign/i).inputValue().catch(() => "");
-  return value;
+async function openPanel(page: Page, label: "Copy" | "Publish") {
+  const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  await button.click();
 }
 
-function campaignIdFromUrl(page: Page): string | null {
-  return new URL(page.url()).searchParams.get("campaignId");
+async function saveDraft(page: Page) {
+  const save = page.getByRole("button", { name: /^save$/i }).first();
+  if (await save.isVisible().catch(() => false)) {
+    await save.click();
+    return;
+  }
+
+  await page.getByRole("button", { name: /more actions/i }).click();
+  await page.getByRole("menuitem", { name: /save draft/i }).click();
 }
 
 async function writeTinyPng(path: string) {

@@ -40,6 +40,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
   const [imageName, setImageName] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
     setImageDataUrl("");
     setImageName("");
     setError("");
+    setUploadingImage(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open, initialTemplateId]);
 
@@ -124,6 +126,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
 
   async function selectImage(file: File) {
     setError("");
+    setUploadingImage(true);
     try {
       const uploaded = await uploadAdStudioMedia({
         file,
@@ -132,15 +135,22 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
       });
       setImageDataUrl(uploaded.src);
       setImageName(file.name);
+      setError("");
     } catch (caught) {
       setImageDataUrl("");
       setImageName("");
       setError(caught instanceof Error ? caught.message : "Could not upload that image.");
+    } finally {
+      setUploadingImage(false);
     }
   }
 
   async function submit() {
     const trimmed = description.trim();
+    if (uploadingImage) {
+      setError("Wait for the image upload to finish.");
+      return;
+    }
     if (!imageDataUrl) {
       setError("Upload one image to generate the ad.");
       return;
@@ -239,6 +249,7 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
                   setImageDataUrl("");
                   setImageName("");
                   setError("");
+                  setUploadingImage(false);
                 }}
               />
               <label className="studio-newad-field">
@@ -266,8 +277,8 @@ export function NewAdDialog({ open, onClose, brandKit, workspaceId, templates, o
           </span>
           <button className="studio-btn secondary" type="button" onClick={onClose}>Close</button>
           {step === "brief" && (
-            <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting}>
-              {submitting ? "Generating" : "Generate ad"}
+            <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting || uploadingImage}>
+              {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}
               <ArrowUpRight aria-hidden size={16} />
             </button>
           )}
