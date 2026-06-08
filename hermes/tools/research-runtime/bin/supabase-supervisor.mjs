@@ -131,6 +131,7 @@ const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_canary_page_id",
 ];
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
+const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
   "id",
   "ad_archive_id",
@@ -5546,7 +5547,7 @@ async function processClaimedJobs() {
 }
 
 async function deferMetaBrowserChallengeJob(job) {
-  const cooldownMs = Math.max(60_000, metaBrowserChallengeCooldownRemaining());
+  const cooldownMs = metaBrowserChallengeResumeDelayMs(job);
   const previousAttempts = Math.max(0, Number(job.attempts || 0) - 1);
   await finishJob(job, "pending", {
     attempts: previousAttempts,
@@ -5556,6 +5557,7 @@ async function deferMetaBrowserChallengeJob(job) {
     result: {
       handler: "meta-browser-challenge-cooldown",
       cooldown_ms: cooldownMs,
+      resume_spread_ms: META_BROWSER_CHALLENGE_RESUME_SPREAD_MS,
       previous_attempts: previousAttempts,
       worker_id: workerId,
     },
@@ -5566,6 +5568,13 @@ async function deferMetaBrowserChallengeJob(job) {
     cooldownMs,
     attempts: previousAttempts,
   }, "warning");
+}
+
+function metaBrowserChallengeResumeDelayMs(job) {
+  const cooldownMs = Math.max(60_000, metaBrowserChallengeCooldownRemaining());
+  const spreadSeed = parseInt(hash(`${job?.id || ""}:${job?.job_type || ""}`).slice(0, 8), 16);
+  const spreadMs = Number.isFinite(spreadSeed) ? spreadSeed % META_BROWSER_CHALLENGE_RESUME_SPREAD_MS : 0;
+  return cooldownMs + spreadMs;
 }
 
 async function processOneJob(job) {

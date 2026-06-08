@@ -92,6 +92,7 @@ const metaChallengeDetector = functionBody(supervisor, "metaAdLibraryChallengeDe
 const metaChallengeRecorder = functionBody(supervisor, "recordMetaBrowserChallenge");
 const metaChallengeJobGate = functionBody(supervisor, "shouldDeferMetaBrowserChallengeJob");
 const metaChallengeJobDeferral = functionBody(supervisor, "deferMetaBrowserChallengeJob");
+const metaChallengeResumeDelay = functionBody(supervisor, "metaBrowserChallengeResumeDelayMs");
 const processOneJob = functionBody(supervisor, "processOneJob");
 const metaChallengeCooldownRefresh = functionBody(supervisor, "refreshMetaBrowserChallengeCooldownFromSettings");
 const tick = functionBody(supervisor, "tick");
@@ -221,6 +222,11 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
     metaChallengeJobDeferral,
     /attempts:\s*previousAttempts[\s\S]*available_at:[\s\S]*cooldownMs/u,
     "challenge deferral must preserve the job and avoid consuming attempts while cooling down",
+  );
+  assert.match(
+    `${metaChallengeJobDeferral}\n${metaChallengeResumeDelay}`,
+    /resume_spread_ms:\s*META_BROWSER_CHALLENGE_RESUME_SPREAD_MS[\s\S]*hash\(`\$\{job\?\.[\s\S]*job_type[\s\S]*META_BROWSER_CHALLENGE_RESUME_SPREAD_MS/u,
+    "challenge deferral should stagger resume times so cooled-down capture jobs do not all become due at once",
   );
 });
 
