@@ -128,7 +128,6 @@ const APIFY_RUNTIME_SETTING_KEYS = [
   "apify_canary_max_results",
   "apify_canary_per_run_cap_usd",
   "apify_canary_page_id",
-  "apify_paid_capture_mode",
 ];
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
   "id",
@@ -2635,19 +2634,6 @@ async function runFallbackMetaPageCapture(input, sourceProvider = configuredMeta
   return runHermesBrowserCapture(input);
 }
 
-async function captureWithPaidApifyFailover(input, fallbackSourceProvider, fallbackOutcome) {
-  let sourceProvider = fallbackSourceProvider;
-  let outcome = fallbackOutcome;
-  if (fallbackOutcome.status !== "SUCCEEDED" && fallbackSourceProvider !== META_APIFY_SOURCE_PROVIDER) {
-    const apifyOutcome = await runApifyMetaPageCapture(input, fallbackOutcome);
-    if (apifyOutcome) {
-      outcome = apifyOutcome;
-      sourceProvider = apifyOutcome.provider || META_APIFY_SOURCE_PROVIDER;
-    }
-  }
-  return { outcome, sourceProvider };
-}
-
 async function runMetaPageCapture(input) {
   const fallbackSourceProvider = configuredMetaFallbackSourceProvider();
   if (metaOfficialApiEnabled) {
@@ -2662,27 +2648,25 @@ async function runMetaPageCapture(input) {
       error: official.errorMessage,
     }, "warn");
     const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
-    const paidFailover = await captureWithPaidApifyFailover(input, fallbackSourceProvider, fallback);
     return {
       outcome: {
-        ...paidFailover.outcome,
+        ...fallback,
         metadata: {
-          ...(paidFailover.outcome.metadata || {}),
+          ...(fallback.metadata || {}),
           official_api_failed: true,
           official_api_error: official.errorMessage,
         },
       },
-      sourceProvider: paidFailover.sourceProvider,
-      captureMode: captureModeForSourceProvider(paidFailover.sourceProvider, "after_official_api_failure"),
+      sourceProvider: fallbackSourceProvider,
+      captureMode: captureModeForSourceProvider(fallbackSourceProvider, "after_official_api_failure"),
     };
   }
 
   const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
-  const paidFailover = await captureWithPaidApifyFailover(input, fallbackSourceProvider, fallback);
   return {
-    outcome: paidFailover.outcome,
-    sourceProvider: paidFailover.sourceProvider,
-    captureMode: captureModeForSourceProvider(paidFailover.sourceProvider),
+    outcome: fallback,
+    sourceProvider: fallbackSourceProvider,
+    captureMode: captureModeForSourceProvider(fallbackSourceProvider),
   };
 }
 
@@ -2708,12 +2692,6 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
   if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
     return explicit
       ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture is ${parsedSettings.enabled ? parsedSettings.state : "disabled"}`, { explicit, apify_state: parsedSettings.state })
-      : null;
-  }
-  const paidCaptureMode = runtimeSettingString(settings, "apify_paid_capture_mode", "approved_fallback");
-  if (paidCaptureMode !== "approved_fallback") {
-    return explicit
-      ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture mode is ${paidCaptureMode}`, { explicit, apify_paid_capture_mode: paidCaptureMode })
       : null;
   }
 

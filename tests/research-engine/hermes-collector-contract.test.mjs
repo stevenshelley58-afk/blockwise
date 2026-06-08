@@ -56,7 +56,6 @@ const hostedMetaParser = [
 const captureInput = functionBody(supervisor, "captureInput");
 const metaAdLibraryPageUrl = functionBody(supervisor, "metaAdLibraryPageUrl");
 const configuredMetaPageCapture = functionBody(supervisor, "runMetaPageCapture");
-const paidFailoverCapture = functionBody(supervisor, "captureWithPaidApifyFailover");
 const apifyMetaPageCapture = functionBody(supervisor, "runApifyMetaPageCapture");
 const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor");
 const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBenchmarkIfNeeded");
@@ -144,8 +143,6 @@ test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
   assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
   assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
   assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
-  assert.match(apifyMetaPageCapture, /\bapify_paid_capture_mode\b/u, "paid capture must be runtime-gated so approved canaries do not automatically unlock broad spend");
-  assert.match(apifyMetaPageCapture, /paidCaptureMode\s*!==\s*["']approved_fallback["'][\s\S]*return explicit[\s\S]*:\s*null/u, "non-explicit paid failover must stop when Apify is in canary-only mode");
   assert.match(apifyPageInput, /\burls:\s*\[\s*url\s*\]/u, "Apify actors that require input.urls must receive the Meta Ad Library URL");
   assert.match(apifyPageInput, /\bmaxAds:\s*resultLimit\b/u, "Apify actor-specific maxAds defaults must be capped with the shared result limit");
   assert.match(apifyMetaPageCapture, /\bcostUsdFromApifyError\(error\)/u, "failed Apify captures must still ledger any charged run cost");
@@ -168,11 +165,11 @@ test("Hermes browser parse failures store raw evidence pointers", () => {
   assert.match(browserRawEvidence, /["']browser["']/u, "browser evidence should be stored under a browser prefix for operator review");
 });
 
-test("Hermes active ad collector can fail over from free capture to Apify", () => {
-  assert.match(configuredMetaPageCapture, /\bcaptureWithPaidApifyFailover\b/u);
-  assert.match(paidFailoverCapture, /fallbackOutcome\.status !== ["']SUCCEEDED["']/u, "paid failover should only run after primary fallback failure");
-  assert.match(paidFailoverCapture, /\brunApifyMetaPageCapture\(input, fallbackOutcome\)/u, "failed browser/http_json capture should be eligible for Apify fallback");
-  assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the final provider");
+test("Hermes active ad collector only spends on Apify when Apify is explicitly configured", () => {
+  assert.doesNotMatch(configuredMetaPageCapture, /\bcaptureWithPaidApifyFailover\b/u, "browser/http_json failures must not automatically spend on Apify");
+  assert.doesNotMatch(configuredMetaPageCapture, /\brunApifyMetaPageCapture\(input,\s*fallback/u, "free capture failure must not trigger hidden paid fallback");
+  assert.match(fallbackMetaPageCapture, /sourceProvider === META_APIFY_SOURCE_PROVIDER[\s\S]*runApifyMetaPageCapture\(input,\s*null,\s*\{\s*explicit:\s*true\s*\}\)/u, "Apify page capture should only run when Apify is the configured provider");
+  assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the configured provider");
 });
 
 test("Hermes Apify fallback only promotes actors after capped known-good canaries", () => {
