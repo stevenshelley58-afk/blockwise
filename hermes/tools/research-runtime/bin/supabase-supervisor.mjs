@@ -334,6 +334,13 @@ const encode = (value) => encodeURIComponent(value);
 const uuidOrNull = (value) => (typeof value === "string" && uuidPattern.test(value.trim()) ? value.trim() : null);
 const resolveBuildRunId = async (...candidates) => candidates.map(uuidOrNull).find(Boolean) || await ensureBuildRun();
 
+function runtimeSettingAuditRowId(settingKey) {
+  const hex = hash(`runtime_settings:${settingKey}`).slice(0, 32).split("");
+  hex[12] = "5";
+  hex[16] = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8).join("")}-${hex.slice(8, 12).join("")}-${hex.slice(12, 16).join("")}-${hex.slice(16, 20).join("")}-${hex.slice(20, 32).join("")}`;
+}
+
 async function readRuntimeSettings(settingKeys = APIFY_RUNTIME_SETTING_KEYS) {
   try {
     const rows = await rest(
@@ -358,7 +365,7 @@ async function setRuntimeSetting(settingKey, settingValue, metadata = {}) {
         updated_by: "hermes-supervisor",
       }),
     });
-    await recordEvent("update", "runtime_settings", null, { setting_key: settingKey, setting_value: settingValue, metadata });
+    await recordEvent("update", "runtime_settings", runtimeSettingAuditRowId(settingKey), { setting_key: settingKey, setting_value: settingValue, metadata });
   } catch (error) {
     if (!missingSchemaRelation(error, "runtime_settings")) throw error;
   }

@@ -10,6 +10,7 @@ const runtimeTypes = readFileSync(join(root, "hermes/tools/research-runtime/src/
 const mainWrapper = readFileSync(join(root, "infra/hermes/main-wrapper.sh"), "utf8");
 const researchCompose = readFileSync(join(root, "infra/coolify/docker-compose.research.yml"), "utf8");
 const recordEvent = functionBody(supervisor, "recordEvent");
+const setRuntimeSetting = functionBody(supervisor, "setRuntimeSetting");
 const collector = functionBody(supervisor, "handleAdCollector");
 const postIngestJobs = functionBody(supervisor, "enqueuePostIngestJobs");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
@@ -528,6 +529,19 @@ test("Hermes ingest events keep full audit-trail columns", () => {
     recordEvent,
     /schema cache|PGRST204|42703/u,
     "schema mismatches in ingest_events should fail loudly instead of degrading provenance",
+  );
+});
+
+test("Hermes runtime setting audit events use a non-null UUID row id", () => {
+  assert.match(
+    supervisor,
+    /function runtimeSettingAuditRowId\(settingKey\)[\s\S]*return `\$\{hex\.slice\(0,\s*8\)\.join\(""\)\}-/u,
+    "runtime_settings audit rows need a stable UUID row_id because live ingest_events rejects null row ids",
+  );
+  assert.match(
+    setRuntimeSetting,
+    /recordEvent\(["']update["'],\s*["']runtime_settings["'],\s*runtimeSettingAuditRowId\(settingKey\)/u,
+    "setRuntimeSetting must not record runtime_settings audit events with row_id null",
   );
 });
 
