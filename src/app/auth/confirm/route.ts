@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectPath = type === "signup" ? appendConfirmed(next) : next;
-  return NextResponse.redirect(new URL(redirectPath, request.url));
+  return NextResponse.redirect(new URL(redirectPath, process.env.NEXT_PUBLIC_APP_URL ?? request.url));
 }
 
 function appendConfirmed(path: string): string {

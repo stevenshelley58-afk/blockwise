@@ -25,7 +25,7 @@ export async function requireOperator(): Promise<
     supabase.from("profiles").select("is_operator").eq("id", user.id).maybeSingle(),
     supabase.from("workspace_members").select("role").eq("profile_id", user.id),
   ]);
-  const allowed = (process.env.OPERATOR_EMAILS ?? "stevenshelley58@gmail.com")
+  const allowed = (process.env.OPERATOR_EMAILS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);

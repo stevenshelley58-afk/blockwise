@@ -1,13 +1,13 @@
-import type { MetadataRoute } from "next";
+﻿import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Blockwise",
     short_name: "Blockwise",
     description: "Create and launch real estate ads from one platform.",
-    start_url: "/pwa?source=pwa",
+    start_url: "/",
     scope: "/",
-    display: "standalone",
+    display: "browser",
     background_color: "#ffffff",
     theme_color: "#123e75",
     icons: [

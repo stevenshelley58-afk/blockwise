@@ -19,7 +19,11 @@ type PublicCheck = {
   value: number | string | boolean | null;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  const authorization = request.headers.get("authorization");
+  const authenticated = secret && authorization === `Bearer ${secret}`;
+
   const { data, error } = await createSupabaseServiceClient()
     .schema("research")
     .from("v_health")
@@ -27,6 +31,9 @@ export async function GET() {
     .maybeSingle<ResearchHealthRow>();
 
   if (error || !data) {
+    if (!authenticated) {
+      return NextResponse.json({ app: "blockwise", service: "research", status: "red" }, { status: 503 });
+    }
     return NextResponse.json(
       {
         app: "blockwise",
@@ -42,6 +49,11 @@ export async function GET() {
 
   const checks = publicResearchChecks(data);
   const healthy = Object.values(checks).every((check) => check.ok);
+
+  if (!authenticated) {
+    return NextResponse.json({ app: "blockwise", service: "research", status: healthy ? "green" : "red" }, { status: healthy ? 200 : 503 });
+  }
+
   return NextResponse.json(
     {
       app: "blockwise",

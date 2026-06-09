@@ -6,6 +6,7 @@ import { createOpenAiImageProvider, generateMixedImageVariantsInParallel } from 
 import { createImageProviderForCandidate } from "@/lib/adstudio/ai-providers";
 import { dataUrlToUploadBytes } from "@/lib/adstudio/generated-media";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "@/lib/adstudio/providers";
 import { assembleImagePrompt } from "@/lib/operator/prompts/assemble-prompt";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "@/lib/operator/prompts/model-profile-runtime";
@@ -51,6 +52,19 @@ export async function POST(request: NextRequest) {
 
   if (!context.ok) {
     return context.response;
+  }
+
+  const rateLimit = await checkRateLimit(
+    context.supabase,
+    context.access.workspaceId,
+    context.access.userId,
+    { windowSeconds: 3600, maxRequests: 10, bucket: "ai-generate-image" },
+  );
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const body = await readJsonBody<GenerateImageBody>(request);
