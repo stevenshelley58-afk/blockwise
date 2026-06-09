@@ -26,3 +26,6 @@ _archive/
 
 # Persistent local secrets (SSH keys etc.) - never commit
 .secrets/
+
+# Office temp/owner-lock files
+~$*
