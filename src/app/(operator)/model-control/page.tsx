@@ -7,7 +7,7 @@ import { PromptControlPanel } from "@/components/prompt-control-panel";
 import { StatusPill } from "@/components/status-pill";
 import { getModelControlViewData } from "@/lib/ai/model-profile-store";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listAiLedgerRows, type AiLedgerFilters } from "@/lib/product/live-data";
+import { listAiLedgerRows, type AiLedgerFilters } from "@/lib/operator/overview";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

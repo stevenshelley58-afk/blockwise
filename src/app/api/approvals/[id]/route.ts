@@ -5,6 +5,7 @@ import { queueLeadDeliveryAttempt } from "@/lib/providers/lead-delivery-queue";
 import { queueMetaMutationExecution } from "@/lib/providers/meta-mutation-queue";
 import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
 import { loadMetaPublishPlan, persistMetaPublishPlan } from "@/lib/providers/meta-execution";
+import { recordAuditLog } from "@/lib/supabase/audit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -51,12 +52,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: error?.message ?? "Approval request was not found." }, { status: 404 });
   }
 
-  await serviceSupabase.from("audit_logs").insert({
-    workspace_id: access.workspaceId,
-    actor_profile_id: access.userId,
+  await recordAuditLog(serviceSupabase, {
+    workspaceId: access.workspaceId,
+    actorProfileId: access.userId,
     action: `approval_${body.status}`,
-    target_type: "approval_request",
-    target_id: approval.id,
+    targetType: "approval_request",
+    targetId: approval.id,
     metadata: {
       targetType: approval.target_type,
       targetId: approval.target_id,

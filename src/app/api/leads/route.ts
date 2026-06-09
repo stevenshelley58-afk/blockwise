@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { listLeadRowsWithDedupe } from "@/lib/product/live-data";
+import { listLeadRowsWithDedupe } from "@/lib/leads/rows";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

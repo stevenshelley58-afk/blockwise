@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { listApprovalRows } from "@/lib/product/live-data";
+import { listApprovalRows } from "@/lib/publishing/approvals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

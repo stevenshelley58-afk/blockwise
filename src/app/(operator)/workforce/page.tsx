@@ -6,7 +6,7 @@ import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { WORKFORCE_AGENTS, HUMAN_APPROVAL_ACTIONS } from "@/lib/workforce/permissions";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listAgentRunRows } from "@/lib/product/live-data";
+import { listAgentRunRows } from "@/lib/operator/overview";
 
 export const dynamic = "force-dynamic";
 

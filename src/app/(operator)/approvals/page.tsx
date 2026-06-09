@@ -6,7 +6,7 @@ import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { HUMAN_APPROVAL_ACTIONS } from "@/lib/workforce/permissions";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listApprovalRows } from "@/lib/product/live-data";
+import { listApprovalRows } from "@/lib/publishing/approvals";
 
 export const dynamic = "force-dynamic";
 
