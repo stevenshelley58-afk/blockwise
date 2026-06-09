@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 import { BadgePercent, MousePointerClick, Tag, UserCheck, UserPlus, Wallet } from "lucide-react";
 import { useState } from "react";
@@ -24,17 +25,26 @@ const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) =
 const SPEND_COLOR = "#123e75";
 const LEADS_COLOR = "#31c46f";
 
+export type OAuthNotice = {
+  tone: "success" | "error" | "warning";
+  message: string;
+  settingsLink?: boolean;
+};
+
 export function MetaMonitorDashboard({
   initialPayload,
   metaConnectHref,
+  oauthNotice,
 }: {
   initialPayload: MetaMonitorPayload;
   metaConnectHref?: string;
+  oauthNotice?: OAuthNotice | null;
 }) {
   const [payload, setPayload] = useState(initialPayload);
   const [rangeKey, setRangeKey] = useState<MonitorRange>(initialPayload.range.key);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   async function refresh(nextRange: MonitorRange = rangeKey) {
     setIsRefreshing(true);
@@ -89,6 +99,16 @@ export function MetaMonitorDashboard({
       />
 
       {error ? <p className="mm-error" role="alert">{error}</p> : null}
+
+      {oauthNotice && !noticeDismissed ? (
+        <div className={`mm-oauth-notice mm-oauth-notice--${oauthNotice.tone}`} role="alert">
+          <span>{oauthNotice.message}</span>
+          {oauthNotice.settingsLink ? (
+            <Link href="/settings" className="mm-oauth-notice-link">Go to Settings</Link>
+          ) : null}
+          <button type="button" className="mm-oauth-notice-dismiss" aria-label="Dismiss" onClick={() => setNoticeDismissed(true)}>✕</button>
+        </div>
+      ) : null}
 
       {payload.source === "sample" && !payload.connected && metaConnectHref ? (
         <DemoModeNotice metaConnectHref={metaConnectHref} />
