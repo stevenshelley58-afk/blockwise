@@ -1,6 +1,7 @@
 import { ArrowRight, Palette, PenLine, Plug } from "lucide-react";
 import Link from "next/link";
 
+import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { PageHeading } from "@/components/page-heading";
 import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
 import { StatusPill } from "@/components/status-pill";
@@ -50,6 +51,7 @@ export default async function SelfServePage() {
 
   return (
     <main className="content">
+      <ConfirmRegistrationTracker />
       <PageHeading
         eyebrow="Home"
         title="Start with one ad"

@@ -1,4 +1,5 @@
 import { ArrowRight, Check } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
@@ -88,6 +89,7 @@ export default function HomePage() {
             <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
+            <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
             <SignInLink />
@@ -124,15 +126,15 @@ export default function HomePage() {
             </div>
 
             <div className="lp-hero-media">
-              <picture>
-                <source media="(max-width: 720px)" srcSet="/hero/hero-tall.jpg" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/hero/hero-wide.jpg"
-                  alt="Aerial view of a coastal suburb with waterfront homes"
-                  className="lp-hero-photo"
-                />
-              </picture>
+              <Image
+                src="/hero/hero-wide.jpg"
+                alt="Aerial view of a coastal suburb with waterfront homes"
+                className="lp-hero-photo"
+                width={900}
+                height={600}
+                priority
+                sizes="(max-width: 720px) 100vw, 50vw"
+              />
 
               <div className="lp-perf lp-perf-hero" aria-label="Campaign performance preview (example data)">
                 <div className="lp-perf-top">
@@ -447,7 +449,7 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
-              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 campaigns.</h2>
+              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
               <p className="lp-lead lp-lead-light">
                 No card required. Create draft campaigns, review the ads and connect your ad account
                 when you are ready to launch.
@@ -458,7 +460,7 @@ export default function HomePage() {
             </div>
             <div className="lp-trial-grid">
               <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the campaign builder from the minute you confirm your email.</span></div>
-              <div className="lp-trial-item"><strong>10 campaigns</strong><span>Create up to 10 draft campaigns during the trial.</span></div>
+              <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
@@ -563,6 +565,7 @@ export default function HomePage() {
             <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
+            <Link href="/pricing">Pricing</Link>
           </div>
           <div>
             <h4>Legal</h4>
@@ -574,7 +577,7 @@ export default function HomePage() {
         <div className="lp-shell lp-footer-bottom">
           <span>© {new Date().getFullYear()} Blockwise. All rights reserved.</span>
           {/* Social icons are decorative until the profiles exist — swap spans for links then. */}
-          <span className="lp-footer-social" aria-hidden>
+          <span className="lp-footer-social" aria-hidden style={{ pointerEvents: "none" }}>
             <span className="lp-social-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
             </span>
