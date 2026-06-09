@@ -1,4 +1,5 @@
-import { schedules } from "@trigger.dev/sdk/v3";
+﻿import { schedules } from "@trigger.dev/sdk/v3";
+import * as Sentry from "@sentry/nextjs";
 
 import { runPaidServiceWatchdog } from "../src/lib/alerts/paid-service-runner.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
@@ -12,5 +13,13 @@ import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 export const paidServiceWatchdog = schedules.task({
   id: "paid-service-watchdog",
   cron: "0 */2 * * *",
-  run: async () => runPaidServiceWatchdog(createSupabaseServiceClient()),
+  run: async () => {
+    try {
+      return await runPaidServiceWatchdog(createSupabaseServiceClient());
+    } catch (error) {
+      Sentry.captureException(error);
+      throw error;
+    }
+  },
 });
+
