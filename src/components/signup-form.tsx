@@ -119,7 +119,7 @@ export function SignupForm() {
       password,
       options: {
         captchaToken: turnstileToken,
-        emailRedirectTo: `${location.origin}/auth/confirm?next=/start`,
+        emailRedirectTo: `${location.origin}/auth/confirm?next=/self-serve?confirmed=1`,
         data: {
           signup_flow: "trial_self_serve",
           agency_name: agencyName,
@@ -170,6 +170,7 @@ export function SignupForm() {
             minLength={8}
             maxLength={200}
           />
+          <span className="item-meta">At least 8 characters.</span>
         </label>
         <label htmlFor="signup-agency-name">
           Business name

@@ -1,6 +1,6 @@
 import { MetaMark } from "./MetaMonitorHeader";
 
-export function EmptyMetaState({ issue, connected }: { issue: string | null; connected: boolean }) {
+export function EmptyMetaState({ issue, connected, metaConnectHref }: { issue: string | null; connected: boolean; metaConnectHref?: string }) {
   const title = connected ? "Meta reporting couldn't load" : "Connect Meta to view ad performance";
   const description = connected
     ? (issue ?? "Something went wrong while loading your Meta account. Try refreshing.")
@@ -15,7 +15,7 @@ export function EmptyMetaState({ issue, connected }: { issue: string | null; con
       <h2>{title}</h2>
       <p>{description}</p>
       {!connected ? (
-        <a className="button" href="/settings">
+        <a className="button" href={metaConnectHref ?? "/settings"}>
           Connect Meta
         </a>
       ) : null}

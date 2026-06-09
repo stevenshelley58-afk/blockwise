@@ -1,10 +1,23 @@
 "use client";
 
+import { X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const STORAGE_KEY = "blockwise:sample-banner-dismissed";
 
 export function SampleBanner() {
   const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(window.localStorage.getItem(STORAGE_KEY) === "1");
+  }, []);
+
+  function dismiss() {
+    window.localStorage.setItem(STORAGE_KEY, "1");
+    setDismissed(true);
+  }
+
   if (dismissed) return null;
   return (
     <div
@@ -32,7 +45,7 @@ export function SampleBanner() {
       <button
         type="button"
         aria-label="Dismiss sample data notice"
-        onClick={() => setDismissed(true)}
+        onClick={dismiss}
         style={{
           flexShrink: 0,
           background: "transparent",
@@ -44,7 +57,7 @@ export function SampleBanner() {
           borderRadius: "4px",
         }}
       >
-        X
+        <X aria-hidden size={14} />
       </button>
     </div>
   );

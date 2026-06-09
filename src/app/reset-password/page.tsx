@@ -13,6 +13,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
@@ -21,8 +22,13 @@ export default function ResetPasswordPage() {
       }
     });
 
+    const timer = setTimeout(() => {
+      setExpired(true);
+    }, 8000);
+
     return () => {
       listener.subscription.unsubscribe();
+      clearTimeout(timer);
     };
   }, [supabase]);
 
@@ -60,7 +66,12 @@ export default function ResetPasswordPage() {
           <p className="login-copy">Choose a new password for your account.</p>
         </div>
 
-        {!isReady ? (
+        {!isReady && expired ? (
+          <p className="login-copy">
+            This reset link has expired or was already used.{" "}
+            <a href="/forgot-password">Request a new one</a>.
+          </p>
+        ) : !isReady ? (
           <p className="login-copy">Verifying your reset link&hellip;</p>
         ) : (
           <form className="login-form" onSubmit={submit}>

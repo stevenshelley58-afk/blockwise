@@ -111,18 +111,23 @@ async function loadIsTrialWorkspace(
 
 function BrandSetupGate({ workspaceName }: { workspaceName: string }) {
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f8fafc", padding: 24 }}>
+    <div style={{ display: "grid", placeItems: "center", padding: 24, flex: 1 }}>
       <section style={{ width: "min(560px, 100%)", border: "1px solid #dbe3ef", borderRadius: 10, background: "#fff", padding: 24, display: "grid", gap: 14 }}>
         <span style={{ fontSize: 12, fontWeight: 750, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6 }}>{workspaceName}</span>
         <h1 style={{ margin: 0, fontSize: 24, letterSpacing: 0 }}>Approve your brand kit first</h1>
         <p style={{ margin: 0, color: "#475569", lineHeight: 1.55 }}>
           Ad Studio needs an approved agency brand before it can create live ads. Scan your site, check the logo, colours, contact details, and approve the kit.
         </p>
-        <Link href="/ad-studio/brand" style={{ minHeight: 42, borderRadius: 8, background: "#123E75", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 16px", textDecoration: "none", fontWeight: 750 }}>
-          Open Brand Studio
-        </Link>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <Link href="/ad-studio/brand" style={{ minHeight: 42, borderRadius: 8, background: "#123E75", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 16px", textDecoration: "none", fontWeight: 750 }}>
+            Open Brand Studio
+          </Link>
+          <Link href="/self-serve" style={{ minHeight: 42, borderRadius: 8, border: "1px solid #dbe3ef", color: "#475569", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 16px", textDecoration: "none", fontWeight: 600 }}>
+            Back to Home
+          </Link>
+        </div>
       </section>
-    </main>
+    </div>
   );
 }
 
