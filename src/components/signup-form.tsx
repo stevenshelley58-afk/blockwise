@@ -172,7 +172,7 @@ export function SignupForm() {
           />
         </label>
         <label htmlFor="signup-agency-name">
-          Agency name
+          Business name
           <input id="signup-agency-name" name="agency_name" type="text" autoComplete="organization" required maxLength={160} />
         </label>
 

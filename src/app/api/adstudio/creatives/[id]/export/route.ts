@@ -17,9 +17,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return access.response;
   }
 
-  return NextResponse.json({
-    creativeId: id,
-    status: "queued",
-    message: "Creative export is queued through the AdStudio export package pipeline.",
-  });
+  return NextResponse.json(
+    {
+      error: "not_implemented",
+      message: "Use the Ad Studio UI to export.",
+    },
+    { status: 501 },
+  );
 }

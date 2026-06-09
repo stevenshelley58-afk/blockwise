@@ -318,7 +318,7 @@ export function OnboardingWizard({
             <p>These details come from your signed-in workspace.</p>
             {!canSaveProfile ? <StatusPill tone="blue">Managed by an owner or admin</StatusPill> : null}
             <label className="wizard-field">
-              <span className="wizard-label">Agency name</span>
+              <span className="wizard-label">Business name</span>
               <input
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}

@@ -362,7 +362,7 @@ function BillingSection({
         <div className="item-card">
           <span className="item-meta">Monthly AI budget</span>
           <h3 style={{ margin: "4px 0" }}>{plan ? formatCents(plan.monthlyAiBudgetCents) : "—"}</h3>
-          <span className="item-meta">{plan ? `${plan.maxAgentRunsPerMonth} agent runs / mo` : ""}</span>
+          <span className="item-meta">{plan ? `Monthly ad budget` : ""}</span>
         </div>
         <div className="item-card">
           <span className="item-meta">Payment method</span>
