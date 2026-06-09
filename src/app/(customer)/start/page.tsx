@@ -12,8 +12,14 @@ function normalizeStatus(value: unknown): OnboardingStatus {
   return value === "fast_path" || value === "full_setup" || value === "complete" ? value : "not_started";
 }
 
-export default async function StartPage() {
-  redirect("/self-serve");
+export default async function StartPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const confirmed = params["confirmed"];
+  redirect(confirmed === "1" ? "/self-serve?confirmed=1" : "/self-serve");
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
   const { data: workspace } = await supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle();
   const onboardingStatus = normalizeStatus((workspace as { onboarding_status?: unknown } | null)?.onboarding_status);

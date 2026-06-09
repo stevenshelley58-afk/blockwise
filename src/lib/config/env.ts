@@ -10,6 +10,7 @@ export const REQUIRED_ENV_KEYS = [
   "TRIGGER_PROJECT_ID",
   "META_APP_ID",
   "META_APP_SECRET",
+  "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
 ] as const;
 
 // Provider integrations have their own readiness gates so the top-level

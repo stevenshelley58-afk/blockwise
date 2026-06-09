@@ -47,5 +47,11 @@ export async function GET(request: NextRequest) {
     return confirmFailedRedirect(request);
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  const redirectPath = type === "signup" ? appendConfirmed(next) : next;
+  return NextResponse.redirect(new URL(redirectPath, request.url));
+}
+
+function appendConfirmed(path: string): string {
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}confirmed=1`;
 }
