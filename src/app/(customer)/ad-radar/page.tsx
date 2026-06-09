@@ -117,7 +117,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         ) : (
           <div className="research-empty-state">
             <h3>No ads matched</h3>
-            <p>Try a WA postcode such as 6008 or 6000 while the background collector expands coverage.</p>
+            <p>No ads found for this search.</p>
           </div>
         )}
       </section>
@@ -125,8 +125,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   );
 }
 
-const FETCH_BATCH_SIZE = 1000;
-const FETCH_CEILING = 10000;
+const BROWSE_FETCH_LIMIT = 500;
 
 async function loadCustomerMetaAdLibraryCards(
   supabase: Awaited<ReturnType<typeof requirePageSurfaceAccess>>["supabase"],
@@ -134,46 +133,88 @@ async function loadCustomerMetaAdLibraryCards(
   sort: ResearchSort,
   locationGuess: ReturnType<typeof resolveAdRadarLocationGuess> | ReturnType<typeof resolveAdRadarLocationSearch>,
 ): Promise<{ cards: CustomerMetaAdLibraryCard[]; loadError: string | null; matchedLocation: boolean }> {
-  // Page through the view in batches so results are not silently capped.
-  const rows: CustomerMetaAdLibraryCardRow[] = [];
-  for (let from = 0; from < FETCH_CEILING; from += FETCH_BATCH_SIZE) {
+  if (searchTerm) {
+    // Server-side filtered search — avoid fetching all rows.
+    if (locationGuess && shouldPrioritiseAdRadarLocationSearch(searchTerm, locationGuess)) {
+      const needle = `%${searchTerm}%`;
+      const { data, error } = await supabase
+        .schema("research")
+        .from("v_customer_meta_ad_library_cards")
+        .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+        .or(
+          [
+            `page_name.ilike.${needle}`,
+            `library_id.ilike.${needle}`,
+            `headline.ilike.${needle}`,
+            `body.ilike.${needle}`,
+            `description.ilike.${needle}`,
+            `postcode.ilike.${needle}`,
+            `suburb.ilike.${needle}`,
+            `state.ilike.${needle}`,
+            `destination_url.ilike.${needle}`,
+            `cta.ilike.${needle}`,
+          ].join(","),
+        )
+        .order("last_seen_at", { ascending: false })
+        .limit(50);
+      if (error) return { cards: [], loadError: "Ad Radar data is temporarily unavailable.", matchedLocation: false };
+      const cards = dedupeCards(((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseCustomerMetaAdLibraryCard));
+      const picked = pickAdRadarCardsForLocation(cards, locationGuess, sort);
+      if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
+    }
+
+    const needle = `%${searchTerm}%`;
     const { data, error } = await supabase
       .schema("research")
       .from("v_customer_meta_ad_library_cards")
       .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+      .or(
+        [
+          `page_name.ilike.${needle}`,
+          `library_id.ilike.${needle}`,
+          `headline.ilike.${needle}`,
+          `body.ilike.${needle}`,
+          `description.ilike.${needle}`,
+          `postcode.ilike.${needle}`,
+          `suburb.ilike.${needle}`,
+          `state.ilike.${needle}`,
+          `destination_url.ilike.${needle}`,
+          `cta.ilike.${needle}`,
+        ].join(","),
+      )
       .order("last_seen_at", { ascending: false })
-      .range(from, from + FETCH_BATCH_SIZE - 1);
-
-    if (error) {
-      return { cards: [], loadError: "Ad Radar data is temporarily unavailable.", matchedLocation: false };
-    }
-
-    const batch = (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];
-    rows.push(...batch);
-    if (batch.length < FETCH_BATCH_SIZE) break;
-  }
-
-  const allCards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
-
-  if (searchTerm) {
-    if (locationGuess && shouldPrioritiseAdRadarLocationSearch(searchTerm, locationGuess)) {
-      const picked = pickAdRadarCardsForLocation(allCards, locationGuess, sort);
-      if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
-    }
-
-    const directMatches = allCards.filter((card) => cardMatches(card, searchTerm));
-    if (directMatches.length > 0) {
-      return { cards: sortCards(directMatches, sort), loadError: null, matchedLocation: false };
-    }
+      .limit(50);
+    if (error) return { cards: [], loadError: "Ad Radar data is temporarily unavailable.", matchedLocation: false };
+    const directMatches = dedupeCards(((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseCustomerMetaAdLibraryCard));
+    if (directMatches.length > 0) return { cards: sortCards(directMatches, sort), loadError: null, matchedLocation: false };
 
     if (locationGuess) {
-      const picked = pickAdRadarCardsForLocation(allCards, locationGuess, sort);
-      if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
+      const { data: locData, error: locError } = await supabase
+        .schema("research")
+        .from("v_customer_meta_ad_library_cards")
+        .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+        .order("last_seen_at", { ascending: false })
+        .limit(BROWSE_FETCH_LIMIT);
+      if (!locError) {
+        const allCards = dedupeCards(((locData ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseCustomerMetaAdLibraryCard));
+        const picked = pickAdRadarCardsForLocation(allCards, locationGuess, sort);
+        if (picked.matchedLocation) return { cards: picked.cards, loadError: null, matchedLocation: true };
+      }
     }
 
     return { cards: [], loadError: null, matchedLocation: false };
   }
 
+  // Browse mode (no search term) — fetch a reasonable page of recent ads.
+  const { data, error } = await supabase
+    .schema("research")
+    .from("v_customer_meta_ad_library_cards")
+    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .order("last_seen_at", { ascending: false })
+    .limit(BROWSE_FETCH_LIMIT);
+  if (error) return { cards: [], loadError: "Ad Radar data is temporarily unavailable.", matchedLocation: false };
+
+  const allCards = dedupeCards(((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseCustomerMetaAdLibraryCard));
   const picked = locationGuess
     ? pickAdRadarCardsForLocation(allCards, locationGuess, sort)
     : { cards: sortCards(allCards, sort), matchedLocation: false };
@@ -202,25 +243,6 @@ function buildResearchHref(searchTerm: string, sort: ResearchSort): string {
   return qs ? `/ad-radar?${qs}` : "/ad-radar";
 }
 
-function cardMatches(card: CustomerMetaAdLibraryCard, searchTerm: string): boolean {
-  const needle = searchTerm.toLowerCase();
-  return [
-    card.pageName,
-    card.libraryId,
-    card.postcode,
-    card.suburb,
-    card.state,
-    card.headline,
-    card.body,
-    card.description,
-    card.cta,
-    card.destinationUrl,
-    ...card.postcodes,
-    ...card.platforms,
-  ]
-    .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(needle));
-}
 
 function dedupeCards(cards: CustomerMetaAdLibraryCard[]): CustomerMetaAdLibraryCard[] {
   const seen = new Set<string>();
