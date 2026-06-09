@@ -62,6 +62,8 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         alignItems: "center",
         gap: 8,
         minHeight: 34,
+        maxWidth: "min(100%, 320px)",
+        overflow: "hidden",
         border: "1px solid var(--line)",
         borderRadius: 999,
         background: "#fff",
@@ -73,12 +75,12 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         whiteSpace: "nowrap",
       }}
     >
-      <span>{trialLabel}</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{trialLabel}</span>
       <span aria-hidden style={{ color: "var(--line)", fontWeight: 500 }}>
         |
       </span>
       <span>{remaining}/{included} free ad packs left</span>
-      <span aria-hidden style={{ color: "var(--muted)", fontWeight: 550 }}>
+      <span aria-hidden className="hidden sm:inline" style={{ color: "var(--muted)", fontWeight: 550 }}>
         {used} used
       </span>
       <button

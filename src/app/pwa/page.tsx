@@ -64,6 +64,19 @@ export default function PwaLaunchPage() {
         <p style={{ margin: "12px 0 0", color: "#385b7d", fontSize: 16, lineHeight: 1.55 }}>
           Opening your workspace when the network is available.
         </p>
+        <p
+          id="pwa-offline-msg"
+          role="status"
+          style={{ margin: "10px 0 0", color: "#c0392b", fontSize: 14, lineHeight: 1.5, display: "none" }}
+        >
+          You appear to be offline. This page will open automatically once you reconnect.
+        </p>
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var el=document.getElementById('pwa-offline-msg');function update(){if(el)el.style.display=navigator.onLine?'none':'block';}update();window.addEventListener('online',update);window.addEventListener('offline',update);})();`,
+          }}
+        />
         <p style={{ margin: "24px 0 0" }}>
           <a
             href="/home?source=pwa"

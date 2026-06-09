@@ -115,7 +115,7 @@ export function MetaMonitorDashboard({
       ) : null}
 
       {!summary ? (
-        <EmptyMetaState issue={payload.issue} connected={payload.connected} />
+        <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
       ) : (
         <Dashboard payload={payload} onSelectAd={scrollToAd} />
       )}
