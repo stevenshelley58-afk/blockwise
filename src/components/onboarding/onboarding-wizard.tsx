@@ -18,6 +18,14 @@ import {
 
 const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
 
+const REGION_NAMES: Record<string, string> = {
+  AU: "Australia",
+  NZ: "New Zealand",
+  GB: "United Kingdom",
+  US: "United States",
+  CA: "Canada",
+};
+
 type JsonObject = Record<string, unknown>;
 
 type BrandKitRow = {
@@ -337,7 +345,7 @@ export function OnboardingWizard({
                 required
               >
                 {Object.keys(REGION_CURRENCY).map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
                 ))}
               </select>
             </label>

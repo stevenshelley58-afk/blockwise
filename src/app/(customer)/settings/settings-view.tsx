@@ -8,6 +8,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
 
+const REGION_NAMES: Record<string, string> = {
+  AU: "Australia",
+  NZ: "New Zealand",
+  GB: "United Kingdom",
+  US: "United States",
+  CA: "Canada",
+};
+
 type Msg = { tone: "success" | "error"; text: string } | null;
 
 type Connection = {
@@ -124,6 +132,13 @@ function Section({ id, title, description, children }: { id: string; title: stri
 function formatCents(cents: number): string {
   return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 }).format(cents / 100);
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  connected: "Connected",
+  needs_attention: "Needs attention",
+  revoked: "Disconnected",
+  not_connected: "Not connected",
+};
 
 function statusTone(status: string): "green" | "amber" | "rose" | "blue" {
   if (status === "connected") return "green";
@@ -362,9 +377,9 @@ function BillingSection({
           </StatusPill>
         </div>
         <div className="item-card">
-          <span className="item-meta">Monthly AI budget</span>
-          <h3 style={{ margin: "4px 0" }}>{plan ? formatCents(plan.monthlyAiBudgetCents) : "—"}</h3>
-          <span className="item-meta">{plan ? `Monthly ad budget` : ""}</span>
+          <span className="item-meta">Plan features</span>
+          <h3 style={{ margin: "4px 0" }}>{plan ? `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo` : "—"}</h3>
+          <span className="item-meta">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
         </div>
         <div className="item-card">
           <span className="item-meta">Payment method</span>
@@ -435,7 +450,7 @@ function ConnectionsSection({
     { key: "google", label: "Google Ads", connectHref: googleConnectHref, enabled: googleAdsEnabled },
   ];
 
-  async function disconnect(provider: string) {
+  async function disconnect(provider: string, label: string) {
     setBusyProvider(provider);
     setMessage(null);
     if (provider === "meta") {
@@ -448,7 +463,7 @@ function ConnectionsSection({
       setBusyProvider(null);
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setMessage({ tone: "error", text: data.error ?? `Couldn't disconnect ${provider}.` });
+        setMessage({ tone: "error", text: data.error ?? `Couldn't disconnect ${label}.` });
         return;
       }
     } else {
@@ -459,11 +474,11 @@ function ConnectionsSection({
         .eq("provider", provider);
       setBusyProvider(null);
       if (error) {
-        setMessage({ tone: "error", text: `Couldn't disconnect ${provider}.` });
+        setMessage({ tone: "error", text: `Couldn't disconnect ${label}.` });
         return;
       }
     }
-    setMessage({ tone: "success", text: `${provider} disconnected.` });
+    setMessage({ tone: "success", text: `${label} disconnected.` });
     router.refresh();
   }
 
@@ -479,7 +494,7 @@ function ConnectionsSection({
               <strong>{prov.label}</strong>
               <div className="item-meta">
                 {conn?.accountName ? `${conn.accountName} · ` : ""}
-                {conn ? <StatusPill tone={statusTone(conn.status)}>{conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">not connected</StatusPill>}
+                {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
               </div>
               </div>
               {!prov.enabled ? (
@@ -491,7 +506,7 @@ function ConnectionsSection({
             ) : connected ? (
               <div style={{ display: "flex", gap: 8 }}>
                 <a className="button secondary" href={prov.connectHref}>Reconnect</a>
-                <button className="button secondary" type="button" onClick={() => disconnect(prov.key)} disabled={busyProvider === prov.key}>
+                <button className="button secondary" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
                   {busyProvider === prov.key ? "Working" : "Disconnect"}
                 </button>
               </div>
@@ -617,8 +632,9 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         <StatusPill tone={blockers.length === 0 ? "green" : "amber"}>{blockers.length === 0 ? "ready" : "missing setup"}</StatusPill>
       </div>
 
-      {loading ? <p className="wizard-skip-note">Loading Meta assets.</p> : null}
-
+      {loading ? (
+        <p className="wizard-skip-note">Loading Meta assets.</p>
+      ) : <>
       <div className="grid cols-2">
         <label className="wizard-field">
           <span className="wizard-label">Meta ad account</span>
@@ -659,7 +675,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
           )}
         </label>
         <label className="wizard-field">
-          <span className="wizard-label">Instagram actor</span>
+          <span className="wizard-label">Instagram account (optional)</span>
           {availableInstagramActors.length ? (
             <select value={setup.instagramActorId ?? ""} onChange={(e) => updateSetup({ instagramActorId: e.target.value || null })} disabled={!canManage}>
               <option value="">None</option>
@@ -747,6 +763,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
           {busy ? "Saving" : "Save Meta setup"}
         </button>
       </div>
+      </>}
     </form>
   );
 }
@@ -791,7 +808,7 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
           <span className="wizard-label">Region</span>
           <select value={region} onChange={(e) => setRegion(e.target.value)} required>
             {Object.keys(REGION_CURRENCY).map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
             ))}
           </select>
         </label>

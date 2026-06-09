@@ -5,11 +5,11 @@ export default function NotFoundPage() {
     <main className="content">
       <section className="panel">
         <p className="eyebrow">404</p>
-        <h1>Workspace view not found</h1>
-        <p className="lead">The route is not part of the current Blockwise release surface.</p>
+        <h1>Page not found</h1>
+        <p className="lead">We couldn&apos;t find that page.</p>
         <div className="actions" style={{ marginTop: 18 }}>
-          <Link className="button" href="/operator">
-            Open Operator Console
+          <Link className="button" href="/self-serve">
+            Go to dashboard
           </Link>
         </div>
       </section>

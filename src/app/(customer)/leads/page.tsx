@@ -58,7 +58,7 @@ export default async function LeadsPage() {
                       <td>{lead.quality}</td>
                       <td>
                         <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                          {lead.duplicateCandidate ? "possible duplicate" : "new"}
+                          {lead.duplicateCandidate ? "Possible duplicate" : "New"}
                         </StatusPill>
                       </td>
                     </tr>
@@ -75,7 +75,7 @@ export default async function LeadsPage() {
                       <strong>{lead.name}</strong>
                     </div>
                     <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                      {lead.duplicateCandidate ? "possible duplicate" : "new"}
+                      {lead.duplicateCandidate ? "Possible duplicate" : "New"}
                     </StatusPill>
                   </div>
                   <dl className="lead-card-fields">
@@ -103,7 +103,7 @@ export default async function LeadsPage() {
         )}
       </section>
 
-      <section className="panel leads-duplicate-panel">
+      {(duplicateCount > 0 || rows.length > 0) && <section className="panel leads-duplicate-panel">
         <div className="leads-duplicate-summary">
           <span className="leads-duplicate-count">{duplicateCount}</span>
           <div>
@@ -123,7 +123,7 @@ export default async function LeadsPage() {
             <dd>{incoming.duplicateIds.join(", ") || "none"}</dd>
           </div>
         </dl>
-      </section>
+      </section>}
     </main>
   );
 }
