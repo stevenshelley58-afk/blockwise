@@ -118,7 +118,6 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
     artifactResult,
     leadAttributionResult,
     leadDeliveryResult,
-    leadExportResult,
   ] = await Promise.all([
     run.ai_run_id
       ? supabase
@@ -187,14 +186,6 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
-    correlationId
-      ? supabase
-          .from("lead_export_audits")
-          .select("id,exported_by,approval_request_id,row_count,destination,created_at")
-          .eq("workspace_id", access.workspaceId)
-          .eq("correlation_id", correlationId)
-          .order("created_at", { ascending: false })
-      : emptyList(),
   ]);
 
   const aiRun = aiRunResult.data as AiRunRow | null;
@@ -206,7 +197,6 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
   const artifactRows = (artifactResult.data ?? []) as TraceRow[];
   const leadAttributions = (leadAttributionResult.data ?? []) as TraceRow[];
   const leadDeliveries = (leadDeliveryResult.data ?? []) as TraceRow[];
-  const leadExports = (leadExportResult.data ?? []) as TraceRow[];
   const warnings = [
     aiRunResult.error?.message,
     ledgerResult.error?.message,
@@ -217,7 +207,6 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
     artifactResult.error?.message,
     leadAttributionResult.error?.message,
     leadDeliveryResult.error?.message,
-    leadExportResult.error?.message,
   ].filter((warning): warning is string => Boolean(warning));
 
   return (
@@ -365,16 +354,6 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
             columns={[
               ["lead_id", "Lead"],
               ["status", "Status"],
-              ["created_at", "Created"],
-            ]}
-          />
-          <TraceTable
-            title="Exports"
-            emptyLabel="No lead export rows."
-            rows={leadExports}
-            columns={[
-              ["destination", "Destination"],
-              ["row_count", "Rows"],
               ["created_at", "Created"],
             ]}
           />
