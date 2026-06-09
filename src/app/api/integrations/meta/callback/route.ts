@@ -55,8 +55,11 @@ async function handleCallback(request: NextRequest) {
 
   const serviceSupabase = createSupabaseServiceClient();
 
+  let exchangedAccountId: string | undefined;
+
   try {
     const exchanged = await exchangeProviderCode("meta", request, code);
+    exchangedAccountId = exchanged.externalAccountId;
     await upsertProviderConnectionWithTokens({
       serviceSupabase,
       workspaceId: verified.payload.workspaceId,
@@ -91,5 +94,8 @@ async function handleCallback(request: NextRequest) {
     // Connection is already saved; the first sync can be retried later.
   }
 
-  return NextResponse.redirect(new URL("/results?integration=meta&connected=1", origin));
+  const finalUrl = exchangedAccountId === "meta_account_pending"
+    ? "/results?integration=meta&connected=1&status=needs_account"
+    : "/results?integration=meta&connected=1";
+  return NextResponse.redirect(new URL(finalUrl, origin));
 }
