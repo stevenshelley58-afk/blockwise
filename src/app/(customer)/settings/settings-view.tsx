@@ -390,9 +390,13 @@ function BillingSection({
               </button>
             </div>
           </form>
-          <p className="wizard-skip-note">
-            Payments run through Stripe. Billing goes live once Stripe keys are configured — the UI is ready and wired to a single integration point.
-          </p>
+          <div className="stack" style={{ gap: "4px" }}>
+            <h4 style={{ margin: 0 }}>Upgrade your plan</h4>
+            <p className="wizard-skip-note" style={{ margin: 0 }}>
+              Want early access to a paid plan? Email us at{" "}
+              <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a> and we&apos;ll get you set up.
+            </p>
+          </div>
         </>
       ) : (
         <p className="wizard-skip-note">Only an owner or admin can manage billing.</p>
