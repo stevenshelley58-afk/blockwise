@@ -1,4 +1,5 @@
-import { schedules, task } from "@trigger.dev/sdk/v3";
+﻿import { schedules, task } from "@trigger.dev/sdk/v3";
+import * as Sentry from "@sentry/nextjs";
 
 import { executeLeadDeliveryAttemptById } from "../src/lib/providers/lead-delivery-worker.ts";
 import { checkMetaConnectionHealth } from "../src/lib/providers/meta-assets.ts";
@@ -133,6 +134,7 @@ export async function runScheduledMetaLeadSyncs(serviceSupabase: SupabaseService
       });
       results.push({ planId: row.id, status: "synced" });
     } catch (error) {
+      Sentry.captureException(error);
       results.push({ planId: row.id, status: "failed", error: error instanceof Error ? error.message : "Lead sync failed." });
     }
   }
@@ -187,6 +189,7 @@ export async function runScheduledMetaTokenHealthChecks(serviceSupabase: Supabas
 
       results.push({ connectionId: row.id, status: health.status });
     } catch (error) {
+      Sentry.captureException(error);
       results.push({ connectionId: row.id, status: "failed", error: error instanceof Error ? error.message : "Token health check failed." });
     }
   }
@@ -199,3 +202,4 @@ export async function runScheduledMetaTokenHealthChecks(serviceSupabase: Supabas
     results,
   };
 }
+

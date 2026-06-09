@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (existing) {
     userId = existing;
   } else {
-    const { data, error } = await service.auth.admin.createUser({ email, email_confirm: true });
+    const { data, error } = await service.auth.admin.inviteUserByEmail(email);
     if (error || !data.user) {
       return NextResponse.json({ error: error?.message ?? "Couldn't create the invite." }, { status: 500 });
     }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     message: isNew
-      ? `${email} was added. They can set a password at /forgot-password.`
+      ? `An invite email has been sent to ${email}.`
       : `${email} was added to the workspace.`,
   });
 }
