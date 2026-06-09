@@ -436,15 +436,30 @@ function ConnectionsSection({
   async function disconnect(provider: string) {
     setBusyProvider(provider);
     setMessage(null);
-    const { error } = await supabase
-      .from("provider_connections")
-      .update({ status: "revoked", updated_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId)
-      .eq("provider", provider);
-    setBusyProvider(null);
-    if (error) {
-      setMessage({ tone: "error", text: `Couldn't disconnect ${provider}.` });
-      return;
+    if (provider === "meta") {
+      // Use the server-side route so the Meta app grant is also revoked.
+      const res = await fetch("/api/integrations/meta/disconnect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId }),
+      });
+      setBusyProvider(null);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setMessage({ tone: "error", text: data.error ?? `Couldn't disconnect ${provider}.` });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from("provider_connections")
+        .update({ status: "revoked", updated_at: new Date().toISOString() })
+        .eq("workspace_id", workspaceId)
+        .eq("provider", provider);
+      setBusyProvider(null);
+      if (error) {
+        setMessage({ tone: "error", text: `Couldn't disconnect ${provider}.` });
+        return;
+      }
     }
     setMessage({ tone: "success", text: `${provider} disconnected.` });
     router.refresh();
@@ -990,6 +1005,7 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
   const [busy, setBusy] = useState(false);
   const [delBusy, setDelBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   async function signOutEverywhere() {
     setBusy(true);
@@ -999,9 +1015,11 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
   }
 
   async function requestDeletion() {
-    if (!window.confirm("Request deletion of your account and workspace data? Our team will follow up to confirm.")) {
-      return;
-    }
+    setConfirmDeleteOpen(true);
+  }
+
+  async function confirmDeletion() {
+    setConfirmDeleteOpen(false);
     setDelBusy(true);
     setMessage(null);
     try {
@@ -1044,6 +1062,24 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
         </button>
       </div>
       <Feedback message={message} />
+
+      {confirmDeleteOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,41,.55)", display: "grid", placeItems: "center", padding: 24 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-account-delete-title"
+        >
+          <div style={{ background: "var(--surface, #fff)", borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,.2)" }}>
+            <h2 id="confirm-account-delete-title" style={{ margin: "0 0 8px", fontSize: 18 }}>Delete your account?</h2>
+            <p style={{ margin: "0 0 24px", color: "var(--text-2, #666)" }}>This will permanently delete your account and all data. This cannot be undone.</p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="button secondary" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancel</button>
+              <button className="button" type="button" onClick={confirmDeletion} style={{ background: "var(--destructive, #dc2626)", color: "#fff", borderColor: "transparent" }}>Delete my account</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Section>
   );
 }

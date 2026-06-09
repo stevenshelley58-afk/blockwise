@@ -33,5 +33,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Best-effort: delete the auth user via service role. If this fails the audit row
+  // still exists as a paper trail and the request is considered received.
+  const { error: deleteError } = await service.auth.admin.deleteUser(access.access.userId);
+  if (deleteError) {
+    console.error("[delete-request] auth.admin.deleteUser failed:", deleteError.message);
+  }
+
   return NextResponse.json({ ok: true });
 }
