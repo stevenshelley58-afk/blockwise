@@ -7,7 +7,7 @@ import { BadgePercent, MousePointerClick, Tag, UserCheck, UserPlus, Wallet } fro
 import { useState } from "react";
 
 import { calculateTrend, formatCurrency, formatPercent, safeCpl, safeRate } from "@/lib/meta-monitor/calculations";
-import type { MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
+import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdsSummaryTable } from "./AdsSummaryTable";
@@ -232,6 +232,10 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         </section>
       </div>
 
+      {(payload.anglePerformance?.length ?? 0) > 0 ? (
+        <AnglePerformanceTable rows={payload.anglePerformance ?? []} />
+      ) : null}
+
       {payload.ads.length > 0 ? (
         <>
           <AdsSummaryTable ads={payload.ads} onSelectAd={onSelectAd} />
@@ -244,5 +248,57 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         </>
       ) : null}
     </>
+  );
+}
+
+function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {
+  return (
+    <section className="panel mm-table-panel">
+      <div className="mm-table-head">
+        <h3>Angle performance</h3>
+      </div>
+      <p className="mm-chart-note">
+        Built from Ad Studio variant tags in ad names. Ads published outside Ad Studio group under
+        &quot;Untagged&quot;.
+      </p>
+      <div className="mm-table-scroll">
+        <table className="mm-table">
+          <thead>
+            <tr>
+              <th className="mm-th-left">Angle</th>
+              <th className="mm-th-left">Template</th>
+              <th>Ads</th>
+              <th>Spend</th>
+              <th>CTR</th>
+              <th>Leads</th>
+              <th>Valid leads</th>
+              <th>Valid CPL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={`${row.angle}-${row.template ?? ""}`}>
+                <td className="mm-th-left">
+                  <b>{row.angle}</b>
+                </td>
+                <td className="mm-th-left">{row.template ?? "—"}</td>
+                <td>{row.ads}</td>
+                <td>
+                  <b>{formatCurrency(row.spend)}</b>
+                </td>
+                <td>{row.ctr != null ? formatPercent(row.ctr, 2) : "—"}</td>
+                <td>{row.leads}</td>
+                <td>
+                  <b>{row.validLeads}</b>
+                </td>
+                <td>
+                  <b>{row.validCpl != null ? formatCurrency(row.validCpl) : "—"}</b>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

@@ -8,7 +8,7 @@ import { createSupabaseServiceClient } from "../../supabase/service.ts";
 import type { AssembledPrompt } from "./assemble-prompt.ts";
 
 export type RedactedProviderRunInput = {
-  taskType: "adstudio.copy" | "adstudio.image" | "adstudio.background";
+  taskType: "adstudio.copy" | "adstudio.image" | "adstudio.background" | "adstudio.scoring";
   modelProfile: ModelProfileKey;
   correlationId?: string;
   userId?: string | null;

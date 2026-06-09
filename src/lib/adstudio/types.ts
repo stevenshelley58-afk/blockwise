@@ -286,6 +286,8 @@ export type AdStudioCampaignPack = {
   creatives: AdStudioCreative[];
   copyPacks: AdStudioPlatformCopyPack[];
   compliance: AdStudioComplianceReport;
+  /** Non-blocking cross-variant diversity hints (near-duplicate copy). Additive; absent when no overlap detected. */
+  similarityWarnings?: string[];
 };
 
 export type AdStudioExportManifest = {

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ExternalLink, ImageOff, Play } from "lucide-react";
 
 import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
@@ -21,6 +23,7 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
           <h4>
             {ad.adName}
             <StatusPill status={ad.status} />
+            {ad.fatigued ? <span className="mm-pill amber">Fatiguing</span> : null}
           </h4>
           <span className="mm-ad-campaign">{ad.campaignName}</span>
           <span className="mm-ad-meta">
@@ -29,6 +32,16 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
           <span className="mm-ad-meta">ID: {ad.adId}</span>
         </div>
       </div>
+
+      {ad.fatigued ? (
+        <p className="mm-ad-meta" role="status">
+          This creative is showing fatigue (high frequency, falling CTR).{" "}
+          <Link href={`/ad-studio?from=fatigue&adId=${encodeURIComponent(ad.adId)}`}>
+            Refresh it in Ad Studio
+          </Link>
+          .
+        </p>
+      ) : null}
 
       <dl className="mm-ad-metrics">
         <Metric label="Spend" value={formatCurrency(metrics.spend)} />

@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   CircleAlert,
@@ -37,6 +39,7 @@ import { TopBar } from "./topbar";
 import { useAdStudio } from "./use-ad-studio";
 import { useBrandKit } from "./use-brand-kit";
 import { useCampaignActions } from "./use-campaign-actions";
+import type { GenerationProgress } from "./use-campaign-actions";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
@@ -70,22 +73,18 @@ type AdStudioWorkbenchProps = {
 
 type NavItem = { id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon };
 
-const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
-  {
-    label: "Create",
-    items: [
-      { id: "campaign", label: "Ad", icon: Target },
-      { id: "templates", label: "Templates", icon: LayoutGrid },
-      { id: "brand", label: "Brand", icon: ShieldCheck },
-      { id: "media", label: "Media", icon: ImageIcon },
-      { id: "copy", label: "Copy", icon: Type },
-      { id: "publish", label: "Publish", icon: Send },
-    ],
-  },
-  {
-    label: "Workspace",
-    items: [{ id: "settings", label: "Settings", icon: Settings2 }],
-  },
+// B3 (simplification): three top-level destinations. Media and Copy open as
+// contextual inspectors when the matching layer is selected on the canvas (or
+// via the variant strip actions); Templates and Settings sit behind Advanced.
+const NAV_ITEMS: NavItem[] = [
+  { id: "campaign", label: "Ad", icon: Target },
+  { id: "brand", label: "Brand", icon: ShieldCheck },
+  { id: "publish", label: "Publish", icon: Send },
+];
+
+const ADVANCED_NAV_ITEMS: NavItem[] = [
+  { id: "templates", label: "Templates", icon: LayoutGrid },
+  { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
 const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: string; icon: LucideIcon }> = [
@@ -251,6 +250,8 @@ export function AdStudioWorkbench({
   const [leadDestination, setLeadDestination] = useState("Landing page");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
   const [generatingBackground, setGeneratingBackground] = useState(false);
+  const [generation, setGeneration] = useState<GenerationProgress | null>(null);
+  const [advancedNavOpen, setAdvancedNavOpen] = useState(false);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -259,6 +260,9 @@ export function AdStudioWorkbench({
 
   const studio = useAdStudio();
   const { brand, initials, domain } = useBrandKit(brandKit);
+  // B2: an unapproved extracted kit can generate and edit, but is flagged as a
+  // draft everywhere and keeps publish blocked until it is confirmed.
+  const brandIsDraft = !isSample && brandKit.reviewStatus !== "approved";
   const {
     copy,
     setCopy,
@@ -413,7 +417,7 @@ export function AdStudioWorkbench({
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
   // Campaign readiness checklist lives in the publish panel.
-  const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives } = useCampaignActions({
+  const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
     pack,
     brandKit,
     offers,
@@ -433,6 +437,7 @@ export function AdStudioWorkbench({
     setSaveError: studio.setSaveError,
     setBusy: studio.setBusy,
     setBusyMessage: studio.setBusyMessage,
+    setGeneration,
     setSection: studio.setSection,
     setSelectedAngleId,
     showToast: studio.showToast,
@@ -741,6 +746,9 @@ export function AdStudioWorkbench({
           destinationUrl={destinationUrl}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
+          brandApproved={!brandIsDraft}
+          exportStatus={exportStatus}
+          onRetryExportFormat={(format) => void retryExportFormat(format)}
         />
       );
     }
@@ -776,58 +784,87 @@ export function AdStudioWorkbench({
 
       <div className="studio-desktop-body">
         <aside className="studio-rail" aria-label="Ad Studio sections">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label} style={{ display: "grid", gap: 2 }}>
-              <span className="studio-rail-label">{group.label}</span>
-              {group.items.map((item) => {
-                const Icon = item.icon;
+          <span className="studio-rail-label">Create</span>
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
 
-                // M6: map readiness items to section, derive dot state
-                const sectionItems: Record<string, string[]> = {
-                  campaign: ["Goal & offer", "Location", "Property type"],
-                  media: ["Primary media"],
-                  copy: ["Ad copy", "Call to action"],
-                  brand: [],   // special-cased below
-                  publish: [], // all items
-                };
-                let railState: "done" | "warn" | "todo" | null = null;
-                if (item.id === "brand") {
-                  railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
-                } else if (item.id === "publish") {
-                  const allDone = readinessItems.every((ri) => ri.state === "done");
-                  railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
-                } else {
-                  const labels = sectionItems[item.id] ?? [];
-                  if (labels.length > 0) {
-                    const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
-                    if (relevant.length > 0) {
-                      if (relevant.every((ri) => ri.state === "done")) railState = "done";
-                      else if (relevant.some((ri) => ri.state === "warn")) railState = "warn";
-                      else railState = "todo";
-                    }
-                  }
-                }
+            // M6: derive dot state per section from readiness items.
+            // Media/Copy readiness ("Primary media", "Ad copy", "Call to action")
+            // rolls up into the Publish dot, which covers all items.
+            let railState: "done" | "warn" | "todo" | null = null;
+            if (item.id === "brand") {
+              railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
+            } else if (item.id === "publish") {
+              const allDone = readinessItems.every((ri) => ri.state === "done");
+              railState = allDone ? "done" : readinessItems.some((ri) => ri.state === "warn") ? "warn" : "todo";
+            } else if (item.id === "campaign") {
+              const labels = ["Goal & offer", "Location", "Property type"];
+              const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
+              if (relevant.length > 0) {
+                if (relevant.every((ri) => ri.state === "done")) railState = "done";
+                else if (relevant.some((ri) => ri.state === "warn")) railState = "warn";
+                else railState = "todo";
+              }
+            }
 
-                return (
-                  <button
-                    className={studio.section === item.id ? "active" : ""}
-                    key={item.id}
-                    type="button"
-                    onClick={() => (item.id === "templates" ? openNewAd(undefined, "template") : studio.setSection(item.id))}
-                  >
-                    <Icon aria-hidden size={18} />
-                    <span>{item.label}</span>
-                    {railState === "done" && <Check aria-hidden size={13} style={{ color: "#006d38", marginLeft: "auto", flexShrink: 0 }} />}
-                    {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#8a5a00", marginLeft: "auto", flexShrink: 0 }} />}
-                    {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dfe6f0", marginLeft: "auto", flexShrink: 0 }} />}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+            return (
+              <button
+                className={studio.section === item.id ? "active" : ""}
+                key={item.id}
+                type="button"
+                onClick={() => studio.setSection(item.id)}
+              >
+                <Icon aria-hidden size={18} />
+                <span>{item.label}</span>
+                {railState === "done" && <Check aria-hidden size={13} style={{ color: "#006d38", marginLeft: "auto", flexShrink: 0 }} />}
+                {railState === "warn" && <CircleAlert aria-hidden size={13} style={{ color: "#8a5a00", marginLeft: "auto", flexShrink: 0 }} />}
+                {railState === "todo" && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dfe6f0", marginLeft: "auto", flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            aria-expanded={advancedNavOpen}
+            onClick={() => setAdvancedNavOpen((open) => !open)}
+          >
+            <ChevronDown
+              aria-hidden
+              size={18}
+              style={{ transform: advancedNavOpen ? "rotate(180deg)" : undefined, transition: "transform .15s" }}
+            />
+            <span>Advanced</span>
+          </button>
+          {advancedNavOpen &&
+            ADVANCED_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  className={studio.section === item.id ? "active" : ""}
+                  key={item.id}
+                  type="button"
+                  onClick={() => (item.id === "templates" ? openNewAd(undefined, "template") : studio.setSection(item.id))}
+                >
+                  <Icon aria-hidden size={18} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
         </aside>
 
         <section className="studio-left-panel" aria-label={`${studio.section} setup`}>
+          {brandIsDraft && (
+            <Link href="/ad-studio/brand" className="studio-draft-brand-chip">
+              <CircleAlert aria-hidden size={15} />
+              <span><b>Draft brand in use.</b> You can create ads now - confirm your brand before publishing.</span>
+            </Link>
+          )}
+          {(studio.section === "media" || studio.section === "copy") && (
+            <button className="studio-link-btn" type="button" onClick={() => studio.setSection("campaign")}>
+              <ArrowLeft aria-hidden size={15} />
+              Back to Ad settings
+            </button>
+          )}
           {firstRun && !newAdOpen ? <FirstRunExplainer /> : null}
           {renderPanel()}
         </section>
@@ -885,6 +922,12 @@ export function AdStudioWorkbench({
             selectedVariantIndex={selectedVariantIndex}
             onSelect={selectVariant}
             onAdd={() => openNewAd()}
+            pending={generation}
+            onRetryPending={() => {
+              setGeneration(null);
+              addVariant();
+            }}
+            onDismissPending={() => setGeneration(null)}
             onEditCopy={(index) => {
               selectVariant(index);
               studio.setSection("copy");
@@ -904,6 +947,12 @@ export function AdStudioWorkbench({
       </div>
 
       <div className="studio-mobile-body">
+        {brandIsDraft && (
+          <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
+            <CircleAlert aria-hidden size={15} />
+            <span><b>Draft brand in use.</b> Confirm your brand before publishing.</span>
+          </Link>
+        )}
         <div className="studio-mobile-campaign">
           <button
             className="studio-mobile-campaign-btn"
@@ -1017,12 +1066,26 @@ export function AdStudioWorkbench({
               destinationUrl={destinationUrl}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
+              brandApproved={!brandIsDraft}
+              exportStatus={exportStatus}
+              onRetryExportFormat={(format) => void retryExportFormat(format)}
             />
           </div>
         )}
 
         <div className="studio-mobile-variants">
-          <VariantStrip variants={variants} selectedVariantIndex={selectedVariantIndex} onSelect={selectVariant} compact />
+          <VariantStrip
+            variants={variants}
+            selectedVariantIndex={selectedVariantIndex}
+            onSelect={selectVariant}
+            pending={generation}
+            onRetryPending={() => {
+              setGeneration(null);
+              addVariant();
+            }}
+            onDismissPending={() => setGeneration(null)}
+            compact
+          />
         </div>
       </div>
 
@@ -1030,6 +1093,13 @@ export function AdStudioWorkbench({
         <div className="studio-mobile-busy">
           <RefreshCw aria-hidden size={20} />
           <strong>{studio.busyMessage}</strong>
+        </div>
+      )}
+
+      {generation && !generation.error && (
+        <div className="studio-mobile-busy">
+          <RefreshCw aria-hidden size={20} />
+          <strong>{generation.phase}</strong>
         </div>
       )}
 

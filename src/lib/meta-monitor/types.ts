@@ -36,6 +36,27 @@ export type SuburbPerformance = {
   validCpl: number | null;
 };
 
+/** Variant metadata parsed from the `| bw:v=…;a=…;t=…` ad-name suffix Ad Studio appends at publish. */
+export type AdVariantTags = {
+  variantId: string;
+  angle: string;
+  template: string | null;
+};
+
+/** Per-angle aggregate built from A3 ad-name tags. Untagged ads group under "Untagged". */
+export type AnglePerformance = {
+  angle: string;
+  template: string | null;
+  ads: number;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  ctr: number | null;
+  leads: number;
+  validLeads: number;
+  validCpl: number | null;
+};
+
 export type MetaAdStatus = "ACTIVE" | "PAUSED" | "ARCHIVED" | "UNKNOWN";
 
 export type MetaAdPerformance = {
@@ -72,6 +93,10 @@ export type MetaAdPerformance = {
   };
   placementBreakdown?: Array<{ label: string; impressions: number; percentage: number }>;
   deviceBreakdown?: Array<{ label: string; impressions: number; percentage: number }>;
+  /** Parsed Ad Studio variant tags from the ad name; null/absent for untagged ads. Additive. */
+  variantTags?: AdVariantTags | null;
+  /** True when frequency > 2.5 and 7-day CTR dropped >=30% vs the prior 7 days (>=1k impressions per window). Additive. */
+  fatigued?: boolean;
 };
 
 export type MetaMonitorPayload = {
@@ -85,6 +110,8 @@ export type MetaMonitorPayload = {
   daily: MetaDailyPoint[];
   suburbPerformance: SuburbPerformance[];
   ads: MetaAdPerformance[];
+  /** Per-angle aggregates from A3 ad-name tags. Absent/empty when no tagged ads exist. Additive. */
+  anglePerformance?: AnglePerformance[];
 };
 
 export type BudgetPacingResult = {

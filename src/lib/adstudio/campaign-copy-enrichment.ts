@@ -2,9 +2,12 @@ import { generateAdStudioCopy, type AdStudioCopyFields } from "./copy-generation
 import { renderCreativeSvg } from "./renderer.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { syncCreativeWithCopyAndImage } from "./creative-design-json.ts";
+import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { toMetaCta } from "./readiness.ts";
+import { scoreCampaignPackVariantsWithAi } from "./scoring.ts";
 import type {
   AdStudioCampaignPack,
+  AdStudioCampaignVariant,
   AdStudioCreative,
   AdStudioPlatformCopyPack,
 } from "./types.ts";
@@ -22,14 +25,22 @@ export async function enrichCampaignPackCopyWithAi(input: {
 }): Promise<AdStudioCampaignPack> {
   let pack = input.pack;
   let changed = false;
-  let lastError: unknown = null;
+  let firstError: unknown = null;
 
-  for (const variant of pack.variants) {
-    const copyPack = pack.copyPacks.find((candidate) => candidate.variantId === variant.variantId);
-    if (!copyPack) continue;
+  const enrichable = pack.variants
+    .map((variant) => ({
+      variant,
+      copyPack: pack.copyPacks.find((candidate) => candidate.variantId === variant.variantId),
+    }))
+    .filter((entry): entry is { variant: AdStudioCampaignVariant; copyPack: AdStudioPlatformCopyPack } =>
+      Boolean(entry.copyPack),
+    );
 
-    try {
-      const generated = await generateAdStudioCopy({
+  // Generate copy for all variants in parallel; per-variant failures are already
+  // recorded inside generateAdStudioCopy via recordAdStudioProviderRun.
+  const results = await Promise.allSettled(
+    enrichable.map(({ variant, copyPack }) =>
+      generateAdStudioCopy({
         workspaceId: input.workspaceId,
         userId: input.userId,
         mode: input.brief ? "brief" : "generate",
@@ -48,30 +59,46 @@ export async function enrichCampaignPackCopyWithAi(input: {
           preferredPhrases: pack.brandKit.tone.preferredPhrases,
           neverSay: pack.brandKit.tone.avoid,
         },
-      });
-      pack = applyGeneratedCopy(pack, variant.variantId, generated.copy);
+      }),
+    ),
+  );
+
+  results.forEach((result, index) => {
+    const entry = enrichable[index];
+    if (!entry) return;
+    if (result.status === "fulfilled") {
+      pack = applyGeneratedCopy(pack, entry.variant.variantId, result.value.copy);
       changed = true;
-    } catch (error) {
-      lastError = error;
-      break;
+    } else if (firstError === null) {
+      firstError = result.reason;
     }
-  }
+  });
 
   // Surface a real failure instead of silently shipping the unwritten template copy.
   if (!changed) {
-    if (lastError) throw lastError;
+    if (firstError) throw firstError;
     return input.pack;
   }
 
   const compliance = runAdStudioComplianceReview({ campaign: pack.campaign, copyPacks: pack.copyPacks });
-  return {
+  const similarityWarnings = findPackCopySimilarityWarnings(pack);
+  const enriched: AdStudioCampaignPack = {
     ...pack,
     campaign: {
       ...pack.campaign,
       status: compliance.status === "blocked" ? "blocked" : "ready",
     },
     compliance,
+    similarityWarnings: similarityWarnings.length ? similarityWarnings : undefined,
   };
+
+  // LLM-judge scoring of the enriched copy (one batched call); falls back
+  // silently to the deterministic scores when the call fails.
+  return scoreCampaignPackVariantsWithAi({
+    pack: enriched,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+  });
 }
 
 function applyGeneratedCopy(

@@ -189,9 +189,11 @@ test("campaign creation uses shared AI copy enrichment without changing copy rou
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
   assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(enrichment, /catch \(error\)/);
-  assert.match(enrichment, /let lastError: unknown = null/);
-  assert.match(enrichment, /if \(lastError\) throw lastError/);
+  // A0: variants enrich in parallel; zero-success still surfaces a real failure
+  // instead of silently shipping the unwritten template copy.
+  assert.match(enrichment, /Promise\.allSettled/);
+  assert.match(enrichment, /let firstError: unknown = null/);
+  assert.match(enrichment, /if \(firstError\) throw firstError/);
   assert.match(enrichment, /return input\.pack/);
 });
 

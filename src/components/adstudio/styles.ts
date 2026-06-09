@@ -64,6 +64,10 @@ export const STYLES = `
 .studio-brand-preview small,.studio-note-card{color:var(--muted)}
 .studio-swatches{display:flex;gap:9px}
 .studio-swatches span{width:36px;height:36px;border:1px solid var(--line);border-radius:8px}
+.studio-draft-brand-chip{display:flex;align-items:flex-start;gap:9px;border:1px solid #f0e2bd;border-radius:10px;background:#fdf8ee;color:#8a5a00;padding:10px 12px;font-size:12.5px;line-height:1.45;text-decoration:none}
+.studio-draft-brand-chip b{font-weight:750}
+.studio-draft-brand-chip svg{flex:0 0 auto;margin-top:1px}
+.studio-draft-brand-chip:hover{background:#faf0d7}
 .studio-advanced{background:#fff;border-radius:12px;box-shadow:var(--st-sh-1);padding:12px 14px}
 .studio-advanced summary{cursor:pointer;font-weight:600}
 .studio-advanced p{color:var(--muted);margin:10px 0 0}
@@ -211,6 +215,20 @@ export const STYLES = `
 .studio-variant-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:8px}
 .studio-variant-actions button{border:0;border-radius:7px;background:rgba(255,255,255,.08);color:#d6e3ff;min-height:28px;padding:0 5px;font-size:11px;font-weight:600;text-align:center}
 .studio-variant-actions button:hover{background:rgba(255,255,255,.16)}
+.studio-variant-strip-head button:disabled{opacity:.5;cursor:wait}
+.studio-variant-head-actions{display:inline-flex;gap:8px}
+.studio-variant-head-actions button{border:0;border-radius:8px;background:rgba(255,255,255,.1);color:#d6e3ff;min-height:32px;padding:0 12px;font-weight:600;font-size:12.5px}
+.studio-variant-head-actions button:hover{background:rgba(255,255,255,.18)}
+.studio-variant-skeleton{display:grid;gap:7px;padding-bottom:4px}
+.studio-variant-skeleton i{display:block;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.07) 25%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.07) 75%);background-size:200% 100%;animation:studio-shimmer 1.3s ease-in-out infinite}
+.studio-variant-skeleton-image{height:74px}
+.studio-variant-skeleton-line{height:11px;width:72%}
+.studio-variant-skeleton-line.short{width:46%}
+@keyframes studio-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.studio-variant-tile.error{outline:1px solid rgba(255,138,128,.5)}
+.studio-variant-error-box{display:grid;gap:4px;min-height:108px;align-content:center;padding:6px 8px}
+.studio-variant-error-box strong{color:#ffb4ab;font-size:12.5px;font-weight:650}
+.studio-variant-error-box small{color:#cbb6b3;font-size:11px;line-height:1.35;display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .studio-readiness{background:#fff;border-radius:12px;box-shadow:var(--st-sh-1);padding:20px}
 .studio-readiness header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .studio-readiness h3{font-size:16px;font-weight:650;margin:0}

@@ -1,5 +1,6 @@
 import { scoreAdStudioVariant } from "./scoring.ts";
 import type { TextProviderAdapter } from "./providers.ts";
+import type { AdStudioCampaignPack } from "./types.ts";
 
 export const SCORE_GATE_THRESHOLD = 70;
 
@@ -79,6 +80,62 @@ export function runSimilarityGuard(
   }
 
   return { pass: true, reasons: [] };
+}
+
+// ── Cross-variant copy similarity (non-blocking diversity hint) ───────────────
+// Meta's delivery system suppresses near-duplicate creatives, so warn (never
+// block) when two variants' headline + primary text are nearly the same.
+
+export const COPY_SIMILARITY_WARN_THRESHOLD = 0.6;
+
+export function trigramJaccardSimilarity(a: string, b: string): number {
+  const left = textTrigrams(a);
+  const right = textTrigrams(b);
+  if (left.size === 0 || right.size === 0) return left.size === right.size ? 1 : 0;
+
+  let intersection = 0;
+  for (const gram of left) {
+    if (right.has(gram)) intersection += 1;
+  }
+
+  const union = left.size + right.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+export function findPackCopySimilarityWarnings(
+  pack: Pick<AdStudioCampaignPack, "variants" | "copyPacks">,
+  threshold = COPY_SIMILARITY_WARN_THRESHOLD,
+): string[] {
+  const entries = pack.variants.map((variant) => {
+    const copyPack = pack.copyPacks.find((candidate) => candidate.variantId === variant.variantId);
+    return {
+      angle: variant.angle,
+      text: `${variant.headline} ${copyPack?.meta.primaryText[0] ?? ""}`,
+    };
+  });
+  const warnings: string[] = [];
+
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      const similarity = trigramJaccardSimilarity(entries[i]!.text, entries[j]!.text);
+      if (similarity > threshold) {
+        warnings.push(
+          `Variants "${entries[i]!.angle}" and "${entries[j]!.angle}" use very similar copy (${Math.round(similarity * 100)}% overlap). Distinct angles perform better on Meta.`,
+        );
+      }
+    }
+  }
+
+  return warnings;
+}
+
+function textTrigrams(value: string): Set<string> {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  const grams = new Set<string>();
+  for (let index = 0; index + 3 <= normalized.length; index += 1) {
+    grams.add(normalized.slice(index, index + 3));
+  }
+  return grams;
 }
 
 // ── Score gate ────────────────────────────────────────────────────────────────

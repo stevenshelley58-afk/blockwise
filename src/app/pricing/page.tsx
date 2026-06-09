@@ -91,7 +91,6 @@ export default function PricingPage() {
                   Blockwise
                 </h2>
 
-                {/* TODO: owner to supply price — replace "$X / month" with the real amount */}
                 <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 6 }}>
                   <span
                     style={{
@@ -102,7 +101,7 @@ export default function PricingPage() {
                       fontFamily: "var(--font-manrope), Manrope, sans-serif",
                     }}
                   >
-                    $X
+                    $500
                   </span>
                   <span style={{ fontSize: "1rem", color: "var(--lp-muted)", fontWeight: 600 }}>
                     / month

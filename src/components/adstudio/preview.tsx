@@ -61,6 +61,10 @@ type VariantStripProps = {
   onEditCopy?: (index: number) => void;
   onReplaceImage?: (index: number) => void;
   onRegenerate?: (index: number) => void;
+  /** Staged generation: skeleton tiles + phase label while ads are being generated. */
+  pending?: { phase: string; count: number; error: string | null } | null;
+  onRetryPending?: () => void;
+  onDismissPending?: () => void;
   compact?: boolean;
 };
 
@@ -72,21 +76,56 @@ export function VariantStrip({
   onEditCopy,
   onReplaceImage,
   onRegenerate,
+  pending = null,
+  onRetryPending,
+  onDismissPending,
   compact = false,
 }: VariantStripProps) {
+  const generating = Boolean(pending && !pending.error);
+  const generationFailed = Boolean(pending?.error);
+
   return (
     <div className={compact ? "studio-variant-strip compact" : "studio-variant-strip"}>
       <div className="studio-variant-strip-head">
-        <strong>Generated ads</strong>
-        {!compact && (
-          <button type="button" onClick={onAdd}>
+        <strong aria-live="polite">{generating ? pending?.phase : "Generated ads"}</strong>
+        {generationFailed && (
+          <span className="studio-variant-head-actions">
+            {onRetryPending && (
+              <button type="button" onClick={onRetryPending}>Try again</button>
+            )}
+            {onDismissPending && (
+              <button type="button" onClick={onDismissPending}>Dismiss</button>
+            )}
+          </span>
+        )}
+        {!compact && !generationFailed && (
+          <button type="button" onClick={onAdd} disabled={generating}>
             <Plus aria-hidden size={16} />
             Add ad
           </button>
         )}
       </div>
       <div className="studio-variant-row">
-        {variants.map((variant, index) => (
+        {pending
+          ? Array.from({ length: pending.count }).map((_, index) =>
+              pending.error ? (
+                <article className="studio-variant-tile error" key={`pending-${index}`}>
+                  <span className="studio-variant-error-box" role={index === 0 ? "alert" : undefined}>
+                    <strong>Ad {index + 1} failed</strong>
+                    <small>{index === 0 ? pending.error : "Not generated - try again."}</small>
+                  </span>
+                </article>
+              ) : (
+                <article className="studio-variant-tile" key={`pending-${index}`} aria-hidden>
+                  <span className="studio-variant-skeleton">
+                    <i className="studio-variant-skeleton-image" />
+                    <i className="studio-variant-skeleton-line" />
+                    <i className="studio-variant-skeleton-line short" />
+                  </span>
+                </article>
+              ),
+            )
+          : variants.map((variant, index) => (
           <article className={selectedVariantIndex === index ? "studio-variant-tile active" : "studio-variant-tile"} key={variant.variantId}>
             <button className="studio-variant-preview" type="button" onClick={() => onSelect(index)}>
               <span className="studio-variant-image">

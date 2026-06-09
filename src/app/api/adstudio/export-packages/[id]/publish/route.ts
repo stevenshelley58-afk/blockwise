@@ -40,6 +40,8 @@ type PublishBody = {
   metaSetup?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
   requestApproval?: boolean;
+  /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
+  variantIds?: string[];
 };
 
 type ApprovalRecord = {
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         setupPatch: body.metaSetup,
         controls: body.controls,
         requestApproval: body.requestApproval ?? !body.dryRun,
+        variantIds: body.variantIds,
       })
     : null;
   const metaReadiness = metaPublishPlan
@@ -157,6 +160,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
             creatives: metaPublishPlan.creatives.length,
             ads: metaPublishPlan.ads.length,
           },
+          // Additive: which Ad Studio variants the planned ads map to (A6).
+          variantIds: metaPublishPlan.ads
+            .map((ad) => ad.variantTag?.variantId)
+            .filter((variantId): variantId is string => Boolean(variantId)),
         }
       : null,
     triggerRunId,
@@ -174,6 +181,7 @@ async function createAndPersistMetaPlan(input: {
   setupPatch?: Partial<MetaConnectionSetup>;
   controls?: MetaPublishControls;
   requestApproval: boolean;
+  variantIds?: string[];
 }) {
   const setup = mergeConnectionSetup(
     resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId),
@@ -188,6 +196,7 @@ async function createAndPersistMetaPlan(input: {
     controls: input.controls,
     adapter: input.adapter,
     approvalRequestId: approval.id,
+    variantIds: input.variantIds,
   });
 
   if (!approval.id && input.requestApproval) {
@@ -207,6 +216,7 @@ async function createAndPersistMetaPlan(input: {
       controls: input.controls,
       adapter: input.adapter,
       approvalRequestId: approval.id,
+      variantIds: input.variantIds,
     });
     await input.serviceSupabase
       .from("approval_requests")

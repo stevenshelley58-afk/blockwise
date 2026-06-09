@@ -1,4 +1,5 @@
 import { runAdStudioComplianceReview } from "./compliance.ts";
+import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { getOfferTemplate } from "./offers.ts";
 import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
@@ -67,10 +68,8 @@ const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
 const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
 
 export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): AdStudioCampaignPack {
-  if (input.brandKit.reviewStatus !== "approved") {
-    throw new Error("Brand kit must be approved before campaign generation.");
-  }
-
+  // B2 (simplification): draft/unapproved brand kits may generate; brand-kit
+  // approval is enforced at publish (readiness checks), not at generation.
   const template = input.firstAd?.mode === "template" ? resolveAdStudioTemplate(input.firstAd.templateId) : null;
   const requestedOfferId = template?.offerId ?? inferOfferIdFromFirstAd(input.firstAd?.description, input.offerId);
   const offer = getOfferTemplate(requestedOfferId);
@@ -143,6 +142,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     })),
   );
   const compliance = runAdStudioComplianceReview({ campaign, copyPacks });
+  const similarityWarnings = findPackCopySimilarityWarnings({ variants, copyPacks });
 
   return {
     brandKit: input.brandKit,
@@ -154,6 +154,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     creatives,
     copyPacks,
     compliance,
+    similarityWarnings: similarityWarnings.length ? similarityWarnings : undefined,
   };
 }
 

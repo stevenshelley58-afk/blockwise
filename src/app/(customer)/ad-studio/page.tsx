@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
 import { generateAdStudioCampaignPack, listOfferTemplates } from "@/lib/adstudio";
+import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
-import { persistAdStudioBrandKit } from "@/lib/adstudio/persistence";
+import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -29,11 +30,16 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId);
   const isTrialWorkspace = await loadIsTrialWorkspace(supabase, access.workspaceId);
 
-  if (!liveBundle && !isTrialWorkspace) {
+  // Softened gate: an extracted-but-unapproved kit lets the user straight into the
+  // workbench as a "Draft brand" (publish stays blocked until approval). The hard
+  // gate only remains for non-trial workspaces with no brand kit at all.
+  const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId) : null;
+
+  if (!liveBundle && !draftBundle && !isTrialWorkspace) {
     return <BrandSetupGate workspaceName={access.workspaceName ?? "your workspace"} />;
   }
 
-  const trialBundle = !liveBundle && isTrialWorkspace
+  const trialBundle = !liveBundle && !draftBundle && isTrialWorkspace
     ? await buildTrialStarterBundle({
         supabase,
         workspaceId: access.workspaceId,
@@ -42,8 +48,8 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         userId: access.userId,
       })
     : null;
-  const isSample = liveBundle === null && trialBundle === null;
-  const bundle = liveBundle ?? trialBundle ?? getAdStudioDemoBundle();
+  const isSample = liveBundle === null && draftBundle === null && trialBundle === null;
+  const bundle = liveBundle ?? draftBundle ?? trialBundle ?? getAdStudioDemoBundle();
 
   return (
     <>
@@ -96,6 +102,63 @@ async function buildTrialStarterBundle(input: {
   };
 }
 
+/**
+ * B2 (simplification): when the workspace only has an *unapproved* extracted brand
+ * kit, seed a starter pack from it instead of hard-gating on approval. The kit is
+ * returned with its real (draft) review status so the workbench shows the
+ * "Draft brand" chip and the publish panel keeps publishing blocked.
+ */
+async function buildDraftBrandBundle(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  workspaceId: string,
+) {
+  try {
+    const { data } = await supabase
+      .from("adstudio_brand_kits")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+    const nonDemoRows = (data ?? []).filter((row) => !isExampleBrandKitSourceUrl(String(row.source_url ?? "")));
+    const row = nonDemoRows.find((candidate) => String(candidate.source_url ?? "").trim()) ?? nonDemoRows[0];
+    if (!row) return null;
+
+    const brandKit = applyBrandAssetRows(
+      rowToBrandKit(row),
+      await loadAdStudioBrandAssetRows(supabase, workspaceId, String(row.id)),
+    );
+    // Approved kits are already handled by loadLiveAdStudioBundle.
+    if (brandKit.reviewStatus === "approved") return null;
+
+    const offers = listOfferTemplates();
+    const campaignPack = generateAdStudioCampaignPack({
+      workspaceId,
+      // The generator requires an approved kit; seeding a preview pack from a
+      // draft kit reuses the same pattern as loadLiveAdStudioBundle. The kit
+      // shown in the UI keeps its real draft status.
+      brandKit: { ...brandKit, reviewStatus: "approved" },
+      goal: "seller_leads",
+      suburb: "Scarborough",
+      city: "Perth",
+      state: brandKit.identity.marketRegion ?? "WA",
+      offerId: offers[0]?.offerId ?? "seller_prep_checklist",
+      platforms: ["meta"],
+      variantCount: 3,
+    });
+
+    return {
+      brandKit,
+      campaignPack,
+      offers,
+      performance: getAdStudioDemoBundle().performance,
+      isLive: true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function loadIsTrialWorkspace(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
@@ -114,9 +177,9 @@ function BrandSetupGate({ workspaceName }: { workspaceName: string }) {
     <div style={{ display: "grid", placeItems: "center", padding: 24, flex: 1 }}>
       <section style={{ width: "min(560px, 100%)", border: "1px solid #dbe3ef", borderRadius: 10, background: "#fff", padding: 24, display: "grid", gap: 14 }}>
         <span style={{ fontSize: 12, fontWeight: 750, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.6 }}>{workspaceName}</span>
-        <h1 style={{ margin: 0, fontSize: 24, letterSpacing: 0 }}>Approve your brand kit first</h1>
+        <h1 style={{ margin: 0, fontSize: 24, letterSpacing: 0 }}>Add your brand first</h1>
         <p style={{ margin: 0, color: "#475569", lineHeight: 1.55 }}>
-          Ad Studio needs an approved agency brand before it can create live ads. Scan your site, check the logo, colours, contact details, and approve the kit.
+          Scan your website once and Ad Studio fills in your logo, colours and contact details. You can start creating ads straight away and confirm the details before you publish.
         </p>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <Link href="/ad-studio/brand" style={{ minHeight: 42, borderRadius: 8, background: "#123E75", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 16px", textDecoration: "none", fontWeight: 750 }}>
