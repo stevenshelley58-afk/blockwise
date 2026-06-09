@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   const service = createSupabaseServiceClient();
-  const { error } = await service.from("audit_logs").insert({
+  const { error: auditError } = await service.from("audit_logs").insert({
     workspace_id: access.access.workspaceId,
     actor_profile_id: access.access.userId,
     action: "account_deletion_requested",
@@ -29,8 +29,14 @@ export async function POST(request: NextRequest) {
     metadata: { requestedAt: new Date().toISOString(), role: access.access.role },
   });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (auditError) {
+    return NextResponse.json({ error: auditError.message }, { status: 500 });
+  }
+
+  const { error: deleteError } = await service.auth.admin.deleteUser(access.access.userId);
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

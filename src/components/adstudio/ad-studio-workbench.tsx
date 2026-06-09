@@ -31,7 +31,7 @@ import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-jso
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
-import type { PreviewFormat, PreviewMode, SelectedElement } from "./preview";
+import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { TopBar } from "./topbar";
 import { useAdStudio } from "./use-ad-studio";
@@ -41,6 +41,8 @@ import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
+
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 import { BrandPanel } from "./panels/brand-panel";
 import { CampaignPanel } from "./panels/campaign-panel";
@@ -99,7 +101,6 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
   feed: "4:5",
   square: "1:1",
-  landscape: "1.91:1",
 };
 
 const FabricAdEditor = dynamic(
@@ -234,6 +235,7 @@ export function AdStudioWorkbench({
   isSample = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
   const [newAdStep, setNewAdStep] = useState<"source" | "template">("source");
@@ -242,7 +244,6 @@ export function AdStudioWorkbench({
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
-  const previewMode: PreviewMode = "platform";
   const zoom = previewFormat === "feed" ? 58 : 68;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
@@ -482,7 +483,6 @@ export function AdStudioWorkbench({
 
   // H9: delete campaign with confirmation; lives in publish panel (ownership boundary)
   async function deleteCampaign() {
-    if (!window.confirm("Delete this campaign? This cannot be undone.")) return;
     const res = await fetch(`/api/adstudio/campaigns/${pack.campaign.campaignId}`, { method: "DELETE" });
     if (res.ok) {
       window.location.href = "/ad-studio";
@@ -736,7 +736,7 @@ export function AdStudioWorkbench({
           campaignPack={pack}
           destinationUrl={destinationUrl}
           onExport={exportCreatives}
-          onDelete={deleteCampaign}
+          onDelete={() => setConfirmDeleteOpen(true)}
         />
       );
     }
@@ -765,7 +765,7 @@ export function AdStudioWorkbench({
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
-        onDelete={deleteCampaign}
+        onDelete={() => setConfirmDeleteOpen(true)}
         campaignId={pack.campaign.campaignId}
         showToast={studio.showToast}
       />
@@ -857,7 +857,6 @@ export function AdStudioWorkbench({
                 copy={copy}
                 image={primaryImage}
                 format={previewFormat}
-                mode={previewMode}
                 zoom={zoom}
                 selectedElement={selectedElement}
                 setSelectedElement={(element) => {
@@ -960,7 +959,6 @@ export function AdStudioWorkbench({
               copy={copy}
               image={primaryImage}
               format={previewFormat}
-              mode="platform"
               zoom={100}
               selectedElement={selectedElement}
               setSelectedElement={(element) => {
@@ -1014,7 +1012,7 @@ export function AdStudioWorkbench({
               campaignPack={pack}
               destinationUrl={destinationUrl}
               onExport={exportCreatives}
-              onDelete={deleteCampaign}
+              onDelete={() => setConfirmDeleteOpen(true)}
             />
           </div>
         )}
@@ -1066,6 +1064,16 @@ export function AdStudioWorkbench({
       />
 
       {studio.toast && <div className="studio-toast">{studio.toast}</div>}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete campaign?"
+        description="This cannot be undone. All variants and drafts for this campaign will be permanently removed."
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => { setConfirmDeleteOpen(false); void deleteCampaign(); }}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </main>
   );
 }

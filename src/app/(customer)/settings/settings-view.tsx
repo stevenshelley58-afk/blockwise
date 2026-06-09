@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { StatusPill } from "@/components/status-pill";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -102,6 +103,14 @@ const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: str
 const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
 const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm", "email"];
 
+const REGION_CURRENCY: Record<string, string> = {
+  AU: "AUD",
+  NZ: "NZD",
+  GB: "GBP",
+  US: "USD",
+  CA: "CAD",
+};
+
 function Feedback({ message }: { message: Msg }) {
   if (!message) return null;
   return <p className={`wizard-status ${message.tone}`}>{message.text}</p>;
@@ -160,6 +169,7 @@ export function SettingsView(props: SettingsViewProps) {
         router={router}
         canManage={props.canManage}
         workspaceId={props.workspace.id}
+        workspaceRegion={props.workspace.region}
         connections={props.connections}
         googleAdsEnabled={props.googleAdsEnabled}
         metaConnectHref={props.metaConnectHref}
@@ -411,6 +421,7 @@ function ConnectionsSection({
   router,
   canManage,
   workspaceId,
+  workspaceRegion,
   connections,
   googleAdsEnabled,
   metaConnectHref,
@@ -420,6 +431,7 @@ function ConnectionsSection({
   router: RT;
   canManage: boolean;
   workspaceId: string;
+  workspaceRegion: string;
   connections: Connection[];
   googleAdsEnabled: boolean;
   metaConnectHref: string;
@@ -436,15 +448,35 @@ function ConnectionsSection({
   async function disconnect(provider: string) {
     setBusyProvider(provider);
     setMessage(null);
-    const { error } = await supabase
-      .from("provider_connections")
-      .update({ status: "revoked", updated_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId)
-      .eq("provider", provider);
-    setBusyProvider(null);
-    if (error) {
-      setMessage({ tone: "error", text: `Couldn't disconnect ${provider}.` });
-      return;
+    if (provider === "meta") {
+      try {
+        const res = await fetch("/api/integrations/meta/disconnect", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ workspaceId }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setBusyProvider(null);
+        if (!res.ok) {
+          setMessage({ tone: "error", text: data.error ?? "Couldn't disconnect Meta." });
+          return;
+        }
+      } catch {
+        setBusyProvider(null);
+        setMessage({ tone: "error", text: "Couldn't disconnect Meta." });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from("provider_connections")
+        .update({ status: "revoked", updated_at: new Date().toISOString() })
+        .eq("workspace_id", workspaceId)
+        .eq("provider", provider);
+      setBusyProvider(null);
+      if (error) {
+        setMessage({ tone: "error", text: `Couldn't disconnect ${provider}.` });
+        return;
+      }
     }
     setMessage({ tone: "success", text: `${provider} disconnected.` });
     router.refresh();
@@ -483,7 +515,7 @@ function ConnectionsSection({
               )}
             </div>
             {prov.key === "meta" && connected ? (
-              <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
+              <MetaSetupForm workspaceId={workspaceId} workspaceRegion={workspaceRegion} canManage={canManage} />
             ) : null}
             {prov.key === "meta" && !connected ? (
               <p className="wizard-skip-note">Connect Meta first, then choose the ad account, Page, lead destination, and privacy policy used for publishing.</p>
@@ -509,7 +541,7 @@ function emptyMetaSetup(): MetaSetup {
   };
 }
 
-function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canManage: boolean }) {
+function MetaSetupForm({ workspaceId, workspaceRegion, canManage }: { workspaceId: string; workspaceRegion: string; canManage: boolean }) {
   const [setup, setSetup] = useState<MetaSetup>(() => emptyMetaSetup());
   const [assets, setAssets] = useState<MetaAssetCatalog | null>(null);
   const [blockers, setBlockers] = useState<string[]>([]);
@@ -567,7 +599,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
       const res = await fetch(`/api/integrations/meta/setup?workspaceId=${encodeURIComponent(workspaceId)}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ workspaceId, setup }),
+        body: JSON.stringify({ workspaceId, setup: { ...setup, currency: REGION_CURRENCY[workspaceRegion] ?? setup.currency } }),
       });
       const data = (await res.json().catch(() => ({}))) as MetaSetupResponse;
       setBusy(false);
@@ -704,7 +736,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Currency</span>
-          <input value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} placeholder={selectedAccount?.currency ?? "AUD"} disabled={!canManage} required />
+          <input value={REGION_CURRENCY[workspaceRegion] ?? selectedAccount?.currency ?? "AUD"} readOnly disabled />
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Timezone</span>
@@ -767,7 +799,13 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Region</span>
-          <input value={region} onChange={(e) => setRegion(e.target.value)} required />
+          <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+            <option value="AU">AU — Australia</option>
+            <option value="NZ">NZ — New Zealand</option>
+            <option value="GB">GB — United Kingdom</option>
+            <option value="US">US — United States</option>
+            <option value="CA">CA — Canada</option>
+          </select>
         </label>
         <label className="wizard-connect-row" style={{ cursor: "pointer" }}>
           <span>
@@ -989,6 +1027,7 @@ function NotificationsSection({ supabase, userId, initial }: { supabase: SB; use
 function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router: RT; workspaceId: string }) {
   const [busy, setBusy] = useState(false);
   const [delBusy, setDelBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
 
   async function signOutEverywhere() {
@@ -999,9 +1038,6 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
   }
 
   async function requestDeletion() {
-    if (!window.confirm("Request deletion of your account and workspace data? Our team will follow up to confirm.")) {
-      return;
-    }
     setDelBusy(true);
     setMessage(null);
     try {
@@ -1039,11 +1075,20 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
           <strong>Delete account & workspace data</strong>
           <div className="item-meta">Submits a deletion request for review.</div>
         </span>
-        <button className="button secondary" type="button" onClick={requestDeletion} disabled={delBusy}>
+        <button className="button secondary" type="button" onClick={() => setConfirmOpen(true)} disabled={delBusy}>
           {delBusy ? "Submitting" : "Request deletion"}
         </button>
       </div>
       <Feedback message={message} />
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete account and workspace data?"
+        description="This will permanently delete your account and all workspace data. Our team will review and follow up to confirm before anything is removed."
+        confirmLabel="Yes, request deletion"
+        danger
+        onConfirm={() => { setConfirmOpen(false); void requestDeletion(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Section>
   );
 }
