@@ -23,3 +23,6 @@ _archive/
 
 # MCP config (contains API key)
 .mcp.json
+
+# Persistent local secrets (SSH keys etc.) - never commit
+.secrets/
