@@ -25,10 +25,12 @@ export function useMedia(
     workspaceId: string;
     brandKitId: string;
     onUploaded?: (asset: { src: string; label: string }) => void;
+    isSample?: boolean;
   } = { workspaceId: "", brandKitId: "" },
 ) {
-  const initialPrimaryImage = options.initialImage?.src ?? MEDIA_ASSETS[0].src;
-  const initialPrimaryImageName = options.initialImage?.label ?? MEDIA_ASSETS[0].label;
+  const demoFallback = options.isSample ? MEDIA_ASSETS[0] : null;
+  const initialPrimaryImage = options.initialImage?.src ?? demoFallback?.src ?? "";
+  const initialPrimaryImageName = options.initialImage?.label ?? demoFallback?.label ?? "";
   const [primaryImage, setPrimaryImageState] = useState(() => initialPrimaryImage);
   const [primaryImageName, setPrimaryImageNameState] = useState(() => initialPrimaryImageName);
   const fileInputRef = useRef<HTMLInputElement>(null);

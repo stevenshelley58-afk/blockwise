@@ -75,7 +75,7 @@ export function AdCardActions({
           : status === "sending"
             ? "Sending"
             : status === "sent"
-              ? "Ready in Ad Studio"
+              ? "Saved to swipe file — open Ad Studio to use as inspiration"
               : status === "error"
                 ? "Action failed"
                 : !canSave

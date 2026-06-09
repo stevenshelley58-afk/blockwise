@@ -150,7 +150,6 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setCopy(seedCopy(payload.campaignPack));
       s.setPrimaryImage(preservedImage);
       s.setSaveState("saved");
-      s.setSection("media");
       s.showToast("Generated 3 ads");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {

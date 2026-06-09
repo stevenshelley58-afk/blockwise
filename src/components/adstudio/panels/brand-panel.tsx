@@ -117,7 +117,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
         </div>
 
         <Link href="/ad-studio/brand" className="studio-btn publish block" style={{ textDecoration: "none" }}>
-          Open Brand Studio
+          Edit in Brand Studio →
         </Link>
       </div>
 

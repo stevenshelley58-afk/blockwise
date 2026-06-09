@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { runAdStudioComplianceReview } from "@/lib/adstudio";
-import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
+import type { AdStudioCampaignPack } from "@/lib/adstudio";
 import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 
 export const runtime = "nodejs";
@@ -14,11 +14,18 @@ export async function POST(request: NextRequest) {
     return access.response;
   }
 
-  const body = await readJsonBody<Partial<ReturnType<typeof getAdStudioDemoBundle>["campaignPack"]>>(request);
-  const demo = getAdStudioDemoBundle().campaignPack;
+  const body = await readJsonBody<Partial<AdStudioCampaignPack>>(request);
+
+  if (!body.campaign || !body.copyPacks) {
+    return NextResponse.json(
+      { error: "missing_required_fields", message: "campaign and copyPacks are required" },
+      { status: 400 },
+    );
+  }
+
   const report = runAdStudioComplianceReview({
-    campaign: body.campaign ?? demo.campaign,
-    copyPacks: body.copyPacks ?? demo.copyPacks,
+    campaign: body.campaign,
+    copyPacks: body.copyPacks,
   });
 
   return NextResponse.json({ report });

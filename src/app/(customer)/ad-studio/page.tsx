@@ -56,6 +56,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         offers={bundle.offers}
         performance={bundle.performance}
         firstRun={isFirstRunParam(params.first)}
+        isSample={isSample}
       />
     </>
   );

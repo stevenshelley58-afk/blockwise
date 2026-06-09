@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Target,
   Type,
-  UsersRound,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -43,7 +42,6 @@ import { seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
-import { AudiencePanel } from "./panels/audience-panel";
 import { BrandPanel } from "./panels/brand-panel";
 import { CampaignPanel } from "./panels/campaign-panel";
 import { CopyPanel } from "./panels/copy-panel";
@@ -67,6 +65,7 @@ type AdStudioWorkbenchProps = {
     recommendations: string[];
   };
   firstRun?: boolean;
+  isSample?: boolean;
 };
 
 type NavItem = { id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon };
@@ -80,7 +79,6 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { id: "brand", label: "Brand", icon: ShieldCheck },
       { id: "media", label: "Media", icon: ImageIcon },
       { id: "copy", label: "Copy", icon: Type },
-      { id: "audience", label: "Audience", icon: UsersRound },
       { id: "publish", label: "Publish", icon: Send },
     ],
   },
@@ -233,6 +231,7 @@ export function AdStudioWorkbench({
   campaignPack: initialPack,
   offers,
   firstRun = false,
+  isSample = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const [newAdOpen, setNewAdOpen] = useState(false);
@@ -314,6 +313,7 @@ export function AdStudioWorkbench({
       initialImage: initialMedia,
       workspaceId,
       brandKitId: brandKit.brandKitId,
+      isSample,
       onUploaded: (asset) =>
         setUploadedAssets((prev) =>
           prev.some((item) => item.src === asset.src)
@@ -382,7 +382,10 @@ export function AdStudioWorkbench({
   );
   // Uploads land at the front of the library so the image you just added is
   // visible and reselectable right away, not only after a reload.
-  const mediaAssets = [...uploadedAssets, ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : MEDIA_ASSETS)];
+  // Demo/sample imagery is only shown when viewing the sample workspace; real
+  // users see only their own uploaded and workspace assets.
+  const demoAssets = isSample ? MEDIA_ASSETS : [];
+  const mediaAssets = [...uploadedAssets, ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets)];
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
@@ -529,7 +532,7 @@ export function AdStudioWorkbench({
         displayName: `Ad ${index + 1}`,
       // M5: use the variant's own angle field as the label, not an index-offset into ANGLES
         angleLabel: variant.angle || selectedAngle.variantLabel,
-        image: variantImage?.src ?? (MEDIA_ASSETS.some((item) => item.src === primaryImage) ? MEDIA_ASSETS[index % MEDIA_ASSETS.length].src : primaryImage),
+        image: variantImage?.src ?? (isSample && MEDIA_ASSETS.some((item) => item.src === primaryImage) ? MEDIA_ASSETS[index % MEDIA_ASSETS.length].src : primaryImage),
       };
     });
   }, [getVariantPrimaryImage, initialPack.variants, pack.variants, primaryImage, selectedAngle.variantLabel, selectedVariantIndex]);
@@ -542,10 +545,10 @@ export function AdStudioWorkbench({
       offerLabel,
       primaryImage,
     });
-    const asset = MEDIA_ASSETS[index % MEDIA_ASSETS.length];
+    const asset = isSample ? MEDIA_ASSETS[index % MEDIA_ASSETS.length] : null;
     const variant = nextPack.variants[index] ?? initialPack.variants[index];
     const variantImage = getVariantPrimaryImage(variant?.variantId, nextPack);
-    const currentIsLibraryAsset = MEDIA_ASSETS.some((item) => item.src === primaryImage);
+    const currentIsLibraryAsset = isSample && MEDIA_ASSETS.some((item) => item.src === primaryImage);
     void saveDraft({
       silent: true,
       packOverride: nextPack,
@@ -560,7 +563,7 @@ export function AdStudioWorkbench({
     if (variantImage) {
       setPrimaryImage(variantImage.src);
       setPrimaryImageName(variantImage.label);
-    } else if (currentIsLibraryAsset) {
+    } else if (currentIsLibraryAsset && asset) {
       setPrimaryImage(asset.src);
       setPrimaryImageName(asset.label);
     }
@@ -636,7 +639,7 @@ export function AdStudioWorkbench({
 
   // Adds another generated ad idea from the current defaults.
   function addVariant() {
-    generateVariantsForAngle(selectedAngle);
+    generateVariantsForAngle(selectedAngle, campaignGoal);
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
@@ -724,9 +727,6 @@ export function AdStudioWorkbench({
           onApplyAlternate={applyAlternate}
         />
       );
-    }
-    if (studio.section === "audience") {
-      return <AudiencePanel />;
     }
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
