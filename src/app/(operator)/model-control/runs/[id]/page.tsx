@@ -91,7 +91,7 @@ type TraceRow = {
 
 export default async function ModelRunDetailPage({ params }: PageProps) {
   const { id } = await Promise.resolve(params);
-  const { supabase, access } = await requirePageSurfaceAccess("model_control");
+  const { supabase, access } = await requirePageSurfaceAccess("operator");
   const { data: providerRun, error: providerRunError } = await supabase
     .from("adstudio_provider_runs")
     .select(

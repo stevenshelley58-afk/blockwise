@@ -1,4 +1,4 @@
-export type AgentAction =
+export type WorkforceAction =
   | "capture_public_evidence"
   | "classify_pattern"
   | "generate_idea"
@@ -13,7 +13,7 @@ export type AgentAction =
   | "change_campaign_budget"
   | "export_lead_pii";
 
-export type AgentDataClass =
+export type WorkforceDataClass =
   | "internal_operational"
   | "public_competitor_data"
   | "performance_metrics"
@@ -25,26 +25,26 @@ export type AgentDataClass =
   | "lead_pii"
   | "provider_token";
 
-export type AgentDestination =
+export type WorkforceDestination =
   | "internal_artifact"
   | "model_prompt"
   | "provider_api"
   | "client_message"
   | "external_export";
 
-export type AgentDefinition = {
+export type WorkforceAgent = {
   key: string;
   label: string;
   description: string;
-  allowedActions: AgentAction[];
-  allowedDataClasses: AgentDataClass[];
-  allowedDestinations: AgentDestination[];
+  allowedActions: WorkforceAction[];
+  allowedDataClasses: WorkforceDataClass[];
+  allowedDestinations: WorkforceDestination[];
   allowedOutboundDomains: string[];
   maxRowsPerRun: number;
   canCrossWorkspace: boolean;
 };
 
-export const HUMAN_APPROVAL_ACTIONS: AgentAction[] = [
+export const HUMAN_APPROVAL_ACTIONS: WorkforceAction[] = [
   "send_client_message",
   "publish_provider_campaign",
   "change_campaign_budget",
@@ -53,7 +53,7 @@ export const HUMAN_APPROVAL_ACTIONS: AgentAction[] = [
 
 const MODEL_OUTBOUND_DOMAINS = ["api.openai.com", "gateway.ai.cloudflare.com", "openrouter.ai"];
 
-export const AGENT_DEFINITIONS: AgentDefinition[] = [
+export const WORKFORCE_AGENTS: WorkforceAgent[] = [
   {
     key: "research_agent",
     label: "Research Agent",
@@ -155,8 +155,8 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
   },
 ];
 
-export function canAgentPerformAction(agentKey: string, action: AgentAction): boolean {
-  const agent = AGENT_DEFINITIONS.find((definition) => definition.key === agentKey);
+export function canWorkforceAgentPerformAction(agentKey: string, action: WorkforceAction): boolean {
+  const agent = WORKFORCE_AGENTS.find((definition) => definition.key === agentKey);
 
   if (!agent) {
     return false;
@@ -165,6 +165,6 @@ export function canAgentPerformAction(agentKey: string, action: AgentAction): bo
   return agent.allowedActions.includes(action);
 }
 
-export function requiresHumanApproval(action: AgentAction): boolean {
+export function requiresHumanApproval(action: WorkforceAction): boolean {
   return HUMAN_APPROVAL_ACTIONS.includes(action);
 }

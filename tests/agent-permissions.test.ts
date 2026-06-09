@@ -2,22 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  AGENT_DEFINITIONS,
-  canAgentPerformAction,
+  WORKFORCE_AGENTS,
+  canWorkforceAgentPerformAction,
   requiresHumanApproval,
-} from "../src/lib/agents/permissions.ts";
+} from "../src/lib/workforce/permissions.ts";
 import {
-  authorizeAgentOperation,
-  buildAgentRuntimePolicy,
+  authorizeWorkforceOperation,
+  buildWorkforceRuntimePolicy,
   detectSensitiveText,
-} from "../src/lib/agents/runtime-policy.ts";
+} from "../src/lib/workforce/runtime-policy.ts";
 
 test("research agents can capture evidence but cannot publish ads", () => {
-  const research = AGENT_DEFINITIONS.find((agent) => agent.key === "research_agent");
+  const research = WORKFORCE_AGENTS.find((agent) => agent.key === "research_agent");
 
   assert.ok(research);
-  assert.equal(canAgentPerformAction(research.key, "capture_public_evidence"), true);
-  assert.equal(canAgentPerformAction(research.key, "publish_provider_campaign"), false);
+  assert.equal(canWorkforceAgentPerformAction(research.key, "capture_public_evidence"), true);
+  assert.equal(canWorkforceAgentPerformAction(research.key, "publish_provider_campaign"), false);
 });
 
 test("high risk actions always require human approval", () => {
@@ -28,12 +28,12 @@ test("high risk actions always require human approval", () => {
 });
 
 test("campaign draft agent can draft campaigns but cannot send client-facing messages", () => {
-  assert.equal(canAgentPerformAction("campaign_draft_agent", "draft_campaign"), true);
-  assert.equal(canAgentPerformAction("campaign_draft_agent", "send_client_message"), false);
+  assert.equal(canWorkforceAgentPerformAction("campaign_draft_agent", "draft_campaign"), true);
+  assert.equal(canWorkforceAgentPerformAction("campaign_draft_agent", "send_client_message"), false);
 });
 
 test("agent runtime policies allow scoped internal work only inside the active workspace", () => {
-  const policy = buildAgentRuntimePolicy({
+  const policy = buildWorkforceRuntimePolicy({
     workspaceId: "workspace_a",
     agentRunId: "agent_run_1",
     actorProfileId: "operator_1",
@@ -41,7 +41,7 @@ test("agent runtime policies allow scoped internal work only inside the active w
   });
 
   assert.deepEqual(
-    authorizeAgentOperation(policy, {
+    authorizeWorkforceOperation(policy, {
       action: "draft_campaign",
       workspaceId: "workspace_a",
       dataClasses: ["campaign_draft"],
@@ -53,7 +53,7 @@ test("agent runtime policies allow scoped internal work only inside the active w
   );
 
   assert.deepEqual(
-    authorizeAgentOperation(policy, {
+    authorizeWorkforceOperation(policy, {
       action: "draft_campaign",
       workspaceId: "workspace_b",
       dataClasses: ["campaign_draft"],
@@ -69,7 +69,7 @@ test("agent runtime policies allow scoped internal work only inside the active w
 });
 
 test("agent runtime policies deny unapproved PII exports and unlisted outbound domains", () => {
-  const policy = buildAgentRuntimePolicy({
+  const policy = buildWorkforceRuntimePolicy({
     workspaceId: "workspace_a",
     agentRunId: "agent_run_2",
     actorProfileId: "operator_1",
@@ -77,7 +77,7 @@ test("agent runtime policies deny unapproved PII exports and unlisted outbound d
   });
 
   assert.deepEqual(
-    authorizeAgentOperation(policy, {
+    authorizeWorkforceOperation(policy, {
       action: "export_lead_pii",
       workspaceId: "workspace_a",
       dataClasses: ["lead_pii"],
@@ -93,7 +93,7 @@ test("agent runtime policies deny unapproved PII exports and unlisted outbound d
   );
 
   assert.deepEqual(
-    authorizeAgentOperation(policy, {
+    authorizeWorkforceOperation(policy, {
       action: "summarize_reporting",
       workspaceId: "workspace_a",
       dataClasses: ["performance_metrics"],
@@ -109,7 +109,7 @@ test("agent runtime policies deny unapproved PII exports and unlisted outbound d
 });
 
 test("agent runtime policies allow curated OpenRouter model egress", () => {
-  const policy = buildAgentRuntimePolicy({
+  const policy = buildWorkforceRuntimePolicy({
     workspaceId: "workspace_a",
     agentRunId: "agent_run_3",
     actorProfileId: "operator_1",
@@ -117,7 +117,7 @@ test("agent runtime policies allow curated OpenRouter model egress", () => {
   });
 
   assert.deepEqual(
-    authorizeAgentOperation(policy, {
+    authorizeWorkforceOperation(policy, {
       action: "draft_campaign",
       workspaceId: "workspace_a",
       dataClasses: ["campaign_draft"],

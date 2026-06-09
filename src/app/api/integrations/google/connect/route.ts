@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections } from "@/lib/auth/access-control";
+import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { buildProviderAuthorizationUrl } from "@/lib/providers/oauth-handlers";
 import { createOAuthStatePayload, signOAuthState } from "@/lib/providers/oauth-state";

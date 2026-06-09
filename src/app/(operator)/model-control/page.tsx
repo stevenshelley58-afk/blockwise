@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
 
 export default async function ModelControlPage({ searchParams }: { searchParams?: SearchParams }) {
-  const { access } = await requirePageSurfaceAccess("model_control");
+  const { access } = await requirePageSurfaceAccess("operator");
   const supabase = await createSupabaseServerClient();
   const params = searchParams ? await Promise.resolve(searchParams) : {};
   const ledgerFilters: AiLedgerFilters = {

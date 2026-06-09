@@ -1,4 +1,4 @@
-import type { AgentDataClass } from "../agents/permissions.ts";
+import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
 export type ModelProvider = "openai" | "openrouter";
 
@@ -59,7 +59,7 @@ export type PersistedModelProfileVersion = {
   maxLatencyMs: number;
 };
 
-const SENSITIVE_DATA_CLASSES: AgentDataClass[] = ["lead_pii", "provider_token"];
+const SENSITIVE_DATA_CLASSES: WorkforceDataClass[] = ["lead_pii", "provider_token"];
 
 const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_only"> = {
   openai: "allowed",
@@ -364,7 +364,7 @@ export function resolveEffectiveModelProfiles(
 
 export function resolveModelProfileForData(
   profileKey: ModelProfileKey,
-  request: { dataClasses: AgentDataClass[] },
+  request: { dataClasses: WorkforceDataClass[] },
 ): ResolvedModelProfile {
   const resolved = resolveModelProfile(profileKey);
 

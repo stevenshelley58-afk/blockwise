@@ -1,26 +1,26 @@
 import {
-  AGENT_DEFINITIONS,
+  WORKFORCE_AGENTS,
   HUMAN_APPROVAL_ACTIONS,
-  type AgentAction,
-  type AgentDataClass,
-  type AgentDestination,
+  type WorkforceAction,
+  type WorkforceDataClass,
+  type WorkforceDestination,
 } from "./permissions.ts";
 
-export type AgentRuntimePolicy = {
+export type WorkforceRuntimePolicy = {
   workspaceId: string;
   agentRunId: string;
   actorProfileId: string;
   agentKey: string;
-  allowedActions: AgentAction[];
-  allowedDataClasses: AgentDataClass[];
-  allowedDestinations: AgentDestination[];
+  allowedActions: WorkforceAction[];
+  allowedDataClasses: WorkforceDataClass[];
+  allowedDestinations: WorkforceDestination[];
   allowedOutboundDomains: string[];
   maxRowsPerRun: number;
   canCrossWorkspace: boolean;
   approvalIds: string[];
 };
 
-export type AgentRuntimePolicyInput = {
+export type WorkforceRuntimePolicyInput = {
   workspaceId: string;
   agentRunId: string;
   actorProfileId: string;
@@ -28,17 +28,17 @@ export type AgentRuntimePolicyInput = {
   approvalIds?: string[];
 };
 
-export type AgentOperation = {
-  action: AgentAction;
+export type WorkforceOperation = {
+  action: WorkforceAction;
   workspaceId: string;
-  dataClasses: AgentDataClass[];
-  destination: AgentDestination;
+  dataClasses: WorkforceDataClass[];
+  destination: WorkforceDestination;
   outboundDomain?: string;
   approvalId?: string;
   rowCount?: number;
 };
 
-export type AgentAuthorizationDecision = {
+export type WorkforceAuthorizationDecision = {
   allowed: boolean;
   reason?: string;
 };
@@ -49,12 +49,12 @@ const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const AU_PHONE_PATTERN = /(?:\+?61|0)\s?(?:2|3|4|7|8)\s?\d{2,4}\s?\d{3}\s?\d{3}\b/;
 const SECRET_PATTERN = /\b(?:sk|pk|rk|api[_-]?key|secret|token)[-_=:][A-Za-z0-9_-]{6,}\b/i;
 
-export function buildAgentRuntimePolicy(input: AgentRuntimePolicyInput): AgentRuntimePolicy {
+export function buildWorkforceRuntimePolicy(input: WorkforceRuntimePolicyInput): WorkforceRuntimePolicy {
   if (!input.workspaceId || !input.agentRunId || !input.actorProfileId || !input.agentKey) {
     throw new Error("Agent runtime policy requires workspaceId, agentRunId, actorProfileId, and agentKey.");
   }
 
-  const definition = AGENT_DEFINITIONS.find((agent) => agent.key === input.agentKey);
+  const definition = WORKFORCE_AGENTS.find((agent) => agent.key === input.agentKey);
 
   if (!definition) {
     throw new Error(`Unknown agent definition: ${input.agentKey}`);
@@ -75,10 +75,10 @@ export function buildAgentRuntimePolicy(input: AgentRuntimePolicyInput): AgentRu
   };
 }
 
-export function authorizeAgentOperation(
-  policy: AgentRuntimePolicy,
-  operation: AgentOperation,
-): AgentAuthorizationDecision {
+export function authorizeWorkforceOperation(
+  policy: WorkforceRuntimePolicy,
+  operation: WorkforceOperation,
+): WorkforceAuthorizationDecision {
   if (!policy.allowedActions.includes(operation.action)) {
     return {
       allowed: false,
@@ -151,10 +151,10 @@ export function detectSensitiveText(value: string): SensitiveSignal[] {
   return signals;
 }
 
-function hasCrossWorkspaceGrant(policy: AgentRuntimePolicy, operation: AgentOperation): boolean {
+function hasCrossWorkspaceGrant(policy: WorkforceRuntimePolicy, operation: WorkforceOperation): boolean {
   return policy.canCrossWorkspace && hasApproval(policy, operation.approvalId);
 }
 
-function hasApproval(policy: AgentRuntimePolicy, approvalId?: string): boolean {
+function hasApproval(policy: WorkforceRuntimePolicy, approvalId?: string): boolean {
   return Boolean(approvalId && policy.approvalIds.includes(approvalId));
 }

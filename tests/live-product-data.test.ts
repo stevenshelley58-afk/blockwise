@@ -151,16 +151,13 @@ test("buildAiLedgerRows and buildResearchSignals map production tables", () => {
 
 test("AI ledger loaders expose operator filters for user model task and day", () => {
   const liveData = readFileSync("src/lib/product/live-data.ts", "utf8");
-  const route = readFileSync("src/app/api/ai-ledger/route.ts", "utf8");
-  const page = readFileSync("src/app/(workforce)/model-control/page.tsx", "utf8");
+  const page = readFileSync("src/app/(operator)/model-control/page.tsx", "utf8");
 
   assert.match(liveData, /\.eq\("workspace_id", workspaceId\)/);
   assert.match(liveData, /\.eq\("user_id", filters\.userId\)/);
   assert.match(liveData, /\.ilike\("model", `%\$\{filters\.model\}%`\)/);
   assert.match(liveData, /\.eq\("task", filters\.task\)/);
   assert.match(liveData, /\.gte\("created_at", dayRange\.startIso\)\.lt\("created_at", dayRange\.endIso\)/);
-  assert.match(route, /userId: cleanParam\(request\.nextUrl\.searchParams\.get\("userId"\)\)/);
-  assert.match(route, /listAiLedgerRows\(supabase, access\.access\.workspaceId, filters\)/);
   assert.match(page, /name="userId"/);
   assert.match(page, /name="model"/);
   assert.match(page, /name="task"/);

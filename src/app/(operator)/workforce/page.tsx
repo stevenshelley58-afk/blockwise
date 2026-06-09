@@ -4,14 +4,14 @@ import Link from "next/link";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { AGENT_DEFINITIONS, HUMAN_APPROVAL_ACTIONS } from "@/lib/agents/permissions";
+import { WORKFORCE_AGENTS, HUMAN_APPROVAL_ACTIONS } from "@/lib/workforce/permissions";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listAgentRunRows } from "@/lib/product/live-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgentWorkforcePage() {
-  const { supabase, access } = await requirePageSurfaceAccess("agents");
+  const { supabase, access } = await requirePageSurfaceAccess("operator");
   const agentRuns = await listAgentRunRows(supabase, access.workspaceId);
 
   return (
@@ -23,7 +23,7 @@ export default async function AgentWorkforcePage() {
       />
 
       <section className="grid cols-4">
-        <MetricCard icon={Bot} label="Definitions" value={String(AGENT_DEFINITIONS.length)} note="Native first, external runtimes later" />
+        <MetricCard icon={Bot} label="Definitions" value={String(WORKFORCE_AGENTS.length)} note="Native first, external runtimes later" />
         <MetricCard icon={Workflow} label="Open runs" value="27" note="Run, step, artifact, and review states" />
         <MetricCard icon={ShieldAlert} label="Approval actions" value={String(HUMAN_APPROVAL_ACTIONS.length)} note="Publish, budget, sends, PII export" />
         <MetricCard icon={TimerReset} label="Schedules" value="6" note="Trigger.dev handles retries and schedules" />
@@ -80,7 +80,7 @@ export default async function AgentWorkforcePage() {
       <section className="panel">
         <h2>Permission Model</h2>
         <div className="grid cols-3">
-          {AGENT_DEFINITIONS.slice(0, 6).map((agent) => (
+          {WORKFORCE_AGENTS.slice(0, 6).map((agent) => (
             <article className="item-card" key={agent.key}>
               <h3>{agent.label}</h3>
               <p className="item-meta">{agent.description}</p>
