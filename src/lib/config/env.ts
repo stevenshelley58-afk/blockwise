@@ -10,7 +10,6 @@ export const REQUIRED_ENV_KEYS = [
   "TRIGGER_PROJECT_ID",
   "META_APP_ID",
   "META_APP_SECRET",
-  "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
 ] as const;
 
 // Provider integrations have their own readiness gates so the top-level
@@ -24,6 +23,7 @@ export const PROVIDER_ENV_KEYS = {
 export type ProviderKey = keyof typeof PROVIDER_ENV_KEYS;
 
 export const RECOMMENDED_SECURITY_ENV_KEYS = [
+  "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
   "CLOUDFLARE_AI_GATEWAY_URL",
   "CLOUDFLARE_AI_GATEWAY_TOKEN",
   "AGENT_ALLOWED_OUTBOUND_DOMAINS",
