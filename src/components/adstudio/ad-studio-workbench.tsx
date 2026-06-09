@@ -31,7 +31,7 @@ import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-jso
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
-import type { PreviewFormat, PreviewMode, SelectedElement } from "./preview";
+import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { TopBar } from "./topbar";
 import { useAdStudio } from "./use-ad-studio";
@@ -242,7 +242,6 @@ export function AdStudioWorkbench({
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
-  const previewMode: PreviewMode = "platform";
   const zoom = previewFormat === "feed" ? 58 : 68;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
@@ -857,7 +856,6 @@ export function AdStudioWorkbench({
                 copy={copy}
                 image={primaryImage}
                 format={previewFormat}
-                mode={previewMode}
                 zoom={zoom}
                 selectedElement={selectedElement}
                 setSelectedElement={(element) => {
@@ -960,7 +958,6 @@ export function AdStudioWorkbench({
               copy={copy}
               image={primaryImage}
               format={previewFormat}
-              mode="platform"
               zoom={100}
               selectedElement={selectedElement}
               setSelectedElement={(element) => {

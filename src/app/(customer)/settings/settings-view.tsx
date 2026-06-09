@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { StatusPill } from "@/components/status-pill";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
+
 type Msg = { tone: "success" | "error"; text: string } | null;
 
 type Connection = {
@@ -704,7 +706,12 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Currency</span>
-          <input value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} placeholder={selectedAccount?.currency ?? "AUD"} disabled={!canManage} required />
+          <select value={setup.currency} onChange={(e) => updateSetup({ currency: e.target.value })} disabled={!canManage} required>
+            <option value="">Select currency</option>
+            {Object.values(REGION_CURRENCY).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Timezone</span>
@@ -767,7 +774,11 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
         </label>
         <label className="wizard-field">
           <span className="wizard-label">Region</span>
-          <input value={region} onChange={(e) => setRegion(e.target.value)} required />
+          <select value={region} onChange={(e) => setRegion(e.target.value)} required>
+            {Object.keys(REGION_CURRENCY).map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
         </label>
         <label className="wizard-connect-row" style={{ cursor: "pointer" }}>
           <span>

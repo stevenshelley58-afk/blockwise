@@ -16,6 +16,8 @@ import {
   validateAssetUploadFile,
 } from "@/lib/upload/asset-file";
 
+const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
+
 type JsonObject = Record<string, unknown>;
 
 type BrandKitRow = {
@@ -328,12 +330,16 @@ export function OnboardingWizard({
             </label>
             <label className="wizard-field">
               <span className="wizard-label">Region</span>
-              <input
+              <select
                 value={profileRegion}
                 onChange={(event) => setProfileRegion(event.target.value)}
-                readOnly={!canSaveProfile}
+                disabled={!canSaveProfile}
                 required
-              />
+              >
+                {Object.keys(REGION_CURRENCY).map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
             </label>
             {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
             <div className="wizard-actions">
