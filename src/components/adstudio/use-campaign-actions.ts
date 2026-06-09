@@ -276,11 +276,16 @@ export function useCampaignActions(s: CampaignActionsState) {
 }
 
 async function renderExportsWithFallback(pack: AdStudioCampaignPack) {
+  let renders: Awaited<ReturnType<typeof renderCreativeExports>>;
   try {
-    return await withTimeout(renderCreativeExports(pack, { storeInWorkspace: true }), EXPORT_RENDER_TIMEOUT_MS);
-  } catch {
-    return [];
+    renders = await withTimeout(renderCreativeExports(pack, { storeInWorkspace: true }), EXPORT_RENDER_TIMEOUT_MS);
+  } catch (err) {
+    throw new Error(`Creative render failed — please retry. (${err instanceof Error ? err.message : String(err)})`);
   }
+  if (renders.length === 0) {
+    throw new Error("Export failed — please retry.");
+  }
+  return renders;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
