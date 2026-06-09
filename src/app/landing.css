@@ -770,6 +770,9 @@
 .lp-footer .blockwise-logo, .lp-footer svg { filter: brightness(0) invert(1); }
 .lp-footer-social svg { filter: none; }
 
+/* mobile-only perf section (hidden on desktop/tablet) */
+.lp-mobile-perf { display: none; }
+
 /* responsive */
 @media (min-width: 1081px) {
   .lp-split-swap > :first-child { order: 2; }
@@ -832,4 +835,23 @@
   .lp-footer-grid { grid-template-columns: 1fr; gap: 32px; padding: 44px 0 32px; }
   .lp-footer-bottom { flex-direction: column; align-items: flex-start; }
   .lp-center-head { margin-bottom: 44px; }
+
+  /* mobile hero: hide lead paragraph */
+  .lp-hero .lp-lead { display: none; }
+  /* hide perf card inside hero-media on mobile (shown in lp-mobile-perf below hero) */
+  .lp-perf-hero { display: none; }
+  /* show mobile-only perf section */
+  .lp-mobile-perf { display: block; padding: 0 0 64px; }
+  .lp-mobile-perf .lp-h2 { margin-bottom: 6px; }
+  .lp-mobile-perf .lp-lead { margin-top: 0; margin-bottom: 18px; }
+  .lp-mobile-perf .lp-perf { position: static; width: 100%; margin-top: 0; padding: 18px 16px 16px; }
+
+  /* reorder sections on mobile */
+  #main { display: flex; flex-direction: column; }
+  #problem { order: 5; }
+  #approval { order: 6; }
+  #reporting { order: 7; }
+  #free-trial { order: 8; }
+  #managed-setup { order: 9; }
+  #faq { order: 10; }
 }
