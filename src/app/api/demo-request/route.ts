@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { sendDemoRequestNotification } from "@/lib/notify/demo-request-email";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +44,24 @@ export async function POST(request: NextRequest) {
   // Honeypot tripped — pretend success so bots do not learn anything.
   if (parsed.data.company_website) {
     return NextResponse.json({ ok: true });
+  }
+
+  // Rate limit by IP: 5 demo requests per hour per IP.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+  const serviceClient = createSupabaseServiceClient();
+  const rateLimit = await checkRateLimit(serviceClient, null, ip, {
+    windowSeconds: 3600,
+    maxRequests: 5,
+    bucket: "demo-request",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const supabase = await createSupabaseServerClient();

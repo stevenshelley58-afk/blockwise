@@ -12,10 +12,18 @@ type SupabaseReadiness = {
   message?: string;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  const authorization = request.headers.get("authorization");
+  const authenticated = secret && authorization === `Bearer ${secret}`;
+
   const readiness = getDeploymentReadiness();
   const supabase = await getSupabaseReadiness();
   const ready = readiness.ok && supabase.ok;
+
+  if (!authenticated) {
+    return NextResponse.json({ app: "blockwise", status: ready ? "ready" : "degraded" });
+  }
 
   return NextResponse.json({
     app: "blockwise",

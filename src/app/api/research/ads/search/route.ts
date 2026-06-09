@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
@@ -20,12 +21,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const rateLimit = await checkRateLimit(supabase, access.access.workspaceId, access.access.userId, {
+    windowSeconds: 60,
+    maxRequests: 20,
+    bucket: "ads-search",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const q = (request.nextUrl.searchParams.get("q") ?? "").replace(/[(),]/g, "").trim();
   if (!q) {
     return NextResponse.json({ cards: [] });
   }
 
-  const needle = `%${q}%`;
+  const needle = "%" + q.replace(/[%_\\]/g, "\\$&") + "%";
   const { data, error } = await supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")

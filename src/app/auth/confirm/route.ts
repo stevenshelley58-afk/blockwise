@@ -47,5 +47,5 @@ export async function GET(request: NextRequest) {
     return confirmFailedRedirect(request);
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  return NextResponse.redirect(new URL(next, process.env.NEXT_PUBLIC_APP_URL ?? request.url));
 }
