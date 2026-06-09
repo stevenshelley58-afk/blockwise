@@ -1,27 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
 } from "@/lib/research/customer-meta-card";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  const guard = await requireApiWorkspace(request, "monitor");
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
-  const rateLimit = await checkRateLimit(supabase, access.access.workspaceId, access.access.userId, {
+  const rateLimit = await checkRateLimit(supabase, access.workspaceId, access.userId, {
     windowSeconds: 60,
     maxRequests: 20,
     bucket: "ads-search",

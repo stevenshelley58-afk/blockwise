@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections } from "@/lib/auth/access-control";
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -25,13 +24,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Choose a valid role." }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, { surface: "monitor", requestedWorkspaceId: body.workspaceId });
+  const guard = await requireApiWorkspace(request, "monitor", body.workspaceId ?? null);
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
-  if (!canManageProviderConnections(access.access)) {
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
+  if (!canManageProviderConnections(access)) {
     return NextResponse.json({ error: "Only an owner or admin can invite members." }, { status: 403 });
   }
 
@@ -58,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   const { error: memberError } = await service
     .from("workspace_members")
-    .upsert({ workspace_id: access.access.workspaceId, profile_id: userId, role }, { onConflict: "workspace_id,profile_id" });
+    .upsert({ workspace_id: access.workspaceId, profile_id: userId, role }, { onConflict: "workspace_id,profile_id" });
   if (memberError) {
     return NextResponse.json({ error: memberError.message }, { status: 500 });
   }

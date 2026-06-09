@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections } from "@/lib/auth/access-control";
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   checkMetaConnectionHealth,
   fetchMetaAssetCatalog,
@@ -13,7 +13,6 @@ import {
   type MetaConnectionSetup,
 } from "@/lib/providers/meta-execution";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -33,18 +32,13 @@ type PatchBody = {
 };
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "monitor");
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
   const serviceSupabase = createSupabaseServiceClient();
-  const connection = await loadMetaConnection(serviceSupabase, access.access.workspaceId);
+  const connection = await loadMetaConnection(serviceSupabase, access.workspaceId);
 
   if (!connection) {
     return NextResponse.json({
@@ -81,7 +75,7 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", connection.id)
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .eq("provider", "meta");
 
   return NextResponse.json({
@@ -98,22 +92,17 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as PatchBody;
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "monitor", body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"));
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
-  if (!canManageProviderConnections(access.access)) {
+  if (!canManageProviderConnections(access)) {
     return NextResponse.json({ error: "Provider connection management is not allowed." }, { status: 403 });
   }
 
   const serviceSupabase = createSupabaseServiceClient();
-  const connection = await loadMetaConnection(serviceSupabase, access.access.workspaceId);
+  const connection = await loadMetaConnection(serviceSupabase, access.workspaceId);
 
   if (!connection) {
     return NextResponse.json({ error: "Meta account is not connected." }, { status: 404 });
@@ -135,7 +124,7 @@ export async function PATCH(request: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", connection.id)
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .eq("provider", "meta");
 
   if (error) {

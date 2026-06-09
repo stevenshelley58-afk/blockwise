@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
   RESEARCH_AD_SELECT,
@@ -8,19 +8,13 @@ import {
   researchAdsToCsv,
   type ResearchAdListRow,
 } from "@/lib/research/ad-library-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  const guard = await requireApiWorkspace(request, "monitor");
+  if (!guard.ok) return guard.response;
+  const { supabase } = guard;
 
   const ids = (request.nextUrl.searchParams.get("ids") ?? "")
     .split(",")
