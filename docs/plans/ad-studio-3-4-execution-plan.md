@@ -55,7 +55,21 @@ A6 publish-panel multi-select UI implemented. Manual consistency review passed. 
 - Behaviour changed: **yes — additive** (A3 ad-name suffix, opt-in `variantIds`, angle/fatigue monitor)
 - No schema changes · No auth changes · No new dependencies · No removed API fields
 
-**Smoke-test:** Blocked pending Vercel build completing (was in ERROR state; `.npmrc` fix pushed — awaiting next deploy). B-task and A6-UI commits tagged `simplification` per plan. ☐
+**Smoke-test:** Build unblocked; awaiting Vercel deploy after stale-test fix commit. ✅ (deploy triggered)
+
+### 2026-06-10 — stale-test fix pass (session 4)
+
+5 hard-reset tests were failing due to PRs #22–#24 changing code without updating tests. All fixed:
+
+| File | Fix |
+|------|-----|
+| `tests/pwa.test.ts` | `start_url` `"/pwa?source=pwa"→"/"`, `display` `"standalone"→"browser"` (PR #22 changed manifest) |
+| `tests/public-homepage.test.ts` | Hero image count `>= 2` → `>= 1` (page uses 1 local hero image) |
+| `tests/signup-auth.test.ts` | `emailRedirectTo` regex `?next=\/start` → `?next=\/self-serve\?confirmed=1` (PR #24 deleted /start) |
+| `tests/hard-reset/research-contracts.test.ts` | Location search assertion: `shouldPrioritiseAdRadarLocationSearch` → `resolveAdRadarLocationSearch` (page refactored to server component) |
+| `tests/hard-reset/research-contracts.test.ts` | View check: `researchPage` → `search/route.ts` for `v_customer_meta_ad_library_cards` (moved to API layer) |
+
+Post-fix: **33/33 tests pass** across all 4 files. Committed and pushed — Vercel build running.
 
 ## Known Intentional Oddities
 

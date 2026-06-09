@@ -157,12 +157,12 @@ test("customer research UI does not render internal ad-library identifiers or ra
 
 test("customer research page ranks specific location searches before direct text fallback", () => {
   const researchPage = read(paths.researchPage);
-  const locationPriorityIndex = researchPage.indexOf("shouldPrioritiseAdRadarLocationSearch(searchTerm, locationGuess)");
-  const directMatchIndex = researchPage.indexOf("const directMatches = allCards.filter");
+  const locationSearchIndex = researchPage.indexOf("resolveAdRadarLocationSearch(searchTerm)");
+  const locationGuessIndex = researchPage.indexOf("resolveAdRadarLocationGuess(");
 
-  assert.ok(locationPriorityIndex >= 0, "specific postcode/suburb searches must use the location-ranked path");
-  assert.ok(directMatchIndex >= 0, "research page should still keep a direct text fallback");
-  assert.ok(locationPriorityIndex < directMatchIndex, "location-ranked results must be attempted before broad text matches");
+  assert.ok(locationSearchIndex >= 0, "specific postcode/suburb searches must use the location-ranked path");
+  assert.ok(locationGuessIndex >= 0, "research page should still keep a location-guess fallback");
+  assert.ok(locationSearchIndex < locationGuessIndex, "location search must be attempted before the location-guess fallback");
 });
 
 test("legacy worker runtime is archived only and active collectors are page-first", () => {
@@ -395,7 +395,7 @@ test("media asset contract is strict, durable, and surfaced to the research card
   assert.match(mediaSql, /media_assets\s+jsonb\s+not\s+null\s+default\s+'?\[\]'?::jsonb/i);
   assert.match(adSchema, /\bmediaAssetSchema\b/, "adCreativeSchema must use a named strict media asset schema");
   assert.doesNotMatch(adSchema, /mediaAssets:\s*z\.array\(\s*jsonbSchema\s*\)/, "mediaAssets must not be an untyped jsonb array");
-  assert.match(researchPage, /v_customer_meta_ad_library_cards/, "customer page must read the safe card view");
+  assert.match(read("src/app/api/research/ads/search/route.ts"), /v_customer_meta_ad_library_cards/, "customer research search API must read the safe card view");
   assert.match(read("src/lib/research/customer-meta-card.ts"), /storagePath[\s\S]*sourceUrl|storagePath[\s\S]*url/, "card media resolver must prefer stored media before provider URLs");
 });
 

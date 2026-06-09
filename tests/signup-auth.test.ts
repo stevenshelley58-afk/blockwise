@@ -14,7 +14,7 @@ test("signup form uses Supabase captchaToken and trial metadata without a Turnst
   assert.match(source, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/i);
   assert.match(source, /NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
   assert.match(source, /captchaToken:\s*turnstileToken/i);
-  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/start`/i);
+  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve\?confirmed=1`/i);
   assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
   assert.match(source, /agency_name:\s*agencyName/i);
   assert.match(source, /name="company_website"/i);
