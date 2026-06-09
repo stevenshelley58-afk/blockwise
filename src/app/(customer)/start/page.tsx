@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { PageHeading } from "@/components/page-heading";
 import { StartChoice } from "@/components/onboarding/start-choice";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -11,6 +13,7 @@ function normalizeStatus(value: unknown): OnboardingStatus {
 }
 
 export default async function StartPage() {
+  redirect("/self-serve");
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
   const { data: workspace } = await supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle();
   const onboardingStatus = normalizeStatus((workspace as { onboarding_status?: unknown } | null)?.onboarding_status);

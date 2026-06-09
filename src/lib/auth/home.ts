@@ -38,5 +38,5 @@ export async function resolveHomePath(supabase: SupabaseServerClient): Promise<s
     return "/operator";
   }
 
-  return "/results";
+  return "/self-serve";
 }

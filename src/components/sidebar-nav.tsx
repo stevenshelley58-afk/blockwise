@@ -40,6 +40,7 @@ const operatorNavItems: NavItem[] = [
 ];
 
 const selfServeNavItems: NavItem[] = [
+  { href: "/self-serve", label: "Home", icon: LayoutDashboard },
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
