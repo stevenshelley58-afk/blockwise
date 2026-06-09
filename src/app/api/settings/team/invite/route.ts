@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     message: isNew
-      ? `${email} was added. They can set a password with "Forgot password" on the login page.`
+      ? `${email} was added. They can set a password at /forgot-password.`
       : `${email} was added to the workspace.`,
   });
 }

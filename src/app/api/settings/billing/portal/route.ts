@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     if (error instanceof BillingNotConfiguredError) {
-      return NextResponse.json({ error: "Billing isn't connected yet. Add Stripe keys to enable it." }, { status: 501 });
+      return NextResponse.json({ error: "billing_not_configured", message: "Billing is coming soon." }, { status: 200 });
     }
     return NextResponse.json({ error: "Couldn't open billing right now." }, { status: 500 });
   }

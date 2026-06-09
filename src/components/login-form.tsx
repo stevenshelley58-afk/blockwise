@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
@@ -81,6 +82,9 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
             autoComplete="current-password"
           />
         </label>
+        <p style={{ margin: "4px 0 0", fontSize: "0.875rem", textAlign: "right" }}>
+          <Link href="/forgot-password">Forgot password?</Link>
+        </p>
         {error ? <p className="form-error">{error}</p> : null}
         <button className="button" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Signing in" : "Sign in"}
