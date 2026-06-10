@@ -54,7 +54,7 @@ test("getMissingRecommendedSecurityEnvKeys reports non-blocking production harde
       CLOUDFLARE_AI_GATEWAY_URL: "https://gateway.ai.cloudflare.com/v1/account/gateway",
       CLOUDFLARE_AI_GATEWAY_TOKEN: "token",
     } as NodeJS.ProcessEnv),
-    ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "AGENT_ALLOWED_OUTBOUND_DOMAINS", "SECURITY_AUDIT_LOG_DRAIN_URL"],
+    ["AGENT_ALLOWED_OUTBOUND_DOMAINS", "SECURITY_AUDIT_LOG_DRAIN_URL"],
   );
 });
 
