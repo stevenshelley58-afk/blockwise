@@ -32,7 +32,20 @@ create index if not exists adstudio_campaign_variants_workspace_id_idx on public
 create index if not exists adstudio_campaigns_brand_kit_id_idx on public.adstudio_campaigns (brand_kit_id);
 create index if not exists adstudio_campaigns_created_by_idx on public.adstudio_campaigns (created_by);
 create index if not exists adstudio_campaigns_legacy_campaign_id_idx on public.adstudio_campaigns (legacy_campaign_id);
-create index if not exists adstudio_campaigns_offer_template_id_idx on public.adstudio_campaigns (offer_template_id);
+-- offer_template_id is dropped by 202606100003_drop_dead_tables.sql; guard the
+-- index for replays against schemas where the column is already gone (e.g.
+-- Supabase preview branches).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'adstudio_campaigns'
+      and column_name = 'offer_template_id'
+  ) then
+    create index if not exists adstudio_campaigns_offer_template_id_idx on public.adstudio_campaigns (offer_template_id);
+  end if;
+end
+$$;
 create index if not exists adstudio_compliance_reports_campaign_id_idx on public.adstudio_compliance_reports (campaign_id);
 create index if not exists adstudio_compliance_reports_variant_id_idx on public.adstudio_compliance_reports (variant_id);
 create index if not exists adstudio_compliance_reports_workspace_id_idx on public.adstudio_compliance_reports (workspace_id);
