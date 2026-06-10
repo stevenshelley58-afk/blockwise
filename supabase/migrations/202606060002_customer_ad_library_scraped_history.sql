@@ -69,7 +69,7 @@ drop view if exists research.v_competitors_by_postcode;
 drop view if exists research.v_active_ads_by_postcode;
 drop view if exists research.v_customer_meta_ad_library_cards;
 
-create view research.v_customer_meta_ad_library_cards as
+create or replace view research.v_customer_meta_ad_library_cards as
 select
   oa.id as card_id,
   oa.external_ad_id as library_id,
