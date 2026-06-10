@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections } from "@/lib/auth/access-control";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -15,17 +15,12 @@ type Body = { workspaceId?: string };
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as Body;
 
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: body.workspaceId,
-  });
+  const guard = await requireApiWorkspace(request, "monitor", body.workspaceId ?? null);
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
-  if (!canManageProviderConnections(access.access)) {
+  if (!canManageProviderConnections(access)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -35,7 +30,7 @@ export async function POST(request: NextRequest) {
   const { data: connection, error: connErr } = await serviceSupabase
     .from("provider_connections")
     .select("id")
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .eq("provider", "meta")
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -67,7 +62,7 @@ export async function POST(request: NextRequest) {
   const { error: updateErr } = await serviceSupabase
     .from("provider_connections")
     .update({ status: "revoked", updated_at: new Date().toISOString() })
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .eq("provider", "meta");
 
   if (updateErr) {

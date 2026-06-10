@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
   RESEARCH_AD_SELECT,
   normaliseResearchAd,
   type ResearchAdListRow,
 } from "@/lib/research/ad-library-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,19 +14,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "adstudio",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const guard = await requireApiWorkspace(request, "adstudio");
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
   const { id } = await params;
   const { data: saved, error: savedError } = await supabase
     .from("research_saved_ads")
     .select("*")
     .eq("id", id)
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .maybeSingle();
 
   if (savedError) return NextResponse.json({ error: savedError.message }, { status: 500 });
@@ -69,7 +65,7 @@ export async function POST(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .select("*")
     .single();
 

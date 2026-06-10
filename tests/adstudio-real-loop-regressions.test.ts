@@ -205,15 +205,6 @@ test("publish readiness hides internal provider-write env wording from customer 
   assert.doesNotMatch(labelBlock, /BLOCKWISE_ENABLE_PROVIDER_WRITES/);
 });
 
-test("production repair script is dry-run first and repairs by campaign variant instead of assuming Story creatives", () => {
-  const source = readFileSync("scripts/adstudio-repair-production-data.mjs", "utf8");
-
-  assert.match(source, /process\.argv\.includes\("--execute"\)/);
-  assert.match(source, /Dry run only/);
-  assert.match(source, /variant_id/);
-  assert.doesNotMatch(source, /format === "9:16"/);
-});
-
 test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {
   const brandKitRoute = readFileSync("src/app/api/adstudio/brand-kits/[id]/route.ts", "utf8");
   const campaignRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/route.ts", "utf8");

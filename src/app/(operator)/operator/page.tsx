@@ -4,7 +4,7 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill, type StatusTone } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { loadOperatorOverview } from "@/lib/product/live-data";
+import { loadOperatorOverview } from "@/lib/operator/overview";
 
 export const dynamic = "force-dynamic";
 

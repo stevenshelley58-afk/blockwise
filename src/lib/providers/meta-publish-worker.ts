@@ -6,6 +6,7 @@ import {
   type MetaPublishPlan,
 } from "./meta-execution.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -63,12 +64,12 @@ export async function executeMetaPublishPlan(input: {
 }
 
 async function persistPublishAudit(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {
-  await serviceSupabase.from("audit_logs").insert({
-    workspace_id: plan.workspaceId,
-    actor_profile_id: null,
+  await recordAuditLog(serviceSupabase, {
+    workspaceId: plan.workspaceId,
+    actorProfileId: null,
     action: `meta_publish_${plan.status}`,
-    target_type: "meta_publish_plan",
-    target_id: plan.planId,
+    targetType: "meta_publish_plan",
+    targetId: plan.planId,
     metadata: {
       adapter: plan.adapter,
       idempotencyKey: plan.idempotencyKey,

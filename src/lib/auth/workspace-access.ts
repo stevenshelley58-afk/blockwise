@@ -58,10 +58,6 @@ export function hasOperatorAccessFromRows(
   return Boolean(profile?.is_operator) || (memberships ?? []).some((membership) => membership.role === "operator");
 }
 
-export function canManageProviderConnections(context: { role: WorkspaceRole; workspaceMode: WorkspaceMode }): boolean {
-  return context.role === "operator" || context.role === "owner" || context.role === "admin";
-}
-
 export function resolveRequestedWorkspaceAccess(input: ResolveWorkspaceInput): WorkspaceAccessResult {
   const requestedWorkspaceId = input.requestedWorkspaceId?.trim() || null;
 

@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
 import { queueMetaLeadSync } from "@/lib/providers/meta-leads-queue";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -21,22 +20,17 @@ type SyncBody = {
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const body = (await request.json().catch(() => ({}))) as SyncBody;
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "adstudio",
-    requestedWorkspaceId: body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "adstudio", body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"));
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
   const plan = await loadMetaPublishPlan(createSupabaseServiceClient(), {
-    workspaceId: access.access.workspaceId,
+    workspaceId: access.workspaceId,
     planId: id,
   });
   const queued = await queueMetaLeadSync({
-    workspaceId: access.access.workspaceId,
+    workspaceId: access.workspaceId,
     planId: plan.planId,
     since: body.since ?? null,
   });

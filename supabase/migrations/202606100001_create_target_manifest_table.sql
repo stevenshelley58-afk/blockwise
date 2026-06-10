@@ -7,7 +7,7 @@ create table research.target_manifest (
     canonical_url text not null,
     expected_version_hint text,
     status text not null check (status in ('pending', 'acquired', 'metadata_only', 'blocked', 'out_of_scope')),
-    source_document_id bigint references research.source_documents(id),
+    source_document_id uuid references research.source_documents(id),
     last_checked_at timestamp with time zone,
     notes text
 );

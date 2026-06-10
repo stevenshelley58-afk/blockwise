@@ -1,133 +1,46 @@
 # Blockwise Engineering Rules
 
-## Primary Goal
+## Principles
 
-Reduce *user-facing* complexity and code complexity. The product should hide
-implementation detail from customers and make the first-run experience linear.
-Simplifying the UX is now in scope and may add code where it removes user
-confusion. Behaviour-safety rules below (auth, schema, API shapes, provider
-behaviour) still hold.
+- Delete > simplify > abstract. No speculative abstraction, no future-proofing.
+- Reduce user-facing complexity first, code complexity second.
+- Fix forward. Quarantine genuinely ambiguous failures and note them in the
+  report instead of stalling.
+- Do not replace one messy file with five new messy files.
 
-## Two Modes of Work
+## Safety rules (always hold)
 
-1. **Refactor PRs** — pure internal cleanup. These must still reduce net
-   production LOC and preserve behaviour (see Refactor Rules below).
-2. **Simplification PRs** — deliberate UX redesign to hide complexity (e.g.
-   onboarding wizard, renaming jargon, consolidating surfaces). These MAY
-   increase LOC and MAY change UI, as long as they reduce the number of
-   decisions and concepts a *user* must face. Tag the PR `simplification` and
-   state which user-facing complexity it removes.
+- No secrets, `.env*` files (except `.env.example`), databases, or build
+  output in version control.
+- Workspace isolation must hold: every workspace-scoped query filters by
+  `workspace_id`, and RLS policies stay enabled on workspace-scoped tables.
+- Schema changes ship as tested migrations. Destructive changes (drops,
+  merges) require a row-count check first; archive non-empty tables to
+  `legacy_archive` instead of hard-dropping.
+- Hermes runs only on the VPS (`docs/runbooks/vps-ssh.md`). Vercel code never
+  executes Apify or research scraping; it only reads research state from
+  Supabase.
+- Provider tokens live in `private.provider_token_vault` and are only touched
+  through service-role code.
 
-## CodeGraph Freshness
+## Acceptance (every PR)
 
-- At the start of code work, check CodeGraph freshness with MCP `codegraph_status` or `codegraph status`.
-- If no index exists, run `codegraph init -i`.
-- If the index is stale or pending, run `codegraph sync` or trust the MCP watcher after edits.
-- If CodeGraph reports a stale-file banner, read that file directly before editing.
+- `npm run typecheck` and `npm run test` pass; update or delete stale tests
+  deliberately, never skip them.
+- Runtime verification happens on Vercel Preview or Production URLs only.
+  Localhost is never acceptance.
+- If trigger.dev tasks or Supabase migrations changed, deploy/apply them and
+  confirm they register before merge.
 
-## Deployment and Testing
+## Tooling
 
-- Do not run local deployments.
-- Test deployed behavior only through Vercel Preview or Production URLs.
-- Do not use localhost smoke tests as acceptance for deployment readiness.
+- Use the official CLI/MCP/plugin for GitHub, Vercel, and Supabase. Start the
+  normal login flow when auth is missing instead of avoiding the work.
+- Check CodeGraph freshness (`codegraph_status`) at the start of code work;
+  `codegraph sync` if stale.
 
-## Service Access and Tooling
+## Git scope
 
-- Use the official CLI, MCP server, or installed plugin for GitHub, Vercel, Supabase, and other hosted services whenever available.
-- If a required GitHub, Vercel, or Supabase action needs authentication, start the normal login flow and wait for the user to approve the OAuth prompt.
-- Do not avoid hosted-service work because authentication is missing; request/login through the approved tool path instead.
-- Prefer MCPs and plugins over browser scraping, and prefer CLIs over ad hoc API calls when the CLI supports the task.
-
-## Git and Deployment Scope
-
-- The repository owner authorizes broad staging, committing, pushing, and Vercel deployment of all dirty worktree changes when they ask to make GitHub clean, push everything, get it live, or deploy the current workspace state.
-- This authorization is intended to keep release work moving and does not relax the hard rules below for auth behaviour, database schema, public API response shapes, or provider behaviour.
-
-## External Reference Repositories
-
-Use these repositories as reference material when they are relevant to the
-current task:
-
-- https://github.com/affaan-m/ECC
-- https://github.com/multica-ai/andrej-karpathy-skills
-- https://github.com/safishamsi/graphify
-- https://github.com/pbakaus/impeccable
-
-Treat them as guidance only. Do not add dependencies, copy large blocks of
-code, change provider behaviour, change auth behaviour, change public API
-response shapes, or change database schema unless the user explicitly asks for
-that work and it still satisfies the Blockwise rules above.
-
-## Hard Rules
-
-These always hold, in both modes:
-
-- Do not add new dependencies.
-- Do not create generic helpers, managers, engines, processors, registries, or factories unless they replace clear duplicated code.
-- Do not create interfaces unless there are at least two real implementations now.
-- Do not future-proof.
-- Do not change database schema unless the user request explicitly includes schema work. Schema changes must be additive, tested with migration assertions, and must not change auth behaviour, public API response shapes, or provider behaviour.
-- Do not change public API response shapes.
-- Do not change auth behaviour.
-- Do not change provider behaviour.
-
-## Refactor-PR Rules (mode 1 only)
-
-- Net production code lines must decrease.
-- Deleting code is preferred over moving code.
-- Collapsing duplicate code is preferred over adding abstractions.
-- Do not redesign UI.
-
-## Simplification-PR Rules (mode 2 only)
-
-- UI redesign is allowed when it removes user-facing complexity.
-- Prefer progressive disclosure: hide advanced controls behind "Advanced".
-- Prefer plain language over internal/jargon terms in customer surfaces.
-- LOC may increase, but justify the trade against user confusion removed.
-
-## Code Reduction Targets
-
-For each PR, report:
-
-- production lines before
-- production lines after
-- net production LOC change
-- files deleted
-- files created
-- largest file before
-- largest file after
-- duplicated code removed
-- behaviour changed: yes/no
-
-A refactor PR is not acceptable unless production LOC decreases, excluding
-tests. Simplification PRs are exempt from the LOC-decrease requirement.
-
-## Preferred Refactor Order
-
-1. Delete unused code.
-2. Delete duplicate demo/sample logic.
-3. Collapse duplicated helpers.
-4. Simplify oversized files.
-5. Move code only when it clearly reduces coupling.
-6. Add tests only where needed to protect behaviour.
-
-## Forbidden Pattern
-
-Do not replace one messy file with five new messy files.
-
-## Acceptance
-
-A refactor PR is successful only if:
-
-- behaviour is preserved
-- typecheck passes
-- relevant tests pass
-- production LOC decreases
-- the number of concepts a developer must understand decreases
-
-A simplification PR is successful only if:
-
-- typecheck passes
-- relevant tests pass
-- auth, schema, API shapes, and provider behaviour are unchanged
-- the number of decisions/concepts a *user* must face decreases
+- The repository owner pre-authorizes staging, committing, pushing, merging
+  once green, and Vercel deployment for release work. Log decisions in the
+  commit/PR description.
