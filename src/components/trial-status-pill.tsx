@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -68,10 +68,11 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         borderRadius: 999,
         background: "#fff",
         padding: "0 8px 0 12px",
-        boxShadow: "0 1px 2px rgba(15,23,41,.05)",
+        boxShadow: "0 1px 2px rgba(15,23,42,.05)",
         color: "var(--ink)",
         fontSize: 12.5,
         fontWeight: 650,
+        fontVariantNumeric: "tabular-nums",
         whiteSpace: "nowrap",
       }}
     >

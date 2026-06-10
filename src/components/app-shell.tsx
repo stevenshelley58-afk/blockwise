@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronDown, ChevronRight, ChevronsLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
@@ -179,18 +179,13 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
               </span>
               <ChevronRight aria-hidden size={16} />
             </a>
-            <button className="sidebar-collapse" type="button" disabled>
-              <ChevronsLeft aria-hidden size={17} />
-              Collapse
-            </button>
           </div>
         ) : null}
       </aside>
       <div className="main">
         <header className="topbar">
-          <span className="workspace-chip">
+          <span className="workspace-chip" aria-label={`Workspace: ${workspaceName}`}>
             {workspaceName} - {workspace?.region ?? "AU"}
-            <ChevronDown aria-hidden size={15} />
           </span>
           <div className="topbar-actions">
             <TrialStatusPill initialStatus={initialTrialStatus} />

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { ButtonSpinner } from "@/components/app/button-spinner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function ForgotPasswordPage() {
@@ -58,8 +59,14 @@ export default function ForgotPasswordPage() {
               />
             </label>
             {error ? <p className="form-error">{error}</p> : null}
-            <button className="button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Sending" : "Send reset link"}
+            <button
+              className="button"
+              type="submit"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting || undefined}
+            >
+              {isSubmitting ? <ButtonSpinner size={16} label="Sending reset link" /> : null}
+              {isSubmitting ? "Sending…" : "Send reset link"}
             </button>
           </form>
         )}

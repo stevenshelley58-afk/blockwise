@@ -113,15 +113,18 @@ export default function HomePage() {
               </p>
               <div className="lp-cta-row">
                 <CtaLink location="hero" href="/signup" className="lp-btn lp-btn-hero lp-btn-big">
-                  Free Trial
+                  Start free trial
                   <ArrowRight aria-hidden size={18} />
                 </CtaLink>
+                <a href="#demo-title" className="lp-link-inhero">
+                  Book a 15-min walkthrough →
+                </a>
               </div>
               <div className="lp-trust-row" aria-label="Product trust points">
-                <TrustPoint label="Use your own ad account" />
-                <TrustPoint label="Agent approval required" />
-                <TrustPoint label="Budget controlled by you" />
-                <TrustPoint label="Reporting inside Blockwise" />
+                <TrustPoint label="Live ads from one listing in minutes" />
+                <TrustPoint label="You approve every ad before it spends" />
+                <TrustPoint label="Hard budget caps, no surprises" />
+                <TrustPoint label="Results tracked in one dashboard" />
               </div>
             </div>
 
@@ -154,14 +157,14 @@ export default function HomePage() {
                     <path
                       d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
                       fill="none"
-                      stroke="#2563eb"
+                      stroke="var(--accent)"
                       strokeWidth="3"
                       strokeLinecap="round"
                     />
-                    <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
+                    <circle cx="60" cy="84" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="110" cy="68" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="160" cy="58" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="210" cy="36" r="5" fill="var(--accent)" stroke="#fff" strokeWidth="2" />
                   </svg>
                   <span className="lp-perf-tag">23 Leads</span>
                 </div>
@@ -201,14 +204,14 @@ export default function HomePage() {
                   <path
                     d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
                     fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                  <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
+                  stroke="var(--accent)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <circle cx="60" cy="84" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="110" cy="68" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="160" cy="58" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="210" cy="36" r="5" fill="var(--accent)" stroke="#fff" strokeWidth="2" />
                 </svg>
                 <span className="lp-perf-tag">23 Leads</span>
               </div>
@@ -455,7 +458,7 @@ export default function HomePage() {
                 when you are ready to launch.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
-                Create your first campaign
+                Start free trial
               </CtaLink>
             </div>
             <div className="lp-trial-grid">

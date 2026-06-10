@@ -98,6 +98,7 @@ export default function PricingPage() {
                       fontWeight: 800,
                       letterSpacing: "-0.03em",
                       color: "var(--lp-ink)",
+                      fontVariantNumeric: "tabular-nums",
                       fontFamily: "var(--font-manrope), Manrope, sans-serif",
                     }}
                   >
@@ -108,16 +109,27 @@ export default function PricingPage() {
                   </span>
                 </div>
 
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--lp-muted)",
+                  }}
+                >
+                  Then $500/month. Cancel anytime.
+                </p>
+
                 <div
                   style={{
                     marginTop: 14,
                     padding: "10px 14px",
-                    background: "#ecfdf5",
+                    background: "var(--green-soft)",
                     border: "1px solid #a7f3d0",
                     borderRadius: 10,
                     fontSize: 13.5,
                     fontWeight: 600,
-                    color: "#047857",
+                    color: "var(--green)",
                     lineHeight: 1.5,
                   }}
                 >

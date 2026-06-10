@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -378,7 +378,7 @@ function BillingSection({
         </div>
         <div className="item-card">
           <span className="item-meta">Plan features</span>
-          <h3 style={{ margin: "4px 0" }}>{plan ? `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo` : "—"}</h3>
+          <h3 style={{ margin: "4px 0" }}>{plan ? `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo` : "â€”"}</h3>
           <span className="item-meta">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
         </div>
         <div className="item-card">
@@ -493,7 +493,7 @@ function ConnectionsSection({
               <div>
               <strong>{prov.label}</strong>
               <div className="item-meta">
-                {conn?.accountName ? `${conn.accountName} · ` : ""}
+                {conn?.accountName ? `${conn.accountName} Â· ` : ""}
                 {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : <StatusPill tone="blue">Not connected</StatusPill>}
               </div>
               </div>
@@ -1093,7 +1093,7 @@ function DangerSection({ supabase, router, workspaceId }: { supabase: SB; router
 
       {confirmDeleteOpen && (
         <div
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,41,.55)", display: "grid", placeItems: "center", padding: 24 }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 24 }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-account-delete-title"
