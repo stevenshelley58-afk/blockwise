@@ -102,7 +102,7 @@ export default function PricingPage() {
                       fontFamily: "var(--font-manrope), Manrope, sans-serif",
                     }}
                   >
-                    $500
+                    $799
                   </span>
                   <span style={{ fontSize: "1rem", color: "var(--lp-muted)", fontWeight: 600 }}>
                     / month
@@ -117,7 +117,7 @@ export default function PricingPage() {
                     color: "var(--lp-muted)",
                   }}
                 >
-                  Then $500/month. Cancel anytime.
+                  Then $799/month. Cancel anytime. Less than half a typical agency retainer.
                 </p>
 
                 <div
