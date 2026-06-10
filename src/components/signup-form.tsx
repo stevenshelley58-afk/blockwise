@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { ButtonSpinner } from "@/components/app/button-spinner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type TurnstileOptions = {
@@ -36,6 +37,7 @@ export function SignupForm() {
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetId = useRef<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -169,8 +171,18 @@ export function SignupForm() {
             required
             minLength={8}
             maxLength={200}
+            onChange={(event) => setPassword(event.currentTarget.value)}
           />
-          <span className="item-meta">At least 8 characters.</span>
+          <span
+            className={`item-meta password-hint ${password.length >= 8 ? "is-ok" : ""}`}
+            aria-live="polite"
+          >
+            {password.length === 0
+              ? "At least 8 characters."
+              : password.length >= 8
+                ? "Strong enough — 8+ characters."
+                : `${8 - password.length} more character${8 - password.length === 1 ? "" : "s"} to go.`}
+          </span>
         </label>
         <label htmlFor="signup-agency-name">
           Business name
@@ -202,8 +214,14 @@ export function SignupForm() {
           </p>
         ) : null}
 
-        <button className="button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account" : "Create free trial account"}
+        <button
+          className="button"
+          type="submit"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting || undefined}
+        >
+          {isSubmitting ? <ButtonSpinner size={16} label="Creating account" /> : null}
+          {isSubmitting ? "Creating account…" : "Create free trial account"}
         </button>
       </form>
     </>

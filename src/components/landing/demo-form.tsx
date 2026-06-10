@@ -3,6 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 
+import { ButtonSpinner } from "@/components/app/button-spinner";
 import { trackLead } from "@/lib/analytics/pixel";
 import { gtagConversionDemoForm } from "@/lib/analytics/gtag";
 
@@ -72,20 +73,16 @@ export function DemoForm() {
           <input id="demo-name" name="name" type="text" autoComplete="name" required maxLength={120} />
         </div>
         <div className="demo-field">
-          <label htmlFor="demo-agency">Agency</label>
-          <input id="demo-agency" name="agency" type="text" autoComplete="organization" maxLength={160} />
-        </div>
-        <div className="demo-field">
           <label htmlFor="demo-email">Email</label>
           <input id="demo-email" name="email" type="email" autoComplete="email" required maxLength={200} />
-        </div>
-        <div className="demo-field">
-          <label htmlFor="demo-phone">Phone</label>
-          <input id="demo-phone" name="phone" type="tel" autoComplete="tel" maxLength={40} />
         </div>
         <div className="demo-field demo-field-wide">
           <label htmlFor="demo-suburb">Suburb you want to advertise in</label>
           <input id="demo-suburb" name="suburb" type="text" placeholder="e.g. Mount Lawley" maxLength={120} />
+        </div>
+        <div className="demo-field">
+          <label htmlFor="demo-phone">Phone (optional)</label>
+          <input id="demo-phone" name="phone" type="tel" autoComplete="tel" maxLength={40} />
         </div>
       </div>
 
@@ -101,8 +98,14 @@ export function DemoForm() {
         </p>
       ) : null}
 
-      <button type="submit" className="button primary big" disabled={status === "submitting"}>
-        {status === "submitting" ? "Sending..." : "Request managed setup"}
+      <button
+        type="submit"
+        className="button primary big"
+        disabled={status === "submitting"}
+        aria-busy={status === "submitting" || undefined}
+      >
+        {status === "submitting" ? <ButtonSpinner size={16} label="Sending demo request" /> : null}
+        {status === "submitting" ? "Sending…" : "Request managed setup"}
         <ArrowRight aria-hidden size={18} />
       </button>
       <p className="demo-form-fine">No obligation. We&apos;ll never share your details.</p>

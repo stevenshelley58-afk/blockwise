@@ -70,7 +70,7 @@ export function DangerSection({ supabase, router, workspaceId }: { supabase: SB;
 
       {confirmDeleteOpen && (
         <div
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,41,.55)", display: "grid", placeItems: "center", padding: 24 }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 24 }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-account-delete-title"

@@ -84,7 +84,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
                 height: 30,
                 borderRadius: 8,
                 background: colour,
-                border: "1px solid rgba(15,23,41,.08)",
+                border: "1px solid rgba(15,23,42,.08)",
               }}
             />
           ))}

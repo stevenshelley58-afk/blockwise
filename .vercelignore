@@ -5,4 +5,6 @@ playwright-report
 test-results
 $null
 landing-preview.html
+landing-demo.html
+design-redesign-preview.html
 src/app/globals.css.bak

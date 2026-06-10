@@ -15,6 +15,7 @@ import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
+import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
 import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
@@ -115,7 +116,11 @@ export function MetaMonitorDashboard({
       ) : null}
 
       {!summary ? (
-        <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
+        isRefreshing ? <MonitorDashboardSkeleton /> : (
+          <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
+        )
+      ) : isRefreshing ? (
+        <Dashboard payload={payload} onSelectAd={scrollToAd} refreshing />
       ) : (
         <Dashboard payload={payload} onSelectAd={scrollToAd} />
       )}
@@ -123,16 +128,19 @@ export function MetaMonitorDashboard({
   );
 }
 
-function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void }) {
+function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void; refreshing?: boolean }) {
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
   const validLeadRate = safeRate(summary.validLeads, summary.leads);
   const validCpl = safeCpl(summary.spend, summary.validLeads);
   const budgetRemaining = summary.budget != null ? Math.max(summary.budget - summary.spend, 0) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
+  const wrapperStyle = refreshing
+    ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
+    : undefined;
 
   return (
-    <>
+    <div style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
       <div className="mm-kpi-grid">
         <MetaKpiCard
           icon={Wallet}
@@ -152,7 +160,7 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         />
         <MetaKpiCard
           icon={UserCheck}
-          iconTone="purple"
+          iconTone="slate"
           label="Valid leads"
           value={summary.validLeads.toLocaleString("en-AU")}
           compareText={compare}
@@ -247,7 +255,7 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
           </div>
         </>
       ) : null}
-    </>
+    </div>
   );
 }
 

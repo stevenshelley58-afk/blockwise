@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 
-import { trackDemoCtaClick } from "@/lib/analytics/pixel";
+import { trackCtaClick, trackDemoCtaClick } from "@/lib/analytics/pixel";
 
 type CtaLinkProps = {
-  /** Where on the page this CTA lives (sent to the pixel for attribution). */
+  /** Where on the page this CTA lives — used as the `cta` label for attribution. */
   location: string;
   href?: string;
   className?: string;
@@ -13,11 +13,13 @@ type CtaLinkProps = {
 };
 
 /**
- * Anchor for landing CTAs. Managed setup links fire a Meta Pixel intent event;
- * signup and trial-scroll links do not.
+ * Anchor for landing CTAs. Every click fires a `cta_click` custom event with
+ * the location label. Links to `#managed-setup` (book-a-walkthrough) also
+ * fire a `BookDemoClick` for analytics continuity.
  */
 export function CtaLink({ location, href = "#managed-setup", className, children }: CtaLinkProps) {
   function handleClick() {
+    trackCtaClick(location, { href });
     if (href === "#managed-setup") {
       trackDemoCtaClick(location);
     }
