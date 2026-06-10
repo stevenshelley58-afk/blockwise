@@ -61,7 +61,15 @@ as $$
     );
 $$;
 
-create or replace view research.v_customer_meta_ad_library_cards as
+-- This definition removes columns from the previous view, so `create or
+-- replace` fails (42P16) when replayed against an existing schema (e.g.
+-- Supabase preview branches). Drop the view and its dependents first, then
+-- recreate the dependents below.
+drop view if exists research.v_competitors_by_postcode;
+drop view if exists research.v_active_ads_by_postcode;
+drop view if exists research.v_customer_meta_ad_library_cards;
+
+create view research.v_customer_meta_ad_library_cards as
 select
   oa.id as card_id,
   oa.external_ad_id as library_id,
@@ -132,7 +140,52 @@ where ap.status in ('resolved_collectable', 'no_ads_confirmed')
   and research.creative_is_real_estate(ac.classification, ac.ad_type, ac.primary_intent)
   and ac.display_state = 'displayable';
 
+-- Recreate dependent views dropped above (unchanged definitions from
+-- 202605300003_blockwise_hard_reset_clean_schema.sql).
+create view research.v_active_ads_by_postcode as
+select
+  postcode,
+  suburb,
+  state,
+  card_id as observed_ad_id,
+  library_id as external_ad_id,
+  active_status,
+  last_seen_at,
+  page_id,
+  page_name,
+  page_url,
+  headline,
+  body,
+  cta,
+  cta_url,
+  primary_image_url,
+  image_urls,
+  image_storage_path,
+  video_url,
+  ad_delivery_started_at,
+  ad_delivery_stopped_at,
+  video_storage_path,
+  video_thumbnail_url,
+  media_assets
+from research.v_customer_meta_ad_library_cards;
+
+create view research.v_competitors_by_postcode as
+select
+  postcode,
+  suburb,
+  state,
+  page_id,
+  page_name,
+  page_url,
+  'meta_ad_library'::text as platform,
+  count(distinct card_id) as active_ads,
+  max(last_seen_at) as newest_active_ad_at
+from research.v_customer_meta_ad_library_cards
+group by postcode, suburb, state, page_id, page_name, page_url;
+
 grant select on research.v_customer_meta_ad_library_cards to authenticated, anon, service_role;
+grant select on research.v_active_ads_by_postcode to authenticated, anon, service_role;
+grant select on research.v_competitors_by_postcode to authenticated, anon, service_role;
 grant execute on function research.valid_external_ad_id(text) to authenticated, anon, service_role;
 grant execute on function research.creative_is_real_estate(jsonb, text, text) to authenticated, anon, service_role;
 
