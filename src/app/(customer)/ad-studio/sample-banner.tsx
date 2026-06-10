@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
+/**
+ * Non-dismissable notice rendered at the top of Ad Studio for sample
+ * workspaces. A control that can be hidden while the user is still in a
+ * sample workspace erodes trust: every other surface they touch after
+ * dismissing it shows "fake" data with no reminder. The banner stays
+ * visible for the lifetime of the sample workspace and disappears only
+ * when the user finishes onboarding (`/onboarding`).
+ */
 export function SampleBanner() {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
   return (
     <div
       style={{
@@ -21,31 +26,23 @@ export function SampleBanner() {
         lineHeight: 1.4,
       }}
       role="status"
+      aria-live="polite"
     >
       <span>
         <strong>You&#39;re viewing a sample workspace.</strong> This is demo ad data, not real
         campaign activity from your account.
       </span>
-      <Link href="/onboarding" style={{ fontWeight: 700, color: "#8A5A00", textDecoration: "underline", marginRight: 8 }}>
-        Set up workspace
-      </Link>
-      <button
-        type="button"
-        aria-label="Dismiss sample data notice"
-        onClick={() => setDismissed(true)}
+      <Link
+        href="/onboarding"
         style={{
-          flexShrink: 0,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontWeight: 600,
+          fontWeight: 700,
           color: "#8A5A00",
-          padding: "2px 6px",
-          borderRadius: "4px",
+          textDecoration: "underline",
+          flexShrink: 0,
         }}
       >
-        X
-      </button>
+        Set up your workspace
+      </Link>
     </div>
   );
 }

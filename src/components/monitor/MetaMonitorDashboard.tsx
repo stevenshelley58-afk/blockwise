@@ -1,12 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 import { BadgePercent, MousePointerClick, Tag, UserCheck, UserPlus, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { calculateTrend, formatCurrency, formatPercent, safeCpl, safeRate } from "@/lib/meta-monitor/calculations";
-import type { MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
+import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdsSummaryTable } from "./AdsSummaryTable";
@@ -14,6 +15,7 @@ import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
+import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
 import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
@@ -24,17 +26,26 @@ const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) =
 const SPEND_COLOR = "#123e75";
 const LEADS_COLOR = "#31c46f";
 
+export type OAuthNotice = {
+  tone: "success" | "error" | "warning";
+  message: string;
+  settingsLink?: boolean;
+};
+
 export function MetaMonitorDashboard({
   initialPayload,
   metaConnectHref,
+  oauthNotice,
 }: {
   initialPayload: MetaMonitorPayload;
   metaConnectHref?: string;
+  oauthNotice?: OAuthNotice | null;
 }) {
   const [payload, setPayload] = useState(initialPayload);
   const [rangeKey, setRangeKey] = useState<MonitorRange>(initialPayload.range.key);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   async function refresh(nextRange: MonitorRange = rangeKey) {
     setIsRefreshing(true);
@@ -90,12 +101,26 @@ export function MetaMonitorDashboard({
 
       {error ? <p className="mm-error" role="alert">{error}</p> : null}
 
+      {oauthNotice && !noticeDismissed ? (
+        <div className={`mm-oauth-notice mm-oauth-notice--${oauthNotice.tone}`} role="alert">
+          <span>{oauthNotice.message}</span>
+          {oauthNotice.settingsLink ? (
+            <Link href="/settings" className="mm-oauth-notice-link">Go to Settings</Link>
+          ) : null}
+          <button type="button" className="mm-oauth-notice-dismiss" aria-label="Dismiss" onClick={() => setNoticeDismissed(true)}>✕</button>
+        </div>
+      ) : null}
+
       {payload.source === "sample" && !payload.connected && metaConnectHref ? (
         <DemoModeNotice metaConnectHref={metaConnectHref} />
       ) : null}
 
       {!summary ? (
-        <EmptyMetaState issue={payload.issue} connected={payload.connected} />
+        isRefreshing ? <MonitorDashboardSkeleton /> : (
+          <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
+        )
+      ) : isRefreshing ? (
+        <Dashboard payload={payload} onSelectAd={scrollToAd} refreshing />
       ) : (
         <Dashboard payload={payload} onSelectAd={scrollToAd} />
       )}
@@ -103,16 +128,19 @@ export function MetaMonitorDashboard({
   );
 }
 
-function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void }) {
+function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void; refreshing?: boolean }) {
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
   const validLeadRate = safeRate(summary.validLeads, summary.leads);
   const validCpl = safeCpl(summary.spend, summary.validLeads);
   const budgetRemaining = summary.budget != null ? Math.max(summary.budget - summary.spend, 0) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
+  const wrapperStyle = refreshing
+    ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
+    : undefined;
 
   return (
-    <>
+    <div style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
       <div className="mm-kpi-grid">
         <MetaKpiCard
           icon={Wallet}
@@ -132,7 +160,7 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         />
         <MetaKpiCard
           icon={UserCheck}
-          iconTone="purple"
+          iconTone="slate"
           label="Valid leads"
           value={summary.validLeads.toLocaleString("en-AU")}
           compareText={compare}
@@ -212,6 +240,10 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         </section>
       </div>
 
+      {(payload.anglePerformance?.length ?? 0) > 0 ? (
+        <AnglePerformanceTable rows={payload.anglePerformance ?? []} />
+      ) : null}
+
       {payload.ads.length > 0 ? (
         <>
           <AdsSummaryTable ads={payload.ads} onSelectAd={onSelectAd} />
@@ -223,6 +255,58 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
           </div>
         </>
       ) : null}
-    </>
+    </div>
+  );
+}
+
+function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {
+  return (
+    <section className="panel mm-table-panel">
+      <div className="mm-table-head">
+        <h3>Angle performance</h3>
+      </div>
+      <p className="mm-chart-note">
+        Built from Ad Studio variant tags in ad names. Ads published outside Ad Studio group under
+        &quot;Untagged&quot;.
+      </p>
+      <div className="mm-table-scroll">
+        <table className="mm-table">
+          <thead>
+            <tr>
+              <th className="mm-th-left">Angle</th>
+              <th className="mm-th-left">Template</th>
+              <th>Ads</th>
+              <th>Spend</th>
+              <th>CTR</th>
+              <th>Leads</th>
+              <th>Valid leads</th>
+              <th>Valid CPL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={`${row.angle}-${row.template ?? ""}`}>
+                <td className="mm-th-left">
+                  <b>{row.angle}</b>
+                </td>
+                <td className="mm-th-left">{row.template ?? "—"}</td>
+                <td>{row.ads}</td>
+                <td>
+                  <b>{formatCurrency(row.spend)}</b>
+                </td>
+                <td>{row.ctr != null ? formatPercent(row.ctr, 2) : "—"}</td>
+                <td>{row.leads}</td>
+                <td>
+                  <b>{row.validLeads}</b>
+                </td>
+                <td>
+                  <b>{row.validCpl != null ? formatCurrency(row.validCpl) : "—"}</b>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

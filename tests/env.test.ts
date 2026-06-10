@@ -36,8 +36,9 @@ test("Google Ads keys are tracked as provider-scoped, not core required, so a Me
   ]);
 });
 
-test("recommended security environment keys cover Cloudflare AI Gateway, egress, and audit drains", () => {
+test("recommended security environment keys cover Turnstile, Cloudflare AI Gateway, egress, and audit drains", () => {
   assert.deepEqual(RECOMMENDED_SECURITY_ENV_KEYS, [
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
     "CLOUDFLARE_AI_GATEWAY_URL",
     "CLOUDFLARE_AI_GATEWAY_TOKEN",
     "AGENT_ALLOWED_OUTBOUND_DOMAINS",
@@ -49,6 +50,7 @@ test("getMissingRecommendedSecurityEnvKeys reports non-blocking production harde
   assert.deepEqual(
     getMissingRecommendedSecurityEnvKeys({
       NODE_ENV: "test",
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAABtest",
       CLOUDFLARE_AI_GATEWAY_URL: "https://gateway.ai.cloudflare.com/v1/account/gateway",
       CLOUDFLARE_AI_GATEWAY_TOKEN: "token",
     } as NodeJS.ProcessEnv),

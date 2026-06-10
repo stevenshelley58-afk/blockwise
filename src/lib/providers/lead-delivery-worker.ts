@@ -1,5 +1,6 @@
+import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
-import type { ApprovalStatus } from "../campaigns/publishing.ts";
+import type { ApprovalStatus } from "../publishing/readiness.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -167,12 +168,12 @@ async function persistLeadDeliveryAudit(
     "id" | "workspace_id" | "lead_id" | "destination_type" | "destination_label" | "status" | "approval_request_id"
   >,
 ) {
-  await serviceSupabase.from("audit_logs").insert({
-    workspace_id: attempt.workspace_id,
-    actor_profile_id: null,
+  await recordAuditLog(serviceSupabase, {
+    workspaceId: attempt.workspace_id,
+    actorProfileId: null,
     action: `lead_delivery_${attempt.status}`,
-    target_type: "lead_delivery_attempt",
-    target_id: attempt.id,
+    targetType: "lead_delivery_attempt",
+    targetId: attempt.id,
     metadata: {
       leadId: attempt.lead_id,
       destinationType: attempt.destination_type,

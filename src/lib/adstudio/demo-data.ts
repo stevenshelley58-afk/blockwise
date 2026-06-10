@@ -5,6 +5,10 @@ import {
 } from "./index.ts";
 
 // Richer HTML so brand extraction picks up all required fields without guessing.
+// The teal palette (--brand: #087f7a) is intentionally a *fixture* brand for the
+// fictional Northstar Realty agency, not a Blockwise brand colour. The teal
+// value is asserted by tests in tests/adstudio-core.test.ts and tests/meta-
+// execution.test.ts; do not normalise it to the brand navy.
 const NORTHSTAR_HTML = `
   <html>
     <head>

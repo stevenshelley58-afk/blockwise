@@ -1,4 +1,5 @@
-import { schedules, task } from "@trigger.dev/sdk/v3";
+﻿import { schedules, task } from "@trigger.dev/sdk/v3";
+import * as Sentry from "@sentry/nextjs";
 
 import { resolveMonitorDateRange } from "../src/lib/monitor/dashboard-data.ts";
 import { syncProviderWorkspace } from "../src/lib/providers/provider-sync.ts";
@@ -25,16 +26,21 @@ export const syncProviderReports = schedules.task({
     }
 
     const results = await Promise.all(
-      ((connections ?? []) as ProviderSyncPayload[]).map((connection) =>
-        syncProviderWorkspace({
-          supabase: serviceSupabase as never,
-          serviceSupabase,
-          workspaceId: connection.workspaceId,
-          provider: connection.provider,
-          range: resolveMonitorDateRange("last_30"),
-          jobKey: "sync-provider-reports",
-        }),
-      ),
+      ((connections ?? []) as ProviderSyncPayload[]).map(async (connection) => {
+        try {
+          return await syncProviderWorkspace({
+            supabase: serviceSupabase as never,
+            serviceSupabase,
+            workspaceId: connection.workspaceId,
+            provider: connection.provider,
+            range: resolveMonitorDateRange("last_30"),
+            jobKey: "sync-provider-reports",
+          });
+        } catch (error) {
+          Sentry.captureException(error);
+          return { status: "failed" as const, error: error instanceof Error ? error.message : "Sync failed" };
+        }
+      }),
     );
 
     return {

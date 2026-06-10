@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
   RESEARCH_AD_SELECT,
@@ -16,14 +16,9 @@ type AreaCardIdRow = {
 };
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  const guard = await requireApiWorkspace(request, "monitor");
+  if (!guard.ok) return guard.response;
+  const { supabase } = guard;
 
   const params = request.nextUrl.searchParams;
   const limit = Math.min(Number.parseInt(params.get("limit") ?? "80", 10) || 80, 200);

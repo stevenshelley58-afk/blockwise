@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { ButtonSpinner } from "@/components/app/button-spinner";
 import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -68,22 +70,32 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
       ) : null}
 
       <form className="login-form" onSubmit={submit}>
-        <label>
+        <label htmlFor="login-email">
           Email
-          <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+          <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
         </label>
-        <label>
+        <label htmlFor="login-password">
           Password
           <input
+            id="login-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             type="password"
             autoComplete="current-password"
           />
         </label>
+        <p style={{ margin: "4px 0 0", fontSize: "0.875rem", textAlign: "right" }}>
+          <Link href="/forgot-password">Forgot password?</Link>
+        </p>
         {error ? <p className="form-error">{error}</p> : null}
-        <button className="button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in" : "Sign in"}
+        <button
+          className="button"
+          type="submit"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting || undefined}
+        >
+          {isSubmitting ? <ButtonSpinner size={16} label="Signing in" /> : null}
+          {isSubmitting ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </div>

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
-import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../campaigns/publishing.ts";
+import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -110,12 +110,20 @@ export type MetaPublishCreativePlan = {
   asset?: MetaCreativeAssetPlan | null;
 };
 
+export type MetaAdVariantTag = {
+  variantId: string;
+  angle: string;
+  template: string | null;
+};
+
 export type MetaPublishAdPlan = {
   localId: string;
   name: string;
   adSetLocalId: string;
   creativeLocalId: string;
   status: "PAUSED";
+  /** Ad Studio variant mapping; also encoded into the ad name (additive, see buildAdVariantTagSuffix). */
+  variantTag?: MetaAdVariantTag | null;
 };
 
 export type MetaPublishTrackingPlan = {
@@ -221,19 +229,28 @@ export function buildMetaPublishPlan(input: {
   legacyCampaignId?: string | null;
   adStudioExportId?: string | null;
   includeCreativeAssets?: boolean;
+  /**
+   * A/B publish (A6): when set, only these variants are planned — one campaign,
+   * one ad set, one tagged ad per variant. Absent/empty keeps the existing
+   * full-pack behaviour unchanged.
+   */
+  variantIds?: string[];
 }): MetaPublishPlan {
   const adapter = input.adapter ?? "marketing_api";
   const now = new Date().toISOString();
-  const controls = normalizeMetaPublishControls(input.controls, input.campaignPack);
+  const selectedVariantIds = (input.variantIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0);
+  const abTest = selectedVariantIds.length > 0;
+  const campaignPack = abTest ? filterPackToVariants(input.campaignPack, selectedVariantIds) : input.campaignPack;
+  const controls = normalizeMetaPublishControls(input.controls, campaignPack);
   const idempotencyKey = buildMetaPlanIdempotencyKey({
     workspaceId: input.workspaceId,
-    adStudioCampaignId: input.campaignPack.campaign.campaignId,
+    adStudioCampaignId: campaignPack.campaign.campaignId,
     adapter,
     approvalRequestId: input.approvalRequestId,
   });
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
-    name: input.campaignPack.campaign.name,
+    name: campaignPack.campaign.name,
     objective: "OUTCOME_LEADS",
     status: "PAUSED",
     specialAdCategories: ["HOUSING"],
@@ -242,7 +259,7 @@ export function buildMetaPublishPlan(input: {
   return {
     planId: deterministicUuid(`meta_publish_plan:${idempotencyKey}`),
     workspaceId: input.workspaceId,
-    adStudioCampaignId: input.campaignPack.campaign.campaignId,
+    adStudioCampaignId: campaignPack.campaign.campaignId,
     adStudioExportId: input.adStudioExportId ?? null,
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
@@ -253,15 +270,15 @@ export function buildMetaPublishPlan(input: {
     setup: normalizeMetaConnectionSetup(input.setup),
     controls,
     campaign,
-    adSets: buildAdSetPlans(input.campaignPack, controls),
-    leadForms: buildLeadFormPlans(input.campaignPack, input.setup),
-    creatives: buildCreativePlans(input.campaignPack, input.setup, Boolean(input.includeCreativeAssets)),
-    ads: buildAdPlans(input.campaignPack),
+    adSets: buildAdSetPlans(campaignPack, controls, abTest),
+    leadForms: buildLeadFormPlans(campaignPack, input.setup),
+    creatives: buildCreativePlans(campaignPack, input.setup, Boolean(input.includeCreativeAssets)),
+    ads: buildAdPlans(campaignPack, abTest),
     tracking: {
       utmSource: "meta",
       utmMedium: "paid_social",
-      utmCampaign: slug(input.campaignPack.campaign.name),
-      utmContentPrefix: slug(input.campaignPack.campaign.market.suburb),
+      utmCampaign: slug(campaignPack.campaign.name),
+      utmContentPrefix: slug(campaignPack.campaign.market.suburb),
     },
     requestLog: [],
     responseLog: [],
@@ -269,6 +286,22 @@ export function buildMetaPublishPlan(input: {
     lastError: null,
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+/**
+ * Narrows a campaign pack to the selected variants (A6 A/B publish). Unknown
+ * ids simply produce an empty selection, which readiness validation then
+ * blocks (no draft payload) instead of silently publishing everything.
+ */
+function filterPackToVariants(pack: AdStudioCampaignPack, variantIds: string[]): AdStudioCampaignPack {
+  const selected = new Set(variantIds);
+
+  return {
+    ...pack,
+    variants: pack.variants.filter((variant) => selected.has(variant.variantId)),
+    creatives: pack.creatives.filter((creative) => selected.has(creative.variantId)),
+    copyPacks: pack.copyPacks.filter((copyPack) => selected.has(copyPack.variantId)),
   };
 }
 
@@ -683,24 +716,30 @@ async function getMetaObjectStatus(
   };
 }
 
-function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
+function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls, singleAdSet = false): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const dailyBudgetMinorUnits = controls.dailyBudgetMinorUnits ?? 5000;
   const targeting = buildTargeting(controls);
+  const primary: MetaPublishAdSetPlan = {
+    localId: "adset_primary",
+    name: `${suburb} homeowners broad`,
+    campaignLocalId: "campaign_main",
+    billingEvent: "IMPRESSIONS",
+    optimizationGoal: "LEAD_GENERATION",
+    status: "PAUSED",
+    dailyBudgetMinorUnits,
+    targeting,
+    startTime: controls.schedule?.startTime ?? null,
+    endTime: controls.schedule?.endTime ?? null,
+  };
+
+  // A/B publish (A6): all variant ads compete inside one ad set.
+  if (singleAdSet) {
+    return [primary];
+  }
 
   return [
-    {
-      localId: "adset_primary",
-      name: `${suburb} homeowners broad`,
-      campaignLocalId: "campaign_main",
-      billingEvent: "IMPRESSIONS",
-      optimizationGoal: "LEAD_GENERATION",
-      status: "PAUSED",
-      dailyBudgetMinorUnits,
-      targeting,
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
+    primary,
     {
       localId: "adset_learning",
       name: `${suburb} seller intent test`,
@@ -787,14 +826,38 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
   });
 }
 
-function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => ({
-    localId: `ad_${index + 1}`,
-    name: `${pack.campaign.name} ad ${index + 1}`,
-    adSetLocalId: index % 2 === 0 ? "adset_primary" : "adset_learning",
-    creativeLocalId: `creative_${index + 1}`,
-    status: "PAUSED",
-  }));
+function buildAdPlans(pack: AdStudioCampaignPack, singleAdSet = false): MetaPublishAdPlan[] {
+  return pack.copyPacks.slice(0, 6).map((copy, index) => {
+    const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
+    const variantTag: MetaAdVariantTag | null = variant
+      ? { variantId: variant.variantId, angle: variant.angle, template: pack.campaign.offerId || null }
+      : null;
+
+    return {
+      localId: `ad_${index + 1}`,
+      name: `${pack.campaign.name} ad ${index + 1}${variantTag ? buildAdVariantTagSuffix(variantTag) : ""}`,
+      adSetLocalId: singleAdSet ? "adset_primary" : index % 2 === 0 ? "adset_primary" : "adset_learning",
+      creativeLocalId: `creative_${index + 1}`,
+      status: "PAUSED",
+      variantTag,
+    };
+  });
+}
+
+/**
+ * Structured ad-name suffix the Meta monitor parses back into
+ * `{variantId, angle, template}` (see meta-monitor/calculations.ts
+ * parseAdVariantTags). Name-only metadata: campaign/ad-set creation
+ * semantics are unchanged.
+ */
+export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
+  const parts = [`v=${tag.variantId.replace(/-/g, "").slice(0, 8)}`, `a=${slug(tag.angle)}`];
+
+  if (tag.template) {
+    parts.push(`t=${slug(tag.template)}`);
+  }
+
+  return ` | bw:${parts.join(";")}`;
 }
 
 function normalizeMetaPublishControls(controls: MetaPublishControls | undefined, pack: AdStudioCampaignPack): MetaPublishControls {

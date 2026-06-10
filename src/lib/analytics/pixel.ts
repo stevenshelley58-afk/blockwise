@@ -38,6 +38,15 @@ export function trackContact(params?: Record<string, unknown>): void {
   fbq("track", "Contact", params);
 }
 
+/**
+ * Custom intent event — fire when a visitor clicks any tracked CTA.
+ * Use the `label` to distinguish hero, nav, trial, pricing, faq-walkthrough, etc.
+ * Pair with a separate "BookDemoClick" event for managed-setup CTAs.
+ */
+export function trackCtaClick(label: string, params?: Record<string, unknown>): void {
+  fbq("trackCustom", "cta_click", { cta: label, ...(params ?? {}) });
+}
+
 /** Custom intent event — fire when a visitor clicks a "Book a demo" CTA. */
 export function trackDemoCtaClick(location: string): void {
   fbq("trackCustom", "BookDemoClick", { location });

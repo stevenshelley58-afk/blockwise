@@ -3,12 +3,13 @@ import { createHash } from "node:crypto";
 import type { ModelCandidate, ModelProfileKey, ModelProvider } from "../../ai/model-registry.ts";
 import { estimateRunCostUsd, normalizeModelSlug, resolveModelProfile } from "../../ai/model-registry.ts";
 import type { ImageProviderResponse, TextProviderResponse } from "../../adstudio/providers.ts";
+import { recordAuditLog as writeAuditLog } from "../../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
 
 import type { AssembledPrompt } from "./assemble-prompt.ts";
 
 export type RedactedProviderRunInput = {
-  taskType: "adstudio.copy" | "adstudio.image" | "adstudio.background";
+  taskType: "adstudio.copy" | "adstudio.image" | "adstudio.background" | "adstudio.scoring";
   modelProfile: ModelProfileKey;
   correlationId?: string;
   userId?: string | null;
@@ -213,13 +214,13 @@ async function recordAuditLog(input: {
     return;
   }
 
-  const { error } = await input.serviceSupabase.from("audit_logs").insert({
-    workspace_id: input.input.workspaceId,
-    actor_profile_id: input.input.userId ?? null,
+  await writeAuditLog(input.serviceSupabase, {
+    workspaceId: input.input.workspaceId,
+    actorProfileId: input.input.userId ?? null,
     action: "adstudio.ai_run",
-    target_type: "adstudio_provider_run",
-    target_id: input.providerRunId,
-    correlation_id: input.input.correlationId ?? null,
+    targetType: "adstudio_provider_run",
+    targetId: input.providerRunId,
+    correlationId: input.input.correlationId ?? null,
     metadata: {
       ai_run_id: input.aiRunId,
       ai_usage_ledger_id: input.ledgerId,
@@ -231,10 +232,6 @@ async function recordAuditLog(input: {
       cost_estimate_usd: input.costEstimate,
     },
   });
-
-  if (error) {
-    console.error("Failed to record Ad Studio audit log", error.message);
-  }
 }
 
 export function redactRecord(input: Record<string, unknown>): Record<string, unknown> {

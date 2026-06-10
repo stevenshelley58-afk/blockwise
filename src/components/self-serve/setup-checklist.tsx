@@ -28,7 +28,19 @@ export function SetupChecklist({ items }: { items: SetupChecklistItem[] }) {
     setDismissed(true);
   }
 
-  if (dismissed) return null;
+  function reset() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    setDismissed(false);
+  }
+
+  if (dismissed)
+    return (
+      <p className="item-meta" style={{ textAlign: "center" }}>
+        <button type="button" className="link-button" onClick={reset}>
+          Reset checklist
+        </button>
+      </p>
+    );
 
   const completed = items.filter((item) => item.complete).length;
 

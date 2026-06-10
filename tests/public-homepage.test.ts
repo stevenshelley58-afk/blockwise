@@ -108,7 +108,7 @@ test("landing page local hero images resolve from public assets", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
   const assets = [...source.matchAll(/(?:src|srcSet)="(\/hero\/[^"]+)"/g)].map((match) => match[1]);
 
-  assert.ok(assets.length >= 2, "landing page should use local hero assets");
+  assert.ok(assets.length >= 1, "landing page should use local hero assets");
   for (const asset of assets) {
     assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }

@@ -8,7 +8,6 @@ export type StudioSection =
   | "brand"
   | "media"
   | "copy"
-  | "audience"
   | "publish"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";

@@ -59,7 +59,7 @@ export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudi
     source: {
       type: "website",
       url: normalizedUrl,
-      lastExtractedAt: new Date("2026-05-27T00:00:00.000Z").toISOString(),
+      lastExtractedAt: new Date().toISOString(),
       pagesScanned,
     },
     identity: {

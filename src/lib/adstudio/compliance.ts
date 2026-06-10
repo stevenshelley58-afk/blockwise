@@ -65,7 +65,7 @@ export function runAdStudioComplianceReview(input: {
     campaignId: input.campaign.campaignId,
     status: blocking ? "blocked" : warnings ? "needs_review" : "approved",
     issues: dedupeIssues(issues),
-    checkedAt: new Date("2026-05-27T00:00:00.000Z").toISOString(),
+    checkedAt: new Date().toISOString(),
   };
 }
 

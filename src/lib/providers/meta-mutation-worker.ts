@@ -1,8 +1,9 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
+import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
-import type { ApprovalStatus } from "../campaigns/publishing.ts";
+import type { ApprovalStatus } from "../publishing/readiness.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -63,12 +64,12 @@ export async function executeMetaMutationById(input: {
   };
 
   await updateMutation(input.serviceSupabase, updated);
-  await input.serviceSupabase.from("audit_logs").insert({
-    workspace_id: input.workspaceId,
-    actor_profile_id: mutation.requestedBy,
+  await recordAuditLog(input.serviceSupabase, {
+    workspaceId: input.workspaceId,
+    actorProfileId: mutation.requestedBy,
     action: `meta.${mutation.action}`,
-    target_type: "meta_publish_plan_mutation",
-    target_id: mutation.mutationId,
+    targetType: "meta_publish_plan_mutation",
+    targetId: mutation.mutationId,
     metadata: {
       planId: mutation.planId,
       status: result.status,

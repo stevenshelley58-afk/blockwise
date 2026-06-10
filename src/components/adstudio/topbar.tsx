@@ -123,7 +123,7 @@ export function TopBar({
   return (
     <header className="studio-topbar">
       <div className="studio-titlebar">
-        <Link className="studio-home-link" href="/home" aria-label="Go to Blockwise home">
+        <Link className="studio-home-link" href="/self-serve" aria-label="Go to Blockwise home">
           <BlockwiseLogo />
         </Link>
         <span className="studio-divider" />
@@ -160,7 +160,7 @@ export function TopBar({
         )}
       </div>
       <div className="studio-mobile-title">
-        <Link className="studio-home-link" href="/home" aria-label="Go to Blockwise home">
+        <Link className="studio-home-link" href="/self-serve" aria-label="Go to Blockwise home">
           <BlockwiseLogo />
         </Link>
         <span className="studio-divider" />

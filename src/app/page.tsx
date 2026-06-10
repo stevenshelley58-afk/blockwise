@@ -1,4 +1,5 @@
 import { ArrowRight, Check } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
@@ -88,6 +89,7 @@ export default function HomePage() {
             <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
+            <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
             <SignInLink />
@@ -104,37 +106,40 @@ export default function HomePage() {
             <div className="lp-hero-copy">
               <h1 id="hero-title">
                 Your next lead <em className="lp-hero-accent">is local.</em>
-                <span className="lp-hero-h1-sub">Create property ads from one simple workflow.</span>
+                <span className="lp-hero-h1-sub">Turn one property into local ads.</span>
               </h1>
               <p className="lp-lead">
                 Create and track local Meta ads without opening Ads Manager.
               </p>
               <div className="lp-cta-row">
                 <CtaLink location="hero" href="/signup" className="lp-btn lp-btn-hero lp-btn-big">
-                  Free Trial
+                  Start free trial
                   <ArrowRight aria-hidden size={18} />
                 </CtaLink>
+                <a href="#demo-title" className="lp-link-inhero">
+                  Book a 15-min walkthrough →
+                </a>
               </div>
               <div className="lp-trust-row" aria-label="Product trust points">
-                <TrustPoint label="Use your own ad account" />
-                <TrustPoint label="Agent approval required" />
-                <TrustPoint label="Budget controlled by you" />
-                <TrustPoint label="Reporting inside Blockwise" />
+                <TrustPoint label="Live ads from one listing in minutes" />
+                <TrustPoint label="You approve every ad before it spends" />
+                <TrustPoint label="Hard budget caps, no surprises" />
+                <TrustPoint label="Results tracked in one dashboard" />
               </div>
             </div>
 
             <div className="lp-hero-media">
-              <picture>
-                <source media="(max-width: 720px)" srcSet="/hero/hero-tall.jpg" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/hero/hero-wide.jpg"
-                  alt="Aerial view of a coastal suburb with waterfront homes"
-                  className="lp-hero-photo"
-                />
-              </picture>
+              <Image
+                src="/hero/hero-wide.jpg"
+                alt="Aerial view of a coastal suburb with waterfront homes"
+                className="lp-hero-photo"
+                width={900}
+                height={600}
+                priority
+                sizes="(max-width: 720px) 100vw, 50vw"
+              />
 
-              <div className="lp-perf" aria-label="Campaign performance preview (example data)">
+              <div className="lp-perf lp-perf-hero" aria-label="Campaign performance preview (example data)">
                 <div className="lp-perf-top">
                   <h3>Campaign Performance</h3>
                   <div className="lp-perf-top-right">
@@ -152,14 +157,14 @@ export default function HomePage() {
                     <path
                       d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
                       fill="none"
-                      stroke="#2563eb"
+                      stroke="var(--accent)"
                       strokeWidth="3"
                       strokeLinecap="round"
                     />
-                    <circle cx="60" cy="84" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="110" cy="68" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="160" cy="58" r="3.5" fill="#2563eb" stroke="#fff" strokeWidth="1.5" />
-                    <circle cx="210" cy="36" r="5" fill="#2563eb" stroke="#fff" strokeWidth="2" />
+                    <circle cx="60" cy="84" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="110" cy="68" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="160" cy="58" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                    <circle cx="210" cy="36" r="5" fill="var(--accent)" stroke="#fff" strokeWidth="2" />
                   </svg>
                   <span className="lp-perf-tag">23 Leads</span>
                 </div>
@@ -175,6 +180,52 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* mobile-only: perf chart section shown below hero on mobile */}
+        <div className="lp-mobile-perf">
+          <div className="lp-shell">
+            <h2 className="lp-h2">See what is working.</h2>
+            <p className="lp-lead">Leads, spend, and cost per lead in one view.</p>
+            <div className="lp-perf" aria-label="Campaign performance preview (example data)">
+              <div className="lp-perf-top">
+                <h3>Campaign Performance</h3>
+                <div className="lp-perf-top-right">
+                  <span className="lp-badge lp-badge-neutral">Example data</span>
+                  <span className="lp-perf-range">
+                    This Week
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div className="lp-perf-chart">
+                <svg viewBox="0 0 320 120" role="img" aria-label="Example chart: leads climbing across the week to 23">
+                  <path
+                    d="M10 106C28 99 44 88 60 84C78 79 94 73 110 68C128 62 144 63 160 58C178 52 196 42 210 36"
+                    fill="none"
+                  stroke="var(--accent)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <circle cx="60" cy="84" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="110" cy="68" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="160" cy="58" r="3.5" fill="var(--accent)" stroke="#fff" strokeWidth="1.5" />
+                <circle cx="210" cy="36" r="5" fill="var(--accent)" stroke="#fff" strokeWidth="2" />
+                </svg>
+                <span className="lp-perf-tag">23 Leads</span>
+              </div>
+              <div className="lp-perf-axis" aria-hidden>
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              </div>
+              <div className="lp-perf-stats">
+                <div className="lp-perf-stat"><span>Leads</span><strong>23</strong></div>
+                <div className="lp-perf-stat"><span>Cost per Lead</span><strong>$18</strong></div>
+                <div className="lp-perf-stat"><span>Amount Spent</span><strong>$414</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <section id="problem" className="lp-section lp-section-surface">
           <div className="lp-shell lp-center-head">
@@ -192,18 +243,17 @@ export default function HomePage() {
             <div className="lp-radar-top">
               <div>
                 <p className="lp-eyebrow">Local Ad Radar</p>
-                <h2 className="lp-h2">See what agencies are advertising in your market.</h2>
+                <h2 className="lp-h2">What are your competitors running?</h2>
                 <p className="lp-lead">
-                  Search by suburb, postcode, agency or ad copy. Blockwise shows active real estate ads
-                  in your area so you can understand the market before launching your own campaign.
+                  Search any market and see active real estate ads.
                 </p>
               </div>
               <div className="lp-radar-box">
                 <LandingAdRadarScan
-                  buttonLabel="Scan my suburb"
+                  buttonLabel="Scan my market"
                   initialNote="Start with Perth, WA or choose your suburb."
                   initialValue="Perth, WA"
-                  placeholder="Suburb or postcode"
+                  placeholder="Enter city, agent, or brokerage"
                   useBestGuess
                 />
               </div>
@@ -402,18 +452,18 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
-              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 campaigns.</h2>
+              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
               <p className="lp-lead lp-lead-light">
                 No card required. Create draft campaigns, review the ads and connect your ad account
                 when you are ready to launch.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
-                Create your first campaign
+                Start free trial
               </CtaLink>
             </div>
             <div className="lp-trial-grid">
               <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the campaign builder from the minute you confirm your email.</span></div>
-              <div className="lp-trial-item"><strong>10 campaigns</strong><span>Create up to 10 draft campaigns during the trial.</span></div>
+              <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
@@ -518,6 +568,7 @@ export default function HomePage() {
             <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
+            <Link href="/pricing">Pricing</Link>
           </div>
           <div>
             <h4>Legal</h4>
@@ -529,7 +580,7 @@ export default function HomePage() {
         <div className="lp-shell lp-footer-bottom">
           <span>© {new Date().getFullYear()} Blockwise. All rights reserved.</span>
           {/* Social icons are decorative until the profiles exist — swap spans for links then. */}
-          <span className="lp-footer-social" aria-hidden>
+          <span className="lp-footer-social" aria-hidden style={{ pointerEvents: "none" }}>
             <span className="lp-social-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
             </span>

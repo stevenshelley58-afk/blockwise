@@ -103,7 +103,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
                 <th>Type</th>
                 <th>Intent</th>
                 <th>Display</th>
-                <th>Hash</th>
+                <th>Ad ID</th>
               </tr>
             </thead>
             <tbody>
@@ -116,7 +116,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
                   <td>{version.primaryIntent ?? "-"}</td>
                   <td>{version.displayState ?? "-"}</td>
                   <td>
-                    <span className="operator-ad-code">{version.creativeHash.slice(0, 16)}</span>
+                    <span className="advertiser-ad-code">{version.creativeHash.slice(0, 16)}</span>
                   </td>
                 </tr>
               ))}

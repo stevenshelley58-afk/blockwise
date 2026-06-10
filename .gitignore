@@ -23,3 +23,13 @@ _archive/
 
 # MCP config (contains API key)
 .mcp.json
+
+# Persistent local secrets (SSH keys etc.) - never commit
+.secrets/
+
+# Office temp/owner-lock files
+~$*
+
+# Agent-generated media artifacts
+matrix-media-*.png
+ad-template-library/images/mockups/

@@ -1,6 +1,7 @@
 import { ArrowRight, Palette, PenLine, Plug } from "lucide-react";
 import Link from "next/link";
 
+import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { PageHeading } from "@/components/page-heading";
 import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
 import { StatusPill } from "@/components/status-pill";
@@ -13,7 +14,7 @@ export default async function SelfServePage() {
 
   const [campaigns, brandKits, connections] = await Promise.all([
     supabase.from("adstudio_campaigns").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
-    supabase.from("adstudio_brand_kits").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
+    supabase.from("adstudio_brand_kits").select("name").eq("workspace_id", access.workspaceId).limit(1),
     supabase
       .from("provider_connections")
       .select("id", { count: "exact", head: true })
@@ -22,7 +23,7 @@ export default async function SelfServePage() {
   ]);
 
   const hasAd = (campaigns.count ?? 0) > 0;
-  const hasBrand = (brandKits.count ?? 0) > 0;
+  const hasBrand = (brandKits.data ?? []).some((kit) => kit.name && kit.name.trim() !== "");
   const hasConnection = (connections.count ?? 0) > 0;
   const checklist: SetupChecklistItem[] = [
     {
@@ -50,6 +51,7 @@ export default async function SelfServePage() {
 
   return (
     <main className="content">
+      <ConfirmRegistrationTracker />
       <PageHeading
         eyebrow="Home"
         title="Start with one ad"

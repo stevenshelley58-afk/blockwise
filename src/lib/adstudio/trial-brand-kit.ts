@@ -28,11 +28,20 @@ export async function resolveAdStudioGenerationBrandKit(input: ResolveGeneration
   const approvedBrandKit = await loadApprovedBrandKit(input.supabase, input.workspaceId);
 
   if (!input.isTrialWorkspace) {
-    if (!approvedBrandKit) {
-      return { ok: false, error: "Approved brandKit is required.", status: 400 };
+    if (approvedBrandKit) {
+      return { ok: true, brandKit: approvedBrandKit };
     }
 
-    return { ok: true, brandKit: approvedBrandKit };
+    // B2 (simplification): generation may run on the latest unapproved
+    // extracted kit (real draft status preserved); publish stays gated on
+    // approval via the readiness checks.
+    const draftBrandKit = await loadDraftBrandKit(input.supabase, input.workspaceId);
+
+    if (draftBrandKit) {
+      return { ok: true, brandKit: draftBrandKit };
+    }
+
+    return { ok: false, error: "Approved brandKit is required.", status: 400 };
   }
 
   if (approvedBrandKit) {
@@ -138,13 +147,30 @@ async function loadApprovedBrandKit(
   supabase: SupabaseServerClient,
   workspaceId: string,
 ): Promise<AdStudioBrandKit | null> {
-  const { data, error } = await supabase
+  return loadBrandKitByStatus(supabase, workspaceId, "approved");
+}
+
+/** Latest unapproved non-demo kit — B2 lets generation (never publish) run on it. */
+async function loadDraftBrandKit(
+  supabase: SupabaseServerClient,
+  workspaceId: string,
+): Promise<AdStudioBrandKit | null> {
+  return loadBrandKitByStatus(supabase, workspaceId, "draft");
+}
+
+async function loadBrandKitByStatus(
+  supabase: SupabaseServerClient,
+  workspaceId: string,
+  mode: "approved" | "draft",
+): Promise<AdStudioBrandKit | null> {
+  let query = supabase
     .from("adstudio_brand_kits")
     .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("review_status", "approved")
-    .order("updated_at", { ascending: false })
-    .limit(10);
+    .eq("workspace_id", workspaceId);
+
+  query = mode === "approved" ? query.eq("review_status", "approved") : query.neq("review_status", "approved");
+
+  const { data, error } = await query.order("updated_at", { ascending: false }).limit(10);
 
   if (error) {
     throw new Error(error.message);

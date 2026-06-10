@@ -35,11 +35,12 @@ const operatorNavItems: NavItem[] = [
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
-  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/workforce", label: "AI Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 
 const selfServeNavItems: NavItem[] = [
+  { href: "/self-serve", label: "Home", icon: LayoutDashboard },
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },

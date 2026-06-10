@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { loadMetaPublishPlan } from "@/lib/providers/meta-execution";
 import {
   buildMetaPlanMutation,
   type MetaPlanMutationAction,
   type MetaPlanMutationPayload,
 } from "@/lib/providers/meta-mutations";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -31,25 +30,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "action must be activate, pause, increase_budget, or export_leads." }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "adstudio",
-    requestedWorkspaceId: body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "adstudio", body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"));
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
   const serviceSupabase = createSupabaseServiceClient();
   const plan = await loadMetaPublishPlan(serviceSupabase, {
-    workspaceId: access.access.workspaceId,
+    workspaceId: access.workspaceId,
     planId: id,
   });
   const mutation = buildMetaPlanMutation({
-    workspaceId: access.access.workspaceId,
+    workspaceId: access.workspaceId,
     planId: plan.planId,
-    requestedBy: access.access.userId,
+    requestedBy: access.userId,
     action: body.action,
     payload: withDefaultMutationPayload(body.action, body.payload ?? {}, plan),
   });
@@ -80,7 +74,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       target_type: mutation.approval.targetType,
       target_id: mutation.approval.targetId,
       status: mutation.approval.status,
-      requested_by: access.access.userId,
+      requested_by: access.userId,
       risk_summary: mutation.approval.riskSummary,
     })
     .select("id,status,risk_summary")

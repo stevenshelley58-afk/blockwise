@@ -18,9 +18,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const body = await readJsonBody<Record<string, unknown>>(request);
+  const patch = variantPatch(body);
   const { data, error } = await access.supabase
     .from("adstudio_campaign_variants")
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("workspace_id", access.access.workspaceId)
     .eq("id", id)
     .select("*")
@@ -29,4 +30,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (error) return errorResponse(error);
 
   return NextResponse.json({ variant: data });
+}
+
+function variantPatch(body: Record<string, unknown>): Record<string, unknown> {
+  const allowed = [
+    "name",
+    "format",
+    "platform",
+    "dimensions_json",
+    "copy_json",
+    "creative_refs_json",
+    "status",
+    "notes",
+  ];
+  return Object.fromEntries(allowed.filter((key) => key in body).map((key) => [key, body[key]]));
 }

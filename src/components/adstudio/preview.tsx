@@ -6,7 +6,6 @@ import type { CSSProperties } from "react";
 import type { CopyState } from "./use-copy";
 
 export type PreviewFormat = "story" | "feed" | "square" | "landscape";
-export type PreviewMode = "platform" | "creative";
 export type SelectedElement = "headline" | "primaryText" | "description" | "cta" | "image";
 
 export const FORMAT_META: Record<
@@ -49,7 +48,6 @@ type AdPreviewProps = {
   copy: CopyState;
   image: string;
   format: PreviewFormat;
-  mode: PreviewMode;
   zoom: number;
   selectedElement: SelectedElement;
   setSelectedElement: (element: SelectedElement) => void;
@@ -63,6 +61,10 @@ type VariantStripProps = {
   onEditCopy?: (index: number) => void;
   onReplaceImage?: (index: number) => void;
   onRegenerate?: (index: number) => void;
+  /** Staged generation: skeleton tiles + phase label while ads are being generated. */
+  pending?: { phase: string; count: number; error: string | null } | null;
+  onRetryPending?: () => void;
+  onDismissPending?: () => void;
   compact?: boolean;
 };
 
@@ -74,21 +76,56 @@ export function VariantStrip({
   onEditCopy,
   onReplaceImage,
   onRegenerate,
+  pending = null,
+  onRetryPending,
+  onDismissPending,
   compact = false,
 }: VariantStripProps) {
+  const generating = Boolean(pending && !pending.error);
+  const generationFailed = Boolean(pending?.error);
+
   return (
     <div className={compact ? "studio-variant-strip compact" : "studio-variant-strip"}>
       <div className="studio-variant-strip-head">
-        <strong>Generated ads</strong>
-        {!compact && (
-          <button type="button" onClick={onAdd}>
+        <strong aria-live="polite">{generating ? pending?.phase : "Generated ads"}</strong>
+        {generationFailed && (
+          <span className="studio-variant-head-actions">
+            {onRetryPending && (
+              <button type="button" onClick={onRetryPending}>Try again</button>
+            )}
+            {onDismissPending && (
+              <button type="button" onClick={onDismissPending}>Dismiss</button>
+            )}
+          </span>
+        )}
+        {!compact && !generationFailed && (
+          <button type="button" onClick={onAdd} disabled={generating}>
             <Plus aria-hidden size={16} />
             Add ad
           </button>
         )}
       </div>
       <div className="studio-variant-row">
-        {variants.map((variant, index) => (
+        {pending
+          ? Array.from({ length: pending.count }).map((_, index) =>
+              pending.error ? (
+                <article className="studio-variant-tile error" key={`pending-${index}`}>
+                  <span className="studio-variant-error-box" role={index === 0 ? "alert" : undefined}>
+                    <strong>Ad {index + 1} failed</strong>
+                    <small>{index === 0 ? pending.error : "Not generated - try again."}</small>
+                  </span>
+                </article>
+              ) : (
+                <article className="studio-variant-tile" key={`pending-${index}`} aria-hidden>
+                  <span className="studio-variant-skeleton">
+                    <i className="studio-variant-skeleton-image" />
+                    <i className="studio-variant-skeleton-line" />
+                    <i className="studio-variant-skeleton-line short" />
+                  </span>
+                </article>
+              ),
+            )
+          : variants.map((variant, index) => (
           <article className={selectedVariantIndex === index ? "studio-variant-tile active" : "studio-variant-tile"} key={variant.variantId}>
             <button className="studio-variant-preview" type="button" onClick={() => onSelect(index)}>
               <span className="studio-variant-image">
@@ -119,7 +156,6 @@ export function AdPreview({
   copy,
   image,
   format,
-  mode,
   zoom,
   selectedElement,
   setSelectedElement,
@@ -129,18 +165,16 @@ export function AdPreview({
   if (format === "story") {
     return (
       <div className="studio-preview-device" style={transform}>
-        <div className={mode === "creative" ? "studio-story-card creative" : "studio-story-card"}>
+        <div className="studio-story-card">
           <img src={image} alt="" />
           <span className="studio-story-shade" />
-          {mode === "platform" && (
-            <div className="studio-story-brand">
-              <span>{initials}</span>
-              <div>
-                <strong>{brand}</strong>
-                <small>Sponsored</small>
-              </div>
+          <div className="studio-story-brand">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
             </div>
-          )}
+          </div>
           <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
           <button
             className={selectedElement === "headline" ? "studio-story-headline selected" : "studio-story-headline"}
@@ -165,63 +199,27 @@ export function AdPreview({
     );
   }
 
-  // aspect ratio for each format: story handled above, landscape uses CSS class
-  const feedAspectRatio = format === "feed" ? "4/5" : format === "landscape" ? "1.91/1" : "1/1";
-
-  if (mode === "creative") {
-    return (
-      <div className="studio-preview-device" style={transform}>
-        <div
-          className={format === "landscape" ? "studio-creative-card landscape" : "studio-creative-card"}
-          style={format === "feed" ? { aspectRatio: "4/5" } : undefined}
-        >
-          <img src={image} alt="" />
-          <span className="studio-creative-shade" />
-          <button className="studio-hit image" type="button" aria-label="Edit image" onClick={() => setSelectedElement("image")} />
-          <button
-            className={selectedElement === "headline" ? "studio-creative-headline selected" : "studio-creative-headline"}
-            type="button"
-            onClick={() => setSelectedElement("headline")}
-          >
-            {copy.headline}
-          </button>
-          <button
-            className={selectedElement === "description" ? "studio-creative-body selected" : "studio-creative-body"}
-            type="button"
-            onClick={() => setSelectedElement("description")}
-          >
-            {copy.description}
-          </button>
-          <button className={selectedElement === "cta" ? "studio-creative-cta selected" : "studio-creative-cta"} type="button" onClick={() => setSelectedElement("cta")}>
-            {copy.cta}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // aspect ratio for each format: story handled above
+  const feedAspectRatio = format === "feed" ? "4/5" : "1/1";
 
   return (
     <div className="studio-preview-device" style={transform}>
-      <article className={format === "landscape" ? "studio-feed-card landscape" : "studio-feed-card"}>
-        {mode === "platform" && (
-          <header>
-            <div className="studio-feed-id">
-              <span>{initials}</span>
-              <div>
-                <strong>{brand}</strong>
-                <small>Sponsored</small>
-              </div>
+      <article className="studio-feed-card">
+        <header>
+          <div className="studio-feed-id">
+            <span>{initials}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
             </div>
-            <MoreHorizontal aria-hidden size={18} />
-          </header>
-        )}
-        {mode === "platform" && (
-          <button className={selectedElement === "primaryText" ? "studio-feed-primary selected" : "studio-feed-primary"} type="button" onClick={() => setSelectedElement("primaryText")}>
-            {copy.primaryText}
-          </button>
-        )}
+          </div>
+          <MoreHorizontal aria-hidden size={18} />
+        </header>
+        <button className={selectedElement === "primaryText" ? "studio-feed-primary selected" : "studio-feed-primary"} type="button" onClick={() => setSelectedElement("primaryText")}>
+          {copy.primaryText}
+        </button>
         <button className="studio-feed-image" type="button" onClick={() => setSelectedElement("image")}>
-          <img src={image} alt="" style={format !== "landscape" ? { aspectRatio: feedAspectRatio } : undefined} />
+          <img src={image} alt="" style={{ aspectRatio: feedAspectRatio }} />
         </button>
         <footer>
           <div>

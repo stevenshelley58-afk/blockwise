@@ -12,10 +12,11 @@ import {
   type MetaInsightRow,
 } from "../providers/meta-reporting.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
-import { safeCpl, safeRate } from "./calculations.ts";
+import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import { resolveSuburb } from "./suburbAttribution.ts";
 import type {
+  AnglePerformance,
   MetaAdPerformance,
   MetaAdStatus,
   MetaDailyPoint,
@@ -122,9 +123,10 @@ export async function getMetaMonitorData(input: {
       }).catch(() => undefined),
     ]);
 
-    const ads = buildAds({ insightRows, adEntities, leadFacts, placementRows, deviceRows });
+    const ads = buildAds({ insightRows, adEntities, leadFacts, placementRows, deviceRows, rangeUntil: range.until });
     const daily = buildDaily(insightRows, leadFacts, range);
     const suburbPerformance = buildSuburbPerformance(leadFacts, ads);
+    const anglePerformance = buildAnglePerformance(ads);
     const spend = ads.reduce((total, ad) => total + ad.metrics.spend, 0);
 
     const summary: MetaMonitorSummary = {
@@ -152,6 +154,7 @@ export async function getMetaMonitorData(input: {
       daily,
       suburbPerformance,
       ads,
+      anglePerformance,
     };
   } catch (error) {
     return emptyPayload(range, {
@@ -295,6 +298,7 @@ function buildAds(input: {
   leadFacts: LeadFacts;
   placementRows: MetaBreakdownRow[] | null;
   deviceRows: MetaBreakdownRow[] | null;
+  rangeUntil: string;
 }): MetaAdPerformance[] {
   type Aggregate = {
     adName: string;
@@ -308,9 +312,16 @@ function buildAds(input: {
     platformLeads: number;
     frequencyWeighted: number;
     frequencyImpressions: number;
+    recentImpressions: number;
+    recentClicks: number;
+    priorImpressions: number;
+    priorClicks: number;
   };
 
   const byAdId = new Map<string, Aggregate>();
+  // Fatigue windows: last 7 days of the range vs the 7 days before that.
+  const recentWindowStart = addDays(input.rangeUntil, -6);
+  const priorWindowStart = addDays(input.rangeUntil, -13);
 
   for (const row of input.insightRows) {
     const adId = row.ad_id;
@@ -331,18 +342,33 @@ function buildAds(input: {
       platformLeads: 0,
       frequencyWeighted: 0,
       frequencyImpressions: 0,
+      recentImpressions: 0,
+      recentClicks: 0,
+      priorImpressions: 0,
+      priorClicks: 0,
     };
     const impressions = Math.round(toNumber(row.impressions));
+    const clicks = Math.round(toNumber(row.clicks));
     const frequency = toNumber(row.frequency);
 
     aggregate.spend += toNumber(row.spend);
     aggregate.impressions += impressions;
-    aggregate.clicks += Math.round(toNumber(row.clicks));
+    aggregate.clicks += clicks;
     aggregate.platformLeads += Math.round(extractMetaLeadCount(row.actions));
 
     if (frequency > 0 && impressions > 0) {
       aggregate.frequencyWeighted += frequency * impressions;
       aggregate.frequencyImpressions += impressions;
+    }
+
+    if (row.date_start) {
+      if (row.date_start >= recentWindowStart) {
+        aggregate.recentImpressions += impressions;
+        aggregate.recentClicks += clicks;
+      } else if (row.date_start >= priorWindowStart) {
+        aggregate.priorImpressions += impressions;
+        aggregate.priorClicks += clicks;
+      }
     }
 
     byAdId.set(adId, aggregate);
@@ -360,10 +386,15 @@ function buildAds(input: {
       const leads = Math.max(aggregate.platformLeads, input.leadFacts.leadCountByAdId.get(adId) ?? 0);
       const validLeads = input.leadFacts.validCountByAdId.get(adId) ?? 0;
       const spend = round2(aggregate.spend);
+      const adName = entity?.name ?? aggregate.adName;
+      const frequency =
+        aggregate.frequencyImpressions > 0
+          ? round2(aggregate.frequencyWeighted / aggregate.frequencyImpressions)
+          : null;
 
       return {
         adId,
-        adName: entity?.name ?? aggregate.adName,
+        adName,
         campaignId: aggregate.campaignId,
         campaignName: aggregate.campaignName,
         adsetId: aggregate.adsetId,
@@ -390,17 +421,80 @@ function buildAds(input: {
           validLeads,
           validRate: safeRate(validLeads, leads),
           validCpl: safeCpl(spend, validLeads),
-          frequency:
-            aggregate.frequencyImpressions > 0
-              ? round2(aggregate.frequencyWeighted / aggregate.frequencyImpressions)
-              : null,
+          frequency,
           landingPageViews: null,
         },
         placementBreakdown: placementByAd.get(adId),
         deviceBreakdown: deviceByAd.get(adId),
+        variantTags: parseAdVariantTags(adName),
+        fatigued: detectCreativeFatigue({
+          frequency,
+          recent: { impressions: aggregate.recentImpressions, clicks: aggregate.recentClicks },
+          prior: { impressions: aggregate.priorImpressions, clicks: aggregate.priorClicks },
+        }),
       };
     })
     .sort((a, b) => b.metrics.spend - a.metrics.spend);
+}
+
+/**
+ * Per-angle aggregates from A3 ad-name tags. Returns [] when no ad is tagged,
+ * so the dashboard section only appears for Ad Studio-published ads.
+ */
+function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
+  if (!ads.some((ad) => ad.variantTags)) {
+    return [];
+  }
+
+  const totals = new Map<string, {
+    angle: string;
+    template: string | null;
+    ads: number;
+    spend: number;
+    impressions: number;
+    clicks: number;
+    leads: number;
+    validLeads: number;
+  }>();
+
+  for (const ad of ads) {
+    const angle = ad.variantTags?.angle ?? "Untagged";
+    const template = ad.variantTags?.template ?? null;
+    const key = `${angle}::${template ?? ""}`;
+    const entry = totals.get(key) ?? {
+      angle,
+      template,
+      ads: 0,
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      leads: 0,
+      validLeads: 0,
+    };
+
+    entry.ads += 1;
+    entry.spend += ad.metrics.spend;
+    entry.impressions += ad.metrics.impressions;
+    entry.clicks += ad.metrics.clicks;
+    entry.leads += ad.metrics.leads;
+    entry.validLeads += ad.metrics.validLeads;
+    totals.set(key, entry);
+  }
+
+  return Array.from(totals.values())
+    .map((entry): AnglePerformance => ({
+      angle: entry.angle,
+      template: entry.template,
+      ads: entry.ads,
+      spend: round2(entry.spend),
+      impressions: entry.impressions,
+      clicks: entry.clicks,
+      ctr: safeRate(entry.clicks, entry.impressions),
+      leads: entry.leads,
+      validLeads: entry.validLeads,
+      validCpl: safeCpl(round2(entry.spend), entry.validLeads),
+    }))
+    .sort((a, b) => b.validLeads - a.validLeads || b.spend - a.spend);
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {

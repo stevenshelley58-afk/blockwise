@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -108,19 +108,14 @@ async function loadFallbackTrialStatus(supabase: Awaited<ReturnType<typeof creat
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "monitor");
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
   try {
-    const trial = (await loadRpcTrialStatus(supabase, access.access.workspaceId)) ??
-      (await loadFallbackTrialStatus(supabase, access.access.workspaceId));
+    const trial = (await loadRpcTrialStatus(supabase, access.workspaceId)) ??
+      (await loadFallbackTrialStatus(supabase, access.workspaceId));
     return NextResponse.json({ trial });
   } catch {
     return NextResponse.json({ trial: null });

@@ -1,6 +1,6 @@
 import { task } from "@trigger.dev/sdk/v3";
 
-import { buildAgentRuntimePolicy } from "../src/lib/agents/runtime-policy.ts";
+import { buildWorkforceRuntimePolicy } from "../src/lib/workforce/runtime-policy.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type AgentRunPayload = {
@@ -50,7 +50,7 @@ export const runAgentWorkflow = task({
       throw new Error(runError.message);
     }
 
-    const policy = buildAgentRuntimePolicy({
+    const policy = buildWorkforceRuntimePolicy({
       workspaceId: payload.workspaceId,
       agentRunId: run.id,
       actorProfileId: payload.actorProfileId ?? "00000000-0000-0000-0000-000000000000",

@@ -2935,7 +2935,11 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
     };
   } catch (error) {
     const costUsd = costUsdFromApifyError(error);
-    if (costUsd > 0) {
+    // Transient infrastructure failures (run timed out, network interruption) should not
+    // trip the circuit — they are not evidence of a broken actor spending money without
+    // returning results. Only open the circuit for deliberate FAILED/ABORTED outcomes.
+    const isTransientTimeout = /TIMED-OUT|did not finish within/i.test(error.message);
+    if (costUsd > 0 && !isTransientTimeout) {
       await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason: error.message, scope: "page_capture_failure" });
     }
     return failedCaptureOutcome(sourceProvider, input, startedAt, error.message, {

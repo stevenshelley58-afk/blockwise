@@ -136,6 +136,7 @@ function addCreative(
     return;
   }
 
+  // Rasterization not yet implemented — SVG written with correct extension
   files.push({
     path: path.replace(/\.(png|jpg|jpeg)$/i, ".svg"),
     mimeType: "image/svg+xml",

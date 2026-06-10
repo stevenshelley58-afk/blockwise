@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 
 import { PageViewTracker } from "@/components/page-view-tracker";
+import { ConsentBanner } from "@/components/consent-banner";
 
 import "./globals.css";
 import "./meta-monitor.css";
@@ -22,6 +23,7 @@ const manrope = Manrope({
 });
 
 const META_PIXEL_ID = "1699948581050851";
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
@@ -77,7 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        {/* Meta Pixel Code */}
+        {/* Meta Pixel Code — consent default deny (GDPR/PECR) */}
         <Script id="meta-pixel" strategy="afterInteractive">
           {`!function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -87,22 +89,26 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window,document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('consent', 'default', {ad_storage: 'denied', analytics_storage: 'denied'});
           fbq('init', '${META_PIXEL_ID}');
           fbq('track', 'PageView');`}
         </Script>
-        <noscript>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            alt=""
-            src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-          />
-        </noscript>
         {/* End Meta Pixel Code */}
+        {GOOGLE_ADS_ID ? (
+          <>
+            <Script
+              id="gtag-base"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GOOGLE_ADS_ID}',{ad_storage:'denied',analytics_storage:'denied'});`}
+            </Script>
+          </>
+        ) : null}
         {children}
         <PageViewTracker />
+        <ConsentBanner />
         <Analytics />
       </body>
     </html>

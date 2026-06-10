@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
+import { normalizeAndValidateExtractionUrl } from "@/lib/adstudio/extraction-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const body = await readJsonBody<{ assetType?: string; sourceUrl?: string; storagePath?: string }>(request);
   if (!(await brandKitExists(access.supabase, access.access.workspaceId, id))) {
     return NextResponse.json({ error: "Brand kit not found." }, { status: 404 });
+  }
+
+  if (body.sourceUrl) {
+    const urlResult = normalizeAndValidateExtractionUrl(body.sourceUrl);
+    if (!urlResult.ok) {
+      return NextResponse.json({ error: urlResult.error }, { status: 400 });
+    }
+    body.sourceUrl = urlResult.url;
   }
 
   const { data, error } = await access.supabase

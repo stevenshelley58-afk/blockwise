@@ -32,6 +32,8 @@ export type AdStudioJobRun = {
   } | null;
 };
 
+// Stub: job persistence not yet implemented. These functions build in-memory job
+// run objects only; they are never written to the database.
 export function createAdStudioJobRun(input: {
   workspaceId: string;
   jobType: AdStudioJobRun["jobType"];
@@ -60,7 +62,7 @@ export function failAdStudioJobRun(
   return {
     ...job,
     status: "failed",
-    finishedAt: new Date("2026-05-27T00:00:00.000Z").toISOString(),
+    finishedAt: new Date().toISOString(),
     error,
   };
 }

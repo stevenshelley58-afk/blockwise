@@ -21,6 +21,7 @@
     "trigger:deploy": "npx trigger.dev deploy"
   },
   "dependencies": {
+    "@sentry/nextjs": "^9.0.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@tanstack/react-table": "^8.21.3",
@@ -30,15 +31,16 @@
     "next": "^16.2.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-is": "^19.0.0",
     "recharts": "^3.8.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.0",
+    "@trigger.dev/sdk": "4.4.6",
     "@types/node": "^22.15.30",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
-    "@trigger.dev/sdk": "4.4.6",
     "typescript": "^5.8.3"
   },
   "overrides": {

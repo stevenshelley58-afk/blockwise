@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  buildDemoMonitorDashboardBundle,
   calculateValidCpl,
   calculateValidLeadRate,
-  mergeProviderReportsWithDemo,
+  normalizeProviderReport,
   resolveMonitorDateRange,
-  scopeDemoBundleToProviders,
 } from "../src/lib/monitor/dashboard-data.ts";
 
 test("resolveMonitorDateRange returns inclusive AU dashboard periods", () => {
@@ -59,82 +57,43 @@ test("valid lead metrics are zero-safe", () => {
   assert.equal(calculateValidCpl(3600, 0), 0);
 });
 
-test("demo dashboard bundle is deterministic and led by valid leads", () => {
-  const bundle = buildDemoMonitorDashboardBundle({
-    workspaceId: "workspace_demo",
-    range: "last_30",
-    now: new Date("2026-05-27T05:30:00.000Z"),
-  });
+test("normalizeProviderReport derives metrics, daily points, and row rates", () => {
+  const range = resolveMonitorDateRange("last_7", new Date("2026-05-27T05:30:00.000Z"));
 
-  assert.equal(bundle.workspaceId, "workspace_demo");
-  assert.equal(bundle.range.key, "last_30");
-  assert.equal(bundle.totals.spendAud, 5940);
-  assert.equal(bundle.totals.leads, 176);
-  assert.equal(bundle.totals.validLeads, 118);
-  assert.equal(bundle.totals.validLeadRate, 0.6705);
-  assert.equal(bundle.totals.validCplAud, 50.34);
-  assert.equal(bundle.providers.map((provider) => provider.provider).join(","), "meta,google");
-  assert.equal(bundle.topRows[0].name, "Suburb appraisal pulse");
-  assert.equal(bundle.leads.rows.length, 6);
-});
-
-test("a Meta-only workspace never surfaces Google demo data", () => {
-  const demo = buildDemoMonitorDashboardBundle({
-    workspaceId: "workspace_demo",
-    range: "last_7",
-    now: new Date("2026-05-27T05:30:00.000Z"),
-  });
-
-  const scoped = scopeDemoBundleToProviders(demo, new Set(["meta"]));
-
-  // No Google provider card, rows, or spend.
-  assert.deepEqual(scoped.providers.map((provider) => provider.provider), ["meta"]);
-  assert.ok(scoped.topRows.every((row) => row.provider === "meta"));
-  assert.ok(scoped.spendByCampaign.every((entry) => entry.provider === "meta"));
-
-  // No Google demo leads, but non-provider leads (CSV/Manual) stay.
-  assert.ok(scoped.leads.rows.every((lead) => lead.source !== "Google"));
-  assert.ok(scoped.leads.rows.some((lead) => lead.source === "CSV"));
-  assert.ok(scoped.leads.rows.some((lead) => lead.source === "Manual"));
-  assert.ok(scoped.leads.sourceSplit.every((entry) => entry.source !== "Google"));
-
-  // Totals reflect Meta + non-provider leads only (Google spend excluded).
-  const metaDemo = demo.providers.find((provider) => provider.provider === "meta");
-  assert.equal(scoped.totals.spendAud, metaDemo?.metrics.spendAud);
-});
-
-test("live provider reports override matching demo provider data without breaking the other provider", () => {
-  const demo = buildDemoMonitorDashboardBundle({
-    workspaceId: "workspace_demo",
-    range: "last_7",
-    now: new Date("2026-05-27T05:30:00.000Z"),
-  });
-
-  const merged = mergeProviderReportsWithDemo(demo, [
+  const report = normalizeProviderReport(
     {
       provider: "meta",
       status: "connected",
       source: "live",
       accountName: "Northstar Meta",
       lastSyncAt: "2026-05-27T04:30:00.000Z",
-      metrics: {
-        spendAud: 100,
-        impressions: 1000,
-        clicks: 100,
-        leads: 10,
-        validLeads: 8,
-      },
-      daily: [],
-      rows: [],
+      metrics: { spendAud: 100, impressions: 1000, clicks: 100, leads: 10, validLeads: 8 },
+      rows: [
+        {
+          id: "row_1",
+          provider: "meta",
+          type: "ad",
+          name: "Suburb pulse",
+          campaignName: "Seller lead ads",
+          status: "active",
+          spendAud: 100,
+          impressions: 1000,
+          clicks: 100,
+          leads: 10,
+          validLeads: 8,
+          insight: "",
+        },
+      ],
       creativePreviews: [],
     },
-  ]);
+    range,
+  );
 
-  const meta = merged.providers.find((provider) => provider.provider === "meta");
-  const google = merged.providers.find((provider) => provider.provider === "google");
-
-  assert.equal(meta?.source, "live");
-  assert.equal(meta?.metrics.validCplAud, 12.5);
-  assert.equal(google?.source, "demo");
-  assert.equal(merged.totals.spendAud, 2140);
+  assert.equal(report.metrics.validCplAud, 12.5);
+  assert.equal(report.metrics.cplAud, 10);
+  assert.equal(report.metrics.validLeadRate, 0.8);
+  assert.equal(report.daily.length, range.days);
+  assert.equal(report.daily.reduce((sum, point) => sum + point.spendAud, 0), 100);
+  assert.equal(report.rows[0].ctr, 0.1);
+  assert.equal(report.rows[0].cpcAud, 1);
 });

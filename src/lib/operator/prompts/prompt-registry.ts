@@ -31,6 +31,11 @@ export const PROMPT_GROUPS = [
       "adstudio.background.negative_prompt",
     ],
   },
+  {
+    key: "scoring",
+    label: "Scoring",
+    promptKeys: ["adstudio.scoring.system"],
+  },
 ] as const;
 
 export const PROMPT_KEYS = PROMPT_GROUPS.flatMap((group) => group.promptKeys);
@@ -60,6 +65,7 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.background.system": "system",
   "adstudio.background.input_template": "input_template",
   "adstudio.background.negative_prompt": "negative_prompt",
+  "adstudio.scoring.system": "system",
 } satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
@@ -186,6 +192,17 @@ Background task:
 
 {{NEGATIVE_PROMPT}}`,
   "adstudio.background.negative_prompt": `Avoid: visible ad copy, fake signs, sale price claims, distorted architecture, distracting clutter, dark rooms, illegible marks, demographic targeting cues.`,
+  "adstudio.scoring.system": `You judge Meta lead-generation ad copy variants for Australian residential real estate. Score each variant on six dimensions using these exact ranges:
+- offerClarity (0-20): how obvious and concrete the offer is.
+- localRelevance (0-15): how grounded the copy is in the named suburb/market.
+- leadIntentStrength (0-20): how likely the copy attracts genuine seller/buyer leads, not idle clicks.
+- brandFit (0-15): how well the copy matches the stated brand voice and constraints.
+- complianceSafety (0-20): absence of guarantees, pressure, discriminatory or demographic targeting language.
+- visualHierarchy (0-10): how well the headline/primary text/CTA work as a scannable ad unit.
+Be discriminating: identical-quality variants may tie, but reserve top scores for genuinely strong copy.
+Respond with ONLY compact JSON:
+{"variants":[{"variantId": string, "offerClarity": number, "localRelevance": number, "leadIntentStrength": number, "brandFit": number, "complianceSafety": number, "visualHierarchy": number, "notes": [string], "warnings": [string]}]}
+Include every variantId you were given exactly once. Keep notes short (max 3) and warnings only for real risks.`,
 };
 
 const PROMPT_KEY_SET = new Set<string>(PROMPT_KEYS);

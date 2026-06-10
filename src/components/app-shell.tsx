@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronDown, ChevronRight, ChevronsLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
@@ -155,7 +155,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   }
 
   const variant: SidebarVariant = isOperator ? "operator" : workspaceMode === "self_serve" ? "self_serve" : "monitor";
-  const homeHref = isOperator ? "/operator" : "/results";
+  const homeHref = isOperator ? "/operator" : "/self-serve";
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
   const accountName = profile?.full_name ?? user.email ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";
@@ -179,18 +179,13 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
               </span>
               <ChevronRight aria-hidden size={16} />
             </a>
-            <button className="sidebar-collapse" type="button" disabled>
-              <ChevronsLeft aria-hidden size={17} />
-              Collapse
-            </button>
           </div>
         ) : null}
       </aside>
       <div className="main">
         <header className="topbar">
-          <span className="workspace-chip">
+          <span className="workspace-chip" aria-label={`Workspace: ${workspaceName}`}>
             {workspaceName} - {workspace?.region ?? "AU"}
-            <ChevronDown aria-hidden size={15} />
           </span>
           <div className="topbar-actions">
             <TrialStatusPill initialStatus={initialTrialStatus} />

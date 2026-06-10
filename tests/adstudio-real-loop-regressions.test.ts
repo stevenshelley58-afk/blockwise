@@ -189,9 +189,11 @@ test("campaign creation uses shared AI copy enrichment without changing copy rou
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
   assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(enrichment, /catch \(error\)/);
-  assert.match(enrichment, /let lastError: unknown = null/);
-  assert.match(enrichment, /if \(lastError\) throw lastError/);
+  // A0: variants enrich in parallel; zero-success still surfaces a real failure
+  // instead of silently shipping the unwritten template copy.
+  assert.match(enrichment, /Promise\.allSettled/);
+  assert.match(enrichment, /let firstError: unknown = null/);
+  assert.match(enrichment, /if \(firstError\) throw firstError/);
   assert.match(enrichment, /return input\.pack/);
 });
 
@@ -201,15 +203,6 @@ test("publish readiness hides internal provider-write env wording from customer 
 
   assert.match(labelBlock, /Enable live publishing for this workspace/);
   assert.doesNotMatch(labelBlock, /BLOCKWISE_ENABLE_PROVIDER_WRITES/);
-});
-
-test("production repair script is dry-run first and repairs by campaign variant instead of assuming Story creatives", () => {
-  const source = readFileSync("scripts/adstudio-repair-production-data.mjs", "utf8");
-
-  assert.match(source, /process\.argv\.includes\("--execute"\)/);
-  assert.match(source, /Dry run only/);
-  assert.match(source, /variant_id/);
-  assert.doesNotMatch(source, /format === "9:16"/);
 });
 
 test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {

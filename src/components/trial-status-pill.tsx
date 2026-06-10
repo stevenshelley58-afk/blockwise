@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -62,23 +62,26 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         alignItems: "center",
         gap: 8,
         minHeight: 34,
+        maxWidth: "min(100%, 320px)",
+        overflow: "hidden",
         border: "1px solid var(--line)",
         borderRadius: 999,
         background: "#fff",
         padding: "0 8px 0 12px",
-        boxShadow: "0 1px 2px rgba(15,23,41,.05)",
+        boxShadow: "0 1px 2px rgba(15,23,42,.05)",
         color: "var(--ink)",
         fontSize: 12.5,
         fontWeight: 650,
+        fontVariantNumeric: "tabular-nums",
         whiteSpace: "nowrap",
       }}
     >
-      <span>{trialLabel}</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{trialLabel}</span>
       <span aria-hidden style={{ color: "var(--line)", fontWeight: 500 }}>
         |
       </span>
       <span>{remaining}/{included} free ad packs left</span>
-      <span aria-hidden style={{ color: "var(--muted)", fontWeight: 550 }}>
+      <span aria-hidden className="hidden sm:inline" style={{ color: "var(--muted)", fontWeight: 550 }}>
         {used} used
       </span>
       <button

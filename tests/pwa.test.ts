@@ -17,9 +17,9 @@ test("manifest exposes the Blockwise install metadata", () => {
 
   assert.equal(appManifest.name, "Blockwise");
   assert.equal(appManifest.short_name, "Blockwise");
-  assert.equal(appManifest.start_url, "/pwa?source=pwa");
+  assert.equal(appManifest.start_url, "/");
   assert.equal(appManifest.scope, "/");
-  assert.equal(appManifest.display, "standalone");
+  assert.equal(appManifest.display, "browser");
   assert.equal(appManifest.background_color, "#ffffff");
   assert.equal(appManifest.theme_color, "#123e75");
   assert.deepEqual(

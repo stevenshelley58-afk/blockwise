@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections } from "@/lib/auth/access-control";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { buildProviderAuthorizationUrl } from "@/lib/providers/oauth-handlers";
 import { createOAuthStatePayload, signOAuthState } from "@/lib/providers/oauth-state";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,25 +15,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/results?integration=google&error=disabled", request.nextUrl.origin));
   }
 
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
+  const guard = await requireApiWorkspace(request, "monitor");
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { access } = guard;
 
-  if (!canManageProviderConnections(access.access)) {
+  if (!canManageProviderConnections(access)) {
     return NextResponse.json({ error: "Provider connection management requires owner or admin access." }, { status: 403 });
   }
 
   const state = signOAuthState(
     createOAuthStatePayload({
       provider: "google",
-      workspaceId: access.access.workspaceId,
-      userId: access.access.userId,
+      workspaceId: access.workspaceId,
+      userId: access.userId,
       returnPath: "/results",
     }),
   );

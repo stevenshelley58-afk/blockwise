@@ -16,6 +16,16 @@ import {
   validateAssetUploadFile,
 } from "@/lib/upload/asset-file";
 
+const REGION_CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", GB: "GBP", US: "USD", CA: "CAD" };
+
+const REGION_NAMES: Record<string, string> = {
+  AU: "Australia",
+  NZ: "New Zealand",
+  GB: "United Kingdom",
+  US: "United States",
+  CA: "Canada",
+};
+
 type JsonObject = Record<string, unknown>;
 
 type BrandKitRow = {
@@ -318,7 +328,7 @@ export function OnboardingWizard({
             <p>These details come from your signed-in workspace.</p>
             {!canSaveProfile ? <StatusPill tone="blue">Managed by an owner or admin</StatusPill> : null}
             <label className="wizard-field">
-              <span className="wizard-label">Agency name</span>
+              <span className="wizard-label">Business name</span>
               <input
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
@@ -328,12 +338,16 @@ export function OnboardingWizard({
             </label>
             <label className="wizard-field">
               <span className="wizard-label">Region</span>
-              <input
+              <select
                 value={profileRegion}
                 onChange={(event) => setProfileRegion(event.target.value)}
-                readOnly={!canSaveProfile}
+                disabled={!canSaveProfile}
                 required
-              />
+              >
+                {Object.keys(REGION_CURRENCY).map((r) => (
+                  <option key={r} value={r}>{REGION_NAMES[r] ?? r}</option>
+                ))}
+              </select>
             </label>
             {message ? <p className={`wizard-status ${message.tone}`}>{message.text}</p> : null}
             <div className="wizard-actions">

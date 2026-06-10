@@ -33,7 +33,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
         <Link className="button secondary" href="/ad-radar">
           Back to ads
         </Link>
-        <span className="operator-ad-code">{id}</span>
+        <span className="advertiser-ad-code">{id}</span>
       </div>
 
       {error ? (

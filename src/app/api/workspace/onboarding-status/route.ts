@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +23,6 @@ function canTransition(current: OnboardingStatus, next: OnboardingStatus): boole
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
   const body = (await request.json().catch(() => null)) as { status?: unknown; workspaceId?: unknown } | null;
   const nextStatus = body?.status;
 
@@ -33,19 +31,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   const requestedWorkspaceId = typeof body?.workspaceId === "string" ? body.workspaceId : request.nextUrl.searchParams.get("workspaceId");
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "self_serve",
-    requestedWorkspaceId,
-  });
+  const guard = await requireApiWorkspace(request, "self_serve", requestedWorkspaceId);
 
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
   const { data: workspace, error: readError } = await supabase
     .from("workspaces")
     .select("*")
-    .eq("id", access.access.workspaceId)
+    .eq("id", access.workspaceId)
     .maybeSingle();
 
   if (readError || !workspace) {
@@ -64,11 +58,11 @@ export async function PATCH(request: NextRequest) {
   const { error: updateError } = await supabase
     .from("workspaces")
     .update({ onboarding_status: nextStatus, updated_at: new Date().toISOString() })
-    .eq("id", access.access.workspaceId);
+    .eq("id", access.workspaceId);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ onboardingStatus: nextStatus, workspaceId: access.access.workspaceId });
+  return NextResponse.json({ onboardingStatus: nextStatus, workspaceId: access.workspaceId });
 }
