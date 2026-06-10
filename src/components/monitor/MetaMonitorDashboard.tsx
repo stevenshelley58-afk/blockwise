@@ -152,7 +152,7 @@ function Dashboard({ payload, onSelectAd }: { payload: MetaMonitorPayload; onSel
         />
         <MetaKpiCard
           icon={UserCheck}
-          iconTone="purple"
+          iconTone="slate"
           label="Valid leads"
           value={summary.validLeads.toLocaleString("en-AU")}
           compareText={compare}

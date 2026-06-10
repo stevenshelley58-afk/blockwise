@@ -1,5 +1,5 @@
-export const CONSOLE_STYLES = `
-.rops{--rops-good:#006d38;--rops-good-tint:#ecfdf5;--rops-warn:#8a5a00;--rops-warn-tint:#fdf8ee;--rops-bad:#ba1a1a;--rops-bad-tint:#fdf3f2;--rops-sh:0 1px 2px rgba(15,23,41,.05),0 0 0 1px rgba(15,23,41,.03);
+﻿export const CONSOLE_STYLES = `
+.rops{--rops-good:#006d38;--rops-good-tint:#ecfdf5;--rops-warn:#8a5a00;--rops-warn-tint:#fdf8ee;--rops-bad:#ba1a1a;--rops-bad-tint:#fdf3f2;--rops-sh:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);
   background:#f8fafc;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:13px;color:var(--ink)}
 .rops *{box-sizing:border-box}
 .rops button{cursor:pointer;font:inherit}
@@ -20,7 +20,7 @@ export const CONSOLE_STYLES = `
 .rops-input:focus,.rops-select:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
 .rops-btn{height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 13px;font-weight:600;font-size:12.5px;white-space:nowrap;box-shadow:var(--rops-sh)}
 .rops-btn:hover{background:var(--surface-subtle)}
-.rops-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(31,58,110,.28)}
+.rops-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(18,62,117,.28)}
 .rops-btn.primary:hover{background:var(--accent-strong)}
 .rops-btn.danger{color:var(--rops-bad);border-color:#ffdad6}
 .rops-btn.danger:hover{background:var(--rops-bad-tint)}

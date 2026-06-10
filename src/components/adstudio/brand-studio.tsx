@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -197,7 +197,7 @@ function TagRow({
         <span key={item} className={tone === "no" ? "no" : ""}>
           {item}
           <b role="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>
-            ✕
+            âœ•
           </b>
         </span>
       ))}
@@ -218,7 +218,7 @@ function TagRow({
         />
       ) : (
         <button type="button" className="addbtn" onClick={() => setAdding(true)}>
-          ＋ Add phrase
+          ï¼‹ Add phrase
         </button>
       )}
     </div>
@@ -352,7 +352,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
       if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
       setKit(json.brandKit);
       setScanUrl(json.brandKit.source.url.replace(/^https?:\/\//, ""));
-      flash("ok", "Scan complete — kit updated from your site.");
+      flash("ok", "Scan complete â€” kit updated from your site.");
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not scan the site.");
     } finally {
@@ -435,24 +435,24 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
 
       <div className="bs-top">
         <Link href="/ad-studio" className="back">
-          ‹ Ad Studio
+          â€¹ Ad Studio
         </Link>
         <h1>Brand Studio</h1>
-        <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
+        <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "âœ“ Approved" : "Pending review"}</span>
         <div className="grow">
           {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
           <button className="btn sec" type="button" disabled={busy !== ""} onClick={() => void saveKit()}>
-            {busy === "save" ? "Saving…" : "Save draft"}
+            {busy === "save" ? "Savingâ€¦" : "Save draft"}
           </button>
           <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void saveKit("approved")}>
-            {busy === "approve" ? "Approving…" : "✓ Approve kit"}
+            {busy === "approve" ? "Approvingâ€¦" : "âœ“ Approve kit"}
           </button>
         </div>
       </div>
 
       <div className="bs-scroll">
         <div className="bs-hero">
-          <div className="kick">Brand kit · Real estate · {kit.identity.marketRegion ?? "AU"}</div>
+          <div className="kick">Brand kit Â· Real estate Â· {kit.identity.marketRegion ?? "AU"}</div>
           <h2>
             <input
               value={kit.identity.businessName}
@@ -469,7 +469,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
               <input value={scanUrl} aria-label="Website" onChange={(event) => setScanUrl(event.target.value)} />
             </span>
             <button type="button" className="go" disabled={busy !== ""} onClick={() => void scanSite()}>
-              {busy === "scan" ? "Scanning…" : "↻ Re-scan site"}
+              {busy === "scan" ? "Scanningâ€¦" : "â†» Re-scan site"}
             </button>
           </div>
         </div>
@@ -477,7 +477,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
         <div className="bs-logo-proof">
           <div className="lp">
             <div className="face" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}★ ${brandName.split(" ")[0]?.toLowerCase()}`}
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}â˜… ${brandName.split(" ")[0]?.toLowerCase()}`}
             </div>
             <small>
               <b>Primary</b>
@@ -486,7 +486,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
           </div>
           <div className="lp">
             <div className="face" style={{ background: "#001b3d", color: "#fff" }}>
-              {initial}★ {brandName.split(" ")[0]?.toLowerCase()}
+              {initial}â˜… {brandName.split(" ")[0]?.toLowerCase()}
             </div>
             <small>
               <b>Dark</b>
@@ -494,7 +494,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
             </small>
           </div>
           <div className="lp">
-            <div className="face photo">{initial}★</div>
+            <div className="face photo">{initial}â˜…</div>
             <small>
               <b>Mark</b>
               <em>on photo</em>
@@ -551,7 +551,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                   />
                 ))}
               </div>
-              <span className="subtle">Click a swatch to change it — the preview updates as you pick.</span>
+              <span className="subtle">Click a swatch to change it â€” the preview updates as you pick.</span>
             </section>
 
             <section className="bs-card">
@@ -561,7 +561,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                 <div className="rows">
                   <div>
                     <small>
-                      Headings ·{" "}
+                      Headings Â·{" "}
                       <input
                         className="font-name"
                         value={kit.typography.headingFont}
@@ -575,7 +575,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                   </div>
                   <div>
                     <small>
-                      Body ·{" "}
+                      Body Â·{" "}
                       <input
                         className="font-name"
                         value={kit.typography.bodyFont}
@@ -709,7 +709,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                       }))
                     }
                   >
-                    ＋ Add disclaimer
+                    ï¼‹ Add disclaimer
                   </button>
                 </div>
               </section>
@@ -722,7 +722,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
               <div className="minis">
                 <div className="mini-story">
                   <span className="bc" style={{ color: kit.colours.primary }}>
-                    {initial}★ {brandName.split(" ")[0]}
+                    {initial}â˜… {brandName.split(" ")[0]}
                   </span>
                   <h5>{headlineSample}</h5>
                   <span className="cta" style={{ color: kit.colours.primary }}>
@@ -742,7 +742,7 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
                 </div>
               </div>
               <small>
-                Re-renders as you edit — voice line:
+                Re-renders as you edit â€” voice line:
                 <br />
                 <b>{voiceLine || "describe your voice above"}</b>
               </small>
@@ -766,9 +766,9 @@ const BRAND_STYLES = `
 .bs-screen .asset-upload-trigger{border:1.5px dashed var(--line);background:#fff;color:var(--ink)}
 .bs-screen .asset-upload-clear{border:1px solid var(--line);background:#fff;color:var(--muted)}
 .bs-screen .btn{height:38px;padding:0 16px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px}
-.bs-screen .btn.pri{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(31,58,110,.28)}
+.bs-screen .btn.pri{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(18,62,117,.28)}
 .bs-screen .btn.pri:hover{background:var(--accent-strong)}
-.bs-screen .btn.sec{background:#fff;border:1px solid var(--line);box-shadow:0 1px 2px rgba(15,23,41,.05)}
+.bs-screen .btn.sec{background:#fff;border:1px solid var(--line);box-shadow:0 1px 2px rgba(15,23,42,.05)}
 .bs-screen .btn:disabled{opacity:.55;cursor:not-allowed}
 .bs-screen .chip{font-size:11.5px;font-weight:650;border-radius:999px;padding:5px 11px}
 .bs-screen .chip.good{background:#ecfdf5;color:#006d38}
@@ -794,7 +794,7 @@ const BRAND_STYLES = `
 .bs-hero .go{height:42px;padding:0 18px;border-radius:10px;background:#fff;color:var(--ink);font-weight:650;white-space:nowrap}
 .bs-hero .go:disabled{opacity:.6}
 .bs-logo-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:740px;margin:-50px 28px 0;position:relative;z-index:2}
-.bs-logo-proof .lp{border-radius:14px;box-shadow:0 12px 34px rgba(15,23,41,.16);overflow:hidden;background:#fff}
+.bs-logo-proof .lp{border-radius:14px;box-shadow:0 12px 34px rgba(15,23,42,.16);overflow:hidden;background:#fff}
 .bs-logo-proof .face{height:90px;display:grid;place-items:center;font-weight:800;font-size:21px;letter-spacing:-.3px}
 .bs-logo-proof .face img{display:block;max-width:78%;max-height:58px;object-fit:contain}
 .bs-logo-proof .face.photo{background:linear-gradient(160deg,#3a608f,#0d3263);color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
@@ -803,17 +803,17 @@ const BRAND_STYLES = `
 .bs-logo-proof small em{font-style:normal;color:var(--faint,#94a3b8)}
 .bs-body{display:grid;grid-template-columns:1fr 320px;gap:22px;padding:24px 28px 40px}
 .bs-main{display:grid;gap:18px;align-content:start;min-width:0}
-.bs-card{background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,41,.05),0 0 0 1px rgba(15,23,41,.03);padding:20px;display:grid;gap:14px}
+.bs-card{background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);padding:20px;display:grid;gap:14px}
 .bs-card h3{font-size:15.5px;font-weight:680;letter-spacing:-.2px;margin:0}
 .bs-card .subtle{font-size:12.5px;color:var(--muted)}
 .bs-swrow{display:flex;gap:14px;flex-wrap:wrap}
 .bs-swatch{display:grid;gap:7px;justify-items:center;position:relative}
-.bs-swatch .well{width:64px;height:64px;border-radius:16px;border:1px solid rgba(15,23,41,.08);box-shadow:0 1px 2px rgba(15,23,41,.05);transition:transform .12s;padding:0}
+.bs-swatch .well{width:64px;height:64px;border-radius:16px;border:1px solid rgba(15,23,42,.08);box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .12s;padding:0}
 .bs-swatch .well:hover{transform:translateY(-2px)}
 .bs-swatch.open .well{outline:2.5px solid var(--accent);outline-offset:2px}
 .bs-swatch b{font-size:12px;font-weight:650}
 .bs-swatch small{font-size:10.5px;color:var(--faint,#94a3b8);letter-spacing:.4px}
-.bs-picker{position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:40;width:248px;background:#fff;border-radius:14px;box-shadow:0 10px 32px rgba(15,23,41,.16),0 2px 6px rgba(15,23,41,.07);padding:14px;display:grid;gap:11px}
+.bs-picker{position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:40;width:248px;background:#fff;border-radius:14px;box-shadow:0 10px 32px rgba(15,23,42,.16),0 2px 6px rgba(15,23,42,.07);padding:14px;display:grid;gap:11px}
 .bs-picker::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:#fff;border-radius:2px}
 .bs-picker .sv{position:relative;width:100%;aspect-ratio:5/3.4;border-radius:10px;cursor:crosshair;touch-action:none;background:linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)}
 .bs-picker .sv .cur{position:absolute;width:14px;height:14px;border-radius:99px;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:translate(-7px,-7px);pointer-events:none}
@@ -822,7 +822,7 @@ const BRAND_STYLES = `
 .bs-picker .from-site{display:grid;gap:6px}
 .bs-picker .from-site small{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--faint,#94a3b8)}
 .bs-picker .from-site .dots{display:flex;gap:7px}
-.bs-picker .from-site .dots button{width:22px;height:22px;border-radius:7px;border:1px solid rgba(15,23,41,.1);padding:0}
+.bs-picker .from-site .dots button{width:22px;height:22px;border-radius:7px;border:1px solid rgba(15,23,42,.1);padding:0}
 .bs-picker .pick-foot{display:flex;align-items:center;gap:8px}
 .bs-picker .hexwrap{flex:1;height:34px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;padding:0 10px;gap:6px;font-weight:600;font-size:12.5px}
 .bs-picker .hexwrap input{border:0;outline:0;width:100%;text-transform:uppercase;letter-spacing:.5px;background:transparent}

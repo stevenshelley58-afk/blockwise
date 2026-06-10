@@ -41,13 +41,20 @@ test("onboarding logo upload previews flexible file input", () => {
   assert.match(wizard, /capturePagePaste/);
 });
 
-test("landing CTA tracking only fires for managed setup links", () => {
+test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only for managed setup", () => {
   const ctaLink = readFileSync("src/components/landing/cta-link.tsx", "utf8");
+  const pixel = readFileSync("src/lib/analytics/pixel.ts", "utf8");
   const homepage = readFileSync("src/app/page.tsx", "utf8");
 
+  // Every CTA fires a cta_click with the location label.
+  assert.match(ctaLink, /trackCtaClick\(location/);
+  assert.match(pixel, /trackCustom", "cta_click"/);
+  // Managed setup links also fire BookDemoClick for analytics continuity.
   assert.match(ctaLink, /if \(href === "#managed-setup"\)/);
   assert.match(ctaLink, /trackDemoCtaClick\(location\)/);
+  // The hook is not a single arrow-onClick that fires only for managed setup.
   assert.doesNotMatch(ctaLink, /onClick=\{\(\) => trackDemoCtaClick\(location\)\}/);
+  // The page still has both kinds of links.
   assert.match(homepage, /href="\/signup"/);
   assert.match(homepage, /href="#managed-setup"/);
 });

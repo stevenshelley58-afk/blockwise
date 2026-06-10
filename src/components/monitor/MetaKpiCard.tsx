@@ -4,7 +4,7 @@ import { formatPercent } from "@/lib/meta-monitor/calculations";
 
 export function MetaKpiCard(props: {
   icon: LucideIcon;
-  iconTone: "blue" | "green" | "purple" | "orange" | "rose" | "indigo";
+  iconTone: "blue" | "green" | "slate" | "orange" | "rose" | "indigo";
   label: string;
   value: string;
   compareText?: string;
