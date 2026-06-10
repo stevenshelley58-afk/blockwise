@@ -197,6 +197,11 @@
 .studio-busy-card svg{animation:studio-spin 1s linear infinite;color:var(--accent)}
 @keyframes studio-spin{to{transform:rotate(360deg)}}
 .studio-busy-card span{color:var(--muted);font-size:12px}
+
+/* Inline stage progress line — sits inside a panel and tells the user
+   which stage of a multi-step generation is running. */
+.studio-progress{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-size:12.5px;font-weight:650;padding:8px 10px;border-radius:var(--r-ctl);background:var(--accent-tint)}
+.studio-progress svg{animation:studio-spin 1s linear infinite;flex:0 0 auto}
 .studio-variant-strip{flex:0 0 198px;min-height:0;overflow:hidden;border-top:1px solid rgba(255,255,255,.08);background:transparent;padding:12px 20px 14px}
 .studio-variant-strip-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .studio-variant-strip-head strong{color:#d6e3ff;font-weight:600;font-size:13px}

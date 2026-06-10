@@ -98,11 +98,20 @@ export function CopyPanel({
             className="studio-btn accent"
             type="button"
             disabled={generating}
+            aria-busy={generating || undefined}
             onClick={() => onGenerate("ai", context)}
           >
             <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Write it for me"}
           </button>
+          {generating ? (
+            <span className="studio-progress" role="status" aria-live="polite">
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden>
+                <path d="M21 12a9 9 0 1 1-9-9" strokeLinecap="round" />
+              </svg>
+              Writing copy…
+            </span>
+          ) : null}
           {feedbackNode}
           <CopyFields copy={copy} updateCopy={updateCopy} />
           {hasAlternates && (
@@ -149,11 +158,20 @@ export function CopyPanel({
             className="studio-btn accent"
             type="button"
             disabled={generating}
+            aria-busy={generating || undefined}
             onClick={() => onGenerate("brief", context)}
           >
             <Zap aria-hidden size={15} />
             {generating ? "Writing…" : "Generate copy from brief"}
           </button>
+          {generating ? (
+            <span className="studio-progress" role="status" aria-live="polite">
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden>
+                <path d="M21 12a9 9 0 1 1-9-9" strokeLinecap="round" />
+              </svg>
+              Writing copy from your brief…
+            </span>
+          ) : null}
           {feedbackNode}
           <div className="studio-copy-result" aria-label="Current ad copy">
             <strong>Current ad copy</strong>
