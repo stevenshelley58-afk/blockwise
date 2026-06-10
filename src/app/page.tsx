@@ -121,10 +121,10 @@ export default function HomePage() {
                 </a>
               </div>
               <div className="lp-trust-row" aria-label="Product trust points">
-                <TrustPoint label="Use your own ad account" />
-                <TrustPoint label="Agent approval required" />
-                <TrustPoint label="Budget controlled by you" />
-                <TrustPoint label="Reporting inside Blockwise" />
+                <TrustPoint label="Live ads from one listing in minutes" />
+                <TrustPoint label="You approve every ad before it spends" />
+                <TrustPoint label="Hard budget caps, no surprises" />
+                <TrustPoint label="Results tracked in one dashboard" />
               </div>
             </div>
 
