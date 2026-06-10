@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { canManageProviderConnections } from "../src/lib/auth/access-control.ts";
 import {
-  canManageProviderConnections,
   hasOperatorAccessFromRows,
   resolveRequestedWorkspaceAccess,
 } from "../src/lib/auth/workspace-access.ts";

@@ -5,7 +5,7 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listLeadRowsWithDedupe } from "@/lib/product/live-data";
+import { listLeadRowsWithDedupe } from "@/lib/leads/rows";
 
 export const dynamic = "force-dynamic";
 

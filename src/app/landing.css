@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   Landing page â€” "Executive Precision" (stitch source, mock v2)
+/* ============================================================
+   Landing page — "Executive Precision" (stitch source, mock v2)
    Namespaced lp-* to avoid collisions with app styles.
    Headlines: Manrope (--font-manrope); body: Inter.
    ============================================================ */
@@ -86,7 +86,7 @@
   margin: 0; font-size: clamp(1.8rem, 3vw, 2.5rem);
   line-height: 1.12; letter-spacing: -.025em; font-weight: 800;
 }
-.lp .lp-h2-light { color: #fff; } /* .lp h2 sets ink â€” needs the extra specificity on dark bands */
+.lp .lp-h2-light { color: #fff; } /* .lp h2 sets ink — needs the extra specificity on dark bands */
 .lp-lead { margin: 18px 0 0; max-width: 620px; font-size: 17px; line-height: 1.65; color: var(--lp-muted); }
 .lp-lead-light { color: rgba(255, 255, 255, 0.82); }
 
@@ -98,7 +98,7 @@
 .lp-center-head .lp-lead { margin-left: auto; margin-right: auto; }
 .lp-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 72px; align-items: center; }
 
-/* hero â€” light, photo card right with floating performance card */
+/* hero — light, photo card right with floating performance card */
 .lp-hero {
   padding: 84px 0 110px;
   background: linear-gradient(180deg, var(--lp-surface) 0%, #fff 320px);
@@ -140,7 +140,7 @@
   color: #fff; flex: none;
 }
 
-/* hero media â€” oversized photo card, breaks out toward the right viewport edge */
+/* hero media — oversized photo card, breaks out toward the right viewport edge */
 .lp-hero-media {
   position: relative;
   margin-right: clamp(-160px, calc(28px - (100vw - min(1200px, 100vw - 48px)) / 2), 0px);
@@ -152,7 +152,7 @@
   box-shadow: 0 30px 70px -28px rgba(10, 42, 84, 0.45);
 }
 
-/* hero performance card â€” anchored in the photo's bottom-right corner */
+/* hero performance card — anchored in the photo's bottom-right corner */
 .lp-perf {
   position: absolute; right: 22px; bottom: 22px;
   width: min(58%, 396px);
@@ -588,7 +588,7 @@
   100% { background-position: 0% 50%; }
 }
 
-/* pipeline (how it works) â€” dark band with UI preview cards */
+/* pipeline (how it works) — dark band with UI preview cards */
 .lp-pipeline { background: var(--lp-navy-deep); }
 .lp-pipeline .lp-center-head { margin-bottom: 56px; }
 .lp-pipe-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; align-items: start; }
@@ -734,7 +734,7 @@
 .lp-setup-card h3 { margin: 0 0 10px; font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: #fff; }
 .lp-setup-card p { margin: 0 0 18px; font-size: 13.5px; line-height: 1.6; color: rgba(255, 255, 255, 0.72); }
 
-/* demo section â€” card around the shared .demo-form */
+/* demo section — card around the shared .demo-form */
 #demo .demo-form {
   background: var(--surface);
   border: 1px solid var(--lp-border);

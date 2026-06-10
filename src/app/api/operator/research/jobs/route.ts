@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { recordAuditLog } from "@/lib/supabase/audit";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -75,12 +76,12 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await createSupabaseServiceClient().from("audit_logs").insert({
-    workspace_id: null,
-    actor_profile_id: guard.userId,
+  await recordAuditLog(createSupabaseServiceClient(), {
+    workspaceId: null,
+    actorProfileId: guard.userId,
     action: "manual_research_job_created",
-    target_type: "research_work_queue",
-    target_id: data.id,
+    targetType: "research_work_queue",
+    targetId: data.id,
     metadata: {
       operatorEmail: guard.email,
       jobType: data.job_type,

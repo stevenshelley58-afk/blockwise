@@ -1,7 +1,7 @@
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { PageHeading } from "@/components/page-heading";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { canManageProviderConnections } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 
 export const dynamic = "force-dynamic";

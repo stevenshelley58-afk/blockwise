@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import {
   CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
   RESEARCH_AD_SELECT,
@@ -18,17 +18,14 @@ const saveSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const guard = await requireApiWorkspace(request, "monitor");
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
   const { data: savedRows, error } = await supabase
     .from("research_saved_ads")
     .select("*")
-    .eq("workspace_id", access.access.workspaceId)
+    .eq("workspace_id", access.workspaceId)
     .neq("handoff_status", "archived")
     .order("created_at", { ascending: false })
     .limit(200);
@@ -48,12 +45,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, {
-    surface: "monitor",
-    requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
-  });
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const guard = await requireApiWorkspace(request, "monitor");
+  if (!guard.ok) return guard.response;
+  const { supabase, access } = guard;
 
   const parsed = saveSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -75,12 +69,12 @@ export async function POST(request: NextRequest) {
     .from("research_saved_ads")
     .upsert(
       {
-        workspace_id: access.access.workspaceId,
+        workspace_id: access.workspaceId,
         observed_ad_id: parsed.data.observedAdId,
         ad_creative_id: creativeRows.data?.id ?? null,
         note: parsed.data.note ?? null,
         source_snapshot_url: ad.source.snapshotUrl,
-        created_by: access.access.userId,
+        created_by: access.userId,
         handoff_status: "saved",
       },
       { onConflict: "workspace_id,observed_ad_id" },

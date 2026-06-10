@@ -13,7 +13,6 @@ export function gtagConversionDemoForm(adsId: string): void {
 }
 
 export function gtagConversionSignup(adsId: string): void {
-  // TODO: Call alongside CompleteRegistration in confirm-registration-tracker.tsx
   if (typeof window === "undefined" || !window.gtag) return;
   window.gtag("event", "conversion", { send_to: `${adsId}/signup` });
 }

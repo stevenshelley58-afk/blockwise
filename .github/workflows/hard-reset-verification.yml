@@ -36,6 +36,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+          TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
 
   e2e:
     name: Research card E2E

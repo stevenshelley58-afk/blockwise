@@ -1,4 +1,4 @@
-import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../campaigns/publishing.ts";
+import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 
 type ProviderKey = "meta" | "google";

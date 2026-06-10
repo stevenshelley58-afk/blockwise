@@ -29,3 +29,7 @@ _archive/
 
 # Office temp/owner-lock files
 ~$*
+
+# Agent-generated media artifacts
+matrix-media-*.png
+ad-template-library/images/mockups/

@@ -7,10 +7,11 @@ function read(path: string): string {
 }
 
 test("mobile media tab renders the real upload and library panel", () => {
-  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
-  const mediaStart = workbench.indexOf('studio.mobileTab === "media"');
-  const copyStart = workbench.indexOf('studio.mobileTab === "copy"');
-  const mediaBlock = workbench.slice(mediaStart, copyStart);
+  // Mobile layout JSX lives in workbench-mobile.tsx (extracted from the workbench).
+  const mobileBody = read("src/components/adstudio/workbench-mobile.tsx");
+  const mediaStart = mobileBody.indexOf('studio.mobileTab === "media"');
+  const copyStart = mobileBody.indexOf('studio.mobileTab === "copy"');
+  const mediaBlock = mobileBody.slice(mediaStart, copyStart);
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
 
   assert.ok(mediaStart > -1);
@@ -41,12 +42,14 @@ test("brief copy generation leaves editable copy visible with inline feedback", 
 
 test("mobile campaign chip opens ad details instead of acting like a dead dropdown", () => {
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  // Mobile layout JSX lives in workbench-mobile.tsx (extracted from the workbench).
+  const mobileBody = read("src/components/adstudio/workbench-mobile.tsx");
   const styles = read("src/components/adstudio/styles.ts");
 
   assert.match(workbench, /const \[mobileAdDetailsOpen, setMobileAdDetailsOpen\]/);
-  assert.match(workbench, /onClick=\{\(\) => setMobileAdDetailsOpen\(true\)\}/);
-  assert.match(workbench, /className="studio-mobile-sheet"/);
-  assert.match(workbench, /renderCampaignPanel\(\{ mobileSheet: true \}\)/);
+  assert.match(mobileBody, /onClick=\{\(\) => setMobileAdDetailsOpen\(true\)\}/);
+  assert.match(mobileBody, /className="studio-mobile-sheet"/);
+  assert.match(mobileBody, /renderCampaignPanel\(\{ mobileSheet: true \}\)/);
   assert.match(styles, /studio-mobile-sheet-backdrop/);
 });
 

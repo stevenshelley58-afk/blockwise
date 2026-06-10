@@ -1,7 +1,7 @@
 "use client";
 
-import { Bot, Lock, MessageSquare, Send, X } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { Bot, Lock, MessageSquare, Send } from "lucide-react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 
 export type OperatorAssistantCoverageRow = {
   postcode: string;
@@ -12,19 +12,25 @@ export type OperatorAssistantCoverageRow = {
   health: string;
 };
 
-type OperatorAssistantResponse = {
-  answer: string;
-  rows: OperatorAssistantCoverageRow[];
-  proposedAction?: {
-    scope: "postcode";
-    value: string;
-    label: string;
-  };
+type ProposedAction = {
+  kind: "refresh_postcode" | "collect_ads_for_page" | "set_kill_switch";
+  params: Record<string, unknown>;
+  label: string;
+  summary: string;
 };
 
-type ChatMessage =
-  | { role: "user"; text: string }
-  | { role: "assistant"; text: string; rows: OperatorAssistantCoverageRow[]; proposedAction?: OperatorAssistantResponse["proposedAction"] };
+type ChatResponse = {
+  answer?: string;
+  proposedAction?: ProposedAction;
+  error?: string;
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  text: string;
+  proposedAction?: ProposedAction;
+  actionResolved?: boolean;
+};
 
 type OperatorAssistantProps = {
   initialRows: OperatorAssistantCoverageRow[];
@@ -32,58 +38,75 @@ type OperatorAssistantProps = {
   lastUpdated: string;
 };
 
+const ENDPOINT = "/api/operator/research/chat";
+
 export function OperatorAssistant({ initialRows, initialPostcode, lastUpdated }: OperatorAssistantProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      text:
-        initialRows.length > 0
-          ? "Connected to live coverage, work queue, run, and defect data. Lowest-coverage rows are loaded below."
-          : "Connected to live research data. No coverage rows are currently available.",
-      rows: initialRows,
-      proposedAction: initialPostcode
-        ? { scope: "postcode", value: initialPostcode, label: `Refresh postcode ${initialPostcode}` }
-        : undefined,
-    },
-  ]);
+  const greeting = useMemo(() => buildGreeting(initialRows, initialPostcode), [initialRows, initialPostcode]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: greeting }]);
   const [input, setInput] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+
+  function scrollToEnd() {
+    requestAnimationFrame(() => {
+      if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
+    });
+  }
+
+  function wireHistory(list: ChatMessage[]) {
+    return list
+      .map((message) => ({ role: message.role, content: message.text }))
+      .filter((message) => message.content.trim().length > 0)
+      .slice(-20);
+  }
+
+  async function send(history: ChatMessage[], confirm?: ProposedAction) {
+    setError(null);
+    setIsPending(true);
+    scrollToEnd();
+    try {
+      const response = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: wireHistory(history), confirm }),
+      });
+      const payload = (await response.json()) as ChatResponse;
+      if (!response.ok) throw new Error(payload.error ?? "Operator assistant failed.");
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", text: payload.answer ?? "No answer was returned.", proposedAction: payload.proposedAction },
+      ]);
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : "Operator assistant failed.");
+    } finally {
+      setIsPending(false);
+      scrollToEnd();
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = input.trim();
-    if (!query) return;
-
-    setError(null);
-    setIsPending(true);
-    setMessages((current) => [...current, { role: "user", text: query }]);
+    if (!query || isPending) return;
     setInput("");
+    const next: ChatMessage[] = [...messages, { role: "user", text: query }];
+    setMessages(next);
+    await send(next);
+  }
 
-    try {
-      const response = await fetch("/api/operator/research/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-      const payload = (await response.json()) as Partial<OperatorAssistantResponse> & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Operator chat failed.");
-      }
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          text: payload.answer ?? "No answer was returned.",
-          rows: payload.rows ?? [],
-          proposedAction: payload.proposedAction,
-        },
-      ]);
-    } catch (chatError) {
-      setError(chatError instanceof Error ? chatError.message : "Operator chat failed.");
-    } finally {
-      setIsPending(false);
-    }
+  async function confirmAction(index: number, action: ProposedAction) {
+    if (isPending) return;
+    setMessages((current) => current.map((message, idx) => (idx === index ? { ...message, actionResolved: true } : message)));
+    const history = messages.map((message, idx) => (idx === index ? { ...message, actionResolved: true } : message));
+    await send(history, action);
+  }
+
+  function cancelAction(index: number) {
+    setMessages((current) => {
+      const updated = current.map((message, idx) => (idx === index ? { ...message, actionResolved: true } : message));
+      return [...updated, { role: "assistant", text: "Okay — cancelled. Nothing was changed." }];
+    });
   }
 
   return (
@@ -92,111 +115,94 @@ export function OperatorAssistant({ initialRows, initialPostcode, lastUpdated }:
         <div>
           <Bot aria-hidden size={18} />
           <strong>Operator Assistant</strong>
-          <span>Live</span>
-        </div>
-        <div className="operator-assistant-tools">
-          <X aria-hidden size={16} />
+          <span>Live · {lastUpdated}</span>
         </div>
       </div>
 
-      <div className="operator-chat-thread">
+      <div className="operator-chat-thread" ref={threadRef}>
         {messages.map((message, index) =>
           message.role === "user" ? (
-            <div className="operator-chat-bubble user" key={`${message.role}-${index}`}>
+            <div className="operator-chat-bubble user" key={`u-${index}`}>
               <p>{message.text}</p>
             </div>
           ) : (
-            <div className="operator-chat-bubble assistant" key={`${message.role}-${index}`}>
-              <p>{message.text}</p>
-              {message.rows.length > 0 ? (
-                <CoverageCard rows={message.rows} lastUpdated={lastUpdated} />
+            <div className="operator-chat-bubble assistant" key={`a-${index}`}>
+              {message.text.split("\n").map((line, lineIndex) => (
+                <p key={lineIndex}>{line}</p>
+              ))}
+              {message.proposedAction && !message.actionResolved ? (
+                <ProposedActionCard
+                  action={message.proposedAction}
+                  disabled={isPending}
+                  onConfirm={() => confirmAction(index, message.proposedAction as ProposedAction)}
+                  onCancel={() => cancelAction(index)}
+                />
               ) : null}
-              {message.proposedAction ? <RefreshAction action={message.proposedAction} /> : null}
             </div>
           ),
         )}
+        {isPending ? <p className="operator-chat-bubble assistant">…</p> : null}
         {error ? <p className="operator-chat-error">{error}</p> : null}
       </div>
 
       <form className="operator-chat-composer" onSubmit={submit}>
-        <label htmlFor="operator-chat-input">Ask anything about research ops</label>
+        <label htmlFor="operator-chat-input">Tell Hermes what to do</label>
         <div>
           <MessageSquare aria-hidden size={16} />
           <input
             id="operator-chat-input"
             name="query"
-            placeholder="Ask anything about research ops..."
+            placeholder="e.g. status? · refresh 6000 · collect ads for Acton · pause scraping"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             disabled={isPending}
+            autoComplete="off"
           />
           <button type="submit" aria-label="Send message" disabled={isPending || !input.trim()}>
             <Send size={16} />
           </button>
         </div>
         <span>
-          <Lock size={12} /> Operator actions require confirmation.
+          <Lock size={12} /> Actions ask for confirmation before anything changes.
         </span>
       </form>
     </aside>
   );
 }
 
-function CoverageCard({ rows, lastUpdated }: { rows: OperatorAssistantCoverageRow[]; lastUpdated: string }) {
+function ProposedActionCard({
+  action,
+  disabled,
+  onConfirm,
+  onCancel,
+}: {
+  action: ProposedAction;
+  disabled: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
-    <div className="operator-chat-card">
-      <strong>Coverage rows needing review</strong>
-      <span>Last updated: {lastUpdated}</span>
-      <table>
-        <thead>
-          <tr>
-            <th>Postcode</th>
-            <th>Score</th>
-            <th>Ads</th>
-            <th>Pages</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.state}-${row.postcode}`}>
-              <td>{row.postcode}</td>
-              <td className={row.score < 50 ? "danger" : "good"}>{row.score}%</td>
-              <td>{row.activeAds}</td>
-              <td>{row.advertiserPages}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="operator-proposed-action">
+      <strong>Proposed action</strong>
+      <p>{action.label}</p>
+      <span>{action.summary}</span>
+      <div>
+        <button className="button secondary" type="button" onClick={onCancel} disabled={disabled}>
+          Cancel
+        </button>
+        <button className="button" type="button" onClick={onConfirm} disabled={disabled}>
+          Confirm
+        </button>
+      </div>
     </div>
   );
 }
 
-function RefreshAction({ action }: { action: NonNullable<OperatorAssistantResponse["proposedAction"]> }) {
-  return (
-    <form className="operator-proposed-action" method="post" action="/api/operator/research/refresh-now">
-      <input type="hidden" name="scope" value={action.scope} />
-      <input type="hidden" name="value" value={action.value} />
-      <strong>Proposed action</strong>
-      <p>{action.label}</p>
-      <span>Uses the live refresh policy endpoint.</span>
-      <dl>
-        <div>
-          <dt>Type</dt>
-          <dd>refresh_postcode</dd>
-        </div>
-        <div>
-          <dt>Postcode</dt>
-          <dd>{action.value}</dd>
-        </div>
-      </dl>
-      <div>
-        <button className="button secondary" type="button">
-          Cancel
-        </button>
-        <button className="button" type="submit">
-          Confirm
-        </button>
-      </div>
-    </form>
-  );
+function buildGreeting(rows: OperatorAssistantCoverageRow[], postcode: string | null): string {
+  if (rows.length === 0) {
+    return "Hi — I'm wired into the live Hermes research engine. Ask me how it's running, or tell me to refresh a postcode, collect ads for an agency, or pause scraping.";
+  }
+  const lowest = rows[0];
+  const tail = postcode ? ` The lowest-coverage postcode right now is ${postcode}.` : "";
+  return `Hi — I'm connected to the live Hermes engine (coverage, queue, defects, spend).${tail} Ask me anything, or tell me to refresh a postcode, collect ads for an agency, or pause scraping.`;
 }

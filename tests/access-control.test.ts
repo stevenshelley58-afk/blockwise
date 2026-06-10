@@ -18,10 +18,10 @@ test("self-serve workspaces can access monitor and self-serve surfaces", () => {
   assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "self_serve"), true);
 });
 
-test("model control surface is operator-only", () => {
-  assert.equal(canAccessSurface({ role: "operator", workspaceMode: "self_serve" }, "model_control"), true);
-  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "self_serve" }, "model_control"), false);
-  assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "model_control"), false);
+test("operator console (workforce, model control) is operator-only", () => {
+  assert.equal(canAccessSurface({ role: "operator", workspaceMode: "self_serve" }, "operator"), true);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "self_serve" }, "operator"), false);
+  assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "operator"), false);
 });
 
 test("adstudio is available to self-serve builders and operators only", () => {

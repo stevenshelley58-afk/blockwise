@@ -11,6 +11,7 @@ import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enric
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
@@ -44,6 +45,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   if (!access.ok) {
     return access.response;
+  }
+
+  const rateLimit = await checkRateLimit(
+    access.supabase,
+    access.access.workspaceId,
+    access.access.userId,
+    { windowSeconds: 3600, maxRequests: 10, bucket: "ai-generate-pack" },
+  );
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const body = await readJsonBody<{

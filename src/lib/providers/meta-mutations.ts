@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { ApprovalStatus } from "../campaigns/publishing.ts";
+import type { ApprovalStatus } from "../publishing/readiness.ts";
 
 const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 
