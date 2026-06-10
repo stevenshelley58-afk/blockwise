@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { ButtonSpinner } from "@/components/app/button-spinner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type TurnstileOptions = {
@@ -202,8 +203,14 @@ export function SignupForm() {
           </p>
         ) : null}
 
-        <button className="button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account" : "Create free trial account"}
+        <button
+          className="button"
+          type="submit"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting || undefined}
+        >
+          {isSubmitting ? <ButtonSpinner size={16} label="Creating account" /> : null}
+          {isSubmitting ? "Creating account…" : "Create free trial account"}
         </button>
       </form>
     </>

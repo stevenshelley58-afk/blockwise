@@ -72,6 +72,7 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         color: "var(--ink)",
         fontSize: 12.5,
         fontWeight: 650,
+        fontVariantNumeric: "tabular-nums",
         whiteSpace: "nowrap",
       }}
     >

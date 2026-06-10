@@ -94,6 +94,15 @@ a {
   text-decoration: none;
 }
 
+/* Universal focus-visible ring for any interactive element that hasn't
+   been given a bespoke focus style. Browser-default focus rings are
+   removed; this one is the canonical ring. Excludes inputs/selects/
+   textareas (those use the bespoke :focus-within accent-tint shadow). */
+:where(button, a, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
 button,
 input,
 select,
@@ -278,8 +287,7 @@ textarea {
   padding-top: 16px;
 }
 
-.sidebar-engine,
-.sidebar-collapse {
+.sidebar-engine {
   display: flex;
   min-height: 54px;
   align-items: center;
@@ -318,22 +326,13 @@ textarea {
   font-size: 12px;
 }
 
-.sidebar-collapse {
-  justify-content: flex-start;
-  color: var(--side-ink);
-  cursor: not-allowed;
-  font-size: 13px;
-}
-
-[data-sidebar-theme="light"] .sidebar-engine,
-[data-sidebar-theme="light"] .sidebar-collapse {
+[data-sidebar-theme="light"] .sidebar-engine {
   border-color: var(--side-line);
   background: var(--surface-subtle);
   color: var(--side-ink-active);
 }
 
-[data-sidebar-theme="light"] .sidebar-engine small,
-[data-sidebar-theme="light"] .sidebar-collapse {
+[data-sidebar-theme="light"] .sidebar-engine small {
   color: var(--side-ink);
 }
 
@@ -812,6 +811,43 @@ h3 {
   border-radius: var(--r-card);
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+/* Card hover micro-interaction.
+   Only clickable cards lift; static metric cards stay still. The
+   `a[href]:not([aria-disabled="true"])` selector means "this card is
+   a link to somewhere" and the user can perceive motion as a click
+   affordance. Static panels (mm-ad-card, plain metric-card) get
+   the transition but no hover lift. */
+.metric-card,
+.mm-ad-card,
+.lp-feature,
+article.card,
+[data-card="clickable"] {
+  transition: box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease;
+}
+
+/* Anchor-wrapped cards lift on hover and keyboard focus. */
+a.metric-card:hover,
+a.mm-ad-card:hover,
+a.lp-feature:hover,
+a.item-card:hover,
+article.card a[href]:hover,
+[data-card="clickable"][href]:hover,
+[data-card="clickable"]:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-float);
+  border-color: var(--line-heavy);
+}
+a.metric-card:focus-visible,
+a.mm-ad-card:focus-visible,
+a.lp-feature:focus-visible,
+a.item-card:focus-visible,
+article.card a[href]:focus-visible,
+[data-card="clickable"][href]:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--accent);
 }
 
 .panel {
