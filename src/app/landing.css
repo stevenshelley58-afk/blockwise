@@ -6,10 +6,8 @@
 
 .lp {
   --lp-primary: #123e75;
-  --lp-primary-light: #1e5297;
-  --lp-primary-dark: #0a2a54;
-  --lp-blue: #2563eb;
-  --lp-blue-dark: #1d4ed8;
+  --lp-primary-light: #0d3263;
+  --lp-primary-dark: #002855;
   --lp-navy-deep: #0b1b33;
   --lp-accent: #31c46f;
   --lp-accent-deep: #127a54;
@@ -71,10 +69,10 @@
 .lp-btn-sm { padding: 7px 12px; font-size: 12.5px; border-radius: 8px; }
 .lp-btn-wide { width: 100%; }
 .lp-btn-hero {
-  background: var(--lp-blue); color: #fff; border-radius: 14px;
-  box-shadow: 0 12px 30px -10px rgba(37, 99, 235, 0.65);
+  background: var(--lp-primary); color: #fff; border-radius: var(--r-ctl, 8px);
+  box-shadow: 0 12px 30px -10px rgba(18, 62, 117, 0.55);
 }
-.lp-btn-hero:hover { background: var(--lp-blue-dark); }
+.lp-btn-hero:hover { background: var(--lp-primary-light); }
 
 /* type */
 .lp-eyebrow {
@@ -123,7 +121,7 @@
   font-family: Georgia, "Times New Roman", serif;
   font-style: italic; font-weight: 500;
   letter-spacing: -.015em;
-  color: var(--lp-blue);
+  color: var(--lp-primary);
 }
 .lp-hero-h1-sub { display: block; margin-top: 10px; color: var(--lp-ink); font-weight: 800; }
 .lp-hero .lp-lead { margin-top: 22px; max-width: 430px; font-weight: 500; }
@@ -746,10 +744,10 @@
 }
 #demo .demo-form .button.primary {
   justify-self: stretch; justify-content: center;
-  border-color: var(--lp-blue); background: var(--lp-blue); border-radius: 12px;
+  border-color: var(--lp-primary); background: var(--lp-primary); border-radius: var(--r-ctl, 8px);
 }
 #demo .demo-form .button.primary:hover,
-#demo .demo-form .button.primary:focus-visible { background: var(--lp-blue-dark); border-color: var(--lp-blue-dark); }
+#demo .demo-form .button.primary:focus-visible { background: var(--lp-primary-light); border-color: var(--lp-primary-light); }
 #demo .demo-form-fine { text-align: center; }
 
 /* footer */
