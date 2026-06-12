@@ -12,6 +12,7 @@ const adLibraryExtensionsMigration = "supabase/migrations/202606040001_ad_librar
 const buildRunReportDedupeRepairMigration = "supabase/migrations/202606070001_repair_build_run_reports_dedupe_key.sql";
 const apifyCostControlMigration = "supabase/migrations/202606080001_apify_cost_control_schema.sql";
 const activeApifyHealthMigration = "supabase/migrations/202606080004_scope_active_apify_health.sql";
+const archiveBlockedWorkQueueMigration = "supabase/migrations/202606120001_archive_stale_blocked_work_queue.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -290,4 +291,13 @@ test("active Apify health migration scopes paid-spend red state to the selected 
   assert.doesNotMatch(sql, /from research\.observed_ads/i);
   assert.match(sql, /paid_spend_without_ingest/i);
   assert.match(sql, /grant select on research\.v_health to authenticated, service_role/i);
+});
+
+test("work queue migration allows stale blocked jobs to be archived", () => {
+  const sql = readFileSync(archiveBlockedWorkQueueMigration, "utf8");
+
+  assert.match(sql, /alter table research\.work_queue\s+drop constraint if exists work_queue_status_check/i);
+  assert.match(sql, /alter table research\.work_queue\s+add constraint work_queue_status_check/i);
+  assert.match(sql, /status in \('pending', 'claimed', 'complete', 'failed', 'blocked', 'archived'\)/i);
+  assert.doesNotMatch(sql, /drop table/i);
 });

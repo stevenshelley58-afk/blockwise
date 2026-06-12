@@ -821,13 +821,14 @@ async function enqueueDueLocationAdSearchJobs(buildRunId) {
 
 async function runWatchdogs() {
   const runHourlyWatchdogs = Date.now() % (60 * 60 * 1000) < intervalMs;
-  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
+  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
     rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }),
     rpc("watchdog_record_provider_failures", { p_since: "24 hours", p_failure_threshold: 3 }),
     rpc("watchdog_record_zero_ad_anomalies", { p_since: "48 hours", p_limit: 100 }),
     rpc("watchdog_record_missing_media", { p_since: "24 hours", p_limit: 100 }),
     rpc("watchdog_record_unclassified_creatives", { p_since: "24 hours", p_limit: 100 }),
     enqueueClassificationBackfillJobs(),
+    watchdogArchiveStaleBlockedJobs(),
     runHourlyWatchdogs
       ? watchdogRecheckStaleAgencies()
       : Promise.resolve({ staleAgencies: 0, staleAgencyRechecks: 0, staleAgencySkippedNoCensusSource: 0 }),
@@ -842,8 +843,54 @@ async function runWatchdogs() {
     missingMedia: missingMedia.length,
     unclassified: unclassified.length,
     classificationBackfill,
+    ...staleBlockedArchive,
     ...staleAgencyRecheck,
     ...unresolvedPageRetry,
+  };
+}
+
+async function watchdogArchiveStaleBlockedJobs() {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await rest(
+    "research",
+    `work_queue?select=id,job_type,blocked_reason,last_error,result,updated_at&status=eq.blocked&updated_at=lt.${encode(cutoff)}&order=updated_at.asc&limit=100`,
+  );
+  let archived = 0;
+
+  for (const job of rows) {
+    const archivedAt = now();
+    const priorResult = job.result && typeof job.result === "object" && !Array.isArray(job.result) ? job.result : {};
+    const updated = await rest("research", `work_queue?id=eq.${encode(job.id)}&status=eq.blocked`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: json({
+        status: "archived",
+        blocked_reason: job.blocked_reason || "archived_stale_blocked_job",
+        result: {
+          ...priorResult,
+          archived: {
+            at: archivedAt,
+            reason: "blocked_older_than_7_days",
+            prior_blocked_reason: job.blocked_reason || null,
+            prior_last_error: job.last_error || null,
+          },
+        },
+      }),
+    });
+    if (updated?.[0]?.id) {
+      archived += 1;
+      await recordEvent("archive", "work_queue", job.id, {
+        job_type: job.job_type,
+        reason: "blocked_older_than_7_days",
+        blocked_reason: job.blocked_reason || null,
+        updated_at: job.updated_at || null,
+      }, { work_queue_id: job.id });
+    }
+  }
+
+  return {
+    staleBlockedJobs: rows.length,
+    staleBlockedArchived: archived,
   };
 }
 

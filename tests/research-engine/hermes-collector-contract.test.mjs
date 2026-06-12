@@ -47,6 +47,7 @@ const defectInvestigator = functionBody(supervisor, "handleDefectInvestigator");
 const coverageRefresh = functionBody(supervisor, "requestCoverageRefresh");
 const staleAgencyWatchdog = functionBody(supervisor, "watchdogRecheckStaleAgencies");
 const unresolvedPageWatchdog = functionBody(supervisor, "watchdogRequeueUnresolvedPages");
+const staleBlockedArchiveWatchdog = functionBody(supervisor, "watchdogArchiveStaleBlockedJobs");
 const classificationBackfill = functionBody(supervisor, "enqueueClassificationBackfillJobs");
 const classificationBackfillCandidates = functionBody(supervisor, "loadClassificationBackfillCandidates");
 const handleJob = functionBody(supervisor, "handleJob");
@@ -767,6 +768,34 @@ test("Hermes unresolved verified pages are retried with evidence-backed resolver
     unresolvedPageWatchdog,
     /location_search_allowed:\s*false/u,
     "unresolved page retry must not enable broad location discovery",
+  );
+});
+
+test("Hermes archives stale blocked queue jobs so public health can recover", () => {
+  assert.match(
+    supervisor,
+    /watchdogArchiveStaleBlockedJobs/u,
+    "stale blocked jobs should run from the watchdog phase",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /7 \* 24 \* 60 \* 60 \* 1000/u,
+    "blocked jobs should only be archived after seven days",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /work_queue\?select=id,job_type,blocked_reason,last_error,result,updated_at[\s\S]*status=eq\.blocked[\s\S]*updated_at=lt\./u,
+    "watchdog should find old blocked work_queue rows",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /status:\s*["']archived["'][\s\S]*blocked_older_than_7_days/u,
+    "watchdog should archive old blocked rows with an audit reason",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /recordEvent\(["']archive["'],\s*["']work_queue["']/u,
+    "archivals should be audited",
   );
 });
 
