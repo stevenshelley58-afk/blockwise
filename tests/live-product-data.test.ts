@@ -186,7 +186,7 @@ test("AI ledger loaders expose operator filters for user model task and day", ()
   assert.match(liveData, /\.eq\("task", filters\.task\)/);
   assert.match(liveData, /\.gte\("created_at", dayRange\.startIso\)\.lt\("created_at", dayRange\.endIso\)/);
   assert.match(route, /userId: cleanParam\(request\.nextUrl\.searchParams\.get\("userId"\)\)/);
-  assert.match(route, /listAiLedgerRows\(supabase, access\.access\.workspaceId, filters\)/);
+  assert.match(route, /listAiLedgerRows\(supabase, access\.access\.isOperator \? undefined : access\.access\.workspaceId, filters\)/);
   assert.match(page, /name="userId"/);
   assert.match(page, /name="model"/);
   assert.match(page, /name="task"/);
@@ -199,4 +199,20 @@ test("operator overview does not select phantom lead columns", () => {
   assert.match(liveData, /\.select\("id,workspace_id,full_name,email,provider,created_at,workspaces\(name\)"\)/);
   assert.doesNotMatch(liveData, /full_name,name,email/);
   assert.doesNotMatch(liveData, /lead\.name/);
+});
+
+test("operator AI ledger and agent-run surfaces omit workspace filters for operators only", () => {
+  const modelControlPage = readFileSync("src/app/(workforce)/model-control/page.tsx", "utf8");
+  const agentsPage = readFileSync("src/app/(workforce)/agents/page.tsx", "utf8");
+  const aiLedgerRoute = readFileSync("src/app/api/ai-ledger/route.ts", "utf8");
+  const agentRunsRoute = readFileSync("src/app/api/agent-runs/route.ts", "utf8");
+  const runDetailPage = readFileSync("src/app/(workforce)/model-control/runs/[id]/page.tsx", "utf8");
+
+  assert.match(modelControlPage, /listAiLedgerRows\(supabase, access\.isOperator \? undefined : access\.workspaceId, ledgerFilters\)/);
+  assert.match(agentsPage, /listAgentRunRows\(supabase, access\.isOperator \? undefined : access\.workspaceId\)/);
+  assert.match(aiLedgerRoute, /access\.access\.isOperator \? undefined : access\.access\.workspaceId/);
+  assert.match(agentRunsRoute, /access\.access\.isOperator \? undefined : access\.access\.workspaceId/);
+  assert.match(runDetailPage, /if \(!access\.isOperator\) \{\s*providerRunQuery = providerRunQuery\.eq\("workspace_id", access\.workspaceId\);/);
+  assert.match(runDetailPage, /const traceWorkspaceId = run\.workspace_id/);
+  assert.match(runDetailPage, /\.eq\("workspace_id", traceWorkspaceId\)/);
 });

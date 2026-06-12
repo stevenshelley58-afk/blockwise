@@ -18,5 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  return NextResponse.json({ agentRuns: await listAgentRunRows(supabase, access.access.workspaceId) });
+  return NextResponse.json({
+    agentRuns: await listAgentRunRows(supabase, access.access.isOperator ? undefined : access.access.workspaceId),
+  });
 }

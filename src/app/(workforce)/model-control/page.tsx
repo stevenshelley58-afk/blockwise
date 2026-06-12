@@ -25,7 +25,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
     day: firstParam(params.day),
   };
   const modelControlData = await getModelControlViewData(supabase);
-  const ledgerRows = await listAiLedgerRows(supabase, access.workspaceId, ledgerFilters);
+  const ledgerRows = await listAiLedgerRows(supabase, access.isOperator ? undefined : access.workspaceId, ledgerFilters);
   const profileCount = new Set(
     modelControlData.sections.flatMap((section) => section.profiles.map((profile) => profile.key)),
   ).size;

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AgentWorkforcePage() {
   const { supabase, access } = await requirePageSurfaceAccess("agents");
-  const agentRuns = await listAgentRunRows(supabase, access.workspaceId);
+  const agentRuns = await listAgentRunRows(supabase, access.isOperator ? undefined : access.workspaceId);
 
   return (
     <main className="content">

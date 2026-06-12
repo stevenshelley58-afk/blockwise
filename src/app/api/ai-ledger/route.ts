@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     day: cleanParam(request.nextUrl.searchParams.get("day")),
   };
 
-  return NextResponse.json({ aiLedger: await listAiLedgerRows(supabase, access.access.workspaceId, filters) });
+  return NextResponse.json({
+    aiLedger: await listAiLedgerRows(supabase, access.access.isOperator ? undefined : access.access.workspaceId, filters),
+  });
 }
 
 function cleanParam(value: string | null): string | undefined {
