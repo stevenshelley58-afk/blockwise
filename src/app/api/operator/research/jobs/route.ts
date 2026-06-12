@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
-type ResearchSupabase = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+type ResearchSupabase = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
 
 type WorkQueueInsert = {
   queue_name: string;
@@ -35,9 +34,9 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
   const jobType = url.searchParams.get("jobType");
   const limit = Math.min(Number.parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 500);
+  const research = createSupabaseServiceClient().schema("research");
 
-  let query = guard.supabase
-    .schema("research")
+  let query = research
     .from("v_operator_work_queue_diagnostics")
     .select("*")
     .order("created_at", { ascending: false })
@@ -58,24 +57,25 @@ export async function POST(req: Request) {
   const parsed = triggerSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const serviceSupabase = createSupabaseServiceClient();
+  const research = serviceSupabase.schema("research");
   let job;
   try {
-    job = await buildQueueJob(guard.supabase, parsed.data);
+    job = await buildQueueJob(research, parsed.data);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not create research job." },
       { status: 400 },
     );
   }
-  const { data, error } = await guard.supabase
-    .schema("research")
+  const { data, error } = await research
     .from("work_queue")
     .insert(job)
     .select("*")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await createSupabaseServiceClient().from("audit_logs").insert({
+  await serviceSupabase.from("audit_logs").insert({
     workspace_id: null,
     actor_profile_id: guard.userId,
     action: "manual_research_job_created",
@@ -99,7 +99,6 @@ async function buildQueueJob(
   if (input.jobType === "collect_ads_for_page") {
     if (!input.advertiserPageId) throw new Error("advertiserPageId is required.");
     const { data: page, error } = await supabase
-      .schema("research")
       .from("advertiser_pages")
       .select("id,page_id,resolution_decision_id,status")
       .eq("id", input.advertiserPageId)
