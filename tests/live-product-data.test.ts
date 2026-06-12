@@ -209,10 +209,29 @@ test("operator AI ledger and agent-run surfaces omit workspace filters for opera
   const runDetailPage = readFileSync("src/app/(workforce)/model-control/runs/[id]/page.tsx", "utf8");
 
   assert.match(modelControlPage, /listAiLedgerRows\(supabase, access\.isOperator \? undefined : access\.workspaceId, ledgerFilters\)/);
-  assert.match(agentsPage, /listAgentRunRows\(supabase, access\.isOperator \? undefined : access\.workspaceId\)/);
+  assert.match(agentsPage, /const workspaceId = access\.isOperator \? undefined : access\.workspaceId/);
+  assert.match(agentsPage, /listAgentRunRows\(supabase, workspaceId\)/);
   assert.match(aiLedgerRoute, /access\.access\.isOperator \? undefined : access\.access\.workspaceId/);
   assert.match(agentRunsRoute, /access\.access\.isOperator \? undefined : access\.access\.workspaceId/);
   assert.match(runDetailPage, /if \(!access\.isOperator\) \{\s*providerRunQuery = providerRunQuery\.eq\("workspace_id", access\.workspaceId\);/);
   assert.match(runDetailPage, /const traceWorkspaceId = run\.workspace_id/);
   assert.match(runDetailPage, /\.eq\("workspace_id", traceWorkspaceId\)/);
+});
+
+test("cockpit metric cards use live data instead of hardcoded counts", () => {
+  const agentsPage = readFileSync("src/app/(workforce)/agents/page.tsx", "utf8");
+  const approvalsPage = readFileSync("src/app/(customer)/approvals/page.tsx", "utf8");
+  const modelControlPage = readFileSync("src/app/(workforce)/model-control/page.tsx", "utf8");
+
+  assert.match(agentsPage, /from\("agent_runs"\)[\s\S]*select\("id", \{ count: "exact", head: true \}\)[\s\S]*\.in\("status", \["queued", "running", "needs_review"\]\)/);
+  assert.match(agentsPage, /from\("agent_schedules"\)[\s\S]*select\("id", \{ count: "exact", head: true \}\)[\s\S]*\.eq\("enabled", true\)/);
+  assert.match(agentsPage, /value=\{String\(openRuns \?\? 0\)\}/);
+  assert.match(agentsPage, /value=\{String\(enabledSchedules \?\? 0\)\}/);
+  assert.match(agentsPage, /<tr key=\{run\.id\}>/);
+  assert.doesNotMatch(agentsPage, /value="27"|value="6"|key=\{`\$\{run\.agent\}-\$\{run\.status\}`\}/);
+
+  assert.doesNotMatch(approvalsPage, /Budget changes|Client sends|value="1"|value="0"/);
+
+  assert.match(modelControlPage, /configuredProviderNames\.length/);
+  assert.doesNotMatch(modelControlPage, /label="Providers" value="2"/);
 });

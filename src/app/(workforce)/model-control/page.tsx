@@ -29,6 +29,14 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
   const profileCount = new Set(
     modelControlData.sections.flatMap((section) => section.profiles.map((profile) => profile.key)),
   ).size;
+  const configuredProviderNames = Array.from(
+    new Set(
+      modelControlData.modelProfiles.flatMap((profile) => [
+        profile.primary.provider,
+        ...profile.fallbacks.map((fallback) => fallback.provider),
+      ]),
+    ),
+  ).map(formatProviderName);
 
   return (
     <main className="content">
@@ -40,7 +48,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
 
       <section className="grid cols-4">
         <MetricCard icon={SlidersHorizontal} label="Profiles" value={String(profileCount)} note="Configured by task" />
-        <MetricCard icon={PlugZap} label="Providers" value="2" note="OpenAI direct and OpenRouter routed" />
+        <MetricCard icon={PlugZap} label="Providers" value={String(configuredProviderNames.length)} note={formatProviderList(configuredProviderNames)} />
         <MetricCard icon={Gauge} label="Spend caps" value="On" note="Per-run cost policy and ledger" />
         <MetricCard icon={ShieldCheck} label="Structured output" value="Required" note="For classifications and compliance reviews" />
       </section>
@@ -139,4 +147,19 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 
 function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleString() : "-";
+}
+
+function formatProviderName(provider: string): string {
+  if (provider === "openai") return "OpenAI";
+  if (provider === "openrouter") return "OpenRouter";
+
+  return provider;
+}
+
+function formatProviderList(providers: string[]): string {
+  if (providers.length === 0) {
+    return "No providers configured";
+  }
+
+  return providers.join(", ");
 }

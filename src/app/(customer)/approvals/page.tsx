@@ -1,4 +1,4 @@
-import { ClipboardCheck, MailCheck, ShieldAlert, WalletCards } from "lucide-react";
+import { ClipboardCheck, ShieldAlert } from "lucide-react";
 
 import { ApprovalActions } from "@/components/approvals/approval-actions";
 import { MetricCard } from "@/components/metric-card";
@@ -24,11 +24,9 @@ export default async function ApprovalsPage() {
         description="Review high-risk actions before campaigns publish, budgets change, client-facing sends go out, or lead PII leaves the workspace."
       />
 
-      <section className="grid cols-4">
+      <section className="grid cols-2">
         <MetricCard icon={ClipboardCheck} label="Open" value={String(approvalQueue.length)} note="Review queue" />
         <MetricCard icon={ShieldAlert} label="Policy actions" value={String(HUMAN_APPROVAL_ACTIONS.length)} note={HUMAN_APPROVAL_ACTIONS.join(", ")} />
-        <MetricCard icon={WalletCards} label="Budget changes" value="1" note="Blocked until approval" />
-        <MetricCard icon={MailCheck} label="Client sends" value="0" note="No sends without approval record" />
       </section>
 
       <section className="panel">
