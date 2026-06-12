@@ -97,6 +97,7 @@ alter table research.ad_style_profiles enable row level security;
 revoke all on research.ad_style_profiles from public, anon, authenticated;
 grant all on research.ad_style_profiles to service_role;
 
+drop policy if exists "ad_style_profiles_service_role_all" on research.ad_style_profiles;
 create policy "ad_style_profiles_service_role_all" on research.ad_style_profiles
   as permissive for all to service_role using (true) with check (true);
 
