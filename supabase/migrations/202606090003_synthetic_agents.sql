@@ -47,10 +47,12 @@ alter table research.synthetic_agents enable row level security;
 revoke all on research.synthetic_agents from public, anon, authenticated;
 grant all on research.synthetic_agents to service_role;
 
+drop policy if exists "synthetic_agents_service_role_all" on research.synthetic_agents;
 create policy "synthetic_agents_service_role_all" on research.synthetic_agents
   as permissive for all to service_role using (true) with check (true);
 
 -- Add updated_at trigger.
+drop trigger if exists trg_synthetic_agents_updated_at on research.synthetic_agents;
 create trigger trg_synthetic_agents_updated_at
   before update on research.synthetic_agents
   for each row execute function research.set_updated_at();
