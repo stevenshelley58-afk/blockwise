@@ -659,6 +659,18 @@ export function AdStudioWorkbench({
     generateVariantsForAngle(selectedAngle, campaignGoal);
   }
 
+  function regenerateVariantPack(index: number) {
+    const confirmed = window.confirm(
+      "Regenerate this ad pack?\n\nThis uses one ad credit and replaces all generated ads in this pack, not just this tile.",
+    );
+
+    if (!confirmed) return;
+
+    const variant = pack.variants[index];
+    const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
+    void generateVariantsForAngle(angle);
+  }
+
   async function handleGenerateFirstAd(input: FirstAdInput) {
     await generateFirstAd(input);
   }
@@ -943,11 +955,7 @@ export function AdStudioWorkbench({
               studio.setSection("media");
               openFilePicker();
             }}
-            onRegenerate={(index) => {
-              const variant = pack.variants[index];
-              const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
-              void generateVariantsForAngle(angle);
-            }}
+            onRegenerate={regenerateVariantPack}
           />
         </section>
       </div>

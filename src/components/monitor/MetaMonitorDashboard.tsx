@@ -188,7 +188,7 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
           iconTone="indigo"
           label="Budget remaining"
           value={budgetRemaining != null ? formatCurrency(budgetRemaining) : "Not set"}
-          compareText={summary.budget != null ? `of ${formatCurrency(summary.budget)}` : "Set META_MONITOR_BUDGET_AUD"}
+          compareText={summary.budget != null ? `of ${formatCurrency(summary.budget)}` : "No monthly budget set"}
           progress={summary.budget != null && summary.budget > 0 ? summary.spend / summary.budget : undefined}
         />
       </div>
