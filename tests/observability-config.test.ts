@@ -18,7 +18,10 @@ test("Trigger runtime initializes and captures task failures through Sentry", ()
 
   assert.match(config, /initTriggerSentry/);
   assert.match(config, /requireTriggerProjectId\(\)/);
-  assert.match(config, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\) \|\| process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);
+  assert.match(config, /BLOCKWISE_TRIGGER_PROJECT_REF = "proj_pahvfmcqkjnyxqzrneag"/);
+  assert.match(config, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
+  assert.match(config, /process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);
+  assert.match(config, /BLOCKWISE_TRIGGER_PROJECT_REF;/);
   assert.match(config, /TRIGGER_PROJECT_ID or TRIGGER_PROJECT_REF is required to deploy or run Trigger\.dev tasks\./);
   assert.match(config, /onFailure:\s*async\s*\(\{\s*error,\s*task\s*\}\)/);
   assert.match(config, /captureTriggerException\(error,\s*task\)/);

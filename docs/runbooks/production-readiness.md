@@ -33,7 +33,8 @@ as a release gate unless a later task adds real package scripts.
   `npm test`, and `npm run build`.
 - [x] GitHub deploys Trigger.dev tasks after `main` branch checks pass through
   the `trigger-deploy` job.
-- [x] `trigger.config.ts` fails fast when `TRIGGER_PROJECT_ID` is missing.
+- [x] `trigger.config.ts` pins the non-secret Trigger project ref and GitHub CI
+  fails fast when Trigger deploy secrets are missing.
 - [x] `/api/health` has public/basic and bearer-token detailed modes.
 - [x] Google Ads env vars are provider-readiness fields, not top-level fatal
   env failures.
