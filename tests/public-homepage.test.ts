@@ -138,6 +138,8 @@ test("public marketing copy stays honest about first-tester export posture", () 
   assert.match(home, /export the package for final setup/i);
   assert.match(home, /final platform setup only after approval/i);
   assert.match(pricing, /Create, approve, export and track property/);
+  assert.match(pricing, /\$799/);
+  assert.doesNotMatch(pricing, /\$500/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
   assert.doesNotMatch(combined, /publish the campaign/i);
   assert.doesNotMatch(combined, /create, approve, launch/i);
