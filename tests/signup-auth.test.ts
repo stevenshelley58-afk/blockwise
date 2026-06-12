@@ -6,13 +6,18 @@ const signupFormPath = "src/components/signup-form.tsx";
 const signupPagePath = "src/app/signup/page.tsx";
 const confirmRoutePath = "src/app/auth/confirm/route.ts";
 const loginPagePath = "src/app/login/page.tsx";
+const loginFormPath = "src/components/login-form.tsx";
+const forgotPasswordPagePath = "src/app/forgot-password/page.tsx";
+const turnstileVerificationPath = "src/components/auth/turnstile-verification.tsx";
 
 test("signup form uses Supabase captchaToken and trial metadata without a Turnstile dependency", () => {
   const source = readFileSync(signupFormPath, "utf8");
+  const turnstile = readFileSync(turnstileVerificationPath, "utf8");
 
   assert.doesNotMatch(source, /@marsidev/i);
-  assert.match(source, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/i);
-  assert.match(source, /NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
+  assert.match(turnstile, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/i);
+  assert.match(turnstile, /NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
+  assert.match(source, /<TurnstileVerification/i);
   assert.match(source, /captchaToken:\s*turnstileToken/i);
   assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve\?confirmed=1`/i);
   assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
@@ -53,4 +58,19 @@ test("login page points new clients to signup", () => {
 
   assert.match(source, /href="\/signup"/);
   assert.match(source, /Start free trial/i);
+});
+
+test("login and password reset pass Turnstile captcha tokens to Supabase auth", () => {
+  const loginForm = readFileSync(loginFormPath, "utf8");
+  const forgotPassword = readFileSync(forgotPasswordPagePath, "utf8");
+
+  assert.match(loginForm, /<TurnstileVerification/i);
+  assert.match(loginForm, /hasTurnstileSiteKey\(\) && !turnstileToken/);
+  assert.match(loginForm, /signInWithPassword\(\{[\s\S]*options:\s*\{[\s\S]*captchaToken:\s*turnstileToken/i);
+  assert.match(loginForm, /setTurnstileResetSignal\(\(signal\) => signal \+ 1\)/);
+
+  assert.match(forgotPassword, /<TurnstileVerification/i);
+  assert.match(forgotPassword, /hasTurnstileSiteKey\(\) && !turnstileToken/);
+  assert.match(forgotPassword, /resetPasswordForEmail\(email,\s*\{[\s\S]*captchaToken:\s*turnstileToken/i);
+  assert.match(forgotPassword, /setTurnstileResetSignal\(\(signal\) => signal \+ 1\)/);
 });

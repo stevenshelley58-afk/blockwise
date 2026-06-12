@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
 import { ButtonSpinner } from "@/components/app/button-spinner";
+import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
 import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -18,22 +19,35 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [email, setEmail] = useState<string>(showTestProfiles ? testUsers[0].email : "");
   const [password, setPassword] = useState<string>(showTestProfiles ? testProfilePassword : "");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function signIn(targetEmail: string = email, targetPassword: string = password) {
     setError(null);
+
+    if (hasTurnstileSiteKey() && !turnstileToken) {
+      setError("Complete the verification check.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: targetEmail,
       password: targetPassword,
+      options: {
+        captchaToken: turnstileToken,
+      },
     });
 
     setIsSubmitting(false);
 
     if (signInError) {
       setError(signInError.message);
+      setTurnstileToken("");
+      setTurnstileResetSignal((signal) => signal + 1);
       return;
     }
 
@@ -87,6 +101,14 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
         <p style={{ margin: "4px 0 0", fontSize: "0.875rem", textAlign: "right" }}>
           <Link href="/forgot-password">Forgot password?</Link>
         </p>
+        <TurnstileVerification
+          resetSignal={turnstileResetSignal}
+          onTokenChange={(token) => {
+            setTurnstileToken(token);
+            if (token) setError(null);
+          }}
+          onError={() => setError("Verification failed. Please try again.")}
+        />
         {error ? <p className="form-error">{error}</p> : null}
         <button
           className="button"
