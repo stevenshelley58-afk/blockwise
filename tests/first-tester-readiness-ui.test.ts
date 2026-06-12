@@ -61,3 +61,10 @@ test("trial generation limit responses keep a machine code with friendly money-p
   assert.match(source, /code:\s*reason \?\? "trial_credit_reservation_failed"/);
   assert.match(source, /status:\s*trialCreditErrorStatus\(reason\)/);
 });
+
+test("leads surface labels duplicate candidates as possible duplicates", () => {
+  const source = read("src/app/(customer)/leads/page.tsx");
+
+  assert.match(source, /Possible duplicate/);
+  assert.doesNotMatch(source, /Duplicate flagged/);
+});

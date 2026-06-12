@@ -75,7 +75,7 @@ export default async function LeadsPage() {
                       <td>{lead.delivery}</td>
                       <td>
                         <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                          {lead.duplicateCandidate ? "Duplicate flagged" : "New"}
+                          {lead.duplicateCandidate ? "Possible duplicate" : "New"}
                         </StatusPill>
                       </td>
                     </tr>
@@ -92,7 +92,7 @@ export default async function LeadsPage() {
                       <strong>{lead.name}</strong>
                     </div>
                     <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                      {lead.duplicateCandidate ? "Duplicate flagged" : "New"}
+                      {lead.duplicateCandidate ? "Possible duplicate" : "New"}
                     </StatusPill>
                   </div>
                   <dl className="lead-card-fields">
@@ -129,7 +129,7 @@ export default async function LeadsPage() {
                     </div>
                     <div>
                       <dt>Status</dt>
-                      <dd>{lead.duplicateCandidate ? "Duplicate flagged" : "New"}</dd>
+                      <dd>{lead.duplicateCandidate ? "Possible duplicate" : "New"}</dd>
                     </div>
                   </dl>
                 </article>

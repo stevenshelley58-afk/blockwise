@@ -51,7 +51,7 @@ export default async function ApprovalsPage() {
                   <td data-label="Workspace">{item.workspace}</td>
                   <td data-label="Risk">{item.risk}</td>
                   <td data-label="Status">
-                    <StatusPill tone="amber">{item.status}</StatusPill>
+                    <StatusPill tone={approvalTone(item.status)}>{item.status}</StatusPill>
                   </td>
                   <td data-label="Actions">
                     <ApprovalActions approvalId={item.id} workspaceId={item.workspaceId} status={item.status} />
@@ -64,4 +64,10 @@ export default async function ApprovalsPage() {
       </section>
     </main>
   );
+}
+
+function approvalTone(status: string): "amber" | "green" | "rose" {
+  if (status === "approved") return "green";
+  if (status === "rejected" || status === "cancelled") return "rose";
+  return "amber";
 }

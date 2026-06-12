@@ -14,6 +14,9 @@ test("approvals page exposes human approve and reject actions", () => {
   assert.match(page, /access\.isOperator \? undefined : access\.workspaceId/);
   assert.match(page, /status: "requested"/);
   assert.match(page, /workspaceId=\{item\.workspaceId\}/);
+  assert.match(page, /approvalTone\(item\.status\)/);
+  assert.match(page, /status === "approved"[\s\S]*return "green"/);
+  assert.match(page, /status === "rejected" \|\| status === "cancelled"[\s\S]*return "rose"/);
   assert.match(liveData, /workspace_id,target_type,target_id,status,risk_summary,workspaces\(name\)/);
   assert.match(liveData, /if \(workspaceId\)/);
   assert.match(liveData, /if \(options\.status\)/);
