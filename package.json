@@ -19,8 +19,8 @@
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
     "seed:test-users": "node scripts/seed-test-users.mjs",
-    "trigger:dev": "npx trigger.dev dev",
-    "trigger:deploy": "npx trigger.dev deploy"
+    "trigger:dev": "node scripts/run-trigger-with-project-ref.mjs dev",
+    "trigger:deploy": "node scripts/run-trigger-with-project-ref.mjs deploy"
   },
   "dependencies": {
     "@sentry/nextjs": "^9.0.0",

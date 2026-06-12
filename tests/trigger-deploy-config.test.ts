@@ -4,6 +4,8 @@ import test from "node:test";
 
 test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   const workflow = readFileSync(".github/workflows/hard-reset-verification.yml", "utf8");
+  const packageJson = readFileSync("package.json", "utf8");
+  const triggerWrapper = readFileSync("scripts/run-trigger-with-project-ref.mjs", "utf8");
 
   assert.match(workflow, /trigger-deploy:/);
   assert.match(workflow, /needs:\s*contracts/);
@@ -15,6 +17,11 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(workflow, /test -n "\$TRIGGER_PROJECT_ID"/);
   assert.match(workflow, /test -n "\$TRIGGER_PROJECT_REF"/);
   assert.match(workflow, /npm run trigger:deploy/);
+  assert.match(packageJson, /"trigger:deploy":\s*"node scripts\/run-trigger-with-project-ref\.mjs deploy"/);
+  assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
+  assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);
+  assert.match(triggerWrapper, /"--project-ref", projectRef/);
+  assert.match(triggerWrapper, /TRIGGER_PROJECT_ID or TRIGGER_PROJECT_REF is required to deploy or run Trigger\.dev tasks\./);
 });
 
 test("Trigger runbook lists required production task environment", () => {

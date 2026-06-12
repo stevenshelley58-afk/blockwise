@@ -17,12 +17,10 @@ test("Trigger runtime initializes and captures task failures through Sentry", ()
   const helper = readFileSync("trigger/sentry.ts", "utf8");
 
   assert.match(config, /initTriggerSentry/);
-  assert.match(config, /requireTriggerProjectId\(\)/);
-  assert.match(config, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
-  assert.match(config, /process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);
+  assert.match(config, /project:\s*"configured-by-trigger-cli-project-ref"/);
+  assert.doesNotMatch(config, /process\.env\.TRIGGER_PROJECT/);
   assert.doesNotMatch(config, /BLOCKWISE_TRIGGER_PROJECT_REF/);
   assert.doesNotMatch(config, /proj_[a-z0-9]+/);
-  assert.match(config, /TRIGGER_PROJECT_ID or TRIGGER_PROJECT_REF is required to deploy or run Trigger\.dev tasks\./);
   assert.match(config, /onFailure:\s*async\s*\(\{\s*error,\s*task\s*\}\)/);
   assert.match(config, /captureTriggerException\(error,\s*task\)/);
   assert.doesNotMatch(config, /proj_blockwise_local/);
