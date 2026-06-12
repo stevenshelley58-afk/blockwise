@@ -141,17 +141,19 @@ export async function syncMetaLeads(input: {
 
     if (duplicateOfLeadId) duplicate += 1;
 
-    for (const action of buildLeadDeliveryActions(lead, input.leadDestination)) {
-      await input.repository.recordDeliveryAttempt({
-        workspaceId: input.workspaceId,
-        leadId: result.leadId,
-        action,
-        status: action.type === "manual" ? "manual_review" : "queued",
-        response: {
-          dedupeKey: buildLeadDedupeKey({ email: lead.email, phone: lead.phone }),
-          duplicateOfLeadId,
-        },
-      });
+    if (result.inserted) {
+      for (const action of buildLeadDeliveryActions(lead, input.leadDestination)) {
+        await input.repository.recordDeliveryAttempt({
+          workspaceId: input.workspaceId,
+          leadId: result.leadId,
+          action,
+          status: action.type === "manual" ? "manual_review" : "queued",
+          response: {
+            dedupeKey: buildLeadDedupeKey({ email: lead.email, phone: lead.phone }),
+            duplicateOfLeadId,
+          },
+        });
+      }
     }
   }
 
