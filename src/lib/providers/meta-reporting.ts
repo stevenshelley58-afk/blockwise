@@ -4,6 +4,7 @@ import {
   type MonitorPerformanceRow,
   type MonitorProviderReport,
 } from "../monitor/dashboard-data.ts";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 export type MetaActionMetric = {
   action_type?: string;
@@ -45,7 +46,6 @@ type MetaListResponse<T> = {
   } | null;
 };
 
-const DEFAULT_META_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 const META_LEAD_ACTIONS = new Set([
   "lead",
   "omni_lead",

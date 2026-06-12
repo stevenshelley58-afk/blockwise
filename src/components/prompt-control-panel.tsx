@@ -255,12 +255,12 @@ export function PromptControlPanel() {
       });
       const payload = (await response.json()) as PromptTestResponse;
 
-      if (!response.ok) throw new Error(payload.error ?? "Unable to run prompt test.");
+      if (!response.ok) throw new Error(payload.error ?? "Unable to assemble prompt preview.");
 
       setTestResult(payload);
-      setMessage(`Test assembled for ${payload.fixture.label}.`);
+      setMessage(`Preview assembled for ${payload.fixture.label}.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to run prompt test.");
+      setMessage(error instanceof Error ? error.message : "Unable to assemble prompt preview.");
     } finally {
       setPending(false);
     }
@@ -351,7 +351,7 @@ export function PromptControlPanel() {
 
           <section className="item-card">
             <div className="section-heading compact">
-              <h3>Test</h3>
+              <h3>Preview</h3>
               <StatusPill tone="blue">Assemble-only</StatusPill>
             </div>
             <select value={selectedFixture} onChange={(event) => setSelectedFixture(event.target.value)}>
@@ -374,7 +374,7 @@ export function PromptControlPanel() {
             </select>
             <button className="button" type="button" disabled={pending || !selectedFixture} onClick={runTest}>
               <TestTube2 aria-hidden size={16} />
-              Run test
+              Run preview
             </button>
           </section>
         </div>
@@ -444,7 +444,7 @@ export function PromptControlPanel() {
         <section className="panel nested-panel">
           <div className="section-heading">
             <div>
-              <h3>Test Result</h3>
+              <h3>Preview Result</h3>
               <p className="item-meta">{testResult.fixture.label}</p>
             </div>
             <StatusPill tone={testResult.assembledPrompt.fallbackPromptUsed ? "amber" : "green"}>

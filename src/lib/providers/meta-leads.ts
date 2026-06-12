@@ -1,7 +1,6 @@
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
 import type { MetaLeadDestination } from "./meta-execution.ts";
-
-const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 export type RawMetaLead = {
   id: string;
@@ -174,7 +173,7 @@ async function fetchMetaLeadList(
   formId: string,
 ): Promise<{ data?: RawMetaLead[]; error?: { message?: string } }> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}/${formId}/leads`);
+  const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}/${formId}/leads`);
   url.searchParams.set("fields", "id,created_time,ad_id,adset_id,campaign_id,form_id,field_data");
   url.searchParams.set("limit", "100");
   url.searchParams.set("access_token", input.accessToken);

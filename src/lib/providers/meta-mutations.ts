@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { ApprovalStatus } from "../campaigns/publishing.ts";
-
-const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 export type MetaPlanMutationAction = "activate" | "pause" | "increase_budget" | "export_leads";
 export type MetaPlanMutationStatus = "requested" | "approved" | "applying" | "applied" | "failed";
@@ -166,7 +165,7 @@ async function postMetaMutation(input: {
 }) {
   const fetchImpl = input.fetchImpl ?? fetch;
   const createdAt = new Date().toISOString();
-  const url = `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${input.path}`;
+  const url = `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${input.path}`;
 
   input.requestLog.push({
     step: input.step,

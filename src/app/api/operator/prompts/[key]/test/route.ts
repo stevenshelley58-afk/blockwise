@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (body.runProvider === true) {
       return NextResponse.json(
-        { error: "Provider execution is disabled for prompt tests in PR 1." },
+        { error: "Provider execution is disabled for prompt previews. Live comparison runs through content run generation." },
         { status: 400 },
       );
     }

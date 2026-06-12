@@ -51,7 +51,7 @@ export function listPromptTestFixtures() {
 
 export async function runPromptTest(input: PromptTestRunInput): Promise<PromptTestRunResult> {
   if (input.runProvider) {
-    throw new Error("Provider execution is disabled for prompt tests in PR 1.");
+    throw new Error("Provider execution is disabled for prompt previews. Live comparison runs through content run generation.");
   }
 
   const promptKey = assertPromptKey(input.key);

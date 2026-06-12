@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import type { MonitorProvider } from "@/lib/monitor/dashboard-data";
 import { fetchGoogleAccessibleCustomers } from "@/lib/providers/google-reporting";
+import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
 import { fetchMetaAdAccounts } from "@/lib/providers/meta-reporting";
 
 export type OAuthTokenExchange = {
@@ -34,7 +35,6 @@ const META_SCOPES = [
   "pages_read_engagement",
 ];
 const GOOGLE_SCOPES = ["https://www.googleapis.com/auth/adwords"];
-const META_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 
 export function buildProviderAuthorizationUrl(provider: MonitorProvider, request: NextRequest, state: string): string | null {
   if (provider === "meta") {
@@ -44,7 +44,7 @@ export function buildProviderAuthorizationUrl(provider: MonitorProvider, request
       return null;
     }
 
-    const url = new URL(`https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`);
+    const url = new URL(`https://www.facebook.com/${DEFAULT_META_GRAPH_VERSION}/dialog/oauth`);
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "meta"));
     url.searchParams.set("state", state);
@@ -95,7 +95,7 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     throw new Error("Meta OAuth credentials are not configured.");
   }
 
-  const tokenUrl = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`);
+  const tokenUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/oauth/access_token`);
   tokenUrl.searchParams.set("client_id", appId);
   tokenUrl.searchParams.set("client_secret", appSecret);
   tokenUrl.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "meta"));
@@ -107,7 +107,7 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     throw new Error(shortLived.error?.message ?? "Meta OAuth did not return an access token.");
   }
 
-  const longLivedUrl = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`);
+  const longLivedUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/oauth/access_token`);
   longLivedUrl.searchParams.set("grant_type", "fb_exchange_token");
   longLivedUrl.searchParams.set("client_id", appId);
   longLivedUrl.searchParams.set("client_secret", appSecret);

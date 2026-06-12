@@ -310,3 +310,14 @@ test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () =>
   assert.match(dialog, /initialStep\?: StartStep/);
   assert.match(dialog, /fetch\("\/api\/research\/swipe-file"/);
 });
+
+test("Ad Radar longest-running sort reaches the authenticated search route", () => {
+  const panel = readFileSync("src/components/research/ad-radar-search-panel.tsx", "utf8");
+  const route = readFileSync("src/app/api/research/ads/search/route.ts", "utf8");
+
+  assert.match(panel, /if \(activeSort !== "recent"\) params\.set\("sort", activeSort\)/);
+  assert.match(panel, /doSearch\(initialQuery, initialSort\)/);
+  assert.match(route, /searchParams\.get\("sort"\) === "longest"/);
+  assert.match(route, /ad_delivery_started_at/);
+  assert.match(route, /adRunningMs/);
+});

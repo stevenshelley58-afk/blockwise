@@ -1,14 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const META_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v19.0";
 
 type Body = { workspaceId?: string };
 
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
     try {
       const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
       if (tokens.accessToken) {
-        const revokeUrl = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/permissions`);
+        const revokeUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/permissions`);
         revokeUrl.searchParams.set("access_token", tokens.accessToken);
         const revokeRes = await fetch(revokeUrl.toString(), { method: "DELETE" });
         if (!revokeRes.ok) {

@@ -5,10 +5,9 @@ import { deterministicUuid } from "../adstudio/id.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../campaigns/publishing.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
-
-const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
@@ -684,7 +683,7 @@ async function postMetaObject(
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "POST", path, body, createdAt });
 
-  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${path}`, {
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${input.accessToken}`,
@@ -715,7 +714,7 @@ async function getMetaObjectStatus(
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "GET", path, createdAt });
 
-  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${path}`, {
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "GET",
     headers: { authorization: `Bearer ${input.accessToken}` },
   });

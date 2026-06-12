@@ -238,7 +238,7 @@ test("image assembly includes negative prompt, aspect ratio rules, and redacted 
   assert.equal(prompt.fullPrompt.includes("aW1hZ2U="), false);
 });
 
-test("prompt test runner is assemble-only by default and blocks provider execution", async () => {
+test("prompt preview runner is assemble-only by default and blocks provider execution", async () => {
   const result = await runPromptTest({
     key: "adstudio.copy.input_template",
     fixtureId: "copy_appraisal_no_listing",
@@ -257,7 +257,7 @@ test("prompt test runner is assemble-only by default and blocks provider executi
         runProvider: true,
         client: null,
       }),
-    /Provider execution is disabled for prompt tests in PR 1/,
+    /Provider execution is disabled for prompt previews/,
   );
 });
 

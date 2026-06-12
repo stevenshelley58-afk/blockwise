@@ -31,7 +31,7 @@ export async function POST(_req: Request, context: RouteContext) {
       skill_name: data.skill_name,
       version: data.version,
       status: data.status,
-      note: "Phase 1 prompt tests render and validate the selected template. Live comparison runs through content run generation.",
+      note: "Prompt preview renders and validates the selected template. Live comparison runs through content run generation.",
       rendered_excerpt: String(data.template_body).slice(0, 800),
     },
   });
