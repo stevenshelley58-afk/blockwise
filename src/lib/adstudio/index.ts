@@ -31,7 +31,6 @@ export {
   createOpenRouterTextProvider,
   generateMixedImageVariantsInParallel,
 } from "./ai-providers.ts";
-export { createAdStudioJobRun, failAdStudioJobRun, type AdStudioJobRun } from "./jobs.ts";
 export {
   approveAdStudioBrandKitForUse,
   buildAdStudioLiveResult,

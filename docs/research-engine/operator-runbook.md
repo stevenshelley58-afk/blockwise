@@ -63,8 +63,8 @@ curl "$BLOCKWISE_URL/api/operator/research/jobs?status=failed"
 # Inspect one queue item and its ingest events.
 curl "$BLOCKWISE_URL/api/operator/research/jobs/$WORK_QUEUE_ID"
 
-# Retry a failed or blocked queue item.
-curl -X POST "$BLOCKWISE_URL/api/operator/research/jobs/$WORK_QUEUE_ID/retry"
+# Requeue a failed or blocked queue item.
+curl -X POST "$BLOCKWISE_URL/api/operator/research/jobs/$WORK_QUEUE_ID/requeue"
 
 # Inspect raw fetch-run snapshots and source-document metadata.
 curl "$BLOCKWISE_URL/api/operator/research/runs/$AD_FETCH_RUN_ID/raw"

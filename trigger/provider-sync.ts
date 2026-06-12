@@ -1,4 +1,4 @@
-﻿import { schedules, task } from "@trigger.dev/sdk/v3";
+import { schedules } from "@trigger.dev/sdk/v3";
 import * as Sentry from "@sentry/nextjs";
 
 import { resolveMonitorDateRange } from "../src/lib/monitor/dashboard-data.ts";
@@ -63,21 +63,5 @@ export const syncProviderReports = schedules.task({
       failed: results.filter((result) => result.status === "failed").length,
       results,
     };
-  },
-});
-
-export const syncProviderWorkspaceTask = task({
-  id: "sync-provider-workspace",
-  run: async (payload: ProviderSyncPayload) => {
-    const serviceSupabase = createSupabaseServiceClient();
-
-    return syncProviderWorkspace({
-      supabase: serviceSupabase as never,
-      serviceSupabase,
-      workspaceId: payload.workspaceId,
-      provider: payload.provider,
-      range: resolveMonitorDateRange("last_30"),
-      jobKey: "sync-provider-workspace",
-    });
   },
 });

@@ -51,7 +51,7 @@ Use when scheduled tasks (lead sync, token health, provider reports, watchdog) a
 
 To re-enable, click **Resume** on each schedule.
 
-For on-demand tasks (`publish.meta.execute`, `publish.meta.mutate`, `sync.meta.leads`, `deliver.lead`, `sync-provider-workspace`): these are triggered by API routes — stopping them requires setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` (step 2) or deploying a code change.
+For on-demand tasks (`publish.meta.execute`, `publish.meta.mutate`, `sync.meta.leads`, `deliver.lead`): these are triggered by API routes — stopping them requires setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` (step 2) or deploying a code change.
 
 ## 4. Pause / Delete Runaway Meta Campaign Objects
 

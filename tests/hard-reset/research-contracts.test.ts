@@ -124,9 +124,7 @@ test("customer authenticated research history uses the same safe ad contract as 
 
 test("customer research APIs read the customer-safe history view", () => {
   const sources = [
-    read("src/app/api/research/ads/route.ts"),
-    read("src/app/api/research/ads/[id]/route.ts"),
-    read("src/app/api/research/ads/export/route.ts"),
+    read("src/app/api/research/ads/search/route.ts"),
     read("src/app/api/research/swipe-file/route.ts"),
     read("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"),
     read("src/lib/research/customer-ad-library-pages.ts"),
