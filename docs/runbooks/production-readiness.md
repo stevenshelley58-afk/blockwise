@@ -129,7 +129,9 @@ as a release gate unless a later task adds real package scripts.
   such as Cloudflare Zero Trust, SSO, and MFA.
 - [ ] Verify Trigger.dev deployed tasks in the dashboard: Meta publish, Meta
   mutation, scheduled lead sync, token health, lead delivery, provider sync,
-  paid-service watchdog, and retry/failure visibility.
+  and retry/failure visibility.
+- [ ] Verify the paid-service watchdog as the Vercel Cron configured in
+  `vercel.json` for `/api/alerts/paid-service-watchdog`.
 - [ ] Configure Sentry, analytics, audit log drain, and production alerting for
   route errors, failed jobs, provider failures, and security events.
 - [ ] Create production operator, demo workspace, and smoke-test workspace with

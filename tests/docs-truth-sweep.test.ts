@@ -47,6 +47,8 @@ test("production readiness references real release commands", () => {
   assert.match(readiness, /There is no `lint` script and no `audit:repo` script/);
   assert.match(readiness, /npm run verify:hard-reset/);
   assert.match(readiness, /npm run trigger:deploy/);
+  assert.match(readiness, /paid-service watchdog as the Vercel Cron configured in\s+`vercel\.json`/);
+  assert.doesNotMatch(readiness, /Verify Trigger\.dev deployed tasks[^\r\n]*(?:\r?\n {2}[^\r\n]*)*paid-service watchdog/);
 });
 
 test("launch plan is marked superseded", () => {
