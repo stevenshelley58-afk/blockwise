@@ -39,6 +39,15 @@ test("generation success responses keep the existing fields without a trial bloc
   }
 });
 
+test("real campaign generation route guards duplicate in-flight requests", () => {
+  const source = read(campaignsRoute);
+
+  assert.match(source, /const inFlightGenerations = new Map<string, number>\(\)/);
+  assert.match(source, /generationDedupKey\(context\.access\.workspaceId,\s*body\)/);
+  assert.match(source, /status:\s*409/);
+  assert.match(source, /inFlightGenerations\.delete\(dedupKey\)/);
+});
+
 test("trial helper checks confirmed email only for trial workspaces before the reserve RPC", () => {
   const source = read(trialHelper);
   const planCheckIndex = source.indexOf("loadWorkspacePlanKey");

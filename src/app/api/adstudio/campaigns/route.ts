@@ -31,6 +31,9 @@ type CreateCampaignBody = {
   sourceImageDataUrl?: string;
 };
 
+const inFlightGenerations = new Map<string, number>();
+const GENERATION_DEDUP_TTL_MS = 30_000;
+
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
     value?.startsWith("data:image/") ||
@@ -52,6 +55,15 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
     return "Selected template was not found.";
   }
   return null;
+}
+
+function generationDedupKey(workspaceId: string, body: unknown): string {
+  const text = JSON.stringify(body) ?? "";
+  let hash = 5381;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
+  }
+  return `${workspaceId}:${hash}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -80,6 +92,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readJsonBody<CreateCampaignBody>(request);
+  const dedupKey = generationDedupKey(context.access.workspaceId, body);
+  const inFlightSince = inFlightGenerations.get(dedupKey);
+
+  if (inFlightSince !== undefined && Date.now() - inFlightSince < GENERATION_DEDUP_TTL_MS) {
+    return NextResponse.json(
+      { error: "This generation is already running. Wait for it to finish before retrying." },
+      { status: 409 },
+    );
+  }
+
+  inFlightGenerations.set(dedupKey, Date.now());
   let trialReservation: AdStudioGenerationTrialReservation | null = null;
 
   try {
@@ -167,5 +190,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     await refundReservedTrialCredit(trialReservation);
     return errorResponse(error, 400);
+  } finally {
+    inFlightGenerations.delete(dedupKey);
   }
 }
