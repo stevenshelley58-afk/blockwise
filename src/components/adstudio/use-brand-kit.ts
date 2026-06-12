@@ -79,37 +79,6 @@ export function useBrandKit(brandKit: AdStudioBrandKit) {
     }
   }
 
-  async function rescanKit() {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch(`/api/adstudio/brand-kits/${kitId}/rescan`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
-        setSaveError(json.error ?? `Rescan failed (${res.status})`);
-      } else {
-        const json = (await res.json().catch(() => ({}))) as {
-          brandKit?: { identity?: { businessName?: string; tradingName?: string }; contact?: { phone?: string } };
-        };
-        if (json.brandKit?.identity?.businessName) {
-          setEditedBrand(json.brandKit.identity.businessName);
-        }
-        if (json.brandKit?.identity?.tradingName) {
-          setEditedAgent(json.brandKit.identity.tradingName);
-        }
-        if (json.brandKit?.contact?.phone) {
-          setEditedPhone(formatAuPhone(json.brandKit.contact.phone));
-        }
-      }
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Network error");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function approveKit() {
     setIsSaving(true);
     setSaveError(null);
@@ -146,7 +115,6 @@ export function useBrandKit(brandKit: AdStudioBrandKit) {
     saveConfirmed,
     // Actions
     saveKit,
-    rescanKit,
     approveKit,
   };
 }

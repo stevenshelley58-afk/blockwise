@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -261,4 +261,20 @@ test("fresh brand workspaces do not fall back to Northstar demo branding", () =>
   assert.match(useBrandKit, /"Your agency"/);
   assert.match(preview, /domain \? <small>\{domain\}<\/small> : null/);
   assert.match(brandKitRoute, /if \(!data\) return NextResponse\.json\(\{ error: "Brand kit not found\." \}, \{ status: 404 \}\)/);
+});
+
+test("dead Ad Studio stub endpoints stay deleted", () => {
+  for (const path of [
+    "src/app/api/adstudio/variants/[id]/score/route.ts",
+    "src/app/api/adstudio/creatives/[id]/export/route.ts",
+    "src/app/api/adstudio/export-packages/[id]/route.ts",
+    "src/app/api/adstudio/jobs/route.ts",
+    "src/app/api/adstudio/brand-kits/[id]/rescan/route.ts",
+    "src/app/api/adstudio/creatives/[id]/render/route.ts",
+  ]) {
+    assert.equal(existsSync(path), false, path);
+  }
+
+  const useBrandKit = readFileSync("src/components/adstudio/use-brand-kit.ts", "utf8");
+  assert.doesNotMatch(useBrandKit, /rescanKit|\/rescan/);
 });
