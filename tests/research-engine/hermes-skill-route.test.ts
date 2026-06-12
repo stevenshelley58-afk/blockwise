@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const nextConfig = readFileSync("next.config.ts", "utf8");
@@ -19,4 +19,16 @@ test("operator skill route returns 404 for missing Hermes skills", () => {
   assert.match(route, /NextResponse\.json\(\{ error: "Hermes skill not found\." \}, \{ status: 404 \}\)/u);
   assert.match(hermesAssets, /error\.message === "Invalid Hermes skill slug\."/u);
   assert.match(hermesAssets, /code === "ENOENT" \|\| code === "ENOTDIR"/u);
+});
+
+test("operator research skills list includes every bundled Hermes skill", () => {
+  const skills = readdirSync("hermes/skills", { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^blockwise-[a-z0-9-]+$/u.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+
+  assert.equal(skills.length, 27);
+  assert.ok(skills.includes("blockwise-location-ad-search"));
+  assert.match(hermesAssets, /readdir\(SKILLS_ROOT, \{ withFileTypes: true \}\)/u);
+  assert.match(hermesAssets, /readHermesSkill\(entry\.name\)/u);
 });

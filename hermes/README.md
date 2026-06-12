@@ -10,6 +10,7 @@ not loaded by the Next.js app at runtime.
 | ----- | ------------ |
 | `blockwise-agent-census` | Owns the real-estate roster for a postcode and is the only skill that can mark an agency real-estate verified |
 | `blockwise-page-resolver` | Resolves a verified agent or agency to its real Meta advertiser page |
+| `blockwise-location-ad-search` | Runs explicit gated postcode/suburb Meta Ad Library searches for public scan coverage |
 | `blockwise-ad-collector` | Collects ads only for resolved, real-estate-gated advertiser pages |
 | `blockwise-ad-classifier` | Tags captured creatives with type, hook, style, audience, and confidence |
 | `blockwise-coverage-auditor` | Audits postcode coverage and opens defects for gaps instead of ingesting sampled ads |

@@ -195,7 +195,7 @@ export default function PricingPage() {
           <div>
             <BlockwiseLogo />
             <p>
-              The ad platform for real estate teams. Create, approve, launch and track property
+              The ad platform for real estate teams. Create, approve, export and track property
               campaigns from one place.
             </p>
             <p className="lp-footer-contact">

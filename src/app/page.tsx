@@ -271,7 +271,7 @@ export default function HomePage() {
           <div className="lp-shell">
             <div className="lp-center-head">
               <p className="lp-eyebrow lp-eyebrow-sky">How it works</p>
-              <h2 className="lp-h2 lp-h2-light">From brief to live campaign in four steps.</h2>
+              <h2 className="lp-h2 lp-h2-light">From brief to launch-ready campaign in four steps.</h2>
             </div>
             <div className="lp-pipe-grid">
               <PipeStep
@@ -316,7 +316,7 @@ export default function HomePage() {
               <PipeStep
                 label="Step 3 — Approve"
                 title="Review and approve"
-                copy="Your team checks every claim, disclaimer, image and budget before launch."
+                copy="Your team checks every claim, disclaimer, image and budget before export."
               >
                 <div className="lp-mock">
                   <div className="lp-mock-head">Review &amp; approve</div>
@@ -337,8 +337,8 @@ export default function HomePage() {
                       <path d="m22 2-7 20-4-9-9-4Z" />
                     </svg>
                   </div>
-                  <h3>Launch from Blockwise</h3>
-                  <p>Connect your ad account, publish the campaign and track performance inside the app.</p>
+                  <h3>Export from Blockwise</h3>
+                  <p>Export the reviewed campaign package, connect your ad account when ready and track status inside the app.</p>
                 </div>
               </div>
             </div>
@@ -349,10 +349,10 @@ export default function HomePage() {
           <div className="lp-shell">
             <div className="lp-center-head">
               <p className="lp-eyebrow">Campaigns</p>
-              <h2 className="lp-h2">Everything you need to launch real estate campaigns.</h2>
+              <h2 className="lp-h2">Everything you need to prepare real estate campaigns.</h2>
               <p className="lp-lead">
                 Blockwise gives agents and marketing coordinators the tools to create the campaign,
-                approve the details and run it through the agency ad account.
+                approve the details and export the package for final setup in the agency ad account.
               </p>
             </div>
             <div className="lp-features">
@@ -373,7 +373,7 @@ export default function HomePage() {
               />
               <Feature
                 title="Budget and schedule"
-                copy="Set spend and duration before anything launches. Ad spend goes through your ad account."
+                copy="Set spend and duration before final handoff. Ad spend goes through your ad account."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg>}
               />
               <Feature
@@ -394,13 +394,13 @@ export default function HomePage() {
           <div className="lp-shell lp-split lp-split-swap">
             <div>
               <p className="lp-eyebrow">Approval and control</p>
-              <h2 className="lp-h2" id="control-title">You stay in control before anything goes live.</h2>
+              <h2 className="lp-h2" id="control-title">You stay in control before anything leaves draft.</h2>
               <p className="lp-lead">
-                Every campaign is drafted inside Blockwise, reviewed by your team and launched through
-                your connected ad account only after approval.
+                Every campaign is drafted inside Blockwise, reviewed by your team and exported for
+                final platform setup only after approval.
               </p>
               <ul className="lp-control-list" aria-label="Control points">
-                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before launch</li>
+                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before export</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Use your own Meta ad account</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Control the budget and schedule</li>
                 <li><span className="lp-check" aria-hidden>✓</span>See every result in one dashboard</li>
@@ -460,7 +460,7 @@ export default function HomePage() {
               <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
               <p className="lp-lead lp-lead-light">
                 No card required. Create draft campaigns, review the ads and connect your ad account
-                when you are ready to launch.
+                when you are ready for final setup.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
                 Start free trial
@@ -479,10 +479,10 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow">Managed setup</p>
-              <h2 className="lp-h2" id="demo-title">Want help launching your first campaign?</h2>
+              <h2 className="lp-h2" id="demo-title">Want help preparing your first campaign?</h2>
               <p className="lp-lead">
                 Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
-                your ad account and review everything before launch.
+                your ad account and review everything before handoff.
               </p>
             </div>
             <DemoForm />
@@ -499,37 +499,37 @@ export default function HomePage() {
                   <summary>Who pays for ad spend?</summary>
                   <p>
                     You do. Campaigns run through your connected ad account and your ad spend is paid to
-                    the platform directly. Blockwise is the software used to create, approve, launch and
+                    the platform directly. Blockwise is the software used to create, approve, export and
                     track the campaign.
                   </p>
                 </details>
                 <details>
                   <summary>Do I need a Meta ad account?</summary>
                   <p>
-                    You can create and review campaigns before connecting Meta. To launch from Blockwise,
-                    connect your Meta ad account.
+                    You can create and review campaigns before connecting Meta. To move from draft to a
+                    live campaign, connect your Meta ad account for final setup.
                   </p>
                 </details>
                 <details>
                   <summary>Can I approve ads before they run?</summary>
                   <p>
-                    Yes. Nothing goes live until your team approves the copy, creative, lead form, budget
-                    and schedule.
+                    Yes. Nothing is sent for launch until your team approves the copy, creative, lead form,
+                    budget and schedule.
                   </p>
                 </details>
                 <details>
                   <summary>Can I see results inside Blockwise?</summary>
                   <p>
-                    Yes. Once launched, Blockwise shows campaign status, spend, clicks, leads and
+                    Yes. Once your campaign is connected, Blockwise shows status, spend, clicks, leads and
                     performance metrics inside the app.
                   </p>
                 </details>
                 <details>
-                  <summary>Are the ads checked before publishing?</summary>
+                  <summary>Are the ads checked before export?</summary>
                   <p>
                     Blockwise flags common property advertising risks and brand issues before approval.
                     Your agency remains responsible for final review, claims, pricing language and
-                    publishing.
+                    export.
                   </p>
                 </details>
                 <details>
@@ -545,7 +545,7 @@ export default function HomePage() {
               <h3>Need a hand getting started?</h3>
               <p>
                 Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
-                your ad account and get everything ready to launch.
+                your ad account and get everything ready for final setup.
               </p>
               <CtaLink location="faq-walkthrough" href="#managed-setup" className="lp-btn lp-btn-hero">
                 Book a walkthrough
@@ -560,7 +560,7 @@ export default function HomePage() {
           <div>
             <BlockwiseLogo />
             <p>
-              The ad platform for real estate teams. Create, approve, launch and track property
+              The ad platform for real estate teams. Create, approve, export and track property
               campaigns from one place.
             </p>
             <p className="lp-footer-contact">

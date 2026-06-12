@@ -1,6 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { fetchOpenRouterModelCatalog } from "./openrouter-client.ts";
+import { hasOperatorAccessFromRows } from "../auth/workspace-access.ts";
 import {
   type EnvLike,
   buildModelControlViewData,
@@ -173,13 +174,19 @@ export async function ensureOperatorSession(
     };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_operator")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: memberships }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("is_operator")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("profile_id", user.id),
+  ]);
 
-  if (!profile?.is_operator) {
+  if (!hasOperatorAccessFromRows(profile, memberships)) {
     return {
       ok: false,
       status: 403,

@@ -1,4 +1,5 @@
 import { OperatorAssistant, type OperatorAssistantCoverageRow } from "@/components/operator/operator-assistant";
+import { ServiceRoleRequired } from "@/components/operator/service-role-required";
 import {
   ResearchConsole,
   type ConsoleCoverageRow,
@@ -12,6 +13,7 @@ import {
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { logCaught } from "@/lib/log";
 import { listHermesSkills, type HermesSkillSummary } from "@/lib/operator/hermes-assets";
+import { createOperatorSupabaseServiceClient } from "@/lib/operator/service-role";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -308,7 +310,16 @@ function loadOfficialMetaApiStatus(): ConsoleOfficialMetaApi {
 
 export default async function OperatorResearchPage({ searchParams }: { searchParams?: SearchParams }) {
   await requirePageSurfaceAccess("operator");
-  const supabase = createSupabaseServiceClient();
+  const supabase = createOperatorSupabaseServiceClient();
+  if (!supabase) {
+    return (
+      <main className="operator-os">
+        <div className="operator-os-main">
+          <ServiceRoleRequired />
+        </div>
+      </main>
+    );
+  }
   const params = searchParams ? await Promise.resolve(searchParams) : {};
   const formError = operatorResearchErrorMessage(firstParam(params.error));
 

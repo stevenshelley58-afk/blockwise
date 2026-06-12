@@ -12,6 +12,7 @@ export {
   type CreateContentRunInput,
 } from "./contracts.ts";
 export {
+  ContentRunNotFoundError,
   createContentRunRecord,
   listContentRuns,
   listPromptSets,

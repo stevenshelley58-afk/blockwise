@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { canManageProviderConnections } from "../src/lib/auth/access-control.ts";
@@ -19,6 +20,18 @@ test("operator access accepts profile flag and workspace operator role", () => {
   assert.equal(hasOperatorAccessFromRows({ is_operator: true }, []), true);
   assert.equal(hasOperatorAccessFromRows({ is_operator: false }, [{ role: "operator" }]), true);
   assert.equal(hasOperatorAccessFromRows({ is_operator: false }, [{ role: "owner" }]), false);
+});
+
+test("model profile routes use the shared operator predicate", () => {
+  const store = readFileSync("src/lib/ai/model-profile-store.ts", "utf8");
+  const patchRoute = readFileSync("src/app/api/model-profiles/[key]/route.ts", "utf8");
+  const testRoute = readFileSync("src/app/api/model-profiles/[key]/test/route.ts", "utf8");
+
+  assert.match(store, /hasOperatorAccessFromRows/);
+  assert.match(store, /from\("workspace_members"\)[\s\S]*select\("role"\)[\s\S]*\.eq\("profile_id", user\.id\)/);
+  assert.doesNotMatch(store, /if \(!profile\?\.is_operator\)/);
+  assert.match(patchRoute, /ensureOperatorSession\(supabase\)/);
+  assert.match(testRoute, /ensureOperatorSession\(supabase\)/);
 });
 
 test("non-operators cannot request arbitrary workspace IDs", () => {

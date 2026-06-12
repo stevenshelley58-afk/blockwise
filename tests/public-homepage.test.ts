@@ -120,12 +120,28 @@ test("landing page metadata matches Blockwise positioning", () => {
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
 
   assert.match(layout, /Blockwise \| Real Estate Meta Ads Workflow/);
-  assert.match(layout, /create, approve, launch, and track Meta ad campaigns through their own ad account/);
+  assert.match(layout, /create, approve, export, and track Meta ad campaigns through their own ad account/);
   assert.match(layout, /type:\s*"website"/);
   assert.match(layout, /card:\s*"summary_large_image"/);
   assert.doesNotMatch(layout, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
   assert.match(home, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
   assert.match(pricing, /alternates:\s*\{\s*canonical:\s*"\/pricing"\s*\}/);
+});
+
+test("public marketing copy stays honest about first-tester export posture", () => {
+  const home = readFileSync("src/app/page.tsx", "utf8");
+  const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
+  const layout = readFileSync("src/app/layout.tsx", "utf8");
+  const combined = `${home}\n${pricing}\n${layout}`;
+
+  assert.match(home, /Export from Blockwise/);
+  assert.match(home, /export the package for final setup/i);
+  assert.match(home, /final platform setup only after approval/i);
+  assert.match(pricing, /Create, approve, export and track property/);
+  assert.doesNotMatch(combined, /Launch from Blockwise/);
+  assert.doesNotMatch(combined, /publish the campaign/i);
+  assert.doesNotMatch(combined, /create, approve, launch/i);
+  assert.doesNotMatch(combined, /To launch from Blockwise/i);
 });
 
 test("legal pages rely on root title template and define page canonicals", () => {

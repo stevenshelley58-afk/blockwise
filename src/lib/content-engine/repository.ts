@@ -3,6 +3,13 @@ import type { CreateContentRunInput } from "./contracts.ts";
 type QueryResult<T> = { data: T | null; error: { message: string } | null };
 type QueryRows<T> = { data: T[] | null; error: { message: string } | null };
 
+export class ContentRunNotFoundError extends Error {
+  constructor(runId: string) {
+    super(`Content run not found: ${runId}`);
+    this.name = "ContentRunNotFoundError";
+  }
+}
+
 export type ContentRunRow = {
   id: string;
   workspace_id: string;
@@ -126,9 +133,11 @@ export async function loadContentRun(
   supabase: ContentRepositoryClient,
   runId: string,
 ): Promise<ContentRunRow> {
-  return querySingle<ContentRunRow>(
-    supabase.from("content_runs").select("*").eq("id", runId).single(),
+  const run = await queryMaybeSingle<ContentRunRow>(
+    supabase.from("content_runs").select("*").eq("id", runId).maybeSingle(),
   );
+  if (!run) throw new ContentRunNotFoundError(runId);
+  return run;
 }
 
 export async function listContentRuns(
