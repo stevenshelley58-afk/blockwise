@@ -1,5 +1,7 @@
 ﻿# Blockwise Go-Live Plan
 
+> **SUPERSEDED 2026-06-12** by `docs/FIRST_TESTER_PLAN.md` — work from that plan. This file is kept as the record of the June 10 launch sprint.
+
 **Generated:** 2026-06-10 Â· Full e2e review (security, user flow, UI/UX, ads readiness, ops)
 **Audience:** A code agent executing tasks one at a time, in order.
 
