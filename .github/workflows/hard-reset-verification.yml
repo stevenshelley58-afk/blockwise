@@ -45,3 +45,34 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
           SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
           TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+  trigger-deploy:
+    name: Deploy Trigger.dev tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: contracts
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+      TRIGGER_PROJECT_ID: ${{ secrets.TRIGGER_PROJECT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require Trigger.dev secrets
+        run: |
+          test -n "$TRIGGER_ACCESS_TOKEN"
+          test -n "$TRIGGER_PROJECT_ID"
+
+      - name: Deploy Trigger.dev tasks
+        run: npm run trigger:deploy

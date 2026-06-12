@@ -53,7 +53,24 @@ To re-enable, click **Resume** on each schedule.
 
 For on-demand tasks (`publish.meta.execute`, `publish.meta.mutate`, `sync.meta.leads`, `deliver.lead`): these are triggered by API routes — stopping them requires setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` (step 2) or deploying a code change.
 
-## 4. Pause / Delete Runaway Meta Campaign Objects
+## 4. Trigger.dev Deployments And Env
+
+Trigger.dev tasks deploy automatically after the GitHub `main` branch checks pass. The workflow uses `npm run trigger:deploy` with the `TRIGGER_ACCESS_TOKEN` and `TRIGGER_PROJECT_ID` repository secrets. Missing `TRIGGER_PROJECT_ID` is a hard failure in `trigger.config.ts`; there is no local project fallback.
+
+Keep these variables set in the Trigger.dev project environment that matches Production:
+
+- `TRIGGER_PROJECT_ID`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `META_APP_ID`
+- `META_APP_SECRET`
+- `TOKEN_ENCRYPTION_KEY`
+- `BLOCKWISE_ENABLE_PROVIDER_WRITES`
+- `SENTRY_DSN` or `NEXT_PUBLIC_SENTRY_DSN`
+
+After changing any of those values, redeploy tasks with `npm run trigger:deploy` or wait for the next successful `main` push.
+
+## 5. Pause / Delete Runaway Meta Campaign Objects
 
 Use when Meta campaign objects were created by a bad deploy and need to be stopped immediately.
 
@@ -77,6 +94,7 @@ See step 2 — this stops Blockwise from creating more objects but does not paus
 | Wrong code is live | Vercel instant rollback (§1) |
 | Good code but provider mutations running wild | Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` + redeploy (§2) |
 | Scheduled tasks looping / causing harm | Pause Trigger.dev schedules (§3) |
-| Meta campaigns spending unexpectedly | Pause in Ads Manager (§4) + provider writes off (§2) |
+| Trigger tasks failed to deploy | Check GitHub `trigger-deploy` job and Trigger env (§4) |
+| Meta campaigns spending unexpectedly | Pause in Ads Manager (§5) + provider writes off (§2) |
 
 After any rollback, open a post-mortem in `docs/runbooks/` and note: what broke, when detected, rollback steps taken, and follow-up prevention.
