@@ -45,37 +45,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const existingPack = await loadExistingCampaignPack(access.supabase, access.access.workspaceId, id);
-
-    if (!existingPack) {
-      return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
-    }
-
-    const submittedPack: AdStudioCampaignPack = {
-      ...body.campaignPack,
-      brandKit: existingPack.brandKit,
-      campaign: {
-        ...body.campaignPack.campaign,
-        workspaceId: access.access.workspaceId,
-        brandKitId: existingPack.campaign.brandKitId,
-      },
-      variants: body.campaignPack.variants.map((variant) => ({
-        ...variant,
-        campaignId: id,
-      })),
-      creatives: body.campaignPack.creatives.map((creative) => ({
-        ...creative,
-        campaignId: id,
-      })),
-      copyPacks: body.campaignPack.copyPacks.map((copyPack) => ({
-        ...copyPack,
-        campaignId: id,
-      })),
-      compliance: {
-        ...body.campaignPack.compliance,
-        campaignId: id,
-      },
-    };
-    const campaignPack = mergeCampaignPack(existingPack, submittedPack);
+    const submittedPack = normalizeSubmittedCampaignPack(
+      body.campaignPack,
+      id,
+      access.access.workspaceId,
+      existingPack?.brandKit ?? body.campaignPack.brandKit,
+      existingPack?.campaign.brandKitId ?? body.campaignPack.brandKit.brandKitId,
+    );
+    const campaignPack = existingPack ? mergeCampaignPack(existingPack, submittedPack) : submittedPack;
 
     const persisted = await persistAdStudioCampaignPack(access.supabase, campaignPack, access.access.userId);
     const responsePack = persisted.error
@@ -170,6 +147,44 @@ function mergeCampaignPack(existing: AdStudioCampaignPack, submitted: AdStudioCa
       ...existing.compliance,
       ...submitted.compliance,
       campaignId: existing.campaign.campaignId,
+    },
+  };
+}
+
+function normalizeSubmittedCampaignPack(
+  pack: AdStudioCampaignPack,
+  campaignId: string,
+  workspaceId: string,
+  brandKit: AdStudioCampaignPack["brandKit"],
+  brandKitId: string,
+): AdStudioCampaignPack {
+  return {
+    ...pack,
+    brandKit: {
+      ...brandKit,
+      workspaceId,
+    },
+    campaign: {
+      ...pack.campaign,
+      campaignId,
+      workspaceId,
+      brandKitId,
+    },
+    variants: pack.variants.map((variant) => ({
+      ...variant,
+      campaignId,
+    })),
+    creatives: pack.creatives.map((creative) => ({
+      ...creative,
+      campaignId,
+    })),
+    copyPacks: pack.copyPacks.map((copyPack) => ({
+      ...copyPack,
+      campaignId,
+    })),
+    compliance: {
+      ...pack.compliance,
+      campaignId,
     },
   };
 }

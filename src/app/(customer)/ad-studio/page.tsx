@@ -5,7 +5,7 @@ import { generateAdStudioCampaignPack, listOfferTemplates } from "@/lib/adstudio
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
-import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
+import { isExampleBrandKitSourceUrl, persistAdStudioCampaignPack, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -27,13 +27,13 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
-  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId);
+  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId, access.userId);
   const isTrialWorkspace = await loadIsTrialWorkspace(supabase, access.workspaceId);
 
   // Softened gate: an extracted-but-unapproved kit lets the user straight into the
   // workbench as a "Draft brand" (publish stays blocked until approval). The hard
   // gate only remains for non-trial workspaces with no brand kit at all.
-  const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId) : null;
+  const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId, access.userId) : null;
 
   if (!liveBundle && !draftBundle && !isTrialWorkspace) {
     return <BrandSetupGate workspaceName={access.workspaceName ?? "your workspace"} />;
@@ -80,7 +80,6 @@ async function buildTrialStarterBundle(input: {
     workspaceName: input.workspaceName,
     region: input.region,
   });
-  await persistAdStudioBrandKit(input.supabase, brandKit, input.userId).catch(() => null);
   const offers = listOfferTemplates();
   const campaignPack = generateAdStudioCampaignPack({
     workspaceId: input.workspaceId,
@@ -93,6 +92,7 @@ async function buildTrialStarterBundle(input: {
     platforms: ["meta"],
     variantCount: 3,
   });
+  await persistAdStudioCampaignPack(input.supabase, campaignPack, input.userId).catch(() => null);
   return {
     brandKit,
     campaignPack,
@@ -111,6 +111,7 @@ async function buildTrialStarterBundle(input: {
 async function buildDraftBrandBundle(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
+  userId: string,
 ) {
   try {
     const { data } = await supabase
@@ -132,7 +133,7 @@ async function buildDraftBrandBundle(
     if (brandKit.reviewStatus === "approved") return null;
 
     const offers = listOfferTemplates();
-    const campaignPack = generateAdStudioCampaignPack({
+    const generatedCampaignPack = generateAdStudioCampaignPack({
       workspaceId,
       // The generator requires an approved kit; seeding a preview pack from a
       // draft kit reuses the same pattern as loadLiveAdStudioBundle. The kit
@@ -146,6 +147,8 @@ async function buildDraftBrandBundle(
       platforms: ["meta"],
       variantCount: 3,
     });
+    const campaignPack = { ...generatedCampaignPack, brandKit };
+    await persistAdStudioCampaignPack(supabase, campaignPack, userId).catch(() => null);
 
     return {
       brandKit,
