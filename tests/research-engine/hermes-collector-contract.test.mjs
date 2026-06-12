@@ -240,6 +240,24 @@ test("Hermes active ad collector only spends on Apify when Apify is explicitly c
   assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the configured provider");
 });
 
+test("Hermes treats disabled explicit Apify capture as skipped work, not a blocked job", () => {
+  assert.match(
+    apifyMetaPageCapture,
+    /skippedCaptureOutcome\(META_APIFY_SOURCE_PROVIDER[\s\S]*skip_reason:\s*parsedSettings\.enabled \? ["']apify_circuit_open["'] : ["']apify_disabled["']/u,
+    "disabled or circuit-open explicit Apify capture should return a skipped outcome without paid dispatch",
+  );
+  assert.match(
+    collector,
+    /outcome\.status === ["']SKIPPED["'][\s\S]*status:\s*["']failed["'][\s\S]*skipped:\s*true[\s\S]*status:\s*["']complete["']/u,
+    "skipped capture should complete the work queue job while recording a failed/skipped fetch run",
+  );
+  assert.doesNotMatch(
+    collector,
+    /outcome\.status === ["']SKIPPED["'][\s\S]*finishJob\([^)]*["']blocked["']/u,
+    "skipped paid capture must not create health-critical blocked queue work",
+  );
+});
+
 test("Hermes Apify fallback only promotes actors after capped known-good canaries", () => {
   assert.match(apifyCandidateBenchmark, /\bif \(!apifyToken\) return \{ status: ["']skipped["'], reason: ["']token_missing["'] \}/u, "benchmark must not run without an Apify token");
   assert.match(apifyCandidateBenchmark, /\bresolveApifyCaptureActor\(settings\)/u, "benchmark should skip when an approved actor already exists");

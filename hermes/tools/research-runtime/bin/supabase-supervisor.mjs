@@ -2972,7 +2972,11 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
   const parsedSettings = normaliseApifySettings(settings);
   if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
     return explicit
-      ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture is ${parsedSettings.enabled ? parsedSettings.state : "disabled"}`, { explicit, apify_state: parsedSettings.state })
+      ? skippedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture is ${parsedSettings.enabled ? parsedSettings.state : "disabled"}`, {
+        explicit,
+        apify_state: parsedSettings.state,
+        skip_reason: parsedSettings.enabled ? "apify_circuit_open" : "apify_disabled",
+      })
       : null;
   }
 
@@ -3553,6 +3557,26 @@ function failedCaptureOutcome(provider, input, startedAt, errorMessage, metadata
     items: [],
     rawDatasetId: null,
     errorMessage,
+    metadata: {
+      advertiserPageId: input.advertiserPageId,
+      resolverDecisionId: input.resolverDecisionId,
+      ...metadata,
+    },
+  };
+}
+
+function skippedCaptureOutcome(provider, input, startedAt, message, metadata = {}) {
+  return {
+    runId: `${provider}-skipped-${input.metaPageId}-${Date.now()}`,
+    provider,
+    status: "SKIPPED",
+    startedAt,
+    finishedAt: now(),
+    costUsd: 0,
+    itemCount: 0,
+    items: [],
+    rawDatasetId: null,
+    errorMessage: message,
     metadata: {
       advertiserPageId: input.advertiserPageId,
       resolverDecisionId: input.resolverDecisionId,
@@ -4853,6 +4877,34 @@ async function handleAdCollector(job) {
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
   const capture = await runMetaPageCapture(input);
   const { outcome, sourceProvider, captureMode: capture_mode } = capture;
+  if (outcome.status === "SKIPPED") {
+    await updateFetchRun(adFetchRunId, {
+      source_provider: sourceProvider,
+      status: "failed",
+      result_summary: {
+        provider: sourceProvider,
+        skipped: true,
+        skip_reason: outcome.metadata?.skip_reason || "capture_skipped",
+        metadata: outcome.metadata || {},
+      },
+      error: outcome.errorMessage || "capture skipped",
+      cost_usd: 0,
+    });
+    await markAdvertiserPageCheckFailed(payload.advertiserPageId);
+    return {
+      status: "complete",
+      result: {
+        handler: "blockwise-ad-collector",
+        advertiser_page_id: payload.advertiserPageId,
+        meta_page_id: payload.metaPageId,
+        provider: sourceProvider,
+        capture_mode,
+        collection_skipped: true,
+        skip_reason: outcome.metadata?.skip_reason || "capture_skipped",
+        ingest_tables: ingestTables,
+      },
+    };
+  }
   if (outcome.status !== "SUCCEEDED") {
     await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0 });
     await markAdvertiserPageCheckFailed(payload.advertiserPageId);
