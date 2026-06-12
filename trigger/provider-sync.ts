@@ -10,6 +10,18 @@ type ProviderSyncPayload = {
   provider: "meta" | "google";
 };
 
+type ProviderConnectionRow = {
+  workspace_id: string;
+  provider: "meta" | "google";
+};
+
+export function mapProviderConnectionRow(connection: ProviderConnectionRow): ProviderSyncPayload {
+  return {
+    workspaceId: connection.workspace_id,
+    provider: connection.provider,
+  };
+}
+
 export const syncProviderReports = schedules.task({
   id: "sync-provider-reports",
   cron: "0 */6 * * *",
@@ -25,8 +37,11 @@ export const syncProviderReports = schedules.task({
       throw new Error(error.message);
     }
 
+    const connectionRows: ProviderConnectionRow[] = connections ?? [];
+    const syncPayloads = connectionRows.map(mapProviderConnectionRow);
+
     const results = await Promise.all(
-      ((connections ?? []) as ProviderSyncPayload[]).map(async (connection) => {
+      syncPayloads.map(async (connection) => {
         try {
           return await syncProviderWorkspace({
             supabase: serviceSupabase as never,
