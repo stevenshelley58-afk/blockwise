@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
 import { listHermesSkills } from "@/lib/operator/hermes-assets";
+import { executeRefreshPostcode } from "@/lib/operator/postcode-refresh";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,15 @@ type CoverageRow = {
   last_refreshed_at: string | null;
   live_active_ads: number;
   live_advertiser_pages?: number;
+  health: string;
+};
+
+type CoverageSummary = {
+  postcode: string;
+  state: string;
+  score: number;
+  activeAds: number;
+  advertiserPages: number;
   health: string;
 };
 
@@ -81,6 +91,35 @@ export async function POST(req: Request) {
     .reduce((sum, run) => sum + (Number(run.cost_usd) || 0), 0);
   const rows = coverage.slice(0, 4);
   const proposedPostcode = rows[0]?.postcode ?? null;
+  const refreshCommand = parseRefreshPostcodeCommand(parsed.data.query);
+
+  if (refreshCommand.isRefreshPostcode) {
+    const postcode = refreshCommand.postcode ?? proposedPostcode;
+    if (!postcode) {
+      const answer = "No postcode is available to refresh.";
+      await recordChatDecision(research, parsed.data.query, answer, rows);
+      return NextResponse.json({ answer, rows });
+    }
+    if (!/^\d{4}$/u.test(postcode)) {
+      return NextResponse.json({ error: "postcode must be four digits" }, { status: 400 });
+    }
+
+    try {
+      const result = await executeRefreshPostcode(research, postcode, guard.email);
+      const answer = result.message;
+      await recordChatDecision(research, parsed.data.query, answer, rows, {
+        action: "refresh_postcode",
+        postcode: result.postcode,
+        state: result.state,
+        sourceBacked: result.sourceBacked,
+        queued: result.queued,
+      });
+      return NextResponse.json({ answer, rows });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Could not refresh postcode.";
+      return NextResponse.json({ error: text }, { status: 500 });
+    }
+  }
 
   const answer = [
     `${coverage.length} coverage rows loaded from research.v_coverage_status.`,
@@ -90,20 +129,7 @@ export async function POST(req: Request) {
     `24h collector spend is $${spend24h.toFixed(2)}.`,
   ].join(" ");
 
-  await research.from("agent_decisions").insert({
-    decision_type: "operator_chat",
-    subject_type: "operator_query",
-    subject_id: `operator-chat:${Date.now()}`,
-    decision: {
-      query: parsed.data.query,
-      answer,
-      row_count: rows.length,
-      sources: ["research.v_coverage_status", "research.v_operator_work_queue_diagnostics", "research.v_missing_competitors", "research.ad_fetch_runs", "hermes/skills"],
-    },
-    rationale: "Operator chat response assembled from approved dashboard data sources.",
-    confidence: 100,
-    hermes_skill: "blockwise-operator-chat",
-  });
+  await recordChatDecision(research, parsed.data.query, answer, rows);
 
   return NextResponse.json({
     answer,
@@ -118,7 +144,39 @@ export async function POST(req: Request) {
   });
 }
 
-function toCoverageSummary(row: CoverageRow) {
+function parseRefreshPostcodeCommand(query: string): { isRefreshPostcode: boolean; postcode?: string } {
+  const normalized = query.trim().toLowerCase().replace(/[?.!]+$/u, "");
+  const match = normalized.match(/^refresh\s+postcode(?:\s+(\d{4}))?$/u);
+  return { isRefreshPostcode: Boolean(match), postcode: match?.[1] };
+}
+
+async function recordChatDecision(
+  research: ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>,
+  query: string,
+  answer: string,
+  rows: CoverageSummary[],
+  action?: Record<string, unknown>,
+) {
+  await research.from("agent_decisions").insert({
+    decision_type: "operator_chat",
+    subject_type: "operator_query",
+    subject_id: `operator-chat:${Date.now()}`,
+    decision: {
+      query,
+      answer,
+      row_count: rows.length,
+      action,
+      sources: ["research.v_coverage_status", "research.v_operator_work_queue_diagnostics", "research.v_missing_competitors", "research.ad_fetch_runs", "hermes/skills"],
+    },
+    rationale: action
+      ? "Operator chat executed a postcode refresh through the shared refresh guard."
+      : "Operator chat response assembled from approved dashboard data sources.",
+    confidence: 100,
+    hermes_skill: "blockwise-operator-chat",
+  });
+}
+
+function toCoverageSummary(row: CoverageRow): CoverageSummary {
   return {
     postcode: row.postcode,
     state: row.state,

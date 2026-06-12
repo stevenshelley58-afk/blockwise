@@ -174,9 +174,8 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
           <div className="sidebar-footer" aria-label="Runtime status">
             <a className="sidebar-engine" href="https://hermes.blockwise.sale" target="_blank" rel="noreferrer">
               <span>
-                <i aria-hidden />
                 <strong>Hermes Engine</strong>
-                <small>Operational</small>
+                <small>Open runtime workspace</small>
               </span>
               <ChevronRight aria-hidden size={16} />
             </a>

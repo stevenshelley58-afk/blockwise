@@ -14,6 +14,7 @@ const apifyCostControlMigration = "supabase/migrations/202606080001_apify_cost_c
 const activeApifyHealthMigration = "supabase/migrations/202606080004_scope_active_apify_health.sql";
 const archiveBlockedWorkQueueMigration = "supabase/migrations/202606120001_archive_stale_blocked_work_queue.sql";
 const firstTesterDataCleanupMigration = "supabase/migrations/202606120003_first_tester_data_cleanup.sql";
+const coverageDefectDedupeMigration = "supabase/migrations/202606120004_coverage_defect_dedupe.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -327,4 +328,48 @@ test("first-tester cleanup archives dead adstudio imports and trims unused opera
   assert.match(sql, /insert into storage\.buckets \(id, name, public\)/i);
   assert.match(sql, /'research-ad-creatives',\s*'research-ad-creatives',\s*true/i);
   assert.match(sql, /on conflict \(id\) do update[\s\S]*set public = true/i);
+});
+
+test("coverage defect dedupe migration adds keyed occurrence upserts", () => {
+  const sql = readFileSync(coverageDefectDedupeMigration, "utf8");
+
+  for (const column of ["subject_type", "subject_key", "reason", "occurrences"]) {
+    assert.match(sql, new RegExp(`add column if not exists ${column}`, "i"), `expected coverage_defects.${column}`);
+  }
+  assert.match(sql, /check \(occurrences >= 1\)/i);
+  assert.match(
+    sql,
+    /create unique index if not exists coverage_defects_active_subject_reason_uidx[\s\S]*subject_type,\s*subject_key,\s*reason[\s\S]*status in \('open', 'investigating', 'blocked'\)/i,
+    "active defects must have one canonical row per subject/reason",
+  );
+  assert.match(
+    sql,
+    /create or replace function research\.upsert_coverage_defect\(p_defect jsonb\)[\s\S]*occurrences = occurrences \+ v_occurrences/i,
+    "runtime upserts should increment occurrences instead of inserting duplicates",
+  );
+});
+
+test("coverage defect dedupe migration collapses existing active duplicates", () => {
+  const sql = readFileSync(coverageDefectDedupeMigration, "utf8");
+
+  assert.match(
+    sql,
+    /partition by subject_type,\s*subject_key,\s*reason/i,
+    "duplicate collapse must use the same durable key as runtime upserts",
+  );
+  assert.match(
+    sql,
+    /sum\(greatest\(coalesce\(cd\.occurrences,\s*1\),\s*1\)\) as total_occurrences/i,
+    "canonical defects should keep the summed occurrence count",
+  );
+  assert.match(
+    sql,
+    /delete from research\.coverage_defects[\s\S]*r\.rn > 1/i,
+    "duplicate active rows should be removed after the canonical row is updated",
+  );
+  assert.match(
+    sql,
+    /collapsed_duplicate_count[\s\S]*collapsed_duplicate_ids/i,
+    "canonical rows should retain collapse metadata for operator traceability",
+  );
 });

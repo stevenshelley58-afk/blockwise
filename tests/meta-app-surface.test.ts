@@ -87,3 +87,11 @@ test("Trigger includes scheduled Meta lead sync and token health checks", () => 
   assert.match(trigger, /runScheduledMetaLeadSyncs/);
   assert.match(trigger, /runScheduledMetaTokenHealthChecks/);
 });
+
+test("operator sidebar does not hardcode Hermes runtime health", () => {
+  const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
+
+  assert.match(appShell, /Hermes Engine/);
+  assert.match(appShell, /Open runtime workspace/);
+  assert.doesNotMatch(appShell, /Operational/);
+});
