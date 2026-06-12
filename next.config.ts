@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
   experimental: { optimizePackageImports: ["recharts"] },
   async redirects() {
     return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "blockwise-tan.vercel.app" }],
+        destination: "https://blockwise.sale/:path*",
+        permanent: true,
+      },
       { source: "/monitor", destination: "/results", permanent: false },
       { source: "/research", destination: "/ad-radar", permanent: false },
       { source: "/research/:path*", destination: "/ad-radar/:path*", permanent: false },
