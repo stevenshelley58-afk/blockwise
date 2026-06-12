@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { buildProviderAuthorizationUrl } from "@/lib/providers/oauth-handlers";
-import { createOAuthStatePayload, signOAuthState } from "@/lib/providers/oauth-state";
+import { createOAuthStatePayload, sanitizeOAuthReturnPath, signOAuthState } from "@/lib/providers/oauth-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -23,19 +23,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Provider connection management requires owner or admin access." }, { status: 403 });
   }
 
+  const returnPath = sanitizeOAuthReturnPath(request.nextUrl.searchParams.get("returnPath"));
   const state = signOAuthState(
     createOAuthStatePayload({
       provider: "meta",
       workspaceId: access.access.workspaceId,
       userId: access.access.userId,
-      returnPath: "/results",
+      returnPath,
     }),
   );
   const authorizationUrl = buildProviderAuthorizationUrl("meta", request, state);
 
   if (!authorizationUrl) {
-    return NextResponse.redirect(new URL("/results?integration=meta&error=missing_config", request.nextUrl.origin));
+    return NextResponse.redirect(providerReturnUrl(returnPath, request.nextUrl.origin, { error: "missing_config" }));
   }
 
   return NextResponse.redirect(authorizationUrl);
+}
+
+function providerReturnUrl(returnPath: string, origin: string, params: Record<string, string>): URL {
+  const url = new URL(returnPath, origin);
+  url.searchParams.set("integration", "meta");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return url;
 }

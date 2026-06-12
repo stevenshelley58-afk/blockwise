@@ -12,6 +12,7 @@ import {
   type MetaInsightRow,
 } from "../providers/meta-reporting.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
+import { normalizeLeadQualityLabel } from "../product/live-data.ts";
 import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import { resolveSuburb } from "./suburbAttribution.ts";
@@ -243,7 +244,7 @@ async function loadLeadFacts(
 
   const validLeadIds = new Set(
     ((labelRows ?? []) as Array<{ lead_id: string; label: string | null }>)
-      .filter((row) => row.label?.toLowerCase() === "valid")
+      .filter((row) => normalizeLeadQualityLabel(row.label) === "valid")
       .map((row) => row.lead_id),
   );
   const adIdByLeadId = new Map<string, string>();

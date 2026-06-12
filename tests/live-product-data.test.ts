@@ -7,6 +7,7 @@ import {
   buildAiLedgerRows,
   buildApprovalRows,
   buildLeadRowsWithDedupe,
+  normalizeLeadQualityLabel,
   buildResearchSignals,
 } from "../src/lib/product/live-data.ts";
 
@@ -32,16 +33,39 @@ test("buildLeadRowsWithDedupe maps live leads, labels, attribution, and duplicat
         created_at: "2026-05-27T02:00:00.000Z",
       },
     ],
-    labels: [{ lead_id: "lead_1", label: "High intent" }],
+    labels: [{ lead_id: "lead_1", label: "High intent", created_at: "2026-05-27T03:00:00.000Z" }],
     attributions: [{ lead_id: "lead_1", source: { campaignName: "Seller checklist" } }],
     dedupeRecords: [{ lead_id: "lead_1", duplicate_of_lead_id: "lead_2" }],
+    deliveryAttempts: [
+      {
+        lead_id: "lead_1",
+        status: "queued",
+        destination_label: "CRM",
+        created_at: "2026-05-27T03:00:00.000Z",
+      },
+      {
+        lead_id: "lead_1",
+        status: "delivered",
+        destination_label: "CRM",
+        created_at: "2026-05-27T04:00:00.000Z",
+      },
+    ],
   });
 
   assert.equal(result.rows[0].source, "Meta lead form");
-  assert.equal(result.rows[0].quality, "High intent");
+  assert.equal(result.rows[0].quality, "high_intent");
+  assert.equal(result.rows[0].delivery, "Delivered to CRM");
   assert.equal(result.rows[0].duplicateCandidate, true);
   assert.equal(result.rows[0].attribution, "Seller checklist");
   assert.equal(result.incoming.duplicateIds.length, 0);
+});
+
+test("normalizeLeadQualityLabel accepts shared vocabulary and legacy display labels", () => {
+  assert.equal(normalizeLeadQualityLabel("valid"), "valid");
+  assert.equal(normalizeLeadQualityLabel("Invalid"), "invalid");
+  assert.equal(normalizeLeadQualityLabel("High intent"), "high_intent");
+  assert.equal(normalizeLeadQualityLabel("Unqualified"), "invalid");
+  assert.equal(normalizeLeadQualityLabel("nurture"), null);
 });
 
 test("buildApprovalRows and buildAgentRunRows keep queues workspace backed", () => {

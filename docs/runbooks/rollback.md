@@ -22,13 +22,20 @@ Use when a bad deploy is mutating Meta / Google Ads objects but a full rollback 
 # Set for Production:
 BLOCKWISE_ENABLE_PROVIDER_WRITES=false
 
+# In Trigger.dev Dashboard → blockwise project → Environment Variables
+# Set for the matching Production environment:
+BLOCKWISE_ENABLE_PROVIDER_WRITES=false
+
 # Then redeploy (or use "Redeploy" on the current deployment):
 vercel redeploy --prod
+
+# Then redeploy Trigger.dev tasks so workers receive the same value:
+npx trigger.dev deploy
 ```
 
-All `executeMetaPublishPlanTask`, `executeMetaMutationTask`, and provider-sync writes will short-circuit without calling the Meta/Google APIs.
+The flag must be set in both Vercel and Trigger.dev. Vercel guards API routes that queue provider work; Trigger.dev guards workers that execute Meta publish, Meta mutation, and lead delivery attempts. All `executeMetaPublishPlanTask`, `executeMetaMutationTask`, and guarded provider-write workers will short-circuit without calling the Meta/Google APIs or lead destinations.
 
-Revert by setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` and redeploying.
+Revert by setting `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` in both Vercel and Trigger.dev, then redeploying both.
 
 ## 3. Pause Trigger.dev Schedules
 

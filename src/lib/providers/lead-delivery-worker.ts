@@ -3,6 +3,10 @@ import type { ApprovalStatus } from "../campaigns/publishing.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
+
 type LeadDeliveryAttemptRow = {
   id: string;
   workspace_id: string;
@@ -31,6 +35,19 @@ export async function executeLeadDeliveryAttemptById(input: {
   fetchImpl?: typeof fetch;
 }) {
   const attempt = await loadDeliveryAttempt(input.serviceSupabase, input.workspaceId, input.attemptId);
+
+  if (!providerWritesEnabled()) {
+    await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, "failed", {
+      message: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+    });
+    await persistLeadDeliveryAudit(input.serviceSupabase, {
+      ...attempt,
+      status: "failed",
+    });
+
+    return { status: "failed" as const };
+  }
+
   const approvalStatus = attempt.approval_request_id
     ? await loadApprovalStatus(input.serviceSupabase, input.workspaceId, attempt.approval_request_id)
     : "approved";
@@ -54,34 +71,45 @@ export async function executeLeadDeliveryAttemptById(input: {
     return { status: "manual_review" as const };
   }
 
-  const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(endpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      deliveryType: attempt.destination_type,
-      destination: attempt.destination_label,
-      leadId: lead.id,
-      email: lead.email,
-      phone: lead.phone,
-      fullName: lead.full_name,
-      suburb: lead.suburb,
-      rawPayload: lead.raw_payload,
-    }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const status = response.ok ? "delivered" : "failed";
+  try {
+    const fetchImpl = input.fetchImpl ?? fetch;
+    const response = await fetchImpl(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        deliveryType: attempt.destination_type,
+        destination: attempt.destination_label,
+        leadId: lead.id,
+        email: lead.email,
+        phone: lead.phone,
+        fullName: lead.full_name,
+        suburb: lead.suburb,
+        rawPayload: lead.raw_payload,
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const status = response.ok ? "delivered" : "failed";
 
-  await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, status, {
-    status: response.status,
-    payload,
-  });
-  await persistLeadDeliveryAudit(input.serviceSupabase, {
-    ...attempt,
-    status,
-  });
+    await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, status, {
+      status: response.status,
+      payload,
+    });
+    await persistLeadDeliveryAudit(input.serviceSupabase, {
+      ...attempt,
+      status,
+    });
 
-  return { status, responseStatus: response.status };
+    return { status, responseStatus: response.status };
+  } catch (error) {
+    await updateAttempt(input.serviceSupabase, input.workspaceId, attempt.id, "failed", {
+      message: error instanceof Error ? error.message : "Lead delivery worker failed.",
+    });
+    await persistLeadDeliveryAudit(input.serviceSupabase, {
+      ...attempt,
+      status: "failed",
+    });
+    throw error;
+  }
 }
 
 async function loadDeliveryAttempt(

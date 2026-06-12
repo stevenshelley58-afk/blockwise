@@ -242,7 +242,87 @@ const COLOUR_LABELS: Array<{ key: ColourKey; label: string }> = [
   { key: "text", label: "Text" },
 ];
 
-export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandKit }) {
+export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandKit | null }) {
+  const [kit, setKit] = useState(initialKit);
+  const [scanUrl, setScanUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+
+  function flash(tone: "ok" | "err", text: string) {
+    setNotice({ tone, text });
+    window.setTimeout(() => setNotice(null), 3200);
+  }
+
+  async function scanSite() {
+    if (busy) return;
+    const websiteUrl = scanUrl.trim();
+    if (!websiteUrl) {
+      flash("err", "Enter your website address first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/adstudio/brand-kits/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ websiteUrl }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { brandKit?: AdStudioBrandKit; error?: string };
+      if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
+      setKit(json.brandKit);
+      flash("ok", "Scan complete - kit updated from your site.");
+    } catch (error) {
+      flash("err", error instanceof Error ? error.message : "Could not scan the site.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (kit) {
+    return <BrandStudioEditor brandKit={kit} />;
+  }
+
+  return (
+    <main className="bs-screen" aria-label="Brand Studio">
+      <style>{BRAND_STYLES}</style>
+
+      <div className="bs-top">
+        <Link href="/ad-studio" className="back">
+          {"< Ad Studio"}
+        </Link>
+        <h1>Brand Studio</h1>
+        <div className="grow">{notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}</div>
+      </div>
+
+      <div className="bs-empty">
+        <div className="bs-empty-panel">
+          <span className="chip warn">Brand needed</span>
+          <h2>Scan your website</h2>
+          <p>Add your agency website to build a real brand kit before editing colours, logos, and ad previews.</p>
+          <div className="scanline">
+            <span className="url">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
+              </svg>
+              <input
+                value={scanUrl}
+                aria-label="Website"
+                placeholder="youragency.com.au"
+                onChange={(event) => setScanUrl(event.target.value)}
+              />
+            </span>
+            <button type="button" className="go" disabled={busy} onClick={() => void scanSite()}>
+              {busy ? "Scanning..." : "Scan site"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKit }) {
   const [kit, setKit] = useState(initialKit);
   const [openSwatch, setOpenSwatch] = useState<ColourKey | null>(null);
   const [scanUrl, setScanUrl] = useState(() => initialKit.source.url.replace(/^https?:\/\//, ""));
@@ -781,6 +861,16 @@ const BRAND_STYLES = `
 .bs-top .notice.ok{color:#006d38}
 .bs-top .notice.err{color:#ba1a1a}
 .bs-scroll{flex:1;min-height:0;overflow:auto}
+.bs-empty{flex:1;min-height:0;display:grid;place-items:center;padding:28px;background:#f8fafc}
+.bs-empty-panel{width:min(620px,100%);display:grid;gap:16px;background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:28px;box-shadow:0 12px 34px rgba(15,23,42,.08)}
+.bs-empty-panel h2{font-size:28px;line-height:1.1;margin:0;color:var(--ink)}
+.bs-empty-panel p{margin:0;color:var(--muted);line-height:1.55}
+.bs-empty .scanline{display:flex;gap:9px}
+.bs-empty .url{flex:1;height:42px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:13.5px}
+.bs-empty .url svg{color:var(--muted);flex:0 0 auto}
+.bs-empty .url input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);min-width:0}
+.bs-empty .go{height:42px;padding:0 18px;border-radius:10px;background:var(--accent);color:#fff;font-weight:650;white-space:nowrap}
+.bs-empty .go:disabled{opacity:.6}
 .bs-hero{background:linear-gradient(170deg,#001b3d 0%,#0d3263 90%);color:#fff;padding:30px 28px 78px}
 .bs-hero .kick{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#9aaac3}
 .bs-hero h2{margin:8px 0 0}
@@ -886,6 +976,7 @@ const BRAND_STYLES = `
   .bs-rail{position:static}
   .bs-logo-proof{grid-template-columns:1fr;margin:-50px 16px 0}
   .bs-hero h2 input{font-size:28px}
+  .bs-empty .scanline{display:grid}
   .bs-two{grid-template-columns:1fr}
 }
 `;

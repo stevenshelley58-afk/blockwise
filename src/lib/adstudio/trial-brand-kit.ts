@@ -48,6 +48,14 @@ export async function resolveAdStudioGenerationBrandKit(input: ResolveGeneration
     return { ok: true, brandKit: approvedBrandKit };
   }
 
+  // Onboarding saves the customer's first brand inputs as a draft. Trial
+  // generation should use that real kit before creating a generic fallback.
+  const draftBrandKit = await loadDraftBrandKit(input.supabase, input.workspaceId);
+
+  if (draftBrandKit) {
+    return { ok: true, brandKit: draftBrandKit };
+  }
+
   const fallbackBrandKit = buildTrialFallbackBrandKit({
     workspaceId: input.workspaceId,
     workspaceName: input.workspaceName,

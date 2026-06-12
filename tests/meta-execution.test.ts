@@ -392,6 +392,7 @@ test("buildMetaPublishTaskOptions keeps worker runs idempotent per plan", () => 
       idempotencyKey: "meta:marketing_api:key",
     }),
     {
+      idempotencyKey: "meta:marketing_api:key",
       concurrencyKey: "meta-publish:workspace_demo:meta:marketing_api:key",
       tags: ["meta-publish", "workspace_demo", "plan_123"],
       maxAttempts: 3,

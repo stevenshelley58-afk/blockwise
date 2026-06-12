@@ -10,6 +10,7 @@ import {
 } from "@/lib/providers/publishing-adapters";
 import {
   buildMetaPublishPlan,
+  loadMetaPublishPlanByIdempotencyKey,
   persistMetaPublishPlan,
   resolveMetaConnectionSetup,
   validateMetaPublishPlanReadiness,
@@ -49,7 +50,14 @@ type ApprovalRecord = {
   status: ApprovalStatus;
 };
 
-const WRITES_ENABLED = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+type MetaPlanPersistenceResult = {
+  plan: MetaPublishPlan;
+  reusedActivePlan: boolean;
+};
+
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
@@ -78,7 +86,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     listProviderConnections(access.supabase, access.access.workspaceId),
   ]);
   const firstCopyPack = pack.copyPacks[0];
-  const metaConnection = connections.find((connection) => connection.provider === "meta");
+  const metaConnection =
+    connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
+    ?? connections.find((connection) => connection.provider === "meta");
   const googleConnection = connections.find((connection) => connection.provider === "google");
   const providerStatuses = {
     ...(firstCopyPack?.meta ? { meta: publishableConnectionStatus(metaConnection?.status) } : {}),
@@ -99,7 +109,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     googlePayload: firstCopyPack?.googleSearch,
     validateOnly: true,
   });
-  const metaPublishPlan = metaConnection
+  const writesEnabled = providerWritesEnabled();
+  const metaPublishPlanResult = metaConnection
     ? await createAndPersistMetaPlan({
         serviceSupabase,
         userId: access.access.userId,
@@ -114,6 +125,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         variantIds: body.variantIds,
       })
     : null;
+  let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
   const metaReadiness = metaPublishPlan
     ? validateMetaPublishPlanReadiness(metaPublishPlan, {
         approvalStatus: metaPublishPlan.approvalRequestId ? await loadApprovalById(access.supabase, access.access.workspaceId, metaPublishPlan.approvalRequestId) : "draft",
@@ -128,7 +140,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const publishReady = blockers.length === 0;
   let triggerRunId: string | null = null;
 
-  if (publishReady && !body.dryRun && WRITES_ENABLED && metaPublishPlan?.adapter === "marketing_api") {
+  if (
+    publishReady &&
+    !body.dryRun &&
+    writesEnabled &&
+    metaPublishPlan?.adapter === "marketing_api" &&
+    !metaPublishPlanResult?.reusedActivePlan
+  ) {
     const approvedPlan: MetaPublishPlan = {
       ...metaPublishPlan,
       status: "approved",
@@ -137,19 +155,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
     await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
     const run = await queueMetaPublishPlanExecution(approvedPlan);
     triggerRunId = run.id ?? null;
+    metaPublishPlan = approvedPlan;
   }
 
   return NextResponse.json({
     exportPackageId: id,
     publishReady,
     blockers,
-    providerWritesEnabled: WRITES_ENABLED,
+    providerWritesEnabled: writesEnabled,
     publishRequests,
     providerPayloadReadiness: legacyReadiness,
     metaPublishPlan: metaPublishPlan
       ? {
           id: metaPublishPlan.planId,
-          status: publishReady ? "approved" : metaPublishPlan.status,
+          status: metaPublishPlan.status,
           adapter: metaPublishPlan.adapter,
           approvalRequestId: metaPublishPlan.approvalRequestId,
           idempotencyKey: metaPublishPlan.idempotencyKey,
@@ -182,7 +201,7 @@ async function createAndPersistMetaPlan(input: {
   controls?: MetaPublishControls;
   requestApproval: boolean;
   variantIds?: string[];
-}) {
+}): Promise<MetaPlanPersistenceResult> {
   const setup = mergeConnectionSetup(
     resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId),
     input.setupPatch,
@@ -237,15 +256,39 @@ async function createAndPersistMetaPlan(input: {
     });
   }
 
-  const persistedPlan: MetaPublishPlan = {
+  let persistedPlan: MetaPublishPlan = {
     ...plan,
     approvalRequestId: approval.id,
     status: approval.status === "approved" ? "approved" : "draft",
     updatedAt: new Date().toISOString(),
   };
+  const existingPlan = await loadMetaPublishPlanByIdempotencyKey(input.serviceSupabase, {
+    workspaceId: input.workspaceId,
+    idempotencyKey: persistedPlan.idempotencyKey,
+  });
+
+  if (existingPlan && isActivePublishPlanStatus(existingPlan.status)) {
+    return { plan: existingPlan, reusedActivePlan: true };
+  }
+
+  if (existingPlan) {
+    persistedPlan = {
+      ...persistedPlan,
+      requestLog: existingPlan.requestLog,
+      responseLog: existingPlan.responseLog,
+      reconciledObjects: existingPlan.reconciledObjects,
+      lastError: existingPlan.lastError,
+      createdAt: existingPlan.createdAt,
+    };
+  }
+
   await persistMetaPublishPlan(input.serviceSupabase, persistedPlan, input.userId);
 
-  return persistedPlan;
+  return { plan: persistedPlan, reusedActivePlan: false };
+}
+
+function isActivePublishPlanStatus(status: MetaPublishPlan["status"]) {
+  return status === "approved" || status === "publishing" || status === "paused_live";
 }
 
 function mergeConnectionSetup(

@@ -395,6 +395,7 @@ export function applyMetaPublishExecutionResult(
 
 export function buildMetaPublishTaskOptions(input: { workspaceId: string; planId: string; idempotencyKey: string }) {
   return {
+    idempotencyKey: input.idempotencyKey,
     concurrencyKey: `meta-publish:${input.workspaceId}:${input.idempotencyKey}`,
     tags: ["meta-publish", input.workspaceId, input.planId],
     maxAttempts: 3,
@@ -434,6 +435,24 @@ export async function loadMetaPublishPlan(
   }
 
   return rowToPlan(data as MetaPublishPlanRow);
+}
+
+export async function loadMetaPublishPlanByIdempotencyKey(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; idempotencyKey: string },
+): Promise<MetaPublishPlan | null> {
+  const { data, error } = await serviceSupabase
+    .from("meta_publish_plans")
+    .select("*")
+    .eq("workspace_id", input.workspaceId)
+    .eq("idempotency_key", input.idempotencyKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? rowToPlan(data as MetaPublishPlanRow) : null;
 }
 
 export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {

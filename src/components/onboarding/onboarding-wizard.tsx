@@ -111,7 +111,7 @@ export function OnboardingWizard({
   const current = STEPS[stepIndex].id;
   const progressPercent = Math.round((stepIndex / (STEPS.length - 1)) * 100);
   const workspaceQuery = encodeURIComponent(workspaceId);
-  const metaConnectHref = `/api/integrations/meta/connect?workspaceId=${workspaceQuery}`;
+  const metaConnectHref = `/api/integrations/meta/connect?workspaceId=${workspaceQuery}&returnPath=%2Fonboarding`;
   const googleConnectHref = `/api/integrations/google/connect?workspaceId=${workspaceQuery}`;
 
   function next() {

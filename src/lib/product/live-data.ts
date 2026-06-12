@@ -57,6 +57,7 @@ type LeadRow = {
 type LeadLabelRow = {
   lead_id?: string | null;
   label?: string | null;
+  created_at?: string | null;
 };
 
 type LeadAttributionRow = {
@@ -68,6 +69,17 @@ type LeadDedupeRow = {
   lead_id?: string | null;
   duplicate_of_lead_id?: string | null;
 };
+
+type LeadDeliveryAttemptRow = {
+  lead_id?: string | null;
+  status?: string | null;
+  destination_label?: string | null;
+  created_at?: string | null;
+};
+
+export const LEAD_QUALITY_LABELS = ["valid", "invalid", "high_intent"] as const;
+
+export type LeadQualityLabel = (typeof LEAD_QUALITY_LABELS)[number];
 
 type AgentRunRow = {
   id: string;
@@ -182,10 +194,39 @@ export function buildLeadRowsWithDedupe(input: {
   labels?: LeadLabelRow[];
   attributions?: LeadAttributionRow[];
   dedupeRecords?: LeadDedupeRow[];
+  deliveryAttempts?: LeadDeliveryAttemptRow[];
   incoming?: { email?: string; phone?: string };
 }) {
-  const labelByLead = new Map((input.labels ?? []).map((label) => [label.lead_id, label.label]));
+  const labelByLead = new Map<string, { label: LeadQualityLabel; createdAt: number }>();
+
+  for (const label of input.labels ?? []) {
+    if (!label.lead_id) continue;
+
+    const normalized = normalizeLeadQualityLabel(label.label);
+
+    if (normalized) {
+      const createdAt = labelTime(label);
+      const current = labelByLead.get(label.lead_id);
+
+      if (!current || createdAt >= current.createdAt) {
+        labelByLead.set(label.lead_id, { label: normalized, createdAt });
+      }
+    }
+  }
+
   const attributionByLead = new Map((input.attributions ?? []).map((attribution) => [attribution.lead_id, attribution.source]));
+  const latestDeliveryByLead = new Map<string, LeadDeliveryAttemptRow>();
+
+  for (const attempt of input.deliveryAttempts ?? []) {
+    if (!attempt.lead_id) continue;
+
+    const current = latestDeliveryByLead.get(attempt.lead_id);
+
+    if (current && deliveryAttemptTime(current) >= deliveryAttemptTime(attempt)) continue;
+
+    latestDeliveryByLead.set(attempt.lead_id, attempt);
+  }
+
   const duplicateLeadIds = new Set(
     (input.dedupeRecords ?? [])
       .filter((record) => record.duplicate_of_lead_id)
@@ -195,6 +236,7 @@ export function buildLeadRowsWithDedupe(input: {
   const rows = input.leads.map((lead) => {
     const source = sourceLabel(lead.provider);
     const attribution = attributionByLead.get(lead.id);
+    const delivery = latestDeliveryByLead.get(lead.id);
 
     return {
       id: lead.id,
@@ -203,10 +245,11 @@ export function buildLeadRowsWithDedupe(input: {
       phone: lead.phone ?? "",
       suburb: lead.suburb ?? "Unknown",
       source,
-      quality: labelByLead.get(lead.id) ?? "Unlabelled",
+      quality: labelByLead.get(lead.id)?.label ?? "unlabelled",
       createdAt: lead.created_at ?? new Date(0).toISOString(),
       dedupeKey: buildLeadDedupeKey({ email: lead.email ?? "", phone: lead.phone ?? "" }),
       duplicateCandidate: duplicateLeadIds.has(lead.id),
+      delivery: formatLeadDelivery(delivery),
       attribution: extractAttributionLabel(attribution),
     };
   });
@@ -396,10 +439,21 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
     return buildLeadRowsWithDedupe({ leads: [] });
   }
 
-  const [{ data: labels }, { data: attributions }, { data: dedupeRecords }] = await Promise.all([
-    supabase.from("lead_quality_labels").select("lead_id,label").eq("workspace_id", workspaceId).in("lead_id", leadIds),
+  const [{ data: labels }, { data: attributions }, { data: dedupeRecords }, { data: deliveryAttempts }] = await Promise.all([
+    supabase
+      .from("lead_quality_labels")
+      .select("lead_id,label,created_at")
+      .eq("workspace_id", workspaceId)
+      .in("lead_id", leadIds)
+      .order("created_at", { ascending: false }),
     supabase.from("lead_source_attribution").select("lead_id,source").eq("workspace_id", workspaceId).in("lead_id", leadIds),
     supabase.from("lead_dedupe_records").select("lead_id,duplicate_of_lead_id").eq("workspace_id", workspaceId).in("lead_id", leadIds),
+    supabase
+      .from("lead_delivery_attempts")
+      .select("lead_id,status,destination_label,created_at")
+      .eq("workspace_id", workspaceId)
+      .in("lead_id", leadIds)
+      .order("created_at", { ascending: false }),
   ]);
 
   return buildLeadRowsWithDedupe({
@@ -407,6 +461,7 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
     labels: (labels ?? []) as LeadLabelRow[],
     attributions: (attributions ?? []) as LeadAttributionRow[],
     dedupeRecords: (dedupeRecords ?? []) as LeadDedupeRow[],
+    deliveryAttempts: (deliveryAttempts ?? []) as LeadDeliveryAttemptRow[],
   });
 }
 
@@ -568,6 +623,53 @@ function sourceLabel(provider: LeadRow["provider"]) {
   if (provider === "meta") return "Meta lead form";
   if (provider === "google") return "Google lead form";
   return "Manual import";
+}
+
+export function normalizeLeadQualityLabel(value: string | null | undefined): LeadQualityLabel | null {
+  const normalized = value?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+  if (normalized === "high_intent" || normalized === "valid" || normalized === "invalid") {
+    return normalized;
+  }
+
+  if (normalized === "unqualified") {
+    return "invalid";
+  }
+
+  return null;
+}
+
+function formatLeadDelivery(attempt: LeadDeliveryAttemptRow | undefined): string {
+  if (!attempt) {
+    return "Not sent";
+  }
+
+  const destination = attempt.destination_label?.trim();
+
+  switch (attempt.status) {
+    case "delivered":
+      return destination ? `Delivered to ${destination}` : "Delivered";
+    case "failed":
+      return destination ? `Failed to ${destination}` : "Failed";
+    case "manual_review":
+      return destination ? `Review needed for ${destination}` : "Review needed";
+    case "queued":
+      return destination ? `Queued for ${destination}` : "Queued";
+    default:
+      return destination ? `Pending for ${destination}` : "Pending";
+  }
+}
+
+function deliveryAttemptTime(attempt: LeadDeliveryAttemptRow): number {
+  const time = new Date(attempt.created_at ?? 0).getTime();
+
+  return Number.isFinite(time) ? time : 0;
+}
+
+function labelTime(label: LeadLabelRow): number {
+  const time = new Date(label.created_at ?? 0).getTime();
+
+  return Number.isFinite(time) ? time : 0;
 }
 
 function normalizeApprovalStatus(value: string | null | undefined): ApprovalStatus {

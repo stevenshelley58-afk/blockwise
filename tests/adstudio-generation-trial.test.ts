@@ -93,11 +93,14 @@ test("draft route self-heals missing seeded campaigns instead of returning 404",
 test("trial brand kit fallback is only available for trial workspaces", () => {
   const source = read(trialBrandKitHelper);
   const nonTrialBranch = source.indexOf("if (!input.isTrialWorkspace)");
+  const draftIndex = source.indexOf("const draftBrandKit = await loadDraftBrandKit");
   const fallbackIndex = source.indexOf("buildTrialFallbackBrandKit");
 
   assert.ok(nonTrialBranch > -1);
+  assert.ok(draftIndex > -1);
   assert.ok(fallbackIndex > -1);
   assert.ok(nonTrialBranch < fallbackIndex);
+  assert.ok(draftIndex < fallbackIndex);
   assert.match(source, /workspaceName/);
   assert.match(source, /region/);
 });

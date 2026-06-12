@@ -7,9 +7,9 @@ import type { AdStudioBrandKit } from "@/lib/adstudio";
 function hostOf(url: string): string {
   try {
     const host = new URL(url).host.replace(/^www\./, "");
-    return host.endsWith(".example") ? "northstarrealty.com.au" : host;
+    return host.endsWith(".example") ? "" : host;
   } catch {
-    return "northstarrealty.com.au";
+    return "";
   }
 }
 
@@ -25,14 +25,14 @@ function formatAuPhone(raw: string | null): string {
 
 export function useBrandKit(brandKit: AdStudioBrandKit) {
   // Derived read-only values
-  const brand = brandKit.identity.businessName || "Northstar Realty";
+  const brand = brandKit.identity.businessName || "Your agency";
   const initials = brand.charAt(0).toUpperCase();
   const domain = hostOf(brandKit.source.url);
 
   // Editable field state — initialised from prop
   const [editedBrand, setEditedBrand] = useState(brand);
   const [editedAgent, setEditedAgent] = useState(
-    brandKit.identity.tradingName ?? "Northstar Agent",
+    brandKit.identity.tradingName ?? "",
   );
   const [editedPhone, setEditedPhone] = useState(
     formatAuPhone(brandKit.contact.phone),

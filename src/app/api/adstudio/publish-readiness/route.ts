@@ -29,9 +29,12 @@ export async function GET(request: NextRequest) {
   }
 
   const writesEnabled = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+  const campaignId = request.nextUrl.searchParams.get("campaignId");
   const connections = await listProviderConnections(context.supabase, context.access.workspaceId);
 
-  const metaConnection = connections.find((connection) => connection.provider === "meta");
+  const metaConnection =
+    connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
+    ?? connections.find((connection) => connection.provider === "meta");
   const metaSetup = resolveMetaConnectionSetup(metaConnection?.metadata ?? {}, metaConnection?.externalAccountId);
   const metaSetupBlockers = metaConnection?.status === "connected" ? validateMetaConnectionSetup(metaSetup) : [];
   const metaReadiness: ProviderReadiness = {
@@ -39,6 +42,13 @@ export async function GET(request: NextRequest) {
     status: metaConnection?.status ?? "not_connected",
     accountId: metaConnection?.externalAccountId ?? null,
   };
+
+  const [compliance, approval] = campaignId
+    ? await Promise.all([
+        loadLatestComplianceStatus(context.supabase, context.access.workspaceId, campaignId),
+        loadLatestApprovalStatus(context.supabase, context.access.workspaceId, campaignId),
+      ])
+    : [null, null];
 
   const checklist = [
     {
@@ -62,10 +72,29 @@ export async function GET(request: NextRequest) {
         }))),
     {
       id: "provider_writes",
-      label: "Enable live publishing for this workspace",
+      label: writesEnabled
+        ? "Live publishing is available"
+        : "Live publishing is in final platform review - export your creatives, or we'll email you when it opens.",
       done: writesEnabled,
       automatic: true,
+      blocked: !writesEnabled,
     },
+    ...(campaignId
+      ? [
+          {
+            id: "compliance_passed",
+            label: "Compliance check passed",
+            done: compliance === "approved",
+            automatic: true,
+          },
+          {
+            id: "approval_ready",
+            label: approval === "approved" ? "Approval complete" : "Campaign approval complete",
+            done: approval === "approved",
+            automatic: true,
+          },
+        ]
+      : []),
   ];
 
   const blockers = checklist.filter((item) => !item.done).map((item) => item.label);
@@ -83,4 +112,50 @@ export async function GET(request: NextRequest) {
     ready,
     note: "Read-only Meta check - no ads are created. Live publishing remains disabled until every step is complete.",
   });
+}
+
+async function loadLatestComplianceStatus(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  workspaceId: string,
+  campaignId: string,
+) {
+  const { data } = await supabase
+    .from("adstudio_compliance_reports")
+    .select("status")
+    .eq("workspace_id", workspaceId)
+    .eq("campaign_id", campaignId)
+    .order("checked_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return typeof data?.status === "string" ? data.status : null;
+}
+
+async function loadLatestApprovalStatus(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  workspaceId: string,
+  campaignId: string,
+) {
+  const { data: latestPlan } = await supabase
+    .from("meta_publish_plans")
+    .select("id,approval_request_id")
+    .eq("workspace_id", workspaceId)
+    .eq("adstudio_campaign_id", campaignId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const approvalIds = typeof latestPlan?.approval_request_id === "string" ? [latestPlan.approval_request_id] : [];
+  const targetIds = [campaignId, ...(typeof latestPlan?.id === "string" ? [latestPlan.id] : [])];
+  const query = supabase
+    .from("approval_requests")
+    .select("status")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const { data } = approvalIds.length
+    ? await query.in("id", approvalIds)
+    : await query.in("target_id", targetIds);
+
+  return typeof data?.[0]?.status === "string" ? data[0].status : null;
 }

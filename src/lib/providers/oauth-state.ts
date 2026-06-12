@@ -21,6 +21,12 @@ type VerifyOptions = {
 };
 
 const DEFAULT_MAX_AGE_SECONDS = 10 * 60;
+const ALLOWED_RETURN_PATHS = new Set(["/results", "/onboarding"]);
+
+export function sanitizeOAuthReturnPath(value: string | null | undefined): string {
+  const path = value?.trim();
+  return path && ALLOWED_RETURN_PATHS.has(path) ? path : "/results";
+}
 
 export function createOAuthStatePayload(input: {
   provider: MonitorProvider;
@@ -33,7 +39,7 @@ export function createOAuthStatePayload(input: {
     provider: input.provider,
     workspaceId: input.workspaceId,
     userId: input.userId,
-    returnPath: input.returnPath ?? "/results",
+    returnPath: sanitizeOAuthReturnPath(input.returnPath),
     issuedAt: input.nowSeconds ?? Math.floor(Date.now() / 1000),
     nonce: randomBytes(16).toString("base64url"),
   };

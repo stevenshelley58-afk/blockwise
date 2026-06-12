@@ -5,28 +5,32 @@ import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { listLeadRowsWithDedupe } from "@/lib/product/live-data";
+import { listLeadRowsWithDedupe, type LeadQualityLabel } from "@/lib/product/live-data";
+import { LeadQualitySelect } from "./lead-quality-select";
+
+type LeadQualityValue = LeadQualityLabel | "unlabelled";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
-  const { rows, incoming } = await listLeadRowsWithDedupe(supabase, access.workspaceId);
-  const highIntentCount = rows.filter((lead) => lead.quality === "High intent").length;
-  const duplicateCount = incoming.duplicateIds.length;
+  const { rows } = await listLeadRowsWithDedupe(supabase, access.workspaceId);
+  const highIntentCount = rows.filter((lead) => leadQualityValue(lead.quality) === "high_intent").length;
+  const duplicateCount = rows.filter((lead) => lead.duplicateCandidate).length;
+  const canEditLeadQuality = access.role === "owner" || access.role === "admin" || access.role === "operator";
 
   return (
     <main className="content">
       <PageHeading
         eyebrow="Your leads"
         title="Leads"
-        description="Every Meta lead in one place. We merge duplicates, flag the hot ones, and keep your data secure."
+        description="Every Meta lead in one place. We flag duplicates, highlight high-intent leads, and keep your data secure."
       />
 
-      <section className="grid cols-4">
+      <section className="grid cols-3">
         <MetricCard icon={UsersRound} label="Leads" value={String(rows.length)} note="From Meta ads" />
         <MetricCard icon={Tags} label="High intent" value={String(highIntentCount)} note="Most likely to convert" />
-        <MetricCard icon={Fingerprint} label="Duplicates merged" value={String(incoming.duplicateIds.length)} note="Same person, matched by email or phone" />
+        <MetricCard icon={Fingerprint} label="Duplicates flagged" value={String(duplicateCount)} note="Same person, matched by email or phone" />
       </section>
 
       <section className="panel leads-panel">
@@ -43,9 +47,12 @@ export default async function LeadsPage() {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
                     <th>Suburb</th>
                     <th>Source</th>
                     <th>Quality</th>
+                    <th>Delivery</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -53,12 +60,22 @@ export default async function LeadsPage() {
                   {rows.map((lead) => (
                     <tr key={lead.id}>
                       <td>{lead.name}</td>
+                      <td>{lead.email || "-"}</td>
+                      <td>{lead.phone || "-"}</td>
                       <td>{lead.suburb}</td>
                       <td>{lead.source}</td>
-                      <td>{lead.quality}</td>
+                      <td>
+                        <LeadQualitySelect
+                          leadId={lead.id}
+                          workspaceId={access.workspaceId}
+                          value={leadQualityValue(lead.quality)}
+                          disabled={!canEditLeadQuality}
+                        />
+                      </td>
+                      <td>{lead.delivery}</td>
                       <td>
                         <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                          {lead.duplicateCandidate ? "Possible duplicate" : "New"}
+                          {lead.duplicateCandidate ? "Duplicate flagged" : "New"}
                         </StatusPill>
                       </td>
                     </tr>
@@ -75,10 +92,18 @@ export default async function LeadsPage() {
                       <strong>{lead.name}</strong>
                     </div>
                     <StatusPill tone={lead.duplicateCandidate ? "amber" : "green"}>
-                      {lead.duplicateCandidate ? "Possible duplicate" : "New"}
+                      {lead.duplicateCandidate ? "Duplicate flagged" : "New"}
                     </StatusPill>
                   </div>
                   <dl className="lead-card-fields">
+                    <div>
+                      <dt>Email</dt>
+                      <dd>{lead.email || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Phone</dt>
+                      <dd>{lead.phone || "-"}</dd>
+                    </div>
                     <div>
                       <dt>Suburb</dt>
                       <dd>{lead.suburb}</dd>
@@ -89,11 +114,22 @@ export default async function LeadsPage() {
                     </div>
                     <div>
                       <dt>Quality</dt>
-                      <dd>{lead.quality}</dd>
+                      <dd>
+                        <LeadQualitySelect
+                          leadId={lead.id}
+                          workspaceId={access.workspaceId}
+                          value={leadQualityValue(lead.quality)}
+                          disabled={!canEditLeadQuality}
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Delivery</dt>
+                      <dd>{lead.delivery}</dd>
                     </div>
                     <div>
                       <dt>Status</dt>
-                      <dd>{lead.duplicateCandidate ? "Possible duplicate" : "New"}</dd>
+                      <dd>{lead.duplicateCandidate ? "Duplicate flagged" : "New"}</dd>
                     </div>
                   </dl>
                 </article>
@@ -102,28 +138,10 @@ export default async function LeadsPage() {
           </>
         )}
       </section>
-
-      {(duplicateCount > 0 || rows.length > 0) && <section className="panel leads-duplicate-panel">
-        <div className="leads-duplicate-summary">
-          <span className="leads-duplicate-count">{duplicateCount}</span>
-          <div>
-            <h2>Duplicate matches</h2>
-            <p className="item-meta">
-              {duplicateCount === 1 ? "1 lead matched the incoming identity." : `${duplicateCount} leads matched the incoming identity.`}
-            </p>
-          </div>
-        </div>
-        <dl className="leads-duplicate-details">
-          <div>
-            <dt>Matched on</dt>
-            <dd>{incoming.dedupeKey || "none"}</dd>
-          </div>
-          <div>
-            <dt>Matched leads</dt>
-            <dd>{incoming.duplicateIds.join(", ") || "none"}</dd>
-          </div>
-        </dl>
-      </section>}
     </main>
   );
+}
+
+function leadQualityValue(value: string | null | undefined): LeadQualityValue {
+  return value === "valid" || value === "invalid" || value === "high_intent" ? value : "unlabelled";
 }

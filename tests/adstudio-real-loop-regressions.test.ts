@@ -199,10 +199,28 @@ test("campaign creation uses shared AI copy enrichment without changing copy rou
 
 test("publish readiness hides internal provider-write env wording from customer labels", () => {
   const source = readFileSync("src/app/api/adstudio/publish-readiness/route.ts", "utf8");
-  const labelBlock = source.slice(source.indexOf('id: "provider_writes"'), source.indexOf("done: writesEnabled"));
+  const labelBlock = source.slice(source.indexOf('id: "provider_writes"'), source.indexOf("automatic: true", source.indexOf('id: "provider_writes"')));
 
-  assert.match(labelBlock, /Enable live publishing for this workspace/);
+  assert.match(labelBlock, /Live publishing is in final platform review/);
+  assert.match(source, /blocked: !writesEnabled/);
   assert.doesNotMatch(labelBlock, /BLOCKWISE_ENABLE_PROVIDER_WRITES/);
+});
+
+test("publish flow reports real Meta plan progress without fake queued statuses", () => {
+  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const publishRoute = readFileSync("src/app/api/adstudio/export-packages/[id]/publish/route.ts", "utf8");
+  const statusRoute = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/route.ts", "utf8");
+  const connections = readFileSync("src/lib/providers/provider-connections.ts", "utf8");
+
+  assert.match(connections, /\.order\("updated_at", \{ ascending: false \}\)/);
+  assert.match(publishRoute, /connection\.status === "connected" \|\| connection\.status === "needs_attention"/);
+  assert.doesNotMatch(panel, /body\.status === "published"|body\.status === "queued"/);
+  assert.match(panel, /\/api\/integrations\/meta\/publish-plans\/\$\{encodeURIComponent\(planId\)\}/);
+  assert.match(panel, /Submitted for review - your campaign will be queued once approved/);
+  assert.match(panel, /Queued - creating your paused Meta campaign/);
+  assert.match(statusRoute, /requireWorkspaceAccess/);
+  assert.match(statusRoute, /loadMetaPublishPlan/);
+  assert.match(statusRoute, /reconciledObjects/);
 });
 
 test("production repair script is dry-run first and repairs by campaign variant instead of assuming Story creatives", () => {
@@ -226,4 +244,21 @@ test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {
   assert.match(campaignRoute, /const allowed = \[/);
   assert.match(campaignRoute, /status/);
   assert.doesNotMatch(campaignRoute, /Object\.fromEntries\(Object\.entries\(body\)/);
+});
+
+test("fresh brand workspaces do not fall back to Northstar demo branding", () => {
+  const brandPage = readFileSync("src/app/(customer)/ad-studio/brand/page.tsx", "utf8");
+  const brandStudio = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
+  const useBrandKit = readFileSync("src/components/adstudio/use-brand-kit.ts", "utf8");
+  const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
+  const brandKitRoute = readFileSync("src/app/api/adstudio/brand-kits/[id]/route.ts", "utf8");
+
+  assert.doesNotMatch(brandPage, /getAdStudioDemoBundle/);
+  assert.match(brandPage, /liveBundle\?\.brandKit \?\? draftBrandKit/);
+  assert.match(brandStudio, /brandKit: AdStudioBrandKit \| null/);
+  assert.match(brandStudio, /Scan your website/);
+  assert.doesNotMatch(useBrandKit, /Northstar Realty|northstarrealty\.com\.au|Northstar Agent/);
+  assert.match(useBrandKit, /"Your agency"/);
+  assert.match(preview, /domain \? <small>\{domain\}<\/small> : null/);
+  assert.match(brandKitRoute, /if \(!data\) return NextResponse\.json\(\{ error: "Brand kit not found\." \}, \{ status: 404 \}\)/);
 });

@@ -20,6 +20,17 @@ type ApprovalPatchBody = {
   status?: "approved" | "rejected" | "cancelled";
 };
 
+type ApprovalTarget = {
+  id: string;
+  target_type: string;
+  target_id: string;
+  status: string;
+};
+
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
+
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const body = (await request.json().catch(() => ({}))) as ApprovalPatchBody;
@@ -38,6 +49,35 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const serviceSupabase = createSupabaseServiceClient();
+  const { data: currentApproval, error: loadError } = await serviceSupabase
+    .from("approval_requests")
+    .select("id,target_type,target_id,status")
+    .eq("id", id)
+    .eq("workspace_id", access.access.workspaceId)
+    .single();
+
+  if (loadError || !currentApproval) {
+    return NextResponse.json({ error: loadError?.message ?? "Approval request was not found." }, { status: 404 });
+  }
+
+  let triggerRunId: string | null = null;
+
+  if (body.status === "approved") {
+    try {
+      triggerRunId = await queueApprovedTarget({
+        serviceSupabase,
+        approval: currentApproval as ApprovalTarget,
+        workspaceId: access.access.workspaceId,
+        userId: access.access.userId,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Unable to queue approval execution." },
+        { status: 502 },
+      );
+    }
+  }
+
   const { data: approval, error } = await serviceSupabase
     .from("approval_requests")
     .update({
@@ -67,38 +107,119 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     },
   });
 
-  let triggerRunId: string | null = null;
-
-  if (body.status === "approved" && approval.target_type === "meta_publish_plan_mutation") {
-    const queued = await queueMetaMutationExecution({
-      workspaceId: access.access.workspaceId,
-      mutationId: approval.target_id,
-    });
-    triggerRunId = queued.id ?? null;
-  } else if (body.status === "approved" && approval.target_type === "meta_publish_plan") {
-    const plan = await loadMetaPublishPlan(serviceSupabase, {
-      workspaceId: access.access.workspaceId,
-      planId: approval.target_id,
-    });
-    const approvedPlan = {
-      ...plan,
-      status: "approved" as const,
-      approvalRequestId: approval.id as string,
-      updatedAt: new Date().toISOString(),
-    };
-    await persistMetaPublishPlan(serviceSupabase, approvedPlan, access.access.userId);
-    const queued = await queueMetaPublishPlanExecution(approvedPlan);
-    triggerRunId = queued.id ?? null;
-  } else if (body.status === "approved" && approval.target_type === "lead_delivery_attempt") {
-    const queued = await queueLeadDeliveryAttempt({
-      workspaceId: access.access.workspaceId,
-      attemptId: approval.target_id,
-    });
-    triggerRunId = queued.id ?? null;
-  }
-
   return NextResponse.json({
     approval,
     triggerRunId,
   });
+}
+
+async function queueApprovedTarget(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  approval: ApprovalTarget;
+  workspaceId: string;
+  userId: string;
+}) {
+  if (!isProviderWriteTarget(input.approval.target_type)) {
+    return null;
+  }
+
+  if (!providerWritesEnabled()) {
+    await persistProviderWritesDisabledState(input);
+    throw new Error("Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES; approval was not queued.");
+  }
+
+  if (input.approval.target_type === "meta_publish_plan_mutation") {
+    const queued = await queueMetaMutationExecution({
+      workspaceId: input.workspaceId,
+      mutationId: input.approval.target_id,
+    });
+
+    return queued.id ?? null;
+  }
+
+  if (input.approval.target_type === "meta_publish_plan") {
+    const plan = await loadMetaPublishPlan(input.serviceSupabase, {
+      workspaceId: input.workspaceId,
+      planId: input.approval.target_id,
+    });
+    const approvedPlan = {
+      ...plan,
+      status: "approved" as const,
+      approvalRequestId: input.approval.id,
+      updatedAt: new Date().toISOString(),
+    };
+    const queued = await queueMetaPublishPlanExecution(approvedPlan);
+    await persistMetaPublishPlan(input.serviceSupabase, approvedPlan, input.userId);
+
+    return queued.id ?? null;
+  }
+
+  if (input.approval.target_type === "lead_delivery_attempt") {
+    const queued = await queueLeadDeliveryAttempt({
+      workspaceId: input.workspaceId,
+      attemptId: input.approval.target_id,
+    });
+
+    return queued.id ?? null;
+  }
+
+  return null;
+}
+
+function isProviderWriteTarget(targetType: string) {
+  return targetType === "meta_publish_plan_mutation" || targetType === "meta_publish_plan" || targetType === "lead_delivery_attempt";
+}
+
+async function persistProviderWritesDisabledState(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  approval: ApprovalTarget;
+  workspaceId: string;
+  userId: string;
+}) {
+  const message = "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.";
+
+  if (input.approval.target_type === "meta_publish_plan") {
+    const plan = await loadMetaPublishPlan(input.serviceSupabase, {
+      workspaceId: input.workspaceId,
+      planId: input.approval.target_id,
+    });
+    await persistMetaPublishPlan(
+      input.serviceSupabase,
+      {
+        ...plan,
+        status: "failed",
+        lastError: message,
+        updatedAt: new Date().toISOString(),
+      },
+      input.userId,
+    );
+  } else if (input.approval.target_type === "meta_publish_plan_mutation") {
+    const { error } = await input.serviceSupabase
+      .from("meta_publish_plan_mutations")
+      .update({
+        status: "failed",
+        last_error: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", input.workspaceId)
+      .eq("id", input.approval.target_id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  } else if (input.approval.target_type === "lead_delivery_attempt") {
+    const { error } = await input.serviceSupabase
+      .from("lead_delivery_attempts")
+      .update({
+        status: "failed",
+        response_json: { message },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", input.workspaceId)
+      .eq("id", input.approval.target_id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
 }

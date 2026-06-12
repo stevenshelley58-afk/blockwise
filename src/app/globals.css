@@ -1104,8 +1104,7 @@ article.card a[href]:focus-visible,
 }
 
 .lead-card-label,
-.lead-card-fields dt,
-.leads-duplicate-details dt {
+.lead-card-fields dt {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
@@ -1113,16 +1112,14 @@ article.card a[href]:focus-visible,
   text-transform: uppercase;
 }
 
-.lead-card-fields,
-.leads-duplicate-details {
+.lead-card-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
 }
 
-.lead-card-fields div,
-.leads-duplicate-details div {
+.lead-card-fields div {
   min-width: 0;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-ctl);
@@ -1130,8 +1127,7 @@ article.card a[href]:focus-visible,
   padding: 10px;
 }
 
-.lead-card-fields dd,
-.leads-duplicate-details dd {
+.lead-card-fields dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
   color: var(--ink);
@@ -1139,35 +1135,18 @@ article.card a[href]:focus-visible,
   font-weight: 750;
 }
 
-.leads-duplicate-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.leads-duplicate-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.leads-duplicate-summary h2,
-.leads-duplicate-summary p {
-  margin-bottom: 0;
-}
-
-.leads-duplicate-count {
-  display: inline-flex;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r-card);
-  background: var(--surface-subtle);
-  color: var(--accent-strong);
-  font-size: 18px;
-  font-weight: 850;
-  font-variant-numeric: tabular-nums;
+.lead-quality-select {
+  width: 100%;
+  min-width: 128px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  padding: 0 10px;
 }
 
 .row-between {
@@ -4492,14 +4471,12 @@ a.operator-file-row {
     gap: 12px;
   }
 
-  .lead-card-title,
-  .leads-duplicate-summary {
+  .lead-card-title {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .lead-card-fields,
-  .leads-duplicate-details {
+  .lead-card-fields {
     grid-template-columns: 1fr;
   }
 
