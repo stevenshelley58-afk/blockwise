@@ -9,6 +9,7 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts tests/**/*.test.ts tests/**/*.test.mjs",
     "test:hard-reset": "node --test tests/hard-reset/*.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:preview": "node scripts/require-preview-e2e-env.mjs && playwright test",
     "test:e2e:hard-reset": "playwright test e2e/meta-ad-library-card.spec.ts",
     "test:research": "node --test tests/research-engine/*.test.ts",
     "typecheck": "tsc --noEmit",

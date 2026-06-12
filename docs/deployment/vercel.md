@@ -31,6 +31,7 @@ Run deployment checks through Vercel build and preview workflows. Do not run loc
 - `npm run build`
 - `npm run verify-env`
 - `npm run verify-env:first-tester`
+- `npm run test:e2e:preview` with `PLAYWRIGHT_BASE_URL`, `BLOCKWISE_DEV_PASSWORD`, `ADSTUDIO_E2E_WORKSPACE_ID`, and an authenticated `ADSTUDIO_E2E_STORAGE_STATE`.
 - Visit `/api/health` on the preview URL and confirm `status` is `ready` once secrets are configured.
 - Use `Authorization: Bearer $CRON_SECRET` when checking detailed `/api/health` or `/api/health/research` output.
 - Confirm `/api/health` has no `readiness.security.missingRecommended` entries before handling live client data.

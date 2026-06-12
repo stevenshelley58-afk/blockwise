@@ -18,6 +18,7 @@ These package scripts exist and are the release command set:
 | `npm run verify:hard-reset` | Research hard-reset static and contract checks |
 | `npm test` | Full Node test suite |
 | `npm run test:research` | Focused research-engine tests |
+| `npm run test:e2e:preview` | Preview-backed Playwright E2E with preflight |
 | `npm run typecheck` | TypeScript gate |
 | `npm run build` | Next.js production build |
 | `npm run verify-env` | Required env-var validation |
@@ -64,8 +65,8 @@ as a release gate unless a later task adds real package scripts.
   Preview may warn on incomplete boot env; the first-tester check must fail on
   missing launch-critical env.
 - [ ] Latest Vercel Preview URL is recorded and tested on desktop and mobile.
-- [ ] End-to-end tests run against a seeded Vercel Preview URL. Skipped
-  Playwright tests do not count as launch evidence.
+- [ ] `npm run test:e2e:preview` runs against a seeded Vercel Preview URL.
+  Skipped Playwright tests do not count as launch evidence.
 - [ ] Stripe is either fully implemented and verified with checkout, portal,
   webhooks, and synced subscription state, or billing/payment UI and paid
   claims stay hidden behind the current fallback messaging.
