@@ -291,3 +291,22 @@ test("dead Ad Studio stub endpoints stay deleted", () => {
   const useBrandKit = readFileSync("src/components/adstudio/use-brand-kit.ts", "utf8");
   assert.doesNotMatch(useBrandKit, /rescanKit|\/rescan/);
 });
+
+test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () => {
+  const actions = readFileSync("src/components/research/ad-card-actions.tsx", "utf8");
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const handoffRoute = readFileSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts", "utf8");
+
+  assert.match(actions, /\/api\/research\/swipe-file\/\$\{id\}\/send-to-adstudio/);
+  assert.match(actions, /window\.location\.href = "\/ad-studio\?newAd=radar"/);
+  assert.match(actions, /Use in Ad Studio/);
+  assert.match(actions, /Opening Ad Studio/);
+  assert.doesNotMatch(actions, /open Ad Studio to use as inspiration/);
+  assert.match(handoffRoute, /handoff_status:\s*"sent_to_adstudio"/);
+  assert.match(workbench, /useSearchParams/);
+  assert.match(workbench, /searchParams\.get\("newAd"\) !== "radar"/);
+  assert.match(workbench, /setNewAdStep\("radar"\)/);
+  assert.match(dialog, /initialStep\?: StartStep/);
+  assert.match(dialog, /fetch\("\/api\/research\/swipe-file"/);
+});

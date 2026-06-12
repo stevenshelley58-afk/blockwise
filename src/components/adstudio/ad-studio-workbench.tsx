@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -233,9 +234,10 @@ export function AdStudioWorkbench({
   isSample = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
+  const searchParams = useSearchParams();
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
-  const [newAdStep, setNewAdStep] = useState<"source" | "template">("source");
+  const [newAdStep, setNewAdStep] = useState<"source" | "template" | "radar">("source");
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -291,7 +293,7 @@ export function AdStudioWorkbench({
     neverSay: brandKit.tone.avoid,
   };
 
-  function openNewAd(templateId?: string, step: "source" | "template" = "source") {
+  function openNewAd(templateId?: string, step: "source" | "template" | "radar" = "source") {
     setNewAdTemplateId(templateId);
     setNewAdStep(step);
     setNewAdOpen(true);
@@ -510,6 +512,13 @@ export function AdStudioWorkbench({
       setNewAdOpen(true);
     }
   }, [pack.variants.length, promptedForFirstAd]);
+
+  useEffect(() => {
+    if (searchParams.get("newAd") !== "radar") return;
+    setNewAdTemplateId(undefined);
+    setNewAdStep("radar");
+    setNewAdOpen(true);
+  }, [searchParams]);
 
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time; no extra memo needed (readinessItems is already memoised)

@@ -46,7 +46,7 @@ type NewAdDialogProps = {
   /** Pre-select a template (e.g. launched from a template card). */
   initialTemplateId?: string;
   /** Where the dialog opens: the source chooser, or straight to the template gallery. */
-  initialStep?: Extract<StartStep, "source" | "template">;
+  initialStep?: StartStep;
 };
 
 export function NewAdDialog({
