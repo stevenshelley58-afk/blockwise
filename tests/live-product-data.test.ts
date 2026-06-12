@@ -192,3 +192,11 @@ test("AI ledger loaders expose operator filters for user model task and day", ()
   assert.match(page, /name="task"/);
   assert.match(page, /name="day"/);
 });
+
+test("operator overview does not select phantom lead columns", () => {
+  const liveData = readFileSync("src/lib/product/live-data.ts", "utf8");
+
+  assert.match(liveData, /\.select\("id,workspace_id,full_name,email,provider,created_at,workspaces\(name\)"\)/);
+  assert.doesNotMatch(liveData, /full_name,name,email/);
+  assert.doesNotMatch(liveData, /lead\.name/);
+});

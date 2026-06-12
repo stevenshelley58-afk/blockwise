@@ -46,7 +46,6 @@ type LeadRow = {
   id: string;
   workspace_id?: string | null;
   full_name?: string | null;
-  name?: string | null;
   email?: string | null;
   phone?: string | null;
   suburb?: string | null;
@@ -241,7 +240,7 @@ export function buildLeadRowsWithDedupe(input: {
 
     return {
       id: lead.id,
-      name: lead.full_name ?? lead.name ?? "Unknown lead",
+      name: lead.full_name ?? lead.email ?? "Unknown lead",
       email: lead.email ?? "",
       phone: lead.phone ?? "",
       suburb: lead.suburb ?? "Unknown",
@@ -383,7 +382,7 @@ export function buildOperatorOverview(input: {
       at: lead.created_at ?? "",
       title: "Lead received",
       workspace: one(lead.workspaces)?.name ?? "Workspace",
-      detail: `${lead.full_name ?? lead.name ?? lead.email ?? "Unknown lead"} via ${sourceLabel(lead.provider)}`,
+      detail: `${lead.full_name ?? lead.email ?? "Unknown lead"} via ${sourceLabel(lead.provider)}`,
       tone: "blue",
     })),
     ...input.agentRuns.map((run) => ({
@@ -583,7 +582,7 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
       .limit(25),
     supabase
       .from("leads")
-      .select("id,workspace_id,full_name,name,email,provider,created_at,workspaces(name)")
+      .select("id,workspace_id,full_name,email,provider,created_at,workspaces(name)")
       .order("created_at", { ascending: false })
       .limit(25),
     supabase
