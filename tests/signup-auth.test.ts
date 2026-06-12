@@ -39,7 +39,8 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /searchParams\.get\("next"\)/);
   assert.match(source, /verifyOtp\(\{/);
   assert.match(source, /function sanitizeNextPath/i);
-  assert.match(source, /const DEFAULT_NEXT_PATH = "\/start"/);
+  assert.match(source, /const DEFAULT_NEXT_PATH = "\/self-serve"/);
+  assert.match(source, /new URL\(redirectPath,\s*requestUrl\.origin\)/);
   assert.match(source, /startsWith\("\/\/"\)/);
   assert.match(source, /includes\("\\\\"\)/);
   assert.match(source, /parsed\.origin !== SAFE_REDIRECT_ORIGIN/i);
