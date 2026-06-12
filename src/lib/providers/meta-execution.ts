@@ -14,7 +14,7 @@ export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
 
 export type MetaLeadDestination = {
-  type: "webhook" | "crm" | "email" | "manual";
+  type: "webhook" | "crm" | "manual";
   label: string;
   config?: {
     endpoint?: string;
@@ -906,6 +906,7 @@ function normalizeMetaConnectionSetup(setup: MetaConnectionSetup): MetaConnectio
     pixelId: optionalString(setup.pixelId),
     leadDestination: {
       ...setup.leadDestination,
+      type: normalizeMetaLeadDestinationType(setup.leadDestination.type),
       label: setup.leadDestination.label.trim(),
       config: {
         ...(setup.leadDestination.config ?? {}),
@@ -1072,6 +1073,10 @@ function normalizeMetaAccountId(value: string): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeMetaLeadDestinationType(value: unknown): MetaLeadDestination["type"] {
+  return value === "crm" || value === "manual" ? value : "webhook";
 }
 
 function slug(value: string): string {

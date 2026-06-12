@@ -247,7 +247,6 @@ export function AdStudioWorkbench({
   const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
   const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
-  const [leadDestination, setLeadDestination] = useState("Landing page");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
   const [generatingBackground, setGeneratingBackground] = useState(false);
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
@@ -666,8 +665,6 @@ export function AdStudioWorkbench({
         setMarket={setMarket}
         propertyType={propertyType}
         setPropertyType={setPropertyType}
-        leadDestination={leadDestination}
-        setLeadDestination={setLeadDestination}
         destinationUrl={destinationUrl}
         setDestinationUrl={setDestinationUrl}
         offers={offers}

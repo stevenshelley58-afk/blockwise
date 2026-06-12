@@ -27,7 +27,7 @@ type Connection = {
   lastSyncAt: string | null;
 };
 
-type MetaLeadDestinationType = "webhook" | "crm" | "email" | "manual";
+type MetaLeadDestinationType = "webhook" | "crm" | "manual";
 
 type MetaSetup = {
   metaAdAccountId: string;
@@ -110,7 +110,7 @@ const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: str
 ];
 
 const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
-const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm", "email"];
+const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm"];
 
 function Feedback({ message }: { message: Msg }) {
   if (!message) return null;
@@ -353,12 +353,12 @@ function BillingSection({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ workspaceId: workspace.id }),
       });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string };
       if (res.ok && data.url) {
         window.location.href = data.url;
         return;
       }
-      setMessage({ tone: "error", text: data.error ?? "Billing isn't connected yet." });
+      setMessage({ tone: "error", text: data.message ?? data.error ?? "Billing isn't connected yet." });
     } catch {
       setMessage({ tone: "error", text: "Couldn't open billing right now." });
     } finally {
@@ -390,12 +390,16 @@ function BillingSection({
 
       {canManage ? (
         <>
-          <div className="wizard-connect-row">
-            <span>Manage payment method & invoices</span>
-            <button className="button" type="button" onClick={openPortal} disabled={portalBusy}>
-              {portalBusy ? "Opening" : "Manage billing"}
-            </button>
-          </div>
+          {workspace.stripeCustomerId ? (
+            <div className="wizard-connect-row">
+              <span>Manage payment method & invoices</span>
+              <button className="button" type="button" onClick={openPortal} disabled={portalBusy}>
+                {portalBusy ? "Opening" : "Manage billing"}
+              </button>
+            </div>
+          ) : (
+            <p className="wizard-skip-note">Billing management will appear here after your first paid plan is active.</p>
+          )}
           <form className="stack" onSubmit={saveBillingEmail}>
             <label className="wizard-field">
               <span className="wizard-label">Billing email</span>
@@ -556,7 +560,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
       .then((res) => res.json().catch(() => ({})) as Promise<MetaSetupResponse>)
       .then((data) => {
         if (!active) return;
-        if (data.setup) setSetup(data.setup);
+        if (data.setup) setSetup(normalizeMetaSetupForForm(data.setup));
         setAssets(data.assets ?? null);
         setBlockers(data.blockers ?? []);
         setMessage(data.error ? { tone: "error", text: data.error } : null);
@@ -607,7 +611,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
         setMessage({ tone: "error", text: data.error ?? "Couldn't save Meta setup." });
         return;
       }
-      if (data.setup) setSetup(data.setup);
+      if (data.setup) setSetup(normalizeMetaSetupForForm(data.setup));
       setBlockers(data.blockers ?? []);
       setMessage({
         tone: data.ready ? "success" : "error",
@@ -707,7 +711,7 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
           <span className="wizard-label">Lead destination type</span>
           <select value={setup.leadDestination.type} onChange={(e) => updateLeadDestination({ type: e.target.value as MetaLeadDestinationType })} disabled={!canManage}>
             {META_LEAD_DESTINATION_TYPES.map((type) => (
-              <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
+              <option key={type} value={type}>{formatLeadDestinationType(type)}</option>
             ))}
           </select>
         </label>
@@ -768,10 +772,29 @@ function MetaSetupForm({ workspaceId, canManage }: { workspaceId: string; canMan
   );
 }
 
+function normalizeMetaSetupForForm(setup: MetaSetup): MetaSetup {
+  return {
+    ...setup,
+    leadDestination: {
+      ...setup.leadDestination,
+      type: normalizeLeadDestinationType(setup.leadDestination.type),
+    },
+  };
+}
+
+function normalizeLeadDestinationType(type: string): MetaLeadDestinationType {
+  return type === "crm" || type === "manual" ? type : "webhook";
+}
+
+function formatLeadDestinationType(type: MetaLeadDestinationType): string {
+  if (type === "crm") return "CRM";
+  if (type === "webhook") return "Webhook";
+  return "Manual review";
+}
+
 function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; router: RT; workspace: SettingsViewProps["workspace"] }) {
   const [name, setName] = useState(workspace.name);
   const [region, setRegion] = useState(workspace.region);
-  const [approval, setApproval] = useState(workspace.approvalRequiredByDefault);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
 
@@ -784,7 +807,6 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
       .update({
         name: name.trim() || workspace.name,
         region: region.trim() || "AU",
-        approval_required_by_default: approval,
         updated_at: new Date().toISOString(),
       })
       .eq("id", workspace.id);
@@ -812,13 +834,12 @@ function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; route
             ))}
           </select>
         </label>
-        <label className="wizard-connect-row" style={{ cursor: "pointer" }}>
+        <div className="wizard-connect-row">
           <span>
-            <strong>Require approval before publishing</strong>
-            <div className="item-meta">Drafts must be approved before they go live.</div>
+            <strong>Publishing review</strong>
+            <div className="item-meta">All campaigns are reviewed before going live during early access.</div>
           </span>
-          <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} />
-        </label>
+        </div>
         <Feedback message={message} />
         <div className="wizard-actions">
           <button className="button" type="submit" disabled={busy}>

@@ -73,6 +73,7 @@ test("buildApprovalRows and buildAgentRunRows keep queues workspace backed", () 
     buildApprovalRows([
       {
         id: "approval_1",
+        workspace_id: "workspace_1",
         target_type: "campaign",
         status: "requested",
         risk_summary: "Housing targeting review",
@@ -82,6 +83,7 @@ test("buildApprovalRows and buildAgentRunRows keep queues workspace backed", () 
     [
       {
         id: "approval_1",
+        workspaceId: "workspace_1",
         title: "campaign approval",
         workspace: "Northstar",
         risk: "Housing targeting review",

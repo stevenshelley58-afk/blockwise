@@ -74,7 +74,7 @@ export function normalizeMetaInsightRows(
     const impressions = Math.round(toNumber(row.impressions));
     const clicks = Math.round(toNumber(row.clicks));
     const leads = Math.round(extractMetaLeadCount(row.actions));
-    const validLeads = Math.floor(leads * 0.72);
+    const validLeads = 0;
 
     return {
       id: row.ad_id ?? `${row.campaign_id ?? "meta"}-${row.date_start ?? "row"}`,

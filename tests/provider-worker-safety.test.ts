@@ -43,3 +43,15 @@ test("approval route queues provider work before persisting approved status", ()
   assert.ok(queueIndex < updateIndex);
   assert.match(source, /status: 502/);
 });
+
+test("lead delivery worker normalizes legacy email destinations to webhook language", () => {
+  const source = readFileSync("src/lib/providers/lead-delivery-worker.ts", "utf8");
+
+  assert.match(source, /type StoredLeadDeliveryDestinationType = LeadDeliveryDestinationType \| "email"/);
+  assert.match(source, /function normalizeDeliveryDestination/);
+  assert.match(source, /deliveryType: destination\.type/);
+  assert.match(source, /destination: destination\.label/);
+  assert.match(source, /No webhook or CRM endpoint configured/);
+  assert.doesNotMatch(source, /deliveryType: attempt\.destination_type/);
+  assert.doesNotMatch(source, /No delivery endpoint configured/);
+});

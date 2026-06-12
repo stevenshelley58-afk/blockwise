@@ -56,6 +56,16 @@ export function trialCreditErrorStatus(reason: TrialReserveReason | null | undef
   return reason === "trial_expired" || reason === "credit_limit_reached" ? 402 : 403;
 }
 
+export function trialCreditErrorMessage(reason: TrialReserveReason | null | undefined): string {
+  if (reason === "credit_limit_reached") {
+    return "You've used all trial ad credits. Contact us to keep generating ads.";
+  }
+  if (reason === "trial_expired") {
+    return "Your trial has ended. Contact us to keep generating ads.";
+  }
+  return "Trial credit reservation failed.";
+}
+
 export function isTrialCreditReservation(result: TrialReserveRpcResult): boolean {
   if (result.reason === "not_trial" || result.reason === "non_trial" || result.reason === "paid_workspace") {
     return false;
@@ -143,7 +153,10 @@ export async function reserveAdStudioGenerationCredit(input: ReserveTrialCreditI
   if (!result.allowed) {
     return {
       ok: false,
-      response: NextResponse.json({ error: reason ?? "Trial credit reservation failed." }, { status: trialCreditErrorStatus(reason) }),
+      response: NextResponse.json(
+        { error: trialCreditErrorMessage(reason), code: reason ?? "trial_credit_reservation_failed" },
+        { status: trialCreditErrorStatus(reason) },
+      ),
     };
   }
 

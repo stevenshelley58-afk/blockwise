@@ -15,6 +15,7 @@ type ReadinessEntry = {
   met: boolean;
   automatic?: boolean;
   blocked?: boolean;
+  review?: boolean;
 };
 
 type PublishResponse = {
@@ -95,12 +96,13 @@ export function PublishSetupPanel({
             : Array.isArray(data.checklist)
               ? data.checklist
               : [];
-        const items: ReadinessEntry[] = source.map((item: { id?: string; label: string; met?: boolean; done?: boolean; automatic?: boolean; blocked?: boolean }) => ({
+        const items: ReadinessEntry[] = source.map((item: { id?: string; label: string; met?: boolean; done?: boolean; automatic?: boolean; blocked?: boolean; review?: boolean }) => ({
           id: item.id,
           label: item.label,
           met: item.met ?? Boolean(item.done),
           automatic: item.automatic,
           blocked: item.blocked,
+          review: item.review,
         }));
         setReadiness(items);
       })
@@ -148,9 +150,11 @@ export function PublishSetupPanel({
     ? null
     : { id: "brand_kit_approved", label: "Confirm your brand kit in Brand Studio", met: false };
   const checklist: ReadinessEntry[] = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
-  const allMet = readiness ? checklist.every((item) => item.met) : false;
-  const unmetItems = checklist.filter((item) => !item.met);
+  const blockingItems = checklist.filter((item) => !item.met && (!item.review || item.blocked));
+  const allMet = readiness ? blockingItems.length === 0 : false;
+  const unmetItems = blockingItems;
   const onlyBlockedProviderWrite = unmetItems.length === 1 && unmetItems[0]?.id === "provider_writes" && unmetItems[0]?.blocked;
+  const needsApprovalReview = checklist.some((item) => item.id === "approval_ready" && item.review && !item.met && !item.blocked);
 
   // A6: A/B publish selection. All variants ticked (the default) keeps the
   // existing publish-everything behaviour — `variantIds` is omitted from the
@@ -277,7 +281,7 @@ export function PublishSetupPanel({
             <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
               {item.met
                 ? <Check size={14} style={{ color: "#31c46f", flexShrink: 0 }} aria-hidden />
-                : <CircleAlert size={14} style={{ color: item.blocked ? "#2563eb" : "#8a5a00", flexShrink: 0 }} aria-hidden />}
+                : <CircleAlert size={14} style={{ color: item.blocked || item.review ? "#2563eb" : "#8a5a00", flexShrink: 0 }} aria-hidden />}
               <span style={{ color: item.met ? "var(--ink)" : "var(--muted)" }}>{item.label}</span>
             </div>
           ))}
@@ -406,7 +410,7 @@ export function PublishSetupPanel({
             onClick={handlePublishLive}
           >
             <Send aria-hidden size={17} />
-            {publishing ? "Publishing..." : "Publish"}
+            {publishing ? "Submitting..." : needsApprovalReview ? "Send for review" : "Publish"}
           </button>
           {checklist.length > 0 && !allMet && (
             <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>

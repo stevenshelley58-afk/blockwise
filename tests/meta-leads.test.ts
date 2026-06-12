@@ -60,7 +60,7 @@ test("fetchMetaLeadFormLeads reads leads for reconciled lead forms", async () =>
   assert.equal(leads[0]?.externalId, "lead_123");
 });
 
-test("buildLeadDeliveryActions creates auditable CRM, webhook, email, or manual actions", () => {
+test("buildLeadDeliveryActions creates auditable CRM, webhook, or manual actions", () => {
   const lead = normalizeMetaLead({
     id: "lead_123",
     field_data: [{ name: "email", values: ["alex@example.com"] }],

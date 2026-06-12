@@ -15,8 +15,6 @@ type CampaignPanelProps = {
   setMarket: (value: string) => void;
   propertyType: string;
   setPropertyType: (value: string) => void;
-  leadDestination: string;
-  setLeadDestination: (value: string) => void;
   destinationUrl: string;
   setDestinationUrl: (value: string) => void;
   offers: AdStudioOfferTemplate[];
@@ -50,8 +48,6 @@ export function CampaignPanel({
   setMarket,
   propertyType,
   setPropertyType,
-  leadDestination,
-  setLeadDestination,
   destinationUrl,
   setDestinationUrl,
   offers,
@@ -143,11 +139,9 @@ export function CampaignPanel({
         </select>
       </FieldShell>
       <FieldShell label="Lead destination" icon={Globe2}>
-        <select value={leadDestination} onChange={(event) => setLeadDestination(event.target.value)}>
-          <option>Landing page</option>
-          <option>Meta lead form</option>
-          <option>CRM endpoint</option>
-        </select>
+        <a className="studio-btn secondary block" href="/settings#connections">
+          {"Manage in Settings -> Connections"}
+        </a>
       </FieldShell>
       <FieldShell label="Destination URL">
         <input value={destinationUrl} onChange={(event) => setDestinationUrl(event.target.value)} />

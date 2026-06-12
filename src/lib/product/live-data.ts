@@ -17,6 +17,7 @@ type CampaignRow = {
 
 type ApprovalRow = {
   id?: string;
+  workspace_id?: string | null;
   target_id?: string | null;
   target_type?: string | null;
   status?: string | null;
@@ -269,6 +270,7 @@ export function buildLeadRowsWithDedupe(input: {
 export function buildApprovalRows(rows: ApprovalRow[]) {
   return rows.map((row) => ({
     id: row.id ?? `${row.target_type ?? "approval"}-${row.target_id ?? "unknown"}`,
+    workspaceId: row.workspace_id ?? "",
     title: `${row.target_type ?? "Action"} approval`,
     workspace: one(row.workspaces)?.name ?? "Workspace",
     risk: row.risk_summary ?? "Review required",
@@ -465,12 +467,25 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
   });
 }
 
-export async function listApprovalRows(supabase: SupabaseServerClient, workspaceId: string) {
-  const { data } = await supabase
+export async function listApprovalRows(
+  supabase: SupabaseServerClient,
+  workspaceId?: string,
+  options: { status?: ApprovalStatus } = {},
+) {
+  let query = supabase
     .from("approval_requests")
-    .select("id,target_type,target_id,status,risk_summary,workspaces(name)")
-    .eq("workspace_id", workspaceId)
+    .select("id,workspace_id,target_type,target_id,status,risk_summary,workspaces(name)")
     .order("created_at", { ascending: false });
+
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  }
+
+  if (options.status) {
+    query = query.eq("status", options.status);
+  }
+
+  const { data } = await query;
 
   return buildApprovalRows((data ?? []) as ApprovalRow[]);
 }

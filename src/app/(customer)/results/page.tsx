@@ -33,8 +33,14 @@ function resolveOAuthNotice(searchParams: Record<string, string | string[] | und
   if (error === "missing_config") {
     return { tone: "error", message: "Meta connection is not fully set up. Contact support." };
   }
+  if (error === "missing_code") {
+    return { tone: "error", message: "Meta connection was cancelled or did not complete. Try again." };
+  }
   if (error === "disabled") {
     return { tone: "error", message: "Meta integration is currently disabled." };
+  }
+  if (error) {
+    return { tone: "error", message: "Meta connection could not be completed. Please try again." };
   }
 
   return null;

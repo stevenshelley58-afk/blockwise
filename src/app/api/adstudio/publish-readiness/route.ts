@@ -89,9 +89,15 @@ export async function GET(request: NextRequest) {
           },
           {
             id: "approval_ready",
-            label: approval === "approved" ? "Approval complete" : "Campaign approval complete",
+            label: approval === "approved"
+              ? "Approval complete"
+              : approval === "requested"
+                ? "Submitted for review"
+                : "Submit campaign for review",
             done: approval === "approved",
             automatic: true,
+            review: true,
+            blocked: approval === "rejected" || approval === "cancelled",
           },
         ]
       : []),
