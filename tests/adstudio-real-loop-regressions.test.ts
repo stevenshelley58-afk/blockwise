@@ -284,6 +284,7 @@ test("dead Ad Studio stub endpoints stay deleted", () => {
     "src/app/api/adstudio/brand-kits/route.ts",
     "src/app/api/adstudio/brand-kits/[id]/rescan/route.ts",
     "src/app/api/adstudio/creatives/[id]/render/route.ts",
+    "src/app/api/adstudio/bulk-drafts/route.ts",
   ]) {
     assert.equal(existsSync(path), false, path);
   }
