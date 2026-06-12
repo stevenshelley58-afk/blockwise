@@ -61,5 +61,5 @@ test("rollback documents export, publish, and Trigger deploy posture", () => {
   assert.match(rollback, /Manual Ad Studio export is not a provider write/);
   assert.match(rollback, /created\s+paused/i);
   assert.match(rollback, /trigger-deploy/);
-  assert.match(rollback, /Missing `TRIGGER_PROJECT_ID` is a hard failure/);
+  assert.match(rollback, /Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow/);
 });

@@ -19,7 +19,7 @@ test("Trigger runbook lists required production task environment", () => {
   const runbook = readFileSync("docs/runbooks/rollback.md", "utf8");
 
   assert.match(runbook, /Trigger\.dev Deployments And Env/);
-  assert.match(runbook, /Missing `TRIGGER_PROJECT_ID` is a hard failure/);
+  assert.match(runbook, /Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow/);
   for (const key of [
     "TRIGGER_PROJECT_ID",
     "SUPABASE_URL",

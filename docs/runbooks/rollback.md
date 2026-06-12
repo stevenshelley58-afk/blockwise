@@ -98,8 +98,9 @@ The workflow requires these GitHub secrets:
 - `TRIGGER_ACCESS_TOKEN`
 - `TRIGGER_PROJECT_ID`
 
-Missing `TRIGGER_PROJECT_ID` is a hard failure in `trigger.config.ts`; there is
-no local project fallback.
+Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow.
+`trigger.config.ts` also accepts `TRIGGER_PROJECT_REF` when Trigger.dev exposes
+that project reference inside the managed deployment build.
 
 Keep these variables set in the Trigger.dev project environment that matches
 Production:
