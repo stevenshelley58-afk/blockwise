@@ -16,6 +16,13 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 3. Run `npm run dev`.
 4. Open `http://localhost:3000`.
 
+## Fresh Supabase Environment
+
+1. Install and authenticate the Supabase CLI.
+2. Run `supabase db reset` to apply `supabase/migrations` and `supabase/seed.sql`.
+3. Run `npm run seed:test-users` with `BLOCKWISE_DEV_PASSWORD` set to provision local test users.
+4. Confirm `supabase/config.toml` exposes the `public`, `research`, and `graphql_public` schemas before testing app routes.
+
 ## Verification
 
 - `npm test` runs the Node test suite for model resolution, agent permissions, and provider mocks.
