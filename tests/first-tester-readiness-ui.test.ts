@@ -7,12 +7,17 @@ function read(path: string): string {
 }
 
 test("workspace settings show early-access review copy instead of a dead approval toggle", () => {
-  const source = read("src/app/(customer)/settings/settings-view.tsx");
+  const sources = [
+    read("src/app/(customer)/settings/settings-view.tsx"),
+    read("src/app/(customer)/settings/workspace-section.tsx"),
+  ];
 
-  assert.doesNotMatch(source, /Require approval before publishing/);
-  assert.doesNotMatch(source, /setApproval/);
-  assert.doesNotMatch(source, /approval_required_by_default:\s*approval/);
-  assert.match(source, /All campaigns are reviewed before going live during early access\./);
+  for (const source of sources) {
+    assert.doesNotMatch(source, /Require approval before publishing/);
+    assert.doesNotMatch(source, /setApproval/);
+    assert.doesNotMatch(source, /approval_required_by_default:\s*approval/);
+    assert.match(source, /All campaigns are reviewed before going live during early access\./);
+  }
 });
 
 test("billing settings prefer friendly portal messages and hide billing management until Stripe exists", () => {

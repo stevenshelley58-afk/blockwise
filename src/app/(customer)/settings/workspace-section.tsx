@@ -7,7 +7,6 @@ import { Feedback, REGION_CURRENCY, REGION_NAMES, Section, type Msg, type RT, ty
 export function WorkspaceSection({ supabase, router, workspace }: { supabase: SB; router: RT; workspace: SettingsViewProps["workspace"] }) {
   const [name, setName] = useState(workspace.name);
   const [region, setRegion] = useState(workspace.region);
-  const [approval, setApproval] = useState(workspace.approvalRequiredByDefault);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
 
@@ -20,7 +19,6 @@ export function WorkspaceSection({ supabase, router, workspace }: { supabase: SB
       .update({
         name: name.trim() || workspace.name,
         region: region.trim() || "AU",
-        approval_required_by_default: approval,
         updated_at: new Date().toISOString(),
       })
       .eq("id", workspace.id);
@@ -48,13 +46,12 @@ export function WorkspaceSection({ supabase, router, workspace }: { supabase: SB
             ))}
           </select>
         </label>
-        <label className="wizard-connect-row" style={{ cursor: "pointer" }}>
+        <div className="wizard-connect-row">
           <span>
-            <strong>Require approval before publishing</strong>
-            <div className="item-meta">Drafts must be approved before they go live.</div>
+            <strong>Publishing review</strong>
+            <div className="item-meta">All campaigns are reviewed before going live during early access.</div>
           </span>
-          <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} />
-        </label>
+        </div>
         <Feedback message={message} />
         <div className="wizard-actions">
           <button className="button" type="submit" disabled={busy}>
