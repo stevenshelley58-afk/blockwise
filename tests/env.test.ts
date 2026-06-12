@@ -3,10 +3,13 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  FIRST_TESTER_ENV_KEYS,
   PROVIDER_ENV_KEYS,
   REQUIRED_ENV_KEYS,
   RECOMMENDED_SECURITY_ENV_KEYS,
+  getDeploymentReadiness,
   getInvalidEnvKeys,
+  getInvalidFirstTesterEnvKeys,
   getMissingRecommendedSecurityEnvKeys,
   getProviderReadiness,
   parseEnvFile,
@@ -44,6 +47,17 @@ test("recommended security environment keys cover Turnstile and Cloudflare AI Ga
   ]);
 });
 
+test("first-tester environment keys cover launch-critical runtime services", () => {
+  assert.deepEqual(FIRST_TESTER_ENV_KEYS, [
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "CRON_SECRET",
+    "RESEND_API_KEY",
+    "DEMO_NOTIFY_FROM",
+    "DEMO_NOTIFY_TO",
+  ]);
+});
+
 test("getMissingRecommendedSecurityEnvKeys reports non-blocking production hardening gaps", () => {
   assert.deepEqual(
     getMissingRecommendedSecurityEnvKeys({
@@ -53,6 +67,34 @@ test("getMissingRecommendedSecurityEnvKeys reports non-blocking production harde
       CLOUDFLARE_AI_GATEWAY_TOKEN: "token",
     } as NodeJS.ProcessEnv),
     [],
+  );
+});
+
+test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements without Cloudflare gateway hard-fail", () => {
+  const validBoot = Object.fromEntries(REQUIRED_ENV_KEYS.map((key) => [key, `${key.toLowerCase()}_value`])) as NodeJS.ProcessEnv;
+  const readiness = getDeploymentReadiness({
+    ...validBoot,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAABtest",
+    NEXT_PUBLIC_SENTRY_DSN: "https://sentry.example/1",
+    CRON_SECRET: "cron-secret",
+    RESEND_API_KEY: "re_test",
+    DEMO_NOTIFY_FROM: "Blockwise <notifications@blockwise.sale>",
+    DEMO_NOTIFY_TO: "hello@blockwise.sale",
+  });
+
+  assert.equal(readiness.firstTester.ok, true);
+  assert.equal(readiness.firstTester.invalid.includes("CLOUDFLARE_AI_GATEWAY_URL"), false);
+  assert.deepEqual(
+    getInvalidFirstTesterEnvKeys({
+      ...validBoot,
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "",
+      NEXT_PUBLIC_SENTRY_DSN: "replace_me",
+      CRON_SECRET: "cron-secret",
+      RESEND_API_KEY: "",
+      DEMO_NOTIFY_FROM: "Blockwise <notifications@blockwise.sale>",
+      DEMO_NOTIFY_TO: "hello@blockwise.sale",
+    }),
+    ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "NEXT_PUBLIC_SENTRY_DSN", "RESEND_API_KEY"],
   );
 });
 

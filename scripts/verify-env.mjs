@@ -23,6 +23,7 @@ const env = {
 };
 const readiness = getDeploymentReadiness(env);
 const isVercelPreview = env.VERCEL === "1" && env.VERCEL_ENV === "preview";
+const firstTesterMode = process.argv.includes("--first-tester");
 
 if (readiness.invalid.length > 0) {
   const message = `Invalid or missing required environment variables: ${readiness.invalid.join(", ")}`;
@@ -41,4 +42,15 @@ if (readiness.security.missingRecommended.length > 0) {
   );
 }
 
+if (firstTesterMode && readiness.firstTester.invalid.length > 0) {
+  console.error(
+    `Invalid or missing first-tester environment variables: ${readiness.firstTester.invalid.join(", ")}`,
+  );
+  process.exit(1);
+}
+
 console.log("All required Blockwise environment variables are present and non-placeholder.");
+
+if (firstTesterMode) {
+  console.log("All first-tester Blockwise environment variables are present and non-placeholder.");
+}

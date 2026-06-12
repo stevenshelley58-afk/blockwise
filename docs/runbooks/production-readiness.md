@@ -21,6 +21,7 @@ These package scripts exist and are the release command set:
 | `npm run typecheck` | TypeScript gate |
 | `npm run build` | Next.js production build |
 | `npm run verify-env` | Required env-var validation |
+| `npm run verify-env:first-tester` | Required first-tester service env validation |
 | `npm run trigger:deploy` | Trigger.dev task deployment |
 
 There is no `lint` script and no `audit:repo` script. Do not reference either
@@ -59,8 +60,9 @@ as a release gate unless a later task adds real package scripts.
 - [ ] Vercel deployment logs show the configured build command runs the real
   release gates: `npm run verify-env`, `npm run typecheck`, `npm test`, and
   `npm run build`, or an equivalent `npm run check && npm run build`.
-- [ ] `npm run verify-env` is run against Production env vars. Preview may warn
-  on incomplete env; Production must fail on missing required env.
+- [ ] `npm run verify-env:first-tester` is run against Production env vars.
+  Preview may warn on incomplete boot env; the first-tester check must fail on
+  missing launch-critical env.
 - [ ] Latest Vercel Preview URL is recorded and tested on desktop and mobile.
 - [ ] End-to-end tests run against a seeded Vercel Preview URL. Skipped
   Playwright tests do not count as launch evidence.

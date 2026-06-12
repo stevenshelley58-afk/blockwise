@@ -8,7 +8,8 @@ Blockwise hosts the Next.js website and request/response route handlers on Verce
 2. Set Framework Preset to `Next.js`.
 3. Keep the region close to the first market: `syd1`.
 4. Add the variables from `.env.example` to Local, Preview, and Production environments.
-5. Run `npm run verify-env` in CI before production deployment.
+5. Run `npm run verify-env` in CI before production deployment, then run
+   `npm run verify-env:first-tester` before inviting an external tester.
 
 ## Environment Groups
 
@@ -29,6 +30,7 @@ Run deployment checks through Vercel build and preview workflows. Do not run loc
 - `npm run typecheck`
 - `npm run build`
 - `npm run verify-env`
+- `npm run verify-env:first-tester`
 - Visit `/api/health` on the preview URL and confirm `status` is `ready` once secrets are configured.
 - Use `Authorization: Bearer $CRON_SECRET` when checking detailed `/api/health` or `/api/health/research` output.
 - Confirm `/api/health` has no `readiness.security.missingRecommended` entries before handling live client data.

@@ -28,6 +28,15 @@ export const RECOMMENDED_SECURITY_ENV_KEYS = [
   "CLOUDFLARE_AI_GATEWAY_TOKEN",
 ] as const;
 
+export const FIRST_TESTER_ENV_KEYS = [
+  "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+  "NEXT_PUBLIC_SENTRY_DSN",
+  "CRON_SECRET",
+  "RESEND_API_KEY",
+  "DEMO_NOTIFY_FROM",
+  "DEMO_NOTIFY_TO",
+] as const;
+
 const PLACEHOLDER_ENV_PATTERNS = [
   /^replace(_me|_with)/i,
   /^proj_replace/i,
@@ -52,17 +61,17 @@ export function getMissingRecommendedSecurityEnvKeys(env: NodeJS.ProcessEnv = pr
   return RECOMMENDED_SECURITY_ENV_KEYS.filter((key) => !env[key]);
 }
 
+export function getInvalidFirstTesterEnvKeys(env: NodeJS.ProcessEnv = process.env): string[] {
+  return uniqueStrings([...REQUIRED_ENV_KEYS, ...FIRST_TESTER_ENV_KEYS]).filter((key) => isMissingOrPlaceholder(env[key]));
+}
+
 export function getProviderReadiness(
   provider: ProviderKey,
   env: NodeJS.ProcessEnv = process.env,
 ): { ok: boolean; missing: string[]; invalid: string[] } {
   const keys = PROVIDER_ENV_KEYS[provider];
   const missing = keys.filter((key) => !env[key]);
-  const invalid = keys.filter((key) => {
-    const value = env[key]?.trim();
-
-    return !value || PLACEHOLDER_ENV_PATTERNS.some((pattern) => pattern.test(value));
-  });
+  const invalid = keys.filter((key) => isMissingOrPlaceholder(env[key]));
 
   return { ok: invalid.length === 0, missing, invalid };
 }
@@ -80,12 +89,18 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
   const missing = getMissingEnvKeys(env);
   const invalid = getInvalidEnvKeys(env);
   const missingRecommendedSecurity = getMissingRecommendedSecurityEnvKeys(env);
+  const invalidFirstTester = getInvalidFirstTesterEnvKeys(env);
   const providers = getAllProviderReadiness(env);
 
   return {
     ok: invalid.length === 0,
     missing,
     invalid,
+    firstTester: {
+      ok: invalidFirstTester.length === 0,
+      invalid: invalidFirstTester,
+      requiredCount: uniqueStrings([...REQUIRED_ENV_KEYS, ...FIRST_TESTER_ENV_KEYS]).length,
+    },
     security: {
       recommendedOk: missingRecommendedSecurity.length === 0,
       missingRecommended: missingRecommendedSecurity,
@@ -94,6 +109,16 @@ export function getDeploymentReadiness(env: NodeJS.ProcessEnv = process.env) {
     requiredCount: REQUIRED_ENV_KEYS.length,
     checkedAt: new Date().toISOString(),
   };
+}
+
+function isMissingOrPlaceholder(rawValue: string | undefined): boolean {
+  const value = rawValue?.trim();
+
+  return !value || PLACEHOLDER_ENV_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 export function parseEnvFile(contents: string): Record<string, string> {
