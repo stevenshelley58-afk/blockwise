@@ -15,6 +15,7 @@ import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, resolveAdStudioTemplate, type Ad
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 type CreateCampaignBody = {
   brandKit?: AdStudioBrandKit;

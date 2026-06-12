@@ -16,6 +16,7 @@ import type { AdStudioBrandKit } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
