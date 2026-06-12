@@ -17,6 +17,26 @@
 --   statement instead of once per row. See:
 --   https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select
 
+create or replace function public.is_operator()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    coalesce((select p.is_operator from public.profiles p where p.id = (select auth.uid())), false)
+    or exists (
+      select 1
+      from public.workspace_members wm
+      where wm.profile_id = (select auth.uid())
+        and wm.role = 'operator'
+    );
+$$;
+
+comment on function public.is_operator() is
+  'True for profile-level operators and users assigned the operator workspace role.';
+
 -- =====================================================================
 -- Part A: foreign-key covering indexes
 -- =====================================================================
