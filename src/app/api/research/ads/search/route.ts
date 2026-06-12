@@ -11,6 +11,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const SEARCH_ROW_LIMIT = 200;
+const SEARCH_RESULT_LIMIT = 50;
+
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const access = await requireWorkspaceAccess(supabase, {
@@ -58,15 +61,31 @@ export async function GET(request: NextRequest) {
       ].join(","),
     )
     .order("last_seen_at", { ascending: false })
-    .limit(50);
+    .limit(SEARCH_ROW_LIMIT);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const cards = ((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(
-    normaliseCustomerMetaAdLibraryCard,
-  );
+  const cards = dedupeRowsByCardId((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[])
+    .slice(0, SEARCH_RESULT_LIMIT)
+    .map(normaliseCustomerMetaAdLibraryCard);
 
   return NextResponse.json({ cards });
+}
+
+function dedupeRowsByCardId(rows: CustomerMetaAdLibraryCardRow[]): CustomerMetaAdLibraryCardRow[] {
+  const seen = new Set<string>();
+  const deduped: CustomerMetaAdLibraryCardRow[] = [];
+
+  for (const row of rows) {
+    const cardId = row.card_id?.trim();
+    if (cardId) {
+      if (seen.has(cardId)) continue;
+      seen.add(cardId);
+    }
+    deduped.push(row);
+  }
+
+  return deduped;
 }
