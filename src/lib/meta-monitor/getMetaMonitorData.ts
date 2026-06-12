@@ -12,7 +12,7 @@ import {
   type MetaInsightRow,
 } from "../providers/meta-reporting.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
-import { normalizeLeadQualityLabel } from "../product/live-data.ts";
+import { normalizeLeadQualityLabel } from "../operator/overview.ts";
 import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import { resolveSuburb } from "./suburbAttribution.ts";

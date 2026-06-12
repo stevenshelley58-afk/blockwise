@@ -8,14 +8,20 @@ const migrationPath =
 const sql = readFileSync(migrationPath, "utf8");
 
 const lines = sql.split("\n");
-const createIndexLines = lines.filter((line) => line.trim().startsWith("create index"));
+// Each covering index is wrapped in an exception-handled `execute` so the
+// migration also replays cleanly on Supabase preview branches whose schema
+// lacks prod's out-of-band drift columns.
+const createIndexLines = lines.filter((line) => line.trim().startsWith("execute 'create index"));
 // Executable body = everything except header/section comment lines.
 const body = lines.filter((line) => !line.trim().startsWith("--")).join("\n");
 
 test("advisor cleanup migration is additive and idempotent", () => {
   assert.equal(createIndexLines.length, 138);
-  const guarded = createIndexLines.filter((line) => line.startsWith("create index if not exists "));
+  const guarded = createIndexLines.filter((line) => line.trim().startsWith("execute 'create index if not exists "));
   assert.equal(guarded.length, 138);
+  // Every wrapped index skips drift (missing column/table) instead of failing.
+  const skipGuards = lines.filter((line) => line.includes("exception when undefined_column or undefined_table"));
+  assert.equal(skipGuards.length, 138);
 });
 
 test("advisor cleanup migration only indexes app-owned schemas", () => {
@@ -34,9 +40,9 @@ test("advisor cleanup migration only indexes app-owned schemas", () => {
   assert.equal(excluded.length, 0);
 
   // Spot-check a covering index in each included schema.
-  assert.ok(sql.includes("create index if not exists provider_token_vault_workspace_id_idx on private.provider_token_vault (workspace_id);"));
-  assert.ok(sql.includes("create index if not exists ai_runs_user_id_idx on public.ai_runs (user_id);"));
-  assert.ok(sql.includes("create index if not exists work_queue_advertiser_page_id_idx on research.work_queue (advertiser_page_id);"));
+  assert.ok(sql.includes("execute 'create index if not exists provider_token_vault_workspace_id_idx on private.provider_token_vault (workspace_id)';"));
+  assert.ok(sql.includes("execute 'create index if not exists ai_runs_user_id_idx on public.ai_runs (user_id)';"));
+  assert.ok(sql.includes("execute 'create index if not exists work_queue_advertiser_page_id_idx on research.work_queue (advertiser_page_id)';"));
 });
 
 test("advisor cleanup migration fixes the three auth_rls_initplan policies", () => {

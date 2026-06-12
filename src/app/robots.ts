@@ -25,7 +25,7 @@ export default function robots(): MetadataRoute.Robots {
           "/self-serve",
           "/approvals",
           "/operator",
-          "/agents",
+          "/workforce",
           "/model-control",
         ],
       },

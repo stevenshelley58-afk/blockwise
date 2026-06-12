@@ -5,7 +5,7 @@ import test from "node:test";
 test("approvals page exposes human approve and reject actions", () => {
   const page = readFileSync("src/app/(customer)/approvals/page.tsx", "utf8");
   const actions = readFileSync("src/components/approvals/approval-actions.tsx", "utf8");
-  const liveData = readFileSync("src/lib/product/live-data.ts", "utf8");
+  const liveData = readFileSync("src/lib/operator/overview.ts", "utf8");
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
 

@@ -1,7 +1,7 @@
-﻿:root {
+:root {
   color-scheme: light;
 
-  /* Executive Precision â€” slate neutrals, deep navy ink on clean light surfaces */
+  /* Executive Precision — slate neutrals, deep navy ink on clean light surfaces */
   --bg: #f8fafc;
   --surface: #ffffff;
   --surface-subtle: #f1f5f9;
@@ -3766,7 +3766,7 @@ a.operator-file-row {
   gap: 12px;
 }
 
-/* Provider sync strip â€” responsive, flat, status-accented */
+/* Provider sync strip — responsive, flat, status-accented */
 .monitor-provider-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -3993,7 +3993,7 @@ a.operator-file-row {
   gap: 10px;
 }
 
-/* Meta setup save confirmation â€” toned, aria-live status line */
+/* Meta setup save confirmation — toned, aria-live status line */
 .monitor-setup-status {
   margin: 0;
   font-size: 13px;
@@ -4045,7 +4045,7 @@ a.operator-file-row {
   text-transform: inherit;
 }
 
-/* Numeric columns â€” Spend, Leads, Valid, Valid CPL â€” right-aligned, tabular */
+/* Numeric columns — Spend, Leads, Valid, Valid CPL — right-aligned, tabular */
 .monitor-performance-table th:nth-child(3),
 .monitor-performance-table th:nth-child(4),
 .monitor-performance-table th:nth-child(5),
@@ -4763,7 +4763,7 @@ a.operator-file-row {
 
 
 /* ===========================================================
-   Landing page â€” pure white, infographic-led
+   Landing page — pure white, infographic-led
    =========================================================== */
 
 .site-shell {
@@ -4892,7 +4892,7 @@ a.operator-file-row {
   margin-right: 12px;
 }
 
-/* HERO â€” minimal, no lead paragraph */
+/* HERO — minimal, no lead paragraph */
 
 .hero {
   display: grid;
@@ -5020,7 +5020,7 @@ a.operator-file-row {
   gap: 28px;
 }
 
-/* Mock ad â€” base */
+/* Mock ad — base */
 
 .mock-ad {
   display: grid;
@@ -5361,7 +5361,7 @@ a.operator-file-row {
   text-decoration-color: rgba(18, 62, 117, 0.35);
 }
 
-/* Mock ad property scenes â€” cool tones only */
+/* Mock ad property scenes — cool tones only */
 
 .scene-1 { background:
   radial-gradient(60% 60% at 30% 80%, rgba(40, 55, 78, 0.6) 0%, transparent 65%),
@@ -5388,7 +5388,7 @@ a.operator-file-row {
 .mock-ad-story-bg.scene-6 { background-image: linear-gradient(180deg, #5a6c8e 0%, #344563 50%, #08101f 100%); }
 
 /* ===========================================================
-   How it works â€” visual infographic, no body copy
+   How it works — visual infographic, no body copy
    =========================================================== */
 
 .flow {
@@ -5548,7 +5548,7 @@ a.operator-file-row {
   flex-shrink: 0;
 }
 
-/* Final CTA â€” minimal */
+/* Final CTA — minimal */
 
 .final-cta {
   width: 100%;
@@ -5673,7 +5673,7 @@ a.operator-file-row {
   font-weight: 400;
 }
 
-/* Live metrics strip â€” the transparency proof */
+/* Live metrics strip — the transparency proof */
 
 .live-strip {
   border: 1px solid #dfe6f0;
@@ -6195,7 +6195,7 @@ a.operator-file-row {
 }
 
 /* ============================================================
-   Landing page v2 â€” "Executive Precision" (stitch source)
+   Landing page v2 — "Executive Precision" (stitch source)
    Namespaced lp-* to avoid collisions with app styles.
    Headlines: Manrope (--font-manrope); body: Inter.
    ============================================================ */
@@ -6451,7 +6451,7 @@ a.operator-file-row {
 }
 .lp-faq-list summary::-webkit-details-marker { display: none; }
 .lp-faq-list summary::after { content: "+"; font-size: 20px; font-weight: 400; color: var(--lp-faint); }
-.lp-faq-list details[open] summary::after { content: "â€“"; }
+.lp-faq-list details[open] summary::after { content: "–"; }
 .lp-faq-list details p { margin: 0; padding: 0 0 18px; font-size: 14px; line-height: 1.65; color: var(--lp-muted); }
 .lp-setup-card {
   position: sticky; top: 96px;
@@ -6498,7 +6498,7 @@ a.operator-file-row {
   .lp-center-head { margin-bottom: 44px; }
 }
 
-/* â”€â”€ Consent Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Consent Banner ──────────────────────────────────────────────────────────── */
 .consent-banner {
   position: fixed;
   bottom: 0;

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { canManageProviderConnections, requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { canManageProviderConnections } from "@/lib/auth/access-control";
+import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
 import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";

@@ -12,24 +12,8 @@ This index only links documents that exist in `docs/research-engine/`.
 
 | Document | Purpose |
 | --- | --- |
-| [build-vs-maintain-mode.md](build-vs-maintain-mode.md) | Runtime operating modes and concurrency posture |
-| [codex-kickoff.md](codex-kickoff.md) | Original implementation kickoff notes |
-| [codex-task-apify-cost-controls.md](codex-task-apify-cost-controls.md) | Apify fallback cost-control contract |
-| [data-contracts.md](data-contracts.md) | Research data and quality contracts |
-| [deletion-plan.md](deletion-plan.md) | What was removed from active runtime and what stayed out of scope |
 | [env.md](env.md) | Environment variables for Hermes, Meta capture, and Apify fallback |
-| [go-live.md](go-live.md) | Research runtime go-live checklist |
-| [hermes-system-map.md](hermes-system-map.md) | Hermes runtime map |
-| [hermes-vps-deployment.md](hermes-vps-deployment.md) | VPS deployment contract |
-| [known-limitations.md](known-limitations.md) | Current capture limits and operator expectations |
-| [meta-ad-library-card.md](meta-ad-library-card.md) | App-facing Meta Ad Library card data contract |
 | [operator-runbook.md](operator-runbook.md) | Routine operator checks and stop procedure |
-| [pipeline-architecture.md](pipeline-architecture.md) | Hermes-owned architecture |
-| [pre-reset-inventory.md](pre-reset-inventory.md) | What existed before cleanup |
-| [real-estate-only-fix.md](real-estate-only-fix.md) | Real-estate-only capture correction |
-| [removing-old-research-workers.md](removing-old-research-workers.md) | Legacy worker removal details |
-| [reset-backup-manifest.md](reset-backup-manifest.md) | Archive and backup references |
-| [simplification-review.md](simplification-review.md) | Rebuild review and simplification notes |
 
 ## Active Runtime
 

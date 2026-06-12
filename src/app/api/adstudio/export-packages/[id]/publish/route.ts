@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
-import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/campaigns/publishing";
+import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
 import {
   buildAdStudioPublishRequests,
   resolveAdStudioPublishReadiness,

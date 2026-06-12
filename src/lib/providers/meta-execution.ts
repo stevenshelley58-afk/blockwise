@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
-import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../campaigns/publishing.ts";
+import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";

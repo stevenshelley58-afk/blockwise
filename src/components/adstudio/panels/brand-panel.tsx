@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { Globe2 } from "lucide-react";
@@ -9,7 +9,7 @@ import { PanelHeader } from "../inspector";
 
 type BrandPanelProps = {
   brandKit: AdStudioBrandKit;
-  /** @deprecated Derived internally â€” kept for caller compatibility */
+  /** @deprecated Derived internally — kept for caller compatibility */
   brand?: string;
 };
 
@@ -71,7 +71,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
               whiteSpace: "nowrap",
             }}
           >
-            {approved ? "âœ“ Approved" : "Pending review"}
+            {approved ? "✓ Approved" : "Pending review"}
           </span>
         </div>
 
@@ -104,7 +104,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
             <span>Contact</span>
             <b style={{ color: "var(--ink)", fontWeight: 600, textAlign: "right" }}>
-              {brandKit.contact.phone ?? "â€”"}
+              {brandKit.contact.phone ?? "—"}
             </b>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -117,7 +117,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
         </div>
 
         <Link href="/ad-studio/brand" className="studio-btn publish block" style={{ textDecoration: "none" }}>
-          Edit in Brand Studio â†’
+          Edit in Brand Studio →
         </Link>
       </div>
 

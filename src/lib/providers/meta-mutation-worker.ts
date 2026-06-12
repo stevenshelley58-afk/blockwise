@@ -2,7 +2,7 @@ import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAc
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
-import type { ApprovalStatus } from "../campaigns/publishing.ts";
+import type { ApprovalStatus } from "../publishing/readiness.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 

@@ -10,6 +10,7 @@ import {
   type ConsoleSkill,
 } from "@/components/operator/research-console";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { logCaught } from "@/lib/log";
 import { listHermesSkills, type HermesSkillSummary } from "@/lib/operator/hermes-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -313,22 +314,22 @@ export default async function OperatorResearchPage({ searchParams }: { searchPar
 
   const [coverage, workQueue, queueStats, pipeline, defects, defectStats, decisions, heartbeat, spendToday, stalePagesDue, policy, skills, entity, adLibrary] =
     await Promise.all([
-      loadCoverage(supabase).catch(() => [] as CoverageRow[]),
-      loadWorkQueue(supabase).catch(() => [] as WorkQueueRow[]),
-      loadQueueStats(supabase).catch(() => ({ runningJobs: 0, queuedJobs: 0, blockedJobs: 0, failedJobs: 0, staleJobs: 0 })),
-      loadPipelineStats(supabase).catch(() => SUPERVISOR_STAGES.map((stage) => ({ ...stage, pending: 0, claimed: 0, failed: 0, blocked: 0 }))),
-      loadDefects(supabase).catch(() => [] as DefectRow[]),
-      loadDefectStats(supabase).catch(() => ({ openDefects: 0 })),
-      loadDecisions(supabase).catch(() => [] as DecisionRow[]),
-      loadHeartbeat(supabase).catch(() => ({ ageSeconds: null, mode: "maintain" })),
-      loadSpend24h(supabase).catch(() => 0),
-      loadStalePagesDue(supabase).catch(() => 0),
-      loadPolicyStats(supabase).catch(() => ({ total: 0, active: 0, paused: false, nextRefreshAt: null })),
-      listHermesSkills().catch(() => [] as HermesSkillSummary[]),
-      loadEntityCounts(supabase).catch(() => ({ agents: 0, advertiserPages: 0 })),
-      loadAdLibraryStats(supabase).catch(() => ({ activeCards: 0, totalCards: 0, cardsWithStoredMedia: 0 })),
+      loadCoverage(supabase).catch(logCaught("research ops: coverage", [] as CoverageRow[])),
+      loadWorkQueue(supabase).catch(logCaught("research ops: work queue", [] as WorkQueueRow[])),
+      loadQueueStats(supabase).catch(logCaught("research ops: queue stats", { runningJobs: 0, queuedJobs: 0, blockedJobs: 0, failedJobs: 0, staleJobs: 0 })),
+      loadPipelineStats(supabase).catch(logCaught("research ops: pipeline stats", SUPERVISOR_STAGES.map((stage) => ({ ...stage, pending: 0, claimed: 0, failed: 0, blocked: 0 })))),
+      loadDefects(supabase).catch(logCaught("research ops: defects", [] as DefectRow[])),
+      loadDefectStats(supabase).catch(logCaught("research ops: defect stats", { openDefects: 0 })),
+      loadDecisions(supabase).catch(logCaught("research ops: decisions", [] as DecisionRow[])),
+      loadHeartbeat(supabase).catch(logCaught("research ops: heartbeat", { ageSeconds: null, mode: "maintain" })),
+      loadSpend24h(supabase).catch(logCaught("research ops: spend 24h", 0)),
+      loadStalePagesDue(supabase).catch(logCaught("research ops: stale pages due", 0)),
+      loadPolicyStats(supabase).catch(logCaught("research ops: policy stats", { total: 0, active: 0, paused: false, nextRefreshAt: null })),
+      listHermesSkills().catch(logCaught("research ops: hermes skills", [] as HermesSkillSummary[])),
+      loadEntityCounts(supabase).catch(logCaught("research ops: entity counts", { agents: 0, advertiserPages: 0 })),
+      loadAdLibraryStats(supabase).catch(logCaught("research ops: ad library stats", { activeCards: 0, totalCards: 0, cardsWithStoredMedia: 0 })),
     ]);
-  const inventory = await loadInventory(supabase, skills.length).catch(() => ({
+  const inventory = await loadInventory(supabase, skills.length).catch(logCaught("research ops: inventory", {
     sourceDocuments: 0,
     mediaAssets: 0,
     mediaFailed: 0,

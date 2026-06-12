@@ -13,7 +13,6 @@ const paths = {
   commonSchema: "src/lib/research/schemas/common.ts",
   entitiesSchema: "src/lib/research/schemas/entities.ts",
   hardResetMigration: "supabase/migrations/202605300003_blockwise_hard_reset_clean_schema.sql",
-  jsonRules: "src/lib/adstudio/prompts/shared/json_rules.md",
   metaCapture: "hermes/tools/meta-library-capture/src/capture.ts",
   metaCard: "src/components/research/meta-ad-library-card.tsx",
   censusSources: "src/lib/research/census-sources.ts",
@@ -455,16 +454,14 @@ test("media asset contract is strict, durable, and surfaced to the research card
 
 test("ad classifier contract requires strict JSON and a schema-aligned output", () => {
   const classifierSkill = read(paths.classifierSkill);
-  const jsonRules = read(paths.jsonRules);
   const adSchema = read(paths.adSchema);
 
-  assert.match(jsonRules, /Return only JSON matching the supplied schema/i);
-  assert.match(jsonRules, /repair_once_then_fail/i);
   assert.match(
     classifierSkill,
-    /shared\.json_rules|Return only JSON matching the supplied schema|repair_once_then_fail/i,
-    "classifier skill must explicitly inherit the strict JSON rules",
+    /Return only JSON matching the supplied schema/i,
+    "classifier skill must state the strict JSON rule",
   );
+  assert.match(classifierSkill, /repair_once_then_fail/i, "classifier skill must state the repair-once policy");
   assert.doesNotMatch(classifierSkill, /```jsonc/i, "classifier examples must be strict JSON, not JSONC");
   assert.match(adSchema, /adClassificationSchema[\s\S]*\.strict\(\)/, "classification schema must reject unknown provider fields");
   assert.doesNotMatch(classifierSkill, /\btarget_signal\b/, "classifier output keys must match targetSignal in adClassificationSchema");

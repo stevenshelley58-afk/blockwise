@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { ApprovalStatus } from "../campaigns/publishing.ts";
+import type { ApprovalStatus } from "../publishing/readiness.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 export type MetaPlanMutationAction = "activate" | "pause" | "increase_budget" | "export_leads";

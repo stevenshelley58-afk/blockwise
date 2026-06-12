@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { normalizeLeadQualityLabel } from "@/lib/product/live-data";
+import { normalizeLeadQualityLabel } from "@/lib/operator/overview";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 

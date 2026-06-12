@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 
-import type { LeadQualityLabel } from "@/lib/product/live-data";
+import type { LeadQualityLabel } from "@/lib/operator/overview";
 
 const LABELS: Array<{ value: LeadQualityLabel; label: string }> = [
   { value: "valid", label: "Valid" },

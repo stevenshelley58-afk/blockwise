@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   Meta Monitor (mm-) â€” Meta-only monitor dashboard styles.
+/* ============================================================
+   Meta Monitor (mm-) — Meta-only monitor dashboard styles.
    Imported globally from src/app/layout.tsx.
    ============================================================ */
 .mm-page { display: flex; flex-direction: column; gap: 18px; }
@@ -187,7 +187,7 @@
 }
 /* Phones: stack the header and turn the KPI cards into compact horizontal
    rows so all six metrics are scannable instead of each eating a screen-band
-   of whitespace. CSS-only â€” markup and behaviour are unchanged. */
+   of whitespace. CSS-only — markup and behaviour are unchanged. */
 @media (max-width: 520px) {
   .mm-page { gap: 14px; }
 
