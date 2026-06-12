@@ -5,7 +5,6 @@ import test from "node:test";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
 
 const campaignsRoute = "src/app/api/adstudio/campaigns/route.ts";
-const regenerateRoute = "src/app/api/adstudio/campaigns/[id]/generate/route.ts";
 const trialHelper = "src/lib/adstudio/generation-trial.ts";
 const trialBrandKitHelper = "src/lib/adstudio/trial-brand-kit.ts";
 const persistence = "src/lib/adstudio/persistence.ts";
@@ -17,26 +16,22 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-test("campaign generation routes use the trial reservation helper", () => {
-  for (const path of [campaignsRoute, regenerateRoute]) {
-    const source = read(path);
+test("campaign generation route uses the trial reservation helper", () => {
+  const source = read(campaignsRoute);
 
-    assert.match(source, /@\/lib\/adstudio\/generation-trial/);
-    assert.match(source, /reserveAdStudioGenerationCredit/);
-    assert.match(source, /refundReservedTrialCredit/);
-    assert.match(source, /resolveAdStudioGenerationBrandKit/);
-  }
+  assert.match(source, /@\/lib\/adstudio\/generation-trial/);
+  assert.match(source, /reserveAdStudioGenerationCredit/);
+  assert.match(source, /refundReservedTrialCredit/);
+  assert.match(source, /resolveAdStudioGenerationBrandKit/);
 });
 
-test("generation success responses keep the existing fields without a trial block", () => {
-  for (const path of [campaignsRoute, regenerateRoute]) {
-    const source = read(path);
+test("generation success response keeps the existing fields without a trial block", () => {
+  const source = read(campaignsRoute);
 
-    assert.match(source, /campaignPack:\s*liveResult\.data/);
-    assert.match(source, /data:\s*liveResult\.data/);
-    assert.match(source, /persistence:\s*liveResult\.persistence/);
-    assert.doesNotMatch(source, /\btrial\s*:/);
-  }
+  assert.match(source, /campaignPack:\s*liveResult\.data/);
+  assert.match(source, /data:\s*liveResult\.data/);
+  assert.match(source, /persistence:\s*liveResult\.persistence/);
+  assert.doesNotMatch(source, /\btrial\s*:/);
 });
 
 test("real campaign generation route guards duplicate in-flight requests", () => {

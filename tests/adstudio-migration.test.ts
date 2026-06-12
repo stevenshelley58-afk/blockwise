@@ -136,12 +136,3 @@ test("traceability edge migration adds correlation ids across approvals artifact
   assert.match(sql, /lead_delivery_attempts_trace_idx/i);
   assert.match(sql, /lead_export_audits_trace_idx/i);
 });
-
-test("adstudio provider runs API preserves response shape with an explicit projection", () => {
-  const route = readFileSync("src/app/api/adstudio/provider-runs/route.ts", "utf8");
-
-  assert.doesNotMatch(route, /\.select\("\*"\)/);
-  assert.match(route, /id, workspace_id, job_id, provider_name, provider_type, model_name, prompt_version_id/);
-  assert.doesNotMatch(route, /correlation_id/);
-  assert.doesNotMatch(route, /ai_usage_ledger_id/);
-});

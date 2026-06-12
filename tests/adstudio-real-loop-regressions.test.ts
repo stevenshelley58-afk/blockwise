@@ -182,13 +182,11 @@ test("renderCreativeSvg renders the real logo image or brand name, not a BRAND p
 test("campaign creation uses shared AI copy enrichment without changing copy route response shape", () => {
   const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
-  const generateRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/generate/route.ts", "utf8");
   const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
   // A0: variants enrich in parallel; zero-success still surfaces a real failure
   // instead of silently shipping the unwritten template copy.
   assert.match(enrichment, /Promise\.allSettled/);
@@ -265,10 +263,25 @@ test("fresh brand workspaces do not fall back to Northstar demo branding", () =>
 
 test("dead Ad Studio stub endpoints stay deleted", () => {
   for (const path of [
+    "src/app/api/adstudio/bulk-generate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/generate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/regenerate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/variants/route.ts",
+    "src/app/api/adstudio/compliance/check/route.ts",
+    "src/app/api/adstudio/compliance/fix/route.ts",
+    "src/app/api/adstudio/compliance/reports/[id]/route.ts",
+    "src/app/api/adstudio/creatives/route.ts",
+    "src/app/api/adstudio/creatives/[id]/route.ts",
     "src/app/api/adstudio/variants/[id]/score/route.ts",
     "src/app/api/adstudio/creatives/[id]/export/route.ts",
+    "src/app/api/adstudio/creatives/[id]/regenerate-background/route.ts",
     "src/app/api/adstudio/export-packages/[id]/route.ts",
+    "src/app/api/adstudio/export-packages/route.ts",
     "src/app/api/adstudio/jobs/route.ts",
+    "src/app/api/adstudio/provider-runs/route.ts",
+    "src/app/api/adstudio/variants/[id]/route.ts",
+    "src/app/api/adstudio/variants/[id]/approve/route.ts",
+    "src/app/api/adstudio/brand-kits/route.ts",
     "src/app/api/adstudio/brand-kits/[id]/rescan/route.ts",
     "src/app/api/adstudio/creatives/[id]/render/route.ts",
   ]) {
