@@ -55,6 +55,7 @@ jobs:
     env:
       TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
       TRIGGER_PROJECT_ID: ${{ secrets.TRIGGER_PROJECT_ID }}
+      TRIGGER_PROJECT_REF: ${{ secrets.TRIGGER_PROJECT_ID }}
 
     steps:
       - name: Checkout
@@ -73,6 +74,7 @@ jobs:
         run: |
           test -n "$TRIGGER_ACCESS_TOKEN"
           test -n "$TRIGGER_PROJECT_ID"
+          test -n "$TRIGGER_PROJECT_REF"
 
       - name: Deploy Trigger.dev tasks
         run: npm run trigger:deploy

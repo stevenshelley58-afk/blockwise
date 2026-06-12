@@ -99,8 +99,8 @@ The workflow requires these GitHub secrets:
 - `TRIGGER_PROJECT_ID`
 
 Missing `TRIGGER_PROJECT_ID` is a hard failure in the GitHub deploy workflow.
-`trigger.config.ts` also accepts `TRIGGER_PROJECT_REF` when Trigger.dev exposes
-that project reference inside the managed deployment build.
+The workflow also exports the same value as `TRIGGER_PROJECT_REF` because
+Trigger.dev uses that project reference inside the managed deployment build.
 
 Keep these variables set in the Trigger.dev project environment that matches
 Production:

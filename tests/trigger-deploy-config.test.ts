@@ -10,8 +10,10 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(workflow, /if:\s*github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /TRIGGER_ACCESS_TOKEN:\s*\$\{\{ secrets\.TRIGGER_ACCESS_TOKEN \}\}/);
   assert.match(workflow, /TRIGGER_PROJECT_ID:\s*\$\{\{ secrets\.TRIGGER_PROJECT_ID \}\}/);
+  assert.match(workflow, /TRIGGER_PROJECT_REF:\s*\$\{\{ secrets\.TRIGGER_PROJECT_ID \}\}/);
   assert.match(workflow, /test -n "\$TRIGGER_ACCESS_TOKEN"/);
   assert.match(workflow, /test -n "\$TRIGGER_PROJECT_ID"/);
+  assert.match(workflow, /test -n "\$TRIGGER_PROJECT_REF"/);
   assert.match(workflow, /npm run trigger:deploy/);
 });
 
