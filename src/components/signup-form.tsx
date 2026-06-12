@@ -1,32 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 
 import { ButtonSpinner } from "@/components/app/button-spinner";
+import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-type TurnstileOptions = {
-  sitekey: string;
-  callback(token: string): void;
-  "expired-callback"(): void;
-  "error-callback"(): void;
-};
-
-type TurnstileApi = {
-  render(container: HTMLElement, options: TurnstileOptions): string;
-  reset(widgetId?: string): void;
-  remove(widgetId?: string): void;
-};
-
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
-  }
-}
-
-const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 function cleanAgencyName(value: string) {
   return value.replace(/\s+/g, " ").trim().slice(0, 160);
@@ -34,52 +13,17 @@ function cleanAgencyName(value: string) {
 
 export function SignupForm() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const turnstileRef = useRef<HTMLDivElement | null>(null);
-  const turnstileWidgetId = useRef<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  function renderTurnstile() {
-    if (!turnstileSiteKey || !turnstileRef.current || !window.turnstile || turnstileWidgetId.current) {
-      return;
-    }
-
-    turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
-      sitekey: turnstileSiteKey,
-      callback(token: string) {
-        setTurnstileToken(token);
-        setError(null);
-      },
-      "expired-callback"() {
-        setTurnstileToken("");
-      },
-      "error-callback"() {
-        setTurnstileToken("");
-        setError("Verification failed. Please try again.");
-      },
-    });
-  }
-
   function resetTurnstile() {
-    if (turnstileWidgetId.current) {
-      window.turnstile?.reset(turnstileWidgetId.current);
-    }
     setTurnstileToken("");
+    setTurnstileResetSignal((signal) => signal + 1);
   }
-
-  useEffect(() => {
-    renderTurnstile();
-
-    return () => {
-      if (turnstileWidgetId.current) {
-        window.turnstile?.remove(turnstileWidgetId.current);
-        turnstileWidgetId.current = null;
-      }
-    };
-  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,7 +53,7 @@ export function SignupForm() {
       return;
     }
 
-    if (turnstileSiteKey && !turnstileToken) {
+    if (hasTurnstileSiteKey() && !turnstileToken) {
       setError("Complete the verification check.");
       return;
     }
@@ -151,11 +95,6 @@ export function SignupForm() {
 
   return (
     <>
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
-        onLoad={renderTurnstile}
-      />
       <form className="login-form signup-form" onSubmit={submit} noValidate aria-describedby={error ? "signup-error" : undefined}>
         <label htmlFor="signup-email">
           Work email
@@ -206,7 +145,14 @@ export function SignupForm() {
           </span>
         </label>
 
-        <div className="turnstile-box" ref={turnstileRef} />
+        <TurnstileVerification
+          resetSignal={turnstileResetSignal}
+          onTokenChange={(token) => {
+            setTurnstileToken(token);
+            if (token) setError(null);
+          }}
+          onError={() => setError("Verification failed. Please try again.")}
+        />
 
         {error ? (
           <p className="form-error" id="signup-error" role="alert">

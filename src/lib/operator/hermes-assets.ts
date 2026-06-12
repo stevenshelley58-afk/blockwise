@@ -58,6 +58,16 @@ export async function writeHermesSkill(slug: string, content: string): Promise<H
   return readHermesSkill(slug);
 }
 
+export function isMissingHermesSkillError(error: unknown): boolean {
+  if (error instanceof Error && error.message === "Invalid Hermes skill slug.") {
+    return true;
+  }
+
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? error.code : null;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
 function skillPathForSlug(slug: string): string {
   if (!SKILL_SLUG_RE.test(slug)) {
     throw new Error("Invalid Hermes skill slug.");

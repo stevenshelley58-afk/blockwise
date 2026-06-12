@@ -14,7 +14,7 @@ export default async function SelfServePage() {
 
   const [campaigns, brandKits, connections] = await Promise.all([
     supabase.from("adstudio_campaigns").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
-    supabase.from("adstudio_brand_kits").select("name").eq("workspace_id", access.workspaceId).limit(1),
+    supabase.from("adstudio_brand_kits").select("business_name").eq("workspace_id", access.workspaceId).limit(1),
     supabase
       .from("provider_connections")
       .select("id", { count: "exact", head: true })
@@ -23,7 +23,7 @@ export default async function SelfServePage() {
   ]);
 
   const hasAd = (campaigns.count ?? 0) > 0;
-  const hasBrand = (brandKits.data ?? []).some((kit) => kit.name && kit.name.trim() !== "");
+  const hasBrand = (brandKits.data ?? []).some((kit) => kit.business_name && kit.business_name.trim() !== "");
   const hasConnection = (connections.count ?? 0) > 0;
   const checklist: SetupChecklistItem[] = [
     {

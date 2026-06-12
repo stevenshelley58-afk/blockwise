@@ -14,6 +14,8 @@ type ReadinessEntry = {
   label: string;
   met: boolean;
   automatic?: boolean;
+  blocked?: boolean;
+  review?: boolean;
 };
 
 type PublishResponse = {
@@ -23,11 +25,25 @@ type PublishResponse = {
   triggerRunId?: string | null;
   status?: string;
   metaPublishPlan?: {
+    id?: string;
     status?: string;
+    approvalRequestId?: string | null;
     /** A6 (additive): the Ad Studio variants the planned ads map to — confirms an A/B selection. */
     variantIds?: string[];
   } | null;
   error?: string;
+};
+
+type PublishPlanStatus = {
+  status?: string;
+  lastError?: string | null;
+  reconciledObjects?: {
+    campaigns: number;
+    leadForms: number;
+    adSets: number;
+    creatives: number;
+    ads: number;
+  };
 };
 
 type PublishSetupPanelProps = {
@@ -57,6 +73,8 @@ export function PublishSetupPanel({
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [publishDone, setPublishDone] = useState(false);
+  const [publishMessage, setPublishMessage] = useState("Published");
+  const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
   // A6: variant ids the user unticked. Empty set = full pack = existing publish behaviour.
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   // A6: set only when a subset was published, to confirm the A/B selection on success.
@@ -78,23 +96,65 @@ export function PublishSetupPanel({
             : Array.isArray(data.checklist)
               ? data.checklist
               : [];
-        const items: ReadinessEntry[] = source.map((item: { id?: string; label: string; met?: boolean; done?: boolean; automatic?: boolean }) => ({
+        const items: ReadinessEntry[] = source.map((item: { id?: string; label: string; met?: boolean; done?: boolean; automatic?: boolean; blocked?: boolean; review?: boolean }) => ({
           id: item.id,
           label: item.label,
           met: item.met ?? Boolean(item.done),
           automatic: item.automatic,
+          blocked: item.blocked,
+          review: item.review,
         }));
         setReadiness(items);
       })
       .catch(() => {});
   }, [campaignId]);
 
+  useEffect(() => {
+    if (!publishPlanId || !publishDone) return;
+
+    const planId = publishPlanId;
+    let cancelled = false;
+    async function pollPlan() {
+      const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(planId)}`);
+      const plan = (await response.json().catch(() => ({}))) as PublishPlanStatus;
+      if (cancelled || !response.ok) return;
+
+      if (plan.status === "failed") {
+        setPublishDone(false);
+        setPublishError(plan.lastError ?? "Meta publish failed. Retry from Approvals or contact support.");
+        return;
+      }
+
+      if (plan.status === "paused_live") {
+        setPublishMessage("Live on Meta (paused) - activate after review");
+        return;
+      }
+
+      if (plan.status === "publishing" || plan.status === "approved") {
+        const counts = plan.reconciledObjects;
+        const suffix = counts && counts.ads > 0 ? ` - ${counts.ads} paused ad${counts.ads === 1 ? "" : "s"} in progress` : "";
+        setPublishMessage(`Queued - creating your paused Meta campaign${suffix}`);
+      }
+    }
+
+    void pollPlan();
+    const interval = window.setInterval(() => void pollPlan(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [publishDone, publishPlanId]);
+
   // Brand approval is a publish requirement, shown alongside the fetched checks.
   const brandItem: ReadinessEntry | null = brandApproved
     ? null
     : { id: "brand_kit_approved", label: "Confirm your brand kit in Brand Studio", met: false };
   const checklist: ReadinessEntry[] = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
-  const allMet = readiness ? checklist.every((item) => item.met) : false;
+  const blockingItems = checklist.filter((item) => !item.met && (!item.review || item.blocked));
+  const allMet = readiness ? blockingItems.length === 0 : false;
+  const unmetItems = blockingItems;
+  const onlyBlockedProviderWrite = unmetItems.length === 1 && unmetItems[0]?.id === "provider_writes" && unmetItems[0]?.blocked;
+  const needsApprovalReview = checklist.some((item) => item.id === "approval_ready" && item.review && !item.met && !item.blocked);
 
   // A6: A/B publish selection. All variants ticked (the default) keeps the
   // existing publish-everything behaviour — `variantIds` is omitted from the
@@ -151,6 +211,8 @@ export function PublishSetupPanel({
     setPublishing(true);
     setPublishError("");
     setPublishDone(false);
+    setPublishMessage("Published");
+    setPublishPlanId(null);
     setPublishedVariantCount(null);
     try {
       const res = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
@@ -169,15 +231,18 @@ export function PublishSetupPanel({
       if (!res.ok) {
         throw new Error(body.error ?? "Publish failed.");
       }
+      if (body.metaPublishPlan?.approvalRequestId && !body.triggerRunId) {
+        setPublishMessage("Submitted for review - your campaign will be queued once approved");
+        setPublishPlanId(body.metaPublishPlan.id ?? null);
+        setPublishDone(true);
+        return;
+      }
       const backendPublished = Boolean(body.triggerRunId)
-        || body.status === "published"
-        || body.status === "queued"
         || body.metaPublishPlan?.status === "paused_live";
 
       if (!backendPublished) {
         const blockers = body.blockers?.filter(Boolean) ?? [];
         if (blockers.length > 0) {
-          setReadiness(blockers.map((label, index) => ({ id: `publish_blocker_${index + 1}`, label, met: false })));
           throw new Error("Publish is not ready. Resolve the missing requirements above.");
         }
         if (body.providerWritesEnabled === false) {
@@ -189,6 +254,12 @@ export function PublishSetupPanel({
         // Confirm the A/B selection from the server echo (additive field); fall back to what we sent.
         setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
       }
+      setPublishPlanId(body.metaPublishPlan?.id ?? null);
+      setPublishMessage(
+        body.metaPublishPlan?.status === "paused_live"
+          ? "Live on Meta (paused) - activate after review"
+          : "Queued - creating your paused Meta campaign",
+      );
       setPublishDone(true);
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
@@ -210,7 +281,7 @@ export function PublishSetupPanel({
             <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
               {item.met
                 ? <Check size={14} style={{ color: "#31c46f", flexShrink: 0 }} aria-hidden />
-                : <CircleAlert size={14} style={{ color: "#8a5a00", flexShrink: 0 }} aria-hidden />}
+                : <CircleAlert size={14} style={{ color: item.blocked || item.review ? "#2563eb" : "#8a5a00", flexShrink: 0 }} aria-hidden />}
               <span style={{ color: item.met ? "var(--ink)" : "var(--muted)" }}>{item.label}</span>
             </div>
           ))}
@@ -249,9 +320,9 @@ export function PublishSetupPanel({
 
       <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
         <span style={{ color: "var(--muted)" }}>Audience and location</span>
-        <strong style={{ display: "block", marginTop: 2 }}>Recommended local audience</strong>
+        <strong style={{ display: "block", marginTop: 2 }}>Audience: Australia-wide</strong>
         <span style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>
-          {campaignPack.campaign.market.suburb}, {campaignPack.campaign.market.state}
+          Broad targeting is recommended for housing ads.
         </span>
       </section>
 
@@ -284,7 +355,7 @@ export function PublishSetupPanel({
       </section>
 
       {/* M1: Export (manual download) button — always the primary action */}
-      <button className="studio-btn secondary block" type="button" onClick={onExport}>
+      <button className={`studio-btn ${onlyBlockedProviderWrite ? "publish" : "secondary"} block`} type="button" onClick={onExport}>
         <Download aria-hidden size={17} />
         Export creatives
       </button>
@@ -323,7 +394,7 @@ export function PublishSetupPanel({
       {publishDone ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 8, background: "#ecfdf5", color: "#006d38", border: "1px solid #b7e7cd", fontWeight: 750 }}>
           <Check size={16} aria-hidden />
-          {publishedVariantCount ? `Published — ${publishedVariantCount} variant A/B test` : "Published"}
+          {publishedVariantCount ? `${publishMessage} - ${publishedVariantCount} variant A/B test` : publishMessage}
         </div>
       ) : (
         <>
@@ -339,11 +410,13 @@ export function PublishSetupPanel({
             onClick={handlePublishLive}
           >
             <Send aria-hidden size={17} />
-            {publishing ? "Publishing..." : "Publish"}
+            {publishing ? "Submitting..." : needsApprovalReview ? "Send for review" : "Publish"}
           </button>
           {checklist.length > 0 && !allMet && (
             <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
-              Resolve all readiness items above to enable publishing.
+              {onlyBlockedProviderWrite
+                ? "Live publishing isn't available yet - use Export creatives to launch manually."
+                : "Resolve all readiness items above to enable publishing."}
             </p>
           )}
         </>

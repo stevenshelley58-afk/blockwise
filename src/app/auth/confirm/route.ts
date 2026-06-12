@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const DEFAULT_NEXT_PATH = "/start";
+const DEFAULT_NEXT_PATH = "/self-serve";
 const SAFE_REDIRECT_ORIGIN = "https://blockwise.local";
 
 function sanitizeNextPath(next: string | null) {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectPath = type === "signup" ? appendConfirmed(next) : next;
-  return NextResponse.redirect(new URL(redirectPath, process.env.NEXT_PUBLIC_APP_URL ?? request.url));
+  return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
 }
 
 function appendConfirmed(path: string): string {

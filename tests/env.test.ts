@@ -36,13 +36,11 @@ test("Google Ads keys are tracked as provider-scoped, not core required, so a Me
   ]);
 });
 
-test("recommended security environment keys cover Turnstile, Cloudflare AI Gateway, egress, and audit drains", () => {
+test("recommended security environment keys cover Turnstile and Cloudflare AI Gateway", () => {
   assert.deepEqual(RECOMMENDED_SECURITY_ENV_KEYS, [
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
     "CLOUDFLARE_AI_GATEWAY_URL",
     "CLOUDFLARE_AI_GATEWAY_TOKEN",
-    "AGENT_ALLOWED_OUTBOUND_DOMAINS",
-    "SECURITY_AUDIT_LOG_DRAIN_URL",
   ]);
 });
 
@@ -54,8 +52,29 @@ test("getMissingRecommendedSecurityEnvKeys reports non-blocking production harde
       CLOUDFLARE_AI_GATEWAY_URL: "https://gateway.ai.cloudflare.com/v1/account/gateway",
       CLOUDFLARE_AI_GATEWAY_TOKEN: "token",
     } as NodeJS.ProcessEnv),
-    ["AGENT_ALLOWED_OUTBOUND_DOMAINS", "SECURITY_AUDIT_LOG_DRAIN_URL"],
+    [],
   );
+});
+
+test(".env.example documents app-read env vars and omits retired ones", () => {
+  const example = readFileSync(".env.example", "utf8");
+
+  for (const key of [
+    "CLOUDFLARE_AI_GATEWAY_URL",
+    "CLOUDFLARE_AI_GATEWAY_TOKEN",
+    "OPERATOR_EMAILS",
+    "BLOCKWISE_DEV_PASSWORD",
+    "GOOGLE_ADS_ENABLED",
+    "META_MONITOR_BUDGET_AUD",
+    "NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA",
+  ]) {
+    assert.match(example, new RegExp(`^${key}=`, "m"));
+  }
+
+  assert.doesNotMatch(example, /^SUPABASE_(?:DB_URL|JWT_SECRET)=/m);
+  assert.doesNotMatch(example, new RegExp(`^${"SENTRY"}_${"AUTH_TOKEN"}=`, "m"));
+  assert.doesNotMatch(example, /^NEXT_PUBLIC_POSTHOG_/m);
+  assert.doesNotMatch(example, /^(?:AGENT_ALLOWED|SECURITY_AUDIT)_/m);
 });
 
 test("getInvalidEnvKeys treats placeholder production secrets as invalid", () => {

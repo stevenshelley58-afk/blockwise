@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,8 @@ export async function GET(
   if (!guard.ok) return guard.response;
 
   const { id } = await params;
-  const { data: run, error: runError } = await guard.supabase
-    .schema("research")
+  const research = createSupabaseServiceClient().schema("research");
+  const { data: run, error: runError } = await research
     .from("ad_fetch_runs")
     .select("*")
     .eq("id", id)
@@ -24,15 +25,13 @@ export async function GET(
 
   const [sourceDocumentResult, snapshotsResult] = await Promise.all([
     run.source_document_id
-      ? guard.supabase
-          .schema("research")
+      ? research
           .from("source_documents")
           .select("id,source,source_url,source_external_id,fetched_at,storage_bucket,storage_path,content_hash,mime_type,byte_size,metadata,created_at")
           .eq("id", run.source_document_id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    guard.supabase
-      .schema("research")
+    research
       .from("ad_snapshots")
       .select("id,observed_ad_id,source_provider,payload,payload_hash,changes_from_prior,snapshot_at,created_at")
       .eq("ad_fetch_run_id", id)

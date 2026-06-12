@@ -1,26 +1,31 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { canManageProviderConnections } from "@/lib/auth/access-control";
-import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
 import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const META_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v19.0";
 
 type Body = { workspaceId?: string };
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as Body;
 
-  const guard = await requireApiWorkspace(request, "monitor", body.workspaceId ?? null);
+  const supabase = await createSupabaseServerClient();
+  const access = await requireWorkspaceAccess(supabase, {
+    surface: "monitor",
+    requestedWorkspaceId: body.workspaceId,
+  });
 
-  if (!guard.ok) return guard.response;
-  const { access } = guard;
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
 
-  if (!canManageProviderConnections(access)) {
+  if (!canManageProviderConnections(access.access)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
   const { data: connection, error: connErr } = await serviceSupabase
     .from("provider_connections")
     .select("id")
-    .eq("workspace_id", access.workspaceId)
+    .eq("workspace_id", access.access.workspaceId)
     .eq("provider", "meta")
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
     try {
       const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
       if (tokens.accessToken) {
-        const revokeUrl = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/permissions`);
+        const revokeUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/permissions`);
         revokeUrl.searchParams.set("access_token", tokens.accessToken);
         const revokeRes = await fetch(revokeUrl.toString(), { method: "DELETE" });
         if (!revokeRes.ok) {
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
   const { error: updateErr } = await serviceSupabase
     .from("provider_connections")
     .update({ status: "revoked", updated_at: new Date().toISOString() })
-    .eq("workspace_id", access.workspaceId)
+    .eq("workspace_id", access.access.workspaceId)
     .eq("provider", "meta");
 
   if (updateErr) {

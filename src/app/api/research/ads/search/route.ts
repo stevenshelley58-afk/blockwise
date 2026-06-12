@@ -3,12 +3,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
+  adRunningMs,
   CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   normaliseCustomerMetaAdLibraryCard,
+  type CustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
 } from "@/lib/research/customer-meta-card";
 
 export const dynamic = "force-dynamic";
+
+const SEARCH_ROW_LIMIT = 200;
+const SEARCH_RESULT_LIMIT = 50;
+type SearchSort = "recent" | "longest";
 
 export async function GET(request: NextRequest) {
   const guard = await requireApiWorkspace(request, "monitor");
@@ -28,6 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const q = (request.nextUrl.searchParams.get("q") ?? "").replace(/[(),]/g, "").trim();
+  const sort: SearchSort = request.nextUrl.searchParams.get("sort") === "longest" ? "longest" : "recent";
   if (!q) {
     return NextResponse.json({ cards: [] });
   }
@@ -51,16 +58,57 @@ export async function GET(request: NextRequest) {
         `cta.ilike.${needle}`,
       ].join(","),
     )
-    .order("last_seen_at", { ascending: false })
-    .limit(50);
+    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
+      ascending: sort === "longest",
+      nullsFirst: false,
+    })
+    .limit(SEARCH_ROW_LIMIT);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const cards = ((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(
-    normaliseCustomerMetaAdLibraryCard,
+  const cards = sortCards(
+    dedupeRowsByCardId((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[])
+      .slice(0, SEARCH_RESULT_LIMIT)
+      .map(normaliseCustomerMetaAdLibraryCard),
+    sort,
   );
 
   return NextResponse.json({ cards });
+}
+
+function sortCards(cards: CustomerMetaAdLibraryCard[], sort: SearchSort): CustomerMetaAdLibraryCard[] {
+  if (sort === "longest") {
+    const now = Date.now();
+    return [...cards].sort((a, b) => {
+      const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
+      const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
+      return (bMs ?? -1) - (aMs ?? -1) || dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt);
+    });
+  }
+
+  return [...cards].sort((a, b) => dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt));
+}
+
+function dateValue(value: string | null): number {
+  if (!value) return 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function dedupeRowsByCardId(rows: CustomerMetaAdLibraryCardRow[]): CustomerMetaAdLibraryCardRow[] {
+  const seen = new Set<string>();
+  const deduped: CustomerMetaAdLibraryCardRow[] = [];
+
+  for (const row of rows) {
+    const cardId = row.card_id?.trim();
+    if (cardId) {
+      if (seen.has(cardId)) continue;
+      seen.add(cardId);
+    }
+    deduped.push(row);
+  }
+
+  return deduped;
 }

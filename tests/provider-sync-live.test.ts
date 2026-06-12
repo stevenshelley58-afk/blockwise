@@ -6,6 +6,7 @@ import {
   buildSyncRunInsert,
   buildSyncRunUpdate,
 } from "../src/lib/providers/provider-sync.ts";
+import { mapProviderConnectionRow } from "../trigger/provider-sync.ts";
 
 test("provider sync writes reporting snapshots in production table shape", () => {
   const insert = buildReportingSnapshotInsert("workspace_1", {
@@ -51,5 +52,12 @@ test("provider sync run builders record lifecycle state without provider tokens"
     status: "completed",
     completed_at: "2026-05-27T01:05:00.000Z",
     error_message: null,
+  });
+});
+
+test("provider sync trigger maps snake_case connection rows to sync payloads", () => {
+  assert.deepEqual(mapProviderConnectionRow({ workspace_id: "workspace_1", provider: "meta" }), {
+    workspaceId: "workspace_1",
+    provider: "meta",
   });
 });

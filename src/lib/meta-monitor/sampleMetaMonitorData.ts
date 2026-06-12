@@ -134,7 +134,7 @@ export function buildSampleMetaMonitorPayload(
       adsetName: `Suburb - ${ad.suburb}`,
       suburb: ad.suburb,
       status: ad.status,
-      landingPageUrl: "https://example.com/appraisal",
+      landingPageUrl: null,
       metaPermalinkUrl: null,
       creative: {
         type: ad.creativeType,

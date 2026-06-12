@@ -65,6 +65,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     .maybeSingle();
 
   if (error) return errorResponse(error);
+  if (!data) return NextResponse.json({ error: "Brand kit not found." }, { status: 404 });
 
   const brandKit = applyBrandAssetRows(
     rowToBrandKit(data),

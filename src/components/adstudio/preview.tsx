@@ -223,7 +223,7 @@ export function AdPreview({
         </button>
         <footer>
           <div>
-            <small>{domain}</small>
+            {domain ? <small>{domain}</small> : null}
             <button className={selectedElement === "headline" ? "studio-feed-headline selected" : "studio-feed-headline"} type="button" onClick={() => setSelectedElement("headline")}>
               {copy.headline}
             </button>

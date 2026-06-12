@@ -1,4 +1,6 @@
-﻿# Blockwise Go-Live Plan
+﻿> Superseded: use `docs/runbooks/production-readiness.md` as the current go-live checklist; this file is retained as implementation history.
+
+# Blockwise Go-Live Plan
 
 **Generated:** 2026-06-10 Â· Full e2e review (security, user flow, UI/UX, ads readiness, ops)
 **Audience:** A code agent executing tasks one at a time, in order.

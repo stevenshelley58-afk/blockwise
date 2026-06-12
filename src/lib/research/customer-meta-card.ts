@@ -261,7 +261,7 @@ function normalisePublicUrl(value: unknown): string | null {
   return url;
 }
 
-function normaliseMediaUrl(value: unknown): string | null {
+export function normaliseMediaUrl(value: unknown): string | null {
   const url = cleanString(value);
   if (url && hasUnresolvedTemplateMarker(url)) return null;
   if (!url) return null;

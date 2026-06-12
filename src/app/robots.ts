@@ -12,6 +12,11 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/api/",
           "/login",
+          "/home",
+          "/settings",
+          "/pwa",
+          "/reset-password",
+          "/forgot-password",
           "/ad-studio",
           "/leads",
           "/results",

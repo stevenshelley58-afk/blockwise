@@ -16,6 +16,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
 type ResearchSupabaseClient = ReturnType<typeof createSupabaseServiceClient>;
 
 type CoverageRow = {
@@ -305,9 +306,11 @@ function loadOfficialMetaApiStatus(): ConsoleOfficialMetaApi {
   };
 }
 
-export default async function OperatorResearchPage() {
+export default async function OperatorResearchPage({ searchParams }: { searchParams?: SearchParams }) {
   await requirePageSurfaceAccess("operator");
   const supabase = createSupabaseServiceClient();
+  const params = searchParams ? await Promise.resolve(searchParams) : {};
+  const formError = operatorResearchErrorMessage(firstParam(params.error));
 
   const [coverage, workQueue, queueStats, pipeline, defects, defectStats, decisions, heartbeat, spendToday, stalePagesDue, policy, skills, entity, adLibrary] =
     await Promise.all([
@@ -412,35 +415,38 @@ export default async function OperatorResearchPage() {
     .slice(0, 4);
 
   return (
-    <main style={{ padding: "18px 18px 28px", maxWidth: 1280, margin: "0 auto" }}>
-      <ResearchConsole
-        heartbeat={heartbeat}
-        spend={{ today: spendToday, cap: DAILY_SPEND_CAP_USD }}
-        policy={policy}
-        stats={{
-          needsAttention,
-          activeJobs,
-          runningJobs,
-          queuedJobs,
-          blockedJobs,
-          failedJobs,
-          staleJobs,
-          coveragePercent,
-          liveAds: adLibrary.activeCards,
-        }}
-        pipeline={pipeline}
-        stalePagesDue={stalePagesDue}
-        coverage={consoleCoverage}
-        queue={consoleQueue}
-        defects={consoleDefects}
-        decisions={consoleDecisions}
-        inventory={inventory}
-        entity={entity}
-        adLibrary={adLibrary}
-        officialMetaApi={officialMetaApi}
-        skills={consoleSkills}
-        nowIso={new Date().toISOString()}
-      />
+    <main className="operator-os">
+      <div className="operator-os-main">
+        <ResearchConsole
+          heartbeat={heartbeat}
+          spend={{ today: spendToday, cap: DAILY_SPEND_CAP_USD }}
+          policy={policy}
+          stats={{
+            needsAttention,
+            activeJobs,
+            runningJobs,
+            queuedJobs,
+            blockedJobs,
+            failedJobs,
+            staleJobs,
+            coveragePercent,
+            liveAds: adLibrary.activeCards,
+          }}
+          pipeline={pipeline}
+          stalePagesDue={stalePagesDue}
+          coverage={consoleCoverage}
+          queue={consoleQueue}
+          defects={consoleDefects}
+          decisions={consoleDecisions}
+          inventory={inventory}
+          entity={entity}
+          adLibrary={adLibrary}
+          officialMetaApi={officialMetaApi}
+          skills={consoleSkills}
+          nowIso={new Date().toISOString()}
+          formError={formError}
+        />
+      </div>
       <OperatorAssistant
         initialRows={assistantCoverageRows}
         initialPostcode={assistantCoverageRows[0]?.postcode ?? null}
@@ -448,6 +454,23 @@ export default async function OperatorResearchPage() {
       />
     </main>
   );
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function operatorResearchErrorMessage(code: string | undefined): string | null {
+  switch (code) {
+    case "invalid_postcode":
+      return "Postcode refresh needs a four-digit Australian postcode.";
+    case "invalid_request":
+      return "Refresh request was incomplete. Choose a scope and enter a target.";
+    case "refresh_failed":
+      return "Refresh could not be queued. Check the research health panel, then try again.";
+    default:
+      return null;
+  }
 }
 
 function coverageScore(row: CoverageRow): number {

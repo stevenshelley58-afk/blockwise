@@ -129,7 +129,7 @@ export function BudgetPacingChart(props: {
             <b>Not set</b>
           </div>
           <p className="mm-pacing-note">
-            Set <code>META_MONITOR_BUDGET_AUD</code> to enable pacing and the budget-remaining card.
+            No monthly budget set. Pacing appears once a monthly budget is configured.
           </p>
         </aside>
       )}

@@ -119,12 +119,14 @@ export function createSupabaseMetaLeadRepository(
         }),
       ]);
 
-      if (dedupeKey && !duplicateOfLeadId) {
-        await serviceSupabase.from("lead_dedupe_records").insert({
+      if (dedupeKey) {
+        await serviceSupabase.from("lead_dedupe_records").upsert({
           workspace_id: workspaceId,
           lead_id: leadId,
           dedupe_key: dedupeKey,
-          duplicate_of_lead_id: null,
+          duplicate_of_lead_id: duplicateOfLeadId ?? null,
+        }, {
+          onConflict: "workspace_id,lead_id",
         });
       }
 

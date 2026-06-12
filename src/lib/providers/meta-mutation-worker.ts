@@ -1,11 +1,14 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
 import { loadStoredProviderTokens } from "./provider-connections.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
-import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../publishing/readiness.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
+
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
 
 type MetaMutationRow = {
   id: string;
@@ -29,6 +32,19 @@ export async function executeMetaMutationById(input: {
   mutationId: string;
 }) {
   const mutation = await loadMutation(input.serviceSupabase, input.workspaceId, input.mutationId);
+
+  if (!providerWritesEnabled()) {
+    const skipped = {
+      ...mutation,
+      status: "failed" as const,
+      lastError: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+      updatedAt: new Date().toISOString(),
+    };
+    await updateMutation(input.serviceSupabase, skipped);
+
+    return skipped;
+  }
+
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     planId: mutation.planId,
@@ -43,41 +59,52 @@ export async function executeMetaMutationById(input: {
     updatedAt: new Date().toISOString(),
   });
 
-  const tokens = await loadStoredProviderTokens(input.serviceSupabase, plan.providerConnectionId);
+  try {
+    const tokens = await loadStoredProviderTokens(input.serviceSupabase, plan.providerConnectionId);
 
-  if (!tokens.accessToken) {
-    throw new Error("Meta mutation cannot run without a stored Meta access token.");
-  }
+    if (!tokens.accessToken) {
+      throw new Error("Meta mutation cannot run without a stored Meta access token.");
+    }
 
-  const result = await executeMetaPlanMutation({
-    mutation,
-    approvalStatus,
-    accessToken: tokens.accessToken,
-  });
-  const updated = {
-    ...mutation,
-    status: result.status,
-    requestLog: result.requestLog,
-    responseLog: result.responseLog,
-    lastError: result.lastError,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await updateMutation(input.serviceSupabase, updated);
-  await recordAuditLog(input.serviceSupabase, {
-    workspaceId: input.workspaceId,
-    actorProfileId: mutation.requestedBy,
-    action: `meta.${mutation.action}`,
-    targetType: "meta_publish_plan_mutation",
-    targetId: mutation.mutationId,
-    metadata: {
-      planId: mutation.planId,
+    const result = await executeMetaPlanMutation({
+      mutation,
+      approvalStatus,
+      accessToken: tokens.accessToken,
+    });
+    const updated = {
+      ...mutation,
       status: result.status,
+      requestLog: result.requestLog,
+      responseLog: result.responseLog,
       lastError: result.lastError,
-    },
-  });
+      updatedAt: new Date().toISOString(),
+    };
 
-  return updated;
+    await updateMutation(input.serviceSupabase, updated);
+    await input.serviceSupabase.from("audit_logs").insert({
+      workspace_id: input.workspaceId,
+      actor_profile_id: mutation.requestedBy,
+      action: `meta.${mutation.action}`,
+      target_type: "meta_publish_plan_mutation",
+      target_id: mutation.mutationId,
+      metadata: {
+        planId: mutation.planId,
+        status: result.status,
+        lastError: result.lastError,
+      },
+    });
+
+    return updated;
+  } catch (error) {
+    const failed = {
+      ...mutation,
+      status: "failed" as const,
+      lastError: error instanceof Error ? error.message : "Meta mutation worker failed.",
+      updatedAt: new Date().toISOString(),
+    };
+    await updateMutation(input.serviceSupabase, failed);
+    throw error;
+  }
 }
 
 export async function loadMutation(

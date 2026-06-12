@@ -47,7 +47,6 @@ export const metadata: Metadata = {
     "Perth real estate",
   ],
   authors: [{ name: "Blockwise" }],
-  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "Blockwise",

@@ -2,7 +2,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { generateAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
-import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
+import { isExampleBrandKitSourceUrl, persistAdStudioCampaignPack, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -47,6 +47,7 @@ export async function loadLiveAdStudioBundle(
   supabase: SupabaseServerClient,
   workspaceId: string,
   requestedCampaignId?: string | null,
+  userId?: string,
 ): Promise<AdStudioBundle | null> {
   if (!workspaceId) return null;
 
@@ -133,6 +134,9 @@ export async function loadLiveAdStudioBundle(
         platforms: ["meta"],
         variantCount: 5,
       });
+      if (userId) {
+        await persistAdStudioCampaignPack(supabase, campaignPack, userId).catch(() => null);
+      }
 
       return { brandKit, campaignPack, offers, performance: EMPTY_PERFORMANCE, isLive: true };
     }

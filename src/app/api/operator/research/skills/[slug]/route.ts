@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireOperator } from "@/lib/operator/auth";
-import { readHermesSkill, writeHermesSkill } from "@/lib/operator/hermes-assets";
+import { isMissingHermesSkillError, readHermesSkill, writeHermesSkill } from "@/lib/operator/hermes-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,9 @@ export async function GET(
   if (!guard.ok) return guard.response;
 
   const { slug } = await params;
-  const skill = await readHermesSkill(slug);
+  const loaded = await readSkillForRoute(slug);
+  if (!loaded.ok) return loaded.response;
+  const skill = loaded.skill;
   const url = new URL(req.url);
   const mode = url.searchParams.get("mode");
   const format = url.searchParams.get("format");
@@ -59,7 +61,9 @@ export async function POST(
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const current = await readHermesSkill(slug);
+  const loaded = await readSkillForRoute(slug);
+  if (!loaded.ok) return loaded.response;
+  const current = loaded.skill;
   const proposedSha = createHash("sha256").update(parsed.data.content).digest("hex");
   const research = createSupabaseServiceClient().schema("research");
 
@@ -112,6 +116,21 @@ export async function POST(
   });
 
   return NextResponse.json({ ok: true, mode: "file_updated", skill: updated });
+}
+
+async function readSkillForRoute(slug: string) {
+  try {
+    return { ok: true as const, skill: await readHermesSkill(slug) };
+  } catch (error) {
+    if (isMissingHermesSkillError(error)) {
+      return {
+        ok: false as const,
+        response: NextResponse.json({ error: "Hermes skill not found." }, { status: 404 }),
+      };
+    }
+
+    throw error;
+  }
 }
 
 function renderEditor(skill: Awaited<ReturnType<typeof readHermesSkill>>, productionReadOnly: boolean): string {

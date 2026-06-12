@@ -11,6 +11,10 @@ import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
+
 export async function executeMetaPublishPlanById(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
@@ -21,6 +25,19 @@ export async function executeMetaPublishPlanById(input: {
     workspaceId: input.workspaceId,
     planId: input.planId,
   });
+
+  if (!providerWritesEnabled()) {
+    const failedPlan: MetaPublishPlan = {
+      ...plan,
+      status: "failed",
+      lastError: "Provider writes are disabled by BLOCKWISE_ENABLE_PROVIDER_WRITES.",
+      updatedAt: new Date().toISOString(),
+    };
+    await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);
+    await persistPublishAudit(input.serviceSupabase, failedPlan);
+
+    return failedPlan;
+  }
 
   return executeMetaPublishPlan({
     serviceSupabase: input.serviceSupabase,
@@ -45,22 +62,34 @@ export async function executeMetaPublishPlan(input: {
   };
   await updateMetaPublishPlanExecution(input.serviceSupabase, publishingPlan);
 
-  const tokens = await loadStoredProviderTokens(input.serviceSupabase, publishingPlan.providerConnectionId);
+  try {
+    const tokens = await loadStoredProviderTokens(input.serviceSupabase, publishingPlan.providerConnectionId);
 
-  if (!tokens.accessToken) {
-    throw new Error("Meta access token is missing.");
+    if (!tokens.accessToken) {
+      throw new Error("Meta access token is missing.");
+    }
+
+    const result = await createMetaExecutionAdapter(publishingPlan.adapter).publish(publishingPlan, {
+      accessToken: tokens.accessToken,
+      fetchImpl: input.fetchImpl,
+    });
+    const completedPlan = applyMetaPublishExecutionResult(publishingPlan, result);
+
+    await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
+    await persistPublishAudit(input.serviceSupabase, completedPlan);
+
+    return completedPlan;
+  } catch (error) {
+    const failedPlan: MetaPublishPlan = {
+      ...publishingPlan,
+      status: "failed",
+      lastError: error instanceof Error ? error.message : "Meta publish worker failed.",
+      updatedAt: new Date().toISOString(),
+    };
+    await updateMetaPublishPlanExecution(input.serviceSupabase, failedPlan);
+    await persistPublishAudit(input.serviceSupabase, failedPlan);
+    throw error;
   }
-
-  const result = await createMetaExecutionAdapter(publishingPlan.adapter).publish(publishingPlan, {
-    accessToken: tokens.accessToken,
-    fetchImpl: input.fetchImpl,
-  });
-  const completedPlan = applyMetaPublishExecutionResult(publishingPlan, result);
-
-  await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
-  await persistPublishAudit(input.serviceSupabase, completedPlan);
-
-  return completedPlan;
 }
 
 async function persistPublishAudit(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {

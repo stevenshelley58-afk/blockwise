@@ -62,7 +62,8 @@ export async function listProviderConnections(
     .select(
       "id, workspace_id, provider, status, scopes, external_account_id, external_account_name, metadata_json, token_expires_at, health_status, health_checked_at, last_sync_at",
     )
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", workspaceId)
+    .order("updated_at", { ascending: false });
 
   if (error || !data) {
     return [];

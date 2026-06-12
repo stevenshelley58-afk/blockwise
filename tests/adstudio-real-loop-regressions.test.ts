@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -182,13 +182,11 @@ test("renderCreativeSvg renders the real logo image or brand name, not a BRAND p
 test("campaign creation uses shared AI copy enrichment without changing copy route response shape", () => {
   const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
-  const generateRoute = readFileSync("src/app/api/adstudio/campaigns/[id]/generate/route.ts", "utf8");
   const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(generateRoute, /enrichCampaignPackCopyWithAi/);
   // A0: variants enrich in parallel; zero-success still surfaces a real failure
   // instead of silently shipping the unwritten template copy.
   assert.match(enrichment, /Promise\.allSettled/);
@@ -199,10 +197,37 @@ test("campaign creation uses shared AI copy enrichment without changing copy rou
 
 test("publish readiness hides internal provider-write env wording from customer labels", () => {
   const source = readFileSync("src/app/api/adstudio/publish-readiness/route.ts", "utf8");
-  const labelBlock = source.slice(source.indexOf('id: "provider_writes"'), source.indexOf("done: writesEnabled"));
+  const labelBlock = source.slice(source.indexOf('id: "provider_writes"'), source.indexOf("automatic: true", source.indexOf('id: "provider_writes"')));
 
-  assert.match(labelBlock, /Enable live publishing for this workspace/);
+  assert.match(labelBlock, /Live publishing is in final platform review/);
+  assert.match(source, /blocked: !writesEnabled/);
   assert.doesNotMatch(labelBlock, /BLOCKWISE_ENABLE_PROVIDER_WRITES/);
+});
+
+test("publish flow reports real Meta plan progress without fake queued statuses", () => {
+  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+  const publishRoute = readFileSync("src/app/api/adstudio/export-packages/[id]/publish/route.ts", "utf8");
+  const statusRoute = readFileSync("src/app/api/integrations/meta/publish-plans/[id]/route.ts", "utf8");
+  const connections = readFileSync("src/lib/providers/provider-connections.ts", "utf8");
+
+  assert.match(connections, /\.order\("updated_at", \{ ascending: false \}\)/);
+  assert.match(publishRoute, /connection\.status === "connected" \|\| connection\.status === "needs_attention"/);
+  assert.doesNotMatch(panel, /body\.status === "published"|body\.status === "queued"/);
+  assert.match(panel, /\/api\/integrations\/meta\/publish-plans\/\$\{encodeURIComponent\(planId\)\}/);
+  assert.match(panel, /Submitted for review - your campaign will be queued once approved/);
+  assert.match(panel, /Queued - creating your paused Meta campaign/);
+  assert.match(statusRoute, /requireWorkspaceAccess/);
+  assert.match(statusRoute, /loadMetaPublishPlan/);
+  assert.match(statusRoute, /reconciledObjects/);
+});
+
+test("production repair script is dry-run first and repairs by campaign variant instead of assuming Story creatives", () => {
+  const source = readFileSync("scripts/adstudio-repair-production-data.mjs", "utf8");
+
+  assert.match(source, /process\.argv\.includes\("--execute"\)/);
+  assert.match(source, /Dry run only/);
+  assert.match(source, /variant_id/);
+  assert.doesNotMatch(source, /format === "9:16"/);
 });
 
 test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {
@@ -217,4 +242,82 @@ test("campaign and brand-kit PATCH routes keep explicit allowlists", () => {
   assert.match(campaignRoute, /const allowed = \[/);
   assert.match(campaignRoute, /status/);
   assert.doesNotMatch(campaignRoute, /Object\.fromEntries\(Object\.entries\(body\)/);
+});
+
+test("fresh brand workspaces do not fall back to Northstar demo branding", () => {
+  const brandPage = readFileSync("src/app/(customer)/ad-studio/brand/page.tsx", "utf8");
+  const brandStudio = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
+  const useBrandKit = readFileSync("src/components/adstudio/use-brand-kit.ts", "utf8");
+  const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
+  const brandKitRoute = readFileSync("src/app/api/adstudio/brand-kits/[id]/route.ts", "utf8");
+
+  assert.doesNotMatch(brandPage, /getAdStudioDemoBundle/);
+  assert.match(brandPage, /liveBundle\?\.brandKit \?\? draftBrandKit/);
+  assert.match(brandStudio, /brandKit: AdStudioBrandKit \| null/);
+  assert.match(brandStudio, /Scan your website/);
+  assert.doesNotMatch(useBrandKit, /Northstar Realty|northstarrealty\.com\.au|Northstar Agent/);
+  assert.match(useBrandKit, /"Your agency"/);
+  assert.match(preview, /domain \? <small>\{domain\}<\/small> : null/);
+  assert.match(brandKitRoute, /if \(!data\) return NextResponse\.json\(\{ error: "Brand kit not found\." \}, \{ status: 404 \}\)/);
+});
+
+test("dead Ad Studio stub endpoints stay deleted", () => {
+  for (const path of [
+    "src/app/api/adstudio/bulk-generate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/generate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/regenerate/route.ts",
+    "src/app/api/adstudio/campaigns/[id]/variants/route.ts",
+    "src/app/api/adstudio/compliance/check/route.ts",
+    "src/app/api/adstudio/compliance/fix/route.ts",
+    "src/app/api/adstudio/compliance/reports/[id]/route.ts",
+    "src/app/api/adstudio/creatives/route.ts",
+    "src/app/api/adstudio/creatives/[id]/route.ts",
+    "src/app/api/adstudio/variants/[id]/score/route.ts",
+    "src/app/api/adstudio/creatives/[id]/export/route.ts",
+    "src/app/api/adstudio/creatives/[id]/regenerate-background/route.ts",
+    "src/app/api/adstudio/export-packages/[id]/route.ts",
+    "src/app/api/adstudio/export-packages/route.ts",
+    "src/app/api/adstudio/jobs/route.ts",
+    "src/app/api/adstudio/provider-runs/route.ts",
+    "src/app/api/adstudio/variants/[id]/route.ts",
+    "src/app/api/adstudio/variants/[id]/approve/route.ts",
+    "src/app/api/adstudio/brand-kits/route.ts",
+    "src/app/api/adstudio/brand-kits/[id]/rescan/route.ts",
+    "src/app/api/adstudio/creatives/[id]/render/route.ts",
+  ]) {
+    assert.equal(existsSync(path), false, path);
+  }
+
+  const useBrandKit = readFileSync("src/components/adstudio/use-brand-kit.ts", "utf8");
+  assert.doesNotMatch(useBrandKit, /rescanKit|\/rescan/);
+});
+
+test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () => {
+  const actions = readFileSync("src/components/research/ad-card-actions.tsx", "utf8");
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const handoffRoute = readFileSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts", "utf8");
+
+  assert.match(actions, /\/api\/research\/swipe-file\/\$\{id\}\/send-to-adstudio/);
+  assert.match(actions, /window\.location\.href = "\/ad-studio\?newAd=radar"/);
+  assert.match(actions, /Use in Ad Studio/);
+  assert.match(actions, /Opening Ad Studio/);
+  assert.doesNotMatch(actions, /open Ad Studio to use as inspiration/);
+  assert.match(handoffRoute, /handoff_status:\s*"sent_to_adstudio"/);
+  assert.match(workbench, /useSearchParams/);
+  assert.match(workbench, /searchParams\.get\("newAd"\) !== "radar"/);
+  assert.match(workbench, /setNewAdStep\("radar"\)/);
+  assert.match(dialog, /initialStep\?: StartStep/);
+  assert.match(dialog, /fetch\("\/api\/research\/swipe-file"/);
+});
+
+test("Ad Radar longest-running sort reaches the authenticated search route", () => {
+  const panel = readFileSync("src/components/research/ad-radar-search-panel.tsx", "utf8");
+  const route = readFileSync("src/app/api/research/ads/search/route.ts", "utf8");
+
+  assert.match(panel, /if \(activeSort !== "recent"\) params\.set\("sort", activeSort\)/);
+  assert.match(panel, /doSearch\(initialQuery, initialSort\)/);
+  assert.match(route, /searchParams\.get\("sort"\) === "longest"/);
+  assert.match(route, /ad_delivery_started_at/);
+  assert.match(route, /adRunningMs/);
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MetricCard } from "@/components/metric-card";
 import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
-import { WORKFORCE_AGENTS, HUMAN_APPROVAL_ACTIONS } from "@/lib/workforce/permissions";
+import { HUMAN_APPROVAL_ACTIONS, WORKFORCE_AGENTS } from "@/lib/workforce/permissions";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listAgentRunRows } from "@/lib/operator/overview";
 
@@ -12,7 +12,26 @@ export const dynamic = "force-dynamic";
 
 export default async function AgentWorkforcePage() {
   const { supabase, access } = await requirePageSurfaceAccess("operator");
-  const agentRuns = await listAgentRunRows(supabase, access.workspaceId);
+  const workspaceId = access.isOperator ? undefined : access.workspaceId;
+  let openRunsQuery = supabase
+    .from("agent_runs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["queued", "running", "needs_review"]);
+  let enabledSchedulesQuery = supabase
+    .from("agent_schedules")
+    .select("id", { count: "exact", head: true })
+    .eq("enabled", true);
+
+  if (workspaceId) {
+    openRunsQuery = openRunsQuery.eq("workspace_id", workspaceId);
+    enabledSchedulesQuery = enabledSchedulesQuery.eq("workspace_id", workspaceId);
+  }
+
+  const [agentRuns, { count: openRuns }, { count: enabledSchedules }] = await Promise.all([
+    listAgentRunRows(supabase, workspaceId),
+    openRunsQuery,
+    enabledSchedulesQuery,
+  ]);
 
   return (
     <main className="content">
@@ -24,9 +43,9 @@ export default async function AgentWorkforcePage() {
 
       <section className="grid cols-4">
         <MetricCard icon={Bot} label="Definitions" value={String(WORKFORCE_AGENTS.length)} note="Native first, external runtimes later" />
-        <MetricCard icon={Workflow} label="Open runs" value="27" note="Run, step, artifact, and review states" />
+        <MetricCard icon={Workflow} label="Open runs" value={String(openRuns ?? 0)} note="Queued, running, or needs review" />
         <MetricCard icon={ShieldAlert} label="Approval actions" value={String(HUMAN_APPROVAL_ACTIONS.length)} note="Publish, budget, sends, PII export" />
-        <MetricCard icon={TimerReset} label="Schedules" value="6" note="Trigger.dev handles retries and schedules" />
+        <MetricCard icon={TimerReset} label="Schedules" value={String(enabledSchedules ?? 0)} note="Enabled agent schedules" />
       </section>
 
       <section className="panel">
@@ -60,7 +79,7 @@ export default async function AgentWorkforcePage() {
           </thead>
           <tbody>
             {agentRuns.map((run) => (
-              <tr key={`${run.agent}-${run.status}`}>
+              <tr key={run.id}>
                 <td data-label="Agent">{run.agent}</td>
                 <td data-label="Workspace">{run.workspace}</td>
                 <td data-label="Result">{run.task}</td>

@@ -12,12 +12,14 @@ Blockwise hosts the Next.js website and request/response route handlers on Verce
 
 ## Environment Groups
 
-- Public client values: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`.
-- Server-only values: Supabase service role, token encryption key, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, Trigger.dev keys, Meta/Google app secrets, Resend key, Sentry auth token.
+- Public client values: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, and `NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA`.
+- Server-only values: Supabase service role, token encryption key, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, Cloudflare AI Gateway values, Trigger.dev keys, Meta/Google app secrets, Resend key, `OPERATOR_EMAILS`, `BLOCKWISE_DEV_PASSWORD`, `META_MONITOR_BUDGET_AUD`, and `CRON_SECRET`.
+- Feature flags: keep `GOOGLE_ADS_ENABLED=false` unless the Google Ads integration is being deliberately enabled.
 - Provider-write control: set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` for Preview and initial Production smoke testing, then switch to `true` only after approval-gated publish checks pass.
 - Never expose provider access tokens, service-role keys, or lead PII to client components or agent workers.
-- Recommended production security values: `CLOUDFLARE_AI_GATEWAY_URL`, `CLOUDFLARE_AI_GATEWAY_TOKEN`, `AGENT_ALLOWED_OUTBOUND_DOMAINS`, and `SECURITY_AUDIT_LOG_DRAIN_URL`.
+- Recommended production security values: `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `CLOUDFLARE_AI_GATEWAY_URL`, and `CLOUDFLARE_AI_GATEWAY_TOKEN`.
 - Sensitive AI requests should use Cloudflare AI Gateway or another approved gateway path before leaving the server runtime.
+- Set `TURNSTILE_SECRET_KEY` in the Supabase Auth dashboard; the Next.js app does not read it.
 
 ## Deployment Checks
 
@@ -28,6 +30,7 @@ Run deployment checks through Vercel build and preview workflows. Do not run loc
 - `npm run build`
 - `npm run verify-env`
 - Visit `/api/health` on the preview URL and confirm `status` is `ready` once secrets are configured.
+- Use `Authorization: Bearer $CRON_SECRET` when checking detailed `/api/health` or `/api/health/research` output.
 - Confirm `/api/health` has no `readiness.security.missingRecommended` entries before handling live client data.
 
 ## Durable Jobs

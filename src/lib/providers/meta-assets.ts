@@ -1,6 +1,6 @@
 import type { MetaConnectionSetup } from "./meta-execution.ts";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
-const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type MetaAdAccountAsset = {
@@ -171,7 +171,7 @@ async function fetchMetaList<T>(input: FetchInput, path: string, params: Record<
 
 async function fetchMetaObject<T = Record<string, unknown>>(input: FetchInput, path: string, params: Record<string, string>): Promise<T> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${path}`);
+  const url = new URL(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`);
 
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);

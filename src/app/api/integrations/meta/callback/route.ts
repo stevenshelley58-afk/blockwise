@@ -6,7 +6,7 @@ import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
 import { upsertProviderConnectionWithTokens } from "@/lib/providers/provider-connections";
 import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
-import { verifyOAuthState } from "@/lib/providers/oauth-state";
+import { sanitizeOAuthReturnPath, verifyOAuthState } from "@/lib/providers/oauth-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -51,7 +51,7 @@ async function handleCallback(request: NextRequest) {
   });
 
   if (!access.ok || !canManageProviderConnections(access.access)) {
-    return NextResponse.redirect(new URL("/results?integration=meta&error=forbidden", origin));
+    return NextResponse.redirect(providerReturnUrl(verified.payload.returnPath, origin, { error: "forbidden" }));
   }
 
   const serviceSupabase = createSupabaseServiceClient();
@@ -76,8 +76,8 @@ async function handleCallback(request: NextRequest) {
       tokenExpiresAt: exchanged.tokenExpiresAt,
     });
   } catch (error) {
-    const message = encodeURIComponent(error instanceof Error ? error.message : "Meta connection failed.");
-    return NextResponse.redirect(new URL(`/results?integration=meta&error=${message}`, origin));
+    const message = error instanceof Error ? error.message : "Meta connection failed.";
+    return NextResponse.redirect(providerReturnUrl(verified.payload.returnPath, origin, { error: message }));
   }
 
   // Best-effort first sync so the dashboard shows real data immediately after
@@ -95,8 +95,22 @@ async function handleCallback(request: NextRequest) {
     // Connection is already saved; the first sync can be retried later.
   }
 
-  const finalUrl = exchangedAccountId === "meta_account_pending"
-    ? "/results?integration=meta&connected=1&status=needs_account"
-    : "/results?integration=meta&connected=1";
-  return NextResponse.redirect(new URL(finalUrl, origin));
+  return NextResponse.redirect(
+    providerReturnUrl(
+      verified.payload.returnPath,
+      origin,
+      exchangedAccountId === "meta_account_pending"
+        ? { connected: "1", status: "needs_account" }
+        : { connected: "1" },
+    ),
+  );
+}
+
+function providerReturnUrl(returnPath: string, origin: string, params: Record<string, string>): URL {
+  const url = new URL(sanitizeOAuthReturnPath(returnPath), origin);
+  url.searchParams.set("integration", "meta");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return url;
 }

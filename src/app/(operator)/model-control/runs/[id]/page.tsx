@@ -92,20 +92,25 @@ type TraceRow = {
 export default async function ModelRunDetailPage({ params }: PageProps) {
   const { id } = await Promise.resolve(params);
   const { supabase, access } = await requirePageSurfaceAccess("operator");
-  const { data: providerRun, error: providerRunError } = await supabase
+  let providerRunQuery = supabase
     .from("adstudio_provider_runs")
     .select(
       "id,workspace_id,user_id,correlation_id,ai_run_id,ai_usage_ledger_id,task_type,model_profile,provider_name,provider_type,model_name,prompt_version_id,input_json,output_json,usage_json,cost_estimate,status,error_json,created_at",
     )
-    .eq("workspace_id", access.workspaceId)
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+
+  if (!access.isOperator) {
+    providerRunQuery = providerRunQuery.eq("workspace_id", access.workspaceId);
+  }
+
+  const { data: providerRun, error: providerRunError } = await providerRunQuery.maybeSingle();
 
   if (providerRunError || !providerRun) {
     notFound();
   }
 
   const run = providerRun as ProviderRunDetailRow;
+  const traceWorkspaceId = run.workspace_id;
   const correlationId = run.correlation_id ?? readString(run.input_json, "correlation_id");
   const promptVersionIds = extractPromptVersionIds(run);
   const [
@@ -118,6 +123,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
     artifactResult,
     leadAttributionResult,
     leadDeliveryResult,
+    leadExportResult,
   ] = await Promise.all([
     run.ai_run_id
       ? supabase
@@ -125,7 +131,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
           .select(
             "id,provider,model,task,output_type,status,input_tokens,output_tokens,image_units,estimated_cost_cents,result_summary,error_message,created_at,completed_at,correlation_id",
           )
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("id", run.ai_run_id)
           .maybeSingle()
       : emptySingle(),
@@ -135,7 +141,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
           .select(
             "id,provider,model,task,output_type,result,input_tokens,output_tokens,image_units,estimated_cost_cents,created_at,correlation_id",
           )
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("id", run.ai_usage_ledger_id)
           .maybeSingle()
       : emptySingle(),
@@ -150,7 +156,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
       ? supabase
           .from("audit_logs")
           .select("id,action,target_type,target_id,metadata,created_at")
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
@@ -158,7 +164,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
       ? supabase
           .from("approval_requests")
           .select("id,target_type,target_id,status,risk_summary,created_at")
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
@@ -166,7 +172,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
       ? supabase
           .from("agent_artifacts")
           .select("id,agent_run_id,artifact_type,storage_path,content,created_at")
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
@@ -174,7 +180,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
       ? supabase
           .from("lead_source_attribution")
           .select("id,lead_id,provider,source,meta_publish_plan_id,adstudio_campaign_id,approval_request_id,created_at")
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
@@ -182,7 +188,15 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
       ? supabase
           .from("lead_delivery_attempts")
           .select("id,lead_id,provider,destination_type,destination_label,status,approval_request_id,request_json,response_json,created_at")
-          .eq("workspace_id", access.workspaceId)
+          .eq("workspace_id", traceWorkspaceId)
+          .eq("correlation_id", correlationId)
+          .order("created_at", { ascending: false })
+      : emptyList(),
+    correlationId
+      ? supabase
+          .from("lead_export_audits")
+          .select("id,exported_by,approval_request_id,row_count,destination,created_at")
+          .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })
       : emptyList(),
@@ -197,6 +211,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
   const artifactRows = (artifactResult.data ?? []) as TraceRow[];
   const leadAttributions = (leadAttributionResult.data ?? []) as TraceRow[];
   const leadDeliveries = (leadDeliveryResult.data ?? []) as TraceRow[];
+  const leadExports = (leadExportResult.data ?? []) as TraceRow[];
   const warnings = [
     aiRunResult.error?.message,
     ledgerResult.error?.message,
@@ -207,6 +222,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
     artifactResult.error?.message,
     leadAttributionResult.error?.message,
     leadDeliveryResult.error?.message,
+    leadExportResult.error?.message,
   ].filter((warning): warning is string => Boolean(warning));
 
   return (
@@ -354,6 +370,16 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
             columns={[
               ["lead_id", "Lead"],
               ["status", "Status"],
+              ["created_at", "Created"],
+            ]}
+          />
+          <TraceTable
+            title="Exports"
+            emptyLabel="No lead export rows."
+            rows={leadExports}
+            columns={[
+              ["destination", "Destination"],
+              ["row_count", "Rows"],
               ["created_at", "Created"],
             ]}
           />

@@ -1,4 +1,4 @@
-﻿import { schedules, task } from "@trigger.dev/sdk/v3";
+import { schedules } from "@trigger.dev/sdk/v3";
 import * as Sentry from "@sentry/nextjs";
 
 import { resolveMonitorDateRange } from "../src/lib/monitor/dashboard-data.ts";
@@ -9,6 +9,18 @@ type ProviderSyncPayload = {
   workspaceId: string;
   provider: "meta" | "google";
 };
+
+type ProviderConnectionRow = {
+  workspace_id: string;
+  provider: "meta" | "google";
+};
+
+export function mapProviderConnectionRow(connection: ProviderConnectionRow): ProviderSyncPayload {
+  return {
+    workspaceId: connection.workspace_id,
+    provider: connection.provider,
+  };
+}
 
 export const syncProviderReports = schedules.task({
   id: "sync-provider-reports",
@@ -25,8 +37,11 @@ export const syncProviderReports = schedules.task({
       throw new Error(error.message);
     }
 
+    const connectionRows: ProviderConnectionRow[] = connections ?? [];
+    const syncPayloads = connectionRows.map(mapProviderConnectionRow);
+
     const results = await Promise.all(
-      ((connections ?? []) as ProviderSyncPayload[]).map(async (connection) => {
+      syncPayloads.map(async (connection) => {
         try {
           return await syncProviderWorkspace({
             supabase: serviceSupabase as never,
@@ -48,21 +63,5 @@ export const syncProviderReports = schedules.task({
       failed: results.filter((result) => result.status === "failed").length,
       results,
     };
-  },
-});
-
-export const syncProviderWorkspaceTask = task({
-  id: "sync-provider-workspace",
-  run: async (payload: ProviderSyncPayload) => {
-    const serviceSupabase = createSupabaseServiceClient();
-
-    return syncProviderWorkspace({
-      supabase: serviceSupabase as never,
-      serviceSupabase,
-      workspaceId: payload.workspaceId,
-      provider: payload.provider,
-      range: resolveMonitorDateRange("last_30"),
-      jobKey: "sync-provider-workspace",
-    });
   },
 });

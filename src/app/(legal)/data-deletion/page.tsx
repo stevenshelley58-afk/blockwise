@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { loadDeletionStatus } from "@/lib/meta/data-deletion";
 
 export const metadata: Metadata = {
-  title: "Data Deletion · Blockwise",
+  title: "Data Deletion",
+  alternates: { canonical: "/data-deletion" },
   description:
     "How to request that Blockwise delete the data we hold about you, including data sourced from Meta lead forms.",
 };

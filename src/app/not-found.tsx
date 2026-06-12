@@ -8,7 +8,10 @@ export default function NotFoundPage() {
         <h1>Page not found</h1>
         <p className="lead">We couldn&apos;t find that page.</p>
         <div className="actions" style={{ marginTop: 18 }}>
-          <Link className="button" href="/self-serve">
+          <Link className="button" href="/">
+            Back to home
+          </Link>
+          <Link className="button secondary" href="/self-serve">
             Go to dashboard
           </Link>
         </div>

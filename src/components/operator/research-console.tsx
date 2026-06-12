@@ -139,6 +139,7 @@ export type ResearchConsoleProps = {
   officialMetaApi: ConsoleOfficialMetaApi;
   skills: ConsoleSkill[];
   nowIso: string;
+  formError?: string | null;
 };
 
 const SECTIONS = [
@@ -161,7 +162,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [openDecision, setOpenDecision] = useState<string | null>(null);
 
-  const { heartbeat, spend, policy, stats, pipeline, stalePagesDue, coverage, queue, defects, decisions, inventory, entity, adLibrary, officialMetaApi, skills } = props;
+  const { heartbeat, spend, policy, stats, pipeline, stalePagesDue, coverage, queue, defects, decisions, inventory, entity, adLibrary, officialMetaApi, skills, formError } = props;
 
   const spendPercent = spend.cap > 0 ? Math.min(100, Math.round((spend.today / spend.cap) * 100)) : 0;
   const heartbeatTone = heartbeat.ageSeconds === null ? "bad" : heartbeat.ageSeconds < 60 ? "" : heartbeat.ageSeconds < 600 ? "warn" : "bad";
@@ -198,7 +199,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
               <option value="postcode">postcode</option>
               <option value="advertiser_page">page</option>
             </select>
-            <input className="rops-input" name="value" defaultValue="" placeholder="6011" style={{ width: 76 }} aria-label="Refresh target" required />
+            <input className="rops-input" name="value" defaultValue="" placeholder="6011" pattern="\d{4}" style={{ width: 76 }} aria-label="Refresh target" required />
             <button className="rops-btn primary" type="submit">Refresh now</button>
           </form>
           <form method="post" action="/api/operator/research/kill-switch">
@@ -209,6 +210,7 @@ export function ResearchConsole(props: ResearchConsoleProps) {
           </form>
         </div>
       </div>
+      {formError ? <div className="rops-banner" role="alert">{formError}</div> : null}
 
       <div className="rops-body">
         <nav className="rops-rail" aria-label="Research sections">

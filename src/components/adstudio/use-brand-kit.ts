@@ -7,9 +7,9 @@ import type { AdStudioBrandKit } from "@/lib/adstudio";
 function hostOf(url: string): string {
   try {
     const host = new URL(url).host.replace(/^www\./, "");
-    return host.endsWith(".example") ? "northstarrealty.com.au" : host;
+    return host.endsWith(".example") ? "" : host;
   } catch {
-    return "northstarrealty.com.au";
+    return "";
   }
 }
 
@@ -25,14 +25,14 @@ function formatAuPhone(raw: string | null): string {
 
 export function useBrandKit(brandKit: AdStudioBrandKit) {
   // Derived read-only values
-  const brand = brandKit.identity.businessName || "Northstar Realty";
+  const brand = brandKit.identity.businessName || "Your agency";
   const initials = brand.charAt(0).toUpperCase();
   const domain = hostOf(brandKit.source.url);
 
   // Editable field state — initialised from prop
   const [editedBrand, setEditedBrand] = useState(brand);
   const [editedAgent, setEditedAgent] = useState(
-    brandKit.identity.tradingName ?? "Northstar Agent",
+    brandKit.identity.tradingName ?? "",
   );
   const [editedPhone, setEditedPhone] = useState(
     formatAuPhone(brandKit.contact.phone),
@@ -79,37 +79,6 @@ export function useBrandKit(brandKit: AdStudioBrandKit) {
     }
   }
 
-  async function rescanKit() {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch(`/api/adstudio/brand-kits/${kitId}/rescan`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
-        setSaveError(json.error ?? `Rescan failed (${res.status})`);
-      } else {
-        const json = (await res.json().catch(() => ({}))) as {
-          brandKit?: { identity?: { businessName?: string; tradingName?: string }; contact?: { phone?: string } };
-        };
-        if (json.brandKit?.identity?.businessName) {
-          setEditedBrand(json.brandKit.identity.businessName);
-        }
-        if (json.brandKit?.identity?.tradingName) {
-          setEditedAgent(json.brandKit.identity.tradingName);
-        }
-        if (json.brandKit?.contact?.phone) {
-          setEditedPhone(formatAuPhone(json.brandKit.contact.phone));
-        }
-      }
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Network error");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function approveKit() {
     setIsSaving(true);
     setSaveError(null);
@@ -146,7 +115,6 @@ export function useBrandKit(brandKit: AdStudioBrandKit) {
     saveConfirmed,
     // Actions
     saveKit,
-    rescanKit,
     approveKit,
   };
 }

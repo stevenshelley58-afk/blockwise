@@ -1,3 +1,5 @@
+import { normaliseMediaUrl } from "./customer-meta-card.ts";
+
 export const CUSTOMER_RESEARCH_AD_HISTORY_VIEW = "v_customer_agent_ad_history";
 
 export const RESEARCH_AD_SELECT = [
@@ -243,7 +245,7 @@ function addMedia(
   storagePath: string | null,
   sourceUrl: string | null,
 ) {
-  const url = storagePath ?? sourceUrl;
+  const url = normaliseMediaUrl(storagePath) ?? sourceUrl;
   if (!url || media.some((item) => item.url === url)) return;
   media.push({ kind, url, storagePath, sourceUrl });
 }

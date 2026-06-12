@@ -7,11 +7,9 @@ import { FieldShell, PanelHeader } from "../inspector";
 type LandingPanelProps = {
   destinationUrl: string;
   setDestinationUrl: (value: string) => void;
-  leadDestination: string;
-  setLeadDestination: (value: string) => void;
 };
 
-export function LandingPanel({ destinationUrl, setDestinationUrl, leadDestination, setLeadDestination }: LandingPanelProps) {
+export function LandingPanel({ destinationUrl, setDestinationUrl }: LandingPanelProps) {
   return (
     <>
       <PanelHeader title="Landing" detail="Send leads to one clear destination." />
@@ -19,11 +17,9 @@ export function LandingPanel({ destinationUrl, setDestinationUrl, leadDestinatio
         <input value={destinationUrl} onChange={(event) => setDestinationUrl(event.target.value)} />
       </FieldShell>
       <FieldShell label="Lead destination">
-        <select value={leadDestination} onChange={(event) => setLeadDestination(event.target.value)}>
-          <option>Landing page</option>
-          <option>Meta lead form</option>
-          <option>CRM endpoint</option>
-        </select>
+        <a className="studio-btn secondary block" href="/settings#connections">
+          {"Manage in Settings -> Connections"}
+        </a>
       </FieldShell>
       {/* H9: open destinationUrl in new tab */}
       <button

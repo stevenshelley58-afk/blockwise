@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,22 +13,20 @@ export async function GET(
   if (!guard.ok) return guard.response;
 
   const { id } = await params;
+  const research = createSupabaseServiceClient().schema("research");
   const [jobResult, runResult, eventResult] = await Promise.all([
-    guard.supabase
-      .schema("research")
+    research
       .from("work_queue")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    guard.supabase
-      .schema("research")
+    research
       .from("ad_fetch_runs")
       .select("id,source_provider,role,trigger,target_kind,target_value,input_payload,started_at,completed_at,status,result_summary,error,cost_usd,source_document_id")
       .eq("work_queue_id", id)
       .order("started_at", { ascending: false })
       .limit(20),
-    guard.supabase
-      .schema("research")
+    research
       .from("ingest_events")
       .select("id,event_type,table_name,row_id,source_provider,payload,created_at")
       .eq("work_queue_id", id)

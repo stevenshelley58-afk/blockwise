@@ -45,6 +45,7 @@ const selfServeNavItems: NavItem[] = [
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/ad-studio", label: "Ad Studio", icon: Images },
   { href: "/leads", label: "Leads", icon: UsersRound },
+  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
@@ -52,6 +53,7 @@ const monitorNavItems: NavItem[] = [
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
   { href: "/ad-radar", label: "Ad Radar", icon: Radar },
   { href: "/leads", label: "Leads", icon: UsersRound },
+  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
@@ -71,9 +73,9 @@ export function isItemActive(pathname: string, href: string) {
   return pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ variant }: { variant: SidebarVariant }) {
+export function SidebarNav({ variant, showApprovals = true }: { variant: SidebarVariant; showApprovals?: boolean }) {
   const pathname = usePathname() ?? "";
-  const navItems = navByVariant[variant];
+  const navItems = navByVariant[variant].filter((item) => showApprovals || item.href !== "/approvals");
 
   return (
     <nav className="nav-group">

@@ -39,6 +39,7 @@ Set in **Vercel** environment:
 - `RESEND_API_KEY` - existing key.
 - `ALERT_EMAIL_TO` - where warnings go, falling back to `DEMO_NOTIFY_TO`.
 - `ALERT_EMAIL_FROM` - verified sender, falling back to `DEMO_NOTIFY_FROM`.
+- `CRON_SECRET` - required for the Vercel Cron watchdog route and for detailed health responses.
 
 ### 2. WhatsApp via Twilio
 
@@ -106,8 +107,7 @@ schedule `0 */2 * * *`.
   cap on and usage notification emails enabled. Going over quota on the
   free/spend-capped plan pauses the project, which would take ad creation down.
 - **Resend**: dashboard sending-quota notifications.
-- **Sentry / PostHog**: both have built-in quota/billing alerts; enable in org
-  settings.
+- **Sentry**: use built-in quota/billing alerts; enable them in org settings.
 - **Google Places API**: Google Cloud Console > Billing > Budgets & alerts -
   create a budget with 80%/95% email thresholds.
 - **Meta / Google Ads APIs**: rate-limited rather than billed; failures surface

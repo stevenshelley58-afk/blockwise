@@ -1,6 +1,5 @@
 import { BrandStudio } from "@/components/adstudio/brand-studio";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
-import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
 import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -13,7 +12,7 @@ export default async function BrandStudioPage() {
   // B2 (simplification): an extracted-but-unapproved kit must be editable here —
   // previously unapproved users were shown the demo kit instead of their own.
   const draftBrandKit = liveBundle ? null : await loadDraftBrandKit(supabase, access.workspaceId);
-  const brandKit = liveBundle?.brandKit ?? draftBrandKit ?? getAdStudioDemoBundle().brandKit;
+  const brandKit = liveBundle?.brandKit ?? draftBrandKit;
 
   return <BrandStudio brandKit={brandKit} />;
 }

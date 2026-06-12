@@ -15,7 +15,7 @@ test("Meta lead actions are normalized into lead counts", () => {
   );
 });
 
-test("Meta insight rows normalize spend, clicks, leads, and valid lead placeholders", () => {
+test("Meta insight rows normalize spend, clicks, and leads without fabricating valid leads", () => {
   const report = normalizeMetaInsightRows([
     {
       ad_id: "ad_1",
@@ -32,8 +32,9 @@ test("Meta insight rows normalize spend, clicks, leads, and valid lead placehold
 
   assert.equal(report.metrics.spendAud, 120.5);
   assert.equal(report.metrics.leads, 6);
-  assert.equal(report.metrics.validLeads, 4);
-  assert.equal(report.rows[0].validCplAud, 30.13);
+  assert.equal(report.metrics.validLeads, 0);
+  assert.equal(report.rows[0].validLeads, 0);
+  assert.equal(report.rows[0].validCplAud, 0);
 });
 
 test("Meta single-day insight reads use Ads Manager date presets", async () => {

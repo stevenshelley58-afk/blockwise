@@ -46,6 +46,7 @@ export function AdCardActions({
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not send ad to Ad Studio.");
       setStatus("sent");
+      window.location.href = "/ad-studio?newAd=radar";
     } catch {
       setStatus("error");
     }
@@ -67,7 +68,7 @@ export function AdCardActions({
         <Bookmark size={14} /> {status === "saved" || status === "sent" ? "Saved" : "Save"}
       </button>
       <button className="button secondary" type="button" onClick={sendToAdStudio} disabled={!canSave || status === "saving" || status === "sending"}>
-        <Images size={14} /> {status === "sent" ? "Sent" : "Use"}
+        <Images size={14} /> Use in Ad Studio
       </button>
       <span className={`meta-ad-action-status ${status}`}>
         {status === "saving"
@@ -75,7 +76,7 @@ export function AdCardActions({
           : status === "sending"
             ? "Sending"
             : status === "sent"
-              ? "Saved to swipe file — open Ad Studio to use as inspiration"
+              ? "Opening Ad Studio"
               : status === "error"
                 ? "Action failed"
                 : !canSave

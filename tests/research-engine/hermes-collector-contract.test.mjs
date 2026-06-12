@@ -47,6 +47,7 @@ const defectInvestigator = functionBody(supervisor, "handleDefectInvestigator");
 const coverageRefresh = functionBody(supervisor, "requestCoverageRefresh");
 const staleAgencyWatchdog = functionBody(supervisor, "watchdogRecheckStaleAgencies");
 const unresolvedPageWatchdog = functionBody(supervisor, "watchdogRequeueUnresolvedPages");
+const staleBlockedArchiveWatchdog = functionBody(supervisor, "watchdogArchiveStaleBlockedJobs");
 const classificationBackfill = functionBody(supervisor, "enqueueClassificationBackfillJobs");
 const classificationBackfillCandidates = functionBody(supervisor, "loadClassificationBackfillCandidates");
 const handleJob = functionBody(supervisor, "handleJob");
@@ -77,6 +78,8 @@ const configuredMetaFallbackSourceProvider = functionBody(supervisor, "configure
 const fallbackMetaPageCapture = functionBody(supervisor, "runFallbackMetaPageCapture");
 const officialMetaPageApiCapture = functionBody(supervisor, "runOfficialMetaPageApiCapture");
 const officialMetaArchiveUrl = functionBody(supervisor, "officialMetaAdsArchiveUrl");
+const insertCoverageDefect = functionBody(supervisor, "insertCoverageDefect");
+const resolveCoverageDefects = functionBody(supervisor, "resolveCoverageDefects");
 const officialMetaStatusPasses = functionBody(supervisor, "officialMetaStatusPasses");
 const areaAttribution = functionBody(supervisor, "upsertAreaMatchesForObservedAd");
 const explicitAreaAttribution = functionBody(supervisor, "upsertExplicitAreaMatchForObservedAd");
@@ -385,6 +388,49 @@ test("Hermes census failures are visible and backed off", () => {
     agentCensus,
     /blocked_reason:\s*reason/u,
     "census dead ends should not duplicate the same failure as both a defect and a blocked job",
+  );
+});
+
+test("Hermes coverage defects upsert by subject and reason instead of flooding rows", () => {
+  assert.match(
+    insertCoverageDefect,
+    /coverageDefectSubject\(row\)[\s\S]*coverageDefectReason\(row\)[\s\S]*occurrences:\s*Math\.max/u,
+    "coverage defects need a durable subject/reason key and occurrence count",
+  );
+  assert.match(
+    insertCoverageDefect,
+    /rpc\(["']upsert_coverage_defect["'],\s*\{\s*p_defect:\s*defect\s*\}\)/u,
+    "Hermes should call the database upsert RPC so duplicates increment atomically",
+  );
+  assert.doesNotMatch(
+    insertCoverageDefect,
+    /await rest\(["']research["'],\s*["']coverage_defects["'][\s\S]*body:\s*json\(row\)/u,
+    "the primary path must not directly insert the raw row and recreate defect floods",
+  );
+  assert.match(
+    coverageAuditor,
+    /insertCoverageGapDefect[\s\S]*reason:\s*["']coverage_audit_gap["']/u,
+    "coverage audit gaps should use one stable reason for keyed upserts",
+  );
+});
+
+test("Hermes auto-resolves matching active coverage defects after later success", () => {
+  assert.match(
+    resolveCoverageDefects,
+    /coverage_defects\?subject_type=eq\.[\s\S]*subject_key=eq\.[\s\S]*status=in\.\(open,investigating,blocked\)/u,
+    "auto-resolution must target active defects by the durable subject key",
+  );
+  for (const source of [agentCensus, pageResolver, locationAdSearch, collector, coverageAuditor]) {
+    assert.match(
+      source,
+      /resolveCoverageDefects\(/u,
+      "successful Hermes flows should close their matching open defects",
+    );
+  }
+  assert.match(
+    collector,
+    /reason:\s*["']ad_collector_capture_failed["'][\s\S]*reason:\s*["']ad_collector_truncated["']/u,
+    "collector success should resolve fetch failures and non-truncated runs should resolve prior truncation defects",
   );
 });
 
@@ -767,6 +813,34 @@ test("Hermes unresolved verified pages are retried with evidence-backed resolver
     unresolvedPageWatchdog,
     /location_search_allowed:\s*false/u,
     "unresolved page retry must not enable broad location discovery",
+  );
+});
+
+test("Hermes archives stale blocked queue jobs so public health can recover", () => {
+  assert.match(
+    supervisor,
+    /watchdogArchiveStaleBlockedJobs/u,
+    "stale blocked jobs should run from the watchdog phase",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /7 \* 24 \* 60 \* 60 \* 1000/u,
+    "blocked jobs should only be archived after seven days",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /work_queue\?select=id,job_type,blocked_reason,last_error,result,updated_at[\s\S]*status=eq\.blocked[\s\S]*updated_at=lt\./u,
+    "watchdog should find old blocked work_queue rows",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /status:\s*["']archived["'][\s\S]*blocked_older_than_7_days/u,
+    "watchdog should archive old blocked rows with an audit reason",
+  );
+  assert.match(
+    staleBlockedArchiveWatchdog,
+    /recordEvent\(["']archive["'],\s*["']work_queue["']/u,
+    "archivals should be audited",
   );
 });
 

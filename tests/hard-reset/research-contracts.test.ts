@@ -18,6 +18,8 @@ const paths = {
   censusSources: "src/lib/research/census-sources.ts",
   coverageSchema: "src/lib/research/schemas/coverage.ts",
   defectInvestigateRoute: "src/app/api/operator/research/defects/[id]/investigate/route.ts",
+  operatorPostcodeRefresh: "src/lib/operator/postcode-refresh.ts",
+  operatorResearchChat: "src/app/api/operator/research/chat/route.ts",
   operatorResearchConsole: "src/components/operator/research-console.tsx",
   operatorResearchPage: "src/app/(operator)/operator/research/page.tsx",
   policiesRoute: "src/app/api/operator/research/policies/route.ts",
@@ -123,9 +125,7 @@ test("customer authenticated research history uses the same safe ad contract as 
 
 test("customer research APIs read the customer-safe history view", () => {
   const sources = [
-    read("src/app/api/research/ads/route.ts"),
-    read("src/app/api/research/ads/[id]/route.ts"),
-    read("src/app/api/research/ads/export/route.ts"),
+    read("src/app/api/research/ads/search/route.ts"),
     read("src/app/api/research/swipe-file/route.ts"),
     read("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"),
     read("src/lib/research/customer-ad-library-pages.ts"),
@@ -202,20 +202,21 @@ test("work queue claiming is atomic and has no legacy orchestrator fallback path
 
 test("operator postcode refresh creates a due policy and one-off census job", () => {
   const route = read(paths.refreshNowRoute);
+  const refresh = read(paths.operatorPostcodeRefresh);
   const censusSources = read(paths.censusSources);
 
   assert.match(
-    route,
+    refresh,
     /resolveAdRadarLocationSearch/,
     "postcode refresh must infer state from the national postcode index instead of assuming one market",
   );
   assert.match(
-    route,
+    refresh,
     /refresh_policies[\s\S]*upsert[\s\S]*onConflict:\s*["']postcode,state["']/,
     "refresh-now must create a refresh policy when the postcode was not pre-seeded",
   );
   assert.match(
-    route,
+    refresh,
     /hasEnabledCensusSourceForState\(state\)/,
     "refresh-now must not manually queue census work for states without an enabled source",
   );
@@ -225,35 +226,70 @@ test("operator postcode refresh creates a due policy and one-off census job", ()
     "operator source checks must use enabled agent roster source states, not assume national coverage",
   );
   assert.match(
-    route,
-    /sourceBacked[\s\S]*queuePostcodeCensusRefresh\(research, postcode, state\)[\s\S]*recordUnsupportedPostcodeRefresh\(research, postcode, state, guard\.email\)/,
+    refresh,
+    /sourceBacked[\s\S]*queuePostcodeCensusRefresh\(research, postcode, state\)[\s\S]*recordUnsupportedPostcodeRefresh\(research, postcode, state, operatorEmail\)/,
     "source-backed manual refreshes must queue census work, while unsupported states become visible defects",
   );
   assert.match(
     route,
+    /executeRefreshPostcode\(research, postcode, guard\.email\)/,
+    "refresh-now must use the shared postcode refresh execution guard",
+  );
+  assert.match(
+    refresh,
     /const dedupeKey = `census:\$\{state\}:\$\{postcode\}`[\s\S]*work_queue[\s\S]*job_type:\s*["']blockwise-agent-census["'][\s\S]*dedupe_key:\s*dedupeKey/,
     "source-backed refresh-now must queue a direct census job so manual runs still work while scheduled policies are paused or missing",
   );
   assert.match(
-    route,
+    refresh,
     /select\(["']id,status,claim_expires_at["']\)[\s\S]*\.in\(["']status["'],\s*\[\s*["']pending["'],\s*["']claimed["'],\s*["']failed["'],\s*["']blocked["']\s*\]\)/,
     "refresh-now must inspect active or stuck census dedupe keys before inserting",
   );
   assert.match(
-    route,
+    refresh,
     /status:\s*["']pending["'][\s\S]*attempts:\s*0[\s\S]*last_error:\s*null[\s\S]*blocked_reason:\s*null/,
     "refresh-now must recycle failed, blocked, or stale-claimed census jobs instead of treating duplicates as success",
   );
   assert.match(
-    route,
+    refresh,
     /location_search_allowed:\s*false[\s\S]*legacy_discovery_allowed:\s*false/,
     "manual postcode refresh must remain verified-roster-first, not broad location scraping",
   );
   assert.match(
-    route,
+    refresh,
     /coverage_defects[\s\S]*reason:\s*["']missing_census_source["'][\s\S]*location_search_allowed:\s*false/,
     "unsupported manual refreshes must file a visible coverage defect instead of silently doing nothing",
   );
+});
+
+test("operator chat postcode refresh uses the shared census source guard", () => {
+  const chat = read(paths.operatorResearchChat);
+  const refresh = read(paths.operatorPostcodeRefresh);
+
+  assert.match(chat, /parseRefreshPostcodeCommand/);
+  assert.match(chat, /executeRefreshPostcode\(research, postcode, guard\.email\)/);
+  assert.match(
+    refresh,
+    /No census source for \$\{state\} yet, so I did not queue a postcode census refresh for \$\{postcode\}\./,
+    "unsupported chat refreshes must answer honestly instead of implying impossible queued census work",
+  );
+  assert.doesNotMatch(
+    chat,
+    /job_type:\s*["']blockwise-agent-census["']/,
+    "chat must not maintain a separate postcode census queueing path",
+  );
+});
+
+test("operator refresh-now form errors redirect with concise error codes", () => {
+  const route = read(paths.refreshNowRoute);
+
+  assert.match(route, /contentType\.includes\(["']application\/json["']\)[\s\S]*redirectAfter:\s*false/);
+  assert.match(route, /redirectWithError\(req,\s*["']invalid_request["']\)/);
+  assert.match(route, /redirectWithError\(req,\s*["']invalid_postcode["']\)/);
+  assert.match(route, /redirectWithError\(req,\s*["']refresh_failed["']\)/);
+  assert.match(route, /new URL\(["']\/operator\/research["'],\s*req\.url\)[\s\S]*url\.searchParams\.set\(["']error["'],\s*code\)[\s\S]*NextResponse\.redirect\(url,\s*303\)/);
+  assert.match(route, /NextResponse\.json\(\{\s*error:\s*parsed\.error\.flatten\(\)\s*\},\s*\{\s*status:\s*400\s*\}\)/);
+  assert.match(route, /NextResponse\.json\(\{\s*error:\s*["']postcode must be four digits["']\s*\},\s*\{\s*status:\s*400\s*\}\)/);
 });
 
 test("operator refresh policy validation matches the held national rollout priority range", () => {
@@ -291,6 +327,11 @@ test("coverage defect schema accepts blocked defects surfaced by repair automati
     coverageSchema,
     /defectStatusSchema = z\.enum\(\[\s*["']open["'],\s*["']investigating["'],\s*["']resolved["'],\s*["']dismissed["'],\s*["']blocked["']\s*\]\)/,
     "TypeScript schema must parse blocked coverage defects emitted by Hermes/operator repair paths",
+  );
+  assert.match(
+    coverageSchema,
+    /subjectType:[\s\S]*subjectKey:[\s\S]*reason:[\s\S]*occurrences:\s*z\.number\(\)\.int\(\)\.min\(1\)\.default\(1\)/,
+    "TypeScript schema must parse keyed coverage defects with occurrence counts",
   );
 });
 
@@ -356,6 +397,19 @@ test("operator research console exposes official Meta API readiness without secr
     /process\.env\.META_AD_LIBRARY|accessToken/,
     "client console must receive readiness only, not token values",
   );
+});
+
+test("operator research console keeps chat beside the cockpit and shows form errors as banners", () => {
+  const page = read(paths.operatorResearchPage);
+  const consoleSource = read(paths.operatorResearchConsole);
+
+  assert.match(page, /<main className=["']operator-os["']>/);
+  assert.match(page, /<div className=["']operator-os-main["']>/);
+  assert.match(page, /<OperatorAssistant[\s\S]*initialRows/);
+  assert.match(page, /operatorResearchErrorMessage/);
+  assert.match(consoleSource, /formError\?: string \| null/);
+  assert.match(consoleSource, /className=["']rops-banner["'][\s\S]*role=["']alert["']/);
+  assert.match(consoleSource, /pattern=["']\\d\{4\}["']/);
 });
 
 test("app-side research data loaders use statically scoped bundled data files", () => {

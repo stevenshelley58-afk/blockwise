@@ -17,6 +17,7 @@ export function ContentPromptEditor({ promptSets, promptTemplates }: ContentProm
   const selected = templates.find((template) => template.id === selectedId) ?? templates[0];
   const [body, setBody] = useState(selected?.template_body ?? "");
   const [message, setMessage] = useState("");
+  const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const grouped = groupBySkill(templates);
 
   function chooseTemplate(id: string) {
@@ -24,6 +25,7 @@ export function ContentPromptEditor({ promptSets, promptTemplates }: ContentProm
     setSelectedId(id);
     setBody(next?.template_body ?? "");
     setMessage("");
+    setPreview(null);
   }
 
   async function saveVersion() {
@@ -73,14 +75,16 @@ export function ContentPromptEditor({ promptSets, promptTemplates }: ContentProm
 
   async function testPrompt() {
     if (!selected) return;
-    setMessage("Testing prompt...");
+    setMessage("Rendering preview...");
+    setPreview(null);
     try {
       const response = await fetch(`/api/operator/content-prompts/${selected.id}/test`, { method: "POST" });
       const payload = (await response.json()) as { output?: unknown; error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Prompt test failed.");
-      setMessage(JSON.stringify(payload.output, null, 2));
+      if (!response.ok) throw new Error(payload.error ?? "Prompt preview failed.");
+      setPreview(isRecord(payload.output) ? payload.output : { output: payload.output ?? null });
+      setMessage("Preview rendered.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Prompt test failed.");
+      setMessage(error instanceof Error ? error.message : "Prompt preview failed.");
     }
   }
 
@@ -133,13 +137,23 @@ export function ContentPromptEditor({ promptSets, promptTemplates }: ContentProm
               </button>
               <button className="button secondary" type="button" onClick={() => void testPrompt()}>
                 <Play aria-hidden size={16} />
-                Test
+                Preview
               </button>
               <button className="button secondary" type="button" onClick={() => void setStatus("active")}>Activate</button>
               <button className="button secondary" type="button" onClick={() => void setStatus("locked")}>Lock</button>
               <button className="button secondary" type="button" onClick={() => void setStatus("draft")}>Draft</button>
             </div>
             {message ? <pre className="content-prompt-message" aria-live="polite">{message}</pre> : null}
+            {preview ? (
+              <section className="item-card" aria-label="Prompt preview">
+                <div className="row-between">
+                  <h3>Preview</h3>
+                  <StatusPill tone="blue">{String(preview.status ?? "rendered")}</StatusPill>
+                </div>
+                <p className="item-meta">{String(preview.note ?? "Selected template rendered without provider execution.")}</p>
+                <pre className="content-prompt-message">{String(preview.rendered_excerpt ?? "")}</pre>
+              </section>
+            ) : null}
           </>
         ) : (
           <p>No prompt templates were found. Run the content engine migration.</p>
@@ -147,6 +161,10 @@ export function ContentPromptEditor({ promptSets, promptTemplates }: ContentProm
       </main>
     </div>
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function groupBySkill(templates: PromptTemplateRow[]): Record<string, PromptTemplateRow[]> {

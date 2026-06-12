@@ -5,16 +5,15 @@ import { deterministicUuid } from "../adstudio/id.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
-
-const DEFAULT_GRAPH_VERSION = process.env.META_GRAPH_API_VERSION ?? process.env.META_API_VERSION ?? "v23.0";
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
 export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
 
 export type MetaLeadDestination = {
-  type: "webhook" | "crm" | "email" | "manual";
+  type: "webhook" | "crm" | "manual";
   label: string;
   config?: {
     endpoint?: string;
@@ -395,6 +394,7 @@ export function applyMetaPublishExecutionResult(
 
 export function buildMetaPublishTaskOptions(input: { workspaceId: string; planId: string; idempotencyKey: string }) {
   return {
+    idempotencyKey: input.idempotencyKey,
     concurrencyKey: `meta-publish:${input.workspaceId}:${input.idempotencyKey}`,
     tags: ["meta-publish", input.workspaceId, input.planId],
     maxAttempts: 3,
@@ -434,6 +434,24 @@ export async function loadMetaPublishPlan(
   }
 
   return rowToPlan(data as MetaPublishPlanRow);
+}
+
+export async function loadMetaPublishPlanByIdempotencyKey(
+  serviceSupabase: SupabaseServiceClient,
+  input: { workspaceId: string; idempotencyKey: string },
+): Promise<MetaPublishPlan | null> {
+  const { data, error } = await serviceSupabase
+    .from("meta_publish_plans")
+    .select("*")
+    .eq("workspace_id", input.workspaceId)
+    .eq("idempotency_key", input.idempotencyKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? rowToPlan(data as MetaPublishPlanRow) : null;
 }
 
 export async function updateMetaPublishPlanExecution(serviceSupabase: SupabaseServiceClient, plan: MetaPublishPlan) {
@@ -665,7 +683,7 @@ async function postMetaObject(
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "POST", path, body, createdAt });
 
-  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${path}`, {
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${input.accessToken}`,
@@ -696,7 +714,7 @@ async function getMetaObjectStatus(
   const createdAt = new Date().toISOString();
   requestLog.push({ step, method: "GET", path, createdAt });
 
-  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_GRAPH_VERSION}${path}`, {
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
     method: "GET",
     headers: { authorization: `Bearer ${input.accessToken}` },
   });
@@ -887,6 +905,7 @@ function normalizeMetaConnectionSetup(setup: MetaConnectionSetup): MetaConnectio
     pixelId: optionalString(setup.pixelId),
     leadDestination: {
       ...setup.leadDestination,
+      type: normalizeMetaLeadDestinationType(setup.leadDestination.type),
       label: setup.leadDestination.label.trim(),
       config: {
         ...(setup.leadDestination.config ?? {}),
@@ -1053,6 +1072,10 @@ function normalizeMetaAccountId(value: string): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeMetaLeadDestinationType(value: unknown): MetaLeadDestination["type"] {
+  return value === "crm" || value === "manual" ? value : "webhook";
 }
 
 function slug(value: string): string {

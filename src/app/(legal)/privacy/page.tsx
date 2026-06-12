@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · Blockwise",
+  title: "Privacy Policy",
+  alternates: { canonical: "/privacy" },
   description:
     "How Blockwise collects, stores, uses, and deletes data — including data accessed through Meta Marketing API and lead form submissions.",
 };

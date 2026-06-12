@@ -116,11 +116,43 @@ test("landing page local hero images resolve from public assets", () => {
 
 test("landing page metadata matches Blockwise positioning", () => {
   const layout = readFileSync("src/app/layout.tsx", "utf8");
+  const home = readFileSync("src/app/page.tsx", "utf8");
+  const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
 
   assert.match(layout, /Blockwise \| Real Estate Meta Ads Workflow/);
   assert.match(layout, /create, approve, launch, and track Meta ad campaigns through their own ad account/);
   assert.match(layout, /type:\s*"website"/);
   assert.match(layout, /card:\s*"summary_large_image"/);
+  assert.doesNotMatch(layout, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
+  assert.match(home, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
+  assert.match(pricing, /alternates:\s*\{\s*canonical:\s*"\/pricing"\s*\}/);
+});
+
+test("legal pages rely on root title template and define page canonicals", () => {
+  const legalPages = [
+    ["src/app/(legal)/privacy/page.tsx", "Privacy Policy", "/privacy"],
+    ["src/app/(legal)/terms/page.tsx", "Terms of Service", "/terms"],
+    ["src/app/(legal)/data-deletion/page.tsx", "Data Deletion", "/data-deletion"],
+  ] as const;
+
+  for (const [file, title, canonical] of legalPages) {
+    const source = readFileSync(file, "utf8");
+    assert.match(source, new RegExp(`title:\\s*"${title}"`));
+    assert.doesNotMatch(source, /title:\s*"[^"]*(?:·|Â·)\s*Blockwise"/);
+    assert.match(source, new RegExp(`alternates:\\s*\\{\\s*canonical:\\s*"${canonical}"\\s*\\}`));
+  }
+});
+
+test("robots and 404 keep protected routes out of search and anonymous visitors on public home", () => {
+  const robots = readFileSync("src/app/robots.ts", "utf8");
+  const notFound = readFileSync("src/app/not-found.tsx", "utf8");
+
+  for (const route of ["/home", "/settings", "/pwa", "/reset-password", "/forgot-password"]) {
+    assert.match(robots, new RegExp(`"${route}"`));
+  }
+
+  assert.match(notFound, /href="\/"[\s\S]*Back to home/);
+  assert.match(notFound, /className="button secondary"[\s\S]*href="\/self-serve"[\s\S]*Go to dashboard/);
 });
 
 test("production login page does not expose development test profiles or passwords", () => {

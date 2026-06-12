@@ -28,12 +28,13 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
   const [searched, setSearched] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function doSearch(q: string) {
+  function doSearch(q: string, activeSort: ResearchSort = sort) {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams({ q });
+        if (activeSort !== "recent") params.set("sort", activeSort);
         const res = await fetch(`/api/research/ads/search?${params.toString()}`);
         const data: SearchResponse = res.ok ? await res.json() : { cards: [] };
         setCards(data.cards ?? []);
@@ -46,11 +47,11 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
 
   function onSearch(q: string) {
     setQuery(q);
-    doSearch(q);
+    doSearch(q, sort);
   }
 
   useEffect(() => {
-    if (initialQuery) doSearch(initialQuery);
+    if (initialQuery) doSearch(initialQuery, initialSort);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

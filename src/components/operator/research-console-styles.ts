@@ -25,6 +25,7 @@
 .rops-btn.danger{color:var(--rops-bad);border-color:#ffdad6}
 .rops-btn.danger:hover{background:var(--rops-bad-tint)}
 .rops-btn.danger.on{background:var(--rops-bad-tint)}
+.rops-banner{border-bottom:1px solid #ffdad6;background:var(--rops-bad-tint);color:var(--rops-bad);padding:10px 18px;font-size:12.5px;font-weight:650}
 .rops-body{display:flex;align-items:stretch;min-height:520px}
 .rops-rail{width:172px;flex-shrink:0;background:#fff;border-right:1px solid var(--line-soft);padding:10px 8px 14px}
 .rops-rail-label{font-size:10.5px;font-weight:700;letter-spacing:.7px;color:#94a3b8;text-transform:uppercase;padding:12px 12px 5px;margin:0}

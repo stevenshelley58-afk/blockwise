@@ -821,13 +821,14 @@ async function enqueueDueLocationAdSearchJobs(buildRunId) {
 
 async function runWatchdogs() {
   const runHourlyWatchdogs = Date.now() % (60 * 60 * 1000) < intervalMs;
-  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
+  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
     rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }),
     rpc("watchdog_record_provider_failures", { p_since: "24 hours", p_failure_threshold: 3 }),
     rpc("watchdog_record_zero_ad_anomalies", { p_since: "48 hours", p_limit: 100 }),
     rpc("watchdog_record_missing_media", { p_since: "24 hours", p_limit: 100 }),
     rpc("watchdog_record_unclassified_creatives", { p_since: "24 hours", p_limit: 100 }),
     enqueueClassificationBackfillJobs(),
+    watchdogArchiveStaleBlockedJobs(),
     runHourlyWatchdogs
       ? watchdogRecheckStaleAgencies()
       : Promise.resolve({ staleAgencies: 0, staleAgencyRechecks: 0, staleAgencySkippedNoCensusSource: 0 }),
@@ -842,8 +843,54 @@ async function runWatchdogs() {
     missingMedia: missingMedia.length,
     unclassified: unclassified.length,
     classificationBackfill,
+    ...staleBlockedArchive,
     ...staleAgencyRecheck,
     ...unresolvedPageRetry,
+  };
+}
+
+async function watchdogArchiveStaleBlockedJobs() {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await rest(
+    "research",
+    `work_queue?select=id,job_type,blocked_reason,last_error,result,updated_at&status=eq.blocked&updated_at=lt.${encode(cutoff)}&order=updated_at.asc&limit=100`,
+  );
+  let archived = 0;
+
+  for (const job of rows) {
+    const archivedAt = now();
+    const priorResult = job.result && typeof job.result === "object" && !Array.isArray(job.result) ? job.result : {};
+    const updated = await rest("research", `work_queue?id=eq.${encode(job.id)}&status=eq.blocked`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: json({
+        status: "archived",
+        blocked_reason: job.blocked_reason || "archived_stale_blocked_job",
+        result: {
+          ...priorResult,
+          archived: {
+            at: archivedAt,
+            reason: "blocked_older_than_7_days",
+            prior_blocked_reason: job.blocked_reason || null,
+            prior_last_error: job.last_error || null,
+          },
+        },
+      }),
+    });
+    if (updated?.[0]?.id) {
+      archived += 1;
+      await recordEvent("archive", "work_queue", job.id, {
+        job_type: job.job_type,
+        reason: "blocked_older_than_7_days",
+        blocked_reason: job.blocked_reason || null,
+        updated_at: job.updated_at || null,
+      }, { work_queue_id: job.id });
+    }
+  }
+
+  return {
+    staleBlockedJobs: rows.length,
+    staleBlockedArchived: archived,
   };
 }
 
@@ -2250,14 +2297,80 @@ async function upsertAdvertiserPage(input) {
   return rows?.[0]?.id || null;
 }
 
+function coverageDefectReason(row) {
+  const note = String(row.notes || "").toLowerCase();
+  const resolution = row.resolution || {};
+  if (row.reason) return String(row.reason);
+  if (resolution.reason) return String(resolution.reason);
+  if (note.includes("census could not verify")) return "census_requires_verified_evidence";
+  if (note.includes("page resolver could not find")) return "page_resolver_no_verified_meta_page";
+  if (note.includes("budget guard blocked candidate actor")) return "apify_canary_budget_guard_blocked";
+  if (note.includes("budget guard blocked meta ad library capture")) return "apify_budget_guard_blocked";
+  if (note.includes("spent money without ingesting ads")) return "apify_spend_without_ingest";
+  if (note.includes("location ad search could not fetch")) return "location_ad_search_capture_failed";
+  if (note.includes("ad collector could not fetch")) return "ad_collector_capture_failed";
+  if (note.includes("still had more pages") || note.includes("hit resultslimit")) return "ad_collector_truncated";
+  if (note.includes("coverage audit found")) return "coverage_audit_gap";
+  return `unknown:${hash(`${row.reported_by || "system"}:${row.notes || ""}`).slice(0, 16)}`;
+}
+
+function coverageDefectSubject(row) {
+  const resolution = row.resolution || {};
+  if (row.subject_type && row.subject_key) return { subject_type: String(row.subject_type), subject_key: String(row.subject_key) };
+  if (row.resolved_advertiser_page_id) return { subject_type: "advertiser_page", subject_key: String(row.resolved_advertiser_page_id) };
+  if (resolution.advertiser_page_id) return { subject_type: "advertiser_page", subject_key: String(resolution.advertiser_page_id) };
+  if (row.resolved_agent_id) return { subject_type: "agent", subject_key: String(row.resolved_agent_id) };
+  if (row.resolved_agency_id) return { subject_type: "agency", subject_key: String(row.resolved_agency_id) };
+  if (row.postcode) return { subject_type: "coverage_area", subject_key: `${String(row.state || "WA").toUpperCase()}:${row.postcode}` };
+  if (resolution.meta_page_id) return { subject_type: "meta_page", subject_key: `${row.platform || "facebook"}:${resolution.meta_page_id}` };
+  if (resolution.actor_id) return { subject_type: "capture_actor", subject_key: `${row.platform || "facebook"}:${resolution.actor_id}` };
+  if (row.platform) return { subject_type: "platform", subject_key: String(row.platform) };
+  return { subject_type: "system", subject_key: hash(`${coverageDefectReason(row)}:${row.notes || ""}`).slice(0, 32) };
+}
+
+async function resolveCoverageDefects({ subject_type, subject_key, reason = null, resolution = {} }) {
+  const resolvedAt = now();
+  const reasonFilter = reason ? `&reason=eq.${encode(reason)}` : "";
+  try {
+    await rest("research", `coverage_defects?subject_type=eq.${encode(subject_type)}&subject_key=eq.${encode(subject_key)}&status=in.(open,investigating,blocked)${reasonFilter}`, {
+      method: "PATCH",
+      body: json({
+        status: "resolved",
+        resolved_at: resolvedAt,
+        resolution: {
+          ...resolution,
+          auto_resolved_by: "hermes-success",
+          auto_resolved_at: resolvedAt,
+        },
+      }),
+    });
+  } catch (error) {
+    if (!/subject_type|subject_key|reason|resolved_at|schema cache|PGRST204|42703/i.test(error.message)) throw error;
+  }
+}
+
 async function insertCoverageDefect(row) {
+  const subject = coverageDefectSubject(row);
+  const reason = coverageDefectReason(row);
+  const defect = {
+    ...row,
+    ...subject,
+    reason,
+    occurrences: Math.max(1, Number.parseInt(row.occurrences || "1", 10) || 1),
+  };
+  try {
+    await rpc("upsert_coverage_defect", { p_defect: defect });
+    return;
+  } catch (error) {
+    if (!/upsert_coverage_defect|subject_type|subject_key|reason|occurrences|schema cache|PGRST202|PGRST204|42703|42883/i.test(error.message)) throw error;
+  }
   try {
     await rest("research", "coverage_defects", {
       method: "POST",
-      body: json(row),
+      body: json(defect),
     });
   } catch (error) {
-    if (!/reporter_identity|resolution_decision_id|resolved_agent_id|resolved_agency_id|resolved_advertiser_page_id|resolved_at|schema cache|PGRST204|42703/i.test(error.message)) throw error;
+    if (!/reporter_identity|resolution_decision_id|resolved_agent_id|resolved_agency_id|resolved_advertiser_page_id|resolved_at|subject_type|subject_key|reason|occurrences|schema cache|PGRST204|42703/i.test(error.message)) throw error;
     const {
       reporter_identity: _reporterIdentity,
       resolution_decision_id: _resolutionDecisionId,
@@ -2265,8 +2378,12 @@ async function insertCoverageDefect(row) {
       resolved_agency_id: _resolvedAgencyId,
       resolved_advertiser_page_id: _resolvedAdvertiserPageId,
       resolved_at: _resolvedAt,
+      subject_type: _subjectType,
+      subject_key: _subjectKey,
+      reason: _reason,
+      occurrences: _occurrences,
       ...compatibleRow
-    } = row;
+    } = defect;
     await rest("research", "coverage_defects", {
       method: "POST",
       body: json(compatibleRow),
@@ -2342,12 +2459,18 @@ async function handleAgentCensus(job) {
         next_refresh_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
       }),
     });
+    await resolveCoverageDefects({
+      subject_type: "coverage_area",
+      subject_key: `${String(payload.state || "WA").toUpperCase()}:${payload.postcode}`,
+      reason: "census_requires_verified_evidence",
+      resolution: { handler: "blockwise-agent-census", verified_agencies: found.length },
+    });
     return { status: "complete", result: { handler: "blockwise-agent-census", verified_agencies: found.length, queued_page_resolvers: queuedResolvers, errors } };
   }
 
   const reason = errors.length ? "census_evidence_fetch_failed" : "census_requires_verified_evidence";
   await deferCensusPolicy(payload.postcode, payload.state || "WA", reason, errors.length ? 6 : 24, true);
-  await insertCoverageDefect({ postcode: payload.postcode, state: payload.state || "WA", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } });
+  await insertCoverageDefect({ postcode: payload.postcode, state: payload.state || "WA", reason: "census_requires_verified_evidence", notes: `Hermes census could not verify an evidence-backed roster without allowed public evidence (${reason}).`, reported_by: "system", reporter_identity: workerId, status: "blocked", resolution: { reason, errors, location_search_allowed: false } });
   return { status: "complete", result: { handler: "blockwise-agent-census", reason, verified_agencies: 0, queued_page_resolvers: 0, census_deferred: true, defect_recorded: true, errors, location_search_allowed: false } };
 }
 
@@ -2591,6 +2714,12 @@ async function handlePageResolver(job) {
   }
 
   if (resolved.length) {
+    await resolveCoverageDefects({
+      subject_type: subject.kind,
+      subject_key: subject.id,
+      reason: "page_resolver_no_verified_meta_page",
+      resolution: { handler: "blockwise-page-resolver", resolved_pages: resolved.length },
+    });
     return {
       status: "complete",
       result: {
@@ -2608,6 +2737,9 @@ async function handlePageResolver(job) {
 
   await insertCoverageDefect({
     state: "WA",
+    subject_type: subject.kind,
+    subject_key: subject.id,
+    reason: "page_resolver_no_verified_meta_page",
     agent_name: subject.agent?.full_name || null,
     agency_name: subject.agency?.name || null,
     notes: "Hermes page resolver could not find a Facebook page from verified-subject evidence.",
@@ -2881,9 +3013,10 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
     token: apifyToken,
     readLedgerSpendUsd: readApifyLedgerSpendUsd,
     setRuntimeSetting,
-    fileDefect: (defect) => insertCoverageDefect({
-      platform: "facebook",
-      notes: "Apify paid fallback budget guard blocked Meta Ad Library capture.",
+      fileDefect: (defect) => insertCoverageDefect({
+        platform: "facebook",
+        reason: "apify_budget_guard_blocked",
+        notes: "Apify paid fallback budget guard blocked Meta Ad Library capture.",
       reported_by: "system",
       reporter_identity: workerId,
       status: "open",
@@ -3099,6 +3232,7 @@ async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId
       setRuntimeSetting,
       fileDefect: (defect) => insertCoverageDefect({
         platform: "facebook",
+        reason: "apify_canary_budget_guard_blocked",
         notes: "Apify canary budget guard blocked candidate actor benchmarking.",
         reported_by: "system",
         reporter_identity: workerId,
@@ -3273,6 +3407,7 @@ async function openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd
   await setRuntimeSetting(APIFY_CIRCUIT_OPEN_UNTIL_SETTING, apifyCircuitOpenUntilIso(), { reason: "apify_spend_without_ingest", scope });
   await insertCoverageDefect({
     platform: "facebook",
+    reason: "apify_spend_without_ingest",
     notes: "Apify paid capture spent money without ingesting ads; paid circuit opened.",
     reported_by: "system",
     reporter_identity: workerId,
@@ -4619,6 +4754,7 @@ async function handleLocationAdSearch(job) {
       postcode: input.postcode,
       suburb: input.suburb,
       state: input.state,
+      reason: "location_ad_search_capture_failed",
       notes: "Hermes location ad search could not fetch Meta Ad Library results for a public suburb/postcode scan.",
       reported_by: "system",
       reporter_identity: workerId,
@@ -4682,6 +4818,12 @@ async function handleLocationAdSearch(job) {
     },
     cost_usd: outcome.costUsd || 0,
   });
+  await resolveCoverageDefects({
+    subject_type: "coverage_area",
+    subject_key: `${input.state}:${input.postcode}`,
+    reason: "location_ad_search_capture_failed",
+    resolution: { handler: LOCATION_AD_SEARCH_JOB_TYPE, provider: META_LOCATION_SEARCH_SOURCE_PROVIDER, ingested_count: ingested.length },
+  });
 
   return {
     status: "complete",
@@ -4716,6 +4858,7 @@ async function handleAdCollector(job) {
     await markAdvertiserPageCheckFailed(payload.advertiserPageId);
     await insertCoverageDefect({
       platform: "facebook",
+      reason: "ad_collector_capture_failed",
       notes: "Hermes ad collector could not fetch a verified Meta page.",
       reported_by: "system",
       reporter_identity: workerId,
@@ -4737,6 +4880,12 @@ async function handleAdCollector(job) {
     await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
       method: "PATCH",
       body: json({ status: "no_ads_confirmed", last_checked_at: checkedAt, last_successful_check_at: checkedAt, consecutive_failed_checks: 0 }),
+    });
+    await resolveCoverageDefects({
+      subject_type: "advertiser_page",
+      subject_key: payload.advertiserPageId,
+      reason: "ad_collector_capture_failed",
+      resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, confirmed_absence: true },
     });
     return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, confirmed_absence: true, reconciliation, ingest_tables: ingestTables } };
   }
@@ -4787,7 +4936,22 @@ async function handleAdCollector(job) {
   });
   await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "success", result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {}, reconciliation }, cost_usd: outcome.costUsd || 0 });
   await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: ingested.length, reason: "zero_ingested_after_successful_capture", scope: "page_capture_success" });
-  if (outcome.metadata?.truncated || (sourceProvider !== META_OFFICIAL_SOURCE_PROVIDER && outcome.itemCount >= input.resultsLimit)) {
+  const captureTruncated = outcome.metadata?.truncated || (sourceProvider !== META_OFFICIAL_SOURCE_PROVIDER && outcome.itemCount >= input.resultsLimit);
+  await resolveCoverageDefects({
+    subject_type: "advertiser_page",
+    subject_key: payload.advertiserPageId,
+    reason: "ad_collector_capture_failed",
+    resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, ingested_count: ingested.length },
+  });
+  if (!captureTruncated) {
+    await resolveCoverageDefects({
+      subject_type: "advertiser_page",
+      subject_key: payload.advertiserPageId,
+      reason: "ad_collector_truncated",
+      resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, ingested_count: ingested.length },
+    });
+  }
+  if (captureTruncated) {
     log("Meta capture may be truncated", {
       advertiser_page_id: payload.advertiserPageId,
       meta_page_id: payload.metaPageId,
@@ -4798,6 +4962,7 @@ async function handleAdCollector(job) {
     }, "warn");
     await insertCoverageDefect({
       platform: "facebook",
+      reason: "ad_collector_truncated",
       notes: sourceProvider === META_OFFICIAL_SOURCE_PROVIDER
         ? `Official Meta Ads Archive capture for page ${payload.metaPageId} still had more pages after ${outcome.metadata?.max_pages_per_capture || "the configured"} page limit.`
         : `Ad collector hit resultsLimit (${input.resultsLimit}) for page ${payload.metaPageId}; there may be more ads. Consider paginated collection.`,
@@ -5370,12 +5535,6 @@ async function requestCoverageRefresh({ postcode, state, reason, parentJob, oper
 }
 
 async function insertCoverageGapDefect({ postcode, state, suburb, snapshot, job }) {
-  const existing = await rest(
-    "research",
-    `coverage_defects?select=id&postcode=eq.${encode(postcode)}&state=eq.${encode(state)}&status=in.(open,investigating,blocked)&limit=1`,
-  );
-  if (existing.length) return false;
-
   const notes = snapshot.adsKnown > 0
     ? `Hermes coverage audit found ads for ${postcode}, but status still needs review.`
     : snapshot.agentsKnown > 0 || snapshot.advertiserPages > 0
@@ -5386,6 +5545,7 @@ async function insertCoverageGapDefect({ postcode, state, suburb, snapshot, job 
     postcode,
     suburb,
     state,
+    reason: "coverage_audit_gap",
     notes,
     reported_by: "auditor",
     reporter_identity: workerId,
@@ -5434,6 +5594,14 @@ async function handleCoverageAuditor(job) {
     }),
   });
 
+  if (auditStatus === "covered") {
+    await resolveCoverageDefects({
+      subject_type: "coverage_area",
+      subject_key: `${state}:${postcode}`,
+      reason: "coverage_audit_gap",
+      resolution: { handler: COVERAGE_AUDITOR_JOB_TYPE, audit_status: auditStatus, snapshot },
+    });
+  }
   const defectInserted = auditStatus === "covered" ? false : await insertCoverageGapDefect({ postcode, state, suburb, snapshot, job });
   const refreshQueued = auditStatus === "covered"
     ? false

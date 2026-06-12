@@ -61,6 +61,11 @@ begin
     (demo_workspace_id, 'google', 'google_lead_002', 'daniel@example.com', '0400 333 444', 'Daniel Ng', 'Leederville', '{"source":"demo"}')
   on conflict do nothing;
 
+  delete from public.reporting_snapshots
+  where workspace_id = demo_workspace_id
+    and provider in ('meta', 'google')
+    and date_range = daterange('2026-04-26', '2026-05-26', '[]');
+
   insert into public.reporting_snapshots (workspace_id, provider, date_range, metrics)
   values
     (demo_workspace_id, 'meta', daterange('2026-04-26', '2026-05-26', '[]'), '{"spendAud":1840,"leads":92,"cplAud":20}'),

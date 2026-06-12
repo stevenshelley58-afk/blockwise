@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireOperator } from "@/lib/operator/auth";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,9 @@ export async function POST(
   const patch = {
     display_state: input.displayState,
   };
+  const research = createSupabaseServiceClient().schema("research");
 
-  let { data: creative, error } = await guard.supabase
-    .schema("research")
+  let { data: creative, error } = await research
     .from("ad_creatives")
     .update(patch)
     .eq("observed_ad_id", id)
@@ -32,8 +33,7 @@ export async function POST(
     .maybeSingle();
 
   if (!creative && !error) {
-    const result = await guard.supabase
-      .schema("research")
+    const result = await research
       .from("ad_creatives")
       .update(patch)
       .eq("id", id)
@@ -46,7 +46,7 @@ export async function POST(
   if (error) return respond(request, { error: error.message }, 500);
   if (!creative) return respond(request, { error: "Creative not found." }, 404);
 
-  await guard.supabase.schema("research").from("ingest_events").insert({
+  await research.from("ingest_events").insert({
     event_type: "update",
     table_name: "ad_creatives",
     row_id: creative.id,
