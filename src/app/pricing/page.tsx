@@ -7,6 +7,7 @@ import { SignInLink } from "@/components/landing/sign-in-link";
 
 export const metadata = {
   title: "Pricing",
+  alternates: { canonical: "/pricing" },
   description:
     "Simple pricing for real estate teams. Start with a free 7-day trial — 10 free ad packs included.",
 };

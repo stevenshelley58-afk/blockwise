@@ -1,5 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
@@ -8,6 +9,10 @@ import { DemoForm } from "@/components/landing/demo-form";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
 import { LandingRadarCards } from "@/components/research/landing-radar-cards";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /**
  * Landing page — "Executive Precision" design (source: /stitch export, wired

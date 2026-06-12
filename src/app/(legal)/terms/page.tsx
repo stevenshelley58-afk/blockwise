@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · Blockwise",
+  title: "Terms of Service",
+  alternates: { canonical: "/terms" },
   description: "Terms of service for Blockwise, a real estate advertising workflow tool.",
 };
 
