@@ -133,6 +133,14 @@ function formatCents(cents: number): string {
   return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 0 }).format(cents / 100);
 }
 
+function planFeatureTitle(plan: NonNullable<Plan>): string {
+  if (plan.key === "trial" || plan.maxAgentRunsPerMonth <= 0) {
+    return "10 free ad packs included";
+  }
+
+  return `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo`;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   connected: "Connected",
   needs_attention: "Needs attention",
@@ -378,7 +386,7 @@ function BillingSection({
         </div>
         <div className="item-card">
           <span className="item-meta">Plan features</span>
-          <h3 style={{ margin: "4px 0" }}>{plan ? `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo` : "â€”"}</h3>
+          <h3 style={{ margin: "4px 0" }}>{plan ? planFeatureTitle(plan) : "â€”"}</h3>
           <span className="item-meta">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
         </div>
         <div className="item-card">

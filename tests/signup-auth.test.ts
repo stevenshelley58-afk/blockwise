@@ -8,6 +8,10 @@ const confirmRoutePath = "src/app/auth/confirm/route.ts";
 const loginPagePath = "src/app/login/page.tsx";
 const loginFormPath = "src/components/login-form.tsx";
 const forgotPasswordPagePath = "src/app/forgot-password/page.tsx";
+const resetPasswordPagePath = "src/app/reset-password/page.tsx";
+const pageGuardsPath = "src/lib/auth/page-guards.ts";
+const accessUnavailablePagePath = "src/app/access-unavailable/page.tsx";
+const accessUnavailableActionsPath = "src/app/access-unavailable/access-unavailable-actions.tsx";
 const turnstileVerificationPath = "src/components/auth/turnstile-verification.tsx";
 
 test("signup form uses Supabase captchaToken and trial metadata without a Turnstile dependency", () => {
@@ -29,6 +33,9 @@ test("signup form uses Supabase captchaToken and trial metadata without a Turnst
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
   assert.match(source, /name="terms"/i);
+  assert.match(source, /signUpData\.user/);
+  assert.match(source, /signUpData\.user\.identities\.length === 0/);
+  assert.match(source, /An account with this email already exists\. Sign in or reset your password\./);
   assert.doesNotMatch(source, /onboarding_status/i);
 });
 
@@ -60,6 +67,9 @@ test("confirm route verifies token hash and only redirects to safe relative next
 test("login page points new clients to signup", () => {
   const source = readFileSync(loginPagePath, "utf8");
 
+  assert.match(source, /searchParams/);
+  assert.match(source, /error === "confirm_failed"/);
+  assert.match(source, /That confirmation link is invalid or expired/);
   assert.match(source, /href="\/signup"/);
   assert.match(source, /Start free trial/i);
 });
@@ -77,4 +87,22 @@ test("login and password reset pass Turnstile captcha tokens to Supabase auth", 
   assert.match(forgotPassword, /hasTurnstileSiteKey\(\) && !turnstileToken/);
   assert.match(forgotPassword, /resetPasswordForEmail\(email,\s*\{[\s\S]*captchaToken:\s*turnstileToken/i);
   assert.match(forgotPassword, /setTurnstileResetSignal\(\(signal\) => signal \+ 1\)/);
+});
+
+test("reset and denied access flows avoid dead-end redirects", () => {
+  const resetPassword = readFileSync(resetPasswordPagePath, "utf8");
+  const pageGuards = readFileSync(pageGuardsPath, "utf8");
+  const accessPage = readFileSync(accessUnavailablePagePath, "utf8");
+  const accessActions = readFileSync(accessUnavailableActionsPath, "utf8");
+
+  assert.match(resetPassword, /setIsUpdated\(true\)/);
+  assert.match(resetPassword, /Password updated/);
+  assert.match(resetPassword, /30000/);
+  assert.doesNotMatch(resetPassword, /router\.replace\("\/login"\)/);
+
+  assert.match(pageGuards, /\/access-unavailable\?reason=/);
+  assert.doesNotMatch(pageGuards, /\/results\?error=access_denied/);
+  assert.match(accessPage, /No workspace found/);
+  assert.match(accessActions, /supabase\.auth\.signOut\(\)/);
+  assert.match(accessActions, /router\.replace\(target === "signup" \? "\/signup" : "\/login"\)/);
 });

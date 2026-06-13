@@ -12,7 +12,7 @@ export async function requirePageSurfaceAccess(surface: ProductSurface, requeste
   });
 
   if (!access.ok) {
-    redirect(access.status === 401 ? "/login" : "/results?error=access_denied");
+    redirect(access.status === 401 ? "/login" : `/access-unavailable?reason=${access.status === 404 ? "no_workspace" : "access_denied"}`);
   }
 
   return {

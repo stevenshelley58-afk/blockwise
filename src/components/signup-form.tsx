@@ -60,7 +60,7 @@ export function SignupForm() {
 
     setIsSubmitting(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -77,6 +77,12 @@ export function SignupForm() {
 
     if (signUpError) {
       setError(signUpError.message);
+      resetTurnstile();
+      return;
+    }
+
+    if (signUpData.user && Array.isArray(signUpData.user.identities) && signUpData.user.identities.length === 0) {
+      setError("An account with this email already exists. Sign in or reset your password.");
       resetTurnstile();
       return;
     }

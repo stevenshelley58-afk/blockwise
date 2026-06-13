@@ -7,6 +7,14 @@ import { logCaught } from "@/lib/log";
 
 import { Feedback, Section, type Msg, type Plan, type RT, type SB, type SettingsViewProps } from "./settings-shared";
 
+function planFeatureTitle(plan: NonNullable<Plan>): string {
+  if (plan.key === "trial" || plan.maxAgentRunsPerMonth <= 0) {
+    return "10 free ad packs included";
+  }
+
+  return `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo`;
+}
+
 export function BillingSection({
   supabase,
   router,
@@ -76,7 +84,7 @@ export function BillingSection({
         </div>
         <div className="item-card">
           <span className="item-meta">Plan features</span>
-          <h3 style={{ margin: "4px 0" }}>{plan ? `Up to ${plan.maxAgentRunsPerMonth} agent runs / mo` : "—"}</h3>
+          <h3 style={{ margin: "4px 0" }}>{plan ? planFeatureTitle(plan) : "—"}</h3>
           <span className="item-meta">{plan ? `Up to ${plan.maxWorkspaces} workspace${plan.maxWorkspaces === 1 ? "" : "s"}` : ""}</span>
         </div>
         <div className="item-card">

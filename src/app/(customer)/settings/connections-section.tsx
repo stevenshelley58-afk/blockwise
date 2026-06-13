@@ -7,7 +7,7 @@ import { logCaught } from "@/lib/log";
 
 import { Feedback, REGION_CURRENCY, Section, type Connection, type Msg, type RT, type SB } from "./settings-shared";
 
-type MetaLeadDestinationType = "webhook" | "crm" | "email" | "manual";
+type MetaLeadDestinationType = "webhook" | "crm" | "manual";
 
 type MetaSetup = {
   metaAdAccountId: string;
@@ -43,7 +43,7 @@ type MetaSetupResponse = {
   error?: string;
 };
 
-const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm", "email"];
+const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType[] = ["manual", "webhook", "crm"];
 
 const STATUS_LABELS: Record<string, string> = {
   connected: "Connected",

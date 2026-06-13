@@ -1,18 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isUpdated, setIsUpdated] = useState(false);
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
@@ -24,7 +23,7 @@ export default function ResetPasswordPage() {
 
     const timer = setTimeout(() => {
       setExpired(true);
-    }, 8000);
+    }, 30000);
 
     return () => {
       listener.subscription.unsubscribe();
@@ -50,7 +49,7 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    router.replace("/login");
+    setIsUpdated(true);
   }
 
   return (
@@ -66,7 +65,13 @@ export default function ResetPasswordPage() {
           <p className="login-copy">Choose a new password for your account.</p>
         </div>
 
-        {!isReady && expired ? (
+        {isUpdated ? (
+          <div className="signup-success" role="status" aria-live="polite">
+            <strong>Password updated</strong>
+            <p>You can now sign in with your new password.</p>
+            <a className="button" href="/login">Sign in</a>
+          </div>
+        ) : !isReady && expired ? (
           <p className="login-copy">
             This reset link has expired or was already used.{" "}
             <a href="/forgot-password">Request a new one</a>.

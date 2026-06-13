@@ -21,12 +21,18 @@ test("workspace settings show early-access review copy instead of a dead approva
 });
 
 test("billing settings prefer friendly portal messages and hide billing management until Stripe exists", () => {
-  const source = read("src/app/(customer)/settings/settings-view.tsx");
+  const source = [
+    read("src/app/(customer)/settings/settings-view.tsx"),
+    read("src/app/(customer)/settings/billing-section.tsx"),
+  ].join("\n");
 
   assert.match(source, /message\?: string/);
   assert.match(source, /data\.message \?\? data\.error \?\? "Billing isn't connected yet\."/);
   assert.match(source, /workspace\.stripeCustomerId \?/);
   assert.match(source, /Billing management will appear here after your first paid plan is active\./);
+  assert.match(source, /function planFeatureTitle/);
+  assert.match(source, /plan\.key === "trial" \|\| plan\.maxAgentRunsPerMonth <= 0/);
+  assert.match(source, /10 free ad packs included/);
 });
 
 test("ad studio lead destination points to real connection settings instead of local-only state", () => {
