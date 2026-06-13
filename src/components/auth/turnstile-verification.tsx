@@ -85,8 +85,6 @@ export function TurnstileVerification({ onTokenChange, onError, resetSignal = 0 
   }
 
   useEffect(() => {
-    renderTurnstile();
-
     return () => {
       if (turnstileWidgetId.current) {
         window.turnstile?.remove(turnstileWidgetId.current);
@@ -111,7 +109,7 @@ export function TurnstileVerification({ onTokenChange, onError, resetSignal = 0 
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
-        onLoad={renderTurnstile}
+        onReady={renderTurnstile}
       />
       <div className="turnstile-box" ref={turnstileRef} />
     </>
