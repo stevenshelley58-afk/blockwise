@@ -24,7 +24,16 @@ export const FIRST_AD_FORMATS = ["9:16", "4:5", "1:1"] as const;
 
 export type FirstAdInput = {
   mode: "template" | "custom";
+  source?: "blank" | "template_library" | "ad_radar" | "saved_ad";
   templateId?: string;
+  savedAdId?: string;
+  observedAdId?: string;
+  templateKey?: string;
+  imageBriefId?: string;
+  hooks?: string[];
+  referenceCta?: string;
+  referenceAdType?: string;
+  referenceIntent?: string;
   description: string;
   imageDataUrl: string;
   formats: ["9:16", "4:5", "1:1"];

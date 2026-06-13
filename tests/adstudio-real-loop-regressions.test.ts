@@ -297,6 +297,7 @@ test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () =>
   const actions = readFileSync("src/components/research/ad-card-actions.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
   const handoffRoute = readFileSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts", "utf8");
 
   assert.match(actions, /\/api\/research\/swipe-file\/\$\{id\}\/send-to-adstudio/);
@@ -310,6 +311,37 @@ test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () =>
   assert.match(workbench, /setNewAdStep\("radar"\)/);
   assert.match(dialog, /initialStep\?: StartStep/);
   assert.match(dialog, /fetch\("\/api\/research\/swipe-file"/);
+  assert.match(types, /source\?: "blank" \| "template_library" \| "ad_radar" \| "saved_ad"/);
+  assert.match(types, /savedAdId\?: string/);
+  assert.match(types, /observedAdId\?: string/);
+  assert.match(types, /templateKey\?: string/);
+  assert.match(types, /imageBriefId\?: string/);
+  assert.match(types, /hooks\?: string\[\]/);
+  assert.match(dialog, /radarInspiration/);
+  assert.match(dialog, /referenceCta: radarInspiration\?\.cta/);
+  assert.match(dialog, /referenceAdType: radarInspiration\?\.adType/);
+  assert.match(dialog, /referenceIntent: radarInspiration\?\.primaryIntent/);
+});
+
+test("Ad Studio template picker loads approved templates with built-in fallback", () => {
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
+  const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
+
+  assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
+  assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
+  assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : AD_STUDIO_TEMPLATES/);
+  assert.match(route, /export async function GET/);
+  assert.match(route, /export async function PATCH/);
+  assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
+  assert.match(route, /from\("v_ad_template_library"\)/);
+  assert.match(route, /from\("ad_template_candidates"\)/);
+  assert.match(route, /action: z\.enum\(\["approve", "archive"\]\)/);
+  assert.match(route, /source: "builtin_fallback"/);
+  assert.match(route, /Operator access is required/);
+  assert.match(templates, /mapAdStudioLibraryTemplate/);
+  assert.match(templates, /mergeAdStudioTemplateLibrary/);
+  assert.match(templates, /isBuiltInAdStudioTemplate/);
 });
 
 test("Ad Radar longest-running sort reaches the authenticated search route", () => {

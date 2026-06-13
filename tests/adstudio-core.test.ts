@@ -13,6 +13,7 @@ import {
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
 } from "../src/lib/adstudio/index.ts";
+import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
 import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
 
 const sampleHtml = `
@@ -186,6 +187,93 @@ test("generateAdStudioCampaignPack keeps appraisal defaults offer-aware", () => 
   assert.equal(pack.copyPacks[0]?.landingPage.headline, "Scarborough price update");
   assert.doesNotMatch(pack.copyPacks[0]?.landingPage.subheadline ?? "", /seller checklist/i);
   assert.equal(pack.compliance.status, "approved");
+});
+
+test("generated creative layout keeps wrapped headline, subhead, and CTA separated", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Spearwood",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    creativeFormats: ["4:5"],
+    variantCount: 3,
+  });
+  const wrappedVariant = pack.variants.find((variant) => variant.headline === "Know what to sort before you list");
+  assert.ok(wrappedVariant);
+  const creative = pack.creatives.find((item) => item.variantId === wrappedVariant.variantId && item.format === "4:5");
+  assert.ok(creative);
+
+  const headline = creative.canvas.objects.find((object) => object.role === "headline");
+  const subhead = creative.canvas.objects.find((object) => object.role === "subheadline");
+  const cta = creative.canvas.objects.find((object) => object.role === "cta_button");
+  assert.ok(headline);
+  assert.ok(subhead);
+  assert.ok(cta);
+
+  const headlineBottom = headline.y + (headline.height ?? 0);
+  const subheadBottom = subhead.y + (subhead.height ?? 0);
+  assert.ok((headline.height ?? 0) > (headline.size ?? 0) * 1.5, "headline fixture should wrap to multiple lines");
+  assert.ok(subhead.y - headlineBottom >= 18, `subhead overlaps headline: ${JSON.stringify({ headline, subhead })}`);
+  assert.ok(cta.y - subheadBottom >= 24, `CTA crowds subhead: ${JSON.stringify({ subhead, cta })}`);
+});
+
+test("creative layout repair fixes existing overlapped generated canvases", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Spearwood",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    creativeFormats: ["4:5"],
+    variantCount: 3,
+  });
+  const creative = pack.creatives[0];
+  assert.ok(creative);
+  const badCreative = {
+    ...creative,
+    canvas: {
+      ...creative.canvas,
+      objects: creative.canvas.objects.map((object) => {
+        if (object.role === "headline") {
+          return { ...object, content: "Spearwood house hitting market soon", height: undefined };
+        }
+        if (object.role === "subheadline") {
+          return { ...object, y: object.y - 80, height: undefined };
+        }
+        return object;
+      }),
+    },
+  };
+
+  const repaired = repairCreativeTextLayout(badCreative);
+  const headline = repaired.canvas.objects.find((object) => object.role === "headline");
+  const subhead = repaired.canvas.objects.find((object) => object.role === "subheadline");
+  assert.ok(headline);
+  assert.ok(subhead);
+  assert.ok(subhead.y >= headline.y + (headline.height ?? 0) + 18);
 });
 
 test("first-ad generation uses the uploaded image as the full creative visual", () => {

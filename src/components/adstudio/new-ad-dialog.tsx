@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowUpRight, Copy, LayoutGrid, Radar, X } from "lucide-reac
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -29,12 +30,18 @@ type ReuseAd = {
 type RadarMedia = { kind: string; url: string };
 type RadarAd = {
   savedId: string;
+  observedAdId: string;
   pageName: string;
   headline: string;
   body: string;
   cta: string;
+  adType: string;
+  primaryIntent: string;
+  hooks: string[];
   thumb: string | null;
 };
+
+type RadarInspiration = Pick<RadarAd, "savedId" | "observedAdId" | "cta" | "adType" | "primaryIntent" | "hooks">;
 
 type NewAdDialogProps = {
   open: boolean;
@@ -70,6 +77,7 @@ export function NewAdDialog({
   const [imageDataUrl, setImageDataUrl] = useState("");
   const [imageName, setImageName] = useState("");
   const [sourceNote, setSourceNote] = useState("");
+  const [radarInspiration, setRadarInspiration] = useState<RadarInspiration | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -95,6 +103,7 @@ export function NewAdDialog({
     setImageDataUrl("");
     setImageName("");
     setSourceNote("");
+    setRadarInspiration(null);
     setError("");
     setUploadingImage(false);
     setReuseAds(null);
@@ -207,6 +216,7 @@ export function NewAdDialog({
   function chooseTemplate(id: string) {
     setTemplateId(id);
     setSourceNote("");
+    setRadarInspiration(null);
     setError("");
     setBriefFrom(id === "" ? "source" : "template");
     setStep("brief");
@@ -226,6 +236,14 @@ export function NewAdDialog({
     setTemplateId("");
     setDescription(brief);
     setSourceNote(`Copied from ${ad.pageName} on Ad Radar. Add your own photo and Blockwise will write your version.`);
+    setRadarInspiration({
+      savedId: ad.savedId,
+      observedAdId: ad.observedAdId,
+      cta: ad.cta,
+      adType: ad.adType,
+      primaryIntent: ad.primaryIntent,
+      hooks: ad.hooks,
+    });
     setError("");
     setBriefFrom("radar");
     setStep("brief");
@@ -282,9 +300,19 @@ export function NewAdDialog({
     setSubmitting(true);
     setError("");
     try {
+      const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
+      const isBuiltInTemplate = selectedTemplate ? isBuiltInAdStudioTemplate(selectedTemplate.id) : false;
       await onGenerate({
-        mode: isBlank ? "custom" : "template",
-        templateId: isBlank ? undefined : selectedTemplate?.id,
+        mode: isBlank || !isBuiltInTemplate ? "custom" : "template",
+        source,
+        templateId: isBlank || !isBuiltInTemplate ? undefined : selectedTemplate?.id,
+        templateKey: selectedTemplate?.templateKey ?? selectedTemplate?.id,
+        savedAdId: radarInspiration?.savedId,
+        observedAdId: radarInspiration?.observedAdId,
+        hooks: radarInspiration?.hooks,
+        referenceCta: radarInspiration?.cta,
+        referenceAdType: radarInspiration?.adType,
+        referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
         imageDataUrl,
         formats: ["9:16", "4:5", "1:1"],
@@ -512,9 +540,18 @@ function toReuseAd(row: Record<string, unknown>): ReuseAd | null {
 }
 
 function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
+  const handoffPayload = isRecord(entry.handoff_payload) ? entry.handoff_payload : {};
   const ad = entry.ad as
     | {
-        creative?: { headline?: string | null; body?: string | null; cta?: string | null };
+        id?: string | null;
+        creative?: {
+          headline?: string | null;
+          body?: string | null;
+          cta?: string | null;
+          adType?: string | null;
+          primaryIntent?: string | null;
+          hooks?: string[] | null;
+        };
         page?: { name?: string | null };
         media?: RadarMedia[];
       }
@@ -523,6 +560,7 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
   if (!ad) return null;
   const savedId = String(entry.id ?? "");
   if (!savedId) return null;
+  const observedAdId = String(entry.observed_ad_id ?? ad.id ?? handoffPayload.observedAdId ?? "");
   const headline = ad.creative?.headline?.trim() ?? "";
   const body = ad.creative?.body?.trim() ?? "";
   const cta = ad.creative?.cta?.trim() ?? "";
@@ -535,12 +573,28 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
   );
   return {
     savedId,
+    observedAdId,
     pageName: ad.page?.name?.trim() || "Unknown advertiser",
     headline,
     body,
     cta,
+    adType: ad.creative?.adType?.trim() || stringValue(handoffPayload.adType),
+    primaryIntent: ad.creative?.primaryIntent?.trim() || stringValue(handoffPayload.primaryIntent),
+    hooks: Array.isArray(ad.creative?.hooks)
+      ? ad.creative.hooks.filter((hook): hook is string => typeof hook === "string" && hook.trim().length > 0)
+      : Array.isArray(handoffPayload.hooks)
+        ? handoffPayload.hooks.filter((hook): hook is string => typeof hook === "string" && hook.trim().length > 0)
+        : [],
     thumb: image?.url ?? null,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function formatGoal(goal: string | null): string {

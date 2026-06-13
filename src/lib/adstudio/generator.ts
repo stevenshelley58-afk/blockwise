@@ -1,8 +1,8 @@
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
+import { buildArchetypeCreative } from "./layout-archetypes.ts";
 import { getOfferTemplate } from "./offers.ts";
-import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
 import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
@@ -137,6 +137,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       variant,
       brandKit: input.brandKit,
       format,
+      template,
       sourceImageDataUrl,
       subheadline: copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
@@ -741,143 +742,20 @@ function buildCreative(input: {
   variant: AdStudioCampaignVariant;
   brandKit: AdStudioBrandKit;
   format: AdStudioFormat;
+  template: AdStudioTemplate | null;
   sourceImageDataUrl?: string;
   subheadline?: string;
 }): AdStudioCreative {
-  const size = getCanvasSize(input.format);
-  const isStory = input.format === "9:16";
-  const isLandscape = input.format === "1.91:1";
-  const marginX = Math.round(size.width * (isLandscape ? 0.07 : 0.08));
-  const copyWidth = Math.round(size.width * (isLandscape ? 0.55 : 0.76));
-  const headlineSize = isStory ? 70 : isLandscape ? 50 : 64;
-  const headlineY = Math.round(size.height * (isStory ? 0.53 : isLandscape ? 0.32 : 0.5));
-  const subheadY = headlineY + Math.round(headlineSize * (isLandscape ? 1.55 : 1.8));
-  const ctaHeight = isLandscape ? 66 : 78;
-  const ctaY = Math.min(
-    Math.round(size.height * (isStory ? 0.76 : isLandscape ? 0.66 : 0.73)),
-    size.height - Math.round(size.height * (isStory ? 0.18 : 0.08)) - ctaHeight,
-  );
-  const ctaWidth = Math.min(Math.round(size.width * (isLandscape ? 0.28 : 0.36)), 360);
-  const logoWidth = isLandscape ? 164 : 180;
-  const logoHeight = isLandscape ? 58 : 64;
-  const creativeBase: Omit<AdStudioCreative, "previewSvg"> = {
-    creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
-    campaignId: input.campaign.campaignId,
-    variantId: input.variant.variantId,
+  return buildArchetypeCreative({
+    campaign: input.campaign,
+    variant: input.variant,
+    brandKit: input.brandKit,
     format: input.format,
-    canvas: {
-      ...size,
-      backgroundAssetId: `background_${input.variant.variantId}`,
-      objects: [
-        {
-          objectId: "background",
-          type: "shape",
-          role: "background_shape",
-          x: 0,
-          y: 0,
-          width: size.width,
-          height: size.height,
-          fill: input.brandKit.colours.secondary,
-          locked: true,
-        },
-        {
-          objectId: "primary_image",
-          type: "image",
-          role: "primary_image",
-          content: input.sourceImageDataUrl,
-          assetId: input.sourceImageDataUrl ? undefined : input.brandKit.assets.listingImages[0] ?? input.brandKit.assets.headshots[0] ?? undefined,
-          x: 0,
-          y: 0,
-          width: size.width,
-          height: size.height,
-          locked: false,
-        },
-        {
-          objectId: "image_scrim",
-          type: "shape",
-          role: "image_scrim",
-          x: 0,
-          y: 0,
-          width: size.width,
-          height: size.height,
-          fill: "rgba(7, 14, 25, 0.48)",
-          locked: true,
-        },
-        {
-          objectId: "headline",
-          type: "text",
-          role: "headline",
-          content: input.variant.headline,
-          x: marginX,
-          y: headlineY,
-          width: copyWidth,
-          font: "brand_heading",
-          size: headlineSize,
-          fill: "#FFFFFF",
-          locked: false,
-        },
-        {
-          objectId: "subhead",
-          type: "text",
-          role: "subheadline",
-          content: input.subheadline ?? `Download the ${input.campaign.market.suburb} seller prep checklist.`,
-          x: marginX,
-          y: subheadY,
-          width: Math.round(copyWidth * 0.9),
-          font: "brand_body",
-          size: Math.max(28, Math.round(headlineSize * 0.42)),
-          fill: "#FFFFFF",
-          locked: false,
-        },
-        {
-          objectId: "cta",
-          type: "shape",
-          role: "cta_button",
-          content: input.variant.cta,
-          x: marginX,
-          y: ctaY,
-          width: ctaWidth,
-          height: ctaHeight,
-          fill: input.brandKit.colours.primary,
-          locked: false,
-        },
-        {
-          objectId: "cta_text",
-          type: "text",
-          role: "cta_text",
-          content: input.variant.cta,
-          x: marginX + Math.round(ctaWidth * 0.08),
-          y: ctaY + Math.round(ctaHeight * 0.31),
-          width: Math.round(ctaWidth * 0.84),
-          font: "brand_body",
-          size: isLandscape ? 24 : 28,
-          fill: "#FFFFFF",
-          locked: false,
-        },
-        {
-          objectId: "brand_logo",
-          type: "logo",
-          role: "brand_logo",
-          content: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
-          assetId: input.brandKit.logos.primaryLogoUrl ?? undefined,
-          x: marginX,
-          y: Math.round(size.height * (isLandscape ? 0.08 : 0.07)),
-          width: logoWidth,
-          height: logoHeight,
-          locked: true,
-        },
-      ],
-    },
-    safeZones: {
-      metaStory: input.format === "9:16",
-      googleDemandGen: input.format !== "1.91:1",
-    },
-  };
-
-  return {
-    ...creativeBase,
-    previewSvg: renderCreativeSvg(creativeBase, input.brandKit),
-  };
+    sourceImageDataUrl: input.sourceImageDataUrl,
+    subheadline: input.subheadline,
+    templateId: input.template?.id,
+    templateName: input.template?.name,
+  });
 }
 
 function landingPathForOffer(offerId: string): string {

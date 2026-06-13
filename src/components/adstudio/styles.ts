@@ -390,7 +390,7 @@
   .studio-readiness.compact .studio-readiness-main{margin-bottom:0}
   .studio-readiness.compact .studio-checklist{display:none}
   .studio-mobile-panel{display:grid;gap:18px;padding-top:22px}
-  .studio-mobile-bottom{position:fixed;left:0;right:0;bottom:0;z-index:150;height:78px;border-top:1px solid var(--line-soft);background:#fff;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 12px 10px}
+  .studio-mobile-bottom{position:fixed;left:0;right:0;bottom:0;z-index:150;height:78px;border-top:1px solid var(--line-soft);background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding:8px 12px 10px}
   .studio-mobile-bottom button{border:0;border-radius:10px;background:transparent;color:var(--muted);display:grid;place-items:center;gap:2px;font-size:11.5px;font-weight:600}
   .studio-mobile-bottom button.active{background:var(--accent-tint);color:var(--accent)}
   .studio-mobile-status{position:fixed;left:12px;right:12px;bottom:84px;z-index:151;min-height:34px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;box-shadow:var(--st-sh-1);display:flex;align-items:center;justify-content:center;padding:7px 12px;color:var(--muted);font-size:12.5px;font-weight:650;text-align:center}

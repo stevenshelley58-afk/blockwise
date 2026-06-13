@@ -1,0 +1,495 @@
+import { deterministicUuid } from "./id.ts";
+import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
+import type {
+  AdStudioBrandKit,
+  AdStudioCampaign,
+  AdStudioCampaignVariant,
+  AdStudioCanvasObject,
+  AdStudioCreative,
+  AdStudioFormat,
+  AdStudioGoal,
+} from "./types.ts";
+
+export type LayoutArchetypeId =
+  | "listing_hero"
+  | "coming_soon"
+  | "open_home"
+  | "just_sold"
+  | "market_stat"
+  | "appraisal"
+  | "seller_guide"
+  | "social_proof";
+
+export type LayoutArchetypeSelectionInput = {
+  templateId?: string;
+  templateName?: string;
+  offerId: string;
+  goal: AdStudioGoal;
+  angle?: string;
+  headline?: string;
+};
+
+export type BuildArchetypeCreativeInput = {
+  campaign: AdStudioCampaign;
+  variant: AdStudioCampaignVariant;
+  brandKit: AdStudioBrandKit;
+  format: AdStudioFormat;
+  sourceImageDataUrl?: string;
+  subheadline?: string;
+  templateId?: string;
+  templateName?: string;
+};
+
+type CanvasSize = { width: number; height: number };
+
+type LayoutGeometry = {
+  marginX: number;
+  copyX: number;
+  copyY: number;
+  copyWidth: number;
+  headlineSize: number;
+  subheadSize: number;
+  ctaX: number;
+  ctaWidth: number;
+  ctaHeight: number;
+  logoX: number;
+  logoY: number;
+  logoWidth: number;
+  logoHeight: number;
+  scrim: string;
+  supportObjects: AdStudioCanvasObject[];
+};
+
+export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): LayoutArchetypeId {
+  const templateId = input.templateId?.toLowerCase();
+  if (templateId === "just_listed" || templateId === "new_to_market") return "listing_hero";
+  if (templateId === "coming_soon") return "coming_soon";
+  if (templateId === "open_home") return "open_home";
+  if (templateId === "just_sold") return "just_sold";
+  if (templateId === "market_update") return "market_stat";
+  if (templateId === "price_update" || templateId === "free_appraisal") return "appraisal";
+  if (templateId === "seller_checklist") return "seller_guide";
+  if (templateId === "buyer_demand") return "social_proof";
+
+  const haystack = [input.templateId, input.templateName, input.offerId, input.goal, input.angle, input.headline]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\bcoming[_ -]?soon\b/.test(haystack)) return "coming_soon";
+  if (/\bopen[_ -]?home\b|\binspection\b|\binspect\b/.test(haystack)) return "open_home";
+  if (/\bjust[_ -]?sold\b|\bsold\b|recent[_ -]?sales/.test(haystack)) return "just_sold";
+  if (/\bmarket[_ -]?update\b|\bmarket\b|\bsnapshot\b|suburb[_ -]?market[_ -]?report/.test(haystack)) return "market_stat";
+  if (/\bfree[_ -]?appraisal\b|\bappraisal\b|\bprice[_ -]?update\b|\bhome[_ -]?value\b/.test(haystack)) {
+    return "appraisal";
+  }
+  if (/\bseller[_ -]?(checklist|guide|prep|mistakes)\b|\bprelisting\b|\bpre-listing\b/.test(haystack)) {
+    return "seller_guide";
+  }
+  if (/\bbuyer[_ -]?demand\b|\bsocial[_ -]?proof\b|\bproof\b/.test(haystack)) return "social_proof";
+  if (/\bjust[_ -]?listed\b|\bnew[_ -]?to[_ -]?market\b|\blisting\b/.test(haystack)) return "listing_hero";
+
+  if (input.goal === "appraisal_bookings") return "appraisal";
+  if (input.goal === "market_update_leads") return "market_stat";
+  if (input.goal === "open_home_followup") return "open_home";
+  return "seller_guide";
+}
+
+export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdStudioCreative {
+  const archetype = selectLayoutArchetype({
+    templateId: input.templateId,
+    templateName: input.templateName,
+    offerId: input.campaign.offerId,
+    goal: input.campaign.goal,
+    angle: input.variant.angle,
+    headline: input.variant.headline,
+  });
+  const size = getCanvasSize(input.format);
+  const geometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
+  const subheadline = input.subheadline ?? fallbackSubheadline(archetype, input.campaign.market.suburb);
+  const text = textLayout({
+    headline: input.variant.headline,
+    subheadline,
+    cta: input.variant.cta,
+    copyX: geometry.copyX,
+    copyY: geometry.copyY,
+    copyWidth: geometry.copyWidth,
+    headlineSize: geometry.headlineSize,
+    subheadSize: geometry.subheadSize,
+    ctaX: geometry.ctaX,
+    ctaWidth: geometry.ctaWidth,
+    ctaHeight: geometry.ctaHeight,
+    canvasHeight: size.height,
+    format: input.format,
+  });
+  const creativeBase: Omit<AdStudioCreative, "previewSvg"> = {
+    creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
+    campaignId: input.campaign.campaignId,
+    variantId: input.variant.variantId,
+    format: input.format,
+    canvas: {
+      ...size,
+      backgroundAssetId: `background_${input.variant.variantId}`,
+      objects: [
+        backgroundObject(size, input.brandKit),
+        primaryImageObject(size, input.sourceImageDataUrl, input.brandKit),
+        scrimObject(size, geometry.scrim),
+        ...geometry.supportObjects,
+        {
+          objectId: "headline",
+          type: "text",
+          role: "headline",
+          content: input.variant.headline,
+          x: geometry.copyX,
+          y: geometry.copyY,
+          width: geometry.copyWidth,
+          height: text.headlineHeight,
+          font: "brand_heading",
+          size: geometry.headlineSize,
+          fill: "#FFFFFF",
+          locked: false,
+        },
+        {
+          objectId: "subhead",
+          type: "text",
+          role: "subheadline",
+          content: subheadline,
+          x: geometry.copyX,
+          y: text.subheadY,
+          width: text.subheadWidth,
+          height: text.subheadHeight,
+          font: "brand_body",
+          size: geometry.subheadSize,
+          fill: "#FFFFFF",
+          locked: false,
+        },
+        {
+          objectId: "cta",
+          type: "shape",
+          role: "cta_button",
+          content: input.variant.cta,
+          x: geometry.ctaX,
+          y: text.ctaY,
+          width: geometry.ctaWidth,
+          height: geometry.ctaHeight,
+          fill: input.brandKit.colours.primary,
+          locked: false,
+        },
+        {
+          objectId: "cta_text",
+          type: "text",
+          role: "cta_text",
+          content: input.variant.cta,
+          x: geometry.ctaX + Math.round(geometry.ctaWidth * 0.08),
+          y: text.ctaY + Math.round(geometry.ctaHeight * 0.31),
+          width: Math.round(geometry.ctaWidth * 0.84),
+          height: Math.round((input.format === "1.91:1" ? 24 : 28) * 1.22),
+          font: "brand_body",
+          size: input.format === "1.91:1" ? 24 : 28,
+          fill: "#FFFFFF",
+          locked: false,
+        },
+        {
+          objectId: "brand_logo",
+          type: "logo",
+          role: "brand_logo",
+          content: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
+          assetId: input.brandKit.logos.primaryLogoUrl ?? undefined,
+          x: geometry.logoX,
+          y: geometry.logoY,
+          width: geometry.logoWidth,
+          height: geometry.logoHeight,
+          locked: true,
+        },
+      ],
+    },
+    safeZones: {
+      metaStory: input.format === "9:16",
+      googleDemandGen: input.format !== "1.91:1",
+    },
+  };
+
+  return {
+    ...creativeBase,
+    previewSvg: renderCreativeSvg(creativeBase, input.brandKit),
+  };
+}
+
+function geometryForArchetype(
+  archetype: LayoutArchetypeId,
+  format: AdStudioFormat,
+  size: CanvasSize,
+  brandKit: AdStudioBrandKit,
+): LayoutGeometry {
+  const isStory = format === "9:16";
+  const isLandscape = format === "1.91:1";
+  const marginX = Math.round(size.width * (isLandscape ? 0.07 : 0.08));
+  const logoWidth = isLandscape ? 164 : 180;
+  const logoHeight = isLandscape ? 58 : 64;
+  const ctaHeight = isLandscape ? 66 : 78;
+  const ctaWidth = Math.min(Math.round(size.width * (isLandscape ? 0.28 : 0.36)), 360);
+  const baseCopyWidth = Math.round(size.width * (isLandscape ? 0.55 : 0.76));
+  const baseHeadlineSize = isStory ? 70 : isLandscape ? 50 : 64;
+  const supportObjects: AdStudioCanvasObject[] = [];
+  let copyX = marginX;
+  let copyY = Math.round(size.height * (isStory ? 0.53 : isLandscape ? 0.32 : 0.5));
+  let copyWidth = baseCopyWidth;
+  let headlineSize = baseHeadlineSize;
+  let subheadSize = Math.max(28, Math.round(baseHeadlineSize * 0.42));
+  let ctaX = marginX;
+  let logoX = marginX;
+  let logoY = Math.round(size.height * (isLandscape ? 0.08 : 0.07));
+  let scrim = "rgba(7, 14, 25, 0.48)";
+
+  if (archetype === "coming_soon") {
+    copyY = Math.round(size.height * (isStory ? 0.38 : isLandscape ? 0.28 : 0.36));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.68));
+    scrim = "rgba(7, 14, 25, 0.54)";
+    supportObjects.push(bandObject(size, "announcement_band", 0.12, isLandscape ? 0.18 : 0.16, brandKit.colours.accent));
+  } else if (archetype === "open_home") {
+    copyY = Math.round(size.height * (isStory ? 0.46 : isLandscape ? 0.24 : 0.42));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.47 : 0.7));
+    scrim = "rgba(7, 14, 25, 0.44)";
+    supportObjects.push(panelObject(size, "details_panel", marginX, copyY - 42, copyWidth + 80, isLandscape ? 250 : 430));
+  } else if (archetype === "just_sold") {
+    copyY = Math.round(size.height * (isStory ? 0.56 : isLandscape ? 0.36 : 0.53));
+    scrim = "rgba(7, 14, 25, 0.5)";
+    supportObjects.push(ribbonObject(size, "sold_ribbon", marginX, logoY + logoHeight + 28, brandKit.colours.primary));
+  } else if (archetype === "market_stat") {
+    copyX = isLandscape ? Math.round(size.width * 0.48) : marginX;
+    copyY = Math.round(size.height * (isStory ? 0.47 : isLandscape ? 0.26 : 0.45));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.43 : 0.68));
+    ctaX = copyX;
+    headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
+    scrim = "rgba(7, 14, 25, 0.36)";
+    supportObjects.push(sidePanelObject(size, "market_panel", copyX - 34, brandKit.colours.secondary));
+  } else if (archetype === "appraisal") {
+    copyX = isLandscape ? Math.round(size.width * 0.5) : marginX;
+    copyY = Math.round(size.height * (isStory ? 0.51 : isLandscape ? 0.27 : 0.48));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.42 : 0.7));
+    ctaX = copyX;
+    scrim = "rgba(7, 14, 25, 0.42)";
+    supportObjects.push(panelObject(size, "value_panel", copyX - 34, copyY - 44, copyWidth + 76, isLandscape ? 312 : 520));
+  } else if (archetype === "seller_guide") {
+    copyY = Math.round(size.height * (isStory ? 0.5 : isLandscape ? 0.3 : 0.47));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.52 : 0.72));
+    scrim = "rgba(7, 14, 25, 0.46)";
+    supportObjects.push(panelObject(size, "guide_panel", marginX - 20, copyY - 44, copyWidth + 72, isLandscape ? 300 : 500));
+  } else if (archetype === "social_proof") {
+    copyY = Math.round(size.height * (isStory ? 0.52 : isLandscape ? 0.34 : 0.49));
+    copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.7));
+    headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
+    scrim = "rgba(7, 14, 25, 0.4)";
+    supportObjects.push(panelObject(size, "proof_panel", marginX - 18, copyY - 50, copyWidth + 68, isLandscape ? 296 : 480));
+  }
+
+  return {
+    marginX,
+    copyX,
+    copyY,
+    copyWidth,
+    headlineSize,
+    subheadSize,
+    ctaX,
+    ctaWidth,
+    ctaHeight,
+    logoX,
+    logoY,
+    logoWidth,
+    logoHeight,
+    scrim,
+    supportObjects,
+  };
+}
+
+function textLayout(input: {
+  headline: string;
+  subheadline: string;
+  cta: string;
+  copyX: number;
+  copyY: number;
+  copyWidth: number;
+  headlineSize: number;
+  subheadSize: number;
+  ctaX: number;
+  ctaWidth: number;
+  ctaHeight: number;
+  canvasHeight: number;
+  format: AdStudioFormat;
+}) {
+  const subheadWidth = Math.round(input.copyWidth * 0.9);
+  const headlineLineHeight = Math.round(input.headlineSize * 1.08);
+  const subheadLineHeight = Math.round(input.subheadSize * 1.22);
+  const headlineLines = estimateWrappedLineCount(input.headline, input.copyWidth, input.headlineSize, 0.56);
+  const headlineHeight = headlineLines * headlineLineHeight;
+  const subheadY = input.copyY + headlineHeight + Math.round(input.headlineSize * 0.34);
+  const subheadLines = estimateWrappedLineCount(input.subheadline, subheadWidth, input.subheadSize, 0.5);
+  const subheadHeight = subheadLines * subheadLineHeight;
+  const textBlockBottom = subheadY + subheadHeight;
+  const isStory = input.format === "9:16";
+  const isLandscape = input.format === "1.91:1";
+  const baseCtaY = Math.round(input.canvasHeight * (isStory ? 0.76 : isLandscape ? 0.66 : 0.73));
+  const maxCtaY = input.canvasHeight - Math.round(input.canvasHeight * (isStory ? 0.18 : 0.08)) - input.ctaHeight;
+  const ctaY = Math.min(
+    maxCtaY,
+    Math.max(baseCtaY, textBlockBottom + Math.round(input.subheadSize * 1.25)),
+  );
+
+  return {
+    headlineHeight,
+    subheadY,
+    subheadWidth,
+    subheadHeight,
+    ctaY,
+  };
+}
+
+function backgroundObject(size: CanvasSize, brandKit: AdStudioBrandKit): AdStudioCanvasObject {
+  return {
+    objectId: "background",
+    type: "shape",
+    role: "background_shape",
+    x: 0,
+    y: 0,
+    width: size.width,
+    height: size.height,
+    fill: brandKit.colours.secondary,
+    locked: true,
+  };
+}
+
+function primaryImageObject(
+  size: CanvasSize,
+  sourceImageDataUrl: string | undefined,
+  brandKit: AdStudioBrandKit,
+): AdStudioCanvasObject {
+  return {
+    objectId: "primary_image",
+    type: "image",
+    role: "primary_image",
+    content: sourceImageDataUrl,
+    assetId: sourceImageDataUrl ? undefined : brandKit.assets.listingImages[0] ?? brandKit.assets.headshots[0] ?? undefined,
+    x: 0,
+    y: 0,
+    width: size.width,
+    height: size.height,
+    locked: false,
+  };
+}
+
+function scrimObject(size: CanvasSize, fill: string): AdStudioCanvasObject {
+  return {
+    objectId: "image_scrim",
+    type: "shape",
+    role: "image_scrim",
+    x: 0,
+    y: 0,
+    width: size.width,
+    height: size.height,
+    fill,
+    locked: true,
+  };
+}
+
+function bandObject(size: CanvasSize, role: string, yRatio: number, heightRatio: number, fill: string): AdStudioCanvasObject {
+  return {
+    objectId: role,
+    type: "shape",
+    role,
+    x: 0,
+    y: Math.round(size.height * yRatio),
+    width: size.width,
+    height: Math.round(size.height * heightRatio),
+    fill,
+    locked: true,
+  };
+}
+
+function panelObject(size: CanvasSize, role: string, x: number, y: number, width: number, height: number): AdStudioCanvasObject {
+  return {
+    objectId: role,
+    type: "shape",
+    role,
+    x: Math.max(0, x),
+    y: Math.max(0, y),
+    width: Math.min(width, size.width - Math.max(0, x)),
+    height: Math.min(height, size.height - Math.max(0, y)),
+    fill: "rgba(8, 15, 28, 0.66)",
+    locked: true,
+  };
+}
+
+function sidePanelObject(size: CanvasSize, role: string, x: number, fill: string): AdStudioCanvasObject {
+  return {
+    objectId: role,
+    type: "shape",
+    role,
+    x: Math.max(0, x),
+    y: 0,
+    width: size.width - Math.max(0, x),
+    height: size.height,
+    fill,
+    locked: true,
+  };
+}
+
+function ribbonObject(size: CanvasSize, role: string, x: number, y: number, fill: string): AdStudioCanvasObject {
+  return {
+    objectId: role,
+    type: "shape",
+    role,
+    x,
+    y,
+    width: Math.min(Math.round(size.width * 0.36), 320),
+    height: Math.round(size.height * 0.055),
+    fill,
+    locked: true,
+  };
+}
+
+function fallbackSubheadline(archetype: LayoutArchetypeId, suburb: string): string {
+  if (archetype === "open_home") return "Inspect with clearer next steps.";
+  if (archetype === "just_sold") return "Recent local sales context before you make plans.";
+  if (archetype === "market_stat") return `A plain-English ${suburb} market update.`;
+  if (archetype === "appraisal") return "A practical local price update.";
+  if (archetype === "coming_soon") return "Local context before the campaign launches.";
+  if (archetype === "social_proof") return "Local enquiry context without the hype.";
+  if (archetype === "listing_hero") return "A fresh local listing to watch.";
+  return `Download the ${suburb} seller prep checklist.`;
+}
+
+export function estimateLayoutWrappedLineCount(
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  widthFactor: number,
+): number {
+  return estimateWrappedLineCount(text, maxWidth, fontSize, widthFactor);
+}
+
+function estimateWrappedLineCount(text: string, maxWidth: number, fontSize: number, widthFactor: number): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 1;
+
+  const spaceWidth = fontSize * 0.3;
+  let lines = 1;
+  let currentWidth = 0;
+
+  for (const word of words) {
+    const wordWidth = Math.max(fontSize, word.length * fontSize * widthFactor);
+    if (currentWidth === 0) {
+      currentWidth = wordWidth;
+      continue;
+    }
+
+    const nextWidth = currentWidth + spaceWidth + wordWidth;
+    if (nextWidth <= maxWidth) {
+      currentWidth = nextWidth;
+    } else {
+      lines += 1;
+      currentWidth = wordWidth;
+    }
+  }
+
+  return lines;
+}

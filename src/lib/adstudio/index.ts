@@ -22,7 +22,35 @@ export {
 } from "./creative-export.ts";
 export { buildAdStudioExportPackage } from "./export-package.ts";
 export { generateAdStudioCampaignPack, type GenerateCampaignPackInput } from "./generator.ts";
-export { AD_STUDIO_TEMPLATES, resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
+export {
+  buildArchetypeCreative,
+  estimateLayoutWrappedLineCount,
+  selectLayoutArchetype,
+  type BuildArchetypeCreativeInput,
+  type LayoutArchetypeId,
+  type LayoutArchetypeSelectionInput,
+} from "./layout-archetypes.ts";
+export {
+  checkLayoutCta,
+  checkLayoutLogo,
+  checkLayoutOverlap,
+  checkLayoutReadability,
+  checkLayoutSafeZones,
+  runLayoutQA,
+  type LayoutQACheckName,
+  type LayoutQACheckResult,
+  type LayoutQAIssue,
+  type LayoutQAResult,
+} from "./layout-qa.ts";
+export {
+  AD_STUDIO_TEMPLATES,
+  builtInAdStudioTemplates,
+  mapAdStudioLibraryTemplate,
+  mergeAdStudioTemplateLibrary,
+  resolveAdStudioTemplate,
+  type AdStudioLibraryTemplate,
+  type AdStudioTemplate,
+} from "./templates.ts";
 export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,

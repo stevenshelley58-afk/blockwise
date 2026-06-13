@@ -1,0 +1,1555 @@
+{
+  "imageBriefs": [
+    {
+      "brief_id": "IMG-HOMEVALUE-Q",
+      "name": "Home-Value Question Card",
+      "concept": "Big curiosity question over a recognisable local home; price/CTA chip.",
+      "layout": "Top 55% property photo (street-facing single dwelling). Bottom 45% solid brand-colour panel. Headline question reversed out large. Round CTA chip bottom-right. Agent logo top-left, small headshot circle bottom-left.",
+      "imagery": "Warm, sunny exterior of a typical local home (not luxury) so owners self-identify. Avoid recognisable real addresses unless owned.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Brand primary panel + white type; one accent colour for the CTA chip.",
+      "text_rules": "Headline <= 6 words. One question only. Suburb name in the question. No price guarantees.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "9:16 story/reel"
+      ],
+      "ai_prompt_seed": "Big curiosity question over a recognisable local home; price/CTA chip.\nLayout: Top 55% property photo (street-facing single dwelling). Bottom 45% solid brand-colour panel. Headline question reversed out large. Round CTA chip bottom-right. Agent logo top-left, small headshot circle bottom-left.\nImagery: Warm, sunny exterior of a typical local home (not luxury) so owners self-identify. Avoid recognisable real addresses unless owned.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Brand primary panel + white type; one accent colour for the CTA chip.\nText rules: Headline <= 6 words. One question only. Suburb name in the question. No price guarantees."
+    },
+    {
+      "brief_id": "IMG-STAT-CARD",
+      "name": "Suburb Stat Card",
+      "concept": "Data-led card: one giant percentage + supporting suburb stats.",
+      "layout": "Left third: property/suburb photo strip. Right two-thirds: dark card with ONE hero stat (e.g. +23%), 2-3 secondary stat rows with check icons, suburb + date stamp, CTA bar at base.",
+      "imagery": "Suburb skyline / streetscape, slightly desaturated behind a coloured overlay so numbers pop.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Dark navy/charcoal card, green up-arrow accents for positive stats, white type.",
+      "text_rules": "Always show the data period (e.g. 'April 2026') and source. Use check rows. Hero stat <= 4 chars.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "1.91:1 link"
+      ],
+      "ai_prompt_seed": "Data-led card: one giant percentage + supporting suburb stats.\nLayout: Left third: property/suburb photo strip. Right two-thirds: dark card with ONE hero stat (e.g. +23%), 2-3 secondary stat rows with check icons, suburb + date stamp, CTA bar at base.\nImagery: Suburb skyline / streetscape, slightly desaturated behind a coloured overlay so numbers pop.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Dark navy/charcoal card, green up-arrow accents for positive stats, white type.\nText rules: Always show the data period (e.g. 'April 2026') and source. Use check rows. Hero stat <= 4 chars."
+    },
+    {
+      "brief_id": "IMG-REPORT-COVER",
+      "name": "Report / Magazine Cover",
+      "concept": "Free downloadable report styled as a glossy quarterly magazine cover.",
+      "layout": "Full-bleed hero suburb photo, darkened top + bottom gradients. Masthead title top ('{{suburb}} Market Report'). '[FREE]' flash badge top-right. Edition line ('Q2 2026') under title. Download CTA bar at base.",
+      "imagery": "Aspirational but local: aerial suburb, coastline, or signature street. Glossy magazine feel.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Editorial: serif masthead, gold/teal accent flash badge.",
+      "text_rules": "'[FREE]' must read as a value flash, not clickbait. Include edition/date. Avoid forward-looking guarantees.",
+      "formats": [
+        "4:5 feed",
+        "1:1 feed",
+        "9:16 story"
+      ],
+      "ai_prompt_seed": "Free downloadable report styled as a glossy quarterly magazine cover.\nLayout: Full-bleed hero suburb photo, darkened top + bottom gradients. Masthead title top ('{{suburb}} Market Report'). '[FREE]' flash badge top-right. Edition line ('Q2 2026') under title. Download CTA bar at base.\nImagery: Aspirational but local: aerial suburb, coastline, or signature street. Glossy magazine feel.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Editorial: serif masthead, gold/teal accent flash badge.\nText rules: '[FREE]' must read as a value flash, not clickbait. Include edition/date. Avoid forward-looking guarantees."
+    },
+    {
+      "brief_id": "IMG-JUST-SOLD",
+      "name": "SOLD Stamp Over Property",
+      "concept": "Celebration proof: bold SOLD sticker across a real recent sale photo.",
+      "layout": "Full property photo. Diagonal or stamped 'SOLD' ribbon. Result chip (days on market / N bidders / 'above reserve') bottom strip. Agent badge corner.",
+      "imagery": "The actual sold property, hero angle. Bright, celebratory.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Red/green SOLD ribbon, brand strip at base.",
+      "text_rules": "Only factual results (e.g. 'SOLD in 14 days', 'N registered bidders'). No invented figures. No 'we'll sell yours for X'.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "carousel cover"
+      ],
+      "ai_prompt_seed": "Celebration proof: bold SOLD sticker across a real recent sale photo.\nLayout: Full property photo. Diagonal or stamped 'SOLD' ribbon. Result chip (days on market / N bidders / 'above reserve') bottom strip. Agent badge corner.\nImagery: The actual sold property, hero angle. Bright, celebratory.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Red/green SOLD ribbon, brand strip at base.\nText rules: Only factual results (e.g. 'SOLD in 14 days', 'N registered bidders'). No invented figures. No 'we'll sell yours for X'."
+    },
+    {
+      "brief_id": "IMG-JUST-LISTED",
+      "name": "Just-Listed Listing Bar",
+      "concept": "Hero property photo + classic listing spec bar (beds/baths/cars).",
+      "layout": "Hero photo top 75%. 'JUST LISTED' tag top-left. Spec bar at base: {{beds}} bed | {{baths}} bath | {{cars}} car | {{land}}. Address + price line. Agent corner badge.",
+      "imagery": "Best single hero shot of the property (facade or key living space).  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Minimal; let the property lead. Brand-colour spec bar.",
+      "text_rules": "Display price honestly (range or 'Offers from'). Include property type. State/agency licence in profile.",
+      "formats": [
+        "4:5 feed",
+        "1:1 feed",
+        "9:16 story"
+      ],
+      "ai_prompt_seed": "Hero property photo + classic listing spec bar (beds/baths/cars).\nLayout: Hero photo top 75%. 'JUST LISTED' tag top-left. Spec bar at base: {{beds}} bed | {{baths}} bath | {{cars}} car | {{land}}. Address + price line. Agent corner badge.\nImagery: Best single hero shot of the property (facade or key living space).  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Minimal; let the property lead. Brand-colour spec bar.\nText rules: Display price honestly (range or 'Offers from'). Include property type. State/agency licence in profile."
+    },
+    {
+      "brief_id": "IMG-DEV-HERO",
+      "name": "Development Hero / Off-the-Plan",
+      "concept": "Architectural render hero for a new development with price-from + deposit hook.",
+      "layout": "Full-bleed architectural render. Project name overlay. Key line: '1, 2 & 3 Bed Residences'. Price-from + '{{deposit_pct}} deposit' flash. Display-suite CTA.",
+      "imagery": "Premium 3D render or finished build, dusk lighting, lifestyle cues.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Elegant, muted luxury (stone, charcoal, brass). Thin serif/sans mix.",
+      "text_rules": "Mark renders as 'Artist impression'. '*' any 'from' price. Deposit/finance claims must be accurate.",
+      "formats": [
+        "1.91:1 link",
+        "4:5 feed",
+        "9:16 story"
+      ],
+      "ai_prompt_seed": "Architectural render hero for a new development with price-from + deposit hook.\nLayout: Full-bleed architectural render. Project name overlay. Key line: '1, 2 & 3 Bed Residences'. Price-from + '{{deposit_pct}} deposit' flash. Display-suite CTA.\nImagery: Premium 3D render or finished build, dusk lighting, lifestyle cues.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Elegant, muted luxury (stone, charcoal, brass). Thin serif/sans mix.\nText rules: Mark renders as 'Artist impression'. '*' any 'from' price. Deposit/finance claims must be accurate."
+    },
+    {
+      "brief_id": "IMG-OPEN-HOME",
+      "name": "Open-Home Inspection Banner",
+      "concept": "Inspection date/time banner over the property.",
+      "layout": "Property photo. Bold 'OPEN THIS SATURDAY' banner. Time + address chip. Calendar icon. Agent corner.",
+      "imagery": "Inviting, well-lit interior or facade.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Bright, energetic accent for the time banner.",
+      "text_rules": "Exact date/time/address. Clear enquiry path.",
+      "formats": [
+        "1:1 feed",
+        "9:16 story",
+        "4:5 feed"
+      ],
+      "ai_prompt_seed": "Inspection date/time banner over the property.\nLayout: Property photo. Bold 'OPEN THIS SATURDAY' banner. Time + address chip. Calendar icon. Agent corner.\nImagery: Inviting, well-lit interior or facade.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Bright, energetic accent for the time banner.\nText rules: Exact date/time/address. Clear enquiry path."
+    },
+    {
+      "brief_id": "IMG-AUCTION",
+      "name": "Auction Hammer Banner",
+      "concept": "Auction energy: hammer motif + auction date, or result with bidder count.",
+      "layout": "Property photo darkened. Hammer motif. 'AUCTION {{date}}' or 'SOLD UNDER THE HAMMER'. Result chip (N bidders) for post-auction variant.",
+      "imagery": "Dramatic property angle, higher contrast.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Bold black/white + single hot accent (red/gold).",
+      "text_rules": "Auction date/time/venue accurate. Post-auction only factual bidder/price figures.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "9:16 story"
+      ],
+      "ai_prompt_seed": "Auction energy: hammer motif + auction date, or result with bidder count.\nLayout: Property photo darkened. Hammer motif. 'AUCTION {{date}}' or 'SOLD UNDER THE HAMMER'. Result chip (N bidders) for post-auction variant.\nImagery: Dramatic property angle, higher contrast.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Bold black/white + single hot accent (red/gold).\nText rules: Auction date/time/venue accurate. Post-auction only factual bidder/price figures."
+    },
+    {
+      "brief_id": "IMG-LANDLORD",
+      "name": "Hands-off Landlord Lifestyle",
+      "concept": "Relaxed owner / hands-off management promise.",
+      "layout": "Lifestyle image (relaxed person, or tidy managed property). Overlay headline 'Income, not hassle'. 3 benefit ticks. PM CTA.",
+      "imagery": "Calm lifestyle or pristine rental interior; reassuring, not corporate-stocky.  AU context: Australian setting, $AUD, Australian English; avoid US cues.",
+      "palette": "Trust blues/greens, soft.",
+      "text_rules": "No guaranteed-yield claims. Fees/terms honest. Tenancy law compliant.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "1.91:1 link"
+      ],
+      "ai_prompt_seed": "Relaxed owner / hands-off management promise.\nLayout: Lifestyle image (relaxed person, or tidy managed property). Overlay headline 'Income, not hassle'. 3 benefit ticks. PM CTA.\nImagery: Calm lifestyle or pristine rental interior; reassuring, not corporate-stocky.  AU context: Australian setting, $AUD, Australian English; avoid US cues.\nPalette: Trust blues/greens, soft.\nText rules: No guaranteed-yield claims. Fees/terms honest. Tenancy law compliant."
+    },
+    {
+      "brief_id": "IMG-COLIVING",
+      "name": "Co-living / Yield Diagram",
+      "concept": "Investor yield story: single home -> multiple incomes, $ figures.",
+      "layout": "Before/after or floorplan-to-rooms diagram. Hero figure ('$600/wk -> $2,000/wk'). 'High-yield' badge. Watch/learn CTA (often video).",
+      "imagery": "Floorplan graphic or room conversion; clean infographic.  AU context: Australian setting, $AUD, Australian English; avoid US cues.",
+      "palette": "Confident finance palette, green growth accents.",
+      "text_rules": "Yield/return figures must be substantiated/illustrative-only and labelled. No financial-advice claims; add 'general information only'.",
+      "formats": [
+        "1:1 feed",
+        "9:16 reel cover",
+        "4:5 feed"
+      ],
+      "ai_prompt_seed": "Investor yield story: single home -> multiple incomes, $ figures.\nLayout: Before/after or floorplan-to-rooms diagram. Hero figure ('$600/wk -> $2,000/wk'). 'High-yield' badge. Watch/learn CTA (often video).\nImagery: Floorplan graphic or room conversion; clean infographic.  AU context: Australian setting, $AUD, Australian English; avoid US cues.\nPalette: Confident finance palette, green growth accents.\nText rules: Yield/return figures must be substantiated/illustrative-only and labelled. No financial-advice claims; add 'general information only'."
+    },
+    {
+      "brief_id": "IMG-AGENT-PORTRAIT",
+      "name": "Agent Intro Portrait",
+      "concept": "Personal brand: agent headshot + name + suburbs covered.",
+      "layout": "Right: clean agent headshot cut-out on brand panel. Left: name, title, agency, 'Covering {{suburb_list}}'. Contact CTA.",
+      "imagery": "Professional, approachable headshot, brand-colour backdrop.  AU context: Australian setting, $AUD, Australian English; avoid US cues.",
+      "palette": "Brand colours, confident.",
+      "text_rules": "Accurate title/licence. Coverage area factual.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "9:16 story"
+      ],
+      "ai_prompt_seed": "Personal brand: agent headshot + name + suburbs covered.\nLayout: Right: clean agent headshot cut-out on brand panel. Left: name, title, agency, 'Covering {{suburb_list}}'. Contact CTA.\nImagery: Professional, approachable headshot, brand-colour backdrop.  AU context: Australian setting, $AUD, Australian English; avoid US cues.\nPalette: Brand colours, confident.\nText rules: Accurate title/licence. Coverage area factual."
+    },
+    {
+      "brief_id": "IMG-TESTIMONIAL",
+      "name": "Testimonial Quote Card",
+      "concept": "Client review as social proof.",
+      "layout": "Quote marks, 5-star row, the review text, client first name + suburb, agent/agency badge. Optional small property or client photo.",
+      "imagery": "Soft brand background or subtle property photo.  AU context: Australian setting, $AUD, Australian English; avoid US cues.",
+      "palette": "Brand, with gold stars.",
+      "text_rules": "Real quotes only, with consent. Star rating must be genuine.",
+      "formats": [
+        "1:1 feed",
+        "4:5 feed",
+        "carousel slide"
+      ],
+      "ai_prompt_seed": "Client review as social proof.\nLayout: Quote marks, 5-star row, the review text, client first name + suburb, agent/agency badge. Optional small property or client photo.\nImagery: Soft brand background or subtle property photo.  AU context: Australian setting, $AUD, Australian English; avoid US cues.\nPalette: Brand, with gold stars.\nText rules: Real quotes only, with consent. Star rating must be genuine."
+    },
+    {
+      "brief_id": "IMG-GUIDE-MOCKUP",
+      "name": "Guide / eBook Mockup",
+      "concept": "Lead-magnet guide shown as a 3D ebook/booklet.",
+      "layout": "3D booklet/tablet mockup of the guide cover. Title of guide. Bullet of what's inside. Download CTA + privacy note.",
+      "imagery": "Rendered ebook/booklet on clean gradient.  AU context: Australian setting, $AUD, Australian English; avoid US cues.",
+      "palette": "Brand + clean white.",
+      "text_rules": "Deliver what's promised. Lead form needs privacy-policy URL.",
+      "formats": [
+        "1:1 feed",
+        "1.91:1 link",
+        "4:5 feed"
+      ],
+      "ai_prompt_seed": "Lead-magnet guide shown as a 3D ebook/booklet.\nLayout: 3D booklet/tablet mockup of the guide cover. Title of guide. Bullet of what's inside. Download CTA + privacy note.\nImagery: Rendered ebook/booklet on clean gradient.  AU context: Australian setting, $AUD, Australian English; avoid US cues.\nPalette: Brand + clean white.\nText rules: Deliver what's promised. Lead form needs privacy-policy URL."
+    },
+    {
+      "brief_id": "IMG-DOWNSIZER",
+      "name": "Downsizer Lifestyle Community",
+      "concept": "Aspirational over-55s lifestyle community.",
+      "layout": "Lifestyle community photo (clubhouse/garden). Headline 'Resize to get the best out of life'. Feature ticks. 'From $price'. Enquiry CTA.",
+      "imagery": "Active, sociable mature-lifestyle imagery; resort feel.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.",
+      "palette": "Warm, calm, premium.",
+      "text_rules": "No age-based ad targeting (housing rules). Message can speak to lifestyle, not demographics. 'From' price starred.",
+      "formats": [
+        "1.91:1 link",
+        "4:5 feed",
+        "1:1 feed"
+      ],
+      "ai_prompt_seed": "Aspirational over-55s lifestyle community.\nLayout: Lifestyle community photo (clubhouse/garden). Headline 'Resize to get the best out of life'. Feature ticks. 'From $price'. Enquiry CTA.\nImagery: Active, sociable mature-lifestyle imagery; resort feel.  AU context: local home vernacular (Colorbond roof, verandah, weatherboard/brick-veneer/render, native garden, gum trees), harsh bright sun, clear sky; avoid any US suburban cues.\nPalette: Warm, calm, premium.\nText rules: No age-based ad targeting (housing rules). Message can speak to lifestyle, not demographics. 'From' price starred."
+    }
+  ],
+  "templates": [
+    {
+      "template_key": "HV-01",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "How much is your home worth?",
+      "primary_text": "Thinking of selling in {{suburb}}? Get a free, no-pressure price update from a local agent who knows the street, not just the suburb. Find out what your home could be worth in today's market.",
+      "description": "Free local price update in {{suburb}}",
+      "cta": "Request price update",
+      "variables": [
+        "{{suburb}}",
+        "{{agent_name}}",
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-HOMEVALUE-Q",
+      "evidence_score": 90.0,
+      "winner_rationale": "'How Much is Your Home Worth?' (Investors Edge) ran 419 days; the highest-frequency hook in the DB ('home worth', 'how much is YOUR HOME worth'). Cross-agency proven.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "HV-02",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "Get your FREE {{suburb}} price update",
+      "primary_text": "Hey {{suburb}} homeowners - how much is your home worth in this current market? Get a free, instant price update. No obligation, no door-knocking, just a clear local number.",
+      "description": "Instant, no-obligation home value",
+      "cta": "Request price update",
+      "variables": [
+        "{{suburb}}",
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-HOMEVALUE-Q",
+      "evidence_score": 82.0,
+      "winner_rationale": "Peard Real Estate 'Get your FREE price update now / Hey {Suburb} Homeowners' run identically across Kingsley, North Beach etc. - reusable suburb-swap winner.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "HV-03",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Passive owners"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "You might be surprised",
+      "primary_text": "Most {{suburb}} owners are surprised when they hear what their home is worth right now. Curious? Get a free price update and find out where you stand - no pressure to sell.",
+      "description": "See what your {{suburb}} home could fetch",
+      "cta": "Request price update",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-HOMEVALUE-Q",
+      "evidence_score": 74.0,
+      "winner_rationale": "Hook 'SURPRISED to hear how much your home is worth' appears 19x across advertisers - a proven curiosity opener.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "HV-04",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Sellers",
+        "Passive owners",
+        "Investors"
+      ],
+      "format": [
+        "Single image",
+        "Carousel"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "Your {{suburb}} value in 5 seconds",
+      "primary_text": "Want to know what your property is worth? Get a FREE instant price estimate for your {{suburb}} home. Whether you're selling, buying or just curious, it takes seconds.",
+      "description": "Free instant property price estimate",
+      "cta": "Request price update",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-HOMEVALUE-Q",
+      "evidence_score": 78.0,
+      "winner_rationale": "Xceed 'Receive Your Free Property Price Estimator Instantly!' + Neon '[FREE] Property Report - Takes You 5 Seconds' - low-friction instant-estimate hook recurs across agencies.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "HV-05",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "FOMO",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "How much are you leaving behind?",
+      "primary_text": "{{suburb}}, how much are you leaving on the table? Right now homes here are selling for more than most owners expect, and buyers are still active. Get your free property report.",
+      "description": "Find out before you list",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 76.0,
+      "winner_rationale": "Neon Property Group '[FREE] Property Report / How Much Are You Leaving on the Table?' (77d, active) - loss-aversion framing.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "HV-06",
+      "status": "approved",
+      "category": "Home Value / Appraisal",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "free_appraisal",
+      "offer_id": "home_value_update",
+      "goal": "appraisal_bookings",
+      "headline": "Free appraisal with {{agent_name}}",
+      "primary_text": "Free appraisals in {{suburb}} - want to know what your home is worth? The market is strong and it's a great time to understand your options. Book a no-pressure appraisal with {{agent_name}}.",
+      "description": "Book a no-pressure local appraisal",
+      "cta": "Book now",
+      "variables": [
+        "{{suburb}}",
+        "{{agent_name}}"
+      ],
+      "image_brief_id": "IMG-AGENT-PORTRAIT",
+      "evidence_score": 80.0,
+      "winner_rationale": "'FREE APPRAISAL WITH ALYSSA' (95d, 7 versions) - personalising the appraisal to a named agent lifts brandFit + local trust.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "MU-01",
+      "status": "approved",
+      "category": "Market Update / Report",
+      "audience": [
+        "Sellers",
+        "Passive owners",
+        "Investors"
+      ],
+      "format": [
+        "Single image",
+        "Carousel"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "suburb_market_report",
+      "goal": "market_update_leads",
+      "headline": "[FREE] {{suburb}} market report",
+      "primary_text": "{{suburb}} market update: prices moved {{growth_12m}} over the past year. Our latest quarterly report breaks down median values, buyer demand and where the market is heading. Grab your free digital copy.",
+      "description": "Free quarterly {{suburb}} report",
+      "cta": "Download",
+      "variables": [
+        "{{suburb}}",
+        "{{growth_12m}}",
+        "{{median_value}}",
+        "{{edition}}"
+      ],
+      "image_brief_id": "IMG-REPORT-COVER",
+      "evidence_score": 96.0,
+      "winner_rationale": "Vivian's '[FREE] Digital Copy of our Mosman Park Report / Prices skyrocket 23%' - 778-856 days active, 7 versions. Top winner in the DB; market_update has the highest avg longevity (139d).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "MU-02",
+      "status": "approved",
+      "category": "Market Update / Report",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "suburb_market_report",
+      "goal": "market_update_leads",
+      "headline": "{{suburb}} property market update",
+      "primary_text": "The {{suburb}} market is moving, and now is a good time to take stock. Our latest update shares key insights on buyer demand, listing numbers and recent results. Straightforward, local and relevant to you.",
+      "description": "Buyer demand, stock & recent results",
+      "cta": "Get market update",
+      "variables": [
+        "{{suburb}}",
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 85.0,
+      "winner_rationale": "'Berwick Property Market Update' / 'Local Market Report - Beaconsfield Upper' (240-251d, active) - JR Property suburb-report series.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "MU-03",
+      "status": "approved",
+      "category": "Market Update / Report",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Carousel"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "suburb_market_report",
+      "goal": "market_update_leads",
+      "headline": "See the latest trends in your area",
+      "primary_text": "Buyer demand remains strong across {{suburb}}, with well-presented homes selling quickly. Download your free Market Update to see the full picture - prices, demand and what it means if you're thinking of selling.",
+      "description": "Free local market snapshot",
+      "cta": "Learn More",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 83.0,
+      "winner_rationale": "'See the Latest Trends in Your Area' ran 282 days (active, carousel) - soft-intent TOFU opener that feeds the report offer.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "MU-04",
+      "status": "approved",
+      "category": "Market Update / Report",
+      "audience": [
+        "Passive owners",
+        "Investors"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "suburb_market_report",
+      "goal": "market_update_leads",
+      "headline": "{{suburb}} median: {{median_value}}",
+      "primary_text": "Updated median value for {{suburb}}: {{median_value}} ({{growth_12m}} year-on-year). Discover the latest on the local market in our newest quarterly report - investment, demand and price trends in one place.",
+      "description": "Latest median + 12-month trend",
+      "cta": "Download",
+      "variables": [
+        "{{suburb}}",
+        "{{median_value}}",
+        "{{growth_12m}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 88.0,
+      "winner_rationale": "Vivian's 'UPDATED MEDIAN VALUE Mosman Park $2.19M / Prices Surge 23%' image variant (778d). Stat-card format travels across suburbs.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "BD-01",
+      "status": "approved",
+      "category": "Buyer Demand",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "FOMO",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "buyer_demand",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Are buyers competing for homes like yours?",
+      "primary_text": "Property values across {{suburb}} have shifted - but not every street is moving the same way. If you've been thinking about selling, the buyer pool right now might surprise you. See where your home sits.",
+      "description": "See current demand for your home type",
+      "cta": "Learn More",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 79.0,
+      "winner_rationale": "'Are Buyers Still Competing For Homes Like Yours?' (carousel, active) - demand-led seller prompt without over-claiming.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "BD-02",
+      "status": "approved",
+      "category": "Buyer Demand",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "buyer_demand",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Curious what your home is worth?",
+      "primary_text": "{{suburb}} property update: {{growth_12m}} growth over the past 12 months, {{growth_5y}} over 5 years, and {{active_buyers}} active buyers right now. Want to know what yours could be worth? Get your free update.",
+      "description": "{{active_buyers}} active buyers in {{suburb}}",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}",
+        "{{growth_12m}}",
+        "{{growth_5y}}",
+        "{{active_buyers}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 86.0,
+      "winner_rationale": "Renouf Real Estate 'Curious what your home is worth? / {Suburb} PROPERTY UPDATE: X% / Y% / N Active Buyers' - same structure run across Alexandra Hills, Ormiston, Wellington Point. Highly reusable.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "BD-03",
+      "status": "approved",
+      "category": "Buyer Demand",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Urgency / Scarcity",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "buyer_demand",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Strong demand. Low stock.",
+      "primary_text": "The {{suburb}} market is strong, buyer demand is high and quality stock is low - which is exactly when well-prepared sellers do best. Thinking about it? Start with a free price update.",
+      "description": "A good window for {{suburb}} sellers",
+      "cta": "Request price update",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-HOMEVALUE-Q",
+      "evidence_score": 75.0,
+      "winner_rationale": "'The market is strong, buyer demand is high, and it's a great time to sell' recurs in long-running appraisal ads (e.g. Free Appraisal with Alyssa, 95d).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JS-01",
+      "status": "approved",
+      "category": "Just Sold / Social Proof",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Social proof",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "just_sold",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "Just sold - yours could be next",
+      "primary_text": "More {{suburb}} homes successfully sold! See how our strategy delivers strong results for local sellers. Swipe to view our recent sales - then find out what it could mean for your home.",
+      "description": "Recent {{suburb}} sales + your position",
+      "cta": "Learn More",
+      "variables": [
+        "{{suburb}}",
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-JUST-SOLD",
+      "evidence_score": 84.0,
+      "winner_rationale": "Ray White Dethridge Groves 'Just Sold - yours could be next' (carousel, 13 creative versions - heavily iterated = backed by spend).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JS-02",
+      "status": "approved",
+      "category": "Just Sold / Social Proof",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Story / Emotional",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "just_sold",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "Another one sold in {{suburb}}",
+      "primary_text": "Another sold - {{address}}! We loved selling this one. After getting it presentation-ready and running the right marketing campaign, we achieved a great result for the owners. Thinking of selling? Let's talk.",
+      "description": "How we got the result",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}",
+        "{{address}}",
+        "{{agent_name}}"
+      ],
+      "image_brief_id": "IMG-JUST-SOLD",
+      "evidence_score": 78.0,
+      "winner_rationale": "Vivian's 'ANOTHER SOLD - 3 Houston Place, Mount Claremont' (194d, video) - behind-the-result storytelling builds vendor trust.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JS-03",
+      "status": "approved",
+      "category": "Just Sold / Social Proof",
+      "audience": [
+        "Sellers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Social proof",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "just_sold",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "Sold under the hammer",
+      "primary_text": "SOLD via auction - {{address}}. With {{bidders}} registered bidders and a result the sellers are thrilled with. Want this kind of competition for your home? Let's talk strategy.",
+      "description": "{{bidders}} bidders. Great result.",
+      "cta": "Learn more",
+      "variables": [
+        "{{address}}",
+        "{{bidders}}"
+      ],
+      "image_brief_id": "IMG-AUCTION",
+      "evidence_score": 77.0,
+      "winner_rationale": "Neon Property Group 'SOLD VIA AUCTION 7 Namoi Court - 8 registered bidders, $1,410,000' - concrete proof with real figures.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JS-04",
+      "status": "approved",
+      "category": "Just Sold / Social Proof",
+      "audience": [
+        "Passive owners"
+      ],
+      "format": [
+        "Carousel"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "What sold near you in {{suburb}}?",
+      "primary_text": "Curious what's been selling near you? Get a free recent-sales report for {{suburb}} - real comparable results that show where your home could sit in today's market.",
+      "description": "Free recent comparable sales",
+      "cta": "Get recent sales",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 74.0,
+      "winner_rationale": "recent_sales_report is a core AdStudio offer; 'just sold' proof ads (avg 37d) convert best when tied to a comparables download.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JL-01",
+      "status": "approved",
+      "category": "Just Listed / New to Market",
+      "audience": [
+        "Buyers",
+        "Sellers"
+      ],
+      "format": [
+        "Single image",
+        "Carousel"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "just_listed",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Just listed in {{suburb}}",
+      "primary_text": "Just listed | {{address}}\n{{beds}} bed | {{baths}} bath | {{cars}} car | {{land}}\nModern, low-maintenance living in a convenient {{suburb}} location. Enquire for an inspection time.",
+      "description": "{{beds}}/{{baths}}/{{cars}} - book an inspection",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}",
+        "{{address}}",
+        "{{beds}}",
+        "{{baths}}",
+        "{{cars}}",
+        "{{land}}"
+      ],
+      "image_brief_id": "IMG-JUST-LISTED",
+      "evidence_score": 80.0,
+      "winner_rationale": "'Just Listed | 2/19 Waratah Avenue / 3 Bed 2 Bath 1 Car' (Renouf) + 'Just Listed' among top hooks (23x). Spec-bar layout is the category default.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JL-02",
+      "status": "approved",
+      "category": "Just Listed / New to Market",
+      "audience": [
+        "Buyers",
+        "First-home buyers"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "FOMO",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "First time offered: {{address}}",
+      "primary_text": "{{address}} - first time offered! {{beds}} bed {{baths}} bath on {{land}}. Light, bright and perfectly positioned. Offers from {{price}}. Be quick - homes like this don't last in {{suburb}}.",
+      "description": "New to market in {{suburb}}",
+      "cta": "Send message",
+      "variables": [
+        "{{address}}",
+        "{{beds}}",
+        "{{baths}}",
+        "{{land}}",
+        "{{price}}",
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-JUST-LISTED",
+      "evidence_score": 72.0,
+      "winner_rationale": "'5 Dandy Place Bayswater / First Time Offered - Light, Bright' (39d, video). 'First time offered' adds scarcity to a standard listing.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "JL-03",
+      "status": "approved",
+      "category": "Just Listed / New to Market",
+      "audience": [
+        "Buyers",
+        "First-home buyers"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Urgency / Scarcity",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "coming_soon",
+      "offer_id": "home_value_update",
+      "goal": "buyer_leads",
+      "headline": "Selling fast - register now",
+      "primary_text": "Coming soon to {{suburb}}: {{project_or_address}}. Connected living, smart buying, boutique opportunity. Register your interest now to get first access before the public launch.",
+      "description": "Get first access before launch",
+      "cta": "Register your interest",
+      "variables": [
+        "{{suburb}}",
+        "{{project_or_address}}"
+      ],
+      "image_brief_id": "IMG-JUST-LISTED",
+      "evidence_score": 73.0,
+      "winner_rationale": "'Selling fast! Register your interest now / boutique opportunity' (The Crossings at Wellard, active) - pre-launch list-building.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "ND-01",
+      "status": "approved",
+      "category": "New Development / Off-the-Plan",
+      "audience": [
+        "Buyers",
+        "First-home buyers",
+        "Investors"
+      ],
+      "format": [
+        "Carousel",
+        "Video"
+      ],
+      "hook_style": "FOMO",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "buyer_inspection_checklist",
+      "goal": "buyer_leads",
+      "headline": "{{project_name}} now selling",
+      "primary_text": "{{project_name}} - exceed every expectation. 1, 2 & 3 bedroom residences at {{address}}. Residences from {{price}}*. A boutique opportunity in one of {{suburb}}'s best-connected pockets.",
+      "description": "1, 2 & 3 bed - from {{price}}*",
+      "cta": "Learn More",
+      "variables": [
+        "{{project_name}}",
+        "{{address}}",
+        "{{price}}",
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-DEV-HERO",
+      "evidence_score": 82.0,
+      "winner_rationale": "'Horizon Hurstville / 1, 2 & 3 Bedroom Residences / From $668k*' (carousel, multiple long-running versions). '1,2 & 3 Bedroom Residences' is a top recurring hook (26x).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "ND-02",
+      "status": "approved",
+      "category": "New Development / Off-the-Plan",
+      "audience": [
+        "First-home buyers",
+        "Buyers"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Urgency / Scarcity",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "buyer_inspection_checklist",
+      "goal": "buyer_leads",
+      "headline": "Secure your home with {{deposit_pct}} deposit",
+      "primary_text": "Your new {{suburb}} home is closer than you think. Secure a brand-new residence at {{project_name}} with only {{deposit_pct}} deposit*. Modern design, great location, limited release.",
+      "description": "Brand-new homes from {{price}}*",
+      "cta": "Learn More",
+      "variables": [
+        "{{suburb}}",
+        "{{project_name}}",
+        "{{deposit_pct}}",
+        "{{price}}"
+      ],
+      "image_brief_id": "IMG-DEV-HERO",
+      "evidence_score": 79.0,
+      "winner_rationale": "'Secure your new home with only 5% deposit' is a top recurring hook (22x) across off-the-plan campaigns - the deposit angle drives first-home-buyer leads.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "ND-03",
+      "status": "approved",
+      "category": "New Development / Off-the-Plan",
+      "audience": [
+        "Buyers",
+        "First-home buyers"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Story / Emotional",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "buyer_inspection_checklist",
+      "goal": "buyer_leads",
+      "headline": "Land now selling at {{project_name}}",
+      "primary_text": "The future is... living minutes from {{landmark}}. A variety of land now selling at {{project_name}}, {{suburb}}. There's no better time to find a lot that suits your lifestyle.",
+      "description": "Lots to suit your lifestyle",
+      "cta": "Learn More",
+      "variables": [
+        "{{project_name}}",
+        "{{suburb}}",
+        "{{landmark}}"
+      ],
+      "image_brief_id": "IMG-DEV-HERO",
+      "evidence_score": 80.0,
+      "winner_rationale": "'Variety Of Land Now Selling / Living minutes from Whiteman Park Train Station' (223d) + 'Land Now Selling / Brabham Estate' (249d). Lifestyle + transport proximity sells lots.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "OH-01",
+      "status": "approved",
+      "category": "Open Home / Inspection",
+      "audience": [
+        "Buyers"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Urgency / Scarcity",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "open_home",
+      "offer_id": "open_home_followup",
+      "goal": "open_home_followup",
+      "headline": "Open this Saturday: {{address}}",
+      "primary_text": "Open for inspection this {{day}} at {{time}} - {{address}}, {{suburb}}. {{beds}} bed {{baths}} bath. Come and see it in person. Can't make it? Message us for a private viewing.",
+      "description": "{{day}} {{time}} - all welcome",
+      "cta": "Get directions",
+      "variables": [
+        "{{address}}",
+        "{{suburb}}",
+        "{{day}}",
+        "{{time}}",
+        "{{beds}}",
+        "{{baths}}"
+      ],
+      "image_brief_id": "IMG-OPEN-HOME",
+      "evidence_score": 70.0,
+      "winner_rationale": "open_home is a core AdStudio template; open-home ads are short-lived by nature (avg 13-18d) but high-intent BOFU. Exact date/time/address drives attendance.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "OH-02",
+      "status": "approved",
+      "category": "Open Home / Inspection",
+      "audience": [
+        "Buyers",
+        "First-home buyers",
+        "Investors"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "FOMO",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "open_home",
+      "offer_id": "open_home_followup",
+      "goal": "open_home_followup",
+      "headline": "Display suite now open",
+      "primary_text": "Now's your chance to step inside {{project_name}}. Visit our on-site display suite in {{suburb}} and explore {{beds}}-bed residences from {{price}}*. Under construction - secure early.",
+      "description": "Visit the on-site display suite",
+      "cta": "Book a viewing",
+      "variables": [
+        "{{project_name}}",
+        "{{suburb}}",
+        "{{beds}}",
+        "{{price}}"
+      ],
+      "image_brief_id": "IMG-DEV-HERO",
+      "evidence_score": 74.0,
+      "winner_rationale": "'Visit the on-site Display Suite' / 'On-site Display Suite' recurs (15x) in long-running development campaigns (e.g. Burswood Point).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AU-01",
+      "status": "approved",
+      "category": "Auction",
+      "audience": [
+        "Sellers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Video",
+        "Carousel"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "auction_vs_private_treaty",
+      "goal": "seller_leads",
+      "headline": "5 reasons to sell at auction",
+      "primary_text": "5 reasons to sell at auction: it's done on the day, no conditions, it creates competition, you set the settlement terms, and the price is driven by real demand. Want to maximise your result? Let's chat.",
+      "description": "Is auction right for your home?",
+      "cta": "Learn more",
+      "variables": [
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-AUCTION",
+      "evidence_score": 76.0,
+      "winner_rationale": "Neon Property Group runs a whole educational auction series ('5 Reasons to Sell at Auction', 'Auction day can move quickly...') - consistent, low-cost authority content.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AU-02",
+      "status": "approved",
+      "category": "Auction",
+      "audience": [
+        "Buyers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Urgency / Scarcity",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "open_home",
+      "offer_id": "open_home_followup",
+      "goal": "open_home_followup",
+      "headline": "Auction {{date}}: {{address}}",
+      "primary_text": "{{address}} goes to auction {{date}} at {{time}}. {{property_desc}}. Register to bid or come feel the energy of auction day. Talk to {{agent_name}} for the contract and inspection times.",
+      "description": "Auction {{date}} - register to bid",
+      "cta": "Learn more",
+      "variables": [
+        "{{address}}",
+        "{{date}}",
+        "{{time}}",
+        "{{property_desc}}",
+        "{{agent_name}}"
+      ],
+      "image_brief_id": "IMG-AUCTION",
+      "evidence_score": 71.0,
+      "winner_rationale": "Listing auction ads ('Auction On Friday 12 June at 2:00pm') run as short BOFU bursts; high intent near the date.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AU-03",
+      "status": "approved",
+      "category": "Auction",
+      "audience": [
+        "Sellers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "seller_checklist",
+      "offer_id": "auction_vs_private_treaty",
+      "goal": "seller_leads",
+      "headline": "Auction or private sale?",
+      "primary_text": "Not sure whether to sell by auction or private treaty? Our free guide compares both - costs, timing, and which suits your property and market. Make a confident, informed decision.",
+      "description": "Free guide for {{suburb}} sellers",
+      "cta": "Compare options",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-GUIDE-MOCKUP",
+      "evidence_score": 72.0,
+      "winner_rationale": "Maps to the auction_vs_private_treaty AdStudio offer; method-comparison guides capture undecided vendors (cold-to-warm).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "PM-01",
+      "status": "approved",
+      "category": "Property Management / Landlord",
+      "audience": [
+        "Landlords",
+        "Investors"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Story / Emotional",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "Want income, not hassle?",
+      "primary_text": "Attention {{suburb}} landlords: want to be as hands-off as possible? Then it's essential to attract top-quality tenants and have the right team behind you. We handle everything - you collect the income.",
+      "description": "Full-service management in {{suburb}}",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}",
+        "{{business_name}}"
+      ],
+      "image_brief_id": "IMG-LANDLORD",
+      "evidence_score": 92.0,
+      "winner_rationale": "Investors Edge 'Want Income, Not Hassle? We Will Handle Everything / Attention Perth Landlords' - 1,103 days active. property_management has the 2nd-highest avg longevity (87d).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "PM-02",
+      "status": "approved",
+      "category": "Property Management / Landlord",
+      "audience": [
+        "Landlords",
+        "Investors"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "Stress-free hosting starts here",
+      "primary_text": "Airbnb without the stress? Sorted. Short-stay management for {{suburb}} owners - listing, guests, cleaning and reviews handled. You get the returns of short-stay without the day-to-day.",
+      "description": "Short-stay management, done for you",
+      "cta": "Learn More",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-LANDLORD",
+      "evidence_score": 85.0,
+      "winner_rationale": "Vivian's Real Estate 'Stress Free Hosting Starts Here / Airbnb Without the Stress' (279d, carousel, 7 versions).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "PM-03",
+      "status": "approved",
+      "category": "Property Management / Landlord",
+      "audience": [
+        "Landlords"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "BOFU (direct response)",
+      "adstudio_template_id": "free_appraisal",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "Is your rental underperforming?",
+      "primary_text": "Unhappy with your current property manager? Switching is easier than you think. Get a free rental appraisal for your {{suburb}} property and see what it should really be earning.",
+      "description": "Free rental appraisal in {{suburb}}",
+      "cta": "Get rental appraisal",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-LANDLORD",
+      "evidence_score": 75.0,
+      "winner_rationale": "PM switch + free rental appraisal is the BOFU complement to the long-running 'hands-off management' winners; rental-appraisal hook mirrors the top sales-appraisal hooks.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "IN-01",
+      "status": "approved",
+      "category": "Investor / Co-living",
+      "audience": [
+        "Investors",
+        "Landlords"
+      ],
+      "format": [
+        "Video"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "Turn {{rent_before}} into {{rent_after}}",
+      "primary_text": "Want to turn {{rent_before}}/week into over {{rent_after}}/week? Convert your home into a co-living property. Watch how we did it in about 30 days - then tap to see if your property suits the model.",
+      "description": "Higher-yield co-living conversions",
+      "cta": "Learn more",
+      "variables": [
+        "{{rent_before}}",
+        "{{rent_after}}"
+      ],
+      "image_brief_id": "IMG-COLIVING",
+      "evidence_score": 88.0,
+      "winner_rationale": "INVIDA co-living series ('Turn $600/week into over $2,000/week', 'Turn One Home Into a High-Yield Co-Living Investment') runs 185-213+ days across many video variants.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "IN-02",
+      "status": "approved",
+      "category": "Investor / Co-living",
+      "audience": [
+        "Investors"
+      ],
+      "format": [
+        "Video"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "One home. Multiple incomes.",
+      "primary_text": "Curious if your home could support multiple leases? This short walkthrough shows how a standard property becomes a high-yield co-living home - then tap the link to talk strategy for yours.",
+      "description": "See the co-living model explained",
+      "cta": "Watch now",
+      "variables": [
+        "\u2014"
+      ],
+      "image_brief_id": "IMG-COLIVING",
+      "evidence_score": 82.0,
+      "winner_rationale": "INVIDA 'Curious if your home could support multiple leases?' + 'Ready to see what a purpose-built co-living home looks like?' (126-213d). Walkthrough-video TOFU.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "IN-03",
+      "status": "approved",
+      "category": "Investor / Co-living",
+      "audience": [
+        "Investors"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "Before you buy your next investment",
+      "primary_text": "Before you buy your next investment property, you need to see this. We redesigned an existing family home internally for co-living - same footprint, very different return. Here's what we'd check first.",
+      "description": "What to check before you buy",
+      "cta": "Learn more",
+      "variables": [
+        "\u2014"
+      ],
+      "image_brief_id": "IMG-COLIVING",
+      "evidence_score": 78.0,
+      "winner_rationale": "'Before You Buy Your Next Investment Property' (active, video) - authority framing that pre-qualifies serious investors.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "IN-04",
+      "status": "approved",
+      "category": "Investor / Co-living",
+      "audience": [
+        "Investors"
+      ],
+      "format": [
+        "Single image",
+        "Carousel"
+      ],
+      "hook_style": "Data / Stat-led",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "market_update",
+      "offer_id": "investor_suburb_snapshot",
+      "goal": "investor_leads",
+      "headline": "{{suburb}} investor snapshot",
+      "primary_text": "Thinking about investing in {{suburb}}? Get a free investor snapshot - median price, rental yield, vacancy and 5-year growth in one place. Local data to back your next decision.",
+      "description": "Yield, vacancy & growth for {{suburb}}",
+      "cta": "Get snapshot",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 80.0,
+      "winner_rationale": "Maps directly to the investor_suburb_snapshot AdStudio offer; mirrors the proven stat-card structure that wins in market-update ads.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AB-01",
+      "status": "approved",
+      "category": "Agency Brand / Agent Intro",
+      "audience": [
+        "Sellers",
+        "Buyers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "price_update",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "{{agent_name}} - {{business_name}}",
+      "primary_text": "Buying or selling in {{suburb}}? Meet {{agent_name}} from {{business_name}}, covering {{suburb_list}}. Local knowledge, straight answers and a genuine focus on getting you the right result. Reach out today.",
+      "description": "Your local agent for {{suburb}}",
+      "cta": "Learn more",
+      "variables": [
+        "{{agent_name}}",
+        "{{business_name}}",
+        "{{suburb}}",
+        "{{suburb_list}}"
+      ],
+      "image_brief_id": "IMG-AGENT-PORTRAIT",
+      "evidence_score": 90.0,
+      "winner_rationale": "'Shelley Bezuidenhout C21 / Real Estate Agent at Century 21... Covering [suburb list]' - 422-483 days active across versions. agency_brand has high avg longevity (72d).",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AB-02",
+      "status": "approved",
+      "category": "Agency Brand / Agent Intro",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "buyer_demand",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Local knowledge wins",
+      "primary_text": "Having an area specialist on your side makes all the difference when selling. From understanding local buyer demand to pricing right and marketing well, {{agent_name}} knows {{suburb}} inside out.",
+      "description": "Sell smarter with a {{suburb}} specialist",
+      "cta": "Request price update",
+      "variables": [
+        "{{agent_name}}",
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-AGENT-PORTRAIT",
+      "evidence_score": 76.0,
+      "winner_rationale": "Neon 'Having an area specialist on your side can make all the difference when selling' (80d, video) - positions the agent as the local edge.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "AB-03",
+      "status": "approved",
+      "category": "Agency Brand / Agent Intro",
+      "audience": [
+        "Sellers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Video",
+        "Single image"
+      ],
+      "hook_style": "Social proof",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "buyer_demand",
+      "offer_id": "home_value_update",
+      "goal": "seller_leads",
+      "headline": "Setting the local benchmark",
+      "primary_text": "Over the past 12 months we've achieved multiple street and suburb records across {{suburb}} - setting a new benchmark for local real estate. Thinking of selling? See what that could mean for you.",
+      "description": "Street & suburb records in {{suburb}}",
+      "cta": "Get quote",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-STAT-CARD",
+      "evidence_score": 78.0,
+      "winner_rationale": "Acton Belle Property 'Setting the benchmark for local real estate / multiple street and suburb records' (active) - results-as-proof brand ad.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "TS-01",
+      "status": "approved",
+      "category": "Testimonial / Review",
+      "audience": [
+        "Sellers",
+        "Vendors comparing methods"
+      ],
+      "format": [
+        "Single image",
+        "Carousel"
+      ],
+      "hook_style": "Social proof",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "just_sold",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "What our {{suburb}} clients say",
+      "primary_text": "\"{{quote}}\" - {{client_name}}, {{suburb}}. Real results for real local owners. Thinking of selling? Let's talk about what we can do for you.",
+      "description": "Real reviews from {{suburb}} sellers",
+      "cta": "Learn More",
+      "variables": [
+        "{{quote}}",
+        "{{client_name}}",
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-TESTIMONIAL",
+      "evidence_score": 82.0,
+      "winner_rationale": "Cocolane Real Estate 'PROPERTY VALUE CALCULATOR' ads lead with seller testimonials ('Emma & Brody were wonderful...') and run 317-324d. Review-led proof sustains spend.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "TS-02",
+      "status": "approved",
+      "category": "Testimonial / Review",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Video"
+      ],
+      "hook_style": "Story / Emotional",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "just_sold",
+      "offer_id": "recent_sales_report",
+      "goal": "seller_leads",
+      "headline": "A journey worth sharing",
+      "primary_text": "Every client has a story, and we're grateful to be part of {{client_name}}'s. In their words: \"{{quote}}\". Helping local owners through a big move is what we love most. Ready to start yours?",
+      "description": "A real {{suburb}} client story",
+      "cta": "Learn more",
+      "variables": [
+        "{{client_name}}",
+        "{{quote}}",
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-TESTIMONIAL",
+      "evidence_score": 79.0,
+      "winner_rationale": "Vivian's Real Estate 'A journey worth sharing... beyond grateful to be part of Steven and Jen's' (video) ran 483 days - emotional client-story testimonial.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "LM-01",
+      "status": "approved",
+      "category": "Lead Magnet / Guide",
+      "audience": [
+        "Sellers",
+        "Passive owners"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "seller_checklist",
+      "offer_id": "seller_prep_checklist",
+      "goal": "seller_leads",
+      "headline": "10 things to do before selling",
+      "primary_text": "Thinking of selling in {{suburb}} in the next year? Our free checklist covers the top 10 things to do first - small moves that can lift your result. Download it and sell with a plan, not a guess.",
+      "description": "Free seller prep checklist",
+      "cta": "Download checklist",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-GUIDE-MOCKUP",
+      "evidence_score": 80.0,
+      "winner_rationale": "Maps to seller_prep_checklist AdStudio offer; lead-magnet checklists are the standard cold-to-warm seller capture and pair with the appraisal nurture.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "LM-02",
+      "status": "approved",
+      "category": "Lead Magnet / Guide",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Curiosity / Question",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "seller_checklist",
+      "offer_id": "seller_mistakes_guide",
+      "goal": "seller_leads",
+      "headline": "7 mistakes that cost sellers money",
+      "primary_text": "Most sellers lose money on avoidable mistakes - wrong timing, wrong price, wrong prep. Our free guide reveals the 7 that cost {{suburb}} owners the most, and how to sidestep each one.",
+      "description": "Free guide for {{suburb}} sellers",
+      "cta": "Get the guide",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-GUIDE-MOCKUP",
+      "evidence_score": 78.0,
+      "winner_rationale": "Maps to seller_mistakes_guide offer; problem-aware 'mistakes' framing is a classic high-CTR lead magnet for cold owners.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "LM-03",
+      "status": "approved",
+      "category": "Lead Magnet / Guide",
+      "audience": [
+        "Sellers"
+      ],
+      "format": [
+        "Single image",
+        "Video"
+      ],
+      "hook_style": "Authority / Local expert",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "seller_checklist",
+      "offer_id": "seller_mistakes_guide",
+      "goal": "seller_leads",
+      "headline": "Sell for top dollar - free book",
+      "primary_text": "Selling real estate in {{suburb}}? This free book reveals how to sell for top dollar - the essential, often-overlooked rules for maximising your result. Every day homes sell too cheaply. Don't let yours.",
+      "description": "Free book for {{suburb}} sellers",
+      "cta": "Get the book",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-GUIDE-MOCKUP",
+      "evidence_score": 80.0,
+      "winner_rationale": "'Selling Real Estate in Perth? This new real estate book shows you how to Sell for Top Dollar!' ran 383 days - book lead magnet as authority builder.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "DS-01",
+      "status": "approved",
+      "category": "Downsizer / Over-55s",
+      "audience": [
+        "Downsizers"
+      ],
+      "format": [
+        "Carousel",
+        "Single image"
+      ],
+      "hook_style": "Story / Emotional",
+      "funnel_stage": "TOFU (awareness)",
+      "adstudio_template_id": "new_to_market",
+      "offer_id": "downsizer_guide",
+      "goal": "downsizer_leads",
+      "headline": "Resize to get the best out of life",
+      "primary_text": "Lifestyle community living in {{suburb}}. Resize to get the best out of life - brand-new homes paired with a five-star clubhouse and resort-style facilities. Less maintenance, more living.",
+      "description": "Resort-style lifestyle from {{price}}*",
+      "cta": "Learn more",
+      "variables": [
+        "{{suburb}}",
+        "{{price}}"
+      ],
+      "image_brief_id": "IMG-DOWNSIZER",
+      "evidence_score": 84.0,
+      "winner_rationale": "Downsizing.com.au over-50s community ads ('Resize to get the best out of life!', Edenlife Byford; Lusso/Clifton/Avington) run 296-370 days across many suburbs.",
+      "scorer_version": "seed-xlsx-v1"
+    },
+    {
+      "template_key": "DS-02",
+      "status": "approved",
+      "category": "Downsizer / Over-55s",
+      "audience": [
+        "Downsizers",
+        "Sellers"
+      ],
+      "format": [
+        "Single image"
+      ],
+      "hook_style": "Free value / Lead magnet",
+      "funnel_stage": "MOFU (consideration)",
+      "adstudio_template_id": "seller_checklist",
+      "offer_id": "downsizer_guide",
+      "goal": "downsizer_leads",
+      "headline": "Thinking about downsizing?",
+      "primary_text": "Thinking about a lifestyle move? Our free downsizer guide walks through timing, preparing the family home, and choosing the right next place around {{suburb}} - at your pace, no pressure.",
+      "description": "Free downsizer selling guide",
+      "cta": "Get the guide",
+      "variables": [
+        "{{suburb}}"
+      ],
+      "image_brief_id": "IMG-GUIDE-MOCKUP",
+      "evidence_score": 74.0,
+      "winner_rationale": "Maps to the downsizer_guide AdStudio offer; pairs the long-running lifestyle-community demand with a soft seller-side capture.",
+      "scorer_version": "seed-xlsx-v1"
+    }
+  ]
+}

@@ -27,10 +27,11 @@ import type {
   AdStudioCreative,
   AdStudioFormat,
   AdStudioOfferTemplate,
+  AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
-import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
+import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -74,22 +75,23 @@ type AdStudioWorkbenchProps = {
 
 type NavItem = { id: import("./use-ad-studio").StudioSection; label: string; icon: LucideIcon };
 
-// B3 (simplification): three top-level destinations. Media and Copy open as
+// B3 (simplification): primary destinations stay visible. Media and Copy open as
 // contextual inspectors when the matching layer is selected on the canvas (or
-// via the variant strip actions); Templates and Settings sit behind Advanced.
+// via the variant strip actions); Settings sits behind Advanced.
 const NAV_ITEMS: NavItem[] = [
   { id: "campaign", label: "Ad", icon: Target },
   { id: "brand", label: "Brand", icon: ShieldCheck },
+  { id: "templates", label: "Templates", icon: LayoutGrid },
   { id: "publish", label: "Publish", icon: Send },
 ];
 
 const ADVANCED_NAV_ITEMS: NavItem[] = [
-  { id: "templates", label: "Templates", icon: LayoutGrid },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV: Array<{ id: "campaign" | "media" | "copy" | "publish"; label: string; icon: LucideIcon }> = [
+const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab; label: string; icon: LucideIcon }> = [
   { id: "campaign", label: "Ad", icon: Target },
+  { id: "templates", label: "Templates", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "copy", label: "Copy", icon: Type },
   { id: "publish", label: "Publish", icon: Send },
@@ -233,11 +235,15 @@ export function AdStudioWorkbench({
   firstRun = false,
   isSample = false,
 }: AdStudioWorkbenchProps) {
-  const [pack, setPack] = useState(initialPack);
+  const [pack, setPack] = useState(() => ({
+    ...initialPack,
+    creatives: initialPack.creatives.map(repairCreativeTextLayout),
+  }));
   const searchParams = useSearchParams();
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
   const [newAdStep, setNewAdStep] = useState<"source" | "template" | "radar">("source");
+  const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(AD_STUDIO_TEMPLATES);
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -303,6 +309,28 @@ export function AdStudioWorkbench({
     setNewAdOpen(false);
     setNewAdTemplateId(undefined);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTemplateLibrary() {
+      try {
+        const response = await fetch(`/api/adstudio/template-library?workspaceId=${encodeURIComponent(workspaceId)}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json().catch(() => ({}))) as { templates?: AdStudioTemplate[] };
+        if (!response.ok || !Array.isArray(payload.templates) || payload.templates.length === 0) return;
+        if (!cancelled) setTemplateLibrary(payload.templates);
+      } catch {
+        if (!cancelled) setTemplateLibrary(AD_STUDIO_TEMPLATES);
+      }
+    }
+
+    void loadTemplateLibrary();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   const initialMedia = useMemo(
     () => primaryImageForVariant(initialPack, initialPack.variants[0]?.variantId, PREVIEW_TO_AD_FORMAT.story),
@@ -502,6 +530,7 @@ export function AdStudioWorkbench({
   }
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
+  const adTemplates = templateLibrary.length > 0 ? templateLibrary : AD_STUDIO_TEMPLATES;
 
   // First open with no ad yet: show the New Ad popup (templates / reuse / radar).
   useEffect(() => {
@@ -702,7 +731,7 @@ export function AdStudioWorkbench({
             studio.setSection("templates");
           }
         }}
-        templates={AD_STUDIO_TEMPLATES}
+        templates={adTemplates}
       />
     );
   }
@@ -711,7 +740,7 @@ export function AdStudioWorkbench({
     if (studio.section === "templates") {
       return (
         <TemplatesPanel
-          templates={AD_STUDIO_TEMPLATES}
+          templates={adTemplates}
           onUseTemplate={(id) => openNewAd(id)}
           onStartBlank={() => openNewAd("")}
         />
@@ -861,7 +890,7 @@ export function AdStudioWorkbench({
                   className={studio.section === item.id ? "active" : ""}
                   key={item.id}
                   type="button"
-                  onClick={() => (item.id === "templates" ? openNewAd(undefined, "template") : studio.setSection(item.id))}
+                  onClick={() => studio.setSection(item.id)}
                 >
                   <Icon aria-hidden size={18} />
                   <span>{item.label}</span>
@@ -1052,6 +1081,16 @@ export function AdStudioWorkbench({
           </div>
         )}
 
+        {studio.mobileTab === "templates" && (
+          <div className="studio-mobile-panel">
+            <TemplatesPanel
+              templates={adTemplates}
+              onUseTemplate={(id) => openNewAd(id)}
+              onStartBlank={() => openNewAd("")}
+            />
+          </div>
+        )}
+
         {studio.mobileTab === "copy" && (
           <div className="studio-mobile-panel">
             <CopyPanel
@@ -1145,7 +1184,7 @@ export function AdStudioWorkbench({
         onClose={closeNewAdDialog}
         brandKit={brandKit}
         workspaceId={workspaceId}
-        templates={AD_STUDIO_TEMPLATES}
+        templates={adTemplates}
         onGenerate={handleGenerateFirstAd}
         initialTemplateId={newAdTemplateId}
         initialStep={newAdStep}

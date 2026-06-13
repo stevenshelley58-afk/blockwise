@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 const SEARCH_ROW_LIMIT = 200;
 const SEARCH_RESULT_LIMIT = 50;
 type SearchSort = "recent" | "longest";
+type RankedSearchRow = CustomerMetaAdLibraryCardRow & { search_rank?: number | null };
 
 export async function GET(request: NextRequest) {
   const guard = await requireApiWorkspace(request, "monitor");
@@ -39,43 +40,99 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ cards: [] });
   }
 
-  const needle = "%" + q.replace(/[%_\\]/g, "\\$&") + "%";
-  const { data, error } = await supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
-    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .or(
-      [
-        `page_name.ilike.${needle}`,
-        `library_id.ilike.${needle}`,
-        `headline.ilike.${needle}`,
-        `body.ilike.${needle}`,
-        `description.ilike.${needle}`,
-        `postcode.ilike.${needle}`,
-        `suburb.ilike.${needle}`,
-        `state.ilike.${needle}`,
-        `destination_url.ilike.${needle}`,
-        `cta.ilike.${needle}`,
-      ].join(","),
-    )
-    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
-      ascending: sort === "longest",
-      nullsFirst: false,
-    })
-    .limit(SEARCH_ROW_LIMIT);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  let rows: CustomerMetaAdLibraryCardRow[] | null = null;
+  if (shouldUseRankedFullTextSearch(q)) {
+    rows = await loadRankedFullTextRows(supabase, q, sort);
   }
 
+  const fallback = rows ? null : await loadFallbackSearchRows(supabase, q, sort);
+  if (fallback?.error) return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+
   const cards = sortCards(
-    dedupeRowsByCardId((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[])
+    dedupeRowsByCardId((rows ?? fallback?.data ?? []) as unknown as CustomerMetaAdLibraryCardRow[])
       .slice(0, SEARCH_RESULT_LIMIT)
       .map(normaliseCustomerMetaAdLibraryCard),
     sort,
   );
 
   return NextResponse.json({ cards });
+}
+
+async function loadRankedFullTextRows(
+  supabase: { schema: (schema: string) => any },
+  q: string,
+  sort: SearchSort,
+): Promise<CustomerMetaAdLibraryCardRow[] | null> {
+  const { data, error } = await supabase
+    .schema("research")
+    .rpc("search_customer_meta_ad_library_cards", {
+      p_query: q,
+      p_limit: SEARCH_ROW_LIMIT,
+      p_sort: sort,
+    });
+
+  if (!error) return (data ?? []) as unknown as RankedSearchRow[];
+  if (isMissingRankedSearchSchemaError(error)) return null;
+
+  console.warn("Ad Radar ranked search failed; falling back to ILIKE search", error.message);
+  return null;
+}
+
+async function loadFallbackSearchRows(
+  supabase: { schema: (schema: string) => any },
+  q: string,
+  sort: SearchSort,
+): Promise<{ data: CustomerMetaAdLibraryCardRow[] | null; error: { message: string } | null }> {
+  const { data, error } = await supabase
+    .schema("research")
+    .from("v_customer_meta_ad_library_cards")
+    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .or(buildFallbackSearchFilter(q))
+    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
+      ascending: sort === "longest",
+      nullsFirst: false,
+    })
+    .limit(SEARCH_ROW_LIMIT);
+
+  return { data: (data ?? null) as unknown as CustomerMetaAdLibraryCardRow[] | null, error };
+}
+
+function shouldUseRankedFullTextSearch(q: string): boolean {
+  return q.length >= 3 && !/^\d+$/u.test(q);
+}
+
+function buildFallbackSearchFilter(q: string): string {
+  const escaped = q.replace(/[%_\\]/g, "\\$&");
+  if (/^\d+$/u.test(q)) {
+    const prefixNeedle = `${escaped}%`;
+    return [
+      `postcode.ilike.${prefixNeedle}`,
+      `library_id.ilike.${prefixNeedle}`,
+    ].join(",");
+  }
+
+  const needle = `%${escaped}%`;
+  return [
+    `page_name.ilike.${needle}`,
+    `library_id.ilike.${needle}`,
+    `headline.ilike.${needle}`,
+    `body.ilike.${needle}`,
+    `description.ilike.${needle}`,
+    `postcode.ilike.${needle}`,
+    `suburb.ilike.${needle}`,
+    `state.ilike.${needle}`,
+    `destination_url.ilike.${needle}`,
+    `cta.ilike.${needle}`,
+  ].join(",");
+}
+
+function isMissingRankedSearchSchemaError(error: { code?: string; message?: string }): boolean {
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  return (
+    ["42703", "42883", "42P01", "PGRST202", "PGRST204"].includes(code) ||
+    /function .*search_customer_meta_ad_library_cards|column .*search_vector|schema cache/i.test(message)
+  );
 }
 
 function sortCards(cards: CustomerMetaAdLibraryCard[], sort: SearchSort): CustomerMetaAdLibraryCard[] {

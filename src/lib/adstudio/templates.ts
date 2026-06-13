@@ -2,10 +2,33 @@ import type { AdStudioGoal } from "./types.ts";
 
 export type AdStudioTemplate = {
   id: string;
+  templateKey?: string;
   name: string;
   goal: AdStudioGoal;
   offerId: string;
   promptHint: string;
+  source?: "builtin" | "operator" | "radar";
+  status?: "approved" | "archived" | "draft";
+};
+
+export type AdStudioLibraryTemplate = {
+  template_key?: string | null;
+  status?: string | null;
+  category?: string | null;
+  hook_style?: string | null;
+  funnel_stage?: string | null;
+  adstudio_template_id?: string | null;
+  offer_id?: string | null;
+  goal?: string | null;
+  headline?: string | null;
+  primary_text?: string | null;
+  description?: string | null;
+  cta?: string | null;
+  image_brief_id?: string | null;
+  ai_prompt_seed?: string | null;
+  evidence_score?: number | string | null;
+  winner_rationale?: string | null;
+  compliance_note?: string | null;
 };
 
 export type AdStudioTemplateVersion = {
@@ -93,6 +116,62 @@ export function resolveAdStudioTemplate(templateId: string | undefined): AdStudi
   return AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
 }
 
+export function isBuiltInAdStudioTemplate(templateId: string | undefined): boolean {
+  return AD_STUDIO_TEMPLATES.some((template) => template.id === templateId);
+}
+
+export function builtInAdStudioTemplates(): AdStudioTemplate[] {
+  return AD_STUDIO_TEMPLATES.map((template) => ({
+    ...template,
+    templateKey: template.templateKey ?? template.id,
+    source: "builtin",
+    status: "approved",
+  }));
+}
+
+export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStudioTemplate | null {
+  if (row.status && row.status !== "approved") return null;
+
+  const templateKey = stringValue(row.template_key);
+  if (!templateKey) return null;
+
+  const builtIn = AD_STUDIO_TEMPLATES.find((template) => template.id === stringValue(row.adstudio_template_id));
+  const goal = stringValue(row.goal) || builtIn?.goal;
+  const offerId = stringValue(row.offer_id) || builtIn?.offerId;
+  if (!goal || !offerId) return null;
+
+  const headline = stringValue(row.headline);
+  const primaryText = stringValue(row.primary_text);
+  const description = stringValue(row.description);
+  const aiPromptSeed = stringValue(row.ai_prompt_seed);
+  const promptHint = [headline, primaryText, description, aiPromptSeed, row.cta ? `CTA: ${row.cta}` : ""]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!promptHint) return null;
+
+  return {
+    id: templateKey,
+    templateKey,
+    name: humanizeTemplateName(templateKey, row.category, row.hook_style),
+    goal: goal as AdStudioGoal,
+    offerId,
+    promptHint,
+    source: "radar",
+    status: "approved",
+  };
+}
+
+export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdStudioTemplate[] {
+  if (approved.length === 0) return builtInAdStudioTemplates();
+  const byId = new Map<string, AdStudioTemplate>();
+  for (const template of approved) byId.set(template.id, template);
+  for (const template of builtInAdStudioTemplates()) {
+    if (!byId.has(template.id)) byId.set(template.id, template);
+  }
+  return [...byId.values()];
+}
+
 export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_TEMPLATES.map((template) => ({
   templateId: template.id,
   vertical: "real_estate",
@@ -100,3 +179,20 @@ export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_T
   offerType: template.offerId,
   active: true,
 }));
+
+function humanizeTemplateName(templateKey: string, category?: string | null, hookStyle?: string | null): string {
+  const label = [category, hookStyle].map(stringValue).filter(Boolean).join(" ");
+  return label ? toTitleCase(label) : toTitleCase(templateKey.replace(/[-_]+/gu, " "));
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/u)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}

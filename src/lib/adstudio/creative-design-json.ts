@@ -109,6 +109,27 @@ export function syncCreativeWithCopyAndImage(
       fabricJson: designJson ? syncDesignJsonWithCopyAndImage(designJson, copy, imageSrc) : creative.canvas.fabricJson,
     },
   };
+  const repaired = repairCreativeTextLayout(next);
+  return {
+    ...repaired,
+    previewSvg: renderCreativeSvg(repaired),
+  };
+}
+
+export function repairCreativeTextLayout(creative: AdStudioCreative): AdStudioCreative {
+  const repaired = repairCanvasObjects(creative.canvas.objects, creative.canvas.height, creative.format);
+  if (!repaired.changed) return creative;
+
+  const designJson = getCreativeDesignJson(creative);
+  const next: AdStudioCreative = {
+    ...creative,
+    canvas: {
+      ...creative.canvas,
+      objects: repaired.objects,
+      fabricJson: designJson ? repairDesignJsonLayout(designJson, repaired.objects) : creative.canvas.fabricJson,
+    },
+  };
+
   return {
     ...next,
     previewSvg: renderCreativeSvg(next),
@@ -295,4 +316,103 @@ function patchDesignObject(object: CreativeDesignObjectJson, patch: CreativeLaye
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function repairCanvasObjects(
+  objects: AdStudioCanvasObject[],
+  canvasHeight: number,
+  format: AdStudioCreative["format"],
+): { objects: AdStudioCanvasObject[]; changed: boolean } {
+  const headline = objects.find((object) => object.role === "headline" && object.type === "text");
+  const subhead = objects.find((object) => object.role === "subheadline" && object.type === "text");
+  if (!headline || !subhead) return { objects, changed: false };
+
+  const headlineHeight = textObjectHeight(headline, 0.56, 1.08);
+  const subheadHeight = textObjectHeight(subhead, 0.5, 1.22);
+  const minSubheadY = headline.y + headlineHeight + Math.round((headline.size ?? 32) * 0.34);
+  const nextSubheadY = Math.max(subhead.y, minSubheadY);
+
+  const cta = objects.find((object) => object.role === "cta_button");
+  const ctaText = objects.find((object) => object.role === "cta_text");
+  const ctaHeight = cta?.height ?? (format === "1.91:1" ? 66 : 78);
+  const minCtaY = nextSubheadY + subheadHeight + Math.round((subhead.size ?? 28) * 1.25);
+  const maxCtaY = canvasHeight - Math.round(canvasHeight * (format === "9:16" ? 0.18 : 0.08)) - ctaHeight;
+  const nextCtaY = cta ? Math.min(maxCtaY, Math.max(cta.y, minCtaY)) : null;
+  const ctaDelta = cta && nextCtaY !== null ? nextCtaY - cta.y : 0;
+
+  let changed = subhead.y !== nextSubheadY || subhead.height !== subheadHeight || headline.height !== headlineHeight;
+  if (cta && nextCtaY !== null && cta.y !== nextCtaY) changed = true;
+  if (ctaText && ctaDelta !== 0) changed = true;
+  if (!changed) return { objects, changed: false };
+
+  return {
+    changed: true,
+    objects: objects.map((object) => {
+      if (object.objectId === headline.objectId) return { ...object, height: headlineHeight };
+      if (object.objectId === subhead.objectId) return { ...object, y: nextSubheadY, height: subheadHeight };
+      if (cta && object.objectId === cta.objectId && nextCtaY !== null) return { ...object, y: nextCtaY };
+      if (ctaText && object.objectId === ctaText.objectId && ctaDelta !== 0) return { ...object, y: object.y + ctaDelta };
+      return object;
+    }),
+  };
+}
+
+function repairDesignJsonLayout(designJson: CreativeDesignJson, objects: AdStudioCanvasObject[]): CreativeDesignJson {
+  const byRole = new Map(objects.map((object) => [object.role, object]));
+  const cta = byRole.get("cta_button");
+  const ctaText = byRole.get("cta_text");
+
+  return {
+    ...designJson,
+    objects: designJson.objects.map((object) => {
+      const meta = object[BLOCKWISE_FABRIC_META_KEY];
+      if (!meta) return object;
+      const source = byRole.get(meta.role);
+      if (!source) return object;
+
+      if (meta.role === "headline" || meta.role === "subheadline") {
+        return { ...object, top: source.y, height: source.height };
+      }
+      if (meta.role === "cta_button") {
+        return { ...object, top: source.y };
+      }
+      if (meta.role === "cta_text" && cta && ctaText) {
+        return { ...object, top: ctaText.y };
+      }
+      return object;
+    }),
+  };
+}
+
+function textObjectHeight(object: AdStudioCanvasObject, widthFactor: number, lineHeightFactor: number): number {
+  const fontSize = object.size ?? 32;
+  const lineHeight = Math.round(fontSize * lineHeightFactor);
+  return estimateWrappedLineCount(object.content ?? "", object.width, fontSize, widthFactor) * lineHeight;
+}
+
+function estimateWrappedLineCount(text: string, maxWidth: number, fontSize: number, widthFactor: number): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 1;
+
+  const spaceWidth = fontSize * 0.3;
+  let lines = 1;
+  let currentWidth = 0;
+
+  for (const word of words) {
+    const wordWidth = Math.max(fontSize, word.length * fontSize * widthFactor);
+    if (currentWidth === 0) {
+      currentWidth = wordWidth;
+      continue;
+    }
+
+    const nextWidth = currentWidth + spaceWidth + wordWidth;
+    if (nextWidth <= maxWidth) {
+      currentWidth = nextWidth;
+    } else {
+      lines += 1;
+      currentWidth = wordWidth;
+    }
+  }
+
+  return lines;
 }
