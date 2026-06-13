@@ -15,6 +15,7 @@ type TurnstileOptions = {
 };
 
 type TurnstileApi = {
+  ready(callback: () => void): void;
   render(container: HTMLElement, options: TurnstileOptions): string;
   reset(widgetId?: string): void;
   remove(widgetId?: string): void;
@@ -41,6 +42,7 @@ export function hasTurnstileSiteKey() {
 export function TurnstileVerification({ onTokenChange, onError, resetSignal = 0 }: TurnstileVerificationProps) {
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetId = useRef<string | null>(null);
+  const renderQueued = useRef(false);
   const tokenChangeRef = useRef(onTokenChange);
   const errorRef = useRef(onError);
 
@@ -50,26 +52,35 @@ export function TurnstileVerification({ onTokenChange, onError, resetSignal = 0 
   }, [onTokenChange, onError]);
 
   function renderTurnstile() {
-    if (!turnstileSiteKey || !turnstileRef.current || !window.turnstile || turnstileWidgetId.current) {
+    if (!turnstileSiteKey || !turnstileRef.current || !window.turnstile || turnstileWidgetId.current || renderQueued.current) {
       return;
     }
 
-    turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
-      sitekey: turnstileSiteKey,
-      appearance: "always",
-      execution: "render",
-      retry: "auto",
-      theme: "light",
-      callback(token: string) {
-        tokenChangeRef.current(token);
-      },
-      "expired-callback"() {
-        tokenChangeRef.current("");
-      },
-      "error-callback"() {
-        tokenChangeRef.current("");
-        errorRef.current();
-      },
+    renderQueued.current = true;
+    window.turnstile.ready(() => {
+      renderQueued.current = false;
+
+      if (!turnstileRef.current || turnstileWidgetId.current) {
+        return;
+      }
+
+      turnstileWidgetId.current = window.turnstile?.render(turnstileRef.current, {
+        sitekey: turnstileSiteKey,
+        appearance: "always",
+        execution: "render",
+        retry: "auto",
+        theme: "light",
+        callback(token: string) {
+          tokenChangeRef.current(token);
+        },
+        "expired-callback"() {
+          tokenChangeRef.current("");
+        },
+        "error-callback"() {
+          tokenChangeRef.current("");
+          errorRef.current();
+        },
+      }) ?? null;
     });
   }
 
