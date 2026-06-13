@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     savedAds: (savedRows ?? []).map((saved) => ({
-      ...saved,
+      id: saved.id,
+      observedAdId: saved.observed_ad_id,
+      notes: saved.notes,
+      status: saved.status,
+      createdAt: saved.created_at,
       ad: ads.find((ad) => ad.id === saved.observed_ad_id) ?? null,
     })),
   });
@@ -83,7 +87,18 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ savedAd: data, ad }, { status: 201 });
+  return NextResponse.json({
+    savedAd: data
+      ? {
+          id: data.id,
+          observedAdId: data.observed_ad_id,
+          notes: data.notes,
+          status: data.status,
+          createdAt: data.created_at,
+        }
+      : null,
+    ad,
+  }, { status: 201 });
 }
 
 async function loadAds(

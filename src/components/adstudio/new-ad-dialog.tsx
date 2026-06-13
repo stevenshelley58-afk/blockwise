@@ -560,7 +560,7 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
   if (!ad) return null;
   const savedId = String(entry.id ?? "");
   if (!savedId) return null;
-  const observedAdId = String(entry.observed_ad_id ?? ad.id ?? handoffPayload.observedAdId ?? "");
+  const observedAdId = String(entry.observedAdId ?? ad.id ?? handoffPayload.observedAdId ?? "");
   const headline = ad.creative?.headline?.trim() ?? "";
   const body = ad.creative?.body?.trim() ?? "";
   const cta = ad.creative?.cta?.trim() ?? "";
