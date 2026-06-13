@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
+import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 
 import "./globals.css";
 import "./meta-monitor.css";
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </>
         ) : null}
         {children}
+        <ServiceWorkerRegistrar />
         <PageViewTracker />
         <ConsentBanner />
         <Analytics />

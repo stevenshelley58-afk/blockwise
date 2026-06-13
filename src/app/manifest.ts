@@ -4,10 +4,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Blockwise",
     short_name: "Blockwise",
-    description: "Create and launch real estate ads from one platform.",
-    start_url: "/",
+    description: "Create, approve, export, and track real estate ads from one platform.",
+    start_url: "/pwa",
     scope: "/",
-    display: "browser",
+    display: "standalone",
     background_color: "#ffffff",
     theme_color: "#123e75",
     icons: [

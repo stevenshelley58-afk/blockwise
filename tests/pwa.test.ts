@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import manifest from "../src/app/manifest.ts";
@@ -17,9 +18,10 @@ test("manifest exposes the Blockwise install metadata", () => {
 
   assert.equal(appManifest.name, "Blockwise");
   assert.equal(appManifest.short_name, "Blockwise");
-  assert.equal(appManifest.start_url, "/");
+  assert.equal(appManifest.description, "Create, approve, export, and track real estate ads from one platform.");
+  assert.equal(appManifest.start_url, "/pwa");
   assert.equal(appManifest.scope, "/");
-  assert.equal(appManifest.display, "browser");
+  assert.equal(appManifest.display, "standalone");
   assert.equal(appManifest.background_color, "#ffffff");
   assert.equal(appManifest.theme_color, "#123e75");
   assert.deepEqual(
@@ -31,6 +33,13 @@ test("manifest exposes the Blockwise install metadata", () => {
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   );
+});
+
+test("root layout registers the production service worker", () => {
+  const layout = readFileSync("src/app/layout.tsx", "utf8");
+
+  assert.match(layout, /ServiceWorkerRegistrar/);
+  assert.match(layout, /<ServiceWorkerRegistrar \/>/);
 });
 
 test("service worker policy caches only same-origin static assets", () => {
