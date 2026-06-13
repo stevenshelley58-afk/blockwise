@@ -5,6 +5,10 @@ import { useEffect, useRef } from "react";
 
 type TurnstileOptions = {
   sitekey: string;
+  appearance: "always" | "execute" | "interaction-only";
+  execution: "render" | "execute";
+  retry: "auto" | "never";
+  theme: "auto" | "light" | "dark";
   callback(token: string): void;
   "expired-callback"(): void;
   "error-callback"(): void;
@@ -52,6 +56,10 @@ export function TurnstileVerification({ onTokenChange, onError, resetSignal = 0 
 
     turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
       sitekey: turnstileSiteKey,
+      appearance: "always",
+      execution: "render",
+      retry: "auto",
+      theme: "light",
       callback(token: string) {
         tokenChangeRef.current(token);
       },
