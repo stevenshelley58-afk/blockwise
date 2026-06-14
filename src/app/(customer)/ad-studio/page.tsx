@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
+import { QuickCreate } from "@/components/adstudio/quick/quick-create";
 import { generateAdStudioCampaignPack, listOfferTemplates } from "@/lib/adstudio";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
@@ -27,6 +28,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
+  const advanced = isFirstRunParam(params.advanced);
   const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId, access.userId);
   const isTrialWorkspace = await loadIsTrialWorkspace(supabase, access.workspaceId);
 
@@ -51,19 +53,28 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const isSample = liveBundle === null && draftBundle === null && trialBundle === null;
   const bundle = liveBundle ?? draftBundle ?? trialBundle ?? getAdStudioDemoBundle();
 
+  // Default entry is the simple template-first create flow. The full multi-panel
+  // workbench stays available as "Advanced edit" (?advanced=1) and is also used
+  // whenever a specific campaign is opened for editing (?campaignId=).
+  const showWorkbench = advanced || Boolean(requestedCampaignId);
+
   return (
     <>
       {isSample && <SampleBanner />}
       {trialBundle && <TrialBrandBanner />}
-      <AdStudioWorkbench
-        workspaceId={access.workspaceId}
-        brandKit={bundle.brandKit}
-        campaignPack={bundle.campaignPack}
-        offers={bundle.offers}
-        performance={bundle.performance}
-        firstRun={isFirstRunParam(params.first)}
-        isSample={isSample}
-      />
+      {showWorkbench ? (
+        <AdStudioWorkbench
+          workspaceId={access.workspaceId}
+          brandKit={bundle.brandKit}
+          campaignPack={bundle.campaignPack}
+          offers={bundle.offers}
+          performance={bundle.performance}
+          firstRun={isFirstRunParam(params.first)}
+          isSample={isSample}
+        />
+      ) : (
+        <QuickCreate workspaceId={access.workspaceId} brandKit={bundle.brandKit} isSample={isSample} />
+      )}
     </>
   );
 }
