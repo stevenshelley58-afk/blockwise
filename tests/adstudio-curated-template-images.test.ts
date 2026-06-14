@@ -22,6 +22,15 @@ test("every built-in template ships curated, on-brand images under /ads/", () =>
   }
 });
 
+test("every built-in template defaults to its own designed card image", () => {
+  for (const template of AD_STUDIO_TEMPLATES) {
+    const def = defaultCuratedTemplateImage(template.id);
+    assert.ok(def, `${template.id} has no default image`);
+    assert.equal(def?.src, `/ads/templates/${template.id}.png`, `${template.id} should default to its designed card`);
+    assert.ok(existsSync(`public/ads/templates/${template.id}.png`), `missing designed card for ${template.id}`);
+  }
+});
+
 test("curated image files exist on disk in public/", () => {
   const srcs = new Set<string>();
   for (const template of AD_STUDIO_TEMPLATES) {
