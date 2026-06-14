@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowUpRight, Copy, LayoutGrid, Radar, X } from "lucide-reac
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
-import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
+import { defaultCuratedTemplateImage, isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -100,8 +100,10 @@ export function NewAdDialog({
       setStep(initialStep);
     }
     setDescription("");
-    setImageDataUrl("");
-    setImageName("");
+    // Default-fill the curated image so a template-started ad opens ready to generate.
+    const curated = initialTemplateId !== undefined ? defaultCuratedTemplateImage(initialTemplateId) : null;
+    setImageDataUrl(curated?.src ?? "");
+    setImageName(curated?.label ?? "");
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
@@ -218,6 +220,10 @@ export function NewAdDialog({
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
+    // Pre-fill this template's default curated image so no upload is needed to start.
+    const curated = defaultCuratedTemplateImage(id);
+    setImageDataUrl(curated?.src ?? "");
+    setImageName(curated?.label ?? "");
     setBriefFrom(id === "" ? "source" : "template");
     setStep("brief");
   }

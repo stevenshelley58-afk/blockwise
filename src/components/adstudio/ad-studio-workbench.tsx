@@ -30,7 +30,7 @@ import type {
   AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
-import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
+import { AD_STUDIO_TEMPLATES, curatedTemplateImages } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
@@ -147,6 +147,11 @@ function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBra
   );
 }
 
+function dedupeAssetsBySrc<T extends { src: string }>(assets: T[]): T[] {
+  const seen = new Set<string>();
+  return assets.filter((asset) => (seen.has(asset.src) ? false : seen.add(asset.src)));
+}
+
 function labelForImageSrc(src: string): string {
   const asset = MEDIA_ASSETS.find((item) => item.src === src);
   if (asset) return asset.label;
@@ -244,6 +249,8 @@ export function AdStudioWorkbench({
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
   const [newAdStep, setNewAdStep] = useState<"source" | "template" | "radar">("source");
   const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(AD_STUDIO_TEMPLATES);
+  // Curated swap options for the template the current ad was started from.
+  const [templateMediaAssets, setTemplateMediaAssets] = useState<typeof MEDIA_ASSETS>([]);
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -418,7 +425,13 @@ export function AdStudioWorkbench({
   // Demo/sample imagery is only shown when viewing the sample workspace; real
   // users see only their own uploaded and workspace assets.
   const demoAssets = isSample ? MEDIA_ASSETS : [];
-  const mediaAssets = [...uploadedAssets, ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets)];
+  // Curated template images sit right after uploads so the ad's on-brand stock is
+  // always swappable in the Media tab, ahead of workspace/demo assets. Dedupe by src.
+  const mediaAssets = dedupeAssetsBySrc([
+    ...uploadedAssets,
+    ...templateMediaAssets,
+    ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets),
+  ]);
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
@@ -701,6 +714,8 @@ export function AdStudioWorkbench({
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
+    // Carry the chosen template's curated images into the Media tab as swap options.
+    setTemplateMediaAssets(curatedTemplateImages(input.templateId ?? input.templateKey));
     await generateFirstAd(input);
   }
 
