@@ -119,8 +119,9 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
     return () => window.clearInterval(id);
   }, [step]);
 
-  // Render the finished ad creative for a variant: the chosen template's design
-  // recipe + the agent's photo + this variant's copy → a real, on-brand ad image.
+  // Enqueue a high-quality creative for a variant, then poll until the background
+  // worker finishes it (no request timeout). genState guards duplicates and lets
+  // reset() cancel an in-flight poll.
   const makeCreative = useCallback(
     async (index: number, force = false) => {
       if (!pack || !photo) return;
@@ -144,9 +145,22 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
           }),
         });
         const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.image) throw new Error(data?.error ?? "Could not create the ad image.");
-        genState.current[index] = "done";
-        setCreatives((current) => ({ ...current, [index]: data.image as string }));
+        if (!res.ok || !data?.jobId) throw new Error(data?.error ?? "Could not start the ad.");
+
+        const deadline = Date.now() + 180_000;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 3000));
+          if (genState.current[index] !== "loading") return; // cancelled (reset / regenerate)
+          const poll = await fetch(`/api/adstudio/creative-image?jobId=${encodeURIComponent(data.jobId)}`);
+          const status = await poll.json().catch(() => null);
+          if (status?.status === "done" && status.image) {
+            genState.current[index] = "done";
+            setCreatives((current) => ({ ...current, [index]: status.image as string }));
+            return;
+          }
+          if (status?.status === "failed") throw new Error(status.error ?? "The ad image could not be generated.");
+        }
+        throw new Error("Timed out waiting for the ad — try Regenerate.");
       } catch (caught) {
         delete genState.current[index];
         setGenError(caught instanceof Error ? caught.message : "Could not create the ad image.");
@@ -407,7 +421,7 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
             ) : genLoading ? (
               <div className={styles.creativeLoading}>
                 <div className={styles.spinner} aria-hidden />
-                <span>Designing your ad…</span>
+                <span>Designing your ad… this can take up to a minute.</span>
               </div>
             ) : (
               <div className="studio-mobile-preview-wrap">

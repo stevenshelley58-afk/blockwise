@@ -1,20 +1,13 @@
-import { randomUUID } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildTemplateCreativePrompt, generateTemplateCreativeImage } from "@/lib/adstudio/creative-image";
-import { dataUrlToUploadBytes } from "@/lib/adstudio/generated-media";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
-import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
 
-type CreativeImageBody = {
+type EnqueueBody = {
   templateKey?: string;
   imageDataUrl?: string;
   headline?: string;
@@ -24,31 +17,30 @@ type CreativeImageBody = {
   brand?: { businessName?: string; primary?: string; accent?: string };
 };
 
-// The mined design recipe (ai_prompt_seed) lives server-side; fetch it by key so
-// the generated creative follows the chosen template's layout and mood.
-async function loadTemplateDesignSeed(templateKey: string): Promise<string | null> {
+const MEDIA_PREFIX = "/api/adstudio/media?path=";
+
+// The agent's photo arrives as a media-proxy URL; store the underlying storage
+// path so the worker can download it directly from Supabase Storage.
+function storagePathFromMediaUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  const idx = value.indexOf(MEDIA_PREFIX);
+  if (idx === -1) return null;
   try {
-    const research = createSupabaseServiceClient().schema("research");
-    const { data } = await research
-      .from("v_ad_template_library")
-      .select("ai_prompt_seed,description")
-      .eq("template_key", templateKey)
-      .maybeSingle();
-    const row = data as { ai_prompt_seed?: string | null; description?: string | null } | null;
-    const seed = String(row?.ai_prompt_seed ?? row?.description ?? "").trim();
-    return seed || null;
+    return decodeURIComponent(value.slice(idx + MEDIA_PREFIX.length).split("&")[0]) || null;
   } catch {
     return null;
   }
 }
 
+// POST = enqueue a high-quality generation job (a background worker does the
+// actual image generation, so there is no request timeout).
 export async function POST(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
   if (!context.ok) return context.response;
 
   const rateLimit = await checkRateLimit(context.supabase, context.access.workspaceId, context.access.userId, {
     windowSeconds: 3600,
-    maxRequests: 40,
+    maxRequests: 60,
     bucket: "ai-creative-image",
   });
   if (!rateLimit.ok) {
@@ -58,58 +50,65 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await readJsonBody<CreativeImageBody>(request);
+  const body = await readJsonBody<EnqueueBody>(request);
   const headline = body.headline?.trim();
   if (!headline) return NextResponse.json({ error: "A headline is required." }, { status: 400 });
-  if (!body.imageDataUrl) return NextResponse.json({ error: "A listing photo is required." }, { status: 400 });
+  const imagePath = storagePathFromMediaUrl(body.imageDataUrl);
+  if (!imagePath) return NextResponse.json({ error: "A listing photo is required." }, { status: 400 });
 
   try {
-    const designSeed =
-      body.templateKey && !isBuiltInAdStudioTemplate(body.templateKey)
-        ? await loadTemplateDesignSeed(body.templateKey)
-        : null;
-    const referencePhoto = await resolveAdStudioImageForModel(
-      context.supabase,
-      context.access.workspaceId,
-      body.imageDataUrl,
-    );
-
-    const prompt = buildTemplateCreativePrompt({
-      designSeed: designSeed ?? undefined,
-      brand: {
-        businessName: body.brand?.businessName?.trim() || "Your agency",
-        primary: body.brand?.primary || "#123e75",
-        accent: body.brand?.accent || "#e7b24b",
-      },
-      copy: {
+    const service = createSupabaseServiceClient();
+    const { data, error } = await service
+      .from("adstudio_creative_jobs")
+      .insert({
+        workspace_id: context.access.workspaceId,
+        created_by: context.access.userId,
+        template_key: body.templateKey ?? null,
+        image_path: imagePath,
         headline,
-        primaryText: body.primaryText?.trim() ?? "",
-        cta: body.cta?.trim() ?? "Learn more",
-      },
-    });
-
-    const generated = await generateTemplateCreativeImage({
-      prompt,
-      negativePrompt: "no fake text, no scrambled or misspelled letters, no watermark, no extra logos, no borders",
-      referenceAssets: referencePhoto ? [referencePhoto] : [],
-      aspectRatio: body.aspectRatio || "4:5",
-      stylePreset: "real_estate_photography",
-    });
-
-    let image = generated.assetUrl;
-    if (image.startsWith("data:image/")) {
-      const decoded = dataUrlToUploadBytes(image);
-      const path = `${context.access.workspaceId}/adstudio/creatives/${randomUUID()}.${decoded.extension}`;
-      const { error } = await context.supabase.storage
-        .from("workspace-artifacts")
-        .upload(path, decoded.bytes, { contentType: decoded.contentType, upsert: false });
-      if (error) throw new Error("Generated ad image could not be stored.");
-      image = `/api/adstudio/media?path=${encodeURIComponent(path)}`;
-    }
-
-    return NextResponse.json({ image, model: generated.model });
+        primary_text: body.primaryText?.trim() ?? null,
+        cta: body.cta?.trim() ?? null,
+        aspect_ratio: body.aspectRatio || "4:5",
+        brand: {
+          businessName: body.brand?.businessName?.trim() ?? "",
+          primary: body.brand?.primary ?? "#123e75",
+          accent: body.brand?.accent ?? "#e7b24b",
+        },
+      })
+      .select("id")
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "Could not queue the ad.");
+    return NextResponse.json({ jobId: data.id, status: "queued" }, { status: 202 });
   } catch (error) {
-    console.error("[creative-image] generation failed", error);
+    return errorResponse(error, 500);
+  }
+}
+
+// GET ?jobId= = poll a job's status; returns the finished image URL when done.
+export async function GET(request: NextRequest) {
+  const context = await requireAdStudioRequest(request);
+  if (!context.ok) return context.response;
+
+  const jobId = new URL(request.url).searchParams.get("jobId");
+  if (!jobId) return NextResponse.json({ error: "jobId is required." }, { status: 400 });
+
+  try {
+    const service = createSupabaseServiceClient();
+    const { data, error } = await service
+      .from("adstudio_creative_jobs")
+      .select("status,result_path,error")
+      .eq("id", jobId)
+      .eq("workspace_id", context.access.workspaceId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+
+    const image =
+      data.status === "done" && data.result_path
+        ? `${MEDIA_PREFIX}${encodeURIComponent(data.result_path)}`
+        : null;
+    return NextResponse.json({ status: data.status, image, error: data.error ?? null });
+  } catch (error) {
     return errorResponse(error, 500);
   }
 }
