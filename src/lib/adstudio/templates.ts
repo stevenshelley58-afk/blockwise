@@ -9,6 +9,8 @@ export type AdStudioTemplate = {
   promptHint: string;
   source?: "builtin" | "operator" | "radar";
   status?: "approved" | "archived" | "draft";
+  /** Clean sample copy for the gallery preview only — never the raw prompt seed. */
+  preview?: { eyebrow: string; headline: string; cta: string };
 };
 
 export type AdStudioLibraryTemplate = {
@@ -140,26 +142,42 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const offerId = stringValue(row.offer_id) || builtIn?.offerId;
   if (!goal || !offerId) return null;
 
-  const headline = stringValue(row.headline);
-  const primaryText = stringValue(row.primary_text);
-  const description = stringValue(row.description);
-  const aiPromptSeed = stringValue(row.ai_prompt_seed);
-  const promptHint = [headline, primaryText, description, aiPromptSeed, row.cta ? `CTA: ${row.cta}` : ""]
-    .filter(Boolean)
-    .join(" ");
+  // Real, customer-facing sample copy. The raw ai_prompt_seed (layout/palette
+  // directives, {{tokens}}, [FREE] flashes) is for server-side generation only
+  // and must never reach the UI — so it is deliberately left out of the template.
+  const headline = sanitizeSampleCopy(stringValue(row.headline));
+  const description = sanitizeSampleCopy(stringValue(row.description));
+  const cta = sanitizeSampleCopy(stringValue(row.cta));
+  const name = builtIn?.name ?? humanizeTemplateName(templateKey, row.category, row.hook_style);
+  // A short, human one-liner for hints/placeholders — not the prompt seed.
+  const hint = builtIn?.promptHint || description || headline || name;
 
-  if (!promptHint) return null;
+  if (!headline && !description && !builtIn) return null;
 
   return {
     id: templateKey,
     templateKey,
-    name: humanizeTemplateName(templateKey, row.category, row.hook_style),
+    name,
     goal: goal as AdStudioGoal,
     offerId,
-    promptHint,
+    promptHint: hint.slice(0, 160),
     source: "radar",
     status: "approved",
+    preview: headline ? { eyebrow: name, headline, cta: cta || "Learn more" } : undefined,
   };
+}
+
+/**
+ * Strip prompt scaffolding from mined copy so only clean, real ad text reaches
+ * the UI: replace {{suburb}} with a readable word, drop any other {{tokens}},
+ * and collapse whitespace. The full seed stays server-side for generation.
+ */
+export function sanitizeSampleCopy(text: string): string {
+  return stringValue(text)
+    .replace(/\{\{\s*suburb\s*\}\}/giu, "your suburb")
+    .replace(/\{\{[^}]*\}\}/gu, "")
+    .replace(/\s{2,}/gu, " ")
+    .trim();
 }
 
 export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdStudioTemplate[] {
@@ -181,8 +199,10 @@ export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_T
 }));
 
 function humanizeTemplateName(templateKey: string, category?: string | null, hookStyle?: string | null): string {
-  const label = [category, hookStyle].map(stringValue).filter(Boolean).join(" ");
-  return label ? toTitleCase(label) : toTitleCase(templateKey.replace(/[-_]+/gu, " "));
+  // Categories can arrive as a slashed taxonomy ("Market Update / Report Data /
+  // Stat-led"); keep only the leading, recognisable label for the card title.
+  const lead = stringValue(category).split("/")[0]?.trim() || stringValue(hookStyle);
+  return lead ? toTitleCase(lead) : toTitleCase(templateKey.replace(/[-_]+/gu, " "));
 }
 
 function toTitleCase(value: string): string {

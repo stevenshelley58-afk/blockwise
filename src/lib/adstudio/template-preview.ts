@@ -1,4 +1,4 @@
-import type { AdStudioTemplate } from "./templates.ts";
+import { sanitizeSampleCopy, type AdStudioTemplate } from "./templates.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
 // Sample copy shown on the gallery preview only. The real ad's copy is generated
@@ -17,13 +17,24 @@ const PREVIEW_COPY: Record<string, { eyebrow: string; headline: string; cta: str
 };
 
 function previewCopy(template: AdStudioTemplate): { eyebrow: string; headline: string; cta: string } {
-  return (
-    PREVIEW_COPY[template.id] ?? {
-      eyebrow: template.name,
-      headline: template.promptHint.length > 60 ? `${template.promptHint.slice(0, 57).trim()}…` : template.promptHint,
-      cta: "Learn more",
-    }
-  );
+  // Prefer the template's own clean sample copy, then the curated built-in copy,
+  // then a sanitised one-liner. Everything is sanitised again here so no prompt
+  // scaffolding ({{tokens}}, layout directives) can ever render on a card.
+  if (template.preview?.headline) {
+    return {
+      eyebrow: sanitizeSampleCopy(template.preview.eyebrow) || template.name,
+      headline: sanitizeSampleCopy(template.preview.headline),
+      cta: sanitizeSampleCopy(template.preview.cta) || "Learn more",
+    };
+  }
+  const builtIn = PREVIEW_COPY[template.id];
+  if (builtIn) return builtIn;
+  const hint = sanitizeSampleCopy(template.promptHint);
+  return {
+    eyebrow: template.name,
+    headline: hint.length > 60 ? `${hint.slice(0, 57).trim()}…` : hint || template.name,
+    cta: "Learn more",
+  };
 }
 
 function esc(text: string): string {
@@ -141,8 +152,6 @@ export function templatePreviewSvg(template: AdStudioTemplate, brandKit: AdStudi
 
   <rect x="80" y="${ctaY}" width="${ctaWidth}" height="92" rx="14" fill="${accent}"/>
   <text x="${80 + ctaWidth / 2}" y="${ctaY + 60}" font-family="${body}" font-size="36" font-weight="700" fill="${mixWithBlack(accent, 0.72)}" text-anchor="middle">${esc(ctaText)}</text>
-
-  <text x="80" y="1316" font-family="${body}" font-size="22" fill="#ffffff" fill-opacity="0.6">Your brand · your photo · written for your suburb</text>
 </svg>`;
 }
 

@@ -27,6 +27,10 @@ type Photo = { src: string; name: string };
 
 const GENERATING_PHASES = ["Building your campaign…", "Writing the copy…", "Polishing each ad…"];
 
+function cardHint(template: AdStudioTemplate): string {
+  return template.preview?.headline || template.promptHint;
+}
+
 function hostOf(url: string): string {
   try {
     return new URL(url).host.replace(/^www\./, "");
@@ -49,15 +53,6 @@ function parseLocation(raw: string, fallbackState: string): { suburb: string; ci
   }
   return { suburb, city, state };
 }
-
-const TEMPLATE_HINTS: Record<string, string> = {
-  just_listed: "New on the market",
-  just_sold: "Sold result in your suburb",
-  open_home: "Invite buyers through",
-  free_appraisal: "What's my home worth?",
-  coming_soon: "Build the waitlist",
-  buyer_demand: "Buyers waiting now",
-};
 
 export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
   const router = useRouter();
@@ -213,7 +208,7 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className={styles.thumb} src={templatePreviewDataUrl(tpl, brandKit)} alt="" loading="lazy" />
                 <span className={styles.cardName}>{tpl.name}</span>
-                <span className={styles.cardHint}>{TEMPLATE_HINTS[tpl.id] ?? tpl.promptHint}</span>
+                <span className={styles.cardHint}>{cardHint(tpl)}</span>
               </button>
             ))}
             <button type="button" className={`${styles.card} ${styles.blank}`} onClick={() => openTemplate(null)}>
