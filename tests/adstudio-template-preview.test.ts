@@ -24,10 +24,13 @@ test("templatePreviewSvg renders a branded layout preview (no AI/baked photo)", 
   const svg = templatePreviewSvg(AD_STUDIO_TEMPLATES.find((t) => t.id === "just_sold")!, kit);
   assert.match(svg, /^<svg[\s>]/u);
   assert.match(svg, /viewBox="0 0 \d+ \d+"/u);
-  // Sample copy for the layout is present...
-  assert.match(svg, /strong local result/iu);
-  // ...and it uses the customer's brand primary colour for the CTA.
-  assert.match(svg, new RegExp(kit.colours.primary.replace(/[-/\\^$*+?.()|[\]{}]/gu, "\\$&"), "u"));
+  // Sample copy for the layout is present (headline may wrap across lines)...
+  assert.match(svg, /strong local/iu);
+  // ...the customer's brand and a "your photo" placeholder are shown...
+  assert.match(svg, /Your listing photo/u);
+  assert.match(svg, /Realty/u);
+  // ...and it uses the customer's brand primary colour.
+  assert.match(svg, new RegExp(kit.colours.primary.replace(/[-/\\^$*+?.()|[\]{}]/gu, "\\$&"), "iu"));
 });
 
 test("every template (built-in + a radar-shaped one) produces a preview", () => {
