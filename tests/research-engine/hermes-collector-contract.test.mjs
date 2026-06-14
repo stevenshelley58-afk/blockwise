@@ -15,8 +15,10 @@ const collector = functionBody(supervisor, "handleAdCollector");
 const postIngestJobs = functionBody(supervisor, "enqueuePostIngestJobs");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
+const upsertMediaAssets = functionBody(supervisor, "upsertMediaAssets");
 const adClassifier = functionBody(supervisor, "handleAdClassifier");
 const captureMediaAsset = functionBody(supervisor, "captureMediaAsset");
+const findCapturedMediaAssetByStorage = functionBody(supervisor, "findCapturedMediaAssetByStorage");
 const freshMediaUrlForAsset = functionBody(supervisor, "freshMediaUrlForAsset");
 const findMediaBlob = functionBody(supervisor, "findMediaBlob");
 const insertMediaBlob = functionBody(supervisor, "insertMediaBlob");
@@ -1309,7 +1311,7 @@ test("Hermes media collector refreshes dead CDN URLs from saved ad payloads", ()
 });
 
 test("Hermes media collector globally dedupes stored media by content hash", () => {
-  const mediaSource = `${mediaCollector}\n${captureMediaAsset}\n${findMediaBlob}\n${insertMediaBlob}`;
+  const mediaSource = `${mediaCollector}\n${captureMediaAsset}\n${findCapturedMediaAssetByStorage}\n${findMediaBlob}\n${insertMediaBlob}`;
   assert.match(
     mediaSource,
     /\bmedia_blobs\b/,
@@ -1324,6 +1326,30 @@ test("Hermes media collector globally dedupes stored media by content hash", () 
     mediaSource,
     /\bdeduped\b/,
     "media collector result should expose how many assets reused existing blobs",
+  );
+  assert.match(
+    mediaSource,
+    /\bfindCapturedMediaAssetByStorage\b[\s\S]*storage_bucket=eq\.\$\{encode\(mediaBucket\)\}[\s\S]*storage_path=eq\.\$\{encode\(storagePath\)\}/u,
+    "media collector must check whether this creative already has a captured row for the stored blob",
+  );
+  assert.match(
+    mediaSource,
+    /capture_status:\s*["']blocked["'][\s\S]*deduped_to_media_asset_id/u,
+    "duplicate stored blobs should be folded into the existing captured media row instead of creating another captured row",
+  );
+});
+
+test("Hermes media asset seeding tolerates source-url unique races", () => {
+  const mediaSource = `${upsertMediaAssets}\n${functionBody(supervisor, "isMediaAssetUniqueConflict")}`;
+  assert.match(
+    mediaSource,
+    /isMediaAssetUniqueConflict\(error\)[\s\S]*media_assets\?select=id&ad_creative_id=eq\.\$\{creativeId\}&source_url=eq/u,
+    "source-url insert races should re-read the canonical media row instead of failing the collector",
+  );
+  assert.match(
+    mediaSource,
+    /duplicate key value\|media_assets_creative_/u,
+    "source-url race handling should be scoped to media asset uniqueness errors",
   );
 });
 
