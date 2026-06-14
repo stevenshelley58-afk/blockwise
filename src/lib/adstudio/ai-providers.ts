@@ -408,12 +408,16 @@ function gatewayHeaders(env: EnvLike): Record<string, string> {
 }
 
 function buildImagePrompt(input: ImageProviderRequest): string {
+  // Only list http(s) reference URLs in the text. data: URLs are full base64
+  // images — they belong as multimodal image parts, never in the prompt string
+  // (OpenAI's images API rejects prompts over 32k chars).
+  const textRefs = input.referenceAssets.filter((asset) => !asset.startsWith("data:"));
   return [
     input.prompt,
     `Aspect ratio: ${input.aspectRatio}.`,
     `Style preset: ${input.stylePreset}.`,
     input.negativePrompt ? `Avoid: ${input.negativePrompt}.` : "",
-    input.referenceAssets.length ? `Reference assets: ${input.referenceAssets.join(", ")}.` : "",
+    textRefs.length ? `Reference assets: ${textRefs.join(", ")}.` : "",
   ].filter(Boolean).join("\n");
 }
 
