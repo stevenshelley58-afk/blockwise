@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { PageHeading } from "@/components/page-heading";
 import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
-import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
@@ -54,23 +53,9 @@ export default async function SelfServePage() {
       <ConfirmRegistrationTracker />
       <PageHeading
         eyebrow="Home"
-        title="Start with one ad"
-        description="Blockwise can build your first ad before your ad accounts are connected."
+        title="Create your first ad"
+        description="Start with one image and a short brief. Meta is only needed when you are ready to publish."
         actions={
-          <Link className="button" href="/ad-studio?first=1">
-            Create first ad
-            <ArrowRight aria-hidden size={16} />
-          </Link>
-        }
-      />
-
-      <section className="panel">
-        <div className="stack">
-          <StatusPill tone="blue">Trial</StatusPill>
-          <h2>10 free ad packs are included</h2>
-          <p className="item-meta">
-            Generating your first ad uses 1 pack. Meta is only needed when you are ready to publish.
-          </p>
           <div className="wizard-actions">
             <Link className="button" href="/ad-studio?first=1">
               Create first ad
@@ -80,8 +65,8 @@ export default async function SelfServePage() {
               Set up workspace
             </Link>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       <SetupChecklist items={checklist} />
 
