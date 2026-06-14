@@ -2,7 +2,7 @@
 
 import { ArrowRight, ChevronLeft, ImagePlus, Plus, RefreshCw, Sliders, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -75,6 +75,20 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
   const brand = brandKit.identity.businessName || "Your agency";
   const initials = brand.charAt(0).toUpperCase();
   const domain = hostOf(brandKit.source.url);
+
+  // Prefer templates that have a real example creative, and never show the same
+  // image twice — a wall of identical cards reads as broken.
+  const galleryTemplates = useMemo(() => {
+    const withImage = templates.filter((t) => t.cardImageUrl);
+    const base = withImage.length > 0 ? withImage : templates;
+    const seen = new Set<string>();
+    return base.filter((t) => {
+      const key = t.cardImageUrl ?? t.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [templates]);
 
   // Load the workspace's approved template library; fall back to built-ins.
   useEffect(() => {
@@ -203,7 +217,7 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
           <h1 className={styles.h1}>Start from a template</h1>
           <p className={styles.sub}>Shown in your brand — add a photo and the copy writes itself.</p>
           <div className={styles.grid}>
-            {templates.map((tpl) => (
+            {galleryTemplates.map((tpl) => (
               <button key={tpl.id} type="button" className={styles.card} onClick={() => openTemplate(tpl)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className={styles.thumb} src={tpl.cardImageUrl ?? templatePreviewDataUrl(tpl, brandKit)} alt="" loading="lazy" />

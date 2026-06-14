@@ -206,9 +206,12 @@ export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_T
 }));
 
 function humanizeTemplateName(templateKey: string, category?: string | null, hookStyle?: string | null): string {
-  // Categories can arrive as a slashed taxonomy ("Market Update / Report Data /
-  // Stat-led"); keep only the leading, recognisable label for the card title.
-  const lead = stringValue(category).split("/")[0]?.trim() || stringValue(hookStyle);
+  // Categories arrive as a slashed taxonomy ("Market Update / Report Data /
+  // Stat-led"). Use the two leading parts so similar templates stay distinct
+  // ("Market Update · Report Data") instead of collapsing to one repeated label.
+  const parts = stringValue(category).split("/").map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) return `${toTitleCase(parts[0])} · ${toTitleCase(parts[1])}`;
+  const lead = parts[0] || stringValue(hookStyle);
   return lead ? toTitleCase(lead) : toTitleCase(templateKey.replace(/[-_]+/gu, " "));
 }
 
