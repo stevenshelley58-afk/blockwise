@@ -362,12 +362,25 @@ async function generateMixedDraftVariants(input: ImageProviderRequest): Promise<
   };
 }
 
+// When reference images are supplied, prefer a provider that can actually
+// consume them. The OpenRouter path attaches them as image_url parts; OpenAI's
+// images endpoint here is text-only and would ignore them. Order is otherwise
+// preserved, and this is a no-op when no references are present.
+function orderCandidatesForReferences(
+  candidates: ReturnType<typeof modelCandidateAttempts>,
+  referenceAssets: string[],
+): ReturnType<typeof modelCandidateAttempts> {
+  if (!referenceAssets.length) return candidates;
+  const rank = (provider: string) => (provider === "openrouter" ? 0 : 1);
+  return [...candidates].sort((a, b) => rank(a.provider) - rank(b.provider));
+}
+
 async function generateSingleImageWithProfile(input: ImageProviderRequest): Promise<ImageGenerationResult> {
   const profile = await resolveRuntimeModelProfile("image_final");
   const attempts: ImageGenerationResult["attempts"] = [];
   let lastError: unknown = null;
 
-  for (const candidate of modelCandidateAttempts(profile)) {
+  for (const candidate of orderCandidatesForReferences(modelCandidateAttempts(profile), input.referenceAssets)) {
     const provider = createImageProviderForCandidate(candidate);
     attempts.push({ provider: provider.providerName, model: candidate.model, status: "attempted" });
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const migrationsDir = "supabase/migrations";
@@ -17,4 +17,16 @@ test("supabase migration versions are unique", () => {
   const duplicates = [...versions.entries()].filter(([, files]) => files.length > 1);
 
   assert.deepEqual(duplicates, []);
+});
+
+test("meta execution repair migration uses existing public RLS helper functions", () => {
+  const sql = readFileSync(
+    `${migrationsDir}/202606150001_repair_meta_execution_runtime_tables.sql`,
+    "utf8",
+  );
+
+  assert.equal(sql.includes("private.is_operator()"), false);
+  assert.equal(sql.includes("private.is_workspace_member"), false);
+  assert.ok(sql.includes("public.is_operator()"));
+  assert.ok(sql.includes("public.is_workspace_member(workspace_id)"));
 });

@@ -31,5 +31,6 @@ _archive/
 ~$*
 
 # Agent-generated media artifacts
+artifacts/
 matrix-media-*.png
 ad-template-library/images/mockups/

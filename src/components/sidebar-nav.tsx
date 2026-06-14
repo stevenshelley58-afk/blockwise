@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   Images,
   LayoutDashboard,
+  Mail,
   Radar,
   Settings2,
   SlidersHorizontal,
@@ -27,6 +28,7 @@ export type NavItem = {
 
 const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
+  { href: "/operator/email", label: "Email", icon: Mail },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/results", label: "Results", icon: ChartNoAxesCombined },
