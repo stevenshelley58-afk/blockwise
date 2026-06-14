@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 
 import type { AdStudioTemplate } from "@/lib/adstudio";
-import { defaultCuratedTemplateImage } from "@/lib/adstudio/templates.ts";
+import { resolveTemplateImage } from "@/lib/adstudio/templates.ts";
 
 import { PanelHeader } from "../inspector";
 
@@ -37,8 +37,8 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, index, active, onSelect }: TemplateCardProps) {
   const preview = PREVIEW_COPY[template.id] ?? { headline: template.name, cta: "Learn more" };
-  // Show the template's curated image on the card; fall back to a gradient.
-  const image = template.images?.[0] ?? defaultCuratedTemplateImage(template.id);
+  // Every template (built-in or radar) resolves to an on-brand designed image.
+  const image = resolveTemplateImage(template);
   return (
     <button
       type="button"

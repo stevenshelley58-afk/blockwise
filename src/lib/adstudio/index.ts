@@ -47,6 +47,7 @@ export {
   builtInAdStudioTemplates,
   curatedTemplateImages,
   defaultCuratedTemplateImage,
+  resolveTemplateImage,
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
   resolveAdStudioTemplate,

@@ -7,6 +7,7 @@ import {
   builtInAdStudioTemplates,
   curatedTemplateImages,
   defaultCuratedTemplateImage,
+  resolveTemplateImage,
 } from "../src/lib/adstudio/index.ts";
 
 test("every built-in template ships curated, on-brand images under /ads/", () => {
@@ -66,11 +67,20 @@ test("New Ad dialog default-fills the curated image on template select", () => {
   assert.match(dialog, /setImageDataUrl\(curated\?\.src \?\? ""\)/);
 });
 
-test("Template cards render the curated image as the thumbnail", () => {
+test("Template cards render an on-brand image (never a bare gradient)", () => {
   const panel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
-  assert.match(panel, /defaultCuratedTemplateImage/);
-  assert.match(panel, /const image = template\.images\?\.\[0\] \?\? defaultCuratedTemplateImage\(template\.id\)/);
+  assert.match(panel, /resolveTemplateImage/);
+  assert.match(panel, /const image = resolveTemplateImage\(template\)/);
   assert.match(panel, /backgroundImage: `url\("\$\{image\.src\}"\)`/);
+});
+
+test("resolveTemplateImage falls back by goal for non-built-in templates", () => {
+  // A radar/library template (unknown id) still resolves to a designed card via its goal.
+  const radar = resolveTemplateImage({ id: "market_update_report_data_stat_led", goal: "market_update_leads" });
+  assert.equal(radar.src, "/ads/templates/market_update.png");
+  // No goal + unknown id still yields a brand card rather than nothing.
+  const bare = resolveTemplateImage({ id: "totally_unknown" });
+  assert.ok(bare.src.startsWith("/ads/templates/"));
 });
 
 test("Media tab exposes the template's curated images as swap options", () => {
