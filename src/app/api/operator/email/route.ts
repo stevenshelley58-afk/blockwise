@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ...result,
-        mailbox: getOperatorMailboxConfig().mailboxAddress,
+        mailbox: getOperatorMailboxConfig().mailboxLabel,
       },
       { status: 201 },
     );

@@ -26,7 +26,12 @@ export default async function OperatorEmailPage() {
         title="Operator Email"
         description="Read and send Blockwise mail for the operator mailbox without leaving the control plane."
       />
-      <EmailConsole mailbox={config.mailboxAddress} initialMessages={messages} initialError={error} />
+      <EmailConsole
+        mailbox={config.mailboxLabel}
+        replyAddress={config.replyAddress}
+        initialMessages={messages}
+        initialError={error}
+      />
     </main>
   );
 }

@@ -1,10 +1,14 @@
 const RESEND_API_BASE = "https://api.resend.com";
 const DEFAULT_MAILBOX_ADDRESS = "steven@blockwise.sale";
+const DEFAULT_MAILBOX_DOMAIN = "blockwise.sale";
 const DEFAULT_MAIL_FROM = "Steven at Blockwise <steven@blockwise.sale>";
 
 export type OperatorMailboxConfig = {
   mailboxAddress: string;
+  mailboxDomain: string;
+  mailboxLabel: string;
   fromAddress: string;
+  replyAddress: string;
   configured: boolean;
 };
 
@@ -70,15 +74,30 @@ type ResendError = {
 };
 
 export function getOperatorMailboxConfig(env: NodeJS.ProcessEnv = process.env): OperatorMailboxConfig {
+  const mailboxAddress = normalizeEmailAddress(env.OPERATOR_MAILBOX_ADDRESS) || DEFAULT_MAILBOX_ADDRESS;
+  const mailboxDomain =
+    normalizeDomain(env.OPERATOR_MAILBOX_DOMAIN) || domainFromEmail(mailboxAddress) || DEFAULT_MAILBOX_DOMAIN;
+  const replyAddress = normalizeEmailAddress(env.OPERATOR_MAIL_REPLY_TO) || mailboxAddress;
+
   return {
-    mailboxAddress: normalizeEmailAddress(env.OPERATOR_MAILBOX_ADDRESS) || DEFAULT_MAILBOX_ADDRESS,
+    mailboxAddress,
+    mailboxDomain,
+    mailboxLabel: env.OPERATOR_MAILBOX_LABEL?.trim() || `All @${mailboxDomain}`,
     fromAddress: env.OPERATOR_MAIL_FROM?.trim() || DEFAULT_MAIL_FROM,
+    replyAddress,
     configured: Boolean(env.RESEND_API_KEY?.trim()),
   };
 }
 
 export function normalizeEmailAddress(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
+}
+
+export function normalizeDomain(value: string | null | undefined): string {
+  return (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "");
 }
 
 export function parseEmailRecipients(value: unknown): string[] {
@@ -98,9 +117,16 @@ export function parseEmailRecipients(value: unknown): string[] {
   return recipients;
 }
 
-export function belongsToMailbox(email: { to?: string[] | null }, mailboxAddress: string): boolean {
-  const mailbox = normalizeEmailAddress(mailboxAddress);
-  return (email.to ?? []).some((address) => normalizeEmailAddress(address) === mailbox);
+export function belongsToMailbox(email: { to?: string[] | null }, mailboxScope: string): boolean {
+  const scope = normalizeEmailAddress(mailboxScope);
+  const domain = normalizeDomain(mailboxScope);
+
+  return (email.to ?? []).some((address) => {
+    const recipient = normalizeEmailAddress(address);
+    if (!recipient) return false;
+    if (scope.includes("@")) return recipient === scope;
+    return recipient.endsWith(`@${domain}`);
+  });
 }
 
 export function buildReplySubject(subject: string | null | undefined): string {
@@ -127,11 +153,11 @@ export async function listOperatorEmails(input?: { limit?: number; before?: stri
     method: "GET",
   });
   const messages = (data.data ?? [])
-    .filter((email) => belongsToMailbox(email, config.mailboxAddress))
+    .filter((email) => belongsToMailbox(email, config.mailboxDomain))
     .map(normalizeSummary);
 
   return {
-    mailbox: config.mailboxAddress,
+    mailbox: config.mailboxLabel,
     hasMore: data.has_more,
     messages,
   };
@@ -143,12 +169,12 @@ export async function getOperatorEmail(id: string): Promise<{ mailbox: string; m
     method: "GET",
   });
 
-  if (!belongsToMailbox(data, config.mailboxAddress)) {
-    return { mailbox: config.mailboxAddress, message: null };
+  if (!belongsToMailbox(data, config.mailboxDomain)) {
+    return { mailbox: config.mailboxLabel, message: null };
   }
 
   return {
-    mailbox: config.mailboxAddress,
+    mailbox: config.mailboxLabel,
     message: normalizeDetail(data),
   };
 }
@@ -182,7 +208,7 @@ export async function sendOperatorEmail(input: {
       subject,
       text,
       html: textToHtml(text),
-      reply_to: input.replyTo || config.mailboxAddress,
+      reply_to: input.replyTo || config.replyAddress,
     }),
   });
 
@@ -249,6 +275,11 @@ function normalizeDetail(email: ResendReceivedEmailDetail): OperatorEmailDetail 
 function clampLimit(value: number): number {
   if (!Number.isFinite(value)) return 50;
   return Math.max(1, Math.min(100, Math.floor(value)));
+}
+
+function domainFromEmail(address: string): string {
+  const parts = address.split("@");
+  return normalizeDomain(parts.length === 2 ? parts[1] : "");
 }
 
 function escapeHtml(value: string): string {

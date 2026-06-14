@@ -7,6 +7,7 @@ import type { OperatorEmailDetail, OperatorEmailSummary } from "@/lib/operator/e
 
 type EmailConsoleProps = {
   mailbox: string;
+  replyAddress: string;
   initialMessages: OperatorEmailSummary[];
   initialError?: string | null;
 };
@@ -27,7 +28,7 @@ const emptyCompose: ComposeState = {
   replyTo: null,
 };
 
-export function EmailConsole({ mailbox, initialMessages, initialError = null }: EmailConsoleProps) {
+export function EmailConsole({ mailbox, replyAddress, initialMessages, initialError = null }: EmailConsoleProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [selectedId, setSelectedId] = useState(initialMessages[0]?.id ?? "");
   const [selectedMessage, setSelectedMessage] = useState<OperatorEmailDetail | null>(null);
@@ -107,7 +108,7 @@ export function EmailConsole({ mailbox, initialMessages, initialError = null }: 
       to,
       subject: replySubject(message?.subject),
       text: quotedReplyText(selectedMessage),
-      replyTo: mailbox,
+      replyTo: replyAddress,
     });
     setSendState("idle");
     setComposeOpen(true);
@@ -272,7 +273,7 @@ export function EmailConsole({ mailbox, initialMessages, initialError = null }: 
           <form onSubmit={(event) => void sendMessage(event)}>
             <header>
               <div>
-                <strong>Send from {mailbox}</strong>
+                <strong>Send from {replyAddress}</strong>
                 <span>Replies return to the operator mailbox.</span>
               </div>
               <button className="icon-button" type="button" onClick={() => setComposeOpen(false)} aria-label="Close compose">
