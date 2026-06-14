@@ -299,7 +299,7 @@
 .studio-btn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
 .studio-btn.accent:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .studio-btn.accent:disabled{opacity:.5}
-.studio-newad-overlay{position:absolute;inset:0;z-index:60;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:24px}
+.studio-newad-overlay{position:absolute;inset:0;z-index:190;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:24px}
 .studio-newad{width:min(880px,100%);max-height:calc(100% - 48px);display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:16px;background:#f8fafc;box-shadow:0 24px 80px rgba(10,15,30,.4)}
 .studio-newad-head{display:flex;align-items:center;gap:14px;padding:18px 24px 14px;background:#fff;border-bottom:1px solid var(--line-soft)}
 .studio-newad-head h2{margin:0;font-size:18px;font-weight:650;line-height:1.1;letter-spacing:-.2px}
