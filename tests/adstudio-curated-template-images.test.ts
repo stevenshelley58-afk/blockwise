@@ -57,6 +57,13 @@ test("New Ad dialog default-fills the curated image on template select", () => {
   assert.match(dialog, /setImageDataUrl\(curated\?\.src \?\? ""\)/);
 });
 
+test("Template cards render the curated image as the thumbnail", () => {
+  const panel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
+  assert.match(panel, /defaultCuratedTemplateImage/);
+  assert.match(panel, /const image = template\.images\?\.\[0\] \?\? defaultCuratedTemplateImage\(template\.id\)/);
+  assert.match(panel, /backgroundImage: `url\("\$\{image\.src\}"\)`/);
+});
+
 test("Media tab exposes the template's curated images as swap options", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   assert.match(workbench, /curatedTemplateImages/);
