@@ -38,7 +38,9 @@ function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
     value?.startsWith("data:image/") ||
       value?.startsWith("/api/adstudio/media?") ||
-      value?.startsWith("/ads/"),
+      value?.startsWith("/ads/") ||
+      // Generated template-card creatives served from the public storage bucket.
+      value?.includes("/storage/v1/object/public/template-cards/"),
   );
 }
 

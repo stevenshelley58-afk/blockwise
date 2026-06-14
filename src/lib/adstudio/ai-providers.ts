@@ -455,6 +455,7 @@ function extractImageUrl(content: unknown): string | undefined {
 function imageSizeForAspect(aspectRatio: string): string {
   if (aspectRatio === "9:16") return "1024x1792";
   if (aspectRatio === "1.91:1") return "1792x1024";
+  if (aspectRatio === "4:5") return "1024x1280";
 
   return "1024x1024";
 }

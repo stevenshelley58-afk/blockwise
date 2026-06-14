@@ -59,11 +59,11 @@ test("built-in templates carry curated images through builtInAdStudioTemplates()
   }
 });
 
-test("New Ad dialog default-fills the curated image on template select", () => {
+test("New Ad dialog default-fills any template's image on select (built-in or radar)", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-  assert.match(dialog, /defaultCuratedTemplateImage/);
-  // Both entry points (gallery select and pre-selected template) must pre-fill the image.
-  assert.match(dialog, /const curated = defaultCuratedTemplateImage\(id\)/);
+  // Resolve via resolveTemplateImage so radar templates (which have no built-in id) prefill too.
+  assert.match(dialog, /resolveTemplateImage/);
+  assert.match(dialog, /const curated = tpl \? resolveTemplateImage\(tpl\) : null/);
   assert.match(dialog, /setImageDataUrl\(curated\?\.src \?\? ""\)/);
 });
 

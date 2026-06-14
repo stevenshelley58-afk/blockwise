@@ -61,6 +61,16 @@ test("template-card cron is GET, CRON_SECRET-guarded, and stays idempotent", () 
   assert.match(route, /upsert: true/);
 });
 
+test("image provider requests a feed-sized (4:5) output, not square", () => {
+  const providers = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
+  assert.match(providers, /aspectRatio === "4:5"\) return "1024x1280"/);
+});
+
+test("the image guard accepts generated template-card creatives", () => {
+  const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  assert.match(route, /storage\/v1\/object\/public\/template-cards\//);
+});
+
 test("template-library route attaches generated brief images with a static fallback", () => {
   const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   assert.match(route, /loadBriefImages/);
