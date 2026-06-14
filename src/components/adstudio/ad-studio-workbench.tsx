@@ -32,6 +32,7 @@ import type {
 } from "@/lib/adstudio";
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
+import { buildLayoutBrief } from "@/lib/adstudio/layout-brief.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -661,16 +662,43 @@ export function AdStudioWorkbench({
     studio.setBusy(true);
     studio.setBusyMessage("Generating background");
     try {
+      // Derive a composition brief from the template's real geometry so the
+      // generated photo leaves room exactly where the headline/CTA sit, and
+      // pass the current listing photo as a reference so the model conditions
+      // on the real property instead of inventing a generic streetscape.
+      const layoutBrief = buildLayoutBrief(currentCreative);
+      const referenceImage = primaryImage;
+      const referenceAssets: string[] = !referenceImage
+        ? []
+        : referenceImage.startsWith("data:image/") || /^https?:\/\//i.test(referenceImage)
+          ? [referenceImage]
+          : referenceImage.startsWith("/") && typeof window !== "undefined"
+            ? [`${window.location.origin}${referenceImage}`]
+            : [];
+
+      const prompt = [
+        copy.headline,
+        copy.description,
+        market,
+        propertyType,
+        "real estate advertising background",
+        layoutBrief,
+        referenceAssets.length
+          ? "Use the supplied reference photo as the real property: preserve its building, architecture and setting; only improve lighting, framing and overall quality."
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
       const response = await fetch("/api/adstudio/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: [copy.headline, copy.description, market, propertyType, "real estate advertising background"]
-            .filter(Boolean)
-            .join(" | "),
+          prompt,
           aspectRatio: currentCreative.format,
           stylePreset: "premium_editorial_real_estate",
           brandKitId: brandKit.brandKitId,
+          referenceAssets,
           brand: {
             palette: [brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent].filter(Boolean),
             styleTags: brandKit.visualStyle.styleTags,

@@ -44,7 +44,7 @@ drop policy if exists meta_publish_plans_server_owned_no_client_update on public
 drop policy if exists meta_publish_plans_server_owned_no_client_delete on public.meta_publish_plans;
 create policy meta_publish_plans_workspace_select on public.meta_publish_plans
   for select
-  using (private.is_operator() or private.is_workspace_member(workspace_id));
+  using (public.is_operator() or public.is_workspace_member(workspace_id));
 create policy meta_publish_plans_server_owned_no_client_insert on public.meta_publish_plans
   for insert to authenticated
   with check (false);
@@ -81,7 +81,7 @@ drop policy if exists meta_publish_plan_mutations_server_owned_no_client_update 
 drop policy if exists meta_publish_plan_mutations_server_owned_no_client_delete on public.meta_publish_plan_mutations;
 create policy meta_publish_plan_mutations_workspace_select on public.meta_publish_plan_mutations
   for select
-  using (private.is_operator() or private.is_workspace_member(workspace_id));
+  using (public.is_operator() or public.is_workspace_member(workspace_id));
 create policy meta_publish_plan_mutations_server_owned_no_client_insert on public.meta_publish_plan_mutations
   for insert to authenticated
   with check (false);
@@ -116,7 +116,7 @@ drop policy if exists lead_delivery_attempts_server_owned_no_client_update on pu
 drop policy if exists lead_delivery_attempts_server_owned_no_client_delete on public.lead_delivery_attempts;
 create policy lead_delivery_attempts_workspace_select on public.lead_delivery_attempts
   for select
-  using (private.is_operator() or private.is_workspace_member(workspace_id));
+  using (public.is_operator() or public.is_workspace_member(workspace_id));
 create policy lead_delivery_attempts_server_owned_no_client_insert on public.lead_delivery_attempts
   for insert to authenticated
   with check (false);
