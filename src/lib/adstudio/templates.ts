@@ -167,6 +167,36 @@ export function defaultCuratedTemplateImage(templateId: string | undefined): Cur
   return curatedTemplateImages(templateId)[0] ?? null;
 }
 
+// Maps every goal to a representative built-in template, so radar/library
+// templates (whose ids are not built-in) still resolve to an on-brand image.
+const GOAL_TO_TEMPLATE: Record<AdStudioGoal, string> = {
+  seller_leads: "just_listed",
+  appraisal_bookings: "free_appraisal",
+  buyer_leads: "buyer_demand",
+  market_update_leads: "market_update",
+  downsizer_leads: "seller_checklist",
+  investor_leads: "buyer_demand",
+  open_home_followup: "open_home",
+  listing_nurture: "just_sold",
+};
+
+/**
+ * The card/default image for any template. Falls back from an exact built-in
+ * match to a goal-based match to a generic brand card, so a template never
+ * renders without an on-brand image.
+ */
+export function resolveTemplateImage(template: {
+  id?: string;
+  goal?: AdStudioGoal | string | null;
+  images?: CuratedTemplateImage[] | null;
+}): CuratedTemplateImage {
+  const exact = template.images?.[0] ?? curatedTemplateImages(template.id)[0];
+  if (exact) return exact;
+  const byGoalId = template.goal ? GOAL_TO_TEMPLATE[template.goal as AdStudioGoal] : undefined;
+  const byGoal = byGoalId ? curatedTemplateImages(byGoalId)[0] : undefined;
+  return byGoal ?? curatedTemplateImages("just_listed")[0];
+}
+
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate {
   return AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
 }
