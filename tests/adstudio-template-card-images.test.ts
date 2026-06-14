@@ -23,6 +23,17 @@ test("buildTemplateCardPrompt prepends brand direction and includes the mined re
   assert.match(prompt, /Creative recipe:/);
 });
 
+test("buildTemplateCardPrompt neutralises age/demographic phrasing the image model refuses", () => {
+  const prompt = buildTemplateCardPrompt({
+    brief_id: "IMG-DOWNSIZER",
+    name: "Downsizer Lifestyle Community",
+    ai_prompt_seed: "Aspirational over-55s lifestyle community.",
+    imagery: "Active, sociable mature-lifestyle imagery; resort feel.",
+  });
+  assert.doesNotMatch(prompt, /over-?55|mature-lifestyle|seniors|elderly|retirees/iu);
+  assert.match(prompt, /downsizer/iu);
+});
+
 test("templateCard URL + object path are stable per brief", () => {
   assert.equal(templateCardObjectPath("IMG-STAT-CARD"), "IMG-STAT-CARD.png");
   assert.equal(
