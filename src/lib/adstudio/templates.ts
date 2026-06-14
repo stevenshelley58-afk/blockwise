@@ -1,5 +1,12 @@
 import type { AdStudioGoal } from "./types.ts";
 
+export type CuratedTemplateImage = {
+  src: string;
+  label: string;
+  type: string;
+  ratio: string;
+};
+
 export type AdStudioTemplate = {
   id: string;
   templateKey?: string;
@@ -9,6 +16,8 @@ export type AdStudioTemplate = {
   promptHint: string;
   source?: "builtin" | "operator" | "radar";
   status?: "approved" | "archived" | "draft";
+  /** Curated, on-brand stock shipped with the template; first entry is the default. */
+  images?: CuratedTemplateImage[];
 };
 
 export type AdStudioLibraryTemplate = {
@@ -39,7 +48,34 @@ export type AdStudioTemplateVersion = {
   active: boolean;
 };
 
-export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
+// Curated, on-brand stock the studio ships with. Every `src` sits under `/ads/`
+// so it passes the server-side image guard (isAdStudioImageSrc) with no upload,
+// letting every template-started ad open with a suiting image already in place.
+const CURATED_IMAGE = {
+  skyline: { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Photo", ratio: "Story" },
+  familyHome: { src: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Photo", ratio: "Feed" },
+  livingRoom: { src: "/ads/ad-hillco.jpg", label: "Living room hero", type: "Photo", ratio: "Square" },
+  riverView: { src: "/ads/ad-coastline.jpg", label: "River market view", type: "Photo", ratio: "Landscape" },
+  justSold: { src: "/ads/templates/just-sold.png", label: "Just sold result", type: "Template", ratio: "Feed" },
+  homeValue: { src: "/ads/templates/home-value.png", label: "Home value update", type: "Template", ratio: "Feed" },
+  suburbReport: { src: "/ads/templates/suburb-report.png", label: "Suburb market report", type: "Template", ratio: "Feed" },
+  agentIntro: { src: "/ads/templates/agent-intro.png", label: "Meet your agent", type: "Template", ratio: "Feed" },
+} as const satisfies Record<string, CuratedTemplateImage>;
+
+const TEMPLATE_IMAGE_SETS: Record<string, CuratedTemplateImage[]> = {
+  just_listed: [CURATED_IMAGE.skyline, CURATED_IMAGE.familyHome, CURATED_IMAGE.livingRoom],
+  coming_soon: [CURATED_IMAGE.familyHome, CURATED_IMAGE.skyline, CURATED_IMAGE.riverView],
+  new_to_market: [CURATED_IMAGE.suburbReport, CURATED_IMAGE.familyHome, CURATED_IMAGE.riverView],
+  open_home: [CURATED_IMAGE.familyHome, CURATED_IMAGE.livingRoom, CURATED_IMAGE.skyline],
+  just_sold: [CURATED_IMAGE.justSold, CURATED_IMAGE.familyHome, CURATED_IMAGE.livingRoom],
+  price_update: [CURATED_IMAGE.homeValue, CURATED_IMAGE.skyline, CURATED_IMAGE.riverView],
+  market_update: [CURATED_IMAGE.suburbReport, CURATED_IMAGE.riverView, CURATED_IMAGE.skyline],
+  free_appraisal: [CURATED_IMAGE.homeValue, CURATED_IMAGE.familyHome, CURATED_IMAGE.agentIntro],
+  buyer_demand: [CURATED_IMAGE.familyHome, CURATED_IMAGE.skyline, CURATED_IMAGE.livingRoom],
+  seller_checklist: [CURATED_IMAGE.homeValue, CURATED_IMAGE.livingRoom, CURATED_IMAGE.agentIntro],
+};
+
+const BASE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   {
     id: "just_listed",
     name: "Just listed",
@@ -111,6 +147,22 @@ export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
     promptHint: "Offer a practical preparation checklist for owners thinking about selling.",
   },
 ];
+
+export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = BASE_AD_STUDIO_TEMPLATES.map((template) => ({
+  ...template,
+  images: TEMPLATE_IMAGE_SETS[template.id] ?? [],
+}));
+
+/** Curated images for a built-in template id (empty for unknown/radar templates). */
+export function curatedTemplateImages(templateId: string | undefined): CuratedTemplateImage[] {
+  if (!templateId) return [];
+  return TEMPLATE_IMAGE_SETS[templateId] ?? [];
+}
+
+/** The default curated image for a template — what a new ad opens with. */
+export function defaultCuratedTemplateImage(templateId: string | undefined): CuratedTemplateImage | null {
+  return curatedTemplateImages(templateId)[0] ?? null;
+}
 
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate {
   return AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
