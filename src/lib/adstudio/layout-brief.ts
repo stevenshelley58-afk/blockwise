@@ -3,10 +3,10 @@ import type { AdStudioCreative } from "./types.ts";
 /**
  * Derives a plain-language composition brief from a creative's real layout
  * geometry so the image model knows where copy will be overlaid and keeps the
- * subject + horizon out of those zones. This is what makes a generated photo
+ * subject and horizon out of those zones. This is what makes a generated photo
  * actually fit the template instead of being a generic stock image.
  *
- * Pure + deterministic: safe to import on the client (no server-only deps).
+ * Pure and deterministic: safe to import on the client (no server-only deps).
  */
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -31,12 +31,12 @@ export function buildLayoutBrief(creative: Pick<AdStudioCreative, "canvas" | "fo
   return [
     `Composition for a ${creative.format} real-estate ad creative.`,
     `Reserve the ${region} of the frame as clean, low-detail, copy-safe space:`,
-    `a headline, sub-headline and a call-to-action button will be overlaid there afterward,`,
-    `so keep the main subject, the horizon line and any busy detail out of that area.`,
+    "a headline, sub-headline and a call-to-action button will be overlaid there afterward,",
+    "so keep the main subject, the horizon line and any busy detail out of that area.",
     `Place the property (or main subject) toward the ${subjectRegion} and keep it sharp and well lit.`,
-    `Photoreal, editorial real-estate quality, even natural lighting, uncluttered background.`,
-    `Do NOT render any text, headlines, logos, badges, price tags or watermarks in the image -`,
-    `all text is composited separately by the template.`,
+    "Photoreal, editorial real-estate quality, even natural lighting, uncluttered background.",
+    "Do NOT render any text, headlines, logos, badges, price tags or watermarks in the image:",
+    "all text is composited separately by the template.",
   ].join(" ");
 }
 
@@ -54,7 +54,7 @@ function describeRegion(box: Box, width: number, height: number): string {
   const vertical = cy < 0.38 ? "upper" : cy > 0.62 ? "lower" : "middle";
   const horizontal = cx < 0.4 ? "left" : cx > 0.6 ? "right" : "centre";
 
-  // Wide copy blocks span the full width — describe as a horizontal band.
+  // Wide copy blocks span the full width: describe as a horizontal band.
   if (box.width / width > 0.7) {
     return `${vertical} third`;
   }
