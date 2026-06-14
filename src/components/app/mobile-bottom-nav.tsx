@@ -24,7 +24,7 @@ type MobileNavItem = NavItem & {
 
 const primaryHrefsByVariant: Record<SidebarVariant, string[]> = {
   monitor: ["/results", "/ad-radar", "/leads", "/settings"],
-  self_serve: ["/ad-studio", "/results", "/leads"],
+  self_serve: ["/ad-studio", "/ad-radar", "/results", "/leads"],
   operator: ["/operator", "/operator/research", "/approvals", "/model-control"],
 };
 
