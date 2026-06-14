@@ -20,7 +20,7 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
   // fonts and logo around a "your photo here" placeholder). It shows what their
   // ad will look like once they add their listing photo — a true range of
   // layouts personalised to the viewing customer, not a fixed finished ad.
-  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
+  const previewSrc = useMemo(() => template.cardImageUrl ?? templatePreviewDataUrl(template, brandKit), [template, brandKit]);
   return (
     <button
       type="button"

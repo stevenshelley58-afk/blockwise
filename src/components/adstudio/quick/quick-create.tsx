@@ -206,7 +206,7 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
             {templates.map((tpl) => (
               <button key={tpl.id} type="button" className={styles.card} onClick={() => openTemplate(tpl)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className={styles.thumb} src={templatePreviewDataUrl(tpl, brandKit)} alt="" loading="lazy" />
+                <img className={styles.thumb} src={tpl.cardImageUrl ?? templatePreviewDataUrl(tpl, brandKit)} alt="" loading="lazy" />
                 <span className={styles.cardName}>{tpl.name}</span>
                 <span className={styles.cardHint}>{cardHint(tpl)}</span>
               </button>
@@ -240,7 +240,7 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
         <div className={styles.composeStage}>
           {template ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className={styles.composePreview} src={templatePreviewDataUrl(template, brandKit)} alt="" />
+            <img className={styles.composePreview} src={template.cardImageUrl ?? templatePreviewDataUrl(template, brandKit)} alt="" />
           ) : (
             <div className={styles.composeBlank}>Describe the ad you want below.</div>
           )}

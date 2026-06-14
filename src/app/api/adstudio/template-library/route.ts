@@ -35,6 +35,28 @@ function researchClient() {
   return createSupabaseServiceClient().schema("research");
 }
 
+// Each mined image brief has a generated, on-brand example creative stored in the
+// public `template-cards` bucket. Map brief_id -> its public URL so the gallery
+// can show a real finished ad instead of a layout placeholder. Empty when none
+// are generated yet, in which case templates fall back to the layout preview.
+async function loadTemplateCardImages(research: ReturnType<typeof researchClient>): Promise<Map<string, string>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const map = new Map<string, string>();
+  if (!supabaseUrl) return map;
+  const { data, error } = await research
+    .from("ad_template_image_briefs")
+    .select("brief_id,card_image_path")
+    .not("card_image_path", "is", null);
+  if (error || !data) return map;
+  const base = supabaseUrl.replace(/\/+$/u, "");
+  for (const row of data as Array<{ brief_id?: string | null; card_image_path?: string | null }>) {
+    const id = typeof row.brief_id === "string" ? row.brief_id.trim() : "";
+    const path = typeof row.card_image_path === "string" ? row.card_image_path.trim() : "";
+    if (id && path) map.set(id, `${base}/storage/v1/object/public/template-cards/${path}`);
+  }
+  return map;
+}
+
 export async function GET(request: NextRequest) {
   const guard = await requireApiWorkspace(request, "adstudio");
   if (!guard.ok) return guard.response;
@@ -58,8 +80,17 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const cardImages = await loadTemplateCardImages(research);
   const approved = ((data ?? []) as AdStudioLibraryTemplate[])
-    .map((row) => mapAdStudioLibraryTemplate(row))
+    .map((row) => {
+      const template = mapAdStudioLibraryTemplate(row);
+      const briefId = typeof row.image_brief_id === "string" ? row.image_brief_id.trim() : "";
+      if (template && briefId) {
+        const url = cardImages.get(briefId);
+        if (url) template.cardImageUrl = url;
+      }
+      return template;
+    })
     .filter((template) => template !== null);
 
   return NextResponse.json({

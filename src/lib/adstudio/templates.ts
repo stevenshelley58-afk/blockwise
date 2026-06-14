@@ -11,6 +11,13 @@ export type AdStudioTemplate = {
   status?: "approved" | "archived" | "draft";
   /** Clean sample copy for the gallery preview only — never the raw prompt seed. */
   preview?: { eyebrow: string; headline: string; cta: string };
+  /**
+   * A real, on-brand example creative for this template (generated once from its
+   * mined image brief, stored in the public template-cards bucket). Shown on the
+   * gallery card so the agent sees a finished ad; their own brand + photo + brief
+   * drive the actual generated ad. Absent → fall back to the layout preview.
+   */
+  cardImageUrl?: string;
 };
 
 export type AdStudioLibraryTemplate = {
