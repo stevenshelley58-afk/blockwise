@@ -373,7 +373,7 @@ function structuredLocationCandidateQueries(
 
   if (postcodes.length > 0) {
     exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.in("postcode", postcodes)));
-    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.overlaps("postcodes", postcodes)));
+    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.overlaps("ad_area_postcodes", postcodes)));
   }
 
   for (const suburb of suburbTerms) {

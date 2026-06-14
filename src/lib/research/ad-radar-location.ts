@@ -233,7 +233,7 @@ function scoreCardForLocation(card: CustomerMetaAdLibraryCard, guess: AdRadarLoc
   const cardState = card.state?.toUpperCase() ?? null;
   const cardSuburb = card.suburb ? normaliseTerm(card.suburb) : null;
   const cardPostcode = card.postcode?.trim() ?? null;
-  const supportingPostcodes = new Set(card.postcodes.filter((value): value is string => Boolean(value)));
+  const supportingPostcodes = new Set(card.adAreaPostcodes.filter((value): value is string => Boolean(value)));
   const hasPostcodeTerm = guess.terms.some((term) => /^\d{4}$/.test(term));
   const isSpecificQuery = guess.source === "query" && (Boolean(city) || hasPostcodeTerm);
   const textLocationTerms = locationTextTerms(guess);

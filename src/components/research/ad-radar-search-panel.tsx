@@ -67,7 +67,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
   const mediaReady = cards.filter((c) => c.media.length > 0).length;
-  const allPostcodes = unique(cards.flatMap((c) => c.postcodes));
+  const allPostcodes = unique(cards.flatMap((c) => c.adAreaPostcodes));
   const newestSeenAt = cards
     .map((c) => c.lastSeenAt)
     .filter((v): v is string => Boolean(v))
@@ -100,7 +100,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
         <section className="grid cols-4">
           <MetricCard icon={FileSearch} label="Ads in view" value={String(cards.length)} note="Meta Ad Library results" />
           <MetricCard icon={Users} label="Advertisers" value={String(advertiserCount)} note="Meta pages with visible ads" />
-          <MetricCard icon={MapPin} label="Postcodes" value={String(allPostcodes.length)} note="Matched service areas" />
+          <MetricCard icon={MapPin} label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
           <MetricCard icon={ImageIcon} label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
         </section>
       )}

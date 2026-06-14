@@ -96,6 +96,18 @@ test("customer research view shows saved scraped ad history for verified pages",
   );
 });
 
+test("customer research view separates ad-area evidence from advertiser service area", () => {
+  const customerCardView = latestViewDefinition("v_customer_meta_ad_library_cards");
+  const sql = allMigrationSql();
+
+  assert.match(customerCardView, /\bam\.postcode\s+as\s+area_match_postcode\b/i);
+  assert.match(customerCardView, /\bam\.suburb\s+as\s+area_match_suburb\b/i);
+  assert.match(customerCardView, /\bam\.match_type\s+as\s+area_match_type\b/i);
+  assert.match(customerCardView, /\bcoalesce\(ad_areas\.postcodes,\s*array\[am\.postcode\]\)\s+as\s+ad_area_postcodes\b/i);
+  assert.match(customerCardView, /\bcoalesce\(service_areas\.postcodes,\s*'\{\}'::text\[\]\)\s+as\s+service_area_postcodes\b/i);
+  assert.match(sql, /comment on column research\.v_customer_meta_ad_library_cards\.postcodes[\s\S]*Legacy display field/i);
+});
+
 test("customer authenticated research history uses the same safe ad contract as customer cards", () => {
   const agentHistoryView = latestViewDefinition("v_customer_agent_ad_history");
   const sql = allMigrationSql();
@@ -448,7 +460,8 @@ test("media asset contract is strict, durable, and surfaced to the research card
   assert.match(mediaSql, /media_assets\s+jsonb\s+not\s+null\s+default\s+'?\[\]'?::jsonb/i);
   assert.match(adSchema, /\bmediaAssetSchema\b/, "adCreativeSchema must use a named strict media asset schema");
   assert.doesNotMatch(adSchema, /mediaAssets:\s*z\.array\(\s*jsonbSchema\s*\)/, "mediaAssets must not be an untyped jsonb array");
-  assert.match(read("src/app/api/research/ads/search/route.ts"), /v_customer_meta_ad_library_cards/, "customer research search API must read the safe card view");
+  assert.match(read("src/app/api/research/ads/search/route.ts"), /searchCustomerMetaAdLibraryCards/, "customer research search API must delegate to the safe card search helper");
+  assert.match(read("src/lib/research/ad-radar-card-search.ts"), /v_customer_meta_ad_library_cards/, "customer research search helper must read the safe card view");
   assert.match(read("src/lib/research/customer-meta-card.ts"), /storagePath[\s\S]*sourceUrl|storagePath[\s\S]*url/, "card media resolver must prefer stored media before provider URLs");
 });
 
