@@ -100,6 +100,8 @@ export function NewAdDialog({
       setStep(initialStep);
     }
     setDescription("");
+    // The customer supplies their own listing photo; the template drives the
+    // layout, copy and brand — never a pre-baked image.
     setImageDataUrl("");
     setImageName("");
     setSourceNote("");
@@ -218,6 +220,9 @@ export function NewAdDialog({
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
+    // The customer adds their own listing photo; the template only drives layout/copy.
+    setImageDataUrl("");
+    setImageName("");
     setBriefFrom(id === "" ? "source" : "template");
     setStep("brief");
   }
@@ -400,11 +405,11 @@ export function NewAdDialog({
 
           {step === "template" && (
             <div className="studio-tpl-grid">
-              {templates.map((template, index) => (
+              {templates.map((template) => (
                 <TemplateCard
                   key={template.id}
                   template={template}
-                  index={index}
+                  brandKit={brandKit}
                   active={templateId === template.id}
                   onSelect={chooseTemplate}
                 />

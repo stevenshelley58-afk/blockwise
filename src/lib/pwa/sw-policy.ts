@@ -1,5 +1,8 @@
 export const PWA_CACHE_PREFIX = "blockwise-pwa";
-export const PWA_CACHE_VERSION = "v1";
+// Bump when shipped static assets under cached prefixes (e.g. /ads/) change at a
+// stable URL — the activate handler drops older caches, so devices refetch them
+// instead of serving a stale cache-first copy.
+export const PWA_CACHE_VERSION = "v2";
 export const STATIC_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-static`;
 export const OFFLINE_FALLBACK_URL = "/offline.html";
 

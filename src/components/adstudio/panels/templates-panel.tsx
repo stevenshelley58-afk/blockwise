@@ -1,41 +1,26 @@
 "use client";
 
+import { useMemo } from "react";
 import { Plus } from "lucide-react";
 
-import type { AdStudioTemplate } from "@/lib/adstudio";
+import type { AdStudioBrandKit, AdStudioTemplate } from "@/lib/adstudio";
+import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 
 import { PanelHeader } from "../inspector";
 
-// Presentation-only preview copy for the gallery thumbnails.
-// Falls back to the template's own name/promptHint when not listed.
-const PREVIEW_COPY: Record<string, { headline: string; cta: string }> = {
-  just_listed: { headline: "Just listed in South Perth", cta: "See the home" },
-  coming_soon: { headline: "Something special is coming soon", cta: "Get first look" },
-  new_to_market: { headline: "Fresh activity on your street", cta: "See recent sales" },
-  open_home: { headline: "Open Sat 11:00 — save your spot", cta: "Plan your visit" },
-  just_sold: { headline: "SOLD — strong local result", cta: "See what yours could get" },
-  price_update: { headline: "What's your home worth now?", cta: "Get a price update" },
-  market_update: { headline: "What sold near you this quarter", cta: "Get the report" },
-  free_appraisal: { headline: "What's your home worth in 2026?", cta: "Book free appraisal" },
-  buyer_demand: { headline: "Buyers are searching your suburb", cta: "Check buyer demand" },
-  seller_checklist: { headline: "10 things to fix before you list", cta: "Download checklist" },
-};
-
-const GRADIENT_COUNT = 7;
-
-function gradientClass(template: AdStudioTemplate, index: number): string {
-  return `studio-tpl-g${index % GRADIENT_COUNT}`;
-}
-
 type TemplateCardProps = {
   template: AdStudioTemplate;
-  index: number;
+  brandKit: AdStudioBrandKit;
   active?: boolean;
   onSelect: (id: string) => void;
 };
 
-export function TemplateCard({ template, index, active, onSelect }: TemplateCardProps) {
-  const preview = PREVIEW_COPY[template.id] ?? { headline: template.name, cta: "Learn more" };
+export function TemplateCard({ template, brandKit, active, onSelect }: TemplateCardProps) {
+  // A branded preview of this template's actual layout (the customer's colours,
+  // fonts and logo around a "your photo here" placeholder). It shows what their
+  // ad will look like once they add their listing photo — a true range of
+  // layouts personalised to the viewing customer, not a fixed finished ad.
+  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
   return (
     <button
       type="button"
@@ -43,10 +28,9 @@ export function TemplateCard({ template, index, active, onSelect }: TemplateCard
       aria-pressed={active}
       onClick={() => onSelect(template.id)}
     >
-      <span className={`studio-tpl-thumb ${gradientClass(template, index)}`}>
-        <span className="tag">{template.name}</span>
-        <span className="t-copy">{preview.headline}</span>
-        <span className="t-cta">{preview.cta}</span>
+      <span className="studio-tpl-thumb studio-tpl-thumb--img">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="studio-tpl-photo" src={previewSrc} alt="" loading="lazy" />
       </span>
       <span className="studio-tpl-meta">
         <strong>{template.name}</strong>
@@ -72,17 +56,18 @@ export function BlankTemplateCard({ active, onSelect }: { active?: boolean; onSe
 
 type TemplatesPanelProps = {
   templates: AdStudioTemplate[];
+  brandKit: AdStudioBrandKit;
   onUseTemplate: (id: string) => void;
   onStartBlank: () => void;
 };
 
-export function TemplatesPanel({ templates, onUseTemplate, onStartBlank }: TemplatesPanelProps) {
+export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank }: TemplatesPanelProps) {
   return (
     <>
-      <PanelHeader title="Templates" detail="Proven starting points — pick one to create a new ad." />
+      <PanelHeader title="Templates" detail="Each preview uses your brand — add your listing photo and the copy writes itself." />
       <div className="studio-tpl-grid">
-        {templates.map((template, index) => (
-          <TemplateCard key={template.id} template={template} index={index} onSelect={onUseTemplate} />
+        {templates.map((template) => (
+          <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />
         ))}
         <BlankTemplateCard onSelect={onStartBlank} />
       </div>
