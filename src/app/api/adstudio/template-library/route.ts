@@ -6,9 +6,32 @@ import {
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
   type AdStudioLibraryTemplate,
+  type CuratedTemplateImage,
 } from "@/lib/adstudio";
+import { templateCardImageFromBrief } from "@/lib/adstudio/template-card-prompt";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+
+// Generated, on-brand creative per image brief (keyed by brief_id). Empty until
+// the template-card cron has generated them; templates then fall back to static.
+async function loadBriefImages(
+  research: ReturnType<typeof researchClient>,
+): Promise<Map<string, CuratedTemplateImage>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const map = new Map<string, CuratedTemplateImage>();
+  if (!supabaseUrl) return map;
+  const { data, error } = await research
+    .from("ad_template_image_briefs")
+    .select("brief_id,name,card_image_path")
+    .not("card_image_path", "is", null);
+  if (error || !data) return map;
+  for (const row of data as Array<{ brief_id?: string | null; name?: string | null }>) {
+    if (typeof row.brief_id === "string" && row.brief_id) {
+      map.set(row.brief_id, templateCardImageFromBrief(supabaseUrl, { brief_id: row.brief_id, name: row.name }));
+    }
+  }
+  return map;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -58,8 +81,9 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const briefImages = await loadBriefImages(research);
   const approved = ((data ?? []) as AdStudioLibraryTemplate[])
-    .map(mapAdStudioLibraryTemplate)
+    .map((row) => mapAdStudioLibraryTemplate(row, briefImages))
     .filter((template) => template !== null);
 
   return NextResponse.json({
