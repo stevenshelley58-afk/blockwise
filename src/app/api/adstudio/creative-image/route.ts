@@ -96,10 +96,6 @@ export async function POST(request: NextRequest) {
       stylePreset: "real_estate_photography",
     });
 
-    if (!generated) {
-      return NextResponse.json({ error: "The ad image could not be generated. Try again." }, { status: 502 });
-    }
-
     let image = generated.assetUrl;
     if (image.startsWith("data:image/")) {
       const decoded = dataUrlToUploadBytes(image);
@@ -113,6 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ image, model: generated.model });
   } catch (error) {
+    console.error("[creative-image] generation failed", error);
     return errorResponse(error, 500);
   }
 }

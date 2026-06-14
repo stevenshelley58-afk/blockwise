@@ -36,26 +36,30 @@ export function buildTemplateCreativePrompt(input: {
 /**
  * Generate one creative, trying the runtime image-model profile's candidates in
  * order (e.g. gpt-image / gemini-flash-image), then the env default as a last
- * resort. Returns null only if every provider fails.
+ * resort. Throws a descriptive error (with each provider's failure) so callers
+ * can log and surface why generation failed rather than a blank 502.
  */
 export async function generateTemplateCreativeImage(
   input: ImageProviderRequest,
-): Promise<{ assetUrl: string; model: string } | null> {
+): Promise<{ assetUrl: string; model: string }> {
+  const errors: string[] = [];
   const profile = await resolveRuntimeModelProfile("image_final");
   for (const candidate of modelCandidateAttempts(profile)) {
     try {
       const provider = createImageProviderForCandidate(candidate);
       const result = await provider.generate(input);
       if (result.assetUrl) return { assetUrl: result.assetUrl, model: result.model };
-    } catch {
-      // Try the next candidate.
+      errors.push(`${candidate.provider}/${candidate.model}: empty result`);
+    } catch (error) {
+      errors.push(`${candidate.provider}/${candidate.model}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   try {
     const result = await createOpenAiImageProvider().generate(input);
     if (result.assetUrl) return { assetUrl: result.assetUrl, model: result.model };
-  } catch {
-    // Fall through to null.
+    errors.push("openai/env-default: empty result");
+  } catch (error) {
+    errors.push(`openai/env-default: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return null;
+  throw new Error(`Image generation failed — ${errors.join(" | ")}`);
 }
