@@ -11,7 +11,9 @@ import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enric
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
-import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, resolveAdStudioTemplate, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
+import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, mapAdStudioLibraryTemplate, resolveAdStudioTemplate, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioLibraryTemplate, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
+import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,33 @@ type CreateCampaignBody = {
 
 const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 30_000;
+
+// Mined ("radar") templates have no built-in template id, so resolveAdStudioTemplate
+// can't see them and the chosen template never reaches generation. Fetch the live
+// template by key and assemble its server-only generation direction (mined copy +
+// layout/imagery recipe) so the AI copy actually follows that template's proven
+// angle, hook and offer. Never returned to the client.
+async function resolveLiveTemplateDirection(templateKey: string): Promise<{ name: string; hint: string } | null> {
+  try {
+    const research = createSupabaseServiceClient().schema("research");
+    const { data, error } = await research
+      .from("v_ad_template_library")
+      .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,ai_prompt_seed,compliance_note")
+      .eq("template_key", templateKey)
+      .maybeSingle();
+    if (error || !data) return null;
+    const row = data as AdStudioLibraryTemplate;
+    const mapped = mapAdStudioLibraryTemplate(row);
+    const hint = [row.headline, row.primary_text, row.description, row.ai_prompt_seed, row.cta ? `CTA: ${row.cta}` : "", row.compliance_note]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter(Boolean)
+      .join("\n");
+    if (!mapped || !hint) return null;
+    return { name: mapped.name, hint };
+  } catch {
+    return null;
+  }
+}
 
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
@@ -153,7 +182,11 @@ export async function POST(request: NextRequest) {
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
     });
-    const template = body.firstAd?.mode === "template" ? resolveAdStudioTemplate(body.firstAd.templateId) : null;
+    const builtInTemplate = body.firstAd?.mode === "template" ? resolveAdStudioTemplate(body.firstAd.templateId) : null;
+    const liveTemplate =
+      !builtInTemplate && body.firstAd?.templateKey && !isBuiltInAdStudioTemplate(body.firstAd.templateKey)
+        ? await resolveLiveTemplateDirection(body.firstAd.templateKey)
+        : null;
     const sourceImageUrl = await resolveAdStudioImageForModel(
       context.supabase,
       context.access.workspaceId,
@@ -164,8 +197,8 @@ export async function POST(request: NextRequest) {
       workspaceId: context.access.workspaceId,
       userId: context.access.userId,
       brief: body.firstAd?.description,
-      templateName: template?.name,
-      templateHint: template?.promptHint,
+      templateName: builtInTemplate?.name ?? liveTemplate?.name,
+      templateHint: builtInTemplate?.promptHint ?? liveTemplate?.hint,
       sourceImageUrl,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
