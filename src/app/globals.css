@@ -1888,6 +1888,373 @@ a.operator-file-row {
   font-weight: 800;
 }
 
+.operator-email-shell {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.operator-email-toolbar,
+.operator-email-grid,
+.operator-email-compose form {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.operator-email-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+}
+
+.operator-email-account,
+.operator-email-actions,
+.operator-email-row-top,
+.operator-email-reader-head,
+.operator-email-compose header,
+.operator-email-compose footer,
+.operator-email-notice,
+.operator-email-attachments span,
+.operator-email-send-state.sent {
+  display: flex;
+  align-items: center;
+}
+
+.operator-email-account {
+  min-width: 0;
+  gap: 11px;
+}
+
+.operator-email-account-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-ctl);
+  background: var(--accent-tint);
+  color: var(--blue);
+}
+
+.operator-email-account strong,
+.operator-email-list-head strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.operator-email-account span,
+.operator-email-list-head span,
+.operator-email-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.operator-email-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.operator-email-notice {
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.operator-email-notice.rose {
+  border-color: color-mix(in srgb, var(--rose) 25%, var(--line));
+  background: color-mix(in srgb, var(--rose-soft) 35%, var(--surface));
+  color: var(--rose);
+}
+
+.operator-email-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  min-height: 610px;
+  overflow: hidden;
+}
+
+.operator-email-list {
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface-subtle);
+  overflow: auto;
+}
+
+.operator-email-list-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-subtle));
+  padding: 14px;
+}
+
+.operator-email-list-head svg {
+  color: var(--blue);
+}
+
+.operator-email-row {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 13px 14px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.operator-email-row:hover,
+.operator-email-row:focus-visible {
+  background: var(--surface);
+}
+
+.operator-email-row.active {
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.operator-email-row-top {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.operator-email-row-top strong,
+.operator-email-row-subject,
+.operator-email-from {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-email-row-top strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.operator-email-row-top time,
+.operator-email-row-meta {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.operator-email-row-subject {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.operator-email-row-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.operator-email-reader {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  background: var(--surface);
+}
+
+.operator-email-reader-head {
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 20px;
+}
+
+.operator-email-reader-head h2 {
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.operator-email-reader-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.operator-email-from {
+  max-width: 720px;
+  color: var(--blue) !important;
+  font-weight: 750;
+}
+
+.operator-email-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px;
+}
+
+.operator-email-body pre {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.operator-email-body iframe {
+  width: 100%;
+  min-height: 520px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: #ffffff;
+}
+
+.operator-email-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 20px;
+}
+
+.operator-email-attachments span {
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
+  padding: 5px 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.operator-email-state,
+.operator-email-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 260px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.operator-email-empty {
+  min-height: 220px;
+}
+
+.operator-email-empty strong {
+  color: var(--ink);
+}
+
+.operator-email-compose {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  width: min(560px, calc(100vw - 32px));
+}
+
+.operator-email-compose form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow-float);
+}
+
+.operator-email-compose header,
+.operator-email-compose footer {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.operator-email-compose header strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.operator-email-compose header span,
+.operator-email-send-state {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.operator-email-compose label {
+  display: grid;
+  gap: 5px;
+}
+
+.operator-email-compose label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.operator-email-compose input,
+.operator-email-compose textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 11px;
+}
+
+.operator-email-compose textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.operator-email-compose input:focus,
+.operator-email-compose textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.operator-email-send-state {
+  min-height: 24px;
+}
+
+.operator-email-send-state.sent {
+  gap: 5px;
+  color: var(--green);
+  font-weight: 800;
+}
+
+.spin {
+  animation: blockwise-spin 0.9s linear infinite;
+}
+
+@keyframes blockwise-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .operator-live-dot {
   display: inline-flex;
   align-items: center;
@@ -2206,7 +2573,8 @@ a.operator-file-row {
   .operator-lower-grid,
   .operator-skill-grid,
   .operator-attention-strip,
-  .operator-inspect-controls {
+  .operator-inspect-controls,
+  .operator-email-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -2214,8 +2582,46 @@ a.operator-file-row {
     align-items: stretch;
   }
 
+  .operator-email-grid {
+    min-height: auto;
+  }
+
+  .operator-email-list {
+    max-height: 360px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .operator-email-reader {
+    min-height: 520px;
+  }
+
   .operator-coverage-row {
     grid-template-columns: 88px minmax(0, 1fr) 38px;
+  }
+}
+
+@media (max-width: 640px) {
+  .operator-email-toolbar,
+  .operator-email-reader-head,
+  .operator-email-compose footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .operator-email-actions {
+    justify-content: stretch;
+  }
+
+  .operator-email-actions .button,
+  .operator-email-compose footer .button {
+    width: 100%;
+  }
+
+  .operator-email-compose {
+    right: 12px;
+    bottom: 86px;
+    width: calc(100vw - 24px);
   }
 }
 
