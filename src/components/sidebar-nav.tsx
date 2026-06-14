@@ -29,11 +29,11 @@ const operatorNavItems: NavItem[] = [
   { href: "/operator", label: "Operator", icon: LayoutDashboard },
   { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
-  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
-  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
-  { href: "/ad-studio", label: "Ad Studio", icon: Images },
+  { href: "/ad-studio", label: "Create", icon: Images },
+  { href: "/ad-radar", label: "Ad Spy", icon: Radar },
+  { href: "/results", label: "Performance", icon: ChartNoAxesCombined },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
+  { href: "/approvals", label: "Review", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
   { href: "/workforce", label: "AI Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
@@ -41,19 +41,19 @@ const operatorNavItems: NavItem[] = [
 
 const selfServeNavItems: NavItem[] = [
   { href: "/self-serve", label: "Home", icon: LayoutDashboard },
-  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
-  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
-  { href: "/ad-studio", label: "Ad Studio", icon: Images },
+  { href: "/ad-studio", label: "Create", icon: Images },
+  { href: "/ad-radar", label: "Ad Spy", icon: Radar },
+  { href: "/results", label: "Performance", icon: ChartNoAxesCombined },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
+  { href: "/approvals", label: "Review", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 
 const monitorNavItems: NavItem[] = [
-  { href: "/results", label: "Results", icon: ChartNoAxesCombined },
-  { href: "/ad-radar", label: "Ad Radar", icon: Radar },
+  { href: "/results", label: "Performance", icon: ChartNoAxesCombined },
+  { href: "/ad-radar", label: "Ad Spy", icon: Radar },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
+  { href: "/approvals", label: "Review", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
 ];
 

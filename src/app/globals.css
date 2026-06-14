@@ -838,6 +838,14 @@ article.card,
   transition: box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease;
 }
 
+/* Anchor-wrapped cards read as plain cards, not links. */
+a.item-card,
+a.metric-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
 /* Anchor-wrapped cards lift on hover and keyboard focus. */
 a.metric-card:hover,
 a.mm-ad-card:hover,

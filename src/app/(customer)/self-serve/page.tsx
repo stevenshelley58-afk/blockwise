@@ -1,91 +1,45 @@
-import { ArrowRight, Palette, PenLine, Plug } from "lucide-react";
+import { ArrowRight, ChartNoAxesCombined, Radar, UsersRound } from "lucide-react";
 import Link from "next/link";
 
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { PageHeading } from "@/components/page-heading";
-import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function SelfServePage() {
-  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
-
-  const [campaigns, brandKits, connections] = await Promise.all([
-    supabase.from("adstudio_campaigns").select("id", { count: "exact", head: true }).eq("workspace_id", access.workspaceId),
-    supabase.from("adstudio_brand_kits").select("business_name").eq("workspace_id", access.workspaceId).limit(1),
-    supabase
-      .from("provider_connections")
-      .select("id", { count: "exact", head: true })
-      .eq("workspace_id", access.workspaceId)
-      .neq("status", "revoked"),
-  ]);
-
-  const hasAd = (campaigns.count ?? 0) > 0;
-  const hasBrand = (brandKits.data ?? []).some((kit) => kit.business_name && kit.business_name.trim() !== "");
-  const hasConnection = (connections.count ?? 0) > 0;
-  const checklist: SetupChecklistItem[] = [
-    {
-      id: "first-ad",
-      label: "Create your first ad",
-      description: "Use one image and a short brief to generate Story, Feed, and Square.",
-      complete: hasAd,
-      href: "/ad-studio?first=1",
-    },
-    {
-      id: "brand",
-      label: "Confirm your brand",
-      description: "Add the basics so draft copy and colours feel like your agency.",
-      complete: hasBrand,
-      href: "/onboarding",
-    },
-    {
-      id: "connections",
-      label: "Connect Meta before publishing",
-      description: "You can leave this until the ad is approved and ready to launch.",
-      complete: hasConnection,
-      href: "/settings#connections",
-    },
-  ];
+  await requirePageSurfaceAccess("self_serve");
 
   return (
     <main className="content">
       <ConfirmRegistrationTracker />
       <PageHeading
-        eyebrow="Home"
-        title="Create your first ad"
-        description="Start with one image and a short brief. Meta is only needed when you are ready to publish."
+        title="Turn a listing into ads"
+        description="One photo and a short brief — that's all it takes."
         actions={
-          <div className="wizard-actions">
-            <Link className="button" href="/ad-studio?first=1">
-              Create first ad
-              <ArrowRight aria-hidden size={16} />
-            </Link>
-            <Link className="button secondary" href="/onboarding">
-              Set up workspace
-            </Link>
-          </div>
+          <Link className="button big" href="/ad-studio?first=1">
+            Create an ad
+            <ArrowRight aria-hidden size={16} />
+          </Link>
         }
       />
 
-      <SetupChecklist items={checklist} />
-
-      <section className="grid cols-3" aria-label="Next actions">
-        <article className="item-card">
-          <PenLine aria-hidden color="#123e75" size={20} />
-          <h3>Create</h3>
-          <p className="item-meta">Turn one listing photo and a short brief into Meta-ready ad formats.</p>
-        </article>
-        <article className="item-card">
-          <Palette aria-hidden color="#123e75" size={20} />
-          <h3>Brand</h3>
-          <p className="item-meta">Keep colours, tone, and compliance defaults tidy before review.</p>
-        </article>
-        <article className="item-card">
-          <Plug aria-hidden color="#123e75" size={20} />
-          <h3>Publish later</h3>
-          <p className="item-meta">Connect Meta only when the ad is approved and ready to go live.</p>
-        </article>
+      <section className="grid cols-3" aria-label="Explore">
+        <Link className="item-card" href="/ad-radar">
+          <Radar aria-hidden color="#123e75" size={20} />
+          <h3>Ad Spy</h3>
+          <p className="item-meta">See ads competitors are running.</p>
+        </Link>
+        <Link className="item-card" href="/results">
+          <ChartNoAxesCombined aria-hidden color="#123e75" size={20} />
+          <h3>Performance</h3>
+          <p className="item-meta">Track how your ads are doing.</p>
+        </Link>
+        <Link className="item-card" href="/leads">
+          <UsersRound aria-hidden color="#123e75" size={20} />
+          <h3>Leads</h3>
+          <p className="item-meta">Enquiries your ads bring in.</p>
+        </Link>
       </section>
     </main>
   );

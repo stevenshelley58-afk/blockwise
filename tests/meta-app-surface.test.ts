@@ -20,7 +20,7 @@ test("approvals page exposes human approve and reject actions", () => {
   assert.match(liveData, /workspace_id,target_type,target_id,status,risk_summary,workspaces\(name\)/);
   assert.match(liveData, /if \(workspaceId\)/);
   assert.match(liveData, /if \(options\.status\)/);
-  assert.match(sidebar, /\{ href: "\/approvals", label: "Approvals", icon: ClipboardCheck \}/);
+  assert.match(sidebar, /\{ href: "\/approvals", label: "Review", icon: ClipboardCheck \}/);
   assert.match(sidebar, /showApprovals \|\| item\.href !== "\/approvals"/);
   assert.match(appShell, /primaryMembership\?\.role === "owner" \|\| primaryMembership\?\.role === "admin"/);
   assert.match(actions, /PATCH/);
