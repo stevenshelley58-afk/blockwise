@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { MetricCard } from "@/components/metric-card";
+import { AdRadarAdvertiserSearch } from "@/components/research/ad-radar-advertiser-search";
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
+import type { AdvertiserSuggestion } from "@/lib/research/advertiser-autocomplete";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
 type ResearchSort = "recent" | "longest";
@@ -26,6 +28,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
   const [cards, setCards] = useState<CustomerMetaAdLibraryCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function doSearch(q: string, activeSort: ResearchSort = sort) {
@@ -46,8 +49,15 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
   }
 
   function onSearch(q: string) {
+    setSelectedAdvertiser(null);
     setQuery(q);
     doSearch(q, sort);
+  }
+
+  function onSelectAdvertiser(advertiser: AdvertiserSuggestion) {
+    setSelectedAdvertiser(advertiser.pageName);
+    setQuery(advertiser.pageName);
+    doSearch(advertiser.pageName, sort);
   }
 
   useEffect(() => {
@@ -76,6 +86,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
           placeholder="6008, Subiaco, Ray White, appraisal"
           surface="research"
         />
+        <div className="research-advertiser-divider">
+          <span>or pick an advertiser</span>
+        </div>
+        <AdRadarAdvertiserSearch onSelect={onSelectAdvertiser} />
         <div className="research-freshness">
           <Clock3 size={14} />
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
@@ -125,6 +139,11 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
 
           {cards.length > 0 ? (
             <AdRadarResultsGrid cards={cards} />
+          ) : selectedAdvertiser ? (
+            <div className="research-empty-state">
+              <h3>No ads running for {selectedAdvertiser}</h3>
+              <p>This advertiser has no live ads in the Blockwise research database right now.</p>
+            </div>
           ) : (
             <div className="research-empty-state">
               <h3>No ads matched</h3>

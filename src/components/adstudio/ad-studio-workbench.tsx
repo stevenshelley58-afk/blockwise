@@ -147,6 +147,11 @@ function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBra
   );
 }
 
+function dedupeAssetsBySrc<T extends { src: string }>(assets: T[]): T[] {
+  const seen = new Set<string>();
+  return assets.filter((asset) => (seen.has(asset.src) ? false : seen.add(asset.src)));
+}
+
 function labelForImageSrc(src: string): string {
   const asset = MEDIA_ASSETS.find((item) => item.src === src);
   if (asset) return asset.label;
@@ -418,7 +423,12 @@ export function AdStudioWorkbench({
   // Demo/sample imagery is only shown when viewing the sample workspace; real
   // users see only their own uploaded and workspace assets.
   const demoAssets = isSample ? MEDIA_ASSETS : [];
-  const mediaAssets = [...uploadedAssets, ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets)];
+  // The Media tab shows the customer's own assets (uploads + workspace/brand-kit
+  // images); demo imagery only on the sample workspace. Dedupe by src.
+  const mediaAssets = dedupeAssetsBySrc([
+    ...uploadedAssets,
+    ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets),
+  ]);
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
@@ -741,6 +751,7 @@ export function AdStudioWorkbench({
       return (
         <TemplatesPanel
           templates={adTemplates}
+          brandKit={brandKit}
           onUseTemplate={(id) => openNewAd(id)}
           onStartBlank={() => openNewAd("")}
         />
@@ -1085,6 +1096,7 @@ export function AdStudioWorkbench({
           <div className="studio-mobile-panel">
             <TemplatesPanel
               templates={adTemplates}
+              brandKit={brandKit}
               onUseTemplate={(id) => openNewAd(id)}
               onStartBlank={() => openNewAd("")}
             />

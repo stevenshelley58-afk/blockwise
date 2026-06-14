@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const approved = ((data ?? []) as AdStudioLibraryTemplate[])
-    .map(mapAdStudioLibraryTemplate)
+    .map((row) => mapAdStudioLibraryTemplate(row))
     .filter((template) => template !== null);
 
   return NextResponse.json({
