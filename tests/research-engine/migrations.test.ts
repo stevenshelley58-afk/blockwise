@@ -15,6 +15,8 @@ const activeApifyHealthMigration = "supabase/migrations/202606080004_scope_activ
 const archiveBlockedWorkQueueMigration = "supabase/migrations/202606120001_archive_stale_blocked_work_queue.sql";
 const firstTesterDataCleanupMigration = "supabase/migrations/202606120003_first_tester_data_cleanup.sql";
 const coverageDefectDedupeMigration = "supabase/migrations/202606120004_coverage_defect_dedupe.sql";
+const mediaAssetsDedupeMigration = "supabase/migrations/202606150002_dedupe_media_assets.sql";
+const mediaAssetsContentHashDedupeMigration = "supabase/migrations/202606150003_dedupe_media_asset_content_hash.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -200,6 +202,56 @@ test("ad-library extension migration adds validation, swipe, and media-dedupe ta
   assert.match(sql, /enable row level security/i);
   assert.match(sql, /grant select, insert, update on research\.media_blobs to service_role/i);
   assert.match(sql, /grant select, insert, update, delete on public\.research_saved_ads to authenticated, service_role/i);
+});
+
+test("media-assets dedupe migration archives rows and restores uniqueness guards", () => {
+  const sql = readFileSync(mediaAssetsDedupeMigration, "utf8");
+
+  assert.match(sql, /^\s*begin;/im);
+  assert.match(sql, /create schema if not exists research_archive/i);
+  assert.match(sql, /research_archive\.media_assets_dedupe_202606150002/i);
+  assert.match(sql, /research_archive\.ad_style_profiles_media_asset_dedupe_202606150002/i);
+  assert.match(
+    sql,
+    /partition by ma\.ad_creative_id,\s*coalesce\(ma\.storage_bucket,\s*''\),\s*ma\.storage_path/i,
+    "stored media duplicates must be grouped by creative and bucket/path",
+  );
+  assert.match(
+    sql,
+    /partition by remaining\.ad_creative_id,\s*remaining\.source_url/i,
+    "source-url duplicates must be grouped before restoring the source index",
+  );
+  assert.match(sql, /raise notice 'media asset dedupe will archive and remove % duplicate rows'/i);
+  assert.match(sql, /duplicate_profile_refs[\s\S]*canonical_rank[\s\S]*update research\.ad_style_profiles/i);
+  assert.match(sql, /set media_asset_id = duplicate_profile_refs\.canonical_id/i);
+  assert.match(sql, /update research\.media_blobs[\s\S]*first_media_asset_id[\s\S]*m\.canonical_id/i);
+  assert.match(sql, /delete from research\.media_assets[\s\S]*media_asset_dedupe_map/i);
+  assert.match(sql, /update research\.ad_creatives[\s\S]*media_assets = coalesce\(aggregated\.media_assets, '\[\]'::jsonb\)/i);
+  assert.match(sql, /drop index if exists research\.media_assets_creative_source_idx/i);
+  assert.match(sql, /create unique index media_assets_creative_source_idx/i);
+  assert.match(sql, /drop index if exists research\.media_assets_creative_storage_idx/i);
+  assert.match(sql, /create unique index media_assets_creative_storage_idx[\s\S]*coalesce\(storage_bucket,\s*''\)/i);
+  assert.match(sql, /media_assets_captured_storage_has_bucket/i);
+  assert.match(sql, /notify pgrst,\s*'reload schema'/i);
+  assert.match(sql, /commit;/i);
+});
+
+test("media-assets content-hash dedupe prefers canonical media blobs", () => {
+  const sql = readFileSync(mediaAssetsContentHashDedupeMigration, "utf8");
+
+  assert.match(sql, /^\s*begin;/im);
+  assert.match(sql, /research_archive\.media_assets_content_hash_dedupe_202606150003/i);
+  assert.match(sql, /partition by ma\.ad_creative_id,\s*ma\.content_hash/i);
+  assert.match(sql, /ma\.storage_path like 'media-blobs\/%'/i);
+  assert.match(sql, /raise notice 'media content-hash dedupe will archive and remove % duplicate rows'/i);
+  assert.match(sql, /duplicate_profile_refs[\s\S]*canonical_rank[\s\S]*update research\.ad_style_profiles/i);
+  assert.match(sql, /delete from research\.media_assets[\s\S]*media_asset_content_hash_dedupe_map/i);
+  assert.match(sql, /update research\.ad_creatives[\s\S]*media_assets = coalesce\(aggregated\.media_assets, '\[\]'::jsonb\)/i);
+  assert.match(sql, /drop index if exists research\.media_assets_creative_content_hash_idx/i);
+  assert.match(sql, /create unique index media_assets_creative_content_hash_idx[\s\S]*ad_creative_id,\s*content_hash/i);
+  assert.match(sql, /where capture_status = 'captured'[\s\S]*content_hash is not null/i);
+  assert.match(sql, /notify pgrst,\s*'reload schema'/i);
+  assert.match(sql, /commit;/i);
 });
 
 test("apify cost-control migration adds runtime settings without opening table access", () => {

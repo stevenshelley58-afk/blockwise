@@ -4491,21 +4491,33 @@ async function upsertMediaAssets({ creativeId, observedAdId, snapshotId, mediaSo
     if (existing?.[0]?.id) {
       await patchMediaAsset(existing[0].id, { kind: source.kind, capture_status: "pending", last_error: null });
     } else {
-      await rest("research", "media_assets", {
-        method: "POST",
-        body: json({
-          ad_creative_id: creativeId,
-          observed_ad_id: observedAdId,
-          kind: source.kind,
-          source_url: source.source_url,
-          capture_status: "pending",
-          metadata: { source_provider: "meta_ad_library", external_asset_id: source.external_asset_id, ad_snapshot_id: snapshotId },
-        }),
-      });
+      try {
+        await rest("research", "media_assets", {
+          method: "POST",
+          body: json({
+            ad_creative_id: creativeId,
+            observed_ad_id: observedAdId,
+            kind: source.kind,
+            source_url: source.source_url,
+            capture_status: "pending",
+            metadata: { source_provider: "meta_ad_library", external_asset_id: source.external_asset_id, ad_snapshot_id: snapshotId },
+          }),
+        });
+      } catch (error) {
+        if (!isMediaAssetUniqueConflict(error)) throw error;
+        const raced = await rest("research", `media_assets?select=id&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
+        if (!raced?.[0]?.id) throw error;
+        await patchMediaAsset(raced[0].id, { kind: source.kind, capture_status: "pending", last_error: null });
+      }
     }
     count += 1;
   }
   return count;
+}
+
+function isMediaAssetUniqueConflict(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /23505|409|duplicate key value|media_assets_creative_(?:source|storage)_idx/iu.test(message);
 }
 
 async function patchMediaAsset(id, patch) {
@@ -5066,6 +5078,31 @@ async function handleMediaCollector(job) {
   for (const asset of assets) {
     try {
       const stored = await captureMediaAsset(asset, buildRunId);
+      const existingStoredAsset = await findCapturedMediaAssetByStorage({
+        creativeId: payload.adCreativeId,
+        storagePath: stored.storagePath,
+        excludeId: asset.id,
+      });
+      if (existingStoredAsset) {
+        await patchMediaAsset(asset.id, {
+          storage_bucket: null,
+          storage_path: null,
+          content_type: stored.contentType,
+          byte_size: stored.byteSize,
+          checksum: stored.checksum,
+          content_hash: stored.contentHash,
+          capture_status: "blocked",
+          captured_at: now(),
+          last_error: `Deduped to media asset ${existingStoredAsset.id}`,
+          metadata: {
+            ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
+            deduped_to_media_asset_id: existingStoredAsset.id,
+            deduped_storage_path: stored.storagePath,
+          },
+        });
+        deduped += 1;
+        continue;
+      }
       await patchMediaAsset(asset.id, {
         storage_bucket: mediaBucket,
         storage_path: stored.storagePath,
@@ -5108,6 +5145,15 @@ async function handleMediaCollector(job) {
     max_attempts: 3,
   }, job);
   return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, failed } };
+}
+
+async function findCapturedMediaAssetByStorage({ creativeId, storagePath, excludeId }) {
+  if (!creativeId || !storagePath) return null;
+  const rows = await rest(
+    "research",
+    `media_assets?select=id&ad_creative_id=eq.${encode(creativeId)}&storage_bucket=eq.${encode(mediaBucket)}&storage_path=eq.${encode(storagePath)}&capture_status=eq.captured&id=neq.${encode(excludeId)}&limit=1`,
+  );
+  return rows?.[0] || null;
 }
 
 async function loadCreativeForMediaCapture(adCreativeId) {
