@@ -214,11 +214,17 @@ export function builtInAdStudioTemplates(): AdStudioTemplate[] {
   }));
 }
 
-export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStudioTemplate | null {
+export function mapAdStudioLibraryTemplate(
+  row: AdStudioLibraryTemplate,
+  briefImages?: Map<string, CuratedTemplateImage>,
+): AdStudioTemplate | null {
   if (row.status && row.status !== "approved") return null;
 
   const templateKey = stringValue(row.template_key);
   if (!templateKey) return null;
+
+  const briefId = stringValue(row.image_brief_id);
+  const briefImage = briefId && briefImages ? briefImages.get(briefId) : undefined;
 
   const builtIn = AD_STUDIO_TEMPLATES.find((template) => template.id === stringValue(row.adstudio_template_id));
   const goal = stringValue(row.goal) || builtIn?.goal;
@@ -244,6 +250,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     promptHint,
     source: "radar",
     status: "approved",
+    images: briefImage ? [briefImage] : undefined,
   };
 }
 
