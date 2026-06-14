@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowUpRight, Copy, LayoutGrid, Radar, X } from "lucide-reac
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
-import { isBuiltInAdStudioTemplate, resolveTemplateImage } from "@/lib/adstudio/templates.ts";
+import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -69,10 +69,6 @@ export function NewAdDialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  // Kept fresh so the open-effect can resolve a template's image without
-  // re-running (and resetting the form) every time the template list reloads.
-  const templatesRef = useRef(templates);
-  templatesRef.current = templates;
   const [step, setStep] = useState<Step>("source");
   const [briefFrom, setBriefFrom] = useState<StartStep>("source");
   // undefined = nothing chosen yet; "" = blank (create your own)
@@ -104,11 +100,10 @@ export function NewAdDialog({
       setStep(initialStep);
     }
     setDescription("");
-    // Default-fill the template's image (built-in or radar) so it opens ready to generate.
-    const initialTemplate = initialTemplateId ? templatesRef.current.find((t) => t.id === initialTemplateId) : undefined;
-    const curated = initialTemplate ? resolveTemplateImage(initialTemplate) : null;
-    setImageDataUrl(curated?.src ?? "");
-    setImageName(curated?.label ?? "");
+    // The customer supplies their own listing photo; the template drives the
+    // layout, copy and brand — never a pre-baked image.
+    setImageDataUrl("");
+    setImageName("");
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
@@ -225,11 +220,9 @@ export function NewAdDialog({
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
-    // Pre-fill this template's image (built-in or radar) so no upload is needed to start.
-    const tpl = templates.find((t) => t.id === id);
-    const curated = tpl ? resolveTemplateImage(tpl) : null;
-    setImageDataUrl(curated?.src ?? "");
-    setImageName(curated?.label ?? "");
+    // The customer adds their own listing photo; the template only drives layout/copy.
+    setImageDataUrl("");
+    setImageName("");
     setBriefFrom(id === "" ? "source" : "template");
     setStep("brief");
   }
@@ -412,11 +405,11 @@ export function NewAdDialog({
 
           {step === "template" && (
             <div className="studio-tpl-grid">
-              {templates.map((template, index) => (
+              {templates.map((template) => (
                 <TemplateCard
                   key={template.id}
                   template={template}
-                  index={index}
+                  brandKit={brandKit}
                   active={templateId === template.id}
                   onSelect={chooseTemplate}
                 />

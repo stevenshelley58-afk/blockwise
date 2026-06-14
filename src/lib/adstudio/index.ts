@@ -45,15 +45,11 @@ export {
 export {
   AD_STUDIO_TEMPLATES,
   builtInAdStudioTemplates,
-  curatedTemplateImages,
-  defaultCuratedTemplateImage,
-  resolveTemplateImage,
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
   resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
   type AdStudioTemplate,
-  type CuratedTemplateImage,
 } from "./templates.ts";
 export {
   createOpenAiImageProvider,

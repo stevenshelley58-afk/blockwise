@@ -7,10 +7,6 @@
     {
       "path": "/api/alerts/paid-service-watchdog",
       "schedule": "0 */2 * * *"
-    },
-    {
-      "path": "/api/cron/template-card-images",
-      "schedule": "30 4 * * *"
     }
   ],
   "headers": [
