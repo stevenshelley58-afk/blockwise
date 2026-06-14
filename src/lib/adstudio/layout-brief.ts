@@ -1,5 +1,3 @@
-import type { AdStudioCreative } from "./types.ts";
-
 /**
  * Derives a plain-language composition brief from a creative's real layout
  * geometry so the image model knows where copy will be overlaid and keeps the
@@ -11,9 +9,22 @@ import type { AdStudioCreative } from "./types.ts";
 
 type Box = { x: number; y: number; width: number; height: number };
 
+/**
+ * Minimal structural shape this helper needs. A full AdStudioCreative is
+ * assignable to it, but tests and other callers can pass a lighter object.
+ */
+export type LayoutBriefCreative = {
+  format: string;
+  canvas: {
+    width?: number;
+    height?: number;
+    objects?: Array<{ role: string; x: number; y: number; width: number; height?: number }>;
+  };
+};
+
 const COPY_ROLES = new Set(["headline", "subheadline", "cta_button", "cta_text"]);
 
-export function buildLayoutBrief(creative: Pick<AdStudioCreative, "canvas" | "format">): string {
+export function buildLayoutBrief(creative: LayoutBriefCreative): string {
   const width = creative.canvas?.width ?? 1080;
   const height = creative.canvas?.height ?? 1080;
   const objects = creative.canvas?.objects ?? [];
