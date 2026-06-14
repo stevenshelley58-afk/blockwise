@@ -24,7 +24,20 @@ export function buildTemplateCardPrompt(brief: TemplateImageBrief): string {
     .map((part) => (typeof part === "string" ? part.trim() : ""))
     .filter(Boolean)
     .join("\n");
-  return recipe ? `${BRAND_DIRECTION}\n\nCreative recipe:\n${recipe}` : BRAND_DIRECTION;
+  const safeRecipe = neutraliseDemographics(recipe);
+  return safeRecipe ? `${BRAND_DIRECTION}\n\nCreative recipe:\n${safeRecipe}` : BRAND_DIRECTION;
+}
+
+// Image models refuse prompts that imply generating people by a protected
+// demographic (notably age). A few mined briefs carry such phrasing (e.g. the
+// downsizer brief's "over-55s / mature-lifestyle"); neutralise it to lifestyle
+// language so the creative renders — and so it stays aligned with housing ad
+// rules, which forbid age-based targeting anyway.
+export function neutraliseDemographics(text: string): string {
+  return text
+    .replace(/over[-\s]?55'?s?\b/giu, "downsizer")
+    .replace(/\bmature[-\s]lifestyle\b/giu, "resort-style community lifestyle")
+    .replace(/\b(?:seniors?|elderly|retirees?|over[-\s]?60s?)\b/giu, "downsizer");
 }
 
 export function templateCardObjectPath(briefId: string): string {
