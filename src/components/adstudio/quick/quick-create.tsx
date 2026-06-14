@@ -2,7 +2,7 @@
 
 import { ArrowRight, ChevronLeft, ImagePlus, Plus, RefreshCw, Sliders, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -67,10 +67,16 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
   const [brief, setBrief] = useState("");
   const [pack, setPack] = useState<AdStudioCampaignPack | null>(null);
   const [variantIndex, setVariantIndex] = useState(0);
-  const [format, setFormat] = useState<PreviewFormat>("story");
+  const [format] = useState<PreviewFormat>("story");
   const [selected, setSelected] = useState<SelectedElement>("headline");
   const [phase, setPhase] = useState(0);
   const [error, setError] = useState("");
+  // The finished ad creative per variant (generated from the template design +
+  // the agent's photo). genState guards against duplicate in-flight requests.
+  const [creatives, setCreatives] = useState<Record<number, string>>({});
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError, setGenError] = useState("");
+  const genState = useRef<Record<number, "loading" | "done">>({});
 
   const brand = brandKit.identity.businessName || "Your agency";
   const initials = brand.charAt(0).toUpperCase();
@@ -112,6 +118,50 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
     const id = window.setInterval(() => setPhase((p) => Math.min(p + 1, GENERATING_PHASES.length - 1)), 7000);
     return () => window.clearInterval(id);
   }, [step]);
+
+  // Render the finished ad creative for a variant: the chosen template's design
+  // recipe + the agent's photo + this variant's copy → a real, on-brand ad image.
+  const makeCreative = useCallback(
+    async (index: number, force = false) => {
+      if (!pack || !photo) return;
+      if (!force && genState.current[index]) return;
+      genState.current[index] = "loading";
+      setGenError("");
+      setGenLoading(true);
+      try {
+        const variantCopy = seedCopy(pack, index);
+        const res = await fetch("/api/adstudio/creative-image", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            templateKey: template?.templateKey ?? template?.id,
+            imageDataUrl: photo.src,
+            headline: variantCopy.headline,
+            primaryText: variantCopy.primaryText,
+            cta: variantCopy.cta,
+            aspectRatio: "4:5",
+            brand: { businessName: brand, primary: brandKit.colours.primary, accent: brandKit.colours.accent },
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.image) throw new Error(data?.error ?? "Could not create the ad image.");
+        genState.current[index] = "done";
+        setCreatives((current) => ({ ...current, [index]: data.image as string }));
+      } catch (caught) {
+        delete genState.current[index];
+        setGenError(caught instanceof Error ? caught.message : "Could not create the ad image.");
+      } finally {
+        setGenLoading(false);
+      }
+    },
+    [pack, photo, template, brand, brandKit],
+  );
+
+  // Generate the selected variant's creative when the result opens or the agent
+  // switches between Ad 1/2/3.
+  useEffect(() => {
+    if (step === "result") void makeCreative(variantIndex);
+  }, [step, variantIndex, makeCreative]);
 
   function openTemplate(next: AdStudioTemplate | null) {
     setTemplate(next);
@@ -177,6 +227,8 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
       if (!response.ok) throw new Error(payload?.error ?? `Generation failed (${response.status}).`);
       setPack(payload.campaignPack as AdStudioCampaignPack);
       setVariantIndex(0);
+      setCreatives({});
+      genState.current = {};
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
       setStep("result");
     } catch (caught) {
@@ -192,6 +244,9 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
     setBrief("");
     setTemplate(null);
     setError("");
+    setCreatives({});
+    setGenError("");
+    genState.current = {};
     setStep("gallery");
   }
 
@@ -345,34 +400,36 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
 
       {pack && copy ? (
         <>
-          <div className="studio-mobile-preview-wrap">
-            <div className={styles.stage}>
-              <AdPreview
-                brand={brand}
-                domain={domain}
-                initials={initials}
-                copy={copy}
-                image={photo?.src ?? ""}
-                format={format}
-                zoom={100}
-                selectedElement={selected}
-                setSelectedElement={setSelected}
-              />
-            </div>
+          <div className={styles.stage}>
+            {creatives[variantIndex] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className={styles.creative} src={creatives[variantIndex]} alt="Your ad" />
+            ) : genLoading ? (
+              <div className={styles.creativeLoading}>
+                <div className={styles.spinner} aria-hidden />
+                <span>Designing your ad…</span>
+              </div>
+            ) : (
+              <div className="studio-mobile-preview-wrap">
+                <AdPreview
+                  brand={brand}
+                  domain={domain}
+                  initials={initials}
+                  copy={copy}
+                  image={photo?.src ?? ""}
+                  format={format}
+                  zoom={100}
+                  selectedElement={selected}
+                  setSelectedElement={setSelected}
+                />
+              </div>
+            )}
           </div>
-
-          <div className={styles.formatRow}>
-            {(["story", "feed", "square"] as PreviewFormat[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={format === f ? `${styles.chip} ${styles.chipOn}` : styles.chip}
-                onClick={() => setFormat(f)}
-              >
-                {f === "story" ? "Story" : f === "feed" ? "Feed" : "Square"}
-              </button>
-            ))}
-          </div>
+          {genError ? (
+            <p className={styles.helper} style={{ color: "#fca5a5" }}>
+              {genError}
+            </p>
+          ) : null}
 
           <div className={styles.variantRow}>
             {pack.variants.map((v, i) => (
@@ -388,7 +445,12 @@ export function QuickCreate({ workspaceId, brandKit }: QuickCreateProps) {
           </div>
 
           <div className={styles.resultActions}>
-            <button type="button" className={styles.ghostDark} onClick={() => void generate()}>
+            <button
+              type="button"
+              className={styles.ghostDark}
+              onClick={() => void makeCreative(variantIndex, true)}
+              disabled={genLoading}
+            >
               <RefreshCw aria-hidden size={16} /> Regenerate
             </button>
             <button type="button" className={styles.launch} onClick={openAdvanced}>
