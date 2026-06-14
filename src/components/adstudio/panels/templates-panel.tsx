@@ -37,7 +37,8 @@ type TemplateCardProps = {
 
 export function TemplateCard({ template, index, active, onSelect }: TemplateCardProps) {
   const preview = PREVIEW_COPY[template.id] ?? { headline: template.name, cta: "Learn more" };
-  // Every template (built-in or radar) resolves to an on-brand designed image.
+  // Every template resolves to a finished, on-brand ad image. Show it clean —
+  // like an Ad Radar creative — with no overlaid tag/headline/CTA on top.
   const image = resolveTemplateImage(template);
   return (
     <button
@@ -46,14 +47,18 @@ export function TemplateCard({ template, index, active, onSelect }: TemplateCard
       aria-pressed={active}
       onClick={() => onSelect(template.id)}
     >
-      <span
-        className={`studio-tpl-thumb${image ? "" : ` ${gradientClass(template, index)}`}`}
-        style={image ? { backgroundImage: `url("${image.src}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-      >
-        <span className="tag">{template.name}</span>
-        <span className="t-copy">{preview.headline}</span>
-        <span className="t-cta">{preview.cta}</span>
-      </span>
+      {image ? (
+        <span className="studio-tpl-thumb studio-tpl-thumb--img">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="studio-tpl-photo" src={image.src} alt="" loading="lazy" />
+        </span>
+      ) : (
+        <span className={`studio-tpl-thumb ${gradientClass(template, index)}`}>
+          <span className="tag">{template.name}</span>
+          <span className="t-copy">{preview.headline}</span>
+          <span className="t-cta">{preview.cta}</span>
+        </span>
+      )}
       <span className="studio-tpl-meta">
         <strong>{template.name}</strong>
         <span>{template.promptHint}</span>

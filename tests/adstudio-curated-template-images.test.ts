@@ -67,11 +67,15 @@ test("New Ad dialog default-fills the curated image on template select", () => {
   assert.match(dialog, /setImageDataUrl\(curated\?\.src \?\? ""\)/);
 });
 
-test("Template cards render an on-brand image (never a bare gradient)", () => {
+test("Template cards render the ad image clean, with no text overlay", () => {
   const panel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
-  assert.match(panel, /resolveTemplateImage/);
   assert.match(panel, /const image = resolveTemplateImage\(template\)/);
-  assert.match(panel, /backgroundImage: `url\("\$\{image\.src\}"\)`/);
+  // Clean creative: an <img>, not a background with tag/headline/CTA layered on top.
+  assert.match(panel, /<img className="studio-tpl-photo" src=\{image\.src\}/);
+  // The image branch contains only the <img> — no tag/copy/cta overlay before it closes.
+  const imgBranch = panel.match(/studio-tpl-thumb--img[\s\S]*?<\/span>/)?.[0] ?? "";
+  assert.ok(imgBranch.includes("studio-tpl-photo"), "img branch should render the photo");
+  assert.doesNotMatch(imgBranch, /className="tag"|className="t-copy"|className="t-cta"/);
 });
 
 test("resolveTemplateImage falls back by goal for non-built-in templates", () => {
