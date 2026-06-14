@@ -32,30 +32,48 @@ export function buildTemplateCreativePrompt(input: {
 }
 
 /**
- * Generate one creative. Prefer the multimodal provider (OpenRouter / gemini),
- * which takes the agent's photo as a real image input, then fall back to OpenAI
- * gpt-image (text-to-image) so a missing OpenRouter key still yields a creative.
- * Throws a descriptive error (with each provider's failure) so callers can log
- * and surface why generation failed rather than a blank 502.
+ * A fetch wrapper that aborts after `ms`, so a slow/hung image provider can't run
+ * the serverless function into a platform timeout (504).
+ */
+function fetchWithTimeout(ms: number): typeof fetch {
+  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(input, { ...(init ?? {}), signal: controller.signal }).finally(() => clearTimeout(timer));
+  }) as typeof fetch;
+}
+
+/**
+ * Generate one creative within a strict time budget. Prefer the multimodal
+ * provider (OpenRouter / gemini), which takes the agent's photo as a real image
+ * input; fall back to OpenAI gpt-image (text-to-image, medium quality for speed).
+ * Only providers whose key is configured are attempted, and each call is bounded
+ * so the function returns before the platform kills it. Throws a descriptive
+ * error so the caller can log and surface why generation failed.
  */
 export async function generateTemplateCreativeImage(
   input: ImageProviderRequest,
 ): Promise<{ assetUrl: string; model: string }> {
+  const BUDGET_MS = 55_000;
+  const start = Date.now();
   const errors: string[] = [];
-  const attempts: Array<{ name: string; provider: ImageProviderAdapter }> = [];
-  try {
-    attempts.push({ name: "openrouter", provider: createOpenRouterImageProvider() });
-  } catch {
-    // No OpenRouter config — skip to OpenAI.
+
+  const attempts: Array<{ name: string; make: (fetchImpl: typeof fetch) => ImageProviderAdapter }> = [];
+  if (process.env.OPENROUTER_API_KEY) {
+    attempts.push({ name: "openrouter", make: (fetchImpl) => createOpenRouterImageProvider({ fetchImpl }) });
   }
-  try {
-    attempts.push({ name: "openai", provider: createOpenAiImageProvider() });
-  } catch {
-    // No OpenAI config either.
+  if (process.env.OPENAI_API_KEY) {
+    attempts.push({ name: "openai", make: (fetchImpl) => createOpenAiImageProvider({ fetchImpl, quality: "medium" }) });
+  }
+  if (attempts.length === 0) {
+    throw new Error("Image generation failed — no image provider key is configured (OPENROUTER_API_KEY / OPENAI_API_KEY).");
   }
 
-  for (const { name, provider } of attempts) {
+  for (const { name, make } of attempts) {
+    const remaining = BUDGET_MS - (Date.now() - start);
+    if (remaining < 8_000) break; // not enough time left for a real attempt
     try {
+      const provider = make(fetchWithTimeout(remaining));
       const result = await provider.generate(input);
       if (result.assetUrl) return { assetUrl: result.assetUrl, model: result.model };
       errors.push(`${name}: empty result`);
@@ -63,5 +81,5 @@ export async function generateTemplateCreativeImage(
       errors.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  throw new Error(`Image generation failed — ${errors.join(" | ") || "no image provider configured"}`);
+  throw new Error(`Image generation failed — ${errors.join(" | ") || "timed out"}`);
 }

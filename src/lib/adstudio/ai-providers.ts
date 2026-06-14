@@ -20,6 +20,7 @@ type ProviderOptions = {
   env?: EnvLike;
   fetchImpl?: typeof fetch;
   model?: string;
+  quality?: string;
 };
 
 type MixedImageVariantOptions = {
@@ -134,7 +135,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
           model,
           prompt: buildImagePrompt(input),
           size: imageSizeForAspect(input.aspectRatio),
-          quality: "high",
+          quality: options.quality ?? "high",
           n: 1,
         }),
       });
