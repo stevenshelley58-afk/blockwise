@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -663,9 +663,9 @@ export function AdStudioWorkbench({
     studio.setBusyMessage("Generating background");
     try {
       // Derive a composition brief from the template's real geometry so the
-      // generated photo leaves room exactly where the headline/CTA sit, and
-      // pass the current listing photo as a reference so the model conditions
-      // on the real property instead of inventing a generic streetscape.
+      // generated photo leaves room exactly where the headline/CTA sit, and pass
+      // the current listing photo as a reference so the model conditions on the
+      // real property instead of inventing a generic streetscape.
       const layoutBrief = buildLayoutBrief(currentCreative);
       const referenceImage = primaryImage;
       const referenceAssets: string[] = !referenceImage
