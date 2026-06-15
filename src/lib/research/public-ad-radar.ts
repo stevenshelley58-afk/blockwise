@@ -61,6 +61,7 @@ export type PublicAdRadarResponse = {
 type LoadPublicAdRadarInput = {
   location: string;
   cursor?: string | null;
+  includeSurroundingSuburbs?: boolean;
   limit?: number;
   sort?: PublicAdRadarSort;
 };
@@ -105,7 +106,8 @@ export async function loadPublicAdRadarCards(
   const limit = clampNumber(input.limit ?? DEFAULT_LIMIT, 1, MAX_LIMIT);
   const sort = input.sort === "longest" ? "longest" : "recent";
   const initialOffset = Math.max(Number.parseInt(input.cursor ?? "0", 10) || 0, 0);
-  const locationGuess = resolveAdRadarLocationSearch(searchTerm);
+  const includeSurroundingSuburbs = input.includeSurroundingSuburbs ?? true;
+  const locationGuess = resolveAdRadarLocationSearch(searchTerm, { includeSurroundingSuburbs });
 
   if (!searchTerm) {
     return loadLongestRunningResponse(supabase, limit);

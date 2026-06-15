@@ -141,6 +141,16 @@ test("Ad Radar keeps postcode-only search labels specific", () => {
   assert.equal(guess.terms.includes("6163"), false);
 });
 
+test("Ad Radar can keep postcode searches to the exact area when surrounding suburbs are disabled", () => {
+  const guess = resolveAdRadarLocationSearch("6166", { includeSurroundingSuburbs: false });
+
+  assert.ok(guess);
+  assert.equal(guess.label, "6166, WA");
+  assert.ok(guess.terms.includes("6166"));
+  assert.equal(guess.terms.includes("Coogee"), false);
+  assert.equal(guess.terms.includes("Lake Coogee"), false);
+});
+
 test("Ad Radar resolves suburb-only searches from national postcode data", () => {
   const guess = resolveAdRadarLocationSearch("Mount Lawley");
 

@@ -21,6 +21,7 @@ type SearchSupabaseClient = {
 type SearchInput = {
   query: string;
   sort?: AdRadarCardSearchSort;
+  includeSurroundingSuburbs?: boolean;
   rowLimit?: number;
   resultLimit?: number;
 };
@@ -54,11 +55,12 @@ export async function searchCustomerMetaAdLibraryCards(
 ): Promise<CustomerMetaAdLibraryCard[]> {
   const q = normaliseAdRadarCardSearchQuery(input.query);
   const sort = input.sort === "longest" ? "longest" : "recent";
+  const includeSurroundingSuburbs = input.includeSurroundingSuburbs === true;
   const rowLimit = clampLimit(input.rowLimit ?? DEFAULT_SEARCH_ROW_LIMIT, 1, 500);
   const resultLimit = clampLimit(input.resultLimit ?? DEFAULT_SEARCH_RESULT_LIMIT, 1, 100);
   if (!q) return [];
 
-  const locationSearch = await loadPrioritisedLocationRows(supabase, q, sort, rowLimit);
+  const locationSearch = await loadPrioritisedLocationRows(supabase, q, sort, rowLimit, includeSurroundingSuburbs);
   let rows = locationSearch.active ? locationSearch.rows : null;
 
   if (!locationSearch.active && shouldUseRankedFullTextSearch(q)) {
@@ -88,8 +90,9 @@ async function loadPrioritisedLocationRows(
   q: string,
   sort: AdRadarCardSearchSort,
   rowLimit: number,
+  includeSurroundingSuburbs: boolean,
 ): Promise<LocationSearchRowsResult> {
-  const guess = resolveAdRadarLocationSearch(q);
+  const guess = resolveAdRadarLocationSearch(q, { includeSurroundingSuburbs });
   if (!guess || !shouldPrioritiseAdRadarLocationSearch(q, guess)) {
     return { rows: [], active: false, guess: null };
   }

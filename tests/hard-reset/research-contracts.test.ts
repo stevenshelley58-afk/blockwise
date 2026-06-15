@@ -168,7 +168,7 @@ test("customer research UI does not render internal ad-library identifiers or ra
 
 test("customer research page ranks specific location searches before direct text fallback", () => {
   const researchPage = read(paths.researchPage);
-  const locationSearchIndex = researchPage.indexOf("resolveAdRadarLocationSearch(searchTerm)");
+  const locationSearchIndex = researchPage.indexOf("resolveAdRadarLocationSearch(searchTerm,");
   const locationGuessIndex = researchPage.indexOf("resolveAdRadarLocationGuess(");
 
   assert.ok(locationSearchIndex >= 0, "specific postcode/suburb searches must use the location-ranked path");

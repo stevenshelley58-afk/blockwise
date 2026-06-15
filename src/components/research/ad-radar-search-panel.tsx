@@ -16,28 +16,31 @@ type ResearchSort = "recent" | "longest";
 type Props = {
   initialQuery: string;
   initialSort: ResearchSort;
+  initialIncludeSurrounding: boolean;
   initialLocationLabel: string;
   initialNote: string;
 };
 
 type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
 
-export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationLabel, initialNote }: Props) {
+export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSurrounding, initialLocationLabel, initialNote }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [sort] = useState<ResearchSort>(initialSort);
+  const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
   const [cards, setCards] = useState<CustomerMetaAdLibraryCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [selectedAdvertiser, setSelectedAdvertiser] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function doSearch(q: string, activeSort: ResearchSort = sort) {
+  function doSearch(q: string, activeSort: ResearchSort = sort, activeIncludeSurrounding = includeSurrounding) {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams({ q });
         if (activeSort !== "recent") params.set("sort", activeSort);
+        if (activeIncludeSurrounding) params.set("includeSurrounding", "1");
         const res = await fetch(`/api/research/ads/search?${params.toString()}`);
         const data: SearchResponse = res.ok ? await res.json() : { cards: [] };
         setCards(data.cards ?? []);
@@ -60,8 +63,13 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
     doSearch(advertiser.pageName, sort);
   }
 
+  function onToggleSurrounding(nextValue: boolean) {
+    setIncludeSurrounding(nextValue);
+    if (searched && query.trim()) doSearch(query, sort, nextValue);
+  }
+
   useEffect(() => {
-    if (initialQuery) doSearch(initialQuery, initialSort);
+    if (initialQuery) doSearch(initialQuery, initialSort, initialIncludeSurrounding);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,6 +94,16 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
           placeholder="6008, Subiaco, Ray White, appraisal"
           surface="research"
         />
+        <label className="research-surrounding-toggle">
+          <input
+            checked={includeSurrounding}
+            name="includeSurrounding"
+            onChange={(event) => onToggleSurrounding(event.target.checked)}
+            type="checkbox"
+            value="1"
+          />
+          <span>Include surrounding suburbs</span>
+        </label>
         <div className="research-advertiser-divider">
           <span>or pick an advertiser</span>
         </div>
@@ -122,14 +140,14 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
               <span className="research-sort-label">Sort</span>
               <a
                 className={`research-sort-option${sort === "recent" ? " is-active" : ""}`}
-                href={buildResearchHref(query, "recent")}
+                href={buildResearchHref(query, "recent", includeSurrounding)}
                 aria-current={sort === "recent" ? "true" : undefined}
               >
                 Most recent
               </a>
               <a
                 className={`research-sort-option${sort === "longest" ? " is-active" : ""}`}
-                href={buildResearchHref(query, "longest")}
+                href={buildResearchHref(query, "longest", includeSurrounding)}
                 aria-current={sort === "longest" ? "true" : undefined}
               >
                 Longest running
@@ -156,10 +174,11 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialLocationL
   );
 }
 
-function buildResearchHref(q: string, sort: ResearchSort): string {
+function buildResearchHref(q: string, sort: ResearchSort, includeSurrounding: boolean): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (sort !== "recent") params.set("sort", sort);
+  if (includeSurrounding) params.set("includeSurrounding", "1");
   const qs = params.toString();
   return qs ? `/ad-radar?${qs}` : "/ad-radar";
 }

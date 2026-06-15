@@ -352,7 +352,7 @@ test("Ad Radar longest-running sort reaches the authenticated search route", () 
   const search = readFileSync("src/lib/research/ad-radar-card-search.ts", "utf8");
 
   assert.match(panel, /if \(activeSort !== "recent"\) params\.set\("sort", activeSort\)/);
-  assert.match(panel, /doSearch\(initialQuery, initialSort\)/);
+  assert.match(panel, /doSearch\(initialQuery, initialSort, initialIncludeSurrounding\)/);
   assert.match(route, /searchParams\.get\("sort"\) === "longest"/);
   assert.match(route, /searchCustomerMetaAdLibraryCards/);
   assert.match(search, /ad_delivery_started_at/);

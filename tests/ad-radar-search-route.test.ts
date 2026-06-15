@@ -13,7 +13,7 @@ const routeSource = readFileSync(
 
 test("ad search route delegates to the shared customer card search helper", () => {
   assert.match(routeSource, /normaliseAdRadarCardSearchQuery/);
-  assert.match(routeSource, /searchCustomerMetaAdLibraryCards\(supabase, \{ query: q, sort \}\)/);
+  assert.match(routeSource, /searchCustomerMetaAdLibraryCards\(supabase, \{ query: q, sort, includeSurroundingSuburbs \}\)/);
 });
 
 test("ad card search caps returned cards after row overfetch and dedupe", async () => {
@@ -50,7 +50,50 @@ test("ad card search uses ranked full-text search when the schema contract is av
   assert.equal(fake.queries.length, 0);
 });
 
-test("ad card search expands postcode searches beyond direct postcode prefix rows", async () => {
+test("ad card search keeps postcode searches exact unless surrounding suburbs are included", async () => {
+  const fake = new FakeSearchClient([
+    row({
+      card_id: "direct-6166",
+      postcode: "6166",
+      suburb: "Coogee",
+      body: "Fresh appraisal campaign.",
+      last_seen_at: "2026-06-05T00:00:00Z",
+    }),
+    row({
+      card_id: "supporting-6166",
+      postcode: null,
+      ad_area_postcodes: ["6166"],
+      body: "Seller lead campaign for the local coastal corridor.",
+      last_seen_at: "2026-06-04T00:00:00Z",
+    }),
+    row({
+      card_id: "copy-coogee",
+      postcode: null,
+      postcodes: [],
+      body: "Winter property update for Coogee owners.",
+      last_seen_at: "2026-06-03T00:00:00Z",
+    }),
+  ]);
+
+  const cards = await searchCustomerMetaAdLibraryCards(fake.client, {
+    query: "6166",
+    sort: "recent",
+  });
+
+  assert.deepEqual(cards.map((card) => card.id), ["direct-6166", "supporting-6166"]);
+  assert.equal(
+    fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Coogee")),
+    false,
+    "default postcode searches should not fan out into postcode-area suburb rows",
+  );
+  assert.equal(
+    fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "body" && args[1] === "%Coogee%")),
+    false,
+    "default postcode searches should not fan out into surrounding-suburb copy terms",
+  );
+});
+
+test("ad card search expands postcode searches when surrounding suburbs are included", async () => {
   const fake = new FakeSearchClient([
     row({
       card_id: "direct-6166",
@@ -87,6 +130,7 @@ test("ad card search expands postcode searches beyond direct postcode prefix row
   const cards = await searchCustomerMetaAdLibraryCards(fake.client, {
     query: "6166",
     sort: "recent",
+    includeSurroundingSuburbs: true,
     resultLimit: 3,
   });
 

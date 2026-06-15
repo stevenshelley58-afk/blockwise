@@ -2725,6 +2725,28 @@ a.operator-file-row {
   color: var(--muted);
 }
 
+.research-surrounding-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.research-surrounding-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.research-surrounding-toggle span {
+  text-transform: none;
+}
+
 .research-location-suggestions {
   position: absolute;
   z-index: 20;
