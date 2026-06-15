@@ -120,7 +120,7 @@ export async function scoreCampaignPackVariantsWithAi(input: {
     }
 
     if (!output || !provider) {
-      throw lastError ?? new Error("AI scoring is not configured.");
+      throw lastError ?? new Error("Creative scoring is not configured.");
     }
 
     await recordAdStudioProviderRun({

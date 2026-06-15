@@ -8,7 +8,7 @@ test("repair-image route resolves source images inside the active workspace", ()
   const source = routeSource();
 
   assert.match(source, /resolveAdStudioImageForModel\(\s*context\.supabase,\s*context\.access\.workspaceId,\s*body\.sourceImage/s);
-  assert.match(source, /Source image could not be read for AI repair/);
+  assert.match(source, /Source image could not be read for auto fit/);
   assert.match(source, /\.from\("adstudio_brand_kits"\)[\s\S]*\.eq\("workspace_id", workspaceId\)[\s\S]*\.eq\("id", brandKitId\)/);
 });
 

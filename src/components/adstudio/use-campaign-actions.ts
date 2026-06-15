@@ -22,7 +22,7 @@ export type GenerationProgress = {
 };
 
 // Phases mirror what the server actually does in order: build the campaign pack,
-// enrich copy with AI (the long step), then score each variant.
+// Enrich copy with provider generation (the long step), then score each variant.
 const GENERATION_PHASES: Array<{ label: string; atMs: number }> = [
   { label: "Building your campaign...", atMs: 0 },
   { label: "Writing copy...", atMs: 3_500 },
@@ -248,7 +248,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setCopy(seedCopy(payload.campaignPack));
       s.setPrimaryImage(input.imageDataUrl);
       s.setSaveState("saved");
-      s.setSection("campaign");
+      s.setSection("media");
       s.showToast("Generated Story, Feed, and Square");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
       return payload.campaignPack;

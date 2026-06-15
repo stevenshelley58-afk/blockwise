@@ -33,4 +33,9 @@ _archive/
 # Agent-generated media artifacts
 artifacts/
 matrix-media-*.png
+
+# Agent-generated ad-template assets (served from Supabase, not committed)
 ad-template-library/images/mockups/
+ad-template-library/images/sample-cards/
+ad-template-library/images/sample-sources/
+ad-template-library/qa-report.json

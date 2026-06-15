@@ -16,7 +16,12 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, brandKit, active, onSelect }: TemplateCardProps) {
-  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
+  const previewSrc = useMemo(
+    () => template.sampleCardImageUrl ?? templatePreviewDataUrl(template, brandKit),
+    [template, brandKit],
+  );
+  const sampleHeadline = template.sampleCopy?.headline;
+  const sampleBody = template.sampleCopy?.primaryText;
 
   return (
     <button
@@ -35,7 +40,8 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
           <span>{template.templateKey ?? template.id}</span>
           <span>{template.creativeSkeleton ? "Template pattern" : template.source === "radar" ? "Template library" : "Built-in"}</span>
         </span>
-        <span>{template.promptHint}</span>
+        <span>{sampleHeadline ?? template.promptHint}</span>
+        {sampleBody ? <span>{sampleBody}</span> : null}
         {template.creativeSkeleton ? (
           <span>{template.creativeSkeleton.archetype.replace(/_/g, " ")}</span>
         ) : null}
@@ -63,12 +69,13 @@ type TemplatesPanelProps = {
   brandKit: AdStudioBrandKit;
   onUseTemplate: (id: string) => void;
   onStartBlank: () => void;
+  showHeader?: boolean;
 };
 
-export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank }: TemplatesPanelProps) {
+export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank, showHeader = true }: TemplatesPanelProps) {
   return (
     <>
-      <PanelHeader title="Templates" detail="Choose a proven layout, then add your listing photo and brand." />
+      {showHeader && <PanelHeader title="Templates" detail="Choose a proven layout, then add your listing photo and brand." />}
       <div className="studio-tpl-grid">
         {templates.map((template) => (
           <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />

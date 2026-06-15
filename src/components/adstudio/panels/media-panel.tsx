@@ -40,7 +40,7 @@ export function MediaPanel({
 
   return (
     <>
-      <PanelHeader title="Media" detail="Your images and the generated ad sizes." />
+      <PanelHeader title="Media" detail="Click the image layer, then replace, fit, or repair it for every ad size." />
       <div className="studio-current-media" aria-label="Current image">
         <img src={primaryImage} alt="" />
         <span>
@@ -74,15 +74,15 @@ export function MediaPanel({
         </button>
       )}
       {(onRepairCurrent || onRepairAll) && (
-        <div className="studio-image-repair-actions" aria-label="AI image repair">
+        <div className="studio-image-repair-actions" aria-label="Auto image fit">
           {onRepairAll && (
             <button className="studio-btn accent block" type="button" disabled={repairingImage} onClick={onRepairAll}>
-              {repairingImage ? "Fitting photo..." : "AI fit all ad sizes"}
+              {repairingImage ? "Fitting photo..." : "Auto fit all ad sizes"}
             </button>
           )}
           {onRepairCurrent && (
             <button className="studio-btn secondary block" type="button" disabled={repairingImage} onClick={onRepairCurrent}>
-              AI fit current size
+              Auto fit current size
             </button>
           )}
         </div>

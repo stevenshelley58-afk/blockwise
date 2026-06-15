@@ -17,7 +17,7 @@ test("operator console exposes control-plane queues", async ({ page }) => {
   await page.goto("/operator");
 
   await expect(page.getByRole("heading", { name: "Operator Console" })).toBeVisible();
-  await expect(page.getByText("AI spend")).toBeVisible();
+  await expect(page.getByText("Model spend")).toBeVisible();
   await expect(page.getByText("Approval Queue")).toBeVisible();
 });
 
@@ -41,8 +41,8 @@ test("ad studio exposes the full generation workflow", async ({ page }) => {
   await page.goto("/ad-studio");
 
   await expect(page.getByLabel("Ad Studio workspace")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Ad/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Templates/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /Create new|Browse/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish" }).first()).toBeVisible();
   await expect(page.getByText(/Ad settings|Create your first ad|Text layer/)).toBeVisible();
   await expect(page.getByText(/Generated ads|Create your first ad/)).toBeVisible();

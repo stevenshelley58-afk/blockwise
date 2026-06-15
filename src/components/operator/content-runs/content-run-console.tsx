@@ -59,7 +59,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
           status: "draft_only",
           prompt_set_id: form.prompt_set_id || undefined,
           word_count: 1400,
-          image_style: "premium SaaS, minimal, navy/off-white, no AI slop",
+          image_style: "premium SaaS, minimal, navy/off-white, no low-quality artifacts",
           publish_target: "blockwise.sale/blog",
         }),
       });

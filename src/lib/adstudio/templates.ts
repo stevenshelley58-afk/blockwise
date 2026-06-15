@@ -1,5 +1,12 @@
 import type { AdStudioGoal } from "./types.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
+import {
+  deriveTemplateSampleStyle,
+  sampleCopyForTemplate,
+  templateCardPublicUrl,
+  type AdStudioTemplateSampleCopy,
+  type AdStudioTemplateSampleStyle,
+} from "./template-samples.ts";
 
 export type AdStudioTemplate = {
   id: string;
@@ -13,6 +20,9 @@ export type AdStudioTemplate = {
   creativeSkeleton?: CreativeSkeleton;
   exemplars?: string[];
   imageBriefId?: string;
+  sampleCopy?: AdStudioTemplateSampleCopy;
+  sampleStyle?: AdStudioTemplateSampleStyle;
+  sampleCardImageUrl?: string;
   evidenceScore?: number;
   winnerRationale?: string;
   complianceNote?: string;
@@ -33,6 +43,8 @@ export type AdStudioLibraryTemplate = {
   description?: string | null;
   cta?: string | null;
   image_brief_id?: string | null;
+  sample_card_image_path?: string | null;
+  sample_style?: unknown;
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
@@ -379,6 +391,11 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   });
 
   const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
+  const sampleStyle = parseSampleStyle(row.sample_style) ?? deriveTemplateSampleStyle({ ...row, template_key: templateKey });
+  const sampleCopy = sampleCopyForTemplate({ ...row, template_key: templateKey }, sampleStyle);
+  const sampleCardImageUrl =
+    templateCardPublicUrl(row.sample_card_image_path) ??
+    (row.sample_card_image_path ? undefined : templateCardPublicUrl(sampleStyle.sampleCardImagePath));
   const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
@@ -394,6 +411,9 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     source: manualFirstPass ? "operator" : "radar",
     status: "approved",
     ...(row.image_brief_id ? { imageBriefId: row.image_brief_id } : {}),
+    ...(sampleCopy ? { sampleCopy } : {}),
+    sampleStyle,
+    ...(sampleCardImageUrl ? { sampleCardImageUrl } : {}),
     ...(numberValue(row.evidence_score) !== undefined ? { evidenceScore: numberValue(row.evidence_score) } : {}),
     ...(row.winner_rationale ? { winnerRationale: row.winner_rationale } : {}),
     ...(row.compliance_note ? { complianceNote: row.compliance_note } : {}),
@@ -492,6 +512,17 @@ function numberValue(value: unknown): number | undefined {
 function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
   const parsed = creativeSkeletonSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function parseSampleStyle(value: unknown): AdStudioTemplateSampleStyle | undefined {
+  if (!isRecord(value)) return undefined;
+  if (value.version !== "template-samples-v1") return undefined;
+  if (typeof value.sampleCardImagePath !== "string") return undefined;
+  return value as AdStudioTemplateSampleStyle;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function compareTemplateVisibility(a: AdStudioTemplate, b: AdStudioTemplate): number {

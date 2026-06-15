@@ -179,7 +179,7 @@ test("renderCreativeSvg renders the real logo image or brand name, not a BRAND p
   assert.doesNotMatch(svg, />BRAND</);
 });
 
-test("campaign creation uses shared AI copy enrichment without changing copy route response shape", () => {
+test("campaign creation uses shared copy enrichment without changing copy route response shape", () => {
   const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
@@ -293,10 +293,9 @@ test("dead Ad Studio stub endpoints stay deleted", () => {
   assert.doesNotMatch(useBrandKit, /rescanKit|\/rescan/);
 });
 
-test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () => {
+test("Ad Radar use action opens the template popout in Ad Studio", () => {
   const actions = readFileSync("src/components/research/ad-card-actions.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
   const handoffRoute = readFileSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts", "utf8");
 
@@ -308,19 +307,17 @@ test("Ad Radar use action opens the saved swipe-file picker in Ad Studio", () =>
   assert.match(handoffRoute, /handoff_status:\s*"sent_to_adstudio"/);
   assert.match(workbench, /useSearchParams/);
   assert.match(workbench, /searchParams\.get\("newAd"\) !== "radar"/);
-  assert.match(workbench, /setNewAdStep\("radar"\)/);
-  assert.match(dialog, /initialStep\?: StartStep/);
-  assert.match(dialog, /fetch\("\/api\/research\/swipe-file"/);
+  assert.match(workbench, /openTemplatePicker\("radar"\)/);
+  assert.doesNotMatch(workbench, /studio\.setSection\("templates"\)/);
+  assert.match(workbench, /Choose a template, then add your own photo\./);
+  assert.doesNotMatch(workbench, /setNewAdStep\("radar"\)/);
+  assert.match(workbench, /<NewAdDialog/);
   assert.match(types, /source\?: "blank" \| "template_library" \| "ad_radar" \| "saved_ad"/);
   assert.match(types, /savedAdId\?: string/);
   assert.match(types, /observedAdId\?: string/);
   assert.match(types, /templateKey\?: string/);
   assert.match(types, /imageBriefId\?: string/);
   assert.match(types, /hooks\?: string\[\]/);
-  assert.match(dialog, /radarInspiration/);
-  assert.match(dialog, /referenceCta: radarInspiration\?\.cta/);
-  assert.match(dialog, /referenceAdType: radarInspiration\?\.adType/);
-  assert.match(dialog, /referenceIntent: radarInspiration\?\.primaryIntent/);
 });
 
 test("Ad Studio template picker loads approved templates with built-in fallback", () => {
@@ -348,6 +345,7 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(route, /from\("v_ad_template_library"\)/);
   assert.match(route, /from\("ad_template_candidates"\)/);
   assert.match(route, /creative_skeleton,exemplar_observed_ad_ids/);
+  assert.match(route, /sample_card_image_path,sample_style/);
   assert.doesNotMatch(route, /from\("ad_creatives"\)/);
   assert.doesNotMatch(route, /image_storage_path|video_thumbnail_url|media_assets/);
   assert.doesNotMatch(route, /preview_image_url|normaliseMediaUrl|primary_image_url/);
@@ -356,18 +354,27 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(route, /Operator access is required/);
   assert.match(templates, /mapAdStudioLibraryTemplate/);
   assert.match(templates, /creativeSkeleton\?: CreativeSkeleton/);
+  assert.match(templates, /sampleCardImageUrl\?: string/);
+  assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
   assert.match(templates, /manualFirstPass\?: boolean/);
   assert.doesNotMatch(templates, /previewImageUrl\?: string|preview_image_url/);
   assert.match(templates, /mergeAdStudioTemplateLibrary/);
   assert.match(templates, /isBuiltInAdStudioTemplate/);
   assert.match(templatePanel, /templatePreviewDataUrl\(template, brandKit\)/);
+  assert.match(templatePanel, /template\.sampleCardImageUrl/);
   assert.doesNotMatch(templatePanel, /previewImageUrl|exemplars\.length/);
   assert.match(dialog, /templatePreviewDataUrl\(template, brandKit\)/);
+  assert.match(dialog, /templatePreviewSrc/);
+  assert.match(dialog, /templateSampleDescription/);
   assert.doesNotMatch(dialog, /template\.previewImageUrl|PLACEHOLDER/);
   assert.match(dialog, /Saved Ad Radar inspiration/);
+  assert.match(dialog, /Previous ads/);
+  assert.match(dialog, /Ad Radar/);
   assert.match(dialog, /Use inspiration/);
   assert.doesNotMatch(dialog, /ad\.thumb|ad\.headline \|\| ad\.body|ad\.pageName|Use this ad/);
   assert.match(studioStyles, /\.studio-tpl-photo\{[^}]*object-fit:contain[^}]*background:#fff/);
+  assert.match(studioStyles, /\.studio-newad-overlay\{position:fixed/);
+  assert.match(studioStyles, /\.studio-newad\{width:min\(1160px/);
   assert.doesNotMatch(dialog, /isBuiltInAdStudioTemplate/);
   assert.match(dialog, /mode: isBlank \? "custom" : "template"/);
   assert.match(dialog, /source = radarInspiration \? "ad_radar" : isBlank \? "blank" : "template_library"/);

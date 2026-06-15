@@ -228,7 +228,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
   return (
     <main className="content">
       <PageHeading
-        eyebrow="AI run trace"
+        eyebrow="Model run trace"
         title={run.task_type ?? readString(run.input_json, "task_type") ?? "Provider run"}
         description="Review the prompt, model, provider, tokens, cost, approval state, artifacts, lead results, and provider response for this run."
       />
@@ -268,7 +268,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
           <DetailCard label="Provider" value={run.provider_name ?? aiRun?.provider ?? ledger?.provider ?? "-"} />
           <DetailCard label="Provider type" value={run.provider_type ?? "-"} />
           <DetailCard label="Model" value={run.model_name ?? aiRun?.model ?? ledger?.model ?? "-"} />
-          <DetailCard label="AI run" value={aiRun?.id ?? "-"} />
+          <DetailCard label="Model run" value={aiRun?.id ?? "-"} />
           <DetailCard label="Ledger row" value={ledger?.id ?? "-"} />
           <DetailCard label="Result" value={aiRun?.result_summary ?? ledger?.result ?? "-"} />
         </div>

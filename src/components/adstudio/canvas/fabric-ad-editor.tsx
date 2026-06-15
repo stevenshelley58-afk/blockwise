@@ -232,9 +232,9 @@ export function FabricAdEditor({
           <ScanSearch aria-hidden size={16} />
           <span>Fit photo</span>
         </button>
-        <button title="Rewrite the selected text with AI" type="button" onClick={() => void onPatchSelectedLayer()}>
+        <button title="Rewrite the selected text" type="button" onClick={() => void onPatchSelectedLayer()}>
           <Bot aria-hidden size={16} />
-          <span>Rewrite with AI</span>
+          <span>Rewrite text</span>
         </button>
       </div>
       <div className="studio-fabric-shell" data-format={creative.format} data-selected={selectedElement}>

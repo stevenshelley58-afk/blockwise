@@ -26,14 +26,14 @@ test("levelForPct thresholds: warn at 80, critical at 95", () => {
 });
 
 test("budgetStatus reports usage against budget", () => {
-  const status = budgetStatus("openai-spend", "OpenAI month-to-date", 42, 50);
+  const status = budgetStatus("openai-spend", "Provider month-to-date", 42, 50);
   assert.equal(status.level, "warn");
   assert.equal(Math.round(status.pctUsed ?? 0), 84);
   assert.match(status.summary, /\$42\.00 of \$50\.00/);
 });
 
 test("budgetStatus with no budget configured stays ok", () => {
-  const status = budgetStatus("openai-spend", "OpenAI month-to-date", 42, 0);
+  const status = budgetStatus("openai-spend", "Provider month-to-date", 42, 0);
   assert.equal(status.level, "ok");
   assert.equal(status.pctUsed, null);
 });
@@ -75,7 +75,7 @@ test("toState maps service to level for persistence", () => {
 test("formatAlert subject carries the worst escalated level", () => {
   const statuses: ServiceStatus[] = [
     { service: "openrouter-credits", level: "critical", summary: "OpenRouter: $0.40 remaining", pctUsed: 99 },
-    { service: "openai-spend", level: "warn", summary: "OpenAI: 84%", pctUsed: 84 },
+    { service: "openai-spend", level: "warn", summary: "Provider: 84%", pctUsed: 84 },
   ];
   const { subject, text } = formatAlert({ escalations: statuses, recoveries: [] }, statuses);
   assert.match(subject, /CRITICAL/);

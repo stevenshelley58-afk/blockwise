@@ -81,6 +81,15 @@ function isNewTemplate(template: AdStudioTemplate): boolean {
   return template.source === "operator" || template.source === "radar" || typeof template.evidenceScore === "number";
 }
 
+function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
+  return template.sampleCardImageUrl ?? templatePreviewDataUrl(template, brandKit);
+}
+
+function templateSampleDescription(template: AdStudioTemplate): string {
+  if (!template.sampleCopy) return template.promptHint;
+  return `${template.sampleCopy.headline} - ${template.sampleCopy.primaryText}`;
+}
+
 function tabForStep(step: StartStep): ExploreTab {
   if (step === "reuse") return "myads";
   if (step === "radar") return "research";
@@ -168,7 +177,7 @@ export function NewAdDialog({
     };
   }, [open]);
 
-  // Load "My ads" and "Competitor research" lists once the dialog opens so their
+  // Load previous ads and Ad Radar lists once the dialog opens so their
   // tab counts are accurate and switching tabs is instant.
   useEffect(() => {
     if (!open || reuseAds !== null) return;
@@ -361,7 +370,7 @@ export function NewAdDialog({
 
   const stepTitle =
     step === "source"
-      ? "Explore templates"
+      ? "Templates"
       : isBlank
         ? sourceNote
           ? "Make it yours"
@@ -404,10 +413,10 @@ export function NewAdDialog({
                   Templates <i>{templates.length}</i>
                 </button>
                 <button type="button" role="tab" aria-selected={tab === "myads"} className={tab === "myads" ? "on" : ""} onClick={() => setTab("myads")}>
-                  My ads <i>{reuseAds === null ? "..." : reuseAds.length}</i>
+                  Previous ads <i>{reuseAds === null ? "..." : reuseAds.length}</i>
                 </button>
                 <button type="button" role="tab" aria-selected={tab === "research"} className={tab === "research" ? "on" : ""} onClick={() => setTab("research")}>
-                  Competitor research <i>{radarAds === null ? "..." : radarAds.length}</i>
+                  Ad Radar <i>{radarAds === null ? "..." : radarAds.length}</i>
                 </button>
               </div>
 
@@ -426,7 +435,7 @@ export function NewAdDialog({
                       <article key={template.id} className="studio-explore-card">
                         <div className={`studio-explore-thumb g${index % 7}`}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={templatePreviewDataUrl(template, brandKit)} alt="" />
+                          <img src={templatePreviewSrc(template, brandKit)} alt="" />
                           {isNewTemplate(template) && <span className="studio-explore-badge">NEW</span>}
                         </div>
                         <div className="studio-explore-meta">
@@ -434,7 +443,7 @@ export function NewAdDialog({
                             <strong>{template.name}</strong>
                             <ArrowUpRight aria-hidden size={16} />
                           </div>
-                          <p>{template.promptHint}</p>
+                          <p>{templateSampleDescription(template)}</p>
                           <button type="button" className="studio-explore-use" onClick={() => chooseTemplate(template.id)}>
                             Use template
                           </button>
@@ -681,7 +690,7 @@ const EXPLORE_STYLES = `
 .studio-explore-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .studio-explore-card{display:flex;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;transition:transform .15s,box-shadow .15s}
 .studio-explore-card:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}
-.studio-explore-thumb{position:relative;aspect-ratio:16/10;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
+.studio-explore-thumb{position:relative;aspect-ratio:4/5;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
 .studio-explore-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.7px;color:rgba(15,23,42,.35)}
 .studio-explore-badge{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;letter-spacing:.4px;background:#c9f24a;color:#1c2b08;border-radius:999px;padding:3px 9px}
@@ -713,4 +722,4 @@ const EXPLORE_STYLES = `
   .studio-explore-grid{grid-template-columns:1fr}
 }
 `;
-// NewAdDialog: "Explore templates" modal (Templates / My ads / Competitor research) to details, then generate.
+// NewAdDialog: Templates pop-up with Templates, Previous ads, and Ad Radar tabs.
