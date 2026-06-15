@@ -16,7 +16,7 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, brandKit, active, onSelect }: TemplateCardProps) {
-  const previewSrc = useMemo(() => template.previewImageUrl ?? templatePreviewDataUrl(template, brandKit), [template, brandKit]);
+  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
 
   return (
     <button
@@ -33,14 +33,11 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
         <strong>{template.name}</strong>
         <span className="studio-tpl-tags">
           <span>{template.templateKey ?? template.id}</span>
-          <span>{template.creativeSkeleton ? "DNA template" : template.source === "radar" ? "Approved library" : "Built-in"}</span>
+          <span>{template.creativeSkeleton ? "Template pattern" : template.source === "radar" ? "Template library" : "Built-in"}</span>
         </span>
         <span>{template.promptHint}</span>
         {template.creativeSkeleton ? (
-          <span>
-            {template.creativeSkeleton.archetype.replace(/_/g, " ")}
-            {template.exemplars?.length ? ` - ${template.exemplars.length} exemplars` : ""}
-          </span>
+          <span>{template.creativeSkeleton.archetype.replace(/_/g, " ")}</span>
         ) : null}
       </span>
     </button>
