@@ -12,6 +12,7 @@ export type AdStudioTemplate = {
   status?: "approved" | "archived" | "draft";
   creativeSkeleton?: CreativeSkeleton;
   exemplars?: string[];
+  evidenceScore?: number;
 };
 
 export type AdStudioLibraryTemplate = {
@@ -169,6 +170,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     promptHint,
     source: "radar",
     status: "approved",
+    evidenceScore: numberValue(row.evidence_score),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
   };
@@ -181,7 +183,7 @@ export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdSt
   for (const template of builtInAdStudioTemplates()) {
     if (!byId.has(template.id)) byId.set(template.id, template);
   }
-  return [...byId.values()];
+  return [...byId.values()].sort(compareTemplateVisibility);
 }
 
 export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_TEMPLATES.map((template) => ({
@@ -209,7 +211,28 @@ function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function numberValue(value: unknown): number | undefined {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
   const parsed = creativeSkeletonSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function compareTemplateVisibility(a: AdStudioTemplate, b: AdStudioTemplate): number {
+  const priority = (template: AdStudioTemplate) => {
+    if (template.creativeSkeleton) return 0;
+    if (template.source === "radar") return 1;
+    return 2;
+  };
+
+  const priorityDiff = priority(a) - priority(b);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  const evidenceDiff = (b.evidenceScore ?? -1) - (a.evidenceScore ?? -1);
+  if (evidenceDiff !== 0) return evidenceDiff;
+
+  return a.name.localeCompare(b.name);
 }

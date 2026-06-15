@@ -34,6 +34,10 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
       </span>
       <span className="studio-tpl-meta">
         <strong>{template.name}</strong>
+        <span className="studio-tpl-tags">
+          <span>{template.templateKey ?? template.id}</span>
+          <span>{template.creativeSkeleton ? "DNA template" : template.source === "radar" ? "Approved library" : "Built-in"}</span>
+        </span>
         <span>{template.promptHint}</span>
         {template.creativeSkeleton ? (
           <span>
