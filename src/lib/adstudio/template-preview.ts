@@ -56,11 +56,29 @@ function toWellFormedText(value: string): string {
 }
 
 function sanitisePreviewText(text: string): string {
-  return toWellFormedText(text)
-    .replace(/\u00e2\u20ac\u201d|\u2014/gu, "-")
-    .replace(/\u00e2\u20ac\u00a6|\u2026/gu, "...")
-    .replace(/\u00c2\u00b7|\u00b7/gu, "/")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/gu, " ");
+  const src = toWellFormedText(text);
+  let out = "";
+  for (let i = 0; i < src.length; i += 1) {
+    const code = src.charCodeAt(i);
+    // Mojibake sequences from mis-decoded UTF-8 (e.g. an em-dash that became three bytes).
+    if (code === 0x00e2 && src.charCodeAt(i + 1) === 0x20ac) {
+      const third = src.charCodeAt(i + 2);
+      if (third === 0x201d) { out += "-"; i += 2; continue; }
+      if (third === 0x00a6) { out += "..."; i += 2; continue; }
+    }
+    if (code === 0x00c2 && src.charCodeAt(i + 1) === 0x00b7) { out += "/"; i += 1; continue; }
+    // Real punctuation we normalise for the preview.
+    if (code === 0x2014) { out += "-"; continue; }
+    if (code === 0x2026) { out += "..."; continue; }
+    if (code === 0x00b7) { out += "/"; continue; }
+    // Strip control characters that would break the SVG/data URL.
+    if ((code >= 0x00 && code <= 0x08) || code === 0x0b || code === 0x0c || (code >= 0x0e && code <= 0x1f)) {
+      out += " ";
+      continue;
+    }
+    out += src[i];
+  }
+  return out;
 }
 
 function cleanPreviewCopy(copy: PreviewCopy): PreviewCopy {
@@ -247,6 +265,13 @@ export function templatePreviewSvg(template: AdStudioTemplate, brandKit: AdStudi
 }
 
 export function templatePreviewDataUrl(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
+  // Prefer the rendered original sample card when one exists. These cards are
+  // original Blockwise creative (no observed-ad pixels), so they are safe to
+  // surface in the picker; otherwise fall back to the neutral on-brand mock.
+  const sampleCard = template.sampleCardImageUrl;
+  if (typeof sampleCard === "string" && /^https:\/\//u.test(sampleCard)) {
+    return sampleCard;
+  }
   try {
     return `data:image/svg+xml;utf8,${encodeURIComponent(toWellFormedText(templatePreviewSvg(template, brandKit)))}`;
   } catch {
