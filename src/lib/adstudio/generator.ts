@@ -34,6 +34,7 @@ export type GenerateCampaignPackInput = {
   variantCount?: number;
   firstAd?: FirstAdInput;
   sourceImageDataUrl?: string;
+  resolvedTemplate?: AdStudioTemplate | null;
 };
 
 type DefaultCreativeMessage = {
@@ -70,11 +71,12 @@ const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
 export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): AdStudioCampaignPack {
   // B2 (simplification): draft/unapproved brand kits may generate; brand-kit
   // approval is enforced at publish (readiness checks), not at generation.
-  const template = input.firstAd?.mode === "template" ? resolveAdStudioTemplate(input.firstAd.templateId) : null;
+  const template = input.resolvedTemplate ?? (input.firstAd?.mode === "template" ? resolveAdStudioTemplate(input.firstAd.templateId ?? input.firstAd.templateKey) : null);
+  const templateKey = template?.templateKey ?? template?.id ?? input.firstAd?.templateKey ?? input.firstAd?.templateId ?? null;
   const requestedOfferId = template?.offerId ?? inferOfferIdFromFirstAd(input.firstAd?.description, input.offerId);
   const offer = getOfferTemplate(requestedOfferId);
   const formats = input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
-  const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${input.suburb}:${input.firstAd?.description ?? ""}`);
+  const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${templateKey ?? "blank"}:${input.suburb}:${input.firstAd?.description ?? ""}`);
   const campaign: AdStudioCampaign = {
     campaignId,
     workspaceId: input.workspaceId,
@@ -89,6 +91,12 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     },
     audienceIntent: offer.expectedLeadIntent,
     offerId: offer.offerId,
+    templateKey,
+    templateSource: template?.source ?? (input.firstAd?.source === "ad_radar" ? "ad_radar" : null),
+    // Only explicit Ad Radar copy starts are sourced from a real observed ad.
+    // Template exemplars remain internal evidence inside the template snapshot.
+    sourceObservedAdId: input.firstAd?.source === "ad_radar" ? input.firstAd.observedAdId ?? null : null,
+    templateSnapshot: template ? buildTemplateSnapshot(template) : null,
     platforms: input.platforms,
     creativeFormats: formats,
     status: "ready",
@@ -352,7 +360,7 @@ function buildFirstAdMessages(
   return [
     {
       label: template.name,
-      headline: templateHeroHeadline(template.name),
+      headline: templateHeroHeadline(template),
       primaryText: templatePrimaryText(template, suburb),
       description: templateDescription(template.name),
       notes: ["Template selected", "Uses uploaded image", "No blocking compliance issues"],
@@ -374,7 +382,10 @@ function buildFirstAdMessages(
   ];
 }
 
-function templateHeroHeadline(templateName: string): string {
+function templateHeroHeadline(template: AdStudioTemplate): string {
+  const skeletonPattern = template.creativeSkeleton?.copy.headline_pattern;
+  if (skeletonPattern) return normalizeTemplatePatternHeadline(skeletonPattern, template.name);
+  const templateName = template.name;
   if (/appraisal|price/i.test(templateName)) return "What could your home be worth?";
   if (/open home/i.test(templateName)) return "See this home this weekend";
   if (/sold/i.test(templateName)) return "What did this sale show?";
@@ -383,6 +394,27 @@ function templateHeroHeadline(templateName: string): string {
   if (/checklist/i.test(templateName)) return "Avoid costly seller prep gaps";
   if (/buyer demand/i.test(templateName)) return "Get a clearer local view";
   return "A fresh local listing to watch";
+}
+
+function normalizeTemplatePatternHeadline(pattern: string, fallbackName: string): string {
+  const headline = pattern
+    .replace(/\{suburb\}/gi, "your suburb")
+    .replace(/\{property_type\}/gi, "home")
+    .replace(/\{bedrooms\}/gi, "")
+    .replace(/\{street\}/gi, "")
+    .replace(/\{launch_timing\}/gi, "soon")
+    .replace(/\{day\}/gi, "this weekend")
+    .replace(/\{time\}/gi, "")
+    .replace(/\{address\}/gi, "")
+    .replace(/\{sale_result\}/gi, "")
+    .replace(/\{period\}/gi, "now")
+    .replace(/\{metric\}/gi, "market")
+    .replace(/\{buyer_type\}/gi, "buyers")
+    .replace(/\{timeline\}/gi, "soon")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\s+([?!.,])/g, "$1");
+  return headline || fallbackName;
 }
 
 function localTemplateHeadline(templateName: string): string {
@@ -755,7 +787,28 @@ function buildCreative(input: {
     subheadline: input.subheadline,
     templateId: input.template?.id,
     templateName: input.template?.name,
+    creativeSkeleton: input.template?.creativeSkeleton,
   });
+}
+
+function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unknown> {
+  return {
+    id: template.id,
+    templateKey: template.templateKey ?? template.id,
+    name: template.name,
+    goal: template.goal,
+    offerId: template.offerId,
+    source: template.source ?? null,
+    status: template.status ?? null,
+    promptHint: template.promptHint,
+    imageBriefId: template.imageBriefId ?? null,
+    evidenceScore: template.evidenceScore ?? null,
+    winnerRationale: template.winnerRationale ?? null,
+    complianceNote: template.complianceNote ?? null,
+    manualFirstPass: template.manualFirstPass ?? false,
+    exemplars: template.exemplars ?? [],
+    creativeSkeleton: template.creativeSkeleton ?? null,
+  };
 }
 
 function landingPathForOffer(offerId: string): string {

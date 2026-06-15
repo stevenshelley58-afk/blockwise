@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
 import type { CopyState } from "./use-copy";
 
 export type PreviewFormat = "story" | "feed" | "square" | "landscape";
-export type SelectedElement = "headline" | "primaryText" | "description" | "cta" | "image";
+export type SelectedElement = "canvas" | "headline" | "primaryText" | "description" | "cta" | "image";
 
 export const FORMAT_META: Record<
   PreviewFormat,

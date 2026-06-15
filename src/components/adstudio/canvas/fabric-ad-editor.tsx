@@ -124,7 +124,7 @@ export function FabricAdEditor({
     const disposers = [
       canvas.on("selection:created", () => syncSelection(canvas, selectElement)),
       canvas.on("selection:updated", () => syncSelection(canvas, selectElement)),
-      canvas.on("selection:cleared", () => selectElement("headline")),
+      canvas.on("selection:cleared", () => selectElement("canvas")),
       canvas.on("object:modified", () => commitCanvas()),
       canvas.on("text:changed", () => commitCanvas()),
       canvas.on("text:editing:exited", () => commitCanvas()),

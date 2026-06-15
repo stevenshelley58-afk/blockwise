@@ -848,7 +848,7 @@ function buildAdPlans(pack: AdStudioCampaignPack, singleAdSet = false): MetaPubl
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
     const variantTag: MetaAdVariantTag | null = variant
-      ? { variantId: variant.variantId, angle: variant.angle, template: pack.campaign.offerId || null }
+      ? { variantId: variant.variantId, angle: variant.angle, template: pack.campaign.templateKey ?? pack.campaign.offerId ?? null }
       : null;
 
     return {
@@ -872,7 +872,7 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
   const parts = [`v=${tag.variantId.replace(/-/g, "").slice(0, 8)}`, `a=${slug(tag.angle)}`];
 
   if (tag.template) {
-    parts.push(`t=${slug(tag.template)}`);
+    parts.push(`t=${tagValue(tag.template)}`);
   }
 
   return ` | bw:${parts.join(";")}`;
@@ -1080,4 +1080,8 @@ function normalizeMetaLeadDestinationType(value: unknown): MetaLeadDestination["
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || createHash("sha1").update(value).digest("hex").slice(0, 8);
+}
+
+function tagValue(value: string): string {
+  return value.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "") || createHash("sha1").update(value).digest("hex").slice(0, 8);
 }

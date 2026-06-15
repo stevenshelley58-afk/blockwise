@@ -63,7 +63,7 @@ export function calculateBudgetPacing(params: {
   };
 }
 
-const AD_VARIANT_TAG_PATTERN = /\|\s*bw:v=([a-z0-9]+);a=([a-z0-9-]+)(?:;t=([a-z0-9-]+))?\s*$/i;
+const AD_VARIANT_TAG_PATTERN = /\|\s*bw:v=([a-z0-9]+);a=([a-z0-9-]+)(?:;t=([a-z0-9_-]+))?\s*$/i;
 
 /**
  * Extracts the structured `| bw:v=<variant>;a=<angle>;t=<template>` suffix that

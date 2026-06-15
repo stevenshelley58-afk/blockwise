@@ -113,14 +113,15 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
     providerType: "image_generation",
     capabilities: {
       textToImage: true,
-      imageToImage: true,
-      multiReference: true,
     },
     async generate(input) {
       const apiKey = env.OPENAI_API_KEY;
 
       if (!apiKey) {
         throw new Error("OPENAI_API_KEY is not configured.");
+      }
+      if (input.requiresReferenceAssets) {
+        throw new Error("OpenAI image generation is not configured for reference-image repair.");
       }
 
       const response = await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
@@ -177,6 +178,9 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
 
       if (!apiKey) {
         throw new Error("OPENROUTER_API_KEY is not configured.");
+      }
+      if (input.requiresReferenceAssets && input.referenceAssets.length === 0) {
+        throw new Error("Reference-image repair requires at least one image.");
       }
 
       const response = await fetchImpl(OPENROUTER_CHAT_URL, {

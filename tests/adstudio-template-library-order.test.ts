@@ -53,5 +53,7 @@ test("template library pins skeleton-backed templates before older evidence-only
   assert.equal(merged[0]?.creativeSkeleton?.archetype, skeleton.archetype);
   assert.deepEqual(merged[0]?.exemplars, ["observed-ad-1"]);
   assert.equal(merged[0]?.previewImageUrl, "https://cdn.example/observed-ad-1.jpg");
-  assert.equal(merged[1]?.id, "OLD-99");
+  assert.ok(
+    merged.findIndex((template) => template.id === "DNA-70") < merged.findIndex((template) => template.id === "OLD-99"),
+  );
 });

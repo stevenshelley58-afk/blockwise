@@ -91,6 +91,11 @@ export {
 export { renderCreativeSvg } from "./renderer.ts";
 export { scoreAdStudioVariant, type VariantScoreInput } from "./scoring.ts";
 export {
+  isMissingTemplateLibrary,
+  resolveApprovedAdStudioTemplate,
+  templatePromptHint,
+} from "./template-resolver.ts";
+export {
   buildSkeletonGenerationContext,
   buildSkeletonMaskSvgDataUrl,
   type SkeletonGenerationContext,

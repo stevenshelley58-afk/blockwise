@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildAdStudioExportPackage,
   buildAdStudioLiveResult,
+  AD_STUDIO_TEMPLATES,
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
   mergeBrandKitReview,
@@ -318,6 +319,80 @@ test("first-ad generation uses the uploaded image as the full creative visual", 
   assert.doesNotMatch(String(subhead?.content ?? ""), /seller prep checklist/i);
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "primary_image") < story.canvas.objects.findIndex((object) => object.role === "headline"));
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
+});
+
+test("template generation treats observed ads as evidence, not the campaign source", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
+  assert.ok(template);
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "market_update_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "suburb_market_report",
+    platforms: ["meta"],
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: template.templateKey ?? template.id,
+      description: "Local market update for Scarborough owners.",
+      imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: {
+      ...template,
+      source: "radar",
+      exemplars: ["observed-ad-evidence-1"],
+    },
+  });
+
+  assert.equal(pack.campaign.templateKey, "market_update");
+  assert.equal(pack.campaign.sourceObservedAdId, null);
+  assert.deepEqual(pack.campaign.templateSnapshot?.exemplars, ["observed-ad-evidence-1"]);
+});
+
+test("ad radar inspiration keeps the explicitly copied observed ad id", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    firstAd: {
+      mode: "custom",
+      source: "ad_radar",
+      observedAdId: "observed-ad-user-picked",
+      description: "Use this competitor angle but make it our own.",
+      imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+  });
+
+  assert.equal(pack.campaign.templateKey, null);
+  assert.equal(pack.campaign.sourceObservedAdId, "observed-ad-user-picked");
 });
 
 test("scoreAdStudioVariant weights offer clarity, relevance, intent, brand fit, compliance, and hierarchy", () => {
