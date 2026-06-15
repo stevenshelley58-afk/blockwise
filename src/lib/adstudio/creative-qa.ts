@@ -1,6 +1,7 @@
 import { scoreAdStudioVariant } from "./scoring.ts";
 import type { TextProviderAdapter } from "./providers.ts";
 import type { AdStudioCampaignPack } from "./types.ts";
+import type { CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 
 export const SCORE_GATE_THRESHOLD = 70;
 
@@ -32,6 +33,11 @@ export type VisionQAResult = {
   reasons: string[];
 };
 
+export type SkeletonQAResult = {
+  pass: boolean;
+  reasons: string[];
+};
+
 export async function runVisionQA(
   imageUrl: string,
   provider: TextProviderAdapter,
@@ -56,6 +62,33 @@ export async function runVisionQA(
   }
 
   return { pass, reasons };
+}
+
+export function runSkeletonQA(input: {
+  skeleton: CreativeSkeleton;
+  observedCopyZoneIds?: string[];
+  palette?: string[];
+  legible?: boolean;
+  onBrief?: boolean;
+}): SkeletonQAResult {
+  const reasons: string[] = [];
+  const requiredZoneIds = input.skeleton.composition.copy_safe_zones.map((zone) => zone.id);
+  const observedZones = new Set(input.observedCopyZoneIds ?? requiredZoneIds);
+
+  for (const zoneId of requiredZoneIds) {
+    if (!observedZones.has(zoneId)) reasons.push(`missing copy-safe zone ${zoneId}`);
+  }
+
+  if (input.palette && input.palette.length > 0) {
+    const expected = new Set(input.skeleton.color.palette.map((color) => color.toLowerCase()));
+    const hasPaletteMatch = input.palette.some((color) => expected.has(color.toLowerCase()));
+    if (!hasPaletteMatch) reasons.push("generated creative is off-palette");
+  }
+
+  if (input.legible === false) reasons.push("generated creative is not legible");
+  if (input.onBrief === false) reasons.push("generated creative does not match skeleton brief");
+
+  return { pass: reasons.length === 0, reasons };
 }
 
 // ── Similarity guard ──────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import type { AdStudioGoal } from "./types.ts";
+import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 
 export type AdStudioTemplate = {
   id: string;
@@ -9,6 +10,8 @@ export type AdStudioTemplate = {
   promptHint: string;
   source?: "builtin" | "operator" | "radar";
   status?: "approved" | "archived" | "draft";
+  creativeSkeleton?: CreativeSkeleton;
+  exemplars?: string[];
 };
 
 export type AdStudioLibraryTemplate = {
@@ -26,6 +29,8 @@ export type AdStudioLibraryTemplate = {
   cta?: string | null;
   image_brief_id?: string | null;
   ai_prompt_seed?: string | null;
+  creative_skeleton?: unknown;
+  exemplar_observed_ad_ids?: string[] | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
   compliance_note?: string | null;
@@ -150,6 +155,11 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
 
   if (!promptHint) return null;
 
+  const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
+  const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
+    ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+
   return {
     id: templateKey,
     templateKey,
@@ -159,6 +169,8 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     promptHint,
     source: "radar",
     status: "approved",
+    ...(creativeSkeleton ? { creativeSkeleton } : {}),
+    ...(exemplars.length > 0 ? { exemplars } : {}),
   };
 }
 
@@ -195,4 +207,9 @@ function toTitleCase(value: string): string {
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
+  const parsed = creativeSkeletonSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }

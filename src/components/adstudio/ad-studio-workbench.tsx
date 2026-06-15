@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -33,6 +33,7 @@ import type {
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 import { buildLayoutBrief } from "@/lib/adstudio/layout-brief.ts";
+import { buildSkeletonGenerationContext } from "@/lib/adstudio/skeleton-to-prompt.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -104,6 +105,8 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   square: "1:1",
   landscape: "1.91:1",
 };
+
+const SKELETON_GENERATION_ENABLED = process.env.NEXT_PUBLIC_ADSTUDIO_SKELETON_GENERATION === "1";
 
 const FabricAdEditor = dynamic(
   () => import("./canvas/fabric-ad-editor").then((mod) => mod.FabricAdEditor),
@@ -250,6 +253,7 @@ export function AdStudioWorkbench({
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
   const [newAdStep, setNewAdStep] = useState<"source" | "template" | "radar">("source");
   const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(AD_STUDIO_TEMPLATES);
+  const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -663,10 +667,19 @@ export function AdStudioWorkbench({
     studio.setBusyMessage("Generating background");
     try {
       // Derive a composition brief from the template's real geometry so the
-      // generated photo leaves room exactly where the headline/CTA sit, and pass
-      // the current listing photo as a reference so the model conditions on the
-      // real property instead of inventing a generic streetscape.
+      // generated photo leaves room exactly where the headline/CTA sit, and
+      // pass the current listing photo as a reference so the model conditions
+      // on the real property instead of inventing a generic streetscape.
       const layoutBrief = buildLayoutBrief(currentCreative);
+      const activeTemplate = activeTemplateKey
+        ? adTemplates.find((template) => template.templateKey === activeTemplateKey || template.id === activeTemplateKey)
+        : undefined;
+      const skeletonContext = SKELETON_GENERATION_ENABLED && activeTemplate?.creativeSkeleton
+        ? buildSkeletonGenerationContext(activeTemplate.creativeSkeleton, {
+            format: currentCreative.format,
+            fallbackBrief: layoutBrief,
+          })
+        : null;
       const referenceImage = primaryImage;
       const referenceAssets: string[] = !referenceImage
         ? []
@@ -682,7 +695,8 @@ export function AdStudioWorkbench({
         market,
         propertyType,
         "real estate advertising background",
-        layoutBrief,
+        skeletonContext?.brief ?? layoutBrief,
+        skeletonContext ? `Copy-safe mask: ${skeletonContext.maskSvgDataUrl}` : "",
         referenceAssets.length
           ? "Use the supplied reference photo as the real property: preserve its building, architecture and setting; only improve lighting, framing and overall quality."
           : "",
@@ -740,6 +754,7 @@ export function AdStudioWorkbench({
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
     await generateFirstAd(input);
+    setActiveTemplateKey(input.templateKey ?? input.templateId);
   }
 
   function renderCampaignPanel(options?: { mobileSheet?: boolean }) {

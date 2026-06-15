@@ -22,6 +22,18 @@ test("resolveModelProfile returns the active model and ordered fallback chain fo
   assert.equal(resolved.profile.requiresStructuredOutput, true);
 });
 
+test("vision_extract profile is structured and vision-capable for creative skeletons", () => {
+  const resolved = resolveModelProfile("vision_extract");
+
+  assert.equal(resolved.profile.requiresStructuredOutput, true);
+  assert.equal(resolved.primary.supportsStructuredOutput, true);
+  assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
+  assert.deepEqual(
+    resolved.fallbacks.map((candidate) => candidate.model),
+    ["google/gemini-2.0-flash-001"],
+  );
+});
+
 test("client-facing strategy profile uses the premium copywriting model", () => {
   const resolved = resolveModelProfile("high_quality_strategy");
 

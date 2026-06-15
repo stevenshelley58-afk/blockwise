@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await research
     .from("v_ad_template_library")
-    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,ai_prompt_seed,evidence_score,winner_rationale,compliance_note")
+    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,ai_prompt_seed,creative_skeleton,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
     .order("evidence_score", { ascending: false })
     .limit(100);
 
@@ -101,7 +101,7 @@ async function updateTemplateStatus(body: TemplatePatchBody, userId: string) {
       ...patch,
     })
     .eq("template_key", body.templateKey)
-    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,ai_prompt_seed,evidence_score,winner_rationale,compliance_note")
+    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,ai_prompt_seed,creative_skeleton,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
     .maybeSingle();
 
   if (isMissingTemplateLibrary(error)) {

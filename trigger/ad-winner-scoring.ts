@@ -3,13 +3,17 @@ import * as Sentry from "@sentry/nextjs";
 
 import {
   WINNER_SCORER_VERSION,
+  buildClusterKey,
   buildTemplateDraftsFromWinners,
+  deriveTemplateKey,
   isScoringEligible,
   scoreWinnerCandidate,
+  type OwnedAdPerformanceSignal,
   type TemplateDraft,
   type WinnerCandidate,
   type WinnerForMining,
 } from "../src/lib/ad-template-library/winner-scoring.ts";
+import { creativeSkeletonSchema, type CreativeSkeleton } from "../src/lib/ad-template-library/skeleton.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -64,6 +68,22 @@ type RawAdvertiserPageRow = {
 type AgentDecisionRow = {
   id: string;
   evidence: Record<string, unknown> | null;
+};
+
+type CreativeSkeletonRow = {
+  observed_ad_id: string;
+  creative_skeleton: unknown;
+};
+
+type OwnedPerformanceRow = {
+  observed_ad_id: string | null;
+  template_key: string | null;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  qualified_leads: number;
+  spend_cents: number;
+  lead_quality_score: number | string | null;
 };
 
 type RunSummary = {
@@ -170,6 +190,10 @@ async function loadScoringCandidates(
   const baseCandidates = rows.map(mapCreativeRow).filter((candidate): candidate is WinnerCandidate => Boolean(candidate));
   const eligible = baseCandidates.filter(isScoringEligible);
   const enriched = await enrichCandidateStats(research, eligible);
+  const performance = await loadOwnedPerformanceSignals(research, {
+    observedAdIds: enriched.map((candidate) => candidate.observedAdId),
+    templateKeys: enriched.map((candidate) => templateKeyForCandidate(candidate)).filter((key): key is string => Boolean(key)),
+  });
   const latestScores = await loadLatestScores(research, enriched.map((candidate) => candidate.observedAdId));
   const decisionEvidence = await loadDecisionEvidence(
     research,
@@ -178,7 +202,14 @@ async function loadScoringCandidates(
   const candidates: WinnerCandidate[] = [];
   let skippedAlreadyCurrent = 0;
 
-  for (const candidate of enriched) {
+  for (const baseCandidate of enriched) {
+    const candidate: WinnerCandidate = {
+      ...baseCandidate,
+      ownedPerformance:
+        performance.byObservedId.get(baseCandidate.observedAdId)
+        ?? performance.byTemplateKey.get(templateKeyForCandidate(baseCandidate) ?? "")
+        ?? null,
+    };
     const latest = latestScores.get(candidate.observedAdId);
     const latestCreativeHash = latest?.decision_id ? stringValue(decisionEvidence.get(latest.decision_id)?.creative_hash) : null;
     const score = scoreWinnerCandidate(candidate, now);
@@ -295,6 +326,73 @@ async function loadCrossAgencyCounts(research: ResearchClient, creativeHashes: s
   return counts;
 }
 
+async function loadOwnedPerformanceSignals(
+  research: ResearchClient,
+  input: { observedAdIds: string[]; templateKeys: string[] },
+): Promise<{ byObservedId: Map<string, OwnedAdPerformanceSignal>; byTemplateKey: Map<string, OwnedAdPerformanceSignal> }> {
+  const byObservedId = new Map<string, OwnedAdPerformanceSignal>();
+  const byTemplateKey = new Map<string, OwnedAdPerformanceSignal>();
+  const observedAdIds = [...new Set(input.observedAdIds)];
+  const templateKeys = [...new Set(input.templateKeys)];
+
+  if (observedAdIds.length === 0 && templateKeys.length === 0) {
+    return { byObservedId, byTemplateKey };
+  }
+
+  let query = research
+    .from("owned_ad_performance")
+    .select("observed_ad_id,template_key,impressions,clicks,leads,qualified_leads,spend_cents,lead_quality_score");
+
+  if (observedAdIds.length > 0 && templateKeys.length > 0) {
+    query = query.or(`observed_ad_id.in.(${observedAdIds.join(",")}),template_key.in.(${templateKeys.join(",")})`);
+  } else if (observedAdIds.length > 0) {
+    query = query.in("observed_ad_id", observedAdIds);
+  } else {
+    query = query.in("template_key", templateKeys);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Unable to load owned ad performance signals: ${error.message}`);
+  }
+
+  for (const row of (data ?? []) as OwnedPerformanceRow[]) {
+    if (row.observed_ad_id) {
+      mergeOwnedPerformanceSignal(byObservedId, row.observed_ad_id, row);
+    }
+    if (row.template_key) {
+      mergeOwnedPerformanceSignal(byTemplateKey, row.template_key, row);
+    }
+  }
+
+  return { byObservedId, byTemplateKey };
+}
+
+function mergeOwnedPerformanceSignal(
+  signals: Map<string, OwnedAdPerformanceSignal>,
+  key: string,
+  row: OwnedPerformanceRow,
+) {
+  const current = signals.get(key) ?? {
+    impressions: 0,
+    clicks: 0,
+    leads: 0,
+    qualifiedLeads: 0,
+    spendCents: 0,
+    leadQualityScore: null,
+  };
+  const quality = row.lead_quality_score === null ? null : Number(row.lead_quality_score);
+  signals.set(key, {
+    impressions: current.impressions + row.impressions,
+    clicks: current.clicks + row.clicks,
+    leads: current.leads + row.leads,
+    qualifiedLeads: current.qualifiedLeads + row.qualified_leads,
+    spendCents: current.spendCents + row.spend_cents,
+    leadQualityScore: quality !== null && Number.isFinite(quality) ? quality : current.leadQualityScore,
+  });
+}
+
 async function loadLatestScores(research: ResearchClient, observedAdIds: string[]): Promise<Map<string, LatestScoreRow>> {
   const latest = new Map<string, LatestScoreRow>();
   if (observedAdIds.length === 0) return latest;
@@ -353,6 +451,8 @@ async function persistAdQualityScore(research: ResearchClient, candidate: Winner
         ad_creative_id: candidate.adCreativeId,
         objective_score: score.score,
         objective_signals: score.signals,
+        owned_performance_score: score.performanceScore,
+        owned_performance: candidate.ownedPerformance ?? null,
         deterministic_review: {
           offer_clarity: score.review.offerClarity,
           local_relevance: score.review.localRelevance,
@@ -427,6 +527,7 @@ async function mineTemplateCandidates(research: ResearchClient): Promise<{ draft
     research,
     creativeRows.map(mapCreativeRow).filter((candidate): candidate is WinnerCandidate => Boolean(candidate)),
   );
+  const skeletons = await loadCreativeSkeletons(research, candidates.map((candidate) => candidate.observedAdId));
   const winners: WinnerForMining[] = candidates.flatMap((candidate) => {
     const score = latestScores.get(candidate.observedAdId);
     if (!score) return [];
@@ -437,6 +538,7 @@ async function mineTemplateCandidates(research: ResearchClient): Promise<{ draft
         objectiveScore: Number(score.objective_score),
         scorerVersion: score.scorer_version,
         rationale: score.rationale,
+        creativeSkeleton: skeletons.get(candidate.observedAdId) ?? null,
       },
     ];
   });
@@ -503,6 +605,10 @@ async function persistTemplateDraft(research: ResearchClient, draft: TemplateDra
     throw new Error(`Unable to create template miner decision for ${draft.templateKey}: ${decisionError?.message ?? "missing decision id"}`);
   }
 
+  if (draft.creativeSkeleton && draft.imageBriefId) {
+    await persistCanonicalImageBrief(research, draft);
+  }
+
   const { error: upsertError } = await research.from("ad_template_candidates").upsert(
     {
       template_key: draft.templateKey,
@@ -522,6 +628,8 @@ async function persistTemplateDraft(research: ResearchClient, draft: TemplateDra
       cta: draft.cta,
       variables: draft.variables,
       image_brief_id: draft.imageBriefId,
+      creative_skeleton: draft.creativeSkeleton ?? null,
+      exemplar_observed_ad_ids: draft.exemplarObservedAdIds,
       evidence_score: draft.evidenceScore,
       source_observed_ad_ids: draft.sourceObservedAdIds,
       winner_rationale: draft.winnerRationale,
@@ -537,6 +645,54 @@ async function persistTemplateDraft(research: ResearchClient, draft: TemplateDra
   }
 
   return "draft_written";
+}
+
+async function persistCanonicalImageBrief(research: ResearchClient, draft: TemplateDraft): Promise<void> {
+  if (!draft.creativeSkeleton || !draft.imageBriefId) return;
+
+  const skeleton = draft.creativeSkeleton;
+  const { error } = await research.from("ad_template_image_briefs").upsert(
+    {
+      brief_id: draft.imageBriefId,
+      name: `${draft.category} ${draft.hookStyle}`.replace(/[_-]+/gu, " "),
+      concept: skeleton.copy.hook_style,
+      layout: skeleton.archetype,
+      imagery: `${skeleton.shot.type}; ${skeleton.composition.focal_point}`,
+      palette: skeleton.color.palette.join(", "),
+      text_rules: `${skeleton.text_system.headline_zone}; ${skeleton.text_system.cta_style}`,
+      formats: draft.format,
+      ai_prompt_seed: skeleton.copy.headline_pattern,
+      creative_skeleton: skeleton,
+      skeleton_version: skeleton.version,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "brief_id" },
+  );
+
+  if (error) {
+    throw new Error(`Unable to upsert canonical image brief ${draft.imageBriefId}: ${error.message}`);
+  }
+}
+
+async function loadCreativeSkeletons(research: ResearchClient, observedAdIds: string[]): Promise<Map<string, CreativeSkeleton>> {
+  const skeletons = new Map<string, CreativeSkeleton>();
+  if (observedAdIds.length === 0) return skeletons;
+
+  const { data, error } = await research
+    .from("creative_skeletons")
+    .select("observed_ad_id,creative_skeleton")
+    .in("observed_ad_id", observedAdIds);
+
+  if (error) {
+    throw new Error(`Unable to load creative skeletons for template mining: ${error.message}`);
+  }
+
+  for (const row of (data ?? []) as CreativeSkeletonRow[]) {
+    const parsed = creativeSkeletonSchema.safeParse(row.creative_skeleton);
+    if (parsed.success) skeletons.set(row.observed_ad_id, parsed.data);
+  }
+
+  return skeletons;
 }
 
 async function recordRunSummaryDecision(research: ResearchClient, summary: RunSummary): Promise<void> {
@@ -590,6 +746,10 @@ function mapCreativeRow(row: RawCreativeRow): WinnerCandidate | null {
     creativeVersions: 1,
     crossAgencyCount: 1,
   };
+}
+
+function templateKeyForCandidate(candidate: WinnerCandidate): string {
+  return deriveTemplateKey(buildClusterKey(candidate));
 }
 
 function firstNested<T>(value: T | T[] | null | undefined): T | null {

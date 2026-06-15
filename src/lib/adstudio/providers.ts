@@ -1,4 +1,8 @@
 import {
+  creativeSkeletonSchema,
+  type CreativeSkeleton,
+} from "../ad-template-library/skeleton.ts";
+import {
   googleAssetPackSchema,
   googleSearchPackSchema,
   metaLeadAdPackSchema,
@@ -87,12 +91,12 @@ export type VisionProviderAdapter = {
   analyse(input: VisionProviderRequest): Promise<VisionProviderResponse>;
 };
 
-export type ProviderSchemaName = "metaLeadAdPack" | "googleSearchPack" | "googleAssetPack";
+export type ProviderSchemaName = "metaLeadAdPack" | "googleSearchPack" | "googleAssetPack" | "creativeSkeleton";
 
 export type ProviderValidationResult =
   | {
       ok: true;
-      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack;
+      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack | CreativeSkeleton;
       repaired: boolean;
       error?: never;
     }
@@ -106,7 +110,7 @@ export type ProviderValidationResult =
 type ParsedProviderValidationResult =
   | {
       ok: true;
-      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack;
+      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack | CreativeSkeleton;
       error?: never;
     }
   | {
@@ -255,7 +259,9 @@ function parseAndValidate(rawText: string, schemaName: ProviderSchemaName): Pars
       ? metaLeadAdPackSchema
       : schemaName === "googleSearchPack"
         ? googleSearchPackSchema
-        : googleAssetPackSchema;
+        : schemaName === "googleAssetPack"
+          ? googleAssetPackSchema
+          : creativeSkeletonSchema;
   const result = schema.safeParse(parsed);
 
   if (!result.success) {

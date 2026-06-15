@@ -336,10 +336,12 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
   assert.match(route, /from\("v_ad_template_library"\)/);
   assert.match(route, /from\("ad_template_candidates"\)/);
+  assert.match(route, /creative_skeleton,exemplar_observed_ad_ids/);
   assert.match(route, /action: z\.enum\(\["approve", "archive"\]\)/);
   assert.match(route, /source: "builtin_fallback"/);
   assert.match(route, /Operator access is required/);
   assert.match(templates, /mapAdStudioLibraryTemplate/);
+  assert.match(templates, /creativeSkeleton\?: CreativeSkeleton/);
   assert.match(templates, /mergeAdStudioTemplateLibrary/);
   assert.match(templates, /isBuiltInAdStudioTemplate/);
 });
