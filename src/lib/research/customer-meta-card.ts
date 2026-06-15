@@ -29,6 +29,15 @@ export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
   "video_thumbnail_url",
   "media_assets",
   "last_seen_at",
+  "area_match_postcode",
+  "area_match_suburb",
+  "area_match_state",
+  "area_match_type",
+  "area_match_confidence",
+  "ad_area_postcodes",
+  "ad_area_suburbs",
+  "service_area_postcodes",
+  "service_area_suburbs",
 ].join(",");
 
 export type CustomerMetaAdLibraryCardRow = {
@@ -60,6 +69,15 @@ export type CustomerMetaAdLibraryCardRow = {
   video_thumbnail_url: string | null;
   media_assets: unknown;
   last_seen_at: string | null;
+  area_match_postcode?: string | null;
+  area_match_suburb?: string | null;
+  area_match_state?: string | null;
+  area_match_type?: string | null;
+  area_match_confidence?: string | number | null;
+  ad_area_postcodes?: string[] | null;
+  ad_area_suburbs?: string[] | null;
+  service_area_postcodes?: string[] | null;
+  service_area_suburbs?: string[] | null;
 };
 
 export type CustomerMetaAdLibraryMedia = {
@@ -85,6 +103,15 @@ export type CustomerMetaAdLibraryCard = {
   suburb: string | null;
   state: string | null;
   postcodes: string[];
+  areaMatchPostcode: string | null;
+  areaMatchSuburb: string | null;
+  areaMatchState: string | null;
+  areaMatchType: string | null;
+  areaMatchConfidence: number | null;
+  adAreaPostcodes: string[];
+  adAreaSuburbs: string[];
+  serviceAreaPostcodes: string[];
+  serviceAreaSuburbs: string[];
   headline: string | null;
   body: string | null;
   description: string | null;
@@ -99,6 +126,19 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
   const fallbackId = [cleanString(row.page_id), pageName, cleanString(row.last_seen_at)].filter(Boolean).join(":");
   const id = cleanString(row.card_id) ?? libraryId ?? fallbackId;
   const activeStatus = normaliseActiveStatus(row.active_status);
+  const areaMatchPostcode = cleanCustomerMetaDisplayText(row.area_match_postcode) ?? cleanCustomerMetaDisplayText(row.postcode);
+  const areaMatchSuburb = cleanCustomerMetaDisplayText(row.area_match_suburb) ?? cleanCustomerMetaDisplayText(row.suburb);
+  const areaMatchState = cleanCustomerMetaDisplayText(row.area_match_state) ?? cleanCustomerMetaDisplayText(row.state);
+  const adAreaPostcodes = uniqueDisplayStrings([
+    ...(row.ad_area_postcodes ?? row.postcodes ?? []),
+    row.area_match_postcode,
+    row.postcode,
+  ]);
+  const adAreaSuburbs = uniqueDisplayStrings([
+    ...(row.ad_area_suburbs ?? []),
+    row.area_match_suburb,
+    row.suburb,
+  ]);
 
   return {
     id,
@@ -115,10 +155,19 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     stoppedAt: resolveDeliveryStoppedAt(activeStatus, cleanString(row.ad_delivery_stopped_at)),
     lastSeenAt: cleanString(row.last_seen_at),
     platforms: uniqueStrings(row.publisher_platforms).map(formatPlatformLabel).map(cleanCustomerMetaDisplayText).filter(isString),
-    postcode: cleanCustomerMetaDisplayText(row.postcode),
-    suburb: cleanCustomerMetaDisplayText(row.suburb),
-    state: cleanCustomerMetaDisplayText(row.state),
-    postcodes: uniqueStrings([...(row.postcodes ?? []), row.postcode].filter(Boolean)).map(cleanCustomerMetaDisplayText).filter(isString),
+    postcode: areaMatchPostcode,
+    suburb: areaMatchSuburb,
+    state: areaMatchState,
+    postcodes: adAreaPostcodes,
+    areaMatchPostcode,
+    areaMatchSuburb,
+    areaMatchState,
+    areaMatchType: cleanCustomerMetaDisplayText(row.area_match_type),
+    areaMatchConfidence: normaliseNumber(row.area_match_confidence),
+    adAreaPostcodes,
+    adAreaSuburbs,
+    serviceAreaPostcodes: uniqueDisplayStrings(row.service_area_postcodes ?? (row.ad_area_postcodes ? [] : row.postcodes ?? [])),
+    serviceAreaSuburbs: uniqueDisplayStrings(row.service_area_suburbs ?? []),
     headline: cleanCustomerMetaDisplayText(row.headline),
     body: cleanCustomerMetaDisplayText(row.body),
     description: cleanCustomerMetaDisplayText(row.description),
@@ -250,8 +299,17 @@ function uniqueStrings(values: Array<string | null | undefined> | null | undefin
   return Array.from(new Set((values ?? []).map(cleanString).filter((value): value is string => Boolean(value))));
 }
 
+function uniqueDisplayStrings(values: Array<string | null | undefined> | null | undefined): string[] {
+  return uniqueStrings(values).map(cleanCustomerMetaDisplayText).filter(isString);
+}
+
 function isString(value: string | null): value is string {
   return Boolean(value);
+}
+
+function normaliseNumber(value: string | number | null | undefined): number | null {
+  const numeric = typeof value === "string" ? Number(value) : value;
+  return typeof numeric === "number" && Number.isFinite(numeric) ? numeric : null;
 }
 
 function normalisePublicUrl(value: unknown): string | null {

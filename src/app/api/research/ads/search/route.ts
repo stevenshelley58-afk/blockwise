@@ -3,19 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  adRunningMs,
-  CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
-  normaliseCustomerMetaAdLibraryCard,
-  type CustomerMetaAdLibraryCard,
-  type CustomerMetaAdLibraryCardRow,
-} from "@/lib/research/customer-meta-card";
+  normaliseAdRadarCardSearchQuery,
+  searchCustomerMetaAdLibraryCards,
+  type AdRadarCardSearchSort,
+} from "@/lib/research/ad-radar-card-search";
 
 export const dynamic = "force-dynamic";
-
-const SEARCH_ROW_LIMIT = 200;
-const SEARCH_RESULT_LIMIT = 50;
-type SearchSort = "recent" | "longest";
-type RankedSearchRow = CustomerMetaAdLibraryCardRow & { search_rank?: number | null };
 
 export async function GET(request: NextRequest) {
   const guard = await requireApiWorkspace(request, "monitor");
@@ -34,138 +27,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const q = (request.nextUrl.searchParams.get("q") ?? "").replace(/[(),]/g, "").trim();
-  const sort: SearchSort = request.nextUrl.searchParams.get("sort") === "longest" ? "longest" : "recent";
+  const q = normaliseAdRadarCardSearchQuery(request.nextUrl.searchParams.get("q") ?? "");
+  const sort: AdRadarCardSearchSort = request.nextUrl.searchParams.get("sort") === "longest" ? "longest" : "recent";
   if (!q) {
     return NextResponse.json({ cards: [] });
   }
 
-  let rows: CustomerMetaAdLibraryCardRow[] | null = null;
-  if (shouldUseRankedFullTextSearch(q)) {
-    rows = await loadRankedFullTextRows(supabase, q, sort);
+  try {
+    const cards = await searchCustomerMetaAdLibraryCards(supabase, { query: q, sort });
+    return NextResponse.json({ cards });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Ad Radar search failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const fallback = rows ? null : await loadFallbackSearchRows(supabase, q, sort);
-  if (fallback?.error) return NextResponse.json({ error: fallback.error.message }, { status: 500 });
-
-  const cards = sortCards(
-    dedupeRowsByCardId((rows ?? fallback?.data ?? []) as unknown as CustomerMetaAdLibraryCardRow[])
-      .slice(0, SEARCH_RESULT_LIMIT)
-      .map(normaliseCustomerMetaAdLibraryCard),
-    sort,
-  );
-
-  return NextResponse.json({ cards });
-}
-
-async function loadRankedFullTextRows(
-  supabase: { schema: (schema: string) => any },
-  q: string,
-  sort: SearchSort,
-): Promise<CustomerMetaAdLibraryCardRow[] | null> {
-  const { data, error } = await supabase
-    .schema("research")
-    .rpc("search_customer_meta_ad_library_cards", {
-      p_query: q,
-      p_limit: SEARCH_ROW_LIMIT,
-      p_sort: sort,
-    });
-
-  if (!error) return (data ?? []) as unknown as RankedSearchRow[];
-  if (isMissingRankedSearchSchemaError(error)) return null;
-
-  console.warn("Ad Radar ranked search failed; falling back to ILIKE search", error.message);
-  return null;
-}
-
-async function loadFallbackSearchRows(
-  supabase: { schema: (schema: string) => any },
-  q: string,
-  sort: SearchSort,
-): Promise<{ data: CustomerMetaAdLibraryCardRow[] | null; error: { message: string } | null }> {
-  const { data, error } = await supabase
-    .schema("research")
-    .from("v_customer_meta_ad_library_cards")
-    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .or(buildFallbackSearchFilter(q))
-    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
-      ascending: sort === "longest",
-      nullsFirst: false,
-    })
-    .limit(SEARCH_ROW_LIMIT);
-
-  return { data: (data ?? null) as unknown as CustomerMetaAdLibraryCardRow[] | null, error };
-}
-
-function shouldUseRankedFullTextSearch(q: string): boolean {
-  return q.length >= 3 && !/^\d+$/u.test(q);
-}
-
-function buildFallbackSearchFilter(q: string): string {
-  const escaped = q.replace(/[%_\\]/g, "\\$&");
-  if (/^\d+$/u.test(q)) {
-    const prefixNeedle = `${escaped}%`;
-    return [
-      `postcode.ilike.${prefixNeedle}`,
-      `library_id.ilike.${prefixNeedle}`,
-    ].join(",");
-  }
-
-  const needle = `%${escaped}%`;
-  return [
-    `page_name.ilike.${needle}`,
-    `library_id.ilike.${needle}`,
-    `headline.ilike.${needle}`,
-    `body.ilike.${needle}`,
-    `description.ilike.${needle}`,
-    `postcode.ilike.${needle}`,
-    `suburb.ilike.${needle}`,
-    `state.ilike.${needle}`,
-    `destination_url.ilike.${needle}`,
-    `cta.ilike.${needle}`,
-  ].join(",");
-}
-
-function isMissingRankedSearchSchemaError(error: { code?: string; message?: string }): boolean {
-  const code = error.code ?? "";
-  const message = error.message ?? "";
-  return (
-    ["42703", "42883", "42P01", "PGRST202", "PGRST204"].includes(code) ||
-    /function .*search_customer_meta_ad_library_cards|column .*search_vector|schema cache/i.test(message)
-  );
-}
-
-function sortCards(cards: CustomerMetaAdLibraryCard[], sort: SearchSort): CustomerMetaAdLibraryCard[] {
-  if (sort === "longest") {
-    const now = Date.now();
-    return [...cards].sort((a, b) => {
-      const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
-      const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
-      return (bMs ?? -1) - (aMs ?? -1) || dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt);
-    });
-  }
-
-  return [...cards].sort((a, b) => dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt));
-}
-
-function dateValue(value: string | null): number {
-  if (!value) return 0;
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-}
-
-function dedupeRowsByCardId(rows: CustomerMetaAdLibraryCardRow[]): CustomerMetaAdLibraryCardRow[] {
-  const seen = new Set<string>();
-  const deduped: CustomerMetaAdLibraryCardRow[] = [];
-
-  for (const row of rows) {
-    const cardId = row.card_id?.trim();
-    if (cardId) {
-      if (seen.has(cardId)) continue;
-      seen.add(cardId);
-    }
-    deduped.push(row);
-  }
-
-  return deduped;
 }

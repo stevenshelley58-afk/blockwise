@@ -250,8 +250,8 @@ test("public Ad Radar loader asks for postcode arrays and national postcode subu
     "postcode searches should query direct ad_area_matches postcode rows",
   );
   assert.ok(
-    fake.queries.some((query) => query.callArgs("overlaps").some((args) => args[0] === "postcodes" && sameArray(args[1], ["6166"]))),
-    "postcode searches should query rows where the safe view exposes the postcode array",
+    fake.queries.some((query) => query.callArgs("overlaps").some((args) => args[0] === "ad_area_postcodes" && sameArray(args[1], ["6166"]))),
+    "postcode searches should query rows where the safe view exposes explicit ad-area postcode evidence",
   );
   assert.ok(
     fake.queries.some((query) => query.callArgs("ilike").some((args) => args[0] === "suburb" && args[1] === "Coogee")),
@@ -345,6 +345,15 @@ function card(input: Partial<CustomerMetaAdLibraryCard> & { id: string }): Custo
     suburb: "suburb" in input ? input.suburb ?? null : "Mount Lawley",
     state: "state" in input ? input.state ?? null : "WA",
     postcodes: input.postcodes ?? ["6050"],
+    areaMatchPostcode: input.areaMatchPostcode ?? ("postcode" in input ? input.postcode ?? null : "6050"),
+    areaMatchSuburb: input.areaMatchSuburb ?? ("suburb" in input ? input.suburb ?? null : "Mount Lawley"),
+    areaMatchState: input.areaMatchState ?? ("state" in input ? input.state ?? null : "WA"),
+    areaMatchType: input.areaMatchType ?? null,
+    areaMatchConfidence: input.areaMatchConfidence ?? null,
+    adAreaPostcodes: input.adAreaPostcodes ?? input.postcodes ?? ["6050"],
+    adAreaSuburbs: input.adAreaSuburbs ?? ("suburb" in input ? (input.suburb ? [input.suburb] : []) : ["Mount Lawley"]),
+    serviceAreaPostcodes: input.serviceAreaPostcodes ?? [],
+    serviceAreaSuburbs: input.serviceAreaSuburbs ?? [],
     headline: input.headline ?? null,
     body: input.body ?? null,
     description: input.description ?? null,
@@ -384,6 +393,15 @@ function row(input: Partial<CustomerMetaAdLibraryCardRow> & { card_id: string })
     video_thumbnail_url: input.video_thumbnail_url ?? null,
     media_assets: input.media_assets ?? [],
     last_seen_at: input.last_seen_at ?? null,
+    area_match_postcode: input.area_match_postcode ?? input.postcode ?? null,
+    area_match_suburb: input.area_match_suburb ?? input.suburb ?? null,
+    area_match_state: input.area_match_state ?? input.state ?? "WA",
+    area_match_type: input.area_match_type ?? null,
+    area_match_confidence: input.area_match_confidence ?? null,
+    ad_area_postcodes: input.ad_area_postcodes ?? input.postcodes ?? (input.postcode ? [input.postcode] : []),
+    ad_area_suburbs: input.ad_area_suburbs ?? (input.suburb ? [input.suburb] : []),
+    service_area_postcodes: input.service_area_postcodes ?? [],
+    service_area_suburbs: input.service_area_suburbs ?? [],
   };
 }
 

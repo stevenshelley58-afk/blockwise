@@ -136,7 +136,8 @@ type ResearchSignalRow = {
   body?: string | null;
   active_status?: string | null;
   last_seen_at?: string | null;
-  postcodes?: string[] | null;
+  ad_area_postcodes?: string[] | null;
+  service_area_postcodes?: string[] | null;
 };
 
 export function buildCampaignReadinessRows(input: {
@@ -542,7 +543,7 @@ export async function listResearchSignals(supabase: SupabaseServerClient, _works
   const { data } = await supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
-    .select("page_name,library_id,headline,body,active_status,last_seen_at,postcodes")
+    .select("page_name,library_id,headline,body,active_status,last_seen_at,ad_area_postcodes,service_area_postcodes")
     .order("last_seen_at", { ascending: false })
     .limit(30);
 
@@ -607,12 +608,15 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
 
 function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
   const summary = row.headline ?? firstSentence(row.body) ?? "Creative captured";
-  const postcodes = Array.isArray(row.postcodes) && row.postcodes.length > 0 ? `Postcodes ${row.postcodes.join(", ")}` : "Postcode match pending";
+  const areaPostcodes = Array.isArray(row.ad_area_postcodes) && row.ad_area_postcodes.length > 0 ? `Matched postcodes ${row.ad_area_postcodes.join(", ")}` : "Postcode match pending";
+  const servicePostcodes = Array.isArray(row.service_area_postcodes) && row.service_area_postcodes.length > 0
+    ? `; service area ${row.service_area_postcodes.slice(0, 6).join(", ")}`
+    : "";
 
   return {
     competitor: row.page_name ?? "Unknown competitor",
     signal: summary,
-    evidence: `${postcodes}${row.last_seen_at ? `, last seen ${new Date(row.last_seen_at).toLocaleDateString("en-AU")}` : ""}`,
+    evidence: `${areaPostcodes}${servicePostcodes}${row.last_seen_at ? `, last seen ${new Date(row.last_seen_at).toLocaleDateString("en-AU")}` : ""}`,
     confidence: row.confidence ?? (row.active_status === "active" ? 80 : 50),
   };
 }
