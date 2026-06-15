@@ -14,6 +14,7 @@ import {
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
 import { normalizeLeadQualityLabel } from "../operator/overview.ts";
 import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
+import { persistOwnedAdPerformanceFromMonitor } from "./owned-performance.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import { resolveSuburb } from "./suburbAttribution.ts";
 import type {
@@ -145,7 +146,7 @@ export async function getMetaMonitorData(input: {
       previousPeriod,
     };
 
-    return {
+    const payload: MetaMonitorPayload = {
       connected: true,
       source: "live",
       currencyCode: "AUD",
@@ -157,6 +158,17 @@ export async function getMetaMonitorData(input: {
       ads,
       anglePerformance,
     };
+
+    await persistOwnedAdPerformanceFromMonitor({
+      serviceSupabase: input.serviceSupabase,
+      workspaceId: input.workspaceId,
+      payload,
+      now,
+    }).catch((error) => {
+      console.warn("[meta-monitor] failed to persist owned ad performance", error);
+    });
+
+    return payload;
   } catch (error) {
     return emptyPayload(range, {
       connected: true,
