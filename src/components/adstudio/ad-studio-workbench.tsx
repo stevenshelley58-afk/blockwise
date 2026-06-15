@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -913,7 +913,7 @@ export function AdStudioWorkbench({
                 className={studio.section === item.id ? "active" : ""}
                 key={item.id}
                 type="button"
-                onClick={() => studio.setSection(item.id)}
+                onClick={() => (item.id === "templates" ? openNewAd() : studio.setSection(item.id))}
               >
                 <Icon aria-hidden size={18} />
                 <span>{item.label}</span>
@@ -1226,7 +1226,7 @@ export function AdStudioWorkbench({
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
           return (
-            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => studio.setMobileTab(item.id)}>
+            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => (item.id === "templates" ? openNewAd() : studio.setMobileTab(item.id))}>
               <Icon aria-hidden size={22} />
               <span>{item.label}</span>
             </button>
