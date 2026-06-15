@@ -121,7 +121,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
   high_quality_strategy: [
     createOpenRouterOption({
       model: "openai/gpt-5.5",
-      label: "OpenAI GPT-5.5",
+      label: "GPT-5.5",
       inputUsdPerMillionTokens: 5,
       outputUsdPerMillionTokens: 30,
       maxContextTokens: 1_000_000,
@@ -130,7 +130,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
     createOpenRouterOption({
       model: "openai/gpt-5.5-pro",
-      label: "OpenAI GPT-5.5 Pro",
+      label: "GPT-5.5 Pro",
       inputUsdPerMillionTokens: 30,
       outputUsdPerMillionTokens: 180,
       maxContextTokens: 1_000_000,
@@ -159,7 +159,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
     createOpenRouterOption({
       model: "openai/gpt-4.1-mini",
-      label: "OpenAI GPT-4.1 Mini",
+      label: "GPT-4.1 Mini",
       inputUsdPerMillionTokens: 0.4,
       outputUsdPerMillionTokens: 1.6,
       maxContextTokens: 1_047_576,
@@ -189,7 +189,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
     createOpenRouterOption({
       model: "openai/gpt-4.1-mini",
-      label: "OpenAI GPT-4.1 Mini",
+      label: "GPT-4.1 Mini",
       inputUsdPerMillionTokens: 0.4,
       outputUsdPerMillionTokens: 1.6,
       imageUsdPerUnit: 0.01,
@@ -220,7 +220,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
     createOpenRouterOption({
       model: "openai/gpt-4.1-mini",
-      label: "OpenAI GPT-4.1 Mini",
+      label: "GPT-4.1 Mini",
       inputUsdPerMillionTokens: 0.4,
       outputUsdPerMillionTokens: 1.6,
       imageUsdPerUnit: 0.01,
@@ -274,7 +274,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
   image_final: [
     createOpenRouterOption({
       model: "openai/gpt-5.4-image-2",
-      label: "OpenAI GPT-5.4 Image 2",
+      label: "GPT-5.4 Image 2",
       inputUsdPerMillionTokens: 8,
       outputUsdPerMillionTokens: 15,
       imageUsdPerUnit: 0,
@@ -326,7 +326,7 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
     createOpenRouterOption({
       model: "openai/gpt-4.1-mini",
-      label: "OpenAI GPT-4.1 Mini",
+      label: "GPT-4.1 Mini",
       inputUsdPerMillionTokens: 0.4,
       outputUsdPerMillionTokens: 1.6,
       maxContextTokens: 1_047_576,

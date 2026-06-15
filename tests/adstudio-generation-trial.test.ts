@@ -76,7 +76,7 @@ test("first-session seeded campaign packs are persisted without reserving trial 
   const loader = read(liveBundle);
 
   assert.match(page, /persistAdStudioCampaignPack/);
-  assert.match(page, /buildTrialStarterBundle\(\{[\s\S]*userId:\s*access\.userId/);
+  assert.match(page, /buildStarterBundle\(\{[\s\S]*userId:\s*access\.userId/);
   assert.match(page, /await persistAdStudioCampaignPack\(input\.supabase,\s*campaignPack,\s*input\.userId\)/);
   assert.match(page, /buildDraftBrandBundle\(supabase,\s*access\.workspaceId,\s*access\.userId\)/);
   assert.match(page, /await persistAdStudioCampaignPack\(supabase,\s*campaignPack,\s*userId\)/);

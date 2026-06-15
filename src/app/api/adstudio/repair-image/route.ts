@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     body.sourceImage,
   );
   if (!sourceImageForModel) {
-    return NextResponse.json({ error: "Source image could not be read for AI repair." }, { status: 400 });
+    return NextResponse.json({ error: "Source image could not be read for auto fit." }, { status: 400 });
   }
 
   const bundle = await getActivePromptBundle(IMAGE_PROMPT_KEYS);

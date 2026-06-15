@@ -1,0 +1,1802 @@
+{
+  "HV-01": {
+    "prompt": "Real estate photograph, Australian setting. Aerial drone view over a leafy established suburb of mixed 1980s family homes with terracotta roofs, pools and tree-lined streets, soft morning light",
+    "persona": {
+      "agency": "Coastal & Co Realty",
+      "agent": "Sarah Chen",
+      "suburb": "Scarborough",
+      "state": "WA",
+      "regionList": "Trigg, Doubleview and Karrinyup",
+      "region": [
+        "Trigg",
+        "Doubleview",
+        "Karrinyup"
+      ],
+      "address": "3 Brighton Road, Scarborough",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Scarborough",
+    "sampleState": "WA",
+    "agencyName": "Coastal & Co Realty",
+    "agentName": "Sarah Chen",
+    "address": "3 Brighton Road, Scarborough"
+  },
+  "HV-02": {
+    "prompt": "Real estate photograph, Australian setting. A modest pale-yellow 1970s single-storey brick home, neat lawn, rose garden, parked sedan in carport, bright afternoon",
+    "persona": {
+      "agency": "Harbour Lane Property",
+      "agent": "Elliot Marsh",
+      "suburb": "Bicton",
+      "state": "WA",
+      "regionList": "Attadale, Palmyra and East Fremantle",
+      "region": [
+        "Attadale",
+        "Palmyra",
+        "East Fremantle"
+      ],
+      "address": "4 Preston Point Road, Bicton",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "appraisal",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_headline",
+    "propertyAge": "older_affordable",
+    "priceFeel": "affordable_entry",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Bicton",
+    "sampleState": "WA",
+    "agencyName": "Harbour Lane Property",
+    "agentName": "Elliot Marsh",
+    "address": "4 Preston Point Road, Bicton"
+  },
+  "HV-03": {
+    "prompt": "Real estate photograph, Australian setting. A renovated weatherboard cottage painted charcoal with white trim, restored picket fence, golden hour street view",
+    "persona": {
+      "agency": "Maison West",
+      "agent": "Mia Hart",
+      "suburb": "Maylands",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bayswater and Inglewood",
+      "region": [
+        "Mount Lawley",
+        "Bayswater",
+        "Inglewood"
+      ],
+      "address": "5 Guildford Road, Maylands",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "appraisal",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "full_bleed_clean",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Maylands",
+    "sampleState": "WA",
+    "agencyName": "Maison West",
+    "agentName": "Mia Hart",
+    "address": "5 Guildford Road, Maylands"
+  },
+  "HV-04": {
+    "prompt": "Real estate photograph, Australian setting. A premium limestone-and-glass coastal home with manicured hedges and a circular driveway, dusk, warm interior glow",
+    "persona": {
+      "agency": "Northbank Realty",
+      "agent": "Daniel Price",
+      "suburb": "Cottesloe",
+      "state": "WA",
+      "regionList": "Mosman Park, Peppermint Grove and Swanbourne",
+      "region": [
+        "Mosman Park",
+        "Peppermint Grove",
+        "Swanbourne"
+      ],
+      "address": "6 Marine Parade, Cottesloe",
+      "project": "Vue Residences",
+      "stats": {
+        "growth_12m": "7.8%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "report_cover",
+    "propertyAge": "luxury_architectural",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "small_badge",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Cottesloe",
+    "sampleState": "WA",
+    "agencyName": "Northbank Realty",
+    "agentName": "Daniel Price",
+    "address": "6 Marine Parade, Cottesloe"
+  },
+  "HV-05": {
+    "prompt": "Real estate photograph, Australian setting. Close-up of a contemporary grey rendered townhouse facade with timber accents and a black front door, clean daylight",
+    "persona": {
+      "agency": "Civic Estate Agents",
+      "agent": "Priya Nair",
+      "suburb": "Victoria Park",
+      "state": "WA",
+      "regionList": "East Victoria Park, Burswood and Lathlain",
+      "region": [
+        "East Victoria Park",
+        "Burswood",
+        "Lathlain"
+      ],
+      "address": "7 Shepperton Road, Victoria Park",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Victoria Park",
+    "sampleState": "WA",
+    "agencyName": "Civic Estate Agents",
+    "agentName": "Priya Nair",
+    "address": "7 Shepperton Road, Victoria Park"
+  },
+  "HV-06": {
+    "prompt": "Professional studio portrait of a friendly mid-30s female real estate agent in a navy blazer, soft grey background, confident smile, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Jarrah Property",
+      "agent": "Ava Lindqvist",
+      "suburb": "Fremantle",
+      "state": "WA",
+      "regionList": "North Fremantle, Beaconsfield and White Gum Valley",
+      "region": [
+        "North Fremantle",
+        "Beaconsfield",
+        "White Gum Valley"
+      ],
+      "address": "8 South Terrace, Fremantle",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "24%",
+        "days": "9",
+        "buyers": "42",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "appraisal",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "agent_strip",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_portrait",
+    "copyDensity": "headline_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Fremantle",
+    "sampleState": "WA",
+    "agencyName": "Jarrah Property",
+    "agentName": "Ava Lindqvist",
+    "address": "8 South Terrace, Fremantle"
+  },
+  "MU-01": {
+    "prompt": "Real estate photograph, Australian setting. Wide street-scape of an upmarket tree-lined avenue with character homes and jacarandas in bloom, editorial morning light",
+    "persona": {
+      "agency": "Bluestone Residential",
+      "agent": "Grace Okafor",
+      "suburb": "Mount Lawley",
+      "state": "WA",
+      "regionList": "Inglewood, Menora and Highgate",
+      "region": [
+        "Inglewood",
+        "Menora",
+        "Highgate"
+      ],
+      "address": "57 Second Avenue, Mount Lawley",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "38%",
+        "days": "21",
+        "buyers": "28",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "report_cover",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "small_badge",
+    "tone": "quiet_editorial",
+    "sampleSuburb": "Mount Lawley",
+    "sampleState": "WA",
+    "agencyName": "Bluestone Residential",
+    "agentName": "Grace Okafor",
+    "address": "57 Second Avenue, Mount Lawley"
+  },
+  "MU-02": {
+    "prompt": "Real estate photograph, Australian setting. Row of pastel-toned semi-detached terraces in an inner-city suburb, parked bikes, overcast even light",
+    "persona": {
+      "agency": "Foreshore & Park",
+      "agent": "Leo Romano",
+      "suburb": "Subiaco",
+      "state": "WA",
+      "regionList": "Shenton Park, Daglish and Jolimont",
+      "region": [
+        "Shenton Park",
+        "Daglish",
+        "Jolimont"
+      ],
+      "address": "58 Rokeby Road, Subiaco",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "38%",
+        "days": "21",
+        "buyers": "28",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Subiaco",
+    "sampleState": "WA",
+    "agencyName": "Foreshore & Park",
+    "agentName": "Leo Romano",
+    "address": "58 Rokeby Road, Subiaco"
+  },
+  "MU-03": {
+    "prompt": "Real estate photograph, Australian setting. Aerial view of a coastal suburb where rooftops meet the ocean, marina and beach, clear blue afternoon",
+    "persona": {
+      "agency": "Highgate Property Co",
+      "agent": "Hannah Webb",
+      "suburb": "Bayswater",
+      "state": "WA",
+      "regionList": "Maylands, Embleton and Morley",
+      "region": [
+        "Maylands",
+        "Embleton",
+        "Morley"
+      ],
+      "address": "59 King William Street, Bayswater",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "44%",
+        "days": "21",
+        "buyers": "28",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "luxury_architectural",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Bayswater",
+    "sampleState": "WA",
+    "agencyName": "Highgate Property Co",
+    "agentName": "Hannah Webb",
+    "address": "59 King William Street, Bayswater"
+  },
+  "MU-04": {
+    "prompt": "Real estate photograph, Australian setting. Modern multi-unit apartment block with balconies and greenery, low-rise, soft evening light, urban edge",
+    "persona": {
+      "agency": "Marlow & Vale",
+      "agent": "Noah Sato",
+      "suburb": "North Perth",
+      "state": "WA",
+      "regionList": "Mount Lawley, Leederville and Highgate",
+      "region": [
+        "Mount Lawley",
+        "Leederville",
+        "Highgate"
+      ],
+      "address": "60 Fitzgerald Street, North Perth",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "44%",
+        "days": "21",
+        "buyers": "28",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "investor_rental",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "North Perth",
+    "sampleState": "WA",
+    "agencyName": "Marlow & Vale",
+    "agentName": "Noah Sato",
+    "address": "60 Fitzgerald Street, North Perth"
+  },
+  "BD-01": {
+    "prompt": "Real estate photograph, Australian setting. A neat brick-and-tile family home with a 'home open' feel, open front door, welcoming porch, late afternoon",
+    "persona": {
+      "agency": "Saltbush Realty",
+      "agent": "Ava Lindqvist",
+      "suburb": "Claremont",
+      "state": "WA",
+      "regionList": "Swanbourne, Nedlands and Mount Claremont",
+      "region": [
+        "Swanbourne",
+        "Nedlands",
+        "Mount Claremont"
+      ],
+      "address": "79 Bay View Terrace, Claremont",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "31%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "older_affordable",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Claremont",
+    "sampleState": "WA",
+    "agencyName": "Saltbush Realty",
+    "agentName": "Ava Lindqvist",
+    "address": "79 Bay View Terrace, Claremont"
+  },
+  "BD-02": {
+    "prompt": "Real estate photograph, Australian setting. A real estate agent addressing a small crowd of prospective buyers on the footpath outside a suburban home at an open inspection, daytime, candid, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Terrace Lane Agents",
+      "agent": "Marcus Bell",
+      "suburb": "Inglewood",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bedford and Bayswater",
+      "region": [
+        "Mount Lawley",
+        "Bedford",
+        "Bayswater"
+      ],
+      "address": "80 Tenth Avenue, Inglewood",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "31%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "poster_band",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "polished_meta_ad",
+    "people": "agent_in_scene",
+    "copyDensity": "full_sales_poster",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Inglewood",
+    "sampleState": "WA",
+    "agencyName": "Terrace Lane Agents",
+    "agentName": "Marcus Bell",
+    "address": "80 Tenth Avenue, Inglewood"
+  },
+  "BD-03": {
+    "prompt": "Real estate photograph, Australian setting. A charming double-fronted character home behind a low stone wall, established garden, warm sunset",
+    "persona": {
+      "agency": "Coastal & Co Realty",
+      "agent": "Sarah Chen",
+      "suburb": "Trigg",
+      "state": "WA",
+      "regionList": "Scarborough, North Beach and Karrinyup",
+      "region": [
+        "Scarborough",
+        "North Beach",
+        "Karrinyup"
+      ],
+      "address": "81 West Coast Drive, Trigg",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "31%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_headline",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Trigg",
+    "sampleState": "WA",
+    "agencyName": "Coastal & Co Realty",
+    "agentName": "Sarah Chen",
+    "address": "81 West Coast Drive, Trigg"
+  },
+  "JS-01": {
+    "prompt": "Real estate photograph, Australian setting. A bright modern white house with a 'sold' sign on the verge, blue sky, pristine front yard",
+    "persona": {
+      "agency": "Harbour Lane Property",
+      "agent": "Elliot Marsh",
+      "suburb": "Joondalup",
+      "state": "WA",
+      "regionList": "Edgewater, Connolly and Currambine",
+      "region": [
+        "Edgewater",
+        "Connolly",
+        "Currambine"
+      ],
+      "address": "72 Grand Boulevard, Joondalup",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "24%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$892k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "just_sold",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "badge_overlay",
+    "propertyAge": "new_build",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "small_badge",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Joondalup",
+    "sampleState": "WA",
+    "agencyName": "Harbour Lane Property",
+    "agentName": "Elliot Marsh",
+    "address": "72 Grand Boulevard, Joondalup"
+  },
+  "JS-02": {
+    "prompt": "A real estate agent in business attire standing proudly beside a sold sign in front of a suburban home, candid daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Maison West",
+      "agent": "Mia Hart",
+      "suburb": "Midland",
+      "state": "WA",
+      "regionList": "Bellevue, Viveash and Woodbridge",
+      "region": [
+        "Bellevue",
+        "Viveash",
+        "Woodbridge"
+      ],
+      "address": "73 Cale Street, Midland",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "24%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$892k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "just_sold",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "badge_overlay",
+    "propertyAge": "older_affordable",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_in_scene",
+    "copyDensity": "small_badge",
+    "tone": "soft_organic",
+    "sampleSuburb": "Midland",
+    "sampleState": "WA",
+    "agencyName": "Maison West",
+    "agentName": "Mia Hart",
+    "address": "73 Cale Street, Midland"
+  },
+  "JS-03": {
+    "prompt": "Real estate photograph, Australian setting. A real estate agent shaking hands with happy buyers outside an elegant brick character home after a successful auction, bunting, daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Northbank Realty",
+      "agent": "Daniel Price",
+      "suburb": "Scarborough",
+      "state": "WA",
+      "regionList": "Trigg, Doubleview and Karrinyup",
+      "region": [
+        "Trigg",
+        "Doubleview",
+        "Karrinyup"
+      ],
+      "address": "74 Brighton Road, Scarborough",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "24%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$892k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "just_sold",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "badge_overlay",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "polished_meta_ad",
+    "people": "agent_in_scene",
+    "copyDensity": "small_badge",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Scarborough",
+    "sampleState": "WA",
+    "agencyName": "Northbank Realty",
+    "agentName": "Daniel Price",
+    "address": "74 Brighton Road, Scarborough"
+  },
+  "JS-04": {
+    "prompt": "Real estate photograph, Australian setting. Tidy interior of a sold family living room, staged neutral furniture, large windows, bright and airy",
+    "persona": {
+      "agency": "Civic Estate Agents",
+      "agent": "Priya Nair",
+      "suburb": "Bicton",
+      "state": "WA",
+      "regionList": "Attadale, Palmyra and East Fremantle",
+      "region": [
+        "Attadale",
+        "Palmyra",
+        "East Fremantle"
+      ],
+      "address": "75 Preston Point Road, Bicton",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "31%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$892k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Bicton",
+    "sampleState": "WA",
+    "agencyName": "Civic Estate Agents",
+    "agentName": "Priya Nair",
+    "address": "75 Preston Point Road, Bicton"
+  },
+  "JL-01": {
+    "prompt": "Real estate photograph, Australian setting. A striking architect-designed black timber and concrete home at twilight, lit pool, dramatic and premium",
+    "persona": {
+      "agency": "Jarrah Property",
+      "agent": "Tom Walker",
+      "suburb": "Maylands",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bayswater and Inglewood",
+      "region": [
+        "Mount Lawley",
+        "Bayswater",
+        "Inglewood"
+      ],
+      "address": "15 Guildford Road, Maylands",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "44%",
+        "days": "15",
+        "buyers": "19",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_minimal",
+    "propertyAge": "luxury_architectural",
+    "priceFeel": "luxury_architectural",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Maylands",
+    "sampleState": "WA",
+    "agencyName": "Jarrah Property",
+    "agentName": "Tom Walker",
+    "address": "15 Guildford Road, Maylands"
+  },
+  "JL-02": {
+    "prompt": "Real estate photograph, Australian setting. A cheerful first-home-buyer cottage, light blue weatherboard, white fence, sunflowers in the yard, bright morning",
+    "persona": {
+      "agency": "Bluestone Residential",
+      "agent": "Grace Okafor",
+      "suburb": "Cottesloe",
+      "state": "WA",
+      "regionList": "Mosman Park, Peppermint Grove and Swanbourne",
+      "region": [
+        "Mosman Park",
+        "Peppermint Grove",
+        "Swanbourne"
+      ],
+      "address": "16 Marine Parade, Cottesloe",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "44%",
+        "days": "15",
+        "buyers": "19",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_headline",
+    "propertyAge": "older_affordable",
+    "priceFeel": "affordable_entry",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Cottesloe",
+    "sampleState": "WA",
+    "agencyName": "Bluestone Residential",
+    "agentName": "Grace Okafor",
+    "address": "16 Marine Parade, Cottesloe"
+  },
+  "JL-03": {
+    "prompt": "Real estate photograph, Australian setting. A renovated red-brick bungalow with a wraparound veranda, hanging plants, casual handheld phone-photo feel, daylight",
+    "persona": {
+      "agency": "Foreshore & Park",
+      "agent": "Leo Romano",
+      "suburb": "Victoria Park",
+      "state": "WA",
+      "regionList": "East Victoria Park, Burswood and Lathlain",
+      "region": [
+        "East Victoria Park",
+        "Burswood",
+        "Lathlain"
+      ],
+      "address": "17 Shepperton Road, Victoria Park",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "44%",
+        "days": "15",
+        "buyers": "19",
+        "median": "$892k",
+        "rent_before": "$700/wk",
+        "rent_after": "$1,720/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "framed_polaroid",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Victoria Park",
+    "sampleState": "WA",
+    "agencyName": "Foreshore & Park",
+    "agentName": "Leo Romano",
+    "address": "17 Shepperton Road, Victoria Park"
+  },
+  "ND-01": {
+    "prompt": "Real estate photograph, Australian setting. Photoreal architectural render of a sleek new apartment tower with curved balconies and landscaped podium, dusk, premium",
+    "persona": {
+      "agency": "Highgate Property Co",
+      "agent": "Hannah Webb",
+      "suburb": "Fremantle",
+      "state": "WA",
+      "regionList": "North Fremantle, Beaconsfield and White Gum Valley",
+      "region": [
+        "North Fremantle",
+        "Beaconsfield",
+        "White Gum Valley"
+      ],
+      "address": "11 South Terrace, Fremantle",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "44%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "full_bleed_clean",
+    "propertyAge": "development_render",
+    "priceFeel": "luxury_architectural",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Fremantle",
+    "sampleState": "WA",
+    "agencyName": "Highgate Property Co",
+    "agentName": "Hannah Webb",
+    "address": "11 South Terrace, Fremantle"
+  },
+  "ND-02": {
+    "prompt": "Real estate photograph, Australian setting. Photoreal render of a boutique low-rise townhouse development, warm timber and white render, communal courtyard garden, golden hour",
+    "persona": {
+      "agency": "Marlow & Vale",
+      "agent": "Noah Sato",
+      "suburb": "Mount Lawley",
+      "state": "WA",
+      "regionList": "Inglewood, Menora and Highgate",
+      "region": [
+        "Inglewood",
+        "Menora",
+        "Highgate"
+      ],
+      "address": "12 Second Avenue, Mount Lawley",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "44%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "magazine_split",
+    "propertyAge": "development_render",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Mount Lawley",
+    "sampleState": "WA",
+    "agencyName": "Marlow & Vale",
+    "agentName": "Noah Sato",
+    "address": "12 Second Avenue, Mount Lawley"
+  },
+  "ND-03": {
+    "prompt": "Real estate photograph, Australian setting. Photoreal render of a modern off-the-plan duplex with rooftop terrace, city skyline behind, clear blue sky",
+    "persona": {
+      "agency": "Saltbush Realty",
+      "agent": "Ava Lindqvist",
+      "suburb": "Subiaco",
+      "state": "WA",
+      "regionList": "Shenton Park, Daglish and Jolimont",
+      "region": [
+        "Shenton Park",
+        "Daglish",
+        "Jolimont"
+      ],
+      "address": "13 Rokeby Road, Subiaco",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "44%",
+        "days": "9",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "poster_band",
+    "propertyAge": "development_render",
+    "priceFeel": "luxury_architectural",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "full_sales_poster",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Subiaco",
+    "sampleState": "WA",
+    "agencyName": "Saltbush Realty",
+    "agentName": "Ava Lindqvist",
+    "address": "13 Rokeby Road, Subiaco"
+  },
+  "OH-01": {
+    "prompt": "Real estate photograph, Australian setting. A family walking up the path to an open home as an agent greets them at the door holding an open-house flag, friendly candid daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Terrace Lane Agents",
+      "agent": "Marcus Bell",
+      "suburb": "Bayswater",
+      "state": "WA",
+      "regionList": "Maylands, Embleton and Morley",
+      "region": [
+        "Maylands",
+        "Embleton",
+        "Morley"
+      ],
+      "address": "56 King William Street, Bayswater",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "24%",
+        "days": "18",
+        "buyers": "36",
+        "median": "$1.05m",
+        "rent_before": "$820/wk",
+        "rent_after": "$1,980/wk"
+      }
+    },
+    "archetype": "open_home",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_minimal",
+    "propertyAge": "older_affordable",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_in_scene",
+    "copyDensity": "small_badge",
+    "tone": "soft_organic",
+    "sampleSuburb": "Bayswater",
+    "sampleState": "WA",
+    "agencyName": "Terrace Lane Agents",
+    "agentName": "Marcus Bell",
+    "address": "56 King William Street, Bayswater"
+  },
+  "OH-02": {
+    "prompt": "Real estate photograph, Australian setting. Bright open-plan interior of a new home with kitchen island, timber floors and sliding doors to a patio, midday light",
+    "persona": {
+      "agency": "Coastal & Co Realty",
+      "agent": "Sarah Chen",
+      "suburb": "North Perth",
+      "state": "WA",
+      "regionList": "Mount Lawley, Leederville and Highgate",
+      "region": [
+        "Mount Lawley",
+        "Leederville",
+        "Highgate"
+      ],
+      "address": "57 Fitzgerald Street, North Perth",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "24%",
+        "days": "18",
+        "buyers": "36",
+        "median": "$1.05m",
+        "rent_before": "$820/wk",
+        "rent_after": "$1,980/wk"
+      }
+    },
+    "archetype": "open_home",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_headline",
+    "propertyAge": "new_build",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "North Perth",
+    "sampleState": "WA",
+    "agencyName": "Coastal & Co Realty",
+    "agentName": "Sarah Chen",
+    "address": "57 Fitzgerald Street, North Perth"
+  },
+  "AU-01": {
+    "prompt": "Real estate photograph, Australian setting. A grand two-storey federation home dressed for auction, red carpet runner and styled garden, dramatic afternoon light",
+    "persona": {
+      "agency": "Harbour Lane Property",
+      "agent": "Elliot Marsh",
+      "suburb": "Claremont",
+      "state": "WA",
+      "regionList": "Swanbourne, Nedlands and Mount Claremont",
+      "region": [
+        "Swanbourne",
+        "Nedlands",
+        "Mount Claremont"
+      ],
+      "address": "45 Bay View Terrace, Claremont",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "31%",
+        "days": "18",
+        "buyers": "28",
+        "median": "$1.22m",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "just_sold",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "poster_band",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "polished_meta_ad",
+    "people": "none",
+    "copyDensity": "full_sales_poster",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Claremont",
+    "sampleState": "WA",
+    "agencyName": "Harbour Lane Property",
+    "agentName": "Elliot Marsh",
+    "address": "45 Bay View Terrace, Claremont"
+  },
+  "AU-02": {
+    "prompt": "Real estate photograph, Australian setting. A sandstone heritage home behind iron gates, auction styling, leafy established street, warm light",
+    "persona": {
+      "agency": "Maison West",
+      "agent": "Mia Hart",
+      "suburb": "Inglewood",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bedford and Bayswater",
+      "region": [
+        "Mount Lawley",
+        "Bedford",
+        "Bayswater"
+      ],
+      "address": "46 Tenth Avenue, Inglewood",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "31%",
+        "days": "18",
+        "buyers": "28",
+        "median": "$1.22m",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "just_sold",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "badge_overlay",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "small_badge",
+    "tone": "urgent_listing",
+    "sampleSuburb": "Inglewood",
+    "sampleState": "WA",
+    "agencyName": "Maison West",
+    "agentName": "Mia Hart",
+    "address": "46 Tenth Avenue, Inglewood"
+  },
+  "AU-03": {
+    "prompt": "Real estate photograph, Australian setting. A calm modern home interior, dining area with neutral styling, soft natural light, suitable for a guide cover",
+    "persona": {
+      "agency": "Northbank Realty",
+      "agent": "Daniel Price",
+      "suburb": "Trigg",
+      "state": "WA",
+      "regionList": "Scarborough, North Beach and Karrinyup",
+      "region": [
+        "Scarborough",
+        "North Beach",
+        "Karrinyup"
+      ],
+      "address": "47 West Coast Drive, Trigg",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "31%",
+        "days": "18",
+        "buyers": "28",
+        "median": "$1.22m",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "guide_mockup",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "guide_or_report_mockup",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Trigg",
+    "sampleState": "WA",
+    "agencyName": "Northbank Realty",
+    "agentName": "Daniel Price",
+    "address": "47 West Coast Drive, Trigg"
+  },
+  "PM-01": {
+    "prompt": "Real estate photograph, Australian setting. A tidy rental duplex with low-maintenance native garden and a carport, neat and practical, clear daylight",
+    "persona": {
+      "agency": "Civic Estate Agents",
+      "agent": "Priya Nair",
+      "suburb": "Joondalup",
+      "state": "WA",
+      "regionList": "Edgewater, Connolly and Currambine",
+      "region": [
+        "Edgewater",
+        "Connolly",
+        "Currambine"
+      ],
+      "address": "52 Grand Boulevard, Joondalup",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "38%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "appraisal",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "feed_headline",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "investor_rental",
+    "visualStyle": "polished_meta_ad",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Joondalup",
+    "sampleState": "WA",
+    "agencyName": "Civic Estate Agents",
+    "agentName": "Priya Nair",
+    "address": "52 Grand Boulevard, Joondalup"
+  },
+  "PM-02": {
+    "prompt": "Real estate photograph, Australian setting. Exterior of a small block of three rental units, brick, simple landscaping, overcast soft light",
+    "persona": {
+      "agency": "Jarrah Property",
+      "agent": "Tom Walker",
+      "suburb": "Midland",
+      "state": "WA",
+      "regionList": "Bellevue, Viveash and Woodbridge",
+      "region": [
+        "Bellevue",
+        "Viveash",
+        "Woodbridge"
+      ],
+      "address": "53 Cale Street, Midland",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "38%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "investor_rental",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Midland",
+    "sampleState": "WA",
+    "agencyName": "Jarrah Property",
+    "agentName": "Tom Walker",
+    "address": "53 Cale Street, Midland"
+  },
+  "PM-03": {
+    "prompt": "A relaxed mid-40s male property manager smiling outside a rental home holding a tablet, candid daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Bluestone Residential",
+      "agent": "Daniel Price",
+      "suburb": "Scarborough",
+      "state": "WA",
+      "regionList": "Trigg, Doubleview and Karrinyup",
+      "region": [
+        "Trigg",
+        "Doubleview",
+        "Karrinyup"
+      ],
+      "address": "54 Brighton Road, Scarborough",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "38%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "appraisal",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "framed_polaroid",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "investor_rental",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_in_scene",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Scarborough",
+    "sampleState": "WA",
+    "agencyName": "Bluestone Residential",
+    "agentName": "Daniel Price",
+    "address": "54 Brighton Road, Scarborough"
+  },
+  "IN-01": {
+    "prompt": "Real estate photograph, Australian setting. A modern co-living share house exterior and contemporary fit-out, communal courtyard, golden hour, empty and unoccupied, no people, no person",
+    "persona": {
+      "agency": "Foreshore & Park",
+      "agent": "Leo Romano",
+      "suburb": "Bicton",
+      "state": "WA",
+      "regionList": "Attadale, Palmyra and East Fremantle",
+      "region": [
+        "Attadale",
+        "Palmyra",
+        "East Fremantle"
+      ],
+      "address": "76 Preston Point Road, Bicton",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "42",
+        "median": "$612k",
+        "rent_before": "$480/wk",
+        "rent_after": "$1,180/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "magazine_split",
+    "propertyAge": "new_build",
+    "priceFeel": "investor_rental",
+    "visualStyle": "super_premium_polished",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Bicton",
+    "sampleState": "WA",
+    "agencyName": "Foreshore & Park",
+    "agentName": "Leo Romano",
+    "address": "76 Preston Point Road, Bicton"
+  },
+  "IN-02": {
+    "prompt": "Real estate photograph, Australian setting. Aerial view of a dual-occupancy investment property on a battle-axe block, two dwellings, suburban, midday",
+    "persona": {
+      "agency": "Highgate Property Co",
+      "agent": "Hannah Webb",
+      "suburb": "Maylands",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bayswater and Inglewood",
+      "region": [
+        "Mount Lawley",
+        "Bayswater",
+        "Inglewood"
+      ],
+      "address": "77 Guildford Road, Maylands",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "42",
+        "median": "$612k",
+        "rent_before": "$480/wk",
+        "rent_after": "$1,180/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "new_build",
+    "priceFeel": "investor_rental",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Maylands",
+    "sampleState": "WA",
+    "agencyName": "Highgate Property Co",
+    "agentName": "Hannah Webb",
+    "address": "77 Guildford Road, Maylands"
+  },
+  "IN-03": {
+    "prompt": "Real estate photograph, Australian setting. A practical brick investment home with a granny flat at the rear, neat yard, clear daylight",
+    "persona": {
+      "agency": "Marlow & Vale",
+      "agent": "Noah Sato",
+      "suburb": "Cottesloe",
+      "state": "WA",
+      "regionList": "Mosman Park, Peppermint Grove and Swanbourne",
+      "region": [
+        "Mosman Park",
+        "Peppermint Grove",
+        "Swanbourne"
+      ],
+      "address": "78 Marine Parade, Cottesloe",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "42",
+        "median": "$612k",
+        "rent_before": "$480/wk",
+        "rent_after": "$1,180/wk"
+      }
+    },
+    "archetype": "listing_hero",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "full_bleed_clean",
+    "propertyAge": "older_affordable",
+    "priceFeel": "investor_rental",
+    "visualStyle": "property_photo_first",
+    "people": "none",
+    "copyDensity": "minimal_no_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Cottesloe",
+    "sampleState": "WA",
+    "agencyName": "Marlow & Vale",
+    "agentName": "Noah Sato",
+    "address": "78 Marine Parade, Cottesloe"
+  },
+  "IN-04": {
+    "prompt": "Real estate photograph, Australian setting. Interior of a stylish co-living common room with sofas, kitchenette and study nooks, bright and modern",
+    "persona": {
+      "agency": "Saltbush Realty",
+      "agent": "Ava Lindqvist",
+      "suburb": "Victoria Park",
+      "state": "WA",
+      "regionList": "East Victoria Park, Burswood and Lathlain",
+      "region": [
+        "East Victoria Park",
+        "Burswood",
+        "Lathlain"
+      ],
+      "address": "79 Shepperton Road, Victoria Park",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "42",
+        "median": "$612k",
+        "rent_before": "$480/wk",
+        "rent_after": "$1,180/wk"
+      }
+    },
+    "archetype": "market_stat",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "investor_rental",
+    "visualStyle": "data_card",
+    "people": "none",
+    "copyDensity": "stat_heavy",
+    "tone": "practical_local",
+    "sampleSuburb": "Victoria Park",
+    "sampleState": "WA",
+    "agencyName": "Saltbush Realty",
+    "agentName": "Ava Lindqvist",
+    "address": "79 Shepperton Road, Victoria Park"
+  },
+  "AB-01": {
+    "prompt": "Confident professional portrait of a smiling late-30s male real estate agent in a charcoal suit, clean studio background, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Terrace Lane Agents",
+      "agent": "Leo Romano",
+      "suburb": "Fremantle",
+      "state": "WA",
+      "regionList": "North Fremantle, Beaconsfield and White Gum Valley",
+      "region": [
+        "North Fremantle",
+        "Beaconsfield",
+        "White Gum Valley"
+      ],
+      "address": "16 South Terrace, Fremantle",
+      "project": "Vue Residences",
+      "stats": {
+        "growth_12m": "7.8%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "social_proof",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "agent_strip",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_portrait",
+    "copyDensity": "headline_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Fremantle",
+    "sampleState": "WA",
+    "agencyName": "Terrace Lane Agents",
+    "agentName": "Leo Romano",
+    "address": "16 South Terrace, Fremantle"
+  },
+  "AB-02": {
+    "prompt": "Warm professional portrait of a mid-40s female real estate agent in a cream blouse, soft natural light, approachable, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Coastal & Co Realty",
+      "agent": "Hannah Webb",
+      "suburb": "Mount Lawley",
+      "state": "WA",
+      "regionList": "Inglewood, Menora and Highgate",
+      "region": [
+        "Inglewood",
+        "Menora",
+        "Highgate"
+      ],
+      "address": "17 Second Avenue, Mount Lawley",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "social_proof",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "agent_strip",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "agent_portrait",
+    "copyDensity": "headline_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Mount Lawley",
+    "sampleState": "WA",
+    "agencyName": "Coastal & Co Realty",
+    "agentName": "Hannah Webb",
+    "address": "17 Second Avenue, Mount Lawley"
+  },
+  "AB-03": {
+    "prompt": "A small real estate team of three agents standing together outside their office, smart casual, friendly, daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Harbour Lane Property",
+      "agent": "Elliot Marsh",
+      "suburb": "Subiaco",
+      "state": "WA",
+      "regionList": "Shenton Park, Daglish and Jolimont",
+      "region": [
+        "Shenton Park",
+        "Daglish",
+        "Jolimont"
+      ],
+      "address": "18 Rokeby Road, Subiaco",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "52%",
+        "days": "18",
+        "buyers": "54",
+        "median": "$560k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "social_proof",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "data_card",
+    "propertyAge": "renovated_character",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "data_card",
+    "people": "agent_in_scene",
+    "copyDensity": "stat_heavy",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Subiaco",
+    "sampleState": "WA",
+    "agencyName": "Harbour Lane Property",
+    "agentName": "Elliot Marsh",
+    "address": "18 Rokeby Road, Subiaco"
+  },
+  "TS-01": {
+    "prompt": "A happy mature couple smiling outside their home holding house keys, candid warm daytime, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Maison West",
+      "agent": "Mia Hart",
+      "suburb": "Bayswater",
+      "state": "WA",
+      "regionList": "Maylands, Embleton and Morley",
+      "region": [
+        "Maylands",
+        "Embleton",
+        "Morley"
+      ],
+      "address": "82 King William Street, Bayswater",
+      "project": "Vue Residences",
+      "stats": {
+        "growth_12m": "7.8%",
+        "growth_5y": "31%",
+        "days": "12",
+        "buyers": "28",
+        "median": "$612k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "social_proof",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "testimonial",
+    "propertyAge": "older_affordable",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "owner_lifestyle",
+    "copyDensity": "headline_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "Bayswater",
+    "sampleState": "WA",
+    "agencyName": "Maison West",
+    "agentName": "Mia Hart",
+    "address": "82 King William Street, Bayswater"
+  },
+  "TS-02": {
+    "prompt": "A young family laughing together on the front steps of their new home, golden afternoon, candid lifestyle, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Northbank Realty",
+      "agent": "Daniel Price",
+      "suburb": "North Perth",
+      "state": "WA",
+      "regionList": "Mount Lawley, Leederville and Highgate",
+      "region": [
+        "Mount Lawley",
+        "Leederville",
+        "Highgate"
+      ],
+      "address": "3 Fitzgerald Street, North Perth",
+      "project": "Saltwater",
+      "stats": {
+        "growth_12m": "3.6%",
+        "growth_5y": "38%",
+        "days": "12",
+        "buyers": "28",
+        "median": "$612k",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "social_proof",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "testimonial",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "organic_agent_post",
+    "people": "owner_lifestyle",
+    "copyDensity": "headline_overlay",
+    "tone": "soft_organic",
+    "sampleSuburb": "North Perth",
+    "sampleState": "WA",
+    "agencyName": "Northbank Realty",
+    "agentName": "Daniel Price",
+    "address": "3 Fitzgerald Street, North Perth"
+  },
+  "LM-01": {
+    "prompt": "Real estate photograph, Australian setting. A bright, styled living room with a checklist and coffee on a table, soft light, suitable for a guide cover",
+    "persona": {
+      "agency": "Civic Estate Agents",
+      "agent": "Priya Nair",
+      "suburb": "Claremont",
+      "state": "WA",
+      "regionList": "Swanbourne, Nedlands and Mount Claremont",
+      "region": [
+        "Swanbourne",
+        "Nedlands",
+        "Mount Claremont"
+      ],
+      "address": "48 Bay View Terrace, Claremont",
+      "project": "Parkside",
+      "stats": {
+        "growth_12m": "5.1%",
+        "growth_5y": "31%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$740k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "guide_mockup",
+    "propertyAge": "renovated_character",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "guide_or_report_mockup",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Claremont",
+    "sampleState": "WA",
+    "agencyName": "Civic Estate Agents",
+    "agentName": "Priya Nair",
+    "address": "48 Bay View Terrace, Claremont"
+  },
+  "LM-02": {
+    "prompt": "Real estate photograph, Australian setting. A tidy home office desk with a laptop, plant and notebook by a window, calm natural light, guide cover style",
+    "persona": {
+      "agency": "Jarrah Property",
+      "agent": "Tom Walker",
+      "suburb": "Inglewood",
+      "state": "WA",
+      "regionList": "Mount Lawley, Bedford and Bayswater",
+      "region": [
+        "Mount Lawley",
+        "Bedford",
+        "Bayswater"
+      ],
+      "address": "49 Tenth Avenue, Inglewood",
+      "project": "The Marin",
+      "stats": {
+        "growth_12m": "6.4%",
+        "growth_5y": "31%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$740k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "guide_mockup",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "mid_market_family",
+    "visualStyle": "guide_or_report_mockup",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Inglewood",
+    "sampleState": "WA",
+    "agencyName": "Jarrah Property",
+    "agentName": "Tom Walker",
+    "address": "49 Tenth Avenue, Inglewood"
+  },
+  "LM-03": {
+    "prompt": "Real estate photograph, Australian setting. An elegant coastal home exterior at dusk suitable for a premium seller's guide cover, warm interior glow",
+    "persona": {
+      "agency": "Bluestone Residential",
+      "agent": "Grace Okafor",
+      "suburb": "Trigg",
+      "state": "WA",
+      "regionList": "Scarborough, North Beach and Karrinyup",
+      "region": [
+        "Scarborough",
+        "North Beach",
+        "Karrinyup"
+      ],
+      "address": "50 West Coast Drive, Trigg",
+      "project": "Vue Residences",
+      "stats": {
+        "growth_12m": "7.8%",
+        "growth_5y": "31%",
+        "days": "12",
+        "buyers": "54",
+        "median": "$740k",
+        "rent_before": "$620/wk",
+        "rent_after": "$1,520/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "guide_mockup",
+    "propertyAge": "luxury_architectural",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "guide_or_report_mockup",
+    "people": "none",
+    "copyDensity": "small_badge",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Trigg",
+    "sampleState": "WA",
+    "agencyName": "Bluestone Residential",
+    "agentName": "Grace Okafor",
+    "address": "50 West Coast Drive, Trigg"
+  },
+  "DS-01": {
+    "prompt": "A relaxed mature couple in their 60s enjoying coffee on the balcony of a low-maintenance modern apartment overlooking parkland, warm morning, no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "persona": {
+      "agency": "Foreshore & Park",
+      "agent": "Leo Romano",
+      "suburb": "Joondalup",
+      "state": "WA",
+      "regionList": "Edgewater, Connolly and Currambine",
+      "region": [
+        "Edgewater",
+        "Connolly",
+        "Currambine"
+      ],
+      "address": "66 Grand Boulevard, Joondalup",
+      "project": "Heritage Walk",
+      "stats": {
+        "growth_12m": "8.9%",
+        "growth_5y": "52%",
+        "days": "15",
+        "buyers": "61",
+        "median": "$892k",
+        "rent_before": "$590/wk",
+        "rent_after": "$1,460/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "magazine_split",
+    "propertyAge": "apartment_townhouse",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "super_premium_polished",
+    "people": "owner_lifestyle",
+    "copyDensity": "headline_overlay",
+    "tone": "simple_super_premium",
+    "sampleSuburb": "Joondalup",
+    "sampleState": "WA",
+    "agencyName": "Foreshore & Park",
+    "agentName": "Leo Romano",
+    "address": "66 Grand Boulevard, Joondalup"
+  },
+  "DS-02": {
+    "prompt": "Real estate photograph, Australian setting. A single-level modern villa with easy-care garden and wide doorways, accessible and bright, clear daylight, guide cover style",
+    "persona": {
+      "agency": "Highgate Property Co",
+      "agent": "Hannah Webb",
+      "suburb": "Midland",
+      "state": "WA",
+      "regionList": "Bellevue, Viveash and Woodbridge",
+      "region": [
+        "Bellevue",
+        "Viveash",
+        "Woodbridge"
+      ],
+      "address": "67 Cale Street, Midland",
+      "project": "The Grove",
+      "stats": {
+        "growth_12m": "4.2%",
+        "growth_5y": "24%",
+        "days": "12",
+        "buyers": "28",
+        "median": "$1.05m",
+        "rent_before": "$540/wk",
+        "rent_after": "$1,340/wk"
+      }
+    },
+    "archetype": "seller_guide",
+    "negativePrompt": "no text, no watermark, no logo, no signage, no lettering, photographic, realistic, high quality",
+    "layout": "guide_mockup",
+    "propertyAge": "new_build",
+    "priceFeel": "premium_coastal",
+    "visualStyle": "guide_or_report_mockup",
+    "people": "none",
+    "copyDensity": "headline_overlay",
+    "tone": "practical_local",
+    "sampleSuburb": "Midland",
+    "sampleState": "WA",
+    "agencyName": "Highgate Property Co",
+    "agentName": "Hannah Webb",
+    "address": "67 Cale Street, Midland"
+  }
+}

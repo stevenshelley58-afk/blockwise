@@ -3,18 +3,16 @@
 import { useCallback, useRef, useState } from "react";
 
 export type StudioSection =
-  | "campaign"
-  | "templates"
-  | "brand"
+  | "home"
   | "media"
-  | "copy"
+  | "text"
   | "publish"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";
-export type MobileTab = "campaign" | "templates" | "publish";
+export type MobileTab = "home" | "media" | "text" | "publish" | "settings";
 
 export function useAdStudio() {
-  const [section, setSection] = useState<StudioSection>("campaign");
+  const [section, setSection] = useState<StudioSection>("home");
   const [showMore, setShowMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [busyMessage, setBusyMessage] = useState("Generating ad");
@@ -24,7 +22,7 @@ export function useAdStudio() {
   // during SSR caused a hydration text mismatch on every page load.
   const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
-  const [mobileTab, setMobileTab] = useState<MobileTab>("campaign");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("home");
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

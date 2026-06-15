@@ -52,7 +52,7 @@ export function CopyPanel({
 
   return (
     <>
-      <PanelHeader title="Copy" detail="Three ways to get the words right." />
+      <PanelHeader title="Text" detail="Click canvas text to edit that layer, or write and rewrite the ad copy here." />
 
       <div className="studio-mode-seg" role="tablist" aria-label="Copy mode">
         <button
@@ -63,7 +63,7 @@ export function CopyPanel({
           onClick={() => setCopyMode("ai")}
         >
           <Zap aria-hidden size={14} />
-          AI copy
+          Write for me
         </button>
         <button
           type="button"
@@ -89,7 +89,7 @@ export function CopyPanel({
 
       {copyMode === "ai" && (
         <>
-          <div className="studio-ctx" aria-label="What the AI uses">
+          <div className="studio-ctx" aria-label="Copy context">
             <span>Goal · {context.goal}</span>
             <span>Offer · {context.offer}</span>
             <span>Market · {context.market}</span>
@@ -139,7 +139,7 @@ export function CopyPanel({
           <div className="studio-hint">
             <Info aria-hidden size={15} />
             <span>
-              AI writes from your <b>goal, offer and market</b>, within Meta housing rules. Tap an alternate to swap it in.
+              Drafted from your <b>goal, offer and market</b>, within Meta housing rules. Tap an alternate to swap it in.
             </span>
           </div>
         </>
@@ -189,7 +189,7 @@ export function CopyPanel({
       {copyMode === "own" && (
         <>
           <CopyFields copy={copy} updateCopy={updateCopy} />
-          <div className="studio-assist-row" aria-label="AI assist">
+          <div className="studio-assist-row" aria-label="Copy assist">
             {ASSIST_ACTIONS.map((label) => (
               <button key={label} type="button" disabled={generating} onClick={() => onAssist(label, context)}>
                 {label}

@@ -145,7 +145,7 @@ export const WORKFORCE_AGENTS: WorkforceAgent[] = [
   {
     key: "cost_control_agent",
     label: "Cost Control Agent",
-    description: "Watches AI spend, failed generations, model drift, and expensive image usage.",
+    description: "Watches model spend, failed generations, model drift, and expensive image usage.",
     allowedActions: ["watch_costs"],
     allowedDataClasses: ["cost_metadata", "internal_operational"],
     allowedDestinations: ["internal_artifact"],

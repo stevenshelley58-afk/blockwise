@@ -5,8 +5,8 @@
  * each one into a ServiceStatus with an alert level:
  *
  *   - OpenRouter  – GET https://openrouter.ai/api/v1/credits
- *   - OpenAI cost – GET https://api.openai.com/v1/organization/costs (admin key)
- *   - OpenAI API  – GET https://api.openai.com/v1/models (the key ad creation uses)
+ *   - Provider cost – GET https://api.openai.com/v1/organization/costs (admin key)
+ *   - Provider API  – GET https://api.openai.com/v1/models (the key ad creation uses)
  *   - Apify       – research.v_health (apify_mtd_spend_usd) vs runtime_settings caps
  *
  * Vercel and Supabase do not expose simple usage APIs; Vercel is covered by the
@@ -264,7 +264,7 @@ export async function checkOpenRouterCredits(): Promise<ServiceStatus | null> {
   }
 }
 
-/** Month-to-date OpenAI organization cost vs OPENAI_MONTHLY_BUDGET_USD. */
+/** Month-to-date provider organization cost vs OPENAI_MONTHLY_BUDGET_USD. */
 export async function checkOpenAiSpend(): Promise<ServiceStatus | null> {
   const service = "openai-spend";
   const adminKey = process.env.OPENAI_ADMIN_KEY;
@@ -279,20 +279,20 @@ export async function checkOpenAiSpend(): Promise<ServiceStatus | null> {
       { headers: { Authorization: `Bearer ${adminKey}` } },
     );
     if (status !== 200) {
-      return checkFailedStatus(service, "OpenAI spend", `HTTP ${status}`);
+      return checkFailedStatus(service, "Provider spend", `HTTP ${status}`);
     }
     const buckets = (body as { data?: Array<{ results?: Array<{ amount?: { value?: number } }> }> })?.data ?? [];
     const usedUsd = buckets
       .flatMap((bucket) => bucket.results ?? [])
       .reduce((sum, result) => sum + Number(result.amount?.value ?? 0), 0);
-    return budgetStatus(service, "OpenAI month-to-date", usedUsd, budget);
+    return budgetStatus(service, "Provider month-to-date", usedUsd, budget);
   } catch (err) {
-    return checkFailedStatus(service, "OpenAI spend", err instanceof Error ? err.message : String(err));
+    return checkFailedStatus(service, "Provider spend", err instanceof Error ? err.message : String(err));
   }
 }
 
 /**
- * Cheap liveness probe for the OpenAI key Ad Studio uses. A 401/403/5xx here
+ * Cheap liveness probe for the provider key Ad Studio uses. A 401/403/5xx here
  * means a customer pressing "generate" is already getting errors.
  */
 export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {
@@ -305,17 +305,17 @@ export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (status === 200) {
-      return { service, level: "ok", summary: "OpenAI API: reachable, key valid", pctUsed: null };
+      return { service, level: "ok", summary: "Provider API: reachable, key valid", pctUsed: null };
     }
     if (status === 401 || status === 403) {
-      return checkFailedStatus(service, "OpenAI API", `key rejected (${status}) — ad generation will fail`);
+      return checkFailedStatus(service, "Provider API", `key rejected (${status}) — ad generation will fail`);
     }
     if (status === 429) {
-      return { service, level: "warn", summary: "OpenAI API: rate limited (429)", pctUsed: null };
+      return { service, level: "warn", summary: "Provider API: rate limited (429)", pctUsed: null };
     }
-    return checkFailedStatus(service, "OpenAI API", `HTTP ${status}`);
+    return checkFailedStatus(service, "Provider API", `HTTP ${status}`);
   } catch (err) {
-    return checkFailedStatus(service, "OpenAI API", err instanceof Error ? err.message : String(err));
+    return checkFailedStatus(service, "Provider API", err instanceof Error ? err.message : String(err));
   }
 }
 

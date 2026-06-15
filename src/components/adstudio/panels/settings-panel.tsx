@@ -13,7 +13,7 @@ export function SettingsPanel() {
         Account, permissions, and defaults remain managed by workspace settings.
       </div>
       <details className="studio-advanced">
-        <summary>Advanced</summary>
+        <summary>More actions</summary>
         <p>Duplicate, export, archive, share, and reset actions live in the More menu.</p>
       </details>
     </>

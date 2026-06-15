@@ -175,7 +175,7 @@ test("buildAiLedgerRows and buildResearchSignals map production tables", () => {
   );
 });
 
-test("AI ledger loaders expose operator filters for user model task and day", () => {
+test("usage ledger loaders expose operator filters for user model task and day", () => {
   const liveData = readFileSync("src/lib/operator/overview.ts", "utf8");
   const route = readFileSync("src/app/api/ai-ledger/route.ts", "utf8");
   const page = readFileSync("src/app/(operator)/model-control/page.tsx", "utf8");
@@ -201,7 +201,7 @@ test("operator overview does not select phantom lead columns", () => {
   assert.doesNotMatch(liveData, /lead\.name/);
 });
 
-test("operator AI ledger and agent-run surfaces omit workspace filters for operators only", () => {
+test("operator usage ledger and agent-run surfaces omit workspace filters for operators only", () => {
   const modelControlPage = readFileSync("src/app/(operator)/model-control/page.tsx", "utf8");
   const agentsPage = readFileSync("src/app/(operator)/workforce/page.tsx", "utf8");
   const aiLedgerRoute = readFileSync("src/app/api/ai-ledger/route.ts", "utf8");

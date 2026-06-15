@@ -86,13 +86,13 @@ async function openNewAd(page: Page) {
   const mobileDetails = page.locator(".studio-mobile-campaign-btn");
   if (await mobileDetails.isVisible().catch(() => false)) {
     await mobileDetails.click();
-    const browse = page.getByRole("button", { name: /browse templates/i }).first();
+    const browse = page.getByRole("button", { name: /browse|create new/i }).first();
     await expect(browse).toBeEnabled({ timeout: 30_000 });
     await browse.click();
     return;
   }
 
-  const browse = page.getByRole("button", { name: /browse templates/i }).first();
+  const browse = page.getByRole("button", { name: /browse|create new/i }).first();
   await expect(browse).toBeEnabled({ timeout: 30_000 });
   await browse.click();
 }

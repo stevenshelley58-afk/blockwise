@@ -468,7 +468,7 @@ export function PromptControlPanel() {
         <div className="section-heading">
           <div>
             <h3>Run History</h3>
-            <p className="item-meta">Recent Ad Studio AI runs with redacted inputs and prompt version metadata.</p>
+            <p className="item-meta">Recent Ad Studio model runs with redacted inputs and prompt version metadata.</p>
           </div>
         </div>
         <div className="table-wrap">

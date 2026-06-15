@@ -41,7 +41,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
   return (
     <main className="content">
       <PageHeading
-        eyebrow="AI governance"
+        eyebrow="Model governance"
         title="Model Control"
         description="Task-specific model profiles keep provider choices, fallbacks, spend limits, structured-output requirements, image settings, and kill switches out of product code."
       />
@@ -63,14 +63,14 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
           {["workspace", "user", "task", "provider", "model", "usage", "estimated cost", "output type", "result"].map((field) => (
             <article className="item-card" key={field}>
               <h3>{field}</h3>
-              <p className="item-meta">Stored for every AI run and reviewable in the Operator Console.</p>
+              <p className="item-meta">Stored for every model run and reviewable in the Operator Console.</p>
             </article>
           ))}
         </div>
       </section>
 
       <section className="panel">
-        <h2>AI Usage Ledger</h2>
+        <h2>Usage Ledger</h2>
         <form className="grid cols-4 ledger-filter-form" method="get">
           <label>
             <span>User</span>
@@ -128,7 +128,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
               ))}
               {!ledgerRows.length ? (
                 <tr>
-                  <td colSpan={8}>No AI usage rows match these filters.</td>
+                  <td colSpan={8}>No usage rows match these filters.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -150,8 +150,8 @@ function formatDate(value: string | null): string {
 }
 
 function formatProviderName(provider: string): string {
-  if (provider === "openai") return "OpenAI";
-  if (provider === "openrouter") return "OpenRouter";
+  if (provider === "openai") return "Primary provider";
+  if (provider === "openrouter") return "Routing provider";
 
   return provider;
 }

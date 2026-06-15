@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "AI copy generation failed." },
+      { error: error instanceof Error ? error.message : "Copy generation failed." },
       { status: 502 },
     );
   }

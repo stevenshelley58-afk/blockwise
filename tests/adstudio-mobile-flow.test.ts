@@ -6,19 +6,30 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-test("mobile edit tab renders the contextual inspector and no separate media/copy tabs", () => {
+test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   const mobileBody = read("src/components/adstudio/ad-studio-workbench.tsx");
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
 
-  assert.match(mobileBody, /studio\.mobileTab === "campaign"[\s\S]*renderPanel\(\)/);
-  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "media"/);
-  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "copy"/);
-  assert.match(mobileBody, /label: "Edit"/);
+  assert.match(mobileBody, /studio\.mobileTab === "home"/);
+  assert.match(mobileBody, /studio\.mobileTab === "media"/);
+  assert.match(mobileBody, /studio\.mobileTab === "text"/);
+  assert.match(mobileBody, /label: "Home"/);
+  assert.match(mobileBody, /label: "Templates"/);
+  assert.match(mobileBody, /templatePickerOpen/);
+  assert.match(mobileBody, /label: "Media"/);
+  assert.match(mobileBody, /label: "Text"/);
+  assert.match(mobileBody, /label: "Publish"/);
+  assert.match(mobileBody, /label: "Settings"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "design"/);
+  assert.doesNotMatch(mobileBody, /label: "Edit"/);
+  assert.doesNotMatch(mobileBody, /label: "Design"/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
-  assert.match(mediaPanel, /AI fit all ad sizes/);
+  assert.match(mediaPanel, /Auto fit all ad sizes/);
   assert.match(mediaPanel, /AssetUploadDropzone/);
   assert.match(mediaPanel, /capturePagePaste/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "templates"/);
 });
 
 test("brief copy generation leaves editable copy visible with inline feedback", () => {
@@ -37,15 +48,14 @@ test("brief copy generation leaves editable copy visible with inline feedback", 
   assert.match(hook, /Copy updated from your brief/);
 });
 
-test("mobile campaign chip opens ad details instead of acting like a dead dropdown", () => {
+test("mobile flow no longer exposes a separate ad details sheet", () => {
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
   const styles = read("src/components/adstudio/styles.ts");
 
-  assert.match(workbench, /const \[mobileAdDetailsOpen, setMobileAdDetailsOpen\]/);
-  assert.match(workbench, /onClick=\{\(\) => setMobileAdDetailsOpen\(true\)\}/);
-  assert.match(workbench, /className="studio-mobile-sheet"/);
-  assert.match(workbench, /renderCampaignPanel\(\{ mobileSheet: true \}\)/);
-  assert.match(styles, /studio-mobile-sheet-backdrop/);
+  assert.doesNotMatch(workbench, /mobileAdDetailsOpen/);
+  assert.doesNotMatch(workbench, /renderCampaignPanel/);
+  assert.doesNotMatch(workbench, /studio-mobile-campaign/);
+  assert.match(styles, /grid-template-columns:repeat\(6,1fr\)/);
 });
 
 test("mobile overflow exposes save draft", () => {

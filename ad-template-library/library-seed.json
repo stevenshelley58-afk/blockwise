@@ -241,7 +241,70 @@
       "image_brief_id": "IMG-HOMEVALUE-Q",
       "evidence_score": 90.0,
       "winner_rationale": "'How Much is Your Home Worth?' (Investors Edge) ran 419 days; the highest-frequency hook in the DB ('home worth', 'how much is YOUR HOME worth'). Cross-agency proven.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "How much is your home worth?",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "HV-02",
@@ -270,7 +333,62 @@
       "image_brief_id": "IMG-HOMEVALUE-Q",
       "evidence_score": 82.0,
       "winner_rationale": "Peard Real Estate 'Get your FREE price update now / Hey {Suburb} Homeowners' run identically across Kingsley, North Beach etc. - reusable suburb-swap winner.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "appraisal",
+        "shot": {
+          "type": "inviting home exterior",
+          "lighting": "soft afternoon",
+          "mood": "reassuring, local"
+        },
+        "composition": {
+          "focal_point": "the home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.64,
+              "width": 0.88,
+              "height": 0.22,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "free appraisal pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "Get your FREE {suburb} price update",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "HV-03",
@@ -298,7 +416,62 @@
       "image_brief_id": "IMG-HOMEVALUE-Q",
       "evidence_score": 74.0,
       "winner_rationale": "Hook 'SURPRISED to hear how much your home is worth' appears 19x across advertisers - a proven curiosity opener.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "appraisal",
+        "shot": {
+          "type": "inviting home exterior",
+          "lighting": "soft afternoon",
+          "mood": "reassuring, local"
+        },
+        "composition": {
+          "focal_point": "the home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.64,
+              "width": 0.88,
+              "height": 0.22,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "free appraisal pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "You might be surprised",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "HV-04",
@@ -328,7 +501,70 @@
       "image_brief_id": "IMG-HOMEVALUE-Q",
       "evidence_score": 78.0,
       "winner_rationale": "Xceed 'Receive Your Free Property Price Estimator Instantly!' + Neon '[FREE] Property Report - Takes You 5 Seconds' - low-friction instant-estimate hook recurs across agencies.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "Your {suburb} value in 5 seconds",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "HV-05",
@@ -356,7 +592,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 76.0,
       "winner_rationale": "Neon Property Group '[FREE] Property Report / How Much Are You Leaving on the Table?' (77d, active) - loss-aversion framing.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "FOMO",
+          "headline_pattern": "How much are you leaving behind?",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "HV-06",
@@ -385,7 +684,63 @@
       "image_brief_id": "IMG-AGENT-PORTRAIT",
       "evidence_score": 80.0,
       "winner_rationale": "'FREE APPRAISAL WITH ALYSSA' (95d, 7 versions) - personalising the appraisal to a named agent lifts brandFit + local trust.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "appraisal",
+        "shot": {
+          "type": "inviting home exterior",
+          "lighting": "soft afternoon",
+          "mood": "reassuring, local"
+        },
+        "composition": {
+          "focal_point": "the home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.64,
+              "width": 0.88,
+              "height": 0.22,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0F4C5C",
+            "#F0AB4C",
+            "#102026",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "free appraisal pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "Free appraisal with",
+          "cta": "Book now"
+        },
+        "variables": [
+          "agent_name",
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "MU-01",
@@ -418,7 +773,71 @@
       "image_brief_id": "IMG-REPORT-COVER",
       "evidence_score": 96.0,
       "winner_rationale": "Vivian's '[FREE] Digital Copy of our Mosman Park Report / Prices skyrocket 23%' - 778-856 days active, 7 versions. Top winner in the DB; market_update has the highest avg longevity (139d).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#334155",
+            "#CBD5E1",
+            "#181E28",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "[FREE] {suburb} market report",
+          "cta": "Download"
+        },
+        "variables": [
+          "suburb",
+          "growth_12m"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "MU-02",
@@ -448,7 +867,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 85.0,
       "winner_rationale": "'Berwick Property Market Update' / 'Local Market Report - Beaconsfield Upper' (240-251d, active) - JR Property suburb-report series.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#78350F",
+            "#F59E0B",
+            "#28180C",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "{suburb} property market update",
+          "cta": "Get market update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "MU-03",
@@ -476,7 +958,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 83.0,
       "winner_rationale": "'See the Latest Trends in Your Area' ran 282 days (active, carousel) - soft-intent TOFU opener that feeds the report offer.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "See the latest trends in your area",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "MU-04",
@@ -506,7 +1051,72 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 88.0,
       "winner_rationale": "Vivian's 'UPDATED MEDIAN VALUE Mosman Park $2.19M / Prices Surge 23%' image variant (778d). Stat-card format travels across suburbs.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "{suburb} median",
+          "cta": "Download"
+        },
+        "variables": [
+          "suburb",
+          "median_value",
+          "growth_12m"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "BD-01",
@@ -535,7 +1145,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 79.0,
       "winner_rationale": "'Are Buyers Still Competing For Homes Like Yours?' (carousel, active) - demand-led seller prompt without over-claiming.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "FOMO",
+          "headline_pattern": "Are buyers competing for homes like yours?",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "BD-02",
@@ -567,7 +1240,73 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 86.0,
       "winner_rationale": "Renouf Real Estate 'Curious what your home is worth? / {Suburb} PROPERTY UPDATE: X% / Y% / N Active Buyers' - same structure run across Alexandra Hills, Ormiston, Wellington Point. Highly reusable.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "Curious what your home is worth?",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb",
+          "growth_12m",
+          "growth_5y",
+          "active_buyers"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "BD-03",
@@ -594,7 +1333,62 @@
       "image_brief_id": "IMG-HOMEVALUE-Q",
       "evidence_score": 75.0,
       "winner_rationale": "'The market is strong, buyer demand is high, and it's a great time to sell' recurs in long-running appraisal ads (e.g. Free Appraisal with Alyssa, 95d).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Urgency / Scarcity",
+          "headline_pattern": "Strong demand. Low stock.",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JS-01",
@@ -624,7 +1418,70 @@
       "image_brief_id": "IMG-JUST-SOLD",
       "evidence_score": 84.0,
       "winner_rationale": "Ray White Dethridge Groves 'Just Sold - yours could be next' (carousel, 13 creative versions - heavily iterated = backed by spend).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "just_sold",
+        "shot": {
+          "type": "exterior with sold signage",
+          "lighting": "bright daylight",
+          "mood": "celebratory, credible"
+        },
+        "composition": {
+          "focal_point": "the sold home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.62,
+              "y": 0.06,
+              "width": 0.32,
+              "height": 0.2,
+              "priority": "secondary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.18,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0F4C5C",
+            "#F0AB4C",
+            "#102026",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "sold ribbon",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Social proof",
+          "headline_pattern": "Just sold - yours could be next",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JS-02",
@@ -654,7 +1511,71 @@
       "image_brief_id": "IMG-JUST-SOLD",
       "evidence_score": 78.0,
       "winner_rationale": "Vivian's 'ANOTHER SOLD - 3 Houston Place, Mount Claremont' (194d, video) - behind-the-result storytelling builds vendor trust.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "just_sold",
+        "shot": {
+          "type": "exterior with sold signage",
+          "lighting": "bright daylight",
+          "mood": "celebratory, credible"
+        },
+        "composition": {
+          "focal_point": "the sold home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.62,
+              "y": 0.06,
+              "width": 0.32,
+              "height": 0.2,
+              "priority": "secondary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.18,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#334155",
+            "#CBD5E1",
+            "#181E28",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "sold ribbon",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Story / Emotional",
+          "headline_pattern": "Another one sold in {suburb}",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb",
+          "address"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JS-03",
@@ -684,7 +1605,71 @@
       "image_brief_id": "IMG-AUCTION",
       "evidence_score": 77.0,
       "winner_rationale": "Neon Property Group 'SOLD VIA AUCTION 7 Namoi Court - 8 registered bidders, $1,410,000' - concrete proof with real figures.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "just_sold",
+        "shot": {
+          "type": "exterior with sold signage",
+          "lighting": "bright daylight",
+          "mood": "celebratory, credible"
+        },
+        "composition": {
+          "focal_point": "the sold home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.62,
+              "y": 0.06,
+              "width": 0.32,
+              "height": 0.2,
+              "priority": "secondary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.18,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#78350F",
+            "#F59E0B",
+            "#28180C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "sold ribbon",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Social proof",
+          "headline_pattern": "Sold under the hammer",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "address",
+          "bidders"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JS-04",
@@ -711,7 +1696,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 74.0,
       "winner_rationale": "recent_sales_report is a core AdStudio offer; 'just sold' proof ads (avg 37d) convert best when tied to a comparables download.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "What sold near you in {suburb}?",
+          "cta": "Get recent sales"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JL-01",
@@ -745,7 +1793,67 @@
       "image_brief_id": "IMG-JUST-LISTED",
       "evidence_score": 80.0,
       "winner_rationale": "'Just Listed | 2/19 Waratah Avenue / 3 Bed 2 Bath 1 Car' (Renouf) + 'Just Listed' among top hooks (23x). Spec-bar layout is the category default.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "Just listed in {suburb}",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb",
+          "address",
+          "beds",
+          "baths",
+          "cars",
+          "land"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JL-02",
@@ -779,7 +1887,67 @@
       "image_brief_id": "IMG-JUST-LISTED",
       "evidence_score": 72.0,
       "winner_rationale": "'5 Dandy Place Bayswater / First Time Offered - Light, Bright' (39d, video). 'First time offered' adds scarcity to a standard listing.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "FOMO",
+          "headline_pattern": "First time offered: {address}",
+          "cta": "Send message"
+        },
+        "variables": [
+          "address",
+          "beds",
+          "baths",
+          "land",
+          "price",
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "JL-03",
@@ -808,7 +1976,63 @@
       "image_brief_id": "IMG-JUST-LISTED",
       "evidence_score": 73.0,
       "winner_rationale": "'Selling fast! Register your interest now / boutique opportunity' (The Crossings at Wellard, active) - pre-launch list-building.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Urgency / Scarcity",
+          "headline_pattern": "Selling fast - register now",
+          "cta": "Register your interest"
+        },
+        "variables": [
+          "suburb",
+          "project_or_address"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "ND-01",
@@ -841,7 +2065,65 @@
       "image_brief_id": "IMG-DEV-HERO",
       "evidence_score": 82.0,
       "winner_rationale": "'Horizon Hurstville / 1, 2 & 3 Bedroom Residences / From $668k*' (carousel, multiple long-running versions). '1,2 & 3 Bedroom Residences' is a top recurring hook (26x).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "FOMO",
+          "headline_pattern": "now selling",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "project_name",
+          "address",
+          "price",
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "ND-02",
@@ -873,7 +2155,64 @@
       "image_brief_id": "IMG-DEV-HERO",
       "evidence_score": 79.0,
       "winner_rationale": "'Secure your new home with only 5% deposit' is a top recurring hook (22x) across off-the-plan campaigns - the deposit angle drives first-home-buyer leads.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0F4C5C",
+            "#F0AB4C",
+            "#102026",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Urgency / Scarcity",
+          "headline_pattern": "Secure your home with deposit",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "deposit_pct",
+          "suburb",
+          "project_name"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "ND-03",
@@ -904,7 +2243,64 @@
       "image_brief_id": "IMG-DEV-HERO",
       "evidence_score": 80.0,
       "winner_rationale": "'Variety Of Land Now Selling / Living minutes from Whiteman Park Train Station' (223d) + 'Land Now Selling / Brabham Estate' (249d). Lifestyle + transport proximity sells lots.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#334155",
+            "#CBD5E1",
+            "#181E28",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Story / Emotional",
+          "headline_pattern": "Land now selling at",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "project_name",
+          "landmark",
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "OH-01",
@@ -936,7 +2332,75 @@
       "image_brief_id": "IMG-OPEN-HOME",
       "evidence_score": 70.0,
       "winner_rationale": "open_home is a core AdStudio template; open-home ads are short-lived by nature (avg 13-18d) but high-intent BOFU. Exact date/time/address drives attendance.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "open_home",
+        "shot": {
+          "type": "welcoming entrance or interior",
+          "lighting": "bright natural",
+          "mood": "friendly, open"
+        },
+        "composition": {
+          "focal_point": "the entrance",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.06,
+              "y": 0.06,
+              "width": 0.4,
+              "height": 0.12,
+              "priority": "secondary"
+            },
+            {
+              "id": "details",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#78350F",
+            "#F59E0B",
+            "#28180C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "open home pill",
+          "cta_style": "outline pill"
+        },
+        "copy": {
+          "hook_style": "Urgency / Scarcity",
+          "headline_pattern": "Open this Saturday: {address}",
+          "cta": "Get directions"
+        },
+        "variables": [
+          "address",
+          "day",
+          "time",
+          "suburb",
+          "beds",
+          "baths"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "OH-02",
@@ -969,7 +2433,73 @@
       "image_brief_id": "IMG-DEV-HERO",
       "evidence_score": 74.0,
       "winner_rationale": "'Visit the on-site Display Suite' / 'On-site Display Suite' recurs (15x) in long-running development campaigns (e.g. Burswood Point).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "open_home",
+        "shot": {
+          "type": "welcoming entrance or interior",
+          "lighting": "bright natural",
+          "mood": "friendly, open"
+        },
+        "composition": {
+          "focal_point": "the entrance",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.06,
+              "y": 0.06,
+              "width": 0.4,
+              "height": 0.12,
+              "priority": "secondary"
+            },
+            {
+              "id": "details",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "open home pill",
+          "cta_style": "outline pill"
+        },
+        "copy": {
+          "hook_style": "FOMO",
+          "headline_pattern": "Display suite now open",
+          "cta": "Book a viewing"
+        },
+        "variables": [
+          "project_name",
+          "suburb",
+          "beds",
+          "price"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AU-01",
@@ -998,7 +2528,68 @@
       "image_brief_id": "IMG-AUCTION",
       "evidence_score": 76.0,
       "winner_rationale": "Neon Property Group runs a whole educational auction series ('5 Reasons to Sell at Auction', 'Auction day can move quickly...') - consistent, low-cost authority content.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "just_sold",
+        "shot": {
+          "type": "exterior with sold signage",
+          "lighting": "bright daylight",
+          "mood": "celebratory, credible"
+        },
+        "composition": {
+          "focal_point": "the sold home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.62,
+              "y": 0.06,
+              "width": 0.32,
+              "height": 0.2,
+              "priority": "secondary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.18,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "sold ribbon",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "5 reasons to sell at auction",
+          "cta": "Learn more"
+        },
+        "variables": [],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AU-02",
@@ -1031,7 +2622,74 @@
       "image_brief_id": "IMG-AUCTION",
       "evidence_score": 71.0,
       "winner_rationale": "Listing auction ads ('Auction On Friday 12 June at 2:00pm') run as short BOFU bursts; high intent near the date.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "just_sold",
+        "shot": {
+          "type": "exterior with sold signage",
+          "lighting": "bright daylight",
+          "mood": "celebratory, credible"
+        },
+        "composition": {
+          "focal_point": "the sold home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "badge",
+              "x": 0.62,
+              "y": 0.06,
+              "width": 0.32,
+              "height": 0.2,
+              "priority": "secondary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.68,
+              "width": 0.88,
+              "height": 0.18,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "sold ribbon",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Urgency / Scarcity",
+          "headline_pattern": "Auction : {address}",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "date",
+          "address",
+          "time",
+          "property_desc",
+          "agent_name"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AU-03",
@@ -1059,7 +2717,68 @@
       "image_brief_id": "IMG-GUIDE-MOCKUP",
       "evidence_score": 72.0,
       "winner_rationale": "Maps to the auction_vs_private_treaty AdStudio offer; method-comparison guides capture undecided vendors (cold-to-warm).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "Auction or private sale?",
+          "cta": "Compare options"
+        },
+        "variables": [],
+        "confidence": 78
+      }
     },
     {
       "template_key": "PM-01",
@@ -1089,7 +2808,62 @@
       "image_brief_id": "IMG-LANDLORD",
       "evidence_score": 92.0,
       "winner_rationale": "Investors Edge 'Want Income, Not Hassle? We Will Handle Everything / Attention Perth Landlords' - 1,103 days active. property_management has the 2nd-highest avg longevity (87d).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "appraisal",
+        "shot": {
+          "type": "inviting home exterior",
+          "lighting": "soft afternoon",
+          "mood": "reassuring, local"
+        },
+        "composition": {
+          "focal_point": "the home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.64,
+              "width": 0.88,
+              "height": 0.22,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "free appraisal pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Story / Emotional",
+          "headline_pattern": "Want income, not hassle?",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "PM-02",
@@ -1118,7 +2892,70 @@
       "image_brief_id": "IMG-LANDLORD",
       "evidence_score": 85.0,
       "winner_rationale": "Vivian's Real Estate 'Stress Free Hosting Starts Here / Airbnb Without the Stress' (279d, carousel, 7 versions).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0F4C5C",
+            "#F0AB4C",
+            "#102026",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "Stress-free hosting starts here",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "PM-03",
@@ -1145,7 +2982,62 @@
       "image_brief_id": "IMG-LANDLORD",
       "evidence_score": 75.0,
       "winner_rationale": "PM switch + free rental appraisal is the BOFU complement to the long-running 'hands-off management' winners; rental-appraisal hook mirrors the top sales-appraisal hooks.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "appraisal",
+        "shot": {
+          "type": "inviting home exterior",
+          "lighting": "soft afternoon",
+          "mood": "reassuring, local"
+        },
+        "composition": {
+          "focal_point": "the home",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.64,
+              "width": 0.88,
+              "height": 0.22,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#334155",
+            "#CBD5E1",
+            "#181E28",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "free appraisal pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "Is your rental underperforming?",
+          "cta": "Get rental appraisal"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "IN-01",
@@ -1174,7 +3066,71 @@
       "image_brief_id": "IMG-COLIVING",
       "evidence_score": 88.0,
       "winner_rationale": "INVIDA co-living series ('Turn $600/week into over $2,000/week', 'Turn One Home Into a High-Yield Co-Living Investment') runs 185-213+ days across many video variants.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#78350F",
+            "#F59E0B",
+            "#28180C",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "Turn into",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "rent_before",
+          "rent_after"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "IN-02",
@@ -1196,12 +3152,73 @@
       "description": "See the co-living model explained",
       "cta": "Watch now",
       "variables": [
-        "\u2014"
+        "—"
       ],
       "image_brief_id": "IMG-COLIVING",
       "evidence_score": 82.0,
       "winner_rationale": "INVIDA 'Curious if your home could support multiple leases?' + 'Ready to see what a purpose-built co-living home looks like?' (126-213d). Walkthrough-video TOFU.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "One home. Multiple incomes.",
+          "cta": "Watch now"
+        },
+        "variables": [],
+        "confidence": 78
+      }
     },
     {
       "template_key": "IN-03",
@@ -1224,12 +3241,65 @@
       "description": "What to check before you buy",
       "cta": "Learn more",
       "variables": [
-        "\u2014"
+        "—"
       ],
       "image_brief_id": "IMG-COLIVING",
       "evidence_score": 78.0,
       "winner_rationale": "'Before You Buy Your Next Investment Property' (active, video) - authority framing that pre-qualifies serious investors.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "listing_hero",
+        "shot": {
+          "type": "exterior hero",
+          "lighting": "golden hour",
+          "mood": "aspirational, warm"
+        },
+        "composition": {
+          "focal_point": "the home facade",
+          "horizon": "low",
+          "copy_safe_zones": [
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.66,
+              "width": 0.88,
+              "height": 0.2,
+              "priority": "primary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "bottom dark gradient",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "lower third",
+          "badge": "new listing pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "Before you buy your next investment",
+          "cta": "Learn more"
+        },
+        "variables": [],
+        "confidence": 78
+      }
     },
     {
       "template_key": "IN-04",
@@ -1257,7 +3327,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 80.0,
       "winner_rationale": "Maps directly to the investor_suburb_snapshot AdStudio offer; mirrors the proven stat-card structure that wins in market-update ads.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "market_stat",
+        "shot": {
+          "type": "aerial or streetscape",
+          "lighting": "clear midday",
+          "mood": "informative, trustworthy"
+        },
+        "composition": {
+          "focal_point": "the suburb context",
+          "horizon": "high",
+          "copy_safe_zones": [
+            {
+              "id": "stats",
+              "x": 0.06,
+              "y": 0.5,
+              "width": 0.88,
+              "height": 0.34,
+              "priority": "primary"
+            },
+            {
+              "id": "headline",
+              "x": 0.06,
+              "y": 0.08,
+              "width": 0.88,
+              "height": 0.16,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.06,
+              "y": 0.88,
+              "width": 0.45,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "solid lower panel",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "data pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Data / Stat-led",
+          "headline_pattern": "{suburb} investor snapshot",
+          "cta": "Get snapshot"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AB-01",
@@ -1290,7 +3423,73 @@
       "image_brief_id": "IMG-AGENT-PORTRAIT",
       "evidence_score": 90.0,
       "winner_rationale": "'Shelley Bezuidenhout C21 / Real Estate Agent at Century 21... Covering [suburb list]' - 422-483 days active across versions. agency_brand has high avg longevity (72d).",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "social_proof",
+        "shot": {
+          "type": "happy clients or home",
+          "lighting": "warm natural",
+          "mood": "authentic, positive"
+        },
+        "composition": {
+          "focal_point": "the people",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "quote",
+              "x": 0.08,
+              "y": 0.34,
+              "width": 0.84,
+              "height": 0.36,
+              "priority": "primary"
+            },
+            {
+              "id": "attribution",
+              "x": 0.08,
+              "y": 0.72,
+              "width": 0.6,
+              "height": 0.1,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.08,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "dim image scrim",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "center",
+          "badge": "five-star pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "A local update worth a look",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "agent_name",
+          "business_name",
+          "suburb",
+          "suburb_list"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AB-02",
@@ -1320,7 +3519,71 @@
       "image_brief_id": "IMG-AGENT-PORTRAIT",
       "evidence_score": 76.0,
       "winner_rationale": "Neon 'Having an area specialist on your side can make all the difference when selling' (80d, video) - positions the agent as the local edge.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "social_proof",
+        "shot": {
+          "type": "happy clients or home",
+          "lighting": "warm natural",
+          "mood": "authentic, positive"
+        },
+        "composition": {
+          "focal_point": "the people",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "quote",
+              "x": 0.08,
+              "y": 0.34,
+              "width": 0.84,
+              "height": 0.36,
+              "priority": "primary"
+            },
+            {
+              "id": "attribution",
+              "x": 0.08,
+              "y": 0.72,
+              "width": 0.6,
+              "height": 0.1,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.08,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "dim image scrim",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "center",
+          "badge": "five-star pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "Local knowledge wins",
+          "cta": "Request price update"
+        },
+        "variables": [
+          "agent_name",
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "AB-03",
@@ -1349,7 +3612,70 @@
       "image_brief_id": "IMG-STAT-CARD",
       "evidence_score": 78.0,
       "winner_rationale": "Acton Belle Property 'Setting the benchmark for local real estate / multiple street and suburb records' (active) - results-as-proof brand ad.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "social_proof",
+        "shot": {
+          "type": "happy clients or home",
+          "lighting": "warm natural",
+          "mood": "authentic, positive"
+        },
+        "composition": {
+          "focal_point": "the people",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "quote",
+              "x": 0.08,
+              "y": 0.34,
+              "width": 0.84,
+              "height": 0.36,
+              "priority": "primary"
+            },
+            {
+              "id": "attribution",
+              "x": 0.08,
+              "y": 0.72,
+              "width": 0.6,
+              "height": 0.1,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.08,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0F4C5C",
+            "#F0AB4C",
+            "#102026",
+            "#FFFFFF"
+          ],
+          "overlay": "dim image scrim",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "center",
+          "badge": "five-star pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Social proof",
+          "headline_pattern": "Setting the local benchmark",
+          "cta": "Get quote"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "TS-01",
@@ -1380,7 +3706,72 @@
       "image_brief_id": "IMG-TESTIMONIAL",
       "evidence_score": 82.0,
       "winner_rationale": "Cocolane Real Estate 'PROPERTY VALUE CALCULATOR' ads lead with seller testimonials ('Emma & Brody were wonderful...') and run 317-324d. Review-led proof sustains spend.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "social_proof",
+        "shot": {
+          "type": "happy clients or home",
+          "lighting": "warm natural",
+          "mood": "authentic, positive"
+        },
+        "composition": {
+          "focal_point": "the people",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "quote",
+              "x": 0.08,
+              "y": 0.34,
+              "width": 0.84,
+              "height": 0.36,
+              "priority": "primary"
+            },
+            {
+              "id": "attribution",
+              "x": 0.08,
+              "y": 0.72,
+              "width": 0.6,
+              "height": 0.1,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.08,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#334155",
+            "#CBD5E1",
+            "#181E28",
+            "#FFFFFF"
+          ],
+          "overlay": "dim image scrim",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "center",
+          "badge": "five-star pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Social proof",
+          "headline_pattern": "What our {suburb} clients say",
+          "cta": "Learn More"
+        },
+        "variables": [
+          "suburb",
+          "quote",
+          "client_name"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "TS-02",
@@ -1409,7 +3800,71 @@
       "image_brief_id": "IMG-TESTIMONIAL",
       "evidence_score": 79.0,
       "winner_rationale": "Vivian's Real Estate 'A journey worth sharing... beyond grateful to be part of Steven and Jen's' (video) ran 483 days - emotional client-story testimonial.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "social_proof",
+        "shot": {
+          "type": "happy clients or home",
+          "lighting": "warm natural",
+          "mood": "authentic, positive"
+        },
+        "composition": {
+          "focal_point": "the people",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "quote",
+              "x": 0.08,
+              "y": 0.34,
+              "width": 0.84,
+              "height": 0.36,
+              "priority": "primary"
+            },
+            {
+              "id": "attribution",
+              "x": 0.08,
+              "y": 0.72,
+              "width": 0.6,
+              "height": 0.1,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.08,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#78350F",
+            "#F59E0B",
+            "#28180C",
+            "#FFFFFF"
+          ],
+          "overlay": "dim image scrim",
+          "contrast": "high"
+        },
+        "text_system": {
+          "headline_zone": "center",
+          "badge": "five-star pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Story / Emotional",
+          "headline_pattern": "A journey worth sharing",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "client_name",
+          "quote"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "LM-01",
@@ -1437,7 +3892,70 @@
       "image_brief_id": "IMG-GUIDE-MOCKUP",
       "evidence_score": 80.0,
       "winner_rationale": "Maps to seller_prep_checklist AdStudio offer; lead-magnet checklists are the standard cold-to-warm seller capture and pair with the appraisal nurture.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#0C4A6E",
+            "#D4A017",
+            "#141C26",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "10 things to do before selling",
+          "cta": "Download checklist"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "LM-02",
@@ -1464,7 +3982,70 @@
       "image_brief_id": "IMG-GUIDE-MOCKUP",
       "evidence_score": 78.0,
       "winner_rationale": "Maps to seller_mistakes_guide offer; problem-aware 'mistakes' framing is a classic high-CTR lead magnet for cold owners.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1B4332",
+            "#D8A84A",
+            "#16221C",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Curiosity / Question",
+          "headline_pattern": "7 mistakes that cost sellers money",
+          "cta": "Get the guide"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "LM-03",
@@ -1492,7 +4073,70 @@
       "image_brief_id": "IMG-GUIDE-MOCKUP",
       "evidence_score": 80.0,
       "winner_rationale": "'Selling Real Estate in Perth? This new real estate book shows you how to Sell for Top Dollar!' ran 383 days - book lead magnet as authority builder.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#7C2D12",
+            "#EAB308",
+            "#261610",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Authority / Local expert",
+          "headline_pattern": "Sell for top dollar - free book",
+          "cta": "Get the book"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "DS-01",
@@ -1521,7 +4165,70 @@
       "image_brief_id": "IMG-DOWNSIZER",
       "evidence_score": 84.0,
       "winner_rationale": "Downsizing.com.au over-50s community ads ('Resize to get the best out of life!', Edenlife Byford; Lusso/Clifton/Avington) run 296-370 days across many suburbs.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#1E1E24",
+            "#C9A227",
+            "#121216",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Story / Emotional",
+          "headline_pattern": "Resize to get the best out of life",
+          "cta": "Learn more"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     },
     {
       "template_key": "DS-02",
@@ -1549,7 +4256,70 @@
       "image_brief_id": "IMG-GUIDE-MOCKUP",
       "evidence_score": 74.0,
       "winner_rationale": "Maps to the downsizer_guide AdStudio offer; pairs the long-running lifestyle-community demand with a soft seller-side capture.",
-      "scorer_version": "seed-xlsx-v1"
+      "scorer_version": "seed-xlsx-v1",
+      "creative_skeleton": {
+        "version": 1,
+        "archetype": "seller_guide",
+        "shot": {
+          "type": "calm styled interior",
+          "lighting": "soft natural",
+          "mood": "helpful, premium"
+        },
+        "composition": {
+          "focal_point": "the guide subject",
+          "horizon": "middle",
+          "copy_safe_zones": [
+            {
+              "id": "title",
+              "x": 0.1,
+              "y": 0.12,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "primary"
+            },
+            {
+              "id": "list",
+              "x": 0.1,
+              "y": 0.5,
+              "width": 0.8,
+              "height": 0.3,
+              "priority": "secondary"
+            },
+            {
+              "id": "cta",
+              "x": 0.1,
+              "y": 0.86,
+              "width": 0.5,
+              "height": 0.08,
+              "priority": "cta"
+            }
+          ]
+        },
+        "color": {
+          "palette": [
+            "#4C1D4F",
+            "#ECBE5C",
+            "#1E1422",
+            "#FFFFFF"
+          ],
+          "overlay": "soft scrim",
+          "contrast": "medium"
+        },
+        "text_system": {
+          "headline_zone": "upper third",
+          "badge": "free guide pill",
+          "cta_style": "solid pill"
+        },
+        "copy": {
+          "hook_style": "Free value / Lead magnet",
+          "headline_pattern": "Thinking about downsizing?",
+          "cta": "Get the guide"
+        },
+        "variables": [
+          "suburb"
+        ],
+        "confidence": 78
+      }
     }
   ]
 }

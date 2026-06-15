@@ -262,5 +262,5 @@ async function generateCopyWithProfile(
   }
 
   if (lastError instanceof Error) throw lastError;
-  throw new Error("AI copy is not configured. Add OPENAI_API_KEY or OPENROUTER_API_KEY to enable it.");
+  throw new Error("Copy generation is not configured. Add OPENAI_API_KEY or OPENROUTER_API_KEY to enable it.");
 }

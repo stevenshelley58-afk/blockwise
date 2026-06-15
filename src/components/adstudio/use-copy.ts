@@ -29,7 +29,7 @@ export type CopyContext = {
   market: string;
   propertyType: string;
   businessName?: string;
-  /** Brand kit voice & guardrails — included verbatim in the AI prompt. */
+  /** Brand kit voice & guardrails included verbatim in the generation prompt. */
   voice?: string;
   preferredPhrases?: string[];
   neverSay?: string[];
@@ -78,7 +78,7 @@ export function seedCopy(pack: AdStudioCampaignPack, variantIndex = 0): CopyStat
   };
 }
 
-// Offline fallback when the AI endpoint is unavailable — market-aware, no hardcoded suburbs.
+// Offline fallback when the writing endpoint is unavailable - market-aware, no hardcoded suburbs.
 function localAssist(action: string, copy: CopyState, market: string): Partial<CopyState> {
   const place = market.split(",")[0]?.trim() || "your area";
   if (action === "More local") {
@@ -159,12 +159,12 @@ export function useCopy(
     });
     const json = (await response.json().catch(() => ({}))) as CopyEndpointResponse;
     if (!response.ok) {
-      throw new Error(json.error || "AI copy request failed.");
+      throw new Error(json.error || "Copy request failed.");
     }
     return json;
   }
 
-  /** AI writes the full copy set — from campaign context ("ai") or the user's brief ("brief"). */
+  /** Writes the full copy set from campaign context ("ai") or the user's brief ("brief"). */
   async function generateCopy(kind: "ai" | "brief", context: CopyContext, imageSrc?: string) {
     if (generating) return;
     if (kind === "brief" && !brief.trim()) {
@@ -194,7 +194,7 @@ export function useCopy(
     }
   }
 
-  /** One-tap adjustments. Tries AI first; falls back to local transforms offline. */
+  /** One-tap adjustments. Tries provider generation first; falls back to local transforms offline. */
   async function applyCopyAssist(action: string, context: CopyContext, imageSrc?: string) {
     if (generating) return;
     setGenerating(true);
@@ -227,7 +227,7 @@ export function useCopy(
         showToast("Layer patched");
         return;
       }
-      showToast("AI did not return a layer patch");
+      showToast("Could not rewrite that layer");
     } catch {
       const fallback = localAssist(action, copy, context.market);
       const value = fallback[field];

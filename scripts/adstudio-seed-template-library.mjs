@@ -5,6 +5,13 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { ADSTUDIO_OFFER_TEMPLATES } from "../src/lib/adstudio/offers.ts";
+import {
+  deriveTemplateSampleStyle,
+  sampleCardImagePath,
+  sampleCopyForTemplate,
+  sampleVarianceErrors,
+  sampleVarianceSummary,
+} from "../src/lib/adstudio/template-samples.ts";
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,7 +108,7 @@ export function validateSeed(seed) {
     }
   }
 
-  for (const template of templates) {
+  for (const [index, template] of templates.entries()) {
     requireFields(errors, `template ${template?.template_key ?? "<missing>"}`, template, [
       "template_key",
       "category",
@@ -125,6 +132,18 @@ export function validateSeed(seed) {
     if (typeof template?.evidence_score !== "number" || template.evidence_score < 0 || template.evidence_score > 100) {
       errors.push(`Template ${template?.template_key ?? "<missing>"} evidence_score must be a number from 0 to 100.`);
     }
+    const sampleStyle = deriveTemplateSampleStyle(template, index);
+    const sampleCopy = sampleCopyForTemplate(template, sampleStyle);
+    if (!sampleCopy?.headline || !sampleCopy.primaryText || !sampleCopy.description || !sampleCopy.cta) {
+      errors.push(`Template ${template?.template_key ?? "<missing>"} must produce sample headline, primary text, description, and CTA.`);
+    }
+    if (sampleCopy && Object.values(sampleCopy).some((value) => /\{\{[^}]+\}\}/.test(value))) {
+      errors.push(`Template ${template?.template_key ?? "<missing>"} sample copy must not contain unresolved variables.`);
+    }
+    const expectedSamplePath = typeof template?.template_key === "string" ? sampleCardImagePath(template.template_key) : "";
+    if (!sampleStyle.sampleCardImagePath || sampleStyle.sampleCardImagePath !== expectedSamplePath) {
+      errors.push(`Template ${template?.template_key ?? "<missing>"} must produce a stable sample_card_image_path.`);
+    }
     if (template?.goal && !knownGoals.has(template.goal)) {
       errors.push(`Template ${template.template_key} references unknown goal ${template.goal}.`);
     }
@@ -136,6 +155,7 @@ export function validateSeed(seed) {
   if (missingOffers.length) errors.push(`Unknown offer_id values: ${missingOffers.join(", ")}.`);
   if (missingBriefs.length) errors.push(`Unknown image_brief_id values: ${missingBriefs.join(", ")}.`);
   if (missingTemplates.length) errors.push(`Unknown adstudio_template_id values: ${missingTemplates.join(", ")}.`);
+  errors.push(...sampleVarianceErrors(templates));
 
   if (errors.length) {
     throw new Error(`Template library seed validation failed:\n- ${errors.join("\n- ")}`);
@@ -161,6 +181,7 @@ export function validateSeed(seed) {
         offerGoal: offerById.get(template.offer_id).goal,
       })),
     scorerVersion: seed?.source?.scorerVersion ?? DEFAULT_SCORER_VERSION,
+    sampleVariance: sampleVarianceSummary(templates),
   };
 }
 
@@ -179,30 +200,36 @@ export function buildImageBriefRows(imageBriefs) {
 }
 
 export function buildTemplateRows(templates) {
-  return templates.map((template) => ({
-    ...pick(template, [
-      "template_key",
-      "category",
-      "audience",
-      "format",
-      "hook_style",
-      "funnel_stage",
-      "adstudio_template_id",
-      "offer_id",
-      "goal",
-      "headline",
-      "primary_text",
-      "description",
-      "cta",
-      "variables",
-      "image_brief_id",
-      "evidence_score",
-      "winner_rationale",
-      "compliance_note",
-    ]),
-    status: "approved",
-    scorer_version: template.scorer_version ?? DEFAULT_SCORER_VERSION,
-  }));
+  return templates.map((template, index) => {
+    const sample_style = deriveTemplateSampleStyle(template, index);
+    return {
+      ...pick(template, [
+        "template_key",
+        "category",
+        "audience",
+        "format",
+        "hook_style",
+        "funnel_stage",
+        "adstudio_template_id",
+        "offer_id",
+        "goal",
+        "headline",
+        "primary_text",
+        "description",
+        "cta",
+        "variables",
+        "image_brief_id",
+        "creative_skeleton",
+        "evidence_score",
+        "winner_rationale",
+        "compliance_note",
+      ]),
+      sample_card_image_path: sample_style.sampleCardImagePath,
+      sample_style,
+      status: "approved",
+      scorer_version: template.scorer_version ?? DEFAULT_SCORER_VERSION,
+    };
+  });
 }
 
 function env() {

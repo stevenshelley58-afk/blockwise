@@ -26,6 +26,8 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
     primary_text: input.primary_text ?? "Book a local appraisal with a practical market read.",
     cta: "Book appraisal",
     evidence_score: input.evidence_score ?? 50,
+    sample_card_image_path: input.sample_card_image_path,
+    sample_style: input.sample_style,
     creative_skeleton: input.creative_skeleton,
     exemplar_observed_ad_ids: input.exemplar_observed_ad_ids,
   };
@@ -62,4 +64,42 @@ test("template library pins skeleton-backed templates before older evidence-only
   assert.ok(
     merged.findIndex((template) => template.id === "DNA-70") < merged.findIndex((template) => template.id === "OLD-99"),
   );
+});
+
+test("template library exposes only generated sample-card URLs, not observed media URLs", () => {
+  const previous = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example";
+  try {
+    const safe = mapAdStudioLibraryTemplate(
+      row({
+        template_key: "HV-01",
+        headline: "How much is your {{suburb}} home worth?",
+        primary_text: "Get a practical {{suburb}} price update.",
+        description: "Free {{suburb}} price update",
+        cta: "Request price update",
+        sample_card_image_path: "adstudio-samples/v1/hv-01.png",
+      }),
+    );
+    assert.ok(safe);
+    assert.equal(
+      safe.sampleCardImageUrl,
+      "https://supabase.example/storage/v1/object/public/template-cards/adstudio-samples/v1/hv-01.png",
+    );
+    assert.match(safe.sampleCopy?.headline ?? "", /Scarborough|Bicton|Maylands|Cottesloe|Victoria Park|Fremantle/);
+
+    const unsafe = mapAdStudioLibraryTemplate(
+      row({
+        template_key: "HV-02",
+        sample_card_image_path: "https://cdn.example/observed-ad.jpg",
+      }),
+    );
+    assert.ok(unsafe);
+    assert.equal("sampleCardImageUrl" in unsafe, false);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
+    }
+  }
 });

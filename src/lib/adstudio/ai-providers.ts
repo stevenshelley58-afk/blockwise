@@ -121,7 +121,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
         throw new Error("OPENAI_API_KEY is not configured.");
       }
       if (input.requiresReferenceAssets) {
-        throw new Error("OpenAI image generation is not configured for reference-image repair.");
+        throw new Error("Reference-image generation is not configured for auto fit.");
       }
 
       const response = await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
@@ -145,7 +145,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       };
 
       if (!response.ok) {
-        throw new Error(payload.error?.message ?? `OpenAI image request failed with ${response.status}.`);
+        throw new Error(payload.error?.message ?? `Provider image request failed with ${response.status}.`);
       }
 
       const first = payload.data?.[0];
@@ -344,7 +344,7 @@ async function postChatCompletion(input: {
   };
 
   if (!response.ok) {
-    throw new Error(payload.error?.message ?? `AI provider request failed with ${response.status}.`);
+    throw new Error(payload.error?.message ?? `Provider request failed with ${response.status}.`);
   }
 
   const rawText = payload.choices?.[0]?.message?.content?.trim() ?? "{}";
@@ -364,7 +364,7 @@ async function postChatCompletion(input: {
 }
 
 // Builds the chat payload. When an image is supplied, it is attached to the final
-// user message as a multimodal content array (OpenAI/OpenRouter vision format).
+// user message as a multimodal content array accepted by supported vision providers.
 function buildChatMessages(request: TextProviderRequest): unknown[] {
   const system = { role: "system", content: request.system };
 
@@ -401,7 +401,7 @@ function parseJson(rawText: string): unknown {
   try {
     return JSON.parse(rawText);
   } catch {
-    throw new Error("AI provider returned non-JSON content.");
+    throw new Error("Provider returned non-JSON content.");
   }
 }
 

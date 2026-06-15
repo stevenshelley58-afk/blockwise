@@ -37,7 +37,7 @@ const operatorNavItems: NavItem[] = [
   { href: "/leads", label: "Leads", icon: UsersRound },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: SlidersHorizontal },
-  { href: "/workforce", label: "AI Workforce", icon: Bot },
+  { href: "/workforce", label: "Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
 ];
 

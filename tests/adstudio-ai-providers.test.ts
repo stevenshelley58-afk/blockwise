@@ -95,7 +95,7 @@ test("createOpenAiImageProvider refuses reference-image repair without calling t
         stylePreset: "truth_preserving_real_estate_repair",
         requiresReferenceAssets: true,
       }),
-    /not configured for reference-image repair/,
+    /not configured for auto fit/,
   );
   assert.equal(called, false);
 });

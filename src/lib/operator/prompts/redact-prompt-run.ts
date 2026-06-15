@@ -160,7 +160,7 @@ async function recordAiRun(input: {
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to record AI run", error.message);
+    console.error("Failed to record model run", error.message);
     return null;
   }
 
@@ -195,7 +195,7 @@ async function recordAiUsageLedger(input: {
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to record AI usage ledger row", error.message);
+    console.error("Failed to record usage ledger row", error.message);
     return null;
   }
 

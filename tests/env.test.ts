@@ -39,7 +39,7 @@ test("Google Ads keys are tracked as provider-scoped, not core required, so a Me
   ]);
 });
 
-test("recommended security environment keys cover Turnstile and Cloudflare AI Gateway", () => {
+test("recommended security environment keys cover Turnstile and Cloudflare gateway", () => {
   assert.deepEqual(RECOMMENDED_SECURITY_ENV_KEYS, [
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
     "CLOUDFLARE_AI_GATEWAY_URL",
