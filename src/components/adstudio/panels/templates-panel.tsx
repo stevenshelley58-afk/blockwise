@@ -16,10 +16,7 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, brandKit, active, onSelect }: TemplateCardProps) {
-  const previewSrc = useMemo(
-    () => template.sampleCardImageUrl ?? templatePreviewDataUrl(template, brandKit),
-    [template, brandKit],
-  );
+  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
   const sampleHeadline = template.sampleCopy?.headline;
   const sampleBody = template.sampleCopy?.primaryText;
 

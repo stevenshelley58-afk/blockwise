@@ -355,8 +355,12 @@
 .studio-newad-overlay{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);display:grid;place-items:center;padding:24px}
 .studio-newad{width:min(1160px,calc(100vw - 48px));max-height:min(880px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:16px;background:#f8fafc;box-shadow:0 24px 80px rgba(10,15,30,.4)}
 .studio-newad-head{display:flex;align-items:center;gap:14px;padding:20px 26px 16px;background:#fff;border-bottom:1px solid var(--line-soft)}
+.studio-newad-titleblock{display:grid;gap:6px;min-width:0}
+.studio-newad-titleblock>span{font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent)}
+.studio-newad-titleblock p{margin:0;color:var(--muted);font-size:15px;line-height:1.45}
 .studio-newad-head h2{margin:0;font-size:24px;font-weight:720;line-height:1.05;letter-spacing:-.3px}
 .studio-newad-x{margin-left:auto;width:36px;height:36px;flex:0 0 auto;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:grid;place-items:center}
+.studio-newad-head>.studio-newad-x:first-child{margin-left:0}
 .studio-newad-x:hover{background:var(--surface-subtle)}
 .studio-newad-steps{display:flex;align-items:center;gap:8px;margin-left:6px}
 .studio-newad-steps .st{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--st-faint)}
