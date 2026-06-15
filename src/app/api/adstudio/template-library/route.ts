@@ -8,7 +8,6 @@ import {
   type AdStudioLibraryTemplate,
 } from "@/lib/adstudio";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { normaliseMediaUrl } from "@/lib/research/customer-meta-card.ts";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -27,15 +26,6 @@ const templatePatchSchema = z.object({
 });
 
 type TemplatePatchBody = z.infer<typeof templatePatchSchema>;
-type ResearchClient = ReturnType<typeof researchClient>;
-
-type ExemplarCreativeRow = {
-  observed_ad_id: string | null;
-  primary_image_url: string | null;
-  image_storage_path: string | null;
-  video_thumbnail_url: string | null;
-  media_assets: unknown;
-};
 
 function isMissingTemplateLibrary(error: { code?: string; message?: string } | null | undefined): boolean {
   return error?.code === "42P01" || /(?:v_ad_template_library|ad_template_candidates|relation .* does not exist)/i.test(error?.message ?? "");
@@ -68,8 +58,7 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = await enrichTemplatePreviewImages(research, (data ?? []) as AdStudioLibraryTemplate[]);
-  const approved = rows
+  const approved = ((data ?? []) as AdStudioLibraryTemplate[])
     .map((row) => mapAdStudioLibraryTemplate(row))
     .filter((template) => template !== null);
 
@@ -122,80 +111,8 @@ async function updateTemplateStatus(body: TemplatePatchBody, userId: string) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Template was not found." }, { status: 404 });
 
-  const [row] = await enrichTemplatePreviewImages(research, [data as AdStudioLibraryTemplate]);
-  const template = body.action === "approve" && row ? mapAdStudioLibraryTemplate(row) : null;
+  const template = body.action === "approve" ? mapAdStudioLibraryTemplate(data as AdStudioLibraryTemplate) : null;
   return NextResponse.json({
     template: template ?? { id: body.templateKey, templateKey: body.templateKey, status: body.action === "approve" ? "approved" : "archived" },
   });
-}
-
-async function enrichTemplatePreviewImages(
-  research: ResearchClient,
-  rows: AdStudioLibraryTemplate[],
-): Promise<AdStudioLibraryTemplate[]> {
-  const exemplarIds = uniqueStrings(rows.flatMap((row) => row.exemplar_observed_ad_ids ?? []));
-  if (exemplarIds.length === 0) return rows;
-
-  const { data, error } = await research
-    .from("ad_creatives")
-    .select("observed_ad_id,primary_image_url,image_storage_path,video_thumbnail_url,media_assets")
-    .in("observed_ad_id", exemplarIds);
-
-  if (error) return rows;
-
-  const previewByObservedAdId = new Map<string, string>();
-  for (const creative of (data ?? []) as ExemplarCreativeRow[]) {
-    const observedAdId = stringValue(creative.observed_ad_id);
-    if (!observedAdId || previewByObservedAdId.has(observedAdId)) continue;
-    const previewImageUrl = resolveTemplatePreviewImageUrl(creative);
-    if (previewImageUrl) previewByObservedAdId.set(observedAdId, previewImageUrl);
-  }
-
-  return rows.map((row) => {
-    const previewImageUrl = (row.exemplar_observed_ad_ids ?? [])
-      .map((observedAdId) => previewByObservedAdId.get(observedAdId))
-      .find((value): value is string => Boolean(value));
-    return previewImageUrl ? { ...row, preview_image_url: previewImageUrl } : row;
-  });
-}
-
-function resolveTemplatePreviewImageUrl(row: ExemplarCreativeRow): string | null {
-  const storedImage = normaliseMediaUrl(row.image_storage_path);
-  if (storedImage) return storedImage;
-
-  if (Array.isArray(row.media_assets)) {
-    for (const asset of row.media_assets) {
-      if (!asset || typeof asset !== "object") continue;
-      const item = asset as Record<string, unknown>;
-      const kind = stringValue(item.kind) ?? stringValue(item.type) ?? stringValue(item.mediaType) ?? stringValue(item.media_type);
-      if (kind?.toLowerCase() === "video") {
-        const posterUrl =
-          normaliseMediaUrl(item.posterStoragePath) ??
-          normaliseMediaUrl(item.poster_storage_path) ??
-          normaliseMediaUrl(item.thumbnailStoragePath) ??
-          normaliseMediaUrl(item.thumbnail_storage_path) ??
-          normaliseMediaUrl(item.posterUrl) ??
-          normaliseMediaUrl(item.poster_url) ??
-          normaliseMediaUrl(item.thumbnailUrl) ??
-          normaliseMediaUrl(item.thumbnail_url);
-        if (posterUrl) return posterUrl;
-        continue;
-      }
-      const storagePath = stringValue(item.storagePath) ?? stringValue(item.storage_path);
-      const url = normaliseMediaUrl(storagePath) ?? normaliseMediaUrl(item.url) ?? normaliseMediaUrl(item.imageUrl) ?? normaliseMediaUrl(item.image_url);
-      if (url) return url;
-    }
-  }
-
-  return normaliseMediaUrl(row.video_thumbnail_url) ?? normaliseMediaUrl(row.primary_image_url);
-}
-
-function uniqueStrings(values: Array<string | null | undefined>): string[] {
-  return [...new Set(values.map(stringValue).filter((value): value is string => Boolean(value)))];
-}
-
-function stringValue(value: unknown): string | null {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return null;
 }

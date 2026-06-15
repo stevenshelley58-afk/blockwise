@@ -13,7 +13,6 @@ export type AdStudioTemplate = {
   creativeSkeleton?: CreativeSkeleton;
   exemplars?: string[];
   imageBriefId?: string;
-  previewImageUrl?: string;
   evidenceScore?: number;
   winnerRationale?: string;
   complianceNote?: string;
@@ -37,7 +36,6 @@ export type AdStudioLibraryTemplate = {
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
-  preview_image_url?: string | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
   compliance_note?: string | null;
@@ -374,27 +372,22 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const offerId = stringValue(row.offer_id) || builtIn?.offerId;
   if (!goal || !offerId) return null;
 
-  const headline = stringValue(row.headline);
-  const primaryText = stringValue(row.primary_text);
-  const description = stringValue(row.description);
-  const aiPromptSeed = stringValue(row.ai_prompt_seed);
-  const promptHint = [headline, primaryText, description, aiPromptSeed, row.cta ? `CTA: ${row.cta}` : ""]
-    .filter(Boolean)
-    .join(" ");
-
-  if (!promptHint) return null;
+  const promptHint = safeLibraryPromptHint({
+    builtIn,
+    goal,
+    offerId,
+  });
 
   const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
   const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
   const manualFirstPass = /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
-  const previewImageUrl = stringValue(row.preview_image_url);
 
   return {
     id: templateKey,
     templateKey,
-    name: builtIn?.name ?? humanizeTemplateName(templateKey, row.category, row.hook_style),
+    name: safeLibraryTemplateName({ builtIn, goal, offerId }),
     goal: goal as AdStudioGoal,
     offerId,
     promptHint,
@@ -407,7 +400,6 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     ...(manualFirstPass ? { manualFirstPass: true } : {}),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
-    ...(previewImageUrl ? { previewImageUrl } : {}),
   };
 }
 
@@ -429,9 +421,51 @@ export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_T
   active: true,
 }));
 
-function humanizeTemplateName(templateKey: string, category?: string | null, hookStyle?: string | null): string {
-  const label = [category, hookStyle].map(stringValue).filter(Boolean).join(" ");
-  return label ? toTitleCase(label) : toTitleCase(templateKey.replace(/[-_]+/gu, " "));
+function safeLibraryPromptHint(input: {
+  builtIn?: AdStudioTemplate;
+  goal: string;
+  offerId: string;
+}): string {
+  if (input.builtIn?.promptHint) return input.builtIn.promptHint;
+
+  const label = safeLibraryTemplateName(input);
+  const goal = toTitleCase(input.goal.replace(/[-_]+/gu, " "));
+  const offer = toTitleCase(input.offerId.replace(/[-_]+/gu, " "));
+  return `${label} template for ${goal}: use customer media, local market context, compliant copy, and a direct call to action for ${offer}.`;
+}
+
+function safeLibraryTemplateName(input: { builtIn?: AdStudioTemplate; goal: string; offerId: string }): string {
+  if (input.builtIn?.name) return input.builtIn.name;
+  switch (input.offerId) {
+    case "listing_inquiries":
+      return "Listing campaign";
+    case "home_value_update":
+      return "Free appraisal";
+    case "buyer_list":
+      return "Buyer inquiry";
+    case "market_report":
+      return "Market update";
+    case "download_guide":
+      return "Seller guide";
+    default:
+      break;
+  }
+  switch (input.goal) {
+    case "market_update_leads":
+      return "Market update";
+    case "appraisal_bookings":
+      return "Free appraisal";
+    case "open_home_followup":
+      return "Open home follow-up";
+    case "listing_nurture":
+      return "Sold nurture";
+    case "downsizer_leads":
+      return "Downsizer inquiry";
+    case "investor_leads":
+      return "Investor inquiry";
+    default:
+      return "Ad template";
+  }
 }
 
 function toTitleCase(value: string): string {

@@ -22,27 +22,31 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
     adstudio_template_id: "free_appraisal",
     offer_id: "home_value_update",
     goal: "appraisal_bookings",
-    headline: "Find out what your home is worth",
-    primary_text: "Book a local appraisal with a practical market read.",
+    headline: input.headline ?? "Find out what your home is worth",
+    primary_text: input.primary_text ?? "Book a local appraisal with a practical market read.",
     cta: "Book appraisal",
     evidence_score: input.evidence_score ?? 50,
     creative_skeleton: input.creative_skeleton,
     exemplar_observed_ad_ids: input.exemplar_observed_ad_ids,
-    preview_image_url: input.preview_image_url,
   };
 }
 
 test("template library pins skeleton-backed templates before older evidence-only rows", () => {
+  const leakedPreviewRow = row({
+    template_key: "DNA-70",
+    category: "creative dna",
+    hook_style: "markets don't guarantee great outcomes",
+    headline: "Don't undersell your home, call Andy Nye",
+    primary_text: "The real competitor wording should not appear in the template picker.",
+    evidence_score: 70,
+    creative_skeleton: skeleton,
+    exemplar_observed_ad_ids: ["observed-ad-1"],
+  }) as AdStudioLibraryTemplate & { preview_image_url: string };
+  leakedPreviewRow.preview_image_url = "https://cdn.example/observed-ad-1.jpg";
+
   const approved = [
     row({ template_key: "OLD-99", category: "legacy", evidence_score: 99 }),
-    row({
-      template_key: "DNA-70",
-      category: "creative dna",
-      evidence_score: 70,
-      creative_skeleton: skeleton,
-      exemplar_observed_ad_ids: ["observed-ad-1"],
-      preview_image_url: "https://cdn.example/observed-ad-1.jpg",
-    }),
+    leakedPreviewRow,
   ]
     .map((template) => mapAdStudioLibraryTemplate(template))
     .filter((template) => template !== null);
@@ -52,7 +56,9 @@ test("template library pins skeleton-backed templates before older evidence-only
   assert.equal(merged[0]?.id, "DNA-70");
   assert.equal(merged[0]?.creativeSkeleton?.archetype, skeleton.archetype);
   assert.deepEqual(merged[0]?.exemplars, ["observed-ad-1"]);
-  assert.equal(merged[0]?.previewImageUrl, "https://cdn.example/observed-ad-1.jpg");
+  assert.equal("previewImageUrl" in merged[0], false);
+  assert.doesNotMatch(merged[0]?.promptHint ?? "", /undersell|Andy Nye|competitor wording/i);
+  assert.doesNotMatch(merged[0]?.name ?? "", /markets don't guarantee|creative dna/i);
   assert.ok(
     merged.findIndex((template) => template.id === "DNA-70") < merged.findIndex((template) => template.id === "OLD-99"),
   );

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Copy, Plus, Radar, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -36,21 +37,16 @@ type ReuseAd = {
   createdAt: string | null;
 };
 
-type RadarMedia = { kind: string; url: string };
 type RadarAd = {
   savedId: string;
   observedAdId: string;
-  pageName: string;
-  headline: string;
-  body: string;
   cta: string;
   adType: string;
   primaryIntent: string;
   hooks: string[];
-  thumb: string | null;
 };
 
-type RadarInspiration = Pick<RadarAd, "savedId" | "observedAdId" | "cta" | "adType" | "primaryIntent" | "hooks">;
+type RadarInspiration = RadarAd;
 
 type NewAdDialogProps = {
   open: boolean;
@@ -276,14 +272,9 @@ export function NewAdDialog({
   }
 
   function chooseRadar(ad: RadarAd) {
-    const brief = [ad.headline, ad.body, ad.cta ? `CTA: ${ad.cta}` : ""]
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .join("\n\n")
-      .slice(0, 480);
     setTemplateId("");
-    setDescription(brief);
-    setSourceNote(`Copied from ${ad.pageName} on Ad Radar. Add your own photo and Blockwise will write your version.`);
+    setDescription("Use this saved Ad Radar pattern as structure only. Write original Blockwise copy for this campaign.");
+    setSourceNote("Ad Radar structure selected. Add your own photo and Blockwise will write an original version.");
     setRadarInspiration({
       savedId: ad.savedId,
       observedAdId: ad.observedAdId,
@@ -434,15 +425,8 @@ export function NewAdDialog({
                     {visibleTemplates.map((template, index) => (
                       <article key={template.id} className="studio-explore-card">
                         <div className={`studio-explore-thumb g${index % 7}`}>
-                          {template.previewImageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={template.previewImageUrl} alt="" onError={(event) => (event.currentTarget.style.display = "none")} />
-                          ) : (
-                            <span className="studio-explore-ph">
-                              <ImageIcon aria-hidden size={24} />
-                              PLACEHOLDER
-                            </span>
-                          )}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={templatePreviewDataUrl(template, brandKit)} alt="" />
                           {isNewTemplate(template) && <span className="studio-explore-badge">NEW</span>}
                         </div>
                         <div className="studio-explore-meta">
@@ -517,23 +501,18 @@ export function NewAdDialog({
                     radarAds.map((ad, index) => (
                       <article key={ad.savedId} className="studio-explore-card">
                         <div className={`studio-explore-thumb g${index % 7}`}>
-                          {ad.thumb ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={ad.thumb} alt="" onError={(event) => (event.currentTarget.style.display = "none")} />
-                          ) : (
-                            <span className="studio-explore-ph">
-                              <Radar aria-hidden size={22} />
-                            </span>
-                          )}
+                          <span className="studio-explore-ph">
+                            <Radar aria-hidden size={22} />
+                          </span>
                         </div>
                         <div className="studio-explore-meta">
                           <div className="studio-explore-row">
-                            <strong>{ad.headline || ad.body || "Untitled ad"}</strong>
+                            <strong>Saved Ad Radar inspiration</strong>
                             <ArrowUpRight aria-hidden size={16} />
                           </div>
-                          <p>{ad.pageName}</p>
+                          <p>Uses the selected ad structure internally. Competitor creative is not copied or shown.</p>
                           <button type="button" className="studio-explore-use" onClick={() => chooseRadar(ad)}>
-                            Use this ad
+                            Use inspiration
                           </button>
                         </div>
                       </article>
@@ -630,7 +609,6 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
           hooks?: string[] | null;
         };
         page?: { name?: string | null };
-        media?: RadarMedia[];
       }
     | null
     | undefined;
@@ -638,22 +616,11 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
   const savedId = String(entry.id ?? "");
   if (!savedId) return null;
   const observedAdId = String(entry.observedAdId ?? ad.id ?? handoffPayload.observedAdId ?? "");
-  const headline = ad.creative?.headline?.trim() ?? "";
-  const body = ad.creative?.body?.trim() ?? "";
   const cta = ad.creative?.cta?.trim() ?? "";
-  if (!headline && !body) return null;
-  const image = (ad.media ?? []).find(
-    (item) =>
-      (item.kind === "image" || item.kind === "thumbnail") &&
-      typeof item.url === "string" &&
-      /^https?:\/\//i.test(item.url),
-  );
+  if (!observedAdId) return null;
   return {
     savedId,
     observedAdId,
-    pageName: ad.page?.name?.trim() || "Unknown advertiser",
-    headline,
-    body,
     cta,
     adType: ad.creative?.adType?.trim() || stringValue(handoffPayload.adType),
     primaryIntent: ad.creative?.primaryIntent?.trim() || stringValue(handoffPayload.primaryIntent),
@@ -662,7 +629,6 @@ function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
       : Array.isArray(handoffPayload.hooks)
         ? handoffPayload.hooks.filter((hook): hook is string => typeof hook === "string" && hook.trim().length > 0)
         : [],
-    thumb: image?.url ?? null,
   };
 }
 
@@ -716,7 +682,7 @@ const EXPLORE_STYLES = `
 .studio-explore-card{display:flex;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;transition:transform .15s,box-shadow .15s}
 .studio-explore-card:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}
 .studio-explore-thumb{position:relative;aspect-ratio:16/10;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
-.studio-explore-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.studio-explore-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.7px;color:rgba(15,23,42,.35)}
 .studio-explore-badge{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;letter-spacing:.4px;background:#c9f24a;color:#1c2b08;border-radius:999px;padding:3px 9px}
 .studio-explore-thumb.g0{background:#edf5e7}
