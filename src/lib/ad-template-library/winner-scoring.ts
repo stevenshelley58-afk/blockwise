@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { AdStudioGoal } from "../adstudio/types.ts";
+import type { CreativeSkeleton } from "./skeleton.ts";
 
 export const WINNER_SCORER_VERSION = "winner-scorer-v1";
 export const WINNER_THRESHOLD = 70;
@@ -27,6 +28,16 @@ export type WinnerCandidate = {
   isActive: boolean;
   creativeVersions: number;
   crossAgencyCount: number;
+  ownedPerformance?: OwnedAdPerformanceSignal | null;
+};
+
+export type OwnedAdPerformanceSignal = {
+  impressions: number;
+  clicks: number;
+  leads: number;
+  qualifiedLeads: number;
+  spendCents: number;
+  leadQualityScore?: number | null;
 };
 
 export type ObjectiveScore = {
@@ -58,6 +69,7 @@ export type DeterministicReview = {
 
 export type WinnerScore = ObjectiveScore & {
   review: DeterministicReview;
+  performanceScore: number | null;
   compositeScore: number;
   isWinner: boolean;
 };
@@ -67,6 +79,7 @@ export type WinnerForMining = WinnerCandidate & {
   objectiveScore: number;
   scorerVersion: string;
   rationale: string | null;
+  creativeSkeleton?: CreativeSkeleton | null;
 };
 
 export type TemplateDraft = {
@@ -86,6 +99,8 @@ export type TemplateDraft = {
   cta: string | null;
   variables: string[];
   imageBriefId: string | null;
+  creativeSkeleton?: CreativeSkeleton;
+  exemplarObservedAdIds: string[];
   evidenceScore: number;
   sourceObservedAdIds: string[];
   winnerRationale: string;
@@ -269,14 +284,34 @@ export function deterministicReview(candidate: WinnerCandidate): DeterministicRe
 export function scoreWinnerCandidate(candidate: WinnerCandidate, now = new Date()): WinnerScore {
   const objective = calculateObjectiveScore(candidate, now);
   const review = deterministicReview(candidate);
-  const compositeScore = round1(objective.score * 0.5 + review.score * 0.5);
+  const performanceScore = calculateOwnedPerformanceScore(candidate.ownedPerformance);
+  const compositeScore = performanceScore === null
+    ? round1(objective.score * 0.5 + review.score * 0.5)
+    : round1(objective.score * 0.3 + review.score * 0.3 + performanceScore * 0.4);
 
   return {
     ...objective,
     review,
+    performanceScore,
     compositeScore,
     isWinner: review.marketRelevant && compositeScore >= WINNER_THRESHOLD,
   };
+}
+
+export function calculateOwnedPerformanceScore(signal: OwnedAdPerformanceSignal | null | undefined): number | null {
+  if (!signal || signal.impressions < 500) return null;
+  const ctr = signal.impressions > 0 ? signal.clicks / signal.impressions : 0;
+  const leadRate = signal.clicks > 0 ? signal.leads / signal.clicks : 0;
+  const qualifiedRate = signal.leads > 0 ? signal.qualifiedLeads / signal.leads : 0;
+  const cplCents = signal.leads > 0 ? signal.spendCents / signal.leads : null;
+  const ctrScore = clamp((ctr / 0.02) * 25, 0, 25);
+  const leadRateScore = clamp((leadRate / 0.08) * 25, 0, 25);
+  const qualifiedScore = clamp((qualifiedRate / 0.6) * 25, 0, 25);
+  const cplScore = cplCents === null ? 0 : clamp(25 - (cplCents / 20000) * 25, 0, 25);
+  const qualityBoost = signal.leadQualityScore === null || signal.leadQualityScore === undefined
+    ? 0
+    : clamp(signal.leadQualityScore / 10, 0, 10);
+  return clamp(round1(ctrScore + leadRateScore + qualifiedScore + cplScore + qualityBoost), 0, 100);
 }
 
 export function buildTemplateDraftsFromWinners(
@@ -385,9 +420,11 @@ function buildTemplateDraft(clusterKey: string, sources: WinnerForMining[]): Tem
   const evidenceScore = round1(sources.reduce((sum, source) => sum + source.compositeScore, 0) / sources.length);
   const sourceIds = sources.map((source) => source.observedAdId);
   const variables = extractVariables([top.headline, top.body, top.cta].filter(Boolean).join(" "));
+  const creativeSkeleton = aggregateCreativeSkeletons(sources);
+  const templateKey = deriveTemplateKey(clusterKey);
 
   return {
-    templateKey: deriveTemplateKey(clusterKey),
+    templateKey,
     clusterKey,
     category,
     audience: mapping.audience,
@@ -402,7 +439,9 @@ function buildTemplateDraft(clusterKey: string, sources: WinnerForMining[]): Tem
     description: null,
     cta: top.cta,
     variables,
-    imageBriefId: mapping.imageBriefId,
+    imageBriefId: creativeSkeleton ? `creative-skeleton-${templateKey.toLowerCase()}` : mapping.imageBriefId,
+    ...(creativeSkeleton ? { creativeSkeleton } : {}),
+    exemplarObservedAdIds: sources.filter((source) => source.creativeSkeleton).map((source) => source.observedAdId).slice(0, 3),
     evidenceScore,
     sourceObservedAdIds: sourceIds,
     winnerRationale: `Mined from ${sources.length} winning ad${sources.length === 1 ? "" : "s"} in ${clusterKey}; mean composite score ${evidenceScore}.`,
@@ -410,6 +449,65 @@ function buildTemplateDraft(clusterKey: string, sources: WinnerForMining[]): Tem
       ? "Deterministic scorer flagged non-blocking copy warnings; operator review required before approval."
       : null,
     scorerVersion: top.scorerVersion || WINNER_SCORER_VERSION,
+  };
+}
+
+function aggregateCreativeSkeletons(sources: WinnerForMining[]): CreativeSkeleton | undefined {
+  const skeletons = sources
+    .map((source) => source.creativeSkeleton)
+    .filter((skeleton): skeleton is CreativeSkeleton => Boolean(skeleton));
+  if (skeletons.length === 0) return undefined;
+
+  const base = [...skeletons].sort((left, right) => right.confidence - left.confidence)[0];
+  const zoneCount = Math.min(6, Math.max(...skeletons.map((skeleton) => skeleton.composition.copy_safe_zones.length)));
+  const copySafeZones = Array.from({ length: zoneCount }, (_, index) => {
+    const zones = skeletons.map((skeleton) => skeleton.composition.copy_safe_zones[index]).filter(Boolean);
+    const fallback = base.composition.copy_safe_zones[Math.min(index, base.composition.copy_safe_zones.length - 1)];
+    const priority = mode(zones.map((zone) => zone.priority).filter(Boolean));
+    const x = round3(median(zones.map((zone) => zone.x)) ?? fallback.x);
+    const y = round3(median(zones.map((zone) => zone.y)) ?? fallback.y);
+    const width = Math.min(round3(median(zones.map((zone) => zone.width)) ?? fallback.width), round3(1 - x));
+    const height = Math.min(round3(median(zones.map((zone) => zone.height)) ?? fallback.height), round3(1 - y));
+    return {
+      id: mode(zones.map((zone) => zone.id)) ?? fallback.id,
+      x,
+      y,
+      width,
+      height,
+      ...(priority ? { priority } : {}),
+    };
+  });
+
+  return {
+    version: 1,
+    archetype: mode(skeletons.map((skeleton) => skeleton.archetype)) ?? base.archetype,
+    shot: {
+      type: mode(skeletons.map((skeleton) => skeleton.shot.type)) ?? base.shot.type,
+      lighting: mode(skeletons.map((skeleton) => skeleton.shot.lighting)) ?? base.shot.lighting,
+      mood: mode(skeletons.map((skeleton) => skeleton.shot.mood)) ?? base.shot.mood,
+    },
+    composition: {
+      focal_point: mode(skeletons.map((skeleton) => skeleton.composition.focal_point)) ?? base.composition.focal_point,
+      horizon: mode(skeletons.map((skeleton) => skeleton.composition.horizon)) ?? base.composition.horizon,
+      copy_safe_zones: copySafeZones,
+    },
+    color: {
+      palette: modePalette(skeletons) ?? base.color.palette,
+      overlay: mode(skeletons.map((skeleton) => skeleton.color.overlay)) ?? base.color.overlay,
+      contrast: mode(skeletons.map((skeleton) => skeleton.color.contrast)) ?? base.color.contrast,
+    },
+    text_system: {
+      headline_zone: mode(skeletons.map((skeleton) => skeleton.text_system.headline_zone)) ?? base.text_system.headline_zone,
+      badge: mode(skeletons.map((skeleton) => skeleton.text_system.badge)) ?? base.text_system.badge,
+      cta_style: mode(skeletons.map((skeleton) => skeleton.text_system.cta_style)) ?? base.text_system.cta_style,
+    },
+    copy: {
+      hook_style: mode(skeletons.map((skeleton) => skeleton.copy.hook_style)) ?? base.copy.hook_style,
+      headline_pattern: mode(skeletons.map((skeleton) => skeleton.copy.headline_pattern)) ?? base.copy.headline_pattern,
+      cta: mode(skeletons.map((skeleton) => skeleton.copy.cta)) ?? base.copy.cta,
+    },
+    variables: [...new Set(skeletons.flatMap((skeleton) => skeleton.variables))].sort(),
+    confidence: round1(skeletons.reduce((sum, skeleton) => sum + skeleton.confidence, 0) / skeletons.length),
   };
 }
 
@@ -488,6 +586,40 @@ function clamp(value: number, min: number, max: number): number {
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+function median(values: number[]): number | null {
+  const sorted = values.filter(Number.isFinite).sort((left, right) => left - right);
+  if (sorted.length === 0) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2 : sorted[middle];
+}
+
+function mode<T extends string>(values: Array<T | null | undefined>): T | null {
+  const counts = new Map<T, number>();
+  for (const value of values) {
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] ?? null;
+}
+
+function modePalette(skeletons: CreativeSkeleton[]): string[] | null {
+  const counts = new Map<string, number>();
+  for (const skeleton of skeletons) {
+    for (const color of skeleton.color.palette) {
+      counts.set(color, (counts.get(color) ?? 0) + 1);
+    }
+  }
+  const palette = [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 8)
+    .map(([color]) => color);
+  return palette.length > 0 ? palette : null;
 }
 
 function stringValue(value: unknown): string | null {

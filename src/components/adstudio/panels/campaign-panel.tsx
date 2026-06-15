@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Globe2, Home, ImagePlus, LayoutGrid, MapPin, Target, Wand } from "lucide-react";
+import { BadgeCheck, Copy, Globe2, Home, ImagePlus, LayoutGrid, MapPin, Radar, Target, Wand } from "lucide-react";
 
 import type { AdStudioOfferTemplate, AdStudioTemplate } from "@/lib/adstudio";
 
@@ -21,6 +21,9 @@ type CampaignPanelProps = {
   variantCount: number;
   onCreateAd: () => void;
   onBrowseTemplates: () => void;
+  onReuseAd: () => void;
+  onCopyFromRadar: () => void;
+  onStartBlank: () => void;
   templates: AdStudioTemplate[];
 };
 
@@ -54,6 +57,9 @@ export function CampaignPanel({
   variantCount,
   onCreateAd,
   onBrowseTemplates,
+  onReuseAd,
+  onCopyFromRadar,
+  onStartBlank,
   templates,
 }: CampaignPanelProps) {
   if (variantCount === 0) {
@@ -71,12 +77,23 @@ export function CampaignPanel({
             for Meta in about a minute.
           </p>
           <div className="studio-empty-row">
-            <button className="studio-btn publish" type="button" onClick={onCreateAd}>
+            <button className="studio-btn publish" type="button" onClick={onBrowseTemplates}>
               <Wand aria-hidden size={16} />
-              Create ad
+              Start with template
             </button>
-            <button className="studio-btn secondary" type="button" onClick={onBrowseTemplates}>
-              Browse templates
+            <button className="studio-btn secondary" type="button" onClick={onReuseAd}>
+              <Copy aria-hidden size={16} />
+              Reuse ad
+            </button>
+          </div>
+          <div className="studio-empty-row">
+            <button className="studio-btn secondary" type="button" onClick={onCopyFromRadar}>
+              <Radar aria-hidden size={16} />
+              Copy from Radar
+            </button>
+            <button className="studio-btn secondary" type="button" onClick={onStartBlank}>
+              <ImagePlus aria-hidden size={16} />
+              Start blank
             </button>
           </div>
           <div className="studio-mini-tpls" aria-label="Featured templates">

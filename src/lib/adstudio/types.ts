@@ -137,6 +137,10 @@ export type AdStudioCampaign = {
   };
   audienceIntent: string;
   offerId: string;
+  templateKey?: string | null;
+  templateSource?: "builtin" | "operator" | "radar" | "ad_radar" | null;
+  sourceObservedAdId?: string | null;
+  templateSnapshot?: Record<string, unknown> | null;
   platforms: AdStudioPlatform[];
   creativeFormats: AdStudioFormat[];
   status: "draft" | "generating" | "ready" | "blocked" | "exported" | "archived";

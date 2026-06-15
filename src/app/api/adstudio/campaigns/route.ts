@@ -10,8 +10,9 @@ import {
 import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
+import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
-import { AD_STUDIO_TEMPLATES, FIRST_AD_FORMATS, resolveAdStudioTemplate, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
+import { FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,7 +52,7 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story, Feed, and Square.";
   }
-  if (firstAd.mode === "template" && !AD_STUDIO_TEMPLATES.some((template) => template.id === firstAd.templateId)) {
+  if (firstAd.mode === "template" && !(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
     return "Selected template was not found.";
   }
   return null;
@@ -110,6 +111,12 @@ export async function POST(request: NextRequest) {
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
+    const resolvedTemplate = body.firstAd?.mode === "template"
+      ? await resolveApprovedAdStudioTemplate({
+          templateKey: body.firstAd.templateKey,
+          templateId: body.firstAd.templateId,
+        })
+      : null;
 
     const trialGate = await reserveAdStudioGenerationCredit({
       supabase: context.supabase,
@@ -152,8 +159,8 @@ export async function POST(request: NextRequest) {
       variantCount: body.variantCount ?? 5,
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
+      resolvedTemplate,
     });
-    const template = body.firstAd?.mode === "template" ? resolveAdStudioTemplate(body.firstAd.templateId) : null;
     const sourceImageUrl = await resolveAdStudioImageForModel(
       context.supabase,
       context.access.workspaceId,
@@ -164,8 +171,8 @@ export async function POST(request: NextRequest) {
       workspaceId: context.access.workspaceId,
       userId: context.access.userId,
       brief: body.firstAd?.description,
-      templateName: template?.name,
-      templateHint: template?.promptHint,
+      templateName: resolvedTemplate?.name,
+      templateHint: templatePromptHint(resolvedTemplate),
       sourceImageUrl,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);

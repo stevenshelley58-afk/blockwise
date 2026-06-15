@@ -1,0 +1,92 @@
+{
+  "creativeSkeletons": [
+    {
+      "version": 1,
+      "archetype": "listing_hero",
+      "shot": { "type": "front exterior hero", "lighting": "warm late afternoon", "mood": "premium local confidence" },
+      "composition": {
+        "focal_point": "property facade on right third",
+        "horizon": "middle",
+        "copy_safe_zones": [{ "id": "left-copy", "x": 0.06, "y": 0.1, "width": 0.38, "height": 0.72, "priority": "primary" }]
+      },
+      "color": { "palette": ["charcoal", "white", "warm gold"], "overlay": "left-to-right charcoal scrim", "contrast": "high" },
+      "text_system": { "headline_zone": "left stacked block", "badge": "top-left suburb badge", "cta_style": "solid brand button" },
+      "copy": { "hook_style": "local proof", "headline_pattern": "Just listed in {suburb}", "cta": "View property" },
+      "variables": ["suburb", "property_type", "agency_name"],
+      "confidence": 92
+    },
+    {
+      "version": 1,
+      "archetype": "market_stat",
+      "shot": { "type": "suburb lifestyle street", "lighting": "clean daylight", "mood": "practical market authority" },
+      "composition": {
+        "focal_point": "street scene softened behind statistic card",
+        "horizon": "high",
+        "copy_safe_zones": [{ "id": "stat-panel", "x": 0.09, "y": 0.14, "width": 0.52, "height": 0.58, "priority": "primary" }]
+      },
+      "color": { "palette": ["navy", "white", "fresh green"], "overlay": "soft white panel over image", "contrast": "high" },
+      "text_system": { "headline_zone": "large stat card", "badge": "monthly update pill", "cta_style": "underlined text CTA" },
+      "copy": { "hook_style": "market update", "headline_pattern": "{suburb} market snapshot", "cta": "Get the report" },
+      "variables": ["suburb", "month", "median_price"],
+      "confidence": 88
+    },
+    {
+      "version": 1,
+      "archetype": "appraisal",
+      "shot": { "type": "agent portrait with home backdrop", "lighting": "soft studio daylight", "mood": "calm expert guidance" },
+      "composition": {
+        "focal_point": "agent portrait on lower right",
+        "horizon": "none",
+        "copy_safe_zones": [{ "id": "headline-top", "x": 0.08, "y": 0.08, "width": 0.72, "height": 0.34, "priority": "primary" }]
+      },
+      "color": { "palette": ["white", "deep teal", "soft grey"], "overlay": "subtle translucent brand wash", "contrast": "medium" },
+      "text_system": { "headline_zone": "top-left headline", "badge": "free price update badge", "cta_style": "rounded brand button" },
+      "copy": { "hook_style": "low-pressure offer", "headline_pattern": "What could your {suburb} home be worth?", "cta": "Request update" },
+      "variables": ["suburb", "agent_name"],
+      "confidence": 85
+    },
+    {
+      "version": 1,
+      "archetype": "open_home",
+      "shot": { "type": "bright interior living room", "lighting": "natural window light", "mood": "inviting inspection" },
+      "composition": {
+        "focal_point": "living area depth through centre",
+        "horizon": "middle",
+        "copy_safe_zones": [
+          { "id": "event-strip", "x": 0.05, "y": 0.68, "width": 0.9, "height": 0.22, "priority": "primary" },
+          { "id": "badge", "x": 0.06, "y": 0.08, "width": 0.28, "height": 0.12, "priority": "secondary" }
+        ]
+      },
+      "color": { "palette": ["white", "black", "brand red"], "overlay": "bottom gradient for event details", "contrast": "high" },
+      "text_system": { "headline_zone": "bottom event strip", "badge": "open home label", "cta_style": "compact pill" },
+      "copy": { "hook_style": "event reminder", "headline_pattern": "Open this {day}", "cta": "Get details" },
+      "variables": ["day", "time", "address"],
+      "confidence": 90
+    },
+    {
+      "version": 1,
+      "archetype": "social_proof",
+      "shot": { "type": "sold sticker and smiling owners", "lighting": "outdoor shade", "mood": "credible local momentum" },
+      "composition": {
+        "focal_point": "sold sign on left with people in background",
+        "horizon": "middle",
+        "copy_safe_zones": [{ "id": "proof-copy", "x": 0.48, "y": 0.12, "width": 0.44, "height": 0.58, "priority": "primary" }]
+      },
+      "color": { "palette": ["white", "black", "sold red"], "overlay": "right-side light scrim", "contrast": "high" },
+      "text_system": { "headline_zone": "right proof block", "badge": "results badge", "cta_style": "solid contrast CTA" },
+      "copy": { "hook_style": "social proof", "headline_pattern": "More buyers are looking in {suburb}", "cta": "Check demand" },
+      "variables": ["suburb", "buyer_count"],
+      "confidence": 84
+    }
+  ],
+  "sampleGeneratedAd": {
+    "templateKey": "market-update-suburb-snapshot",
+    "format": "4:5",
+    "skeletonArchetype": "market_stat",
+    "headline": "Maylands market snapshot",
+    "primaryText": "See what recent buyer demand means for your next move.",
+    "cta": "Get the report",
+    "imagePrompt": "Clean daylight suburb street scene with a soft white statistics panel on the left; keep the panel area empty for headline and market metrics.",
+    "copySafeZoneIds": ["stat-panel"]
+  }
+}

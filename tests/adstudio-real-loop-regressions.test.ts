@@ -327,21 +327,59 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
+  const layout = readFileSync("src/lib/adstudio/layout-archetypes.ts", "utf8");
+  const persistence = readFileSync("src/lib/adstudio/persistence.ts", "utf8");
+  const metaExecution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
+  const monitor = readFileSync("src/lib/meta-monitor/calculations.ts", "utf8");
+  const templatePanel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
+  const studioStyles = readFileSync("src/components/adstudio/styles.ts", "utf8");
 
   assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
   assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : AD_STUDIO_TEMPLATES/);
+  assert.doesNotMatch(workbench, /NEXT_PUBLIC_ADSTUDIO_SKELETON_GENERATION/);
+  assert.match(workbench, /activeTemplate\?\.creativeSkeleton/);
   assert.match(route, /export async function GET/);
   assert.match(route, /export async function PATCH/);
   assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
   assert.match(route, /from\("v_ad_template_library"\)/);
   assert.match(route, /from\("ad_template_candidates"\)/);
+  assert.match(route, /creative_skeleton,exemplar_observed_ad_ids/);
   assert.match(route, /action: z\.enum\(\["approve", "archive"\]\)/);
   assert.match(route, /source: "builtin_fallback"/);
   assert.match(route, /Operator access is required/);
   assert.match(templates, /mapAdStudioLibraryTemplate/);
+  assert.match(templates, /creativeSkeleton\?: CreativeSkeleton/);
+  assert.match(templates, /manualFirstPass\?: boolean/);
   assert.match(templates, /mergeAdStudioTemplateLibrary/);
   assert.match(templates, /isBuiltInAdStudioTemplate/);
+  assert.match(templatePanel, /templatePreviewDataUrl\(template, brandKit\)/);
+  assert.doesNotMatch(templatePanel, /previewImageUrl|observedAd.*src|exemplar.*src/i);
+  assert.match(studioStyles, /\.studio-tpl-photo\{[^}]*object-fit:contain[^}]*background:#fff/);
+  assert.doesNotMatch(dialog, /isBuiltInAdStudioTemplate/);
+  assert.match(dialog, /mode: isBlank \? "custom" : "template"/);
+  assert.match(dialog, /source = radarInspiration \? "ad_radar" : isBlank \? "blank" : "template_library"/);
+  assert.match(dialog, /templateKey: isBlank \? undefined : selectedTemplate\?\.templateKey \?\? selectedTemplate\?\.id/);
+  assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
+  assert.match(createRoute, /resolvedTemplate/);
+  assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
+  assert.match(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
+  assert.match(generator, /templateKey/);
+  assert.match(generator, /templateSnapshot/);
+  assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);
+  assert.match(generator, /Template exemplars remain internal evidence inside the template snapshot/);
+  assert.match(generator, /creativeSkeleton: input\.template\?\.creativeSkeleton/);
+  assert.match(persistence, /source_observed_ad_id: pack\.campaign\.sourceObservedAdId/);
+  assert.match(layout, /geometryForSkeleton/);
+  assert.match(layout, /copy_safe_zones/);
+  assert.match(persistence, /template_key: pack\.campaign\.templateKey/);
+  assert.match(persistence, /template_snapshot_json: pack\.campaign\.templateSnapshot/);
+  assert.match(metaExecution, /template: pack\.campaign\.templateKey \?\? pack\.campaign\.offerId/);
+  assert.match(metaExecution, /tagValue\(tag\.template\)/);
+  assert.match(monitor, /\[a-z0-9_-\]\+/);
 });
 
 test("Ad Radar longest-running sort reaches the authenticated search route", () => {
@@ -350,7 +388,7 @@ test("Ad Radar longest-running sort reaches the authenticated search route", () 
   const search = readFileSync("src/lib/research/ad-radar-card-search.ts", "utf8");
 
   assert.match(panel, /if \(activeSort !== "recent"\) params\.set\("sort", activeSort\)/);
-  assert.match(panel, /doSearch\(initialQuery, initialSort\)/);
+  assert.match(panel, /doSearch\(initialQuery, initialSort, initialIncludeSurrounding\)/);
   assert.match(route, /searchParams\.get\("sort"\) === "longest"/);
   assert.match(route, /searchCustomerMetaAdLibraryCards/);
   assert.match(search, /ad_delivery_started_at/);

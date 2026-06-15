@@ -7,6 +7,7 @@ export type ModelProfileKey =
   | "high_quality_strategy"
   | "structured_json"
   | "vision_classification"
+  | "vision_extract"
   | "image_draft"
   | "image_final"
   | "compliance_review"
@@ -189,6 +190,37 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxLatencyMs: 12_000,
     },
     fallbacks: [],
+  },
+  vision_extract: {
+    key: "vision_extract",
+    label: "Vision extraction",
+    task: "Schema-bound creative skeleton extraction from winning ad images",
+    enabled: true,
+    requiresStructuredOutput: true,
+    maxRunCostUsd: 0.8,
+    defaultTemperature: 0.1,
+    primary: {
+      provider: "openai",
+      model: "gpt-4.1-mini",
+      inputUsdPerMillionTokens: 0.4,
+      outputUsdPerMillionTokens: 1.6,
+      imageUsdPerUnit: 0.01,
+      supportsStructuredOutput: true,
+      maxContextTokens: 128_000,
+      maxLatencyMs: 20_000,
+    },
+    fallbacks: [
+      {
+        provider: "openrouter",
+        model: "google/gemini-2.0-flash-001",
+        inputUsdPerMillionTokens: 0.1,
+        outputUsdPerMillionTokens: 0.4,
+        imageUsdPerUnit: 0,
+        supportsStructuredOutput: true,
+        maxContextTokens: 1_000_000,
+        maxLatencyMs: 20_000,
+      },
+    ],
   },
   image_draft: {
     key: "image_draft",

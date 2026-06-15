@@ -96,6 +96,10 @@ export async function persistAdStudioCampaignPack(
       market_json: pack.campaign.market,
       audience_intent: pack.campaign.audienceIntent,
       offer_id: pack.campaign.offerId,
+      template_key: pack.campaign.templateKey ?? null,
+      template_source: pack.campaign.templateSource ?? null,
+      source_observed_ad_id: pack.campaign.sourceObservedAdId ?? null,
+      template_snapshot_json: pack.campaign.templateSnapshot ?? {},
       platforms_json: pack.campaign.platforms,
       creative_formats_json: pack.campaign.creativeFormats,
       status: pack.campaign.status,
@@ -375,6 +379,10 @@ export function rowToCampaignPack(input: {
     market: input.campaign.market_json as AdStudioCampaign["market"],
     audienceIntent: String(input.campaign.audience_intent ?? ""),
     offerId: String(input.campaign.offer_id ?? ""),
+    templateKey: optionalString(input.campaign.template_key),
+    templateSource: templateSource(input.campaign.template_source),
+    sourceObservedAdId: optionalString(input.campaign.source_observed_ad_id),
+    templateSnapshot: isRecord(input.campaign.template_snapshot_json) ? input.campaign.template_snapshot_json : null,
     platforms: (input.campaign.platforms_json as AdStudioCampaign["platforms"]) ?? [],
     creativeFormats: (input.campaign.creative_formats_json as AdStudioCampaign["creativeFormats"]) ?? [],
     status: (input.campaign.status as AdStudioCampaign["status"]) ?? "ready",
@@ -388,4 +396,17 @@ export function rowToCampaignPack(input: {
     copyPacks: input.copy.map(rowToCopyPack),
     compliance: rowToCompliance(input.compliance, campaignId),
   };
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function templateSource(value: unknown): AdStudioCampaign["templateSource"] {
+  if (value === "builtin" || value === "operator" || value === "radar" || value === "ad_radar") return value;
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

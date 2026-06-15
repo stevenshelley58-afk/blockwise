@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   assembleImagePrompt,
   assembleMetaCopyPrompt,
+  assembleSkeletonExtractionPrompt,
   PromptAssemblyError,
   renderTemplate,
 } from "../src/lib/operator/prompts/assemble-prompt.ts";
@@ -47,6 +48,13 @@ const imageKeys: PromptKey[] = [
   "adstudio.image.brand_rules",
   "adstudio.image.negative_prompt",
   "adstudio.image.aspect_ratio_rules",
+];
+
+const skeletonKeys: PromptKey[] = [
+  "adstudio.skeleton.system",
+  "adstudio.skeleton.input_template",
+  "adstudio.skeleton.output_schema",
+  "adstudio.skeleton.extraction_rules",
 ];
 
 test("prompt governance migrations keep lifecycle RPCs service-only and key-locked", () => {
@@ -155,6 +163,8 @@ test("template renderer rejects unknown placeholders", () => {
         NEGATIVE_PROMPT: "",
         ASPECT_RATIO_RULES: "",
         REFERENCE_ASSETS: "",
+        SKELETON_INPUT: "",
+        EXTRACTION_RULES: "",
       }),
     /Unknown prompt placeholder: NOT_ALLOWED/,
   );
@@ -259,6 +269,28 @@ test("prompt preview runner is assemble-only by default and blocks provider exec
       }),
     /Provider execution is disabled for prompt previews/,
   );
+});
+
+test("skeleton extraction prompts are active and assemble to strict JSON instructions", async () => {
+  const bundle = await getActivePromptBundle(skeletonKeys, undefined, null);
+  const prompt = assembleSkeletonExtractionPrompt({
+    bundle,
+    observedAd: {
+      headline: "Perth Market Update",
+      body: "Get your free Perth suburb market report.",
+      cta: "Get the report",
+      adType: "market_update",
+      primaryIntent: "seller_leads",
+      format: "4:5",
+      imageUrl: "https://cdn.example/ad.png",
+      advertiserName: "Northstar Realty",
+    },
+  });
+
+  assert.match(prompt.fullPrompt, /copy_safe_zones/);
+  assert.match(prompt.fullPrompt, /Pick the closest existing Ad Studio archetype/);
+  assert.match(prompt.fullPrompt, /Headline: Perth Market Update/);
+  assert.equal(prompt.promptVersions.length, 4);
 });
 
 test("provider run redaction removes raw prompts and uploaded image base64", async () => {

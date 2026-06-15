@@ -16,6 +16,9 @@ type MediaPanelProps = {
   onSelectImage?: (src: string) => void;
   onGenerateBackground?: () => void;
   generatingBackground?: boolean;
+  onRepairCurrent?: () => void;
+  onRepairAll?: () => void;
+  repairingImage?: boolean;
 };
 
 export function MediaPanel({
@@ -28,6 +31,9 @@ export function MediaPanel({
   onSelectImage,
   onGenerateBackground,
   generatingBackground = false,
+  onRepairCurrent,
+  onRepairAll,
+  repairingImage = false,
 }: MediaPanelProps) {
   const selectedAsset = mediaAssets.find((asset) => asset.src === primaryImage);
   const currentLabel = selectedAsset?.label ?? primaryImageName ?? "Uploaded image";
@@ -66,6 +72,20 @@ export function MediaPanel({
         <button className="studio-btn secondary block" type="button" disabled={generatingBackground} onClick={onGenerateBackground}>
           {generatingBackground ? "Generating background..." : "Generate background"}
         </button>
+      )}
+      {(onRepairCurrent || onRepairAll) && (
+        <div className="studio-image-repair-actions" aria-label="AI image repair">
+          {onRepairAll && (
+            <button className="studio-btn accent block" type="button" disabled={repairingImage} onClick={onRepairAll}>
+              {repairingImage ? "Fitting photo..." : "AI fit all ad sizes"}
+            </button>
+          )}
+          {onRepairCurrent && (
+            <button className="studio-btn secondary block" type="button" disabled={repairingImage} onClick={onRepairCurrent}>
+              AI fit current size
+            </button>
+          )}
+        </div>
       )}
       <div className="studio-media-grid">
         {mediaAssets.map((asset) => (

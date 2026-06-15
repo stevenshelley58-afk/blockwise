@@ -6,19 +6,17 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-test("mobile media tab renders the real upload and library panel", () => {
+test("mobile edit tab renders the contextual inspector and no separate media/copy tabs", () => {
   const mobileBody = read("src/components/adstudio/ad-studio-workbench.tsx");
-  const mediaStart = mobileBody.indexOf('studio.mobileTab === "media"');
-  const copyStart = mobileBody.indexOf('studio.mobileTab === "copy"');
-  const mediaBlock = mobileBody.slice(mediaStart, copyStart);
   const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
 
-  assert.ok(mediaStart > -1);
-  assert.ok(copyStart > mediaStart);
-  assert.match(mediaBlock, /<MediaPanel[\s\S]*primaryImage=\{primaryImage\}[\s\S]*onUploadImage=\{handleUploadImage\}[\s\S]*onSelectImage=\{selectMediaImage\}/);
-  assert.doesNotMatch(mediaBlock, /<VariantStrip/);
+  assert.match(mobileBody, /studio\.mobileTab === "campaign"[\s\S]*renderPanel\(\)/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "media"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "copy"/);
+  assert.match(mobileBody, /label: "Edit"/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
+  assert.match(mediaPanel, /AI fit all ad sizes/);
   assert.match(mediaPanel, /AssetUploadDropzone/);
   assert.match(mediaPanel, /capturePagePaste/);
 });

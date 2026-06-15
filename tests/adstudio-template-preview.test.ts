@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite } from "../src/lib/adstudio/index.ts";
-import { templatePreviewSvg } from "../src/lib/adstudio/template-preview.ts";
+import { templatePreviewDataUrl, templatePreviewSvg } from "../src/lib/adstudio/template-preview.ts";
 
 const html = `
   <html><head><title>Realty Plus</title>
@@ -41,4 +41,39 @@ test("every template (built-in + a radar-shaped one) produces a preview", () => 
   // A radar template (non-built-in id) still renders via goal-driven archetype selection.
   const radar = { id: "market_update_report_data", name: "Market Update / Report", goal: "market_update_leads", offerId: "suburb_market_report", promptHint: "x" } as const;
   assert.ok(templatePreviewSvg(radar, kit).startsWith("<svg"));
+});
+
+test("template preview data URL does not throw on malformed mined template text", () => {
+  const kit = brandKit();
+  const template = {
+    id: "bad_unicode_template",
+    name: "Broken \uD800 template",
+    goal: "seller_leads",
+    offerId: "home_value_update",
+    promptHint: "A scraped ad left a lone surrogate here \uD800 and should not crash.",
+  } as const;
+
+  assert.doesNotThrow(() => templatePreviewDataUrl(template, kit));
+  assert.match(templatePreviewDataUrl(template, kit), /^data:image\/svg\+xml;utf8,/);
+});
+
+test("template preview data URL falls back instead of crashing on incomplete runtime rows", () => {
+  const kit = {
+    colours: {},
+    typography: {},
+    identity: {},
+  } as unknown as ReturnType<typeof brandKit>;
+  const template = {
+    id: "incomplete_runtime_template",
+    name: "Incomplete runtime template",
+    goal: "seller_leads",
+    offerId: "home_value_update",
+    promptHint: "Should still render",
+    creativeSkeleton: {
+      composition: {},
+    },
+  } as unknown as (typeof AD_STUDIO_TEMPLATES)[number];
+
+  assert.doesNotThrow(() => templatePreviewDataUrl(template, kit));
+  assert.match(templatePreviewDataUrl(template, kit), /^data:image\/svg\+xml;utf8,/);
 });

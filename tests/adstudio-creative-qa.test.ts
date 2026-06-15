@@ -6,10 +6,12 @@ import {
   runComplianceGate,
   runCreativeQA,
   runScoreGate,
+  runSkeletonQA,
   runSimilarityGuard,
   runVisionQA,
   type ScoreDimensions,
 } from "../src/lib/adstudio/creative-qa.ts";
+import { creativeSkeletonSchema } from "../src/lib/ad-template-library/skeleton.ts";
 import { createDeterministicTextProvider } from "../src/lib/adstudio/providers.ts";
 
 // ─── runVisionQA ─────────────────────────────────────────────────────────────
@@ -91,6 +93,62 @@ test("runVisionQA uses reasons from provider when already populated", async () =
   const result = await runVisionQA("https://cdn.test/ad-04.jpg", provider);
   assert.equal(result.pass, false);
   assert.deepEqual(result.reasons, ["American mailbox visible", "flag cue detected"]);
+});
+
+test("runSkeletonQA passes when zones, palette, legibility, and brief match", () => {
+  const result = runSkeletonQA({
+    skeleton: creativeSkeletonSchema.parse({
+      version: 1,
+      archetype: "market_stat",
+      shot: { type: "suburb street", lighting: "daylight", mood: "authority" },
+      composition: {
+        focal_point: "street",
+        horizon: "middle",
+        copy_safe_zones: [{ id: "stat-panel", x: 0.1, y: 0.1, width: 0.4, height: 0.4, priority: "primary" }],
+      },
+      color: { palette: ["navy", "white"], overlay: "soft panel", contrast: "high" },
+      text_system: { headline_zone: "left", badge: "top", cta_style: "link" },
+      copy: { hook_style: "market", headline_pattern: "{suburb} market update", cta: "Get report" },
+      variables: ["suburb"],
+      confidence: 90,
+    }),
+    observedCopyZoneIds: ["stat-panel"],
+    palette: ["navy"],
+    legible: true,
+    onBrief: true,
+  });
+
+  assert.equal(result.pass, true);
+});
+
+test("runSkeletonQA reports skeleton-specific failures", () => {
+  const result = runSkeletonQA({
+    skeleton: creativeSkeletonSchema.parse({
+      version: 1,
+      archetype: "market_stat",
+      shot: { type: "suburb street", lighting: "daylight", mood: "authority" },
+      composition: {
+        focal_point: "street",
+        horizon: "middle",
+        copy_safe_zones: [{ id: "stat-panel", x: 0.1, y: 0.1, width: 0.4, height: 0.4, priority: "primary" }],
+      },
+      color: { palette: ["navy", "white"], overlay: "soft panel", contrast: "high" },
+      text_system: { headline_zone: "left", badge: "top", cta_style: "link" },
+      copy: { hook_style: "market", headline_pattern: "{suburb} market update", cta: "Get report" },
+      variables: ["suburb"],
+      confidence: 90,
+    }),
+    observedCopyZoneIds: [],
+    palette: ["orange"],
+    legible: false,
+    onBrief: false,
+  });
+
+  assert.equal(result.pass, false);
+  assert.match(result.reasons.join(" "), /missing copy-safe zone stat-panel/);
+  assert.match(result.reasons.join(" "), /off-palette/);
+  assert.match(result.reasons.join(" "), /not legible/);
+  assert.match(result.reasons.join(" "), /does not match skeleton brief/);
 });
 
 // ─── runSimilarityGuard ──────────────────────────────────────────────────────

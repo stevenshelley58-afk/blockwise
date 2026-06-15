@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowUpRight, Copy, LayoutGrid, Radar, X } from "lucide-reac
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
-import { isBuiltInAdStudioTemplate } from "@/lib/adstudio/templates.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
@@ -306,12 +305,12 @@ export function NewAdDialog({
     setError("");
     try {
       const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
-      const isBuiltInTemplate = selectedTemplate ? isBuiltInAdStudioTemplate(selectedTemplate.id) : false;
       await onGenerate({
-        mode: isBlank || !isBuiltInTemplate ? "custom" : "template",
+        mode: isBlank ? "custom" : "template",
         source,
-        templateId: isBlank || !isBuiltInTemplate ? undefined : selectedTemplate?.id,
-        templateKey: selectedTemplate?.templateKey ?? selectedTemplate?.id,
+        templateId: isBlank ? undefined : selectedTemplate?.id,
+        templateKey: isBlank ? undefined : selectedTemplate?.templateKey ?? selectedTemplate?.id,
+        imageBriefId: isBlank ? undefined : selectedTemplate?.imageBriefId,
         savedAdId: radarInspiration?.savedId,
         observedAdId: radarInspiration?.observedAdId,
         hooks: radarInspiration?.hooks,

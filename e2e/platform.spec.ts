@@ -40,15 +40,12 @@ test("self-serve includes campaign drafting workflow", async ({ page }) => {
 test("ad studio exposes the full generation workflow", async ({ page }) => {
   await page.goto("/ad-studio");
 
-  await expect(page.getByText("Ad Studio / Free Appraisal Campaign")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Campaign" }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Angles" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Variants" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Checklist" })).toBeVisible();
+  await expect(page.getByLabel("Ad Studio workspace")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Ad/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /Templates/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish" }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Generate variants" })).toBeVisible();
-  await expect(page.getByText("Campaign readiness")).toBeVisible();
-  await expect(page.getByText(/82%|Campaign readiness/)).toBeVisible();
+  await expect(page.getByText(/Ad settings|Create your first ad|Text layer/)).toBeVisible();
+  await expect(page.getByText(/Generated ads|Create your first ad/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Story/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Feed/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Square/ })).toBeVisible();

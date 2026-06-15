@@ -35,6 +35,12 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
       <span className="studio-tpl-meta">
         <strong>{template.name}</strong>
         <span>{template.promptHint}</span>
+        {template.creativeSkeleton ? (
+          <span>
+            {template.creativeSkeleton.archetype.replace(/_/g, " ")}
+            {template.exemplars?.length ? ` · ${template.exemplars.length} exemplars` : ""}
+          </span>
+        ) : null}
       </span>
     </button>
   );

@@ -11,7 +11,7 @@ export type StudioSection =
   | "publish"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";
-export type MobileTab = "campaign" | "templates" | "media" | "copy" | "publish";
+export type MobileTab = "campaign" | "templates" | "publish";
 
 export function useAdStudio() {
   const [section, setSection] = useState<StudioSection>("campaign");

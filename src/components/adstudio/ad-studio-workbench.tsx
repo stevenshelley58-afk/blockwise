@@ -8,14 +8,12 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
-  Image as ImageIcon,
   LayoutGrid,
   RefreshCw,
   Send,
   Settings2,
   ShieldCheck,
   Target,
-  Type,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -33,6 +31,7 @@ import type {
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 import { buildLayoutBrief } from "@/lib/adstudio/layout-brief.ts";
+import { buildSkeletonGenerationContext } from "@/lib/adstudio/skeleton-to-prompt.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -44,19 +43,19 @@ import { useBrandKit } from "./use-brand-kit";
 import { useCampaignActions } from "./use-campaign-actions";
 import type { GenerationProgress } from "./use-campaign-actions";
 import type { CopyState } from "./use-copy";
-import { seedCopy, toMetaCta, useCopy } from "./use-copy";
+import { COPY_LIMITS, seedCopy, toMetaCta, useCopy } from "./use-copy";
 import { MEDIA_ASSETS, useMedia } from "./use-media";
 import { useReadiness } from "./use-readiness";
 
 import { BrandPanel } from "./panels/brand-panel";
 import { CampaignPanel } from "./panels/campaign-panel";
-import { CopyPanel } from "./panels/copy-panel";
 import { MediaPanel } from "./panels/media-panel";
 import { PublishSetupPanel } from "./panels/publish-panel";
 import { SettingsPanel } from "./panels/settings-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { NewAdDialog } from "./new-ad-dialog";
 import { FirstRunExplainer } from "./first-run-explainer";
+import { PanelHeader } from "./inspector";
 
 type AdStudioWorkbenchProps = {
   workspaceId: string;
@@ -91,10 +90,8 @@ const ADVANCED_NAV_ITEMS: NavItem[] = [
 ];
 
 const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab; label: string; icon: LucideIcon }> = [
-  { id: "campaign", label: "Ad", icon: Target },
+  { id: "campaign", label: "Edit", icon: Target },
   { id: "templates", label: "Templates", icon: LayoutGrid },
-  { id: "media", label: "Media", icon: ImageIcon },
-  { id: "copy", label: "Copy", icon: Type },
   { id: "publish", label: "Publish", icon: Send },
 ];
 
@@ -218,6 +215,29 @@ function commitVariantEdits(input: {
   };
 }
 
+type RepairResponse = {
+  repairs?: Array<{ format: AdStudioFormat; image: string; model: string; provider: string }>;
+  error?: string;
+};
+
+function applyRepairedImagesToVariant(input: {
+  pack: AdStudioCampaignPack;
+  variantId: string | undefined;
+  copy: CopyState;
+  repairs: Array<{ format: AdStudioFormat; image: string }>;
+}): AdStudioCampaignPack {
+  if (!input.variantId || input.repairs.length === 0) return input.pack;
+  const imageByFormat = new Map(input.repairs.map((repair) => [repair.format, repair.image]));
+  return {
+    ...input.pack,
+    creatives: input.pack.creatives.map((creative) => {
+      if (creative.variantId !== input.variantId) return creative;
+      const repairedImage = imageByFormat.get(creative.format);
+      return repairedImage ? syncCreativeWithCopyAndImage(creative, input.copy, repairedImage) : creative;
+    }),
+  };
+}
+
 function copyFieldForSelectedElement(element: SelectedElement): "primaryText" | "headline" | "description" | "cta" | null {
   if (element === "primaryText") return "primaryText";
   if (element === "headline") return "headline";
@@ -248,21 +268,23 @@ export function AdStudioWorkbench({
   const searchParams = useSearchParams();
   const [newAdOpen, setNewAdOpen] = useState(false);
   const [newAdTemplateId, setNewAdTemplateId] = useState<string | undefined>(undefined);
-  const [newAdStep, setNewAdStep] = useState<"source" | "template" | "radar">("source");
+  const [newAdStep, setNewAdStep] = useState<"source" | "template" | "reuse" | "radar">("source");
   const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(AD_STUDIO_TEMPLATES);
+  const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
   const [mobileAdDetailsOpen, setMobileAdDetailsOpen] = useState(false);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
   const zoom = previewFormat === "feed" ? 58 : 68;
-  const [selectedElement, setSelectedElement] = useState<SelectedElement>("headline");
+  const [selectedElement, setSelectedElement] = useState<SelectedElement>("canvas");
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
   const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
   const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
   const [generatingBackground, setGeneratingBackground] = useState(false);
+  const [repairingImage, setRepairingImage] = useState(false);
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [advancedNavOpen, setAdvancedNavOpen] = useState(false);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
@@ -280,17 +302,9 @@ export function AdStudioWorkbench({
     copy,
     setCopy,
     updateCopy,
-    copyMode,
-    setCopyMode,
-    brief,
-    setBrief,
     generating,
-    feedback,
-    alternates,
     generateCopy,
-    applyCopyAssist,
     patchCopyField,
-    applyAlternate,
   } = useCopy(initialPack, studio.setSaveState, studio.showToast, setSelectedElement);
 
   const copyContext = {
@@ -305,7 +319,7 @@ export function AdStudioWorkbench({
     neverSay: brandKit.tone.avoid,
   };
 
-  function openNewAd(templateId?: string, step: "source" | "template" | "radar" = "source") {
+  function openNewAd(templateId?: string, step: "source" | "template" | "reuse" | "radar" = "source") {
     setNewAdTemplateId(templateId);
     setNewAdStep(step);
     setNewAdOpen(true);
@@ -346,7 +360,7 @@ export function AdStudioWorkbench({
     studio.showToast,
     () => {
       setSelectedElement("image");
-      studio.setSection("media");
+      studio.setSection("campaign");
     },
     {
       initialImage: initialMedia,
@@ -376,6 +390,13 @@ export function AdStudioWorkbench({
       return; // replaceImage already surfaced the failure to the user
     }
     if (!uploaded) return;
+    if (pack.variants.length > 0 && selectedVariant?.variantId) {
+      void repairImageForFormats(currentVariantFormats, {
+        sourceImage: uploaded.src,
+        variantId: selectedVariant.variantId,
+        message: "Fitting replacement photo to all ad sizes...",
+      });
+    }
     const copyUntouched =
       copy.primaryText === seededCopyRef.current.primaryText &&
       copy.headline === seededCopyRef.current.headline &&
@@ -385,7 +406,8 @@ export function AdStudioWorkbench({
     const isNewAd = firstRun || pack.variants.length === 0;
     if (autoDesignedRef.current || generating || !isNewAd || !copyUntouched) return;
     autoDesignedRef.current = true;
-    studio.setSection("copy");
+    studio.setSection("campaign");
+    setSelectedElement("headline");
     studio.setBusy(true);
     studio.setBusyMessage("Designing your ad from your photo...");
     try {
@@ -543,14 +565,11 @@ export function AdStudioWorkbench({
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
   const adTemplates = templateLibrary.length > 0 ? templateLibrary : AD_STUDIO_TEMPLATES;
 
-  // First open with no ad yet: show the New Ad popup (templates / reuse / radar).
+  // First open with no ad yet: keep the embedded Create ad panel visible. The
+  // modal only opens from an explicit source choice.
   useEffect(() => {
     if (promptedForFirstAd) return;
     setPromptedForFirstAd(true);
-    if (pack.variants.length === 0) {
-      setNewAdStep("source");
-      setNewAdOpen(true);
-    }
   }, [pack.variants.length, promptedForFirstAd]);
 
   useEffect(() => {
@@ -575,6 +594,17 @@ export function AdStudioWorkbench({
       null
     );
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
+  const currentVariantFormats = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          pack.creatives
+            .filter((creative) => creative.variantId === selectedVariant?.variantId)
+            .map((creative) => creative.format),
+        ),
+      ),
+    [pack.creatives, selectedVariant?.variantId],
+  );
 
   const getVariantPrimaryImage = useCallback((variantId: string | undefined, sourcePack: AdStudioCampaignPack = pack) => {
     return primaryImageForVariant(sourcePack, variantId, editorFormat);
@@ -642,18 +672,92 @@ export function AdStudioWorkbench({
   const { setSection } = studio;
   const handleCanvasElementSelect = useCallback((element: SelectedElement) => {
     setSelectedElement(element);
-    setSection(element === "image" ? "media" : "copy");
+    setSection("campaign");
   }, [setSection]);
 
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
-      studio.setSection("media");
+      studio.setSection("campaign");
       openFilePicker();
       return;
     }
     const field = copyFieldForSelectedElement(selectedElement);
     if (!field) return;
     await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext, primaryImage);
+  }
+
+  async function repairImageForFormats(targetFormats: AdStudioFormat[], options?: {
+    sourceImage?: string;
+    basePack?: AdStudioCampaignPack;
+    variantId?: string;
+    copyOverride?: CopyState;
+    message?: string;
+  }) {
+    const formats = Array.from(new Set(targetFormats)).filter(Boolean);
+    const sourceImage = options?.sourceImage ?? primaryImage;
+    const basePack = options?.basePack ?? pack;
+    const variantId = options?.variantId ?? selectedVariant?.variantId;
+    const copyForPatch = options?.copyOverride ?? copy;
+    if (!sourceImage || !variantId || formats.length === 0 || repairingImage) return null;
+
+    const layoutBriefs = Object.fromEntries(
+      formats.map((format) => {
+        const creative = basePack.creatives.find((item) => item.variantId === variantId && item.format === format);
+        return [format, creative ? buildLayoutBrief(creative) : ""];
+      }),
+    );
+
+    setRepairingImage(true);
+    studio.setBusy(true);
+    studio.setBusyMessage(options?.message ?? "Fitting photo to ad sizes...");
+    try {
+      const response = await fetch("/api/adstudio/repair-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandKitId: brandKit.brandKitId,
+          sourceImage,
+          targetFormats: formats,
+          campaignContext: {
+            goal: campaignGoal,
+            offer: offerLabel,
+            market,
+            propertyType,
+            headline: copyForPatch.headline,
+            description: copyForPatch.description,
+          },
+          layoutBriefs,
+        }),
+      });
+      const json = (await response.json().catch(() => ({}))) as RepairResponse;
+      if (!response.ok || !json.repairs?.length) {
+        throw new Error(json.error || "Could not fit that image.");
+      }
+
+      const repairedPack = applyRepairedImagesToVariant({
+        pack: basePack,
+        variantId,
+        copy: copyForPatch,
+        repairs: json.repairs,
+      });
+      setPack(repairedPack);
+      const activeRepair = json.repairs.find((repair) => repair.format === editorFormat) ?? json.repairs[0];
+      if (activeRepair) {
+        setPrimaryImage(activeRepair.image);
+        setPrimaryImageName(`AI fitted ${activeRepair.format}`);
+      }
+      setSelectedElement("image");
+      studio.setSection("campaign");
+      studio.setSaveState("saving");
+      studio.showToast(formats.length > 1 ? "Photo fitted for all ad sizes" : "Photo fitted for this size");
+      return repairedPack;
+    } catch (error) {
+      studio.showToast(error instanceof Error ? error.message : "Could not fit that image");
+      return null;
+    } finally {
+      setRepairingImage(false);
+      studio.setBusy(false);
+    }
   }
 
   async function generateBackgroundImage() {
@@ -667,6 +771,15 @@ export function AdStudioWorkbench({
       // pass the current listing photo as a reference so the model conditions
       // on the real property instead of inventing a generic streetscape.
       const layoutBrief = buildLayoutBrief(currentCreative);
+      const activeTemplate = activeTemplateKey
+        ? adTemplates.find((template) => template.templateKey === activeTemplateKey || template.id === activeTemplateKey)
+        : undefined;
+      const skeletonContext = activeTemplate?.creativeSkeleton
+        ? buildSkeletonGenerationContext(activeTemplate.creativeSkeleton, {
+            format: currentCreative.format,
+            fallbackBrief: layoutBrief,
+          })
+        : null;
       const referenceImage = primaryImage;
       const referenceAssets: string[] = !referenceImage
         ? []
@@ -682,7 +795,8 @@ export function AdStudioWorkbench({
         market,
         propertyType,
         "real estate advertising background",
-        layoutBrief,
+        skeletonContext?.brief ?? layoutBrief,
+        skeletonContext ? `Copy-safe mask: ${skeletonContext.maskSvgDataUrl}` : "",
         referenceAssets.length
           ? "Use the supplied reference photo as the real property: preserve its building, architecture and setting; only improve lighting, framing and overall quality."
           : "",
@@ -739,7 +853,19 @@ export function AdStudioWorkbench({
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
-    await generateFirstAd(input);
+    const generatedPack = await generateFirstAd(input);
+    setActiveTemplateKey(input.templateKey ?? input.templateId);
+    setSelectedElement("image");
+    studio.setSection("campaign");
+    if (generatedPack) {
+      void repairImageForFormats(input.formats, {
+        sourceImage: input.imageDataUrl,
+        basePack: generatedPack,
+        variantId: generatedPack.variants[0]?.variantId,
+        copyOverride: seedCopy(generatedPack),
+        message: "Fitting photo to Story, Feed and Square...",
+      });
+    }
   }
 
   function renderCampaignPanel(options?: { mobileSheet?: boolean }) {
@@ -764,13 +890,64 @@ export function AdStudioWorkbench({
         onBrowseTemplates={() => {
           if (options?.mobileSheet) {
             setMobileAdDetailsOpen(false);
-            openNewAd();
+            openNewAd(undefined, "template");
           } else {
-            studio.setSection("templates");
+            if (pack.variants.length === 0) openNewAd(undefined, "template");
+            else studio.setSection("templates");
           }
+        }}
+        onReuseAd={() => {
+          if (options?.mobileSheet) setMobileAdDetailsOpen(false);
+          openNewAd(undefined, "reuse");
+        }}
+        onCopyFromRadar={() => {
+          if (options?.mobileSheet) setMobileAdDetailsOpen(false);
+          openNewAd(undefined, "radar");
+        }}
+        onStartBlank={() => {
+          if (options?.mobileSheet) setMobileAdDetailsOpen(false);
+          openNewAd("");
         }}
         templates={adTemplates}
       />
+    );
+  }
+
+  function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
+    const label = field === "primaryText" ? "Primary text" : field === "cta" ? "CTA" : field[0].toUpperCase() + field.slice(1);
+    const overLimit = copy[field].length > COPY_LIMITS[field];
+    const actions = field === "cta" ? ["Sharper", "More direct"] : ["Sharper", "More local", "More premium", "Less hype"];
+    return (
+      <>
+        <PanelHeader title="Text layer" detail="Edit the selected canvas text, or rewrite just this layer with AI." />
+        <label className="studio-selected-text-field">
+          <span>
+            {label}
+            <small data-over={overLimit || undefined}>{copy[field].length} / {COPY_LIMITS[field]}</small>
+          </span>
+          <textarea
+            rows={field === "primaryText" ? 4 : 3}
+            value={copy[field]}
+            onChange={(event) => updateCopy(field, event.target.value)}
+          />
+          {overLimit && <small className="studio-field-error">Over the Meta limit - shorten this.</small>}
+        </label>
+        <button
+          className="studio-btn accent block"
+          type="button"
+          disabled={generating}
+          onClick={() => void patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext, primaryImage)}
+        >
+          {generating ? "Rewriting..." : "Rewrite selected text"}
+        </button>
+        <div className="studio-assist-row" aria-label="Text rewrite options">
+          {actions.map((action) => (
+            <button key={action} type="button" disabled={generating} onClick={() => void patchCopyField(field, action, copyContext, primaryImage)}>
+              {action}
+            </button>
+          ))}
+        </div>
+      </>
     );
   }
 
@@ -787,41 +964,6 @@ export function AdStudioWorkbench({
     }
     if (studio.section === "brand") {
       return <BrandPanel brand={brand} brandKit={brandKit} />;
-    }
-    if (studio.section === "media") {
-      // 1a: wire onSelectImage so library tiles actually update the primary image
-      return (
-        <MediaPanel
-          primaryImage={primaryImage}
-          primaryImageName={primaryImageName}
-          openFilePicker={openFilePicker}
-          onUploadImage={handleUploadImage}
-          onUploadRejected={studio.showToast}
-          onSelectImage={selectMediaImage}
-          mediaAssets={mediaAssets}
-          onGenerateBackground={() => void generateBackgroundImage()}
-          generatingBackground={generatingBackground}
-        />
-      );
-    }
-    if (studio.section === "copy") {
-      return (
-        <CopyPanel
-          copy={copy}
-          updateCopy={updateCopy}
-          copyMode={copyMode}
-          setCopyMode={setCopyMode}
-          brief={brief}
-          setBrief={setBrief}
-          generating={generating}
-          feedback={feedback}
-          alternates={alternates}
-          context={copyContext}
-          onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
-          onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
-          onApplyAlternate={applyAlternate}
-        />
-      );
     }
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
@@ -841,6 +983,26 @@ export function AdStudioWorkbench({
     if (studio.section === "settings") {
       return <SettingsPanel />;
     }
+    if (selectedElement === "image") {
+      return (
+        <MediaPanel
+          primaryImage={primaryImage}
+          primaryImageName={primaryImageName}
+          openFilePicker={openFilePicker}
+          onUploadImage={handleUploadImage}
+          onUploadRejected={studio.showToast}
+          onSelectImage={selectMediaImage}
+          mediaAssets={mediaAssets}
+          onGenerateBackground={() => void generateBackgroundImage()}
+          generatingBackground={generatingBackground}
+          onRepairCurrent={() => void repairImageForFormats([editorFormat], { message: "Fitting photo to this ad size..." })}
+          onRepairAll={() => void repairImageForFormats(currentVariantFormats, { message: "Fitting photo to all ad sizes..." })}
+          repairingImage={repairingImage}
+        />
+      );
+    }
+    const textField = copyFieldForSelectedElement(selectedElement);
+    if (textField) return renderTextLayerPanel(textField);
     return renderCampaignPanel();
   }
 
@@ -898,7 +1060,10 @@ export function AdStudioWorkbench({
                 className={studio.section === item.id ? "active" : ""}
                 key={item.id}
                 type="button"
-                onClick={() => studio.setSection(item.id)}
+                onClick={() => {
+                  setSelectedElement("canvas");
+                  studio.setSection(item.id);
+                }}
               >
                 <Icon aria-hidden size={18} />
                 <span>{item.label}</span>
@@ -929,7 +1094,10 @@ export function AdStudioWorkbench({
                   className={studio.section === item.id ? "active" : ""}
                   key={item.id}
                   type="button"
-                  onClick={() => studio.setSection(item.id)}
+                  onClick={() => {
+                    setSelectedElement("canvas");
+                    studio.setSection(item.id);
+                  }}
                 >
                   <Icon aria-hidden size={18} />
                   <span>{item.label}</span>
@@ -945,8 +1113,8 @@ export function AdStudioWorkbench({
               <span><b>Draft brand in use.</b> You can create ads now - confirm your brand before publishing.</span>
             </Link>
           )}
-          {(studio.section === "media" || studio.section === "copy") && (
-            <button className="studio-link-btn" type="button" onClick={() => studio.setSection("campaign")}>
+          {studio.section === "campaign" && selectedElement !== "canvas" && (
+            <button className="studio-link-btn" type="button" onClick={() => setSelectedElement("canvas")}>
               <ArrowLeft aria-hidden size={15} />
               Back to Ad settings
             </button>
@@ -988,7 +1156,7 @@ export function AdStudioWorkbench({
                 selectedElement={selectedElement}
                 setSelectedElement={(element) => {
                   setSelectedElement(element);
-                  studio.setSection(element === "image" ? "media" : "copy");
+                  studio.setSection("campaign");
                 }}
               />
             )}
@@ -1016,11 +1184,13 @@ export function AdStudioWorkbench({
             onDismissPending={() => setGeneration(null)}
             onEditCopy={(index) => {
               selectVariant(index);
-              studio.setSection("copy");
+              setSelectedElement("headline");
+              studio.setSection("campaign");
             }}
             onReplaceImage={(index) => {
               selectVariant(index);
-              studio.setSection("media");
+              setSelectedElement("image");
+              studio.setSection("campaign");
               openFilePicker();
             }}
             onRegenerate={regenerateVariantPack}
@@ -1086,38 +1256,26 @@ export function AdStudioWorkbench({
         </div>
 
         {studio.mobileTab === "campaign" && (
-          <div className="studio-mobile-preview-wrap">
-            <AdPreview
-              brand={brand}
-              domain={domain}
-              initials={initials}
-              copy={copy}
-              image={primaryImage}
-              format={previewFormat}
-              zoom={100}
-              selectedElement={selectedElement}
-              setSelectedElement={(element) => {
-                setSelectedElement(element);
-                studio.setMobileTab(element === "image" ? "media" : "copy");
-              }}
-            />
-          </div>
-        )}
-
-        {studio.mobileTab === "media" && (
-          <div className="studio-mobile-panel">
-            <MediaPanel
-              primaryImage={primaryImage}
-              primaryImageName={primaryImageName}
-              openFilePicker={openFilePicker}
-              onUploadImage={handleUploadImage}
-              onUploadRejected={studio.showToast}
-              onSelectImage={selectMediaImage}
-              mediaAssets={mediaAssets}
-              onGenerateBackground={() => void generateBackgroundImage()}
-              generatingBackground={generatingBackground}
-            />
-          </div>
+          <>
+            <div className="studio-mobile-preview-wrap">
+              <AdPreview
+                brand={brand}
+                domain={domain}
+                initials={initials}
+                copy={copy}
+                image={primaryImage}
+                format={previewFormat}
+                zoom={100}
+                selectedElement={selectedElement}
+                setSelectedElement={(element) => {
+                  setSelectedElement(element);
+                  studio.setSection("campaign");
+                  studio.setMobileTab("campaign");
+                }}
+              />
+            </div>
+            <div className="studio-mobile-panel">{renderPanel()}</div>
+          </>
         )}
 
         {studio.mobileTab === "templates" && (
@@ -1127,26 +1285,6 @@ export function AdStudioWorkbench({
               brandKit={brandKit}
               onUseTemplate={(id) => openNewAd(id)}
               onStartBlank={() => openNewAd("")}
-            />
-          </div>
-        )}
-
-        {studio.mobileTab === "copy" && (
-          <div className="studio-mobile-panel">
-            <CopyPanel
-              copy={copy}
-              updateCopy={updateCopy}
-              copyMode={copyMode}
-              setCopyMode={setCopyMode}
-              brief={brief}
-              setBrief={setBrief}
-              generating={generating}
-              feedback={feedback}
-              alternates={alternates}
-              context={copyContext}
-              onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
-              onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
-              onApplyAlternate={applyAlternate}
             />
           </div>
         )}

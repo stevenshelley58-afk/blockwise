@@ -52,6 +52,12 @@ export {
   type AdStudioTemplate,
 } from "./templates.ts";
 export {
+  creativeSkeletonArchetypeSchema,
+  creativeSkeletonSchema,
+  type CreativeSkeleton,
+  type CreativeSkeletonArchetype,
+} from "../ad-template-library/skeleton.ts";
+export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
   createOpenAiVisionProvider,
@@ -84,6 +90,16 @@ export {
 } from "./providers.ts";
 export { renderCreativeSvg } from "./renderer.ts";
 export { scoreAdStudioVariant, type VariantScoreInput } from "./scoring.ts";
+export {
+  isMissingTemplateLibrary,
+  resolveApprovedAdStudioTemplate,
+  templatePromptHint,
+} from "./template-resolver.ts";
+export {
+  buildSkeletonGenerationContext,
+  buildSkeletonMaskSvgDataUrl,
+  type SkeletonGenerationContext,
+} from "./skeleton-to-prompt.ts";
 export { ADSTUDIO_TEMPLATE_VERSIONS, type AdStudioTemplateVersion } from "./templates.ts";
 export type {
   AdStudioBrandKit,

@@ -1,5 +1,6 @@
 import { deterministicUuid } from "./id.ts";
 import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
+import type { CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -38,6 +39,7 @@ export type BuildArchetypeCreativeInput = {
   subheadline?: string;
   templateId?: string;
   templateName?: string;
+  creativeSkeleton?: CreativeSkeleton;
 };
 
 type CanvasSize = { width: number; height: number };
@@ -96,7 +98,7 @@ export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): Lay
 }
 
 export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdStudioCreative {
-  const archetype = selectLayoutArchetype({
+  const archetype = input.creativeSkeleton?.archetype ?? selectLayoutArchetype({
     templateId: input.templateId,
     templateName: input.templateName,
     offerId: input.campaign.offerId,
@@ -105,7 +107,10 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     headline: input.variant.headline,
   });
   const size = getCanvasSize(input.format);
-  const geometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
+  const fallbackGeometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
+  const geometry = input.creativeSkeleton
+    ? geometryForSkeleton(input.creativeSkeleton, input.format, size, input.brandKit, fallbackGeometry)
+    : fallbackGeometry;
   const subheadline = input.subheadline ?? fallbackSubheadline(archetype, input.campaign.market.suburb);
   const text = textLayout({
     headline: input.variant.headline,
@@ -300,6 +305,71 @@ function geometryForArchetype(
     scrim,
     supportObjects,
   };
+}
+
+function geometryForSkeleton(
+  skeleton: CreativeSkeleton,
+  format: AdStudioFormat,
+  size: CanvasSize,
+  brandKit: AdStudioBrandKit,
+  fallback: LayoutGeometry,
+): LayoutGeometry {
+  const primary = skeleton.composition.copy_safe_zones.find((zone) => zone.priority === "primary")
+    ?? skeleton.composition.copy_safe_zones[0];
+  if (!primary) return fallback;
+
+  const isLandscape = format === "1.91:1";
+  const marginX = fallback.marginX;
+  const minCopyWidth = Math.min(size.width - marginX * 2, isLandscape ? 300 : 430);
+  const maxCopyWidth = Math.max(minCopyWidth, size.width - marginX * 2);
+  const zoneX = Math.round(primary.x * size.width);
+  const zoneY = Math.round(primary.y * size.height);
+  const zoneWidth = Math.round(primary.width * size.width);
+  const zoneHeight = Math.round(primary.height * size.height);
+  const copyX = clampNumber(zoneX, marginX, Math.max(marginX, size.width - marginX - minCopyWidth));
+  const copyWidth = clampNumber(zoneWidth, minCopyWidth, Math.max(minCopyWidth, Math.min(maxCopyWidth, size.width - copyX - marginX)));
+  const copyY = clampNumber(zoneY, fallback.logoY + fallback.logoHeight + 28, Math.max(fallback.logoY + fallback.logoHeight + 28, size.height - 430));
+  const headlineSize = clampNumber(
+    Math.round(Math.min(fallback.headlineSize, Math.max(isLandscape ? 42 : 54, zoneHeight * 0.25))),
+    isLandscape ? 38 : 46,
+    fallback.headlineSize,
+  );
+  const subheadSize = Math.max(isLandscape ? 22 : 26, Math.round(headlineSize * 0.42));
+  const ctaZone = skeleton.composition.copy_safe_zones.find((zone) => zone.priority === "cta");
+  const ctaX = ctaZone ? clampNumber(Math.round(ctaZone.x * size.width), marginX, size.width - marginX - fallback.ctaWidth) : copyX;
+  const supportObjects = [...fallback.supportObjects];
+  const panelHeight = clampNumber(zoneHeight + Math.round(size.height * 0.08), isLandscape ? 220 : 320, size.height - copyY - 48);
+  const panelRole = `${skeleton.archetype}_copy_panel`;
+
+  supportObjects.push(panelObject(size, panelRole, copyX - 26, copyY - 34, copyWidth + 64, panelHeight));
+
+  if (/ribbon|badge|sold|coming/i.test(skeleton.text_system.badge)) {
+    supportObjects.push(ribbonObject(size, `${skeleton.archetype}_badge`, marginX, Math.max(fallback.logoY + fallback.logoHeight + 24, copyY - 120), brandKit.colours.primary));
+  }
+
+  return {
+    ...fallback,
+    marginX,
+    copyX,
+    copyY,
+    copyWidth,
+    headlineSize,
+    subheadSize,
+    ctaX,
+    scrim: scrimForSkeleton(skeleton),
+    supportObjects,
+  };
+}
+
+function scrimForSkeleton(skeleton: CreativeSkeleton): string {
+  if (skeleton.color.contrast === "low") return "rgba(7, 14, 25, 0.32)";
+  if (skeleton.color.contrast === "medium") return "rgba(7, 14, 25, 0.42)";
+  return "rgba(7, 14, 25, 0.54)";
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (max < min) return min;
+  return Math.min(max, Math.max(min, value));
 }
 
 function textLayout(input: {

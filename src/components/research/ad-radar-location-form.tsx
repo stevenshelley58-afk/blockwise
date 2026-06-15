@@ -242,7 +242,7 @@ export function AdRadarLocationForm({
         </div>
       ) : null}
 
-      <p className={isLanding ? "lp-radar-note" : "research-location-note"}>{note}</p>
+      {note ? <p className={isLanding ? "lp-radar-note" : "research-location-note"}>{note}</p> : null}
       <button className={isLanding ? "lp-btn lp-btn-primary lp-btn-wide" : "button"} disabled={isSubmitting} type="submit">
         <Search size={14} aria-hidden />
         {isSubmitting ? "Scanning..." : buttonLabel}

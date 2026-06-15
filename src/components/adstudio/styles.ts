@@ -99,6 +99,13 @@
 .studio-copy-fields small{color:var(--st-faint);font-weight:550;font-size:11.5px}
 .studio-copy-fields textarea{width:100%;resize:vertical;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:10px 11px;outline:none;font-size:13.5px;line-height:1.45}
 .studio-copy-fields textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
+.studio-selected-text-field{display:grid;gap:8px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px;box-shadow:var(--st-sh-1)}
+.studio-selected-text-field>span{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:12.5px}
+.studio-selected-text-field small{color:var(--st-faint);font-weight:650}
+.studio-selected-text-field small[data-over="true"],.studio-field-error{color:var(--rose,#ba1a1a)!important}
+.studio-selected-text-field textarea{width:100%;resize:vertical;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:10px 11px;outline:none;font-size:13.5px;line-height:1.45}
+.studio-selected-text-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
+.studio-image-repair-actions{display:grid;gap:8px}
 .studio-mode-seg{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--line-soft);border-radius:10px;padding:3px;gap:3px}
 .studio-mode-seg button{padding:9px 4px;border:0;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);background:transparent;display:flex;align-items:center;justify-content:center;gap:6px}
 .studio-mode-seg button.active{background:#fff;color:var(--accent);box-shadow:var(--st-sh-1);font-weight:650}
@@ -277,7 +284,7 @@
 .studio-tpl-thumb{aspect-ratio:4/5;position:relative;overflow:hidden;color:#fff;display:block}
 .studio-tpl-thumb::before{content:"";position:absolute;inset:0;background:radial-gradient(130% 80% at 85% 0%,rgba(255,210,150,.25),transparent 50%),linear-gradient(180deg,transparent 30%,rgba(8,12,20,.75) 80%)}
 .studio-tpl-thumb--img::before{content:none}
-.studio-tpl-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.studio-tpl-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:#fff}
 .studio-tpl-thumb .tag{position:absolute;top:9px;left:9px;z-index:1;font-size:9px;font-weight:750;letter-spacing:.8px;text-transform:uppercase;background:rgba(255,255,255,.92);color:var(--accent-strong);border-radius:999px;padding:4px 8px}
 .studio-tpl-thumb .t-copy{position:absolute;left:11px;right:11px;bottom:28px;z-index:1;font-size:13px;line-height:1.25;font-weight:750;letter-spacing:-.1px}
 .studio-tpl-thumb .t-cta{position:absolute;left:11px;right:11px;bottom:8px;z-index:1;height:17px;border-radius:5px;background:#fff;color:var(--accent-strong);display:grid;place-items:center;font-size:8.5px;font-weight:750}
@@ -392,7 +399,7 @@
   .studio-readiness.compact .studio-readiness-main{margin-bottom:0}
   .studio-readiness.compact .studio-checklist{display:none}
   .studio-mobile-panel{display:grid;gap:18px;padding-top:22px}
-  .studio-mobile-bottom{position:fixed;left:0;right:0;bottom:0;z-index:150;height:78px;border-top:1px solid var(--line-soft);background:#fff;display:grid;grid-template-columns:repeat(5,1fr);padding:8px 12px 10px}
+  .studio-mobile-bottom{position:fixed;left:0;right:0;bottom:0;z-index:150;height:78px;border-top:1px solid var(--line-soft);background:#fff;display:grid;grid-template-columns:repeat(3,1fr);padding:8px 12px 10px}
   .studio-mobile-bottom button{border:0;border-radius:10px;background:transparent;color:var(--muted);display:grid;place-items:center;gap:2px;font-size:11.5px;font-weight:600}
   .studio-mobile-bottom button.active{background:var(--accent-tint);color:var(--accent)}
   .studio-mobile-status{position:fixed;left:12px;right:12px;bottom:84px;z-index:151;min-height:34px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;box-shadow:var(--st-sh-1);display:flex;align-items:center;justify-content:center;padding:7px 12px;color:var(--muted);font-size:12.5px;font-weight:650;text-align:center}

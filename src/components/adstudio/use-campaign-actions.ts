@@ -248,9 +248,10 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setCopy(seedCopy(payload.campaignPack));
       s.setPrimaryImage(input.imageDataUrl);
       s.setSaveState("saved");
-      s.setSection("media");
+      s.setSection("campaign");
       s.showToast("Generated Story, Feed, and Square");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
+      return payload.campaignPack;
     } catch (error) {
       stopPhases();
       // The New Ad dialog shows this error inline, so clear the skeletons.

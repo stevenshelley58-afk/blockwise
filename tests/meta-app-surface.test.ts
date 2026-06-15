@@ -103,7 +103,9 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.match(adstudio, /Campaign readiness/);
   assert.match(adstudio, /Export creatives/);
   assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "templates"[\s\S]*id: "publish"/);
-  assert.match(adstudio, /const MOBILE_NAV:[\s\S]*id: "templates"[\s\S]*id: "media"/);
+  const mobileNav = adstudio.match(/const MOBILE_NAV:[\s\S]*?\];/)?.[0] ?? "";
+  assert.match(mobileNav, /id: "campaign"[\s\S]*id: "templates"[\s\S]*id: "publish"/);
+  assert.doesNotMatch(mobileNav, /id: "media"/);
   assert.doesNotMatch(adstudio.match(/const ADVANCED_NAV_ITEMS:[\s\S]*?\];/)?.[0] ?? "", /templates/);
   assert.doesNotMatch(adstudio, /AI generated/);
   assert.doesNotMatch(adstudio, /AI helps/);

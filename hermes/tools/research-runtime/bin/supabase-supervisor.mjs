@@ -417,8 +417,18 @@ async function readApifyLedgerSpendUsd({ since, until } = {}) {
     until ? `started_at=lt.${encode(new Date(until).toISOString())}` : null,
     "limit=10000",
   ].filter(Boolean);
-  const rows = await rest("research", `ad_fetch_runs?${params.join("&")}`);
-  return (rows || []).reduce((total, row) => total + (Number(row.cost_usd) || 0), 0);
+  const legacyParams = [
+    "select=cost_usd",
+    `source_provider=eq.${encode(META_APIFY_SOURCE_PROVIDER)}`,
+    since ? `started_at=gte.${encode(new Date(since).toISOString())}` : null,
+    until ? `started_at=lt.${encode(new Date(until).toISOString())}` : null,
+    "limit=10000",
+  ].filter(Boolean);
+  const [rows, legacyRows] = await Promise.all([
+    rest("research", `ad_fetch_runs?${params.join("&")}`),
+    rest("research", `ad_fetch_runs?${legacyParams.join("&")}`),
+  ]);
+  return [...(rows || []), ...(legacyRows || [])].reduce((total, row) => total + (Number(row.cost_usd) || 0), 0);
 }
 
 async function readApifyCaptureActors(actorId = null) {
@@ -2901,6 +2911,7 @@ async function runMetaPageCapture(input) {
       error: official.errorMessage,
     }, "warn");
     const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
+    const sourceProvider = fallback.provider || fallbackSourceProvider;
     return {
       outcome: {
         ...fallback,
@@ -2910,16 +2921,17 @@ async function runMetaPageCapture(input) {
           official_api_error: official.errorMessage,
         },
       },
-      sourceProvider: fallbackSourceProvider,
-      captureMode: captureModeForSourceProvider(fallbackSourceProvider, "after_official_api_failure"),
+      sourceProvider,
+      captureMode: captureModeForSourceProvider(sourceProvider, "after_official_api_failure"),
     };
   }
 
   const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
+  const sourceProvider = fallback.provider || fallbackSourceProvider;
   return {
     outcome: fallback,
-    sourceProvider: fallbackSourceProvider,
-    captureMode: captureModeForSourceProvider(fallbackSourceProvider),
+    sourceProvider,
+    captureMode: captureModeForSourceProvider(sourceProvider),
   };
 }
 
