@@ -12,6 +12,7 @@ export type AdStudioTemplate = {
   status?: "approved" | "archived" | "draft";
   creativeSkeleton?: CreativeSkeleton;
   exemplars?: string[];
+  previewImageUrl?: string;
   evidenceScore?: number;
 };
 
@@ -32,6 +33,7 @@ export type AdStudioLibraryTemplate = {
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
+  preview_image_url?: string | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
   compliance_note?: string | null;
@@ -160,6 +162,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
+  const previewImageUrl = stringValue(row.preview_image_url);
 
   return {
     id: templateKey,
@@ -173,6 +176,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     evidenceScore: numberValue(row.evidence_score),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
+    ...(previewImageUrl ? { previewImageUrl } : {}),
   };
 }
 

@@ -16,11 +16,8 @@ type TemplateCardProps = {
 };
 
 export function TemplateCard({ template, brandKit, active, onSelect }: TemplateCardProps) {
-  // A branded preview of this template's actual layout (the customer's colours,
-  // fonts and logo around a "your photo here" placeholder). It shows what their
-  // ad will look like once they add their listing photo — a true range of
-  // layouts personalised to the viewing customer, not a fixed finished ad.
-  const previewSrc = useMemo(() => templatePreviewDataUrl(template, brandKit), [template, brandKit]);
+  const previewSrc = useMemo(() => template.previewImageUrl ?? templatePreviewDataUrl(template, brandKit), [template, brandKit]);
+
   return (
     <button
       type="button"
@@ -42,7 +39,7 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
         {template.creativeSkeleton ? (
           <span>
             {template.creativeSkeleton.archetype.replace(/_/g, " ")}
-            {template.exemplars?.length ? ` · ${template.exemplars.length} exemplars` : ""}
+            {template.exemplars?.length ? ` - ${template.exemplars.length} exemplars` : ""}
           </span>
         ) : null}
       </span>
@@ -58,7 +55,7 @@ export function BlankTemplateCard({ active, onSelect }: { active?: boolean; onSe
       </span>
       <span className="studio-tpl-meta">
         <strong>Start blank</strong>
-        <span>No template — describe it yourself</span>
+        <span>No template - describe it yourself</span>
       </span>
     </button>
   );
@@ -74,7 +71,7 @@ type TemplatesPanelProps = {
 export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank }: TemplatesPanelProps) {
   return (
     <>
-      <PanelHeader title="Templates" detail="Each preview uses your brand — add your listing photo and the copy writes itself." />
+      <PanelHeader title="Templates" detail="Choose a proven layout, then add your listing photo and brand." />
       <div className="studio-tpl-grid">
         {templates.map((template) => (
           <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />

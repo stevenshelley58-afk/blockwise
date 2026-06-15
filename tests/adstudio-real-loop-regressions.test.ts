@@ -327,6 +327,7 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
+  const panel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
 
   assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
@@ -337,13 +338,18 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(route, /from\("v_ad_template_library"\)/);
   assert.match(route, /from\("ad_template_candidates"\)/);
   assert.match(route, /creative_skeleton,exemplar_observed_ad_ids/);
+  assert.match(route, /from\("ad_creatives"\)/);
+  assert.match(route, /image_storage_path,video_thumbnail_url,media_assets/);
+  assert.match(route, /preview_image_url/);
   assert.match(route, /action: z\.enum\(\["approve", "archive"\]\)/);
   assert.match(route, /source: "builtin_fallback"/);
   assert.match(route, /Operator access is required/);
   assert.match(templates, /mapAdStudioLibraryTemplate/);
   assert.match(templates, /creativeSkeleton\?: CreativeSkeleton/);
+  assert.match(templates, /previewImageUrl\?: string/);
   assert.match(templates, /mergeAdStudioTemplateLibrary/);
   assert.match(templates, /isBuiltInAdStudioTemplate/);
+  assert.match(panel, /template\.previewImageUrl \?\? templatePreviewDataUrl/);
 });
 
 test("Ad Radar longest-running sort reaches the authenticated search route", () => {
