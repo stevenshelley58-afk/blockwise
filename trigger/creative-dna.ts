@@ -1,5 +1,4 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import * as Sentry from "@sentry/nextjs";
 
 import {
   CREATIVE_DNA_VERSION,
@@ -9,7 +8,9 @@ import {
 import { createTextProviderForCandidate } from "../src/lib/adstudio/ai-providers.ts";
 import { estimateRunCostUsd, shouldBlockForCostPolicy } from "../src/lib/ai/model-registry.ts";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../src/lib/operator/prompts/model-profile-runtime.ts";
+import { normaliseMediaUrl } from "../src/lib/research/customer-meta-card.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { captureTriggerException } from "./sentry.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 type ResearchClient = ReturnType<SupabaseServiceClient["schema"]>;
@@ -32,6 +33,8 @@ type RawWinnerCreativeRow = {
   body: string | null;
   cta: string | null;
   primary_image_url: string | null;
+  image_storage_path: string | null;
+  media_assets: unknown;
   ad_type: string | null;
   primary_intent: string | null;
   observed_ads?: {
@@ -60,6 +63,8 @@ const CREATIVE_SELECT = `
   body,
   cta,
   primary_image_url,
+  image_storage_path,
+  media_assets,
   ad_type,
   primary_intent,
   observed_ads!inner (
@@ -115,7 +120,7 @@ export async function runCreativeDnaExtractor(serviceSupabase: SupabaseServiceCl
       await persistCreativeSkeleton(research, ad, extraction);
       summary.extracted += 1;
     } catch (error) {
-      Sentry.captureException(error);
+      captureTriggerException(error, "extract-creative-dna-nightly");
       summary.failed += 1;
     }
   }
@@ -194,13 +199,14 @@ async function loadWinnerCreatives(research: ResearchClient, observedAdIds: stri
   }
 
   return ((data ?? []) as RawWinnerCreativeRow[]).flatMap((row) => {
-    if (!row.primary_image_url) return [];
+    const imageUrl = resolveCreativeDnaImageUrl(row);
+    if (!imageUrl) return [];
     const observed = firstNested(row.observed_ads);
     const advertiser = firstNested(observed?.advertiser_pages);
     return [{
       observedAdId: row.observed_ad_id,
       adCreativeId: row.id,
-      imageUrl: row.primary_image_url,
+      imageUrl,
       headline: row.headline,
       body: row.body,
       cta: row.cta,
@@ -210,6 +216,25 @@ async function loadWinnerCreatives(research: ResearchClient, observedAdIds: stri
       advertiserName: advertiser?.page_name ?? null,
     }];
   });
+}
+
+function resolveCreativeDnaImageUrl(row: RawWinnerCreativeRow): string | null {
+  const storedImage = normaliseMediaUrl(row.image_storage_path);
+  if (storedImage) return storedImage;
+
+  if (Array.isArray(row.media_assets)) {
+    for (const asset of row.media_assets) {
+      if (!asset || typeof asset !== "object") continue;
+      const item = asset as Record<string, unknown>;
+      const kind = stringValue(item.kind) ?? stringValue(item.type) ?? stringValue(item.mediaType) ?? stringValue(item.media_type);
+      if (kind === "video") continue;
+      const storagePath = stringValue(item.storagePath) ?? stringValue(item.storage_path);
+      const url = normaliseMediaUrl(storagePath);
+      if (url) return url;
+    }
+  }
+
+  return normaliseMediaUrl(row.primary_image_url);
 }
 
 async function persistCreativeSkeleton(
@@ -295,4 +320,8 @@ async function recordRunSummary(research: ResearchClient, summary: CreativeDnaRu
 function firstNested<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
