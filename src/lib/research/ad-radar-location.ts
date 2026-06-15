@@ -12,6 +12,10 @@ export type AdRadarLocationGuess = {
   source: "ip" | "fallback" | "query";
 };
 
+export type AdRadarLocationSearchOptions = {
+  includeSurroundingSuburbs?: boolean;
+};
+
 type HeaderReader = {
   get(name: string): string | null;
 };
@@ -135,10 +139,11 @@ export function resolveAdRadarLocationGuess(headers: HeaderReader): AdRadarLocat
   };
 }
 
-export function resolveAdRadarLocationSearch(value: string): AdRadarLocationGuess | null {
+export function resolveAdRadarLocationSearch(value: string, options: AdRadarLocationSearchOptions = {}): AdRadarLocationGuess | null {
   const cleaned = cleanLocationValue(value);
   if (!cleaned) return null;
 
+  const includeSurroundingSuburbs = options.includeSurroundingSuburbs ?? true;
   const postcode = cleaned.match(/\b\d{4}\b/)?.[0] ?? null;
   const explicitState = resolveAustralianStateFromText(cleaned);
   const postcodeState = postcode ? resolveAustralianStateFromPostcode(postcode) : null;
@@ -153,7 +158,7 @@ export function resolveAdRadarLocationSearch(value: string): AdRadarLocationGues
       : null;
   const cityPostcodes = city ? CITY_DEFAULT_POSTCODES[normaliseTerm(city)] ?? [] : [];
   const hintedPostcodes = suburbHint?.postcodes ?? [];
-  const relatedSuburbs = suburbHint?.suburbs ?? postcodeHint?.suburbs ?? [];
+  const relatedSuburbs = includeSurroundingSuburbs ? suburbHint?.suburbs ?? postcodeHint?.suburbs ?? [] : [];
   const terms = uniqueTerms([city, ...relatedSuburbs, state?.code, state?.name, postcode, ...cityPostcodes, ...hintedPostcodes, cleaned]);
 
   if (terms.length === 0) return null;

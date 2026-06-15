@@ -29,15 +29,20 @@ export async function GET(request: NextRequest) {
 
   const q = normaliseAdRadarCardSearchQuery(request.nextUrl.searchParams.get("q") ?? "");
   const sort: AdRadarCardSearchSort = request.nextUrl.searchParams.get("sort") === "longest" ? "longest" : "recent";
+  const includeSurroundingSuburbs = isTruthySearchParam(request.nextUrl.searchParams.get("includeSurrounding"));
   if (!q) {
     return NextResponse.json({ cards: [] });
   }
 
   try {
-    const cards = await searchCustomerMetaAdLibraryCards(supabase, { query: q, sort });
+    const cards = await searchCustomerMetaAdLibraryCards(supabase, { query: q, sort, includeSurroundingSuburbs });
     return NextResponse.json({ cards });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ad Radar search failed.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function isTruthySearchParam(value: string | null): boolean {
+  return value === "1" || value === "true" || value === "yes";
 }

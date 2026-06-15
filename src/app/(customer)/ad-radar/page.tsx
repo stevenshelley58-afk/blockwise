@@ -19,7 +19,10 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const searchTerm = firstParam(params.q ?? params.postcode).trim();
   const sort: ResearchSort = firstParam(params.sort) === "longest" ? "longest" : "recent";
-  const locationGuess = searchTerm ? resolveAdRadarLocationSearch(searchTerm) : resolveAdRadarLocationGuess(requestHeaders);
+  const includeSurrounding = isTruthyParam(firstParam(params.includeSurrounding));
+  const locationGuess = searchTerm
+    ? resolveAdRadarLocationSearch(searchTerm, { includeSurroundingSuburbs: includeSurrounding })
+    : resolveAdRadarLocationGuess(requestHeaders);
   const locationLabel = locationGuess?.label ?? "Perth, WA";
 
   return (
@@ -30,14 +33,11 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         description="Search live Australian real-estate ads by postcode, suburb, page, Library ID, or ad copy."
       />
       <AdRadarSearchPanel
+        initialIncludeSurrounding={includeSurrounding}
         initialQuery={searchTerm}
         initialSort={sort}
         initialLocationLabel={locationLabel}
-        initialNote={
-          searchTerm
-            ? `Searching scraped ads for "${searchTerm}".`
-            : `Best guess: ${locationLabel}. Search to find ads.`
-        }
+        initialNote=""
       />
     </main>
   );
@@ -45,4 +45,8 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
 
 function firstParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function isTruthyParam(value: string): boolean {
+  return value === "1" || value === "true" || value === "yes";
 }
