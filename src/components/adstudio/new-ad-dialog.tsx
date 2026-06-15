@@ -82,7 +82,7 @@ function isNewTemplate(template: AdStudioTemplate): boolean {
 }
 
 function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
-  return template.sampleCardImageUrl ?? templatePreviewDataUrl(template, brandKit);
+  return templatePreviewDataUrl(template, brandKit);
 }
 
 function templateSampleDescription(template: AdStudioTemplate): string {
@@ -399,7 +399,11 @@ export function NewAdDialog({
               <ArrowLeft aria-hidden size={18} />
             </button>
           )}
-          <h2 id={titleId}>{stepTitle}</h2>
+          <div className="studio-newad-titleblock">
+            <span>Start an ad</span>
+            <h2 id={titleId}>{stepTitle}</h2>
+            {step === "source" ? <p>Pick a starting layout, then edit the media and text on the canvas.</p> : null}
+          </div>
           <button className="studio-newad-x" type="button" aria-label="Close" onClick={onClose}>
             <X aria-hidden size={18} />
           </button>
@@ -687,11 +691,11 @@ const EXPLORE_STYLES = `
 .studio-explore-chips button:hover{color:var(--ink)}
 .studio-explore-chips button.on{background:var(--ink,#0f172a);color:#fff;border-color:var(--ink,#0f172a)}
 .studio-explore-count{margin-left:auto;font-size:12.5px;color:var(--muted)}
-.studio-explore-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
-.studio-explore-card{display:flex;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;transition:transform .15s,box-shadow .15s}
+.studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.studio-explore-card{display:flex;min-width:0;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;transition:transform .15s,box-shadow .15s}
 .studio-explore-card:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}
-.studio-explore-thumb{position:relative;aspect-ratio:4/5;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
-.studio-explore-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
+.studio-explore-thumb{position:relative;height:236px;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
+.studio-explore-thumb img{position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);object-fit:contain;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.16);display:block}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.7px;color:rgba(15,23,42,.35)}
 .studio-explore-badge{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;letter-spacing:.4px;background:#c9f24a;color:#1c2b08;border-radius:999px;padding:3px 9px}
 .studio-explore-thumb.g0{background:#edf5e7}
@@ -717,9 +721,11 @@ const EXPLORE_STYLES = `
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-tabs button{font-size:12.5px;padding:8px 13px}
+  .studio-explore-thumb{height:210px}
 }
 @media(max-width:560px){
   .studio-explore-grid{grid-template-columns:1fr}
+  .studio-explore-thumb{height:220px}
 }
 `;
 // NewAdDialog: Templates pop-up with Templates, Previous ads, and Ad Radar tabs.
