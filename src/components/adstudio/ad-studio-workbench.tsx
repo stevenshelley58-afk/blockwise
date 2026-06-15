@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -1062,7 +1062,8 @@ export function AdStudioWorkbench({
                 type="button"
                 onClick={() => {
                   setSelectedElement("canvas");
-                  studio.setSection(item.id);
+                  if (item.id === "templates") openNewAd();
+                  else studio.setSection(item.id);
                 }}
               >
                 <Icon aria-hidden size={18} />
@@ -1349,7 +1350,7 @@ export function AdStudioWorkbench({
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;
           return (
-            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => studio.setMobileTab(item.id)}>
+            <button className={studio.mobileTab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => (item.id === "templates" ? openNewAd() : studio.setMobileTab(item.id))}>
               <Icon aria-hidden size={22} />
               <span>{item.label}</span>
             </button>

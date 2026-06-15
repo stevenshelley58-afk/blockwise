@@ -291,6 +291,9 @@
 .studio-tpl-meta{padding:11px 13px 13px;display:block}
 .studio-tpl-meta strong{font-size:13.5px;font-weight:650;display:block}
 .studio-tpl-meta span{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.studio-tpl-meta .studio-tpl-tags{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:6px;margin-bottom:5px;-webkit-line-clamp:unset;overflow:visible}
+.studio-tpl-meta .studio-tpl-tags span{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 7px;margin:0;font-size:9.5px;font-weight:750;line-height:1.25;color:var(--muted);background:#fff;-webkit-line-clamp:unset;overflow:visible}
+.studio-tpl-meta .studio-tpl-tags span:first-child{color:var(--accent-strong);background:var(--accent-tint);border-color:rgba(176,111,44,.28)}
 .studio-tpl-g0{background:linear-gradient(165deg,#34557a,#152740)}
 .studio-tpl-g1{background:linear-gradient(165deg,#7a5a34,#3f2c14)}
 .studio-tpl-g2{background:linear-gradient(165deg,#2e6b5e,#143229)}

@@ -1,5 +1,4 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import * as Sentry from "@sentry/nextjs";
 
 import {
   WINNER_SCORER_VERSION,
@@ -15,6 +14,7 @@ import {
 } from "../src/lib/ad-template-library/winner-scoring.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../src/lib/ad-template-library/skeleton.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { captureTriggerException } from "./sentry.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 type ResearchClient = ReturnType<SupabaseServiceClient["schema"]>;
@@ -164,7 +164,7 @@ export async function runNightlyWinnerScorer(serviceSupabase: SupabaseServiceCli
       summary.scored += 1;
       if (score.isWinner) summary.winners += 1;
     } catch (error) {
-      Sentry.captureException(error);
+      captureTriggerException(error, "score-ad-winners-nightly");
       summary.scoreFailures += 1;
     }
   }
@@ -174,7 +174,7 @@ export async function runNightlyWinnerScorer(serviceSupabase: SupabaseServiceCli
     summary.minedDrafts = mined.draftRows;
     summary.protectedApprovedRows = mined.protectedApprovedRows;
   } catch (error) {
-    Sentry.captureException(error);
+    captureTriggerException(error, "score-ad-winners-nightly");
     summary.minerFailures += 1;
   }
 

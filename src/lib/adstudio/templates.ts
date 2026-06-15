@@ -13,6 +13,7 @@ export type AdStudioTemplate = {
   creativeSkeleton?: CreativeSkeleton;
   exemplars?: string[];
   imageBriefId?: string;
+  previewImageUrl?: string;
   evidenceScore?: number;
   winnerRationale?: string;
   complianceNote?: string;
@@ -36,6 +37,7 @@ export type AdStudioLibraryTemplate = {
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
+  preview_image_url?: string | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
   compliance_note?: string | null;
@@ -387,6 +389,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
   const manualFirstPass = /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
+  const previewImageUrl = stringValue(row.preview_image_url);
 
   return {
     id: templateKey,
@@ -404,6 +407,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     ...(manualFirstPass ? { manualFirstPass: true } : {}),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
+    ...(previewImageUrl ? { previewImageUrl } : {}),
   };
 }
 
@@ -414,7 +418,7 @@ export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdSt
   for (const template of builtInAdStudioTemplates()) {
     if (!byId.has(template.id)) byId.set(template.id, template);
   }
-  return [...byId.values()];
+  return [...byId.values()].sort(compareTemplateVisibility);
 }
 
 export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_TEMPLATES.map((template) => ({
@@ -454,4 +458,20 @@ function numberValue(value: unknown): number | undefined {
 function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
   const parsed = creativeSkeletonSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function compareTemplateVisibility(a: AdStudioTemplate, b: AdStudioTemplate): number {
+  const priority = (template: AdStudioTemplate) => {
+    if (template.creativeSkeleton) return 0;
+    if (template.source === "radar") return 1;
+    return 2;
+  };
+
+  const priorityDiff = priority(a) - priority(b);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  const evidenceDiff = (b.evidenceScore ?? -1) - (a.evidenceScore ?? -1);
+  if (evidenceDiff !== 0) return evidenceDiff;
+
+  return a.name.localeCompare(b.name);
 }

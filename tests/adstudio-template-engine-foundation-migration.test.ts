@@ -77,7 +77,8 @@ test("template engine migration creates workspace-scoped owned performance table
 });
 
 test("template engine migration exposes skeletons and exemplars through approved template view", () => {
-  assert.match(sql, /create or replace view research\.v_ad_template_library as/i);
+  assert.match(sql, /drop view if exists research\.v_ad_template_library/i);
+  assert.match(sql, /create view research\.v_ad_template_library as/i);
   assert.match(sql, /coalesce\(c\.creative_skeleton, b\.creative_skeleton\) as creative_skeleton/i);
   assert.match(sql, /\bc\.exemplar_observed_ad_ids\b/i);
   assert.match(sql, /where c\.status = 'approved'/i);

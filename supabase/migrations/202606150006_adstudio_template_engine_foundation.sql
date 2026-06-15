@@ -190,7 +190,9 @@ where not exists (
     and existing.active_to is null
 );
 
-create or replace view research.v_ad_template_library as
+drop view if exists research.v_ad_template_library;
+
+create view research.v_ad_template_library as
 select
   c.template_key,
   c.status,

@@ -9,7 +9,6 @@ function creative(objects: Array<{ role: string; x: number; y: number; width: nu
     canvas: {
       width: 1080,
       height: 1080,
-      backgroundAssetId: null,
       objects: objects.map((o) => ({ ...o, objectId: o.role, type: "text" as const, locked: false })),
     },
   };
@@ -22,9 +21,8 @@ test("buildLayoutBrief names a copy-safe zone and forbids rendered text", () => 
       { role: "cta_button", x: 86, y: 788, width: 360, height: 78 },
     ]),
   );
-
   assert.match(brief, /copy-safe/i);
-  assert.match(brief, /lower third/i); // wide block low in the frame
+  assert.match(brief, /lower third/i);
   assert.match(brief, /do not render any text/i);
   assert.match(brief, /1:1/);
 });
@@ -32,13 +30,12 @@ test("buildLayoutBrief names a copy-safe zone and forbids rendered text", () => 
 test("buildLayoutBrief places the subject opposite a side-weighted copy block", () => {
   const brief = buildLayoutBrief(
     creative([
-      { role: "headline", x: 560, y: 470, width: 360, height: 120 }, // right-middle, narrow
+      { role: "headline", x: 560, y: 470, width: 360, height: 120 },
       { role: "subheadline", x: 560, y: 600, width: 340, height: 80 },
     ]),
   );
-
   assert.match(brief, /right side/i);
-  assert.match(brief, /left side/i); // subject pushed opposite
+  assert.match(brief, /left side/i);
 });
 
 test("buildLayoutBrief falls back gracefully when there are no copy objects", () => {
