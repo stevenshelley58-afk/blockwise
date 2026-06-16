@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise | Real Estate Meta Ads Workflow</title>
+<meta name="description" content="See what your competitors are running, then create, approve, export and track local Meta ad campaigns through your own ad account. Free 7-day trial, no card required." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Blockwise home">
+    <span class="mark"></span>blockwise
+  </a>
+  <nav class="nav__links">
+    <a href="#workflow">How it works</a>
+    <a href="#results">Results</a>
+    <a href="#trial">Pricing</a>
+  </nav>
+  <div class="nav__cta">
+    <a class="nav__login" href="#login">Log in</a>
+    <a class="btn btn--ink btn--sm" href="#signup">Start free trial</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO — SPLIT-SCREEN LIVE FEED ============ -->
+  <section class="hero hero--split wrap" id="radar-top">
+    <div class="hero__layout">
+      <div class="hero__copy">
+        <div class="eyebrow" data-reveal><span class="dot"></span> Suburb Signals · live</div>
+        <h1 data-reveal data-delay="1">See every ad running in <em>your suburb</em>.</h1>
+        <p class="hero__sub" data-reveal data-delay="2">Suburb Signals streams every active real estate ad in your market into one live feed — then turns one listing into leads of your own.</p>
+
+        <form class="search" id="radarForm" data-reveal data-delay="2" autocomplete="off">
+          <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input id="radarSearch" type="text" placeholder="Enter your suburb — try Cottesloe, WA" aria-label="Search a suburb" />
+          <button class="btn btn--accent" type="submit">Scan my suburb</button>
+        </form>
+
+        <div class="hero__trust" data-reveal data-delay="2">
+          <span>Live ads in seconds</span>
+          <span>No login to look</span>
+          <span>Updated daily</span>
+        </div>
+      </div>
+
+      <div class="feed" id="feed" data-reveal aria-label="Live competitor ad feed (example data)">
+        <div class="feed__bar">
+          <span class="blip"></span> LIVE&nbsp;·&nbsp;<b id="adMarket">Perth, WA</b><span class="spacer"></span><b id="adCount">1,284</b>&nbsp;active ads
+        </div>
+        <div class="feed__track" id="feedTrack"><!-- cards injected by app.js --></div>
+        <div class="feed__hint">Hover to pause</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="section wrap" id="workflow">
+    <div class="section-head" data-reveal>
+      <span class="eyebrow">How it works</span>
+      <h2>One listing in. Live ads out.</h2>
+    </div>
+    <div class="steps">
+      <div class="step" data-reveal>
+        <div class="step__n">01</div>
+        <h3>Brief it</h3>
+        <p>Pick the angle, suburb and goal.</p>
+      </div>
+      <div class="step" data-reveal data-delay="1">
+        <div class="step__n">02</div>
+        <h3>Generate it</h3>
+        <p>Ads, creative variants and a lead form, drafted for you.</p>
+      </div>
+      <div class="step" data-reveal data-delay="2">
+        <div class="step__n">03</div>
+        <h3>Approve it</h3>
+        <p>One review of copy, creative, budget and schedule.</p>
+      </div>
+      <div class="step" data-reveal data-delay="3">
+        <div class="step__n">04</div>
+        <h3>Launch it</h3>
+        <p>Export to your own ad account and track results here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS + CONTROL ============ -->
+  <section class="section wrap" id="results">
+    <div class="split">
+      <div data-reveal>
+        <span class="eyebrow">The result</span>
+        <h2 style="margin-top:14px;">More leads.<br />Less work.</h2>
+        <p class="lead" style="margin-top:18px;">One listing becomes a week of local ads. Nothing spends until you approve it.</p>
+        <ul class="checklist" style="margin-top:26px;">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Approve every ad before it goes live</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Runs through your own Meta ad account</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> You set the budget and schedule</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Every result in one dashboard</li>
+        </ul>
+      </div>
+      <div class="dash" data-reveal data-delay="1">
+        <div class="dash__head">
+          <div class="dash__title">Campaign Performance <span>Example data</span></div>
+          <div class="dash__pill">This week</div>
+        </div>
+        <div class="dash__big"><span>23</span><small>leads</small></div>
+        <div class="chart">
+          <div class="bar" data-v="0.34"><i></i><span>Mon</span></div>
+          <div class="bar" data-v="0.52"><i></i><span>Tue</span></div>
+          <div class="bar" data-v="0.46"><i></i><span>Wed</span></div>
+          <div class="bar peak" data-v="0.92"><i></i><span>Thu</span></div>
+          <div class="bar" data-v="0.68"><i></i><span>Fri</span></div>
+          <div class="bar" data-v="0.74"><i></i><span>Sat</span></div>
+          <div class="bar" data-v="0.40"><i></i><span>Sun</span></div>
+        </div>
+        <div class="dash__stats">
+          <div class="dash__stat"><div class="k">Leads</div><div class="v">23</div></div>
+          <div class="dash__stat"><div class="k">Cost / lead</div><div class="v">$18</div></div>
+          <div class="dash__stat"><div class="k">Spent</div><div class="v">$414</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FREE TRIAL ============ -->
+  <section class="section trial" id="trial">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">Free trial</span>
+        <h2>Start free. Connect when you're ready.</h2>
+        <p>Build real campaigns for 7 days. No card — nothing charges at the end.</p>
+        <div style="margin-top:26px;"><a class="btn btn--accent" href="#signup">Start free trial <span class="arr">→</span></a></div>
+      </div>
+      <div class="trial__grid">
+        <div class="tcard" data-reveal><div class="k">7 <em>days</em></div><p>Full builder access from minute one.</p></div>
+        <div class="tcard" data-reveal data-delay="1"><div class="k">10 <em>packs</em></div><p>Create up to 10 ad packs, free.</p></div>
+        <div class="tcard" data-reveal data-delay="2"><div class="k">No <em>card</em></div><p>Link Meta only when you choose to.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section wrap" id="faq">
+    <div class="section-head" data-reveal>
+      <span class="eyebrow">Questions</span>
+      <h2>The bits agents ask about.</h2>
+    </div>
+    <div class="faq" data-reveal>
+      <div class="faq__item" aria-expanded="true">
+        <button class="faq__q">Who pays for ad spend?<span class="pm"></span></button>
+        <div class="faq__a"><p>You do. Campaigns run through your connected ad account and spend is paid to the platform directly. Blockwise is the software used to create, approve, export and track the campaign.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Do I need a Meta ad account?<span class="pm"></span></button>
+        <div class="faq__a"><p>You can create and review campaigns before connecting Meta. To move from draft to a live campaign, connect your Meta ad account for final setup.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Can I approve ads before they run?<span class="pm"></span></button>
+        <div class="faq__a"><p>Yes. Nothing is sent for launch until your team approves the copy, creative, lead form, budget and schedule.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">What happens after the 7 days?<span class="pm"></span></button>
+        <div class="faq__a"><p>Creating campaigns pauses and we ask you to pick a plan. We never took a card, so there's no surprise charge. Your drafts stay put.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA BAND ============ -->
+  <section class="section ctaband wrap">
+    <div data-reveal>
+      <h2>Turn one property into local ads.</h2>
+      <div class="btns">
+        <a class="btn btn--accent" href="#signup">Start free trial <span class="arr">→</span></a>
+        <a class="btn btn--ghost" href="mailto:hello@blockwise.sale?subject=Managed%20setup">Book a 15-min walkthrough</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site">
+  <div class="wrap">
+    <div class="foot__top">
+      <div>
+        <div class="foot__brand"><span class="mark"></span>blockwise</div>
+        <p>The ad platform for real estate teams. Create, approve, export and track property campaigns from one place.</p>
+        <a class="mail" href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
+      </div>
+      <div class="foot__col">
+        <h4>Product</h4>
+        <a href="#workflow">How it works</a>
+        <a href="#results">Results</a>
+        <a href="#trial">Pricing</a>
+      </div>
+      <div class="foot__col">
+        <h4>Legal</h4>
+        <a href="#privacy">Privacy</a>
+        <a href="#terms">Terms</a>
+        <a href="#data-deletion">Data deletion</a>
+      </div>
+    </div>
+    <div class="foot__bot">
+      <span>© 2026 Blockwise. All rights reserved.</span>
+      <span class="mono">Perth, WA · built for real estate teams</span>
+    </div>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

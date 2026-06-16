@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise | SubSignals for Real Estate Ads</title>
+<meta name="description" content="SubSignals shows active real estate ads running nearby, then Blockwise turns one listing into a ready-to-approve Meta campaign." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav nav--minimal nav--subsignals">
+  <a class="brand" href="#top" aria-label="Blockwise home">
+    <span class="mark"></span>blockwise.sale
+  </a>
+  <nav class="nav__links">
+    <a href="#subsignals">SubSignals</a>
+    <a href="#builder">Builder</a>
+    <a href="#workflow">How it works</a>
+  </nav>
+  <div class="nav__cta">
+    <a class="nav__login" href="/login">Log in</a>
+    <a class="btn btn--ink btn--sm" href="/signup">Start free</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO — SPLIT-SCREEN LIVE FEED ============ -->
+  <section class="hero hero--split wrap" id="radar-top">
+    <div class="hero__layout">
+      <div class="hero__copy">
+        <div class="eyebrow" data-reveal><span class="dot"></span> SubSignals · live</div>
+        <h1 data-reveal data-delay="1">See nearby ads. <em>Launch yours.</em></h1>
+        <p class="hero__sub" data-reveal data-delay="2">SubSignals streams every active agent ad nearby into one live feed. Blockwise turns one listing into a ready-to-approve Meta campaign.</p>
+
+        <form class="search" id="radarForm" data-reveal data-delay="2" autocomplete="off">
+          <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input id="radarSearch" type="text" placeholder="Enter suburb, agency, or postcode" aria-label="Search a suburb, agency, or postcode" />
+          <button class="btn btn--ink" type="submit">See SubSignals</button>
+        </form>
+
+        <div class="hero__trust" data-reveal data-delay="2">
+          <span>Live ads in seconds</span>
+          <span>No login to look</span>
+          <span>7-day trial · no card</span>
+        </div>
+      </div>
+
+      <div class="feed" id="feed" data-reveal aria-label="Live agent ad feed (example data)">
+        <div class="feed__bar">
+          <span class="blip"></span> LIVE&nbsp;·&nbsp;<b id="feedMarket">Perth, WA</b><span class="spacer"></span><b id="feedCount">1,284</b>&nbsp;active ads
+        </div>
+        <div class="feed__track" id="feedTrack"></div>
+        <div class="feed__hint">Hover to pause</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUBSIGNALS DEMO ============ -->
+  <section class="section wrap ad-spy-section subsignals-demo" id="subsignals">
+    <div class="section-head section-head--center" data-reveal>
+      <span class="eyebrow"><span class="dot"></span> SubSignals demo</span>
+      <h2>Search a suburb. See the pattern.</h2>
+      <p class="lead">Browse active agent ads by angle, agency and platform, then build from the signal.</p>
+    </div>
+
+    <div class="chips" data-reveal data-delay="1">
+      <button class="chip" data-market="Perth, WA" aria-pressed="true">Perth, WA</button>
+      <button class="chip" data-market="Subiaco">Subiaco</button>
+      <button class="chip" data-market="Cottesloe">Cottesloe</button>
+      <button class="chip" data-market="Mount Lawley">Mount Lawley</button>
+      <button class="chip" data-market="South Perth">South Perth</button>
+      <button class="chip" data-market="Fremantle">Fremantle</button>
+    </div>
+
+    <div class="radarwrap" data-reveal data-delay="2">
+      <div class="panel" id="radar">
+        <div class="panel__bar">
+          <div class="panel__id">
+            <span class="dial" aria-hidden="true"></span>
+            <span class="panel__title">SubSignals</span>
+            <span class="panel__market" id="adMarket"><b>Perth, WA</b></span>
+          </div>
+          <span class="panel__spacer"></span>
+          <span class="panel__market"><b id="adCount">1,284</b>&nbsp;active ads</span>
+          <div class="seg" data-group="platform" role="group" aria-label="Platform">
+            <button data-platform="All" aria-pressed="true">All</button>
+            <button data-platform="Facebook" aria-pressed="false">Facebook</button>
+            <button data-platform="Instagram" aria-pressed="false">Instagram</button>
+          </div>
+        </div>
+
+        <div class="panel__filters">
+          <button class="tchip" data-type="All" aria-pressed="true">All angles</button>
+          <button class="tchip" data-type="Just Listed" aria-pressed="false">Just Listed</button>
+          <button class="tchip" data-type="Open Home" aria-pressed="false">Open Home</button>
+          <button class="tchip" data-type="Just Sold" aria-pressed="false">Just Sold</button>
+          <button class="tchip" data-type="Free Appraisal" aria-pressed="false">Free Appraisal</button>
+          <button class="tchip" data-type="Buyer Demand" aria-pressed="false">Buyer Demand</button>
+          <button class="tchip" data-type="Market Update" aria-pressed="false">Market Update</button>
+        </div>
+
+        <div class="adgrid" id="adGrid"></div>
+
+        <div class="scan" id="scanState">
+          <div class="scan__radar" aria-hidden="true"></div>
+          <div class="scan__label" id="scanLabel">Scanning <b>Perth, WA</b>…</div>
+        </div>
+
+        <div class="panel__foot">
+          <span id="resultMeta">Showing 16 of ~1,284 active ads</span>
+          <span>Search a suburb · then build from the signal</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SIGNAL TO CAMPAIGN ============ -->
+  <section class="section wrap" id="builder">
+    <div class="split split--builder">
+      <div class="campaign-pack" data-reveal>
+        <div class="campaign-pack__top">
+          <span>Campaign pack</span>
+          <small>Built from SubSignals</small>
+        </div>
+        <h3>Mount Lawley seller leads</h3>
+        <p>One listing becomes the ads, form, budget and approval workflow.</p>
+        <div class="pack-grid">
+          <div><b>3</b><span>ad variants</span></div>
+          <div><b>1</b><span>lead form</span></div>
+          <div><b>$25</b><span>daily budget</span></div>
+          <div><b>Ready</b><span>for approval</span></div>
+        </div>
+        <div class="pack-checks">
+          <span>Copy checked</span>
+          <span>Creative matched</span>
+          <span>Meta export ready</span>
+        </div>
+      </div>
+      <div data-reveal data-delay="1">
+        <span class="eyebrow"><span class="dot"></span> What Blockwise does</span>
+        <h2 style="margin-top:14px;">Turns the local signal into the campaign.</h2>
+        <p class="lead" style="margin-top:18px;">Search the area, pick the angle, add one listing, then approve the ads, form, budget and schedule before launch.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="section wrap" id="workflow">
+    <div class="section-head" data-reveal>
+      <span class="eyebrow">How it works</span>
+      <h2>One listing in. Live ads out.</h2>
+    </div>
+    <div class="steps">
+      <div class="step" data-reveal>
+        <div class="step__n">Step 1, Brief</div>
+        <div class="step__viz">
+          <div class="mini">
+            <div class="mini__row"><span class="k">Type</span><span class="v">Free appraisal</span></div>
+            <div class="mini__row"><span class="k">Suburb</span><span class="v">Mount Lawley</span></div>
+            <div class="mini__row"><span class="k">Budget</span><span class="v">$25 / day</span></div>
+            <div class="mini__row"><span class="k">Goal</span><span class="v">Seller leads</span></div>
+          </div>
+        </div>
+        <h3>Brief it</h3>
+        <p>Pick the angle, suburb and goal.</p>
+      </div>
+      <div class="step" data-reveal data-delay="1">
+        <div class="step__n">Step 2, Generate</div>
+        <div class="step__viz">
+          <div style="width:100%;">
+            <div class="mini__ad"><i></i><i></i></div>
+            <div class="mini" style="margin-top:8px;padding:9px 12px;">
+              <div class="mini__row" style="border:0;padding:3px 0;"><span class="k">Ad 1 · Ad 2 · Form</span><span class="v">drafted</span></div>
+            </div>
+          </div>
+        </div>
+        <h3>Generate it</h3>
+        <p>Ads, creative variants and lead form, drafted.</p>
+      </div>
+      <div class="step" data-reveal data-delay="2">
+        <div class="step__n">Step 3, Approve</div>
+        <div class="step__viz">
+          <div class="mini">
+            <div class="mini__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Copy and claims</div>
+            <div class="mini__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Images and brand</div>
+            <div class="mini__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Budget and schedule</div>
+          </div>
+        </div>
+        <h3>Approve it</h3>
+        <p>One review of copy, creative and budget.</p>
+      </div>
+      <div class="step" data-reveal data-delay="3">
+        <div class="step__n">Step 4, Export</div>
+        <div class="step__viz">
+          <div class="mini" style="display:flex;align-items:center;gap:12px;">
+            <span class="dial" style="width:30px;height:30px;"></span>
+            <div><div class="v" style="font-weight:600;">Package ready</div><div class="k">connect ad account ›</div></div>
+          </div>
+        </div>
+        <h3>Launch it</h3>
+        <p>Export to your ad account and track it here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CAMPAIGNS / FEATURES ============ -->
+  <section class="section wrap" id="campaign-types">
+    <div class="section-head" data-reveal>
+      <span class="eyebrow">Campaigns</span>
+      <h2>Everything in one workspace.</h2>
+    </div>
+    <div class="features">
+      <div class="feat" data-reveal>
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
+        <h3>Facebook &amp; Instagram ads</h3>
+        <p>Copy and creative variants for every property angle.</p>
+      </div>
+      <div class="feat" data-reveal data-delay="1">
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+        <h3>Lead forms</h3>
+        <p>Built to match the campaign goal.</p>
+      </div>
+      <div class="feat" data-reveal data-delay="2">
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 12 8 8M12 12l5 2"/></svg></div>
+        <h3>Six campaign angles</h3>
+        <p>Just Listed, Open Home, Just Sold, Appraisal &amp; more.</p>
+      </div>
+      <div class="feat" data-reveal>
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v20M5 6h9a3 3 0 0 1 0 6H7a3 3 0 0 0 0 6h10"/></svg></div>
+        <h3>Budget &amp; schedule</h3>
+        <p>Set spend and duration. Spend runs through your account.</p>
+      </div>
+      <div class="feat" data-reveal data-delay="1">
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 12l2 2 4-4"/><path d="M12 3 4 6v5c0 5 3.4 8.3 8 10 4.6-1.7 8-5 8-10V6l-8-3Z"/></svg></div>
+        <h3>Approval checks</h3>
+        <p>Claims and brand fit, flagged before sign-off.</p>
+      </div>
+      <div class="feat" data-reveal data-delay="2">
+        <div class="feat__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-7"/></svg></div>
+        <h3>Live reporting</h3>
+        <p>Clicks, leads and spend, inside Blockwise.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTROL + TABLE ============ -->
+  <section class="section wrap">
+    <div class="split">
+      <div data-reveal>
+        <span class="eyebrow">Approval &amp; control</span>
+        <h2 style="margin-top:14px;">Nothing spends until you say so.</h2>
+        <ul class="checklist" style="margin-top:26px;">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Approve every ad before export</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Use your own Meta ad account</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> Control the budget and schedule</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7"/></svg> See every result in one dashboard</li>
+        </ul>
+      </div>
+      <div class="tablecard" data-reveal data-delay="1">
+        <div class="tablecard__top">
+          <div class="t">Campaigns <span>Example data</span></div>
+          <a class="btn btn--ghost btn--sm" href="/signup">Create campaign</a>
+        </div>
+        <table class="camp">
+          <thead><tr><th>Campaign</th><th>Status</th><th>Clicks</th><th>Leads</th><th>Spend</th></tr></thead>
+          <tbody>
+            <tr><td>Mt Lawley Appraisal</td><td><span class="status active"><span class="d"></span>Active</span></td><td>247</td><td>18</td><td>$324</td></tr>
+            <tr><td>Subiaco Just Listed</td><td><span class="status active"><span class="d"></span>Active</span></td><td>182</td><td>11</td><td>$210</td></tr>
+            <tr><td>Cottesloe Open Home</td><td><span class="status paused"><span class="d"></span>Paused</span></td><td>93</td><td>7</td><td>$98</td></tr>
+            <tr><td>South Perth Auction</td><td><span class="status active"><span class="d"></span>Active</span></td><td>145</td><td>9</td><td>$176</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FREE TRIAL ============ -->
+  <section class="section trial" id="free-trial">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <span class="eyebrow">Free trial</span>
+        <h2>Start with 10 free ad packs.</h2>
+        <p>No card. Build real campaigns, connect your ad account when you're ready.</p>
+        <div style="margin-top:26px;"><a class="btn btn--accent" href="/signup">Start free trial <span class="arr">›</span></a></div>
+      </div>
+      <div class="trial__grid">
+        <div class="tcard" data-reveal><div class="k">7 <em>days</em></div><p>Full builder access from minute one.</p></div>
+        <div class="tcard" data-reveal data-delay="1"><div class="k">10 <em>packs</em></div><p>Create up to 10 ad packs free.</p></div>
+        <div class="tcard" data-reveal data-delay="2"><div class="k">No <em>card</em></div><p>Nothing charges at the end.</p></div>
+        <div class="tcard" data-reveal data-delay="3"><div class="k">Connect <em>anytime</em></div><p>Link Meta when you're ready.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MANAGED SETUP ============ -->
+  <section class="section wrap" id="managed-setup">
+    <div class="split">
+      <div data-reveal>
+        <span class="eyebrow">Managed setup</span>
+        <h2 style="margin-top:14px;">Want us to set up the first one?</h2>
+        <p class="lead" style="margin-top:18px;">Book 15 minutes. We'll build your first campaign with you and have it ready to launch.</p>
+      </div>
+      <form class="formcard" data-reveal data-delay="1" onsubmit="return false">
+        <div class="field"><label>Your name</label><input type="text" placeholder="Jordan Avery" /></div>
+        <div class="field"><label>Email</label><input type="email" placeholder="you@agency.com.au" /></div>
+        <div class="field"><label>Suburb you want to advertise in</label><input type="text" placeholder="Mount Lawley, WA" /></div>
+        <div class="field"><label>Phone (optional)</label><input type="tel" placeholder="04XX XXX XXX" /></div>
+        <button class="btn btn--ink" style="width:100%;justify-content:center;">Request managed setup</button>
+        <p class="formnote">No obligation. We'll never share your details.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section wrap" id="faq">
+    <div class="section-head" data-reveal>
+      <span class="eyebrow">Questions</span>
+      <h2>The bits agents ask about.</h2>
+    </div>
+    <div class="faq" data-reveal>
+      <div class="faq__item" aria-expanded="true">
+        <button class="faq__q">Who pays for ad spend?<span class="pm"></span></button>
+        <div class="faq__a"><p>You do. Campaigns run through your connected ad account and your ad spend is paid to the platform directly. Blockwise is the software used to create, approve, export and track the campaign.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Do I need a Meta ad account?<span class="pm"></span></button>
+        <div class="faq__a"><p>You can create and review campaigns before connecting Meta. To move from draft to a live campaign, connect your Meta ad account for final setup.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Can I approve ads before they run?<span class="pm"></span></button>
+        <div class="faq__a"><p>Yes. Nothing is sent for launch until your team approves the copy, creative, lead form, budget and schedule.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Can I see results inside Blockwise?<span class="pm"></span></button>
+        <div class="faq__a"><p>Yes. Once your campaign is connected, Blockwise shows status, spend, clicks, leads and performance metrics inside the app.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">Are the ads checked before export?<span class="pm"></span></button>
+        <div class="faq__a"><p>Blockwise flags common property advertising risks and brand issues before approval. Your agency remains responsible for final review, claims, pricing language and export.</p></div>
+      </div>
+      <div class="faq__item" aria-expanded="false">
+        <button class="faq__q">What happens after the 7 days?<span class="pm"></span></button>
+        <div class="faq__a"><p>Creating campaigns pauses and we ask you to pick a plan. We never took a card, so there is no surprise charge. Your drafts stay put.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA BAND ============ -->
+  <section class="section ctaband wrap">
+    <div data-reveal>
+      <span class="eyebrow" style="justify-content:center;display:flex;"><span class="dot"></span> SubSignals</span>
+      <h2 style="margin-top:18px;">See the local signal. Launch the better campaign.</h2>
+      <div class="btns">
+        <a class="btn btn--accent" href="/signup">Start free trial <span class="arr">›</span></a>
+        <a class="btn btn--ghost" href="#managed-setup">Book a 15-min walkthrough</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site">
+  <div class="wrap">
+    <div class="foot__top">
+      <div>
+        <div class="foot__brand"><span class="mark"></span>blockwise</div>
+        <p>SubSignals shows what ads are running nearby. Blockwise turns that signal into ready-to-approve property campaigns.</p>
+        <a class="mail" href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
+      </div>
+      <div class="foot__col">
+        <h4>Product</h4>
+        <a href="#radar">SubSignals</a>
+        <a href="#builder">Builder</a>
+        <a href="#workflow">How it works</a>
+        <a href="#free-trial">Free trial</a>
+        <a href="/pricing">Pricing</a>
+      </div>
+      <div class="foot__col">
+        <h4>Legal</h4>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/data-deletion">Data deletion</a>
+      </div>
+    </div>
+    <div class="foot__bot">
+      <span>© 2026 Blockwise. All rights reserved.</span>
+      <span class="mono">Perth, WA · built for real estate teams</span>
+    </div>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

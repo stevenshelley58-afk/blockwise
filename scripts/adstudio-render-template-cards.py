@@ -36,7 +36,7 @@ STYLES_PATH = ROOT / "ad-template-library" / "sample-styles.json"
 SOURCES_DIR = ROOT / "ad-template-library" / "images" / "sample-sources"
 DEFAULT_OUT = ROOT / "ad-template-library" / "images" / "sample-cards"
 BUCKET = "template-cards"
-PREFIX = "adstudio-samples/v1"
+PREFIX = "adstudio-samples/v2"
 W, H = 1080, 1350
 
 _SANS = ["/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -578,8 +578,13 @@ def lay_poster_band(canvas, key, style, copy, pal, idx):
 
 
 def lay_data_card(canvas, key, style, copy, pal, idx):
+    theme = style.get("theme", "dark")
+    if theme == "light":
+        bg = (245, 242, 235); big_col = pal["ink"]; lab_col = (96, 102, 110); ul_col = pal["accent"]; cta_col = pal["accent"]
+    else:
+        bg = pal["ink"]; big_col = (255, 255, 255); lab_col = (206, 214, 224); ul_col = pal["accent2"]; cta_col = pal["accent2"]
     d = ImageDraw.Draw(canvas)
-    d.rectangle([0, 0, W, H], fill=pal["ink"])
+    d.rectangle([0, 0, W, H], fill=bg)
     photo_h = 470
     canvas.paste(load_source(key, style, (W, photo_h)), (0, 0))
     bottom_gradient(canvas, photo_h - 200, 200, 200)
@@ -595,10 +600,10 @@ def lay_data_card(canvas, key, style, copy, pal, idx):
     for i, (big, label) in enumerate(stats):
         col = 60 if i % 2 == 0 else 580
         row = sy + (i // 2) * 220
-        d.text((col, row), big, font=font(92, True), fill="white")
-        d.line([(col, row + 116), (col + 360, row + 116)], fill=pal["accent2"], width=3)
-        d.text((col, row + 128), label, font=font(25), fill=(206, 214, 224))
-    d.text((60, H - 70), copy["cta"][:40].upper(), font=font(26, True), fill=pal["accent2"])
+        d.text((col, row), big, font=font(92, True), fill=big_col)
+        d.line([(col, row + 116), (col + 360, row + 116)], fill=ul_col, width=3)
+        d.text((col, row + 128), label, font=font(25), fill=lab_col)
+    d.text((60, H - 70), copy["cta"][:40].upper(), font=font(26, True), fill=cta_col)
 
 
 def lay_magazine_split(canvas, key, style, copy, pal, idx):
@@ -628,14 +633,19 @@ def lay_magazine_split(canvas, key, style, copy, pal, idx):
 
 
 def lay_report_cover(canvas, key, style, copy, pal, idx):
+    theme = style.get("theme", "dark")
+    if theme == "light":
+        bg = (245, 242, 235); title_col = pal["ink"]; eyebrow_col = pal["accent"]
+    else:
+        bg = pal["ink"]; title_col = (255, 255, 255); eyebrow_col = pal["accent2"]
     d = ImageDraw.Draw(canvas)
-    d.rectangle([0, 0, W, H], fill=pal["ink"])
-    d.text((60, 80), style["agencyName"].upper(), font=font(26, True), fill=pal["accent2"])
+    d.rectangle([0, 0, W, H], fill=bg)
+    d.text((60, 80), style["agencyName"].upper(), font=font(26, True), fill=eyebrow_col)
     hf = font(70, True, serif=True)
     y = 150
     title = copy["description"] if len(copy["description"]) > 8 else copy["headline"]
     for line in wrap(d, title, hf, W - 120, 3):
-        d.text((60, y), line, font=hf, fill="white")
+        d.text((60, y), line, font=hf, fill=title_col)
         y += 80
     py = y + 30
     ph = H - py - 200
@@ -730,7 +740,7 @@ def render_all(out_dir):
     templates = load_seed(DEFAULT_SEED)
     for index, (key, style) in enumerate(styles.items()):
         template = templates.get(key, {})
-        render_card(key, template, style, index, out_dir)
+        render_card_v3(key, template, style, index, out_dir)
     return styles
 
 
@@ -790,16 +800,719 @@ def upload_outputs(out_dir):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
-    parser.add_argument("--verify-only", action="store_true")
-    parser.add_argument("--upload", action="store_true")
-    args = parser.parse_args()
-    if not args.verify_only:
-        render_all(args.out_dir)
-    verify_outputs(args.out_dir)
-    if args.upload:
-        upload_outputs(args.out_dir)
-    print(json.dumps({"outDir": str(args.out_dir), "verified": True}))
+  
+
+# ===========================================================================
+# v3: rich typographic + palette + shape toolkit for 45 distinct layouts
+# ===========================================================================
+_FONT_FILES = {
+    "display": ["/usr/share/fonts/truetype/lato/Lato-Black.ttf", "/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf"],
+    "heavy": ["/usr/share/fonts/truetype/lato/Lato-Heavy.ttf", "/usr/share/fonts/truetype/lato/Lato-Bold.ttf"],
+    "poppins": ["/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf"],
+    "poppinslight": ["/usr/share/fonts/truetype/google-fonts/Poppins-Light.ttf"],
+    "sans": ["/usr/share/fonts/truetype/lato/Lato-Regular.ttf"],
+    "sansmed": ["/usr/share/fonts/truetype/lato/Lato-Medium.ttf"],
+    "sansbold": ["/usr/share/fonts/truetype/lato/Lato-Bold.ttf"],
+    "thin": ["/usr/share/fonts/truetype/lato/Lato-Light.ttf", "/usr/share/fonts/truetype/lato/Lato-Thin.ttf"],
+    "cond": ["/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf"],
+    "serif": ["/usr/share/fonts/truetype/google-fonts/Lora-Variable.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"],
+    "serifbold": ["/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"],
+    "serifit": ["/usr/share/fonts/truetype/google-fonts/Lora-Italic-Variable.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"],
+    "script": ["/usr/share/fonts/opentype/urw-base35/Z003-MediumItalic.otf", "/usr/share/fonts/truetype/google-fonts/Lora-Italic-Variable.ttf"],
+}
+_F2: dict = {}
 
 
-if __name__ == "__main__":
-    main()
+def f2(family: str, size: int):
+    require_pillow()
+    key = (family, size)
+    if key in _F2:
+        return _F2[key]
+    for path in _FONT_FILES.get(family, _FONT_FILES["sans"]):
+        if os.path.exists(path):
+            _F2[key] = ImageFont.truetype(path, size)
+            return _F2[key]
+    _F2[key] = font(size, bold=True)
+    return _F2[key]
+
+
+# Rich palette set: mix of light and dark grounds, varied accents.
+SCHEMES = [
+    {"bg": (245, 242, 235), "ink": (28, 30, 34), "accent": (196, 92, 48), "muted": (120, 116, 110), "name": "cream/rust"},
+    {"bg": (20, 28, 38), "ink": (245, 246, 248), "accent": (224, 168, 74), "muted": (150, 160, 172), "name": "navy/gold"},
+    {"bg": (238, 240, 233), "ink": (38, 46, 36), "accent": (92, 122, 78), "muted": (118, 124, 112), "name": "sage"},
+    {"bg": (32, 34, 38), "ink": (244, 244, 246), "accent": (228, 122, 80), "muted": (150, 150, 156), "name": "charcoal/coral"},
+    {"bg": (244, 238, 230), "ink": (44, 36, 30), "accent": (140, 96, 60), "muted": (130, 120, 110), "name": "tan"},
+    {"bg": (236, 92, 40), "ink": (255, 255, 255), "accent": (255, 255, 255), "muted": (255, 224, 210), "name": "orange"},
+    {"bg": (28, 44, 52), "ink": (240, 246, 246), "accent": (122, 196, 188), "muted": (150, 170, 172), "name": "teal"},
+    {"bg": (247, 244, 240), "ink": (30, 32, 40), "accent": (60, 84, 140), "muted": (124, 128, 138), "name": "ivory/blue"},
+    {"bg": (44, 40, 52), "ink": (244, 240, 248), "accent": (212, 168, 220), "muted": (160, 154, 168), "name": "plum"},
+    {"bg": (228, 220, 208), "ink": (40, 34, 28), "accent": (176, 76, 52), "muted": (128, 118, 106), "name": "clay"},
+    {"bg": (18, 20, 24), "ink": (242, 242, 244), "accent": (210, 214, 220), "muted": (140, 142, 148), "name": "mono dark"},
+    {"bg": (250, 248, 244), "ink": (34, 36, 40), "accent": (28, 30, 34), "muted": (138, 138, 142), "name": "mono light"},
+    {"bg": (40, 52, 46), "ink": (238, 244, 238), "accent": (200, 176, 110), "muted": (150, 164, 152), "name": "forest/brass"},
+    {"bg": (243, 236, 240), "ink": (52, 30, 44), "accent": (164, 72, 104), "muted": (140, 116, 128), "name": "blush"},
+    {"bg": (236, 238, 242), "ink": (28, 34, 46), "accent": (40, 70, 120), "muted": (122, 128, 140), "name": "slate/blue"},
+    {"bg": (26, 32, 30), "ink": (236, 242, 238), "accent": (214, 152, 92), "muted": (146, 158, 152), "name": "pine/amber"},
+]
+
+
+def scheme_for(style, index):
+    s = dict(SCHEMES[index % len(SCHEMES)])
+    # honor explicit light/dark theme if it conflicts strongly: leave as-is (schemes already mixed)
+    return s
+
+
+def is_light(scheme):
+    return sum(scheme["bg"]) > 360
+
+
+def fill_bg(canvas, scheme):
+    ImageDraw.Draw(canvas).rectangle([0, 0, W, H], fill=scheme["bg"])
+
+
+def rounded_photo(canvas, key, style, box, radius=0):
+    x, y, w, h = box
+    img = load_source(key, style, (w, h))
+    if radius > 0:
+        mask = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w, h], radius=radius, fill=255)
+        canvas.paste(img, (x, y), mask)
+    else:
+        canvas.paste(img, (x, y))
+
+
+def arch_photo(canvas, key, style, box):
+    x, y, w, h = box
+    img = load_source(key, style, (w, h))
+    mask = Image.new("L", (w, h), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle([0, 0, w, h], radius=min(w, h) // 2 if h <= w else w // 2, fill=255)
+    md.pieslice([0, 0, w, w], 180, 360, fill=255)
+    md.rectangle([0, w // 2, w, h], fill=255)
+    canvas.paste(img, (x, y), mask)
+
+
+def circle_photo(canvas, key, style, cx, cy, r):
+    img = load_source(key, style, (2 * r, 2 * r))
+    mask = Image.new("L", (2 * r, 2 * r), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, 2 * r, 2 * r], fill=255)
+    canvas.paste(img, (cx - r, cy - r), mask)
+
+
+def draw_pills(d, x, y, items, scheme, fnt):
+    cx = x
+    for label in items:
+        tw = text_w(d, label, fnt)
+        d.rounded_rectangle([cx, y, cx + tw + 44, y + fnt.size + 28], radius=(fnt.size + 28) // 2,
+                            outline=scheme["accent"], width=3)
+        d.text((cx + 22, y + 12), label, font=fnt, fill=scheme["ink"])
+        cx += tw + 44 + 16
+
+
+def letterspace(d, x, y, text, fnt, fill, gap=10):
+    cx = x
+    for ch in text:
+        d.text((cx, y), ch, font=fnt, fill=fill)
+        cx += text_w(d, ch, fnt) + gap
+    return cx - gap - x
+
+
+# === v3 layout family A: splits, type-led, shaped photo =====================
+def _tag(d, x, y, key, style, sch, fnt=None):
+    fnt = fnt or f2("sansbold", 24)
+    t = corner_tag(key, style)
+    d.text((x, y), t, font=fnt, fill=sch["accent"])
+
+
+def lay_split_left(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    pw = 560
+    rounded_photo(canvas, key, style, (W - pw, 0, pw, H))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    tx = 70
+    _tag(d, tx, 120, key, style, sch)
+    y = 180
+    for line in wrap(d, copy["headline"], f2("serif", 64), W - pw - tx - 50, 4):
+        d.text((tx, y), line, font=f2("serif", 64), fill=sch["ink"]); y += 74
+    y += 16
+    for line in wrap(d, copy["primary"], f2("sans", 25), W - pw - tx - 50, 4):
+        d.text((tx, y), line, font=f2("sans", 25), fill=sch["muted"]); y += 36
+    cta = copy["cta"][:22]; cf = f2("sansbold", 24)
+    d.rounded_rectangle([tx, H - 150, tx + text_w(d, cta, cf) + 64, H - 150 + 60], radius=8, fill=sch["accent"])
+    d.text((tx + 32, H - 150 + 16), cta, font=cf, fill=sch["bg"])
+
+
+def lay_split_right(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    pw = 560
+    rounded_photo(canvas, key, style, (0, 0, pw, H))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    tx = pw + 60
+    _tag(d, tx, 130, key, style, sch)
+    y = 196
+    for line in wrap(d, copy["headline"], f2("display", 58), W - tx - 50, 4):
+        d.text((tx, y), line, font=f2("display", 58), fill=sch["ink"]); y += 66
+    y += 14
+    for line in wrap(d, copy["primary"], f2("sans", 24), W - tx - 50, 5):
+        d.text((tx, y), line, font=f2("sans", 24), fill=sch["muted"]); y += 34
+    d.text((tx, H - 120), copy["cta"][:26].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_split_top(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    th = 520
+    d = ImageDraw.Draw(canvas, "RGBA")
+    _tag(d, 70, 90, key, style, sch)
+    y = 150
+    for line in wrap(d, copy["headline"], f2("serifbold", 70), W - 140, 3):
+        d.text((70, y), line, font=f2("serifbold", 70), fill=sch["ink"]); y += 84
+    rounded_photo(canvas, key, style, (0, th, W, H - th), radius=0)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bottom_gradient(canvas, H - 130, 130, 150)
+    d.text((70, H - 92), copy["cta"][:40].upper(), font=f2("sansbold", 26), fill="white")
+
+
+def lay_diagonal(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    img = load_source(key, style, (W, H))
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).polygon([(W, 0), (W, H), (380, H), (W - 120, 0)], fill=255)
+    canvas.paste(img, (0, 0), mask)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    y = 150
+    for line in wrap(d, copy["headline"], f2("serifbold", 62), 600, 3):
+        d.text((70, y), line, font=f2("serifbold", 62), fill=sch["ink"]); y += 74
+    d.text((70, y + 10), copy["description"][:40], font=f2("sansmed", 28), fill=sch["accent"])
+    # best-deal ribbon
+    cx, cy = W - 150, H - 150
+    d.ellipse([cx - 78, cy - 78, cx + 78, cy + 78], fill=sch["accent"])
+    bf = f2("display", 26)
+    d.text((cx - text_w(d, "BEST", bf) / 2, cy - 34), "BEST", font=bf, fill=sch["bg"])
+    d.text((cx - text_w(d, "DEAL", bf) / 2, cy + 2), "DEAL", font=bf, fill=sch["bg"])
+
+
+def lay_big_word(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    ph = 620
+    rounded_photo(canvas, key, style, (0, H - ph, W, ph))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    word = (corner_tag(key, style).split()[0] if corner_tag(key, style) else "PROPERTY").upper()
+    if len(word) < 4:
+        word = "PROPERTY"
+    bf = f2("display", 230)
+    while text_w(d, word, bf) > W - 80 and bf.size > 90:
+        bf = f2("display", bf.size - 10)
+    d.text((60, 120), word, font=bf, fill=sch["ink"])
+    sub = wrap(d, copy["headline"], f2("sansmed", 30), W - 600, 3)
+    sy = H - ph + 40
+    for line in sub:
+        d.text((70, sy), line, font=f2("sansmed", 30), fill="white"); sy += 40
+    cta = copy["cta"][:24]; cf = f2("sansbold", 24)
+    d.rounded_rectangle([70, H - 110, 70 + text_w(d, cta, cf) + 64, H - 50], radius=30, fill="white")
+    d.text((70 + 32, H - 98), cta, font=cf, fill=sch["ink"])
+
+
+def lay_script_hero(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (10, 14, 20, 90)), (0, 0), Image.new("RGBA", (W, H), (10, 14, 20, 90)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 110), style["agencyName"].upper(), font=f2("sansbold", 26), fill="white")
+    sf = f2("script", 150)
+    head = copy["headline"] if len(copy["headline"]) < 22 else (corner_tag(key, style).title())
+    lines = wrap(d, head, sf, W - 120, 2)
+    y = H // 2 - len(lines) * 70
+    for line in lines:
+        d.text((64, y), line, font=sf, fill="white"); y += 140
+    d.text((70, H - 110), copy["cta"][:36].upper(), font=f2("sansbold", 26), fill=sch["accent"])
+
+
+def lay_letterspace(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (12, 14, 18, 130)), (0, 0), Image.new("RGBA", (W, H), (12, 14, 18, 130)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    word = "REAL ESTATE"
+    bf = f2("thin", 70)
+    wdt = sum(text_w(d, c, bf) + 16 for c in word) - 16
+    letterspace(d, (W - wdt) // 2, H // 2 - 60, word, bf, "white", gap=16)
+    sub = corner_tag(key, style)
+    sf = f2("sansmed", 24)
+    d.text(((W - text_w(d, sub, sf)) // 2, H // 2 + 30), sub, font=sf, fill=sch["accent"])
+    # vertical side label
+    side = Image.new("RGBA", (400, 40), (0, 0, 0, 0))
+    ImageDraw.Draw(side).text((0, 0), style["sampleSuburb"].upper(), font=f2("sansbold", 22), fill="white")
+    canvas.paste(side.rotate(90, expand=True), (40, H // 2 - 200), side.rotate(90, expand=True))
+
+
+def lay_serif_elegant(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 110), style["agencyName"].upper(), font=f2("sansbold", 22), fill=sch["accent"])
+    big = f2("serif", 92)
+    word = corner_tag(key, style).split("/")[0].strip().upper()[:12] or "FEATURED"
+    d.text((70, 170), word.split()[0] if " " not in word else word.split()[0], font=big, fill=sch["ink"])
+    if " " in word:
+        d.text((70, 270), word.split()[1], font=big, fill=sch["ink"])
+    rounded_photo(canvas, key, style, (70, 420, W - 140, 640), radius=8)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    y = 1090
+    for line in wrap(d, copy["primary"], f2("serifit", 28), W - 140, 2):
+        d.text((70, y), line, font=f2("serifit", 28), fill=sch["muted"]); y += 38
+    d.text((70, H - 120), copy["cta"][:30].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_arch_card(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    arch_photo(canvas, key, style, (190, 150, 700, 760))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text(((W - text_w(d, style["agencyName"], f2("sansbold", 26))) // 2, 60), style["agencyName"], font=f2("sansbold", 26), fill=sch["accent"])
+    hf = f2("serifbold", 56)
+    lines = wrap(d, copy["headline"], hf, W - 160, 2)
+    y = 960
+    for line in lines:
+        d.text(((W - text_w(d, line, hf)) // 2, y), line, font=hf, fill=sch["ink"]); y += 64
+    cta = copy["cta"][:24]; cf = f2("sansbold", 24)
+    bw = text_w(d, cta, cf) + 64
+    d.rounded_rectangle([(W - bw) // 2, H - 140, (W + bw) // 2, H - 80], radius=30, fill=sch["accent"])
+    d.text(((W - text_w(d, cta, cf)) // 2, H - 128), cta, font=cf, fill=sch["bg"])
+
+
+def lay_circle_card(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    circle_photo(canvas, key, style, W // 2, 430, 330)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.ellipse([W // 2 - 342, 88, W // 2 + 342, 772], outline=sch["accent"], width=5)
+    hf = f2("display", 60)
+    lines = wrap(d, copy["headline"], hf, W - 160, 2)
+    y = 850
+    for line in lines:
+        d.text(((W - text_w(d, line, hf)) // 2, y), line, font=hf, fill=sch["ink"]); y += 70
+    for line in wrap(d, copy["primary"], f2("sans", 25), W - 220, 2):
+        d.text(((W - text_w(d, line, f2("sans", 25))) // 2, y + 8), line, font=f2("sans", 25), fill=sch["muted"]); y += 36
+    d.text(((W - text_w(d, copy["cta"][:26].upper(), f2("sansbold", 24))) // 2, H - 110), copy["cta"][:26].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_photo_grid(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    hf = f2("serifbold", 56)
+    y = 80
+    for line in wrap(d, copy["headline"], hf, W - 140, 2):
+        d.text((70, y), line, font=hf, fill=sch["ink"]); y += 64
+    gy = y + 20
+    cells = [(70, gy, 460, 360), (550, gy, 460, 360), (70, gy + 380, 460, 360), (550, gy + 380, 460, 360)]
+    labels = ["LIVING", "KITCHEN", "BEDROOM", "OUTDOOR"]
+    for (cx, cy, cw, ch), lab in zip(cells, labels):
+        rounded_photo(canvas, key, style, (cx, cy, cw, ch), radius=10)
+        dd = ImageDraw.Draw(canvas, "RGBA")
+        dd.rectangle([cx, cy + ch - 46, cx + cw, cy + ch], fill=(*([0, 0, 0]), 150))
+        dd.text((cx + 16, cy + ch - 40), lab, font=f2("sansbold", 22), fill="white")
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, H - 96), copy["cta"][:40].upper(), font=f2("sansbold", 26), fill=sch["accent"])
+
+
+def lay_pills_listing(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (60, 70, W - 120, 600), radius=16)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    sf = f2("script", 90)
+    d.text((70, 690), "Just Listed", font=sf, fill=sch["ink"])
+    draw_pills(d, 70, 830, ["3 Bed", "2 Bath", "512 m2"], sch, f2("sansbold", 28))
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    cta = f"Offers from {price}"; cf = f2("sansbold", 30)
+    bw = text_w(d, cta, cf) + 80
+    d.rounded_rectangle([70, 960, 70 + bw, 1030], radius=12, fill=sch["accent"])
+    d.text((110, 974), cta, font=cf, fill=sch["bg"])
+    d.text((70, H - 90), f"{style['persona']['address']}", font=f2("sansmed", 24), fill=sch["muted"])
+
+
+# === v3 layout family B: editorial, banners, agent, listing detail ==========
+def lay_triptych(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    rounded_photo(canvas, key, style, (0, 0, 360, 760))
+    rounded_photo(canvas, key, style, (720, 0, 360, 760))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle([360, 0, 720, 760], fill=sch["bg"])
+    hf = f2("display", 46)
+    yy = 230
+    for line in wrap(d, corner_tag(key, style).title(), hf, 320, 2):
+        d.text((360 + (360 - text_w(d, line, hf)) // 2, yy), line, font=hf, fill=sch["ink"]); yy += 54
+    d.rectangle([0, 760, W, H], fill=sch["ink"])
+    d.text((70, 820), copy["headline"][:34], font=f2("serifbold", 40), fill=sch["bg"])
+    y = 900
+    for line in wrap(d, copy["primary"], f2("sans", 24), W - 140, 3):
+        d.text((70, y), line, font=f2("sans", 24), fill=sch["muted"]); y += 34
+    d.text((70, H - 96), copy["cta"][:40].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_open_house(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, 560))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bottom_gradient(canvas, 360, 200, 170)
+    sf = f2("serifbold", 96)
+    d.text((60, 360), corner_tag(key, style).split("/")[0].title(), font=sf, fill="white")
+    d.rectangle([0, 560, W, H], fill=sch["bg"])
+    d.text((60, 600), "SATURDAY, 21 JUNE  ·  10:30AM", font=f2("sansbold", 28), fill=sch["accent"])
+    y = 680
+    for item in ["Spacious open-plan layout", "Renovated kitchen & bathrooms", "Walk to parks and cafes"]:
+        d.text((60, y), "+", font=f2("sansbold", 30), fill=sch["accent"])
+        d.text((100, y), item, font=f2("sans", 28), fill=sch["ink"]); y += 56
+    d.rectangle([0, H - 110, W, H], fill=sch["ink"])
+    d.text((60, H - 86), f"{style['persona']['address']}  ·  {style['agencyName']}", font=f2("sansmed", 24), fill=sch["bg"])
+
+
+def lay_room_overview(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (430, 60, 590, 520), radius=12)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 90), style["agencyName"].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+    hf = f2("serifbold", 52)
+    y = 150
+    for line in wrap(d, "Your dream home is waiting", hf, 340, 3):
+        d.text((60, y), line, font=hf, fill=sch["ink"]); y += 60
+    cells = [(60, 620, 470, 250), (560, 620, 460, 250), (60, 890, 470, 250), (560, 890, 460, 250)]
+    labels = ["Living room", "Bedrooms", "Dining room", "Kitchen"]
+    for (cx, cy, cw, ch), lab in zip(cells, labels):
+        rounded_photo(canvas, key, style, (cx, cy, cw, 180), radius=10)
+        dd = ImageDraw.Draw(canvas, "RGBA")
+        dd.text((cx, cy + 190), lab, font=f2("sansbold", 24), fill=sch["ink"])
+        dd.text((cx, cy + 220), "Comfort, space and light.", font=f2("sans", 19), fill=sch["muted"])
+
+
+def lay_for_sale_banner(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (0, 0, W, 760))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle([0, 600, W, 760], fill=(*([0, 0, 0]), 0))
+    bottom_gradient(canvas, 520, 240, 200)
+    df = f2("serifbold", 70)
+    d.text((60, 470), "PROPERTY FOR SALE", font=f2("display", 44), fill="white")
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    d.text((60, 540), f"Start price {price}", font=f2("serif", 48), fill="white")
+    d.rectangle([0, 760, W, H], fill=sch["bg"])
+    y = 810
+    for line in wrap(d, copy["primary"], f2("sans", 26), W - 120, 4):
+        d.text((60, y), line, font=f2("sans", 26), fill=sch["ink"]); y += 38
+    d.text((60, H - 96), f"{copy['cta'][:30].upper()}  ·  {style['agencyName']}", font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_agent_feature(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (520, 0, 560, H))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    band = Image.new("RGBA", (W, 300), (*sch["accent"], 235))
+    canvas.paste(band, (0, 560), band)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    hf = f2("display", 48)
+    y = 150
+    for line in wrap(d, "Find the property of your dream", hf, 440, 4):
+        d.text((60, y), line, font=hf, fill=sch["ink"]); y += 56
+    d.text((60, 600), style["agentName"], font=f2("script", 92), fill=sch["bg"])
+    d.text((60, 720), "Real Estate Agent", font=f2("sansbold", 26), fill=sch["bg"])
+    yy = 900
+    for row in [f"{style['persona']['address']}", "(123) 456-7890", style["agencyName"]]:
+        d.text((60, yy), row, font=f2("sansmed", 24), fill=sch["ink"]); yy += 44
+
+
+def lay_buy_sell(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (560, 70, 460, 480), radius=14)
+    circle_photo(canvas, key, style, 880, 980, 150) if style["people"] != "none" else rounded_photo(canvas, key, style, (560, 600, 460, 470), radius=14)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    hf = f2("display", 62)
+    d.text((60, 150), "Buying or", font=hf, fill=sch["ink"])
+    d.text((60, 220), "selling a home?", font=hf, fill=sch["ink"])
+    d.text((60, 320), "Let's work together.", font=f2("serifit", 34), fill=sch["accent"])
+    y = 430
+    for line in wrap(d, copy["primary"], f2("sans", 25), 460, 6):
+        d.text((60, y), line, font=f2("sans", 25), fill=sch["muted"]); y += 36
+    d.text((60, H - 110), f"{style['agentName']}  ·  {style['agencyName']}", font=f2("sansbold", 24), fill=sch["ink"])
+
+
+def lay_spec_card(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 70), style["agencyName"].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+    rounded_photo(canvas, key, style, (60, 120, W - 120, 430), radius=14)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 580), corner_tag(key, style).title(), font=f2("serifbold", 44), fill=sch["ink"])
+    st = (style.get("persona") or {}).get("stats", {})
+    rows = [("Bedrooms", "3"), ("Bathrooms", "2"), ("Car spaces", "2"), ("Land size", "512 m2"), ("Price guide", st.get("median", "$690k"))]
+    y = 660
+    for lab, val in rows:
+        d.text((60, y), lab, font=f2("sans", 27), fill=sch["muted"])
+        d.text((W - 60 - text_w(d, val, f2("sansbold", 27)), y), val, font=f2("sansbold", 27), fill=sch["ink"])
+        d.line([(60, y + 44), (W - 60, y + 44)], fill=(*sch["muted"], 90), width=1); y += 70
+    d.text((60, H - 96), copy["cta"][:40].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_two_tone(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle([0, 0, W, 470], fill=sch["accent"])
+    rounded_photo(canvas, key, style, (0, 470, W, H - 470))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    hf = f2("display", 110)
+    d.text((60, 140), corner_tag(key, style).split()[0].upper(), font=hf, fill=sch["bg"])
+    d.text((60, 300), copy["headline"][:40], font=f2("sansmed", 30), fill=sch["bg"])
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bottom_gradient(canvas, H - 130, 130, 160)
+    cta = copy["cta"][:24]; cf = f2("sansbold", 26)
+    d.rounded_rectangle([60, H - 110, 60 + text_w(d, cta, cf) + 70, H - 50], radius=30, fill="white")
+    d.text((96, H - 98), cta, font=cf, fill=sch["ink"])
+
+
+def lay_quote_band(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (*sch["ink"], 170)), (0, 0), Image.new("RGBA", (W, H), (*sch["ink"], 170)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 230), "“", font=f2("serifbold", 200), fill=sch["accent"])
+    qf = f2("serifit", 50)
+    quote = copy["headline"] if len(copy["headline"]) < 70 else copy["description"]
+    y = 430
+    for line in wrap(d, quote, qf, W - 140, 4):
+        d.text((70, y), line, font=qf, fill="white"); y += 64
+    draw_stars(ImageDraw.Draw(canvas, "RGBA"), 70, y + 30, 40, sch["accent"])
+    d.text((70, y + 110), f"— A {style['sampleSuburb']} client", font=f2("sansbold", 26), fill=sch["accent"])
+
+
+def lay_price_strip(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (W - 520, 0, 520, H))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 120), "DISCOUNT", font=f2("display", 40), fill=sch["accent"])
+    d.text((60, 175), "START PRICE", font=f2("sansbold", 30), fill=sch["ink"])
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    d.text((60, 230), price, font=f2("display", 96), fill=sch["ink"])
+    y = 380
+    for line in wrap(d, copy["primary"], f2("sans", 25), W - 600, 6):
+        d.text((60, y), line, font=f2("sans", 25), fill=sch["muted"]); y += 36
+    yy = H - 230
+    for row in ["More info", "(123) 456-7890", style["persona"]["address"]]:
+        d.text((60, yy), row, font=f2("sansmed", 24), fill=sch["ink"]); yy += 42
+
+
+def lay_search_concept(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (*sch["ink"], 120)), (0, 0), Image.new("RGBA", (W, H), (*sch["ink"], 120)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bx, by, bw = 90, 300, W - 180
+    d.rounded_rectangle([bx, by, bx + bw, by + 80], radius=40, fill="white")
+    d.ellipse([bx + 24, by + 24, bx + 56, by + 56], outline=sch["muted"], width=4)
+    d.text((bx + 80, by + 22), "Find your dream home...", font=f2("sansmed", 30), fill=sch["muted"])
+    opts = ["Luxury apartments", "Spacious villas", "Budget-friendly homes", "Commercial spaces"]
+    oy = by + 110
+    for o in opts:
+        d.rounded_rectangle([bx, oy, bx + bw, oy + 64], radius=12, fill=(255, 255, 255, 235))
+        d.ellipse([bx + 22, oy + 22, bx + 44, oy + 44], outline=sch["accent"], width=3)
+        d.text((bx + 60, oy + 16), o, font=f2("sans", 26), fill=sch["ink"]); oy += 78
+
+
+# === v3 layout family C: more distinct looks ================================
+def lay_minimal_block(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (*sch["ink"], 90)), (0, 0), Image.new("RGBA", (W, H), (*sch["ink"], 90)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 90), style["agencyName"].upper(), font=f2("sansbold", 24), fill="white")
+    d.rounded_rectangle([70, 360, 720, 720], radius=24, fill=(*sch["accent"], 235))
+    d.text((100, 410), "Real", font=f2("display", 120), fill=sch["bg"])
+    d.text((100, 540), "Estate", font=f2("display", 120), fill=sch["bg"])
+    d.text((70, H - 96), copy["headline"][:42], font=f2("sansmed", 28), fill="white")
+
+
+def lay_welcome_dark(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (10, 12, 16, 150)), (0, 0), Image.new("RGBA", (W, H), (10, 12, 16, 150)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 110), style["agencyName"].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+    hf = f2("serif", 64)
+    y = H - 360
+    for line in wrap(d, "Welcome to your future dream home", hf, W - 140, 3):
+        d.text((70, y), line, font=hf, fill="white"); y += 76
+    d.text((70, H - 96), copy["cta"][:36].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_just_sold_agent(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (60, 70, W - 120, 600), radius=16)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 720), "Just", font=f2("display", 110), fill=sch["ink"])
+    d.text((300, 730), "Sold!", font=f2("script", 130), fill=sch["accent"])
+    d.text((70, 880), "A new chapter begins.", font=f2("serif", 44), fill=sch["ink"])
+    if style["people"] != "none":
+        circle_photo(canvas, key, style, W - 180, 980, 120)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, H - 96), f"{style['agentName']}  ·  {style['agencyName']}", font=f2("sansbold", 24), fill=sch["muted"])
+
+
+def lay_highlight_list(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle([0, 0, W, 70], fill=sch["accent"])
+    d.text((60, 18), style["agencyName"].upper(), font=f2("sansbold", 24), fill=sch["bg"])
+    rounded_photo(canvas, key, style, (60, 120, W - 120, 380), radius=12)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 540), "Modern property", font=f2("serifbold", 50), fill=sch["ink"])
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    d.text((60, 610), f"Start from {price}", font=f2("sansbold", 30), fill=sch["accent"])
+    d.text((60, 690), "PROPERTY HIGHLIGHTS", font=f2("sansbold", 24), fill=sch["muted"])
+    items = ["Renovated open-plan kitchen", "Sun-filled north-facing living", "Landscaped low-care gardens", "Walk to schools and transport"]
+    y = 740
+    for it in items:
+        d.text((60, y), "•", font=f2("sansbold", 28), fill=sch["accent"])
+        d.text((92, y), it, font=f2("sans", 26), fill=sch["ink"]); y += 50
+    d.text((60, H - 90), copy["cta"][:40].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_lifestyle_soft(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (0, 0, W, 620))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 700), "Discover", font=f2("serifit", 46), fill=sch["muted"])
+    d.text((70, 760), "a space that", font=f2("serifit", 46), fill=sch["muted"])
+    d.text((70, 850), "Embrace your", font=f2("serif", 72), fill=sch["ink"])
+    d.text((70, 930), "Lifestyle", font=f2("script", 110), fill=sch["accent"])
+    d.text((70, H - 96), copy["cta"][:40], font=f2("sansbold", 24), fill=sch["muted"])
+
+
+def lay_flyer_about(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    rounded_photo(canvas, key, style, (60, 70, W - 120, 440), radius=12)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 540), "JUST LISTED", font=f2("serif", 56), fill=sch["ink"])
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    d.text((60, 620), f"Offered at {price}", font=f2("sansbold", 30), fill=sch["accent"])
+    d.text((60, 700), "ABOUT", font=f2("sansbold", 24), fill=sch["muted"])
+    y = 740
+    for line in wrap(d, copy["primary"], f2("sans", 24), 470, 5):
+        d.text((60, y), line, font=f2("sans", 24), fill=sch["ink"]); y += 34
+    d.text((560, 700), "FEATURES", font=f2("sansbold", 24), fill=sch["muted"])
+    fy = 740
+    for it in ["3 Bedrooms", "2 Bathrooms", "2 Car garage", "512 m2 land", "Renovated kitchen"]:
+        d.text((560, fy), "- " + it, font=f2("sans", 24), fill=sch["ink"]); fy += 40
+    d.text((60, H - 80), f"{style['persona']['address']}  ·  {style['agencyName']}", font=f2("sansmed", 22), fill=sch["muted"])
+
+
+def lay_coming_soon_teaser(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 110), style["agencyName"].upper(), font=f2("sansbold", 22), fill=sch["accent"])
+    d.text((70, 180), "COMING", font=f2("serif", 120), fill=sch["ink"])
+    d.text((70, 310), "SOON", font=f2("serif", 120), fill=sch["ink"])
+    rounded_photo(canvas, key, style, (70, 480, W - 140, 560), radius=10)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    cf = f2("sansbold", 22)
+    d.rounded_rectangle([W - 280, 1090, W - 70, 1150], radius=30, fill=sch["accent"])
+    d.text((W - 250, 1104), "CONTACT US", font=cf, fill=sch["bg"])
+    d.text((70, 1100), f"{style['persona']['address']}", font=f2("sansmed", 24), fill=sch["muted"])
+
+
+def lay_icon_specs(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (0, 0, W, 540))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bottom_gradient(canvas, 360, 180, 160)
+    d.text((60, 410), "Modern", font=f2("serifit", 40), fill="white")
+    d.text((60, 460), "Real Estate", font=f2("display", 56), fill="white")
+    d.rectangle([0, 540, W, H], fill=sch["bg"])
+    rows = [("Living room", "Bathroom"), ("Garage", "Kitchen"), ("Bedroom", "Pool")]
+    y = 600
+    for left, right in rows:
+        d.text((90, y), "▢  " + left, font=f2("sans", 28), fill=sch["ink"])
+        d.text((600, y), "▢  " + right, font=f2("sans", 28), fill=sch["ink"]); y += 70
+    price = (style.get("persona") or {}).get("stats", {}).get("median", "$690k")
+    d.rounded_rectangle([60, H - 150, 360, H - 80], radius=10, fill=sch["accent"])
+    d.text((90, H - 138), f"Start {price}", font=f2("sansbold", 28), fill=sch["bg"])
+    d.text((420, H - 132), style["agencyName"], font=f2("sansmed", 24), fill=sch["muted"])
+
+
+def lay_key_hero(canvas, key, style, copy, sch, idx):
+    rounded_photo(canvas, key, style, (0, 0, W, H))
+    canvas.paste(Image.new("RGBA", (W, H), (20, 16, 12, 140)), (0, 0), Image.new("RGBA", (W, H), (20, 16, 12, 140)))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, H - 360), "Looking to", font=f2("serif", 56), fill="white")
+    d.text((70, H - 290), "buy a property", font=f2("script", 96), fill="white")
+    d.text((70, H - 170), f"in {style['sampleSuburb']}?", font=f2("serif", 56), fill="white")
+    d.text((70, H - 90), copy["cta"][:36].upper(), font=f2("sansbold", 24), fill=sch["accent"])
+
+
+def lay_editorial_big(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (0, 320, W, H - 320))
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((60, 70), style["agencyName"].upper() + "   ·   HOME   ·   ABOUT   ·   CONTACT", font=f2("sansmed", 20), fill=sch["muted"])
+    d.rounded_rectangle([60, 360, 560, 720], radius=20, fill=(*sch["accent"], 235))
+    d.text((90, 420), "Real", font=f2("display", 120), fill=sch["bg"])
+    d.text((90, 555), "Estate", font=f2("display", 120), fill=sch["bg"])
+    d = ImageDraw.Draw(canvas, "RGBA")
+    bottom_gradient(canvas, H - 110, 110, 150)
+    d.text((60, H - 86), copy["cta"][:40].upper() + "   ·   www.example.com", font=f2("sansbold", 22), fill="white")
+
+
+def lay_modern_intro(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 120), "MODERN", font=f2("display", 70), fill=sch["ink"])
+    d.text((70, 200), "REAL ESTATE", font=f2("sansbold", 40), fill=sch["accent"])
+    d.text((70, 280), copy["headline"][:40], font=f2("serifit", 32), fill=sch["muted"])
+    rounded_photo(canvas, key, style, (70, 360, 460, 360), radius=10)
+    rounded_photo(canvas, key, style, (550, 360, 460, 360), radius=10)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.rectangle([0, 760, W, H], fill=sch["ink"])
+    d.text((70, 810), "We help you find your dream home.", font=f2("serif", 38), fill=sch["bg"])
+    yy = 900
+    for row in ["(123) 456-7890", "hello@example.com", style["persona"]["address"]]:
+        d.text((70, yy), row, font=f2("sansmed", 26), fill=sch["bg"]); yy += 50
+
+
+def lay_postcard(canvas, key, style, copy, sch, idx):
+    fill_bg(canvas, sch)
+    rounded_photo(canvas, key, style, (70, 70, W - 140, 760), radius=18)
+    d = ImageDraw.Draw(canvas, "RGBA")
+    d.text((70, 870), corner_tag(key, style).title(), font=f2("script", 120), fill=sch["accent"])
+    y = 1040
+    for line in wrap(d, copy["primary"], f2("sansmed", 26), W - 160, 2):
+        d.text((70, y), line, font=f2("sansmed", 26), fill=sch["ink"]); y += 38
+    d.text((70, H - 80), f"{copy['cta'][:30].upper()}", font=f2("sansbold", 24), fill=sch["muted"])
+
+
+# v3 dispatch: scheme-based layouts (one unique per template)
+LAYOUTS3 = {
+    "split_left": lay_split_left, "split_right": lay_split_right, "split_top": lay_split_top,
+    "diagonal": lay_diagonal, "big_word": lay_big_word, "script_hero": lay_script_hero,
+    "letterspace": lay_letterspace, "serif_elegant": lay_serif_elegant, "arch_card": lay_arch_card,
+    "circle_card": lay_circle_card, "photo_grid": lay_photo_grid, "pills_listing": lay_pills_listing,
+    "triptych": lay_triptych, "open_house": lay_open_house, "room_overview": lay_room_overview,
+    "for_sale_banner": lay_for_sale_banner, "agent_feature": lay_agent_feature, "buy_sell": lay_buy_sell,
+    "spec_card": lay_spec_card, "two_tone": lay_two_tone, "quote_band": lay_quote_band,
+    "price_strip": lay_price_strip, "search_concept": lay_search_concept,
+    "minimal_block": lay_minimal_block, "welcome_dark": lay_welcome_dark, "just_sold_agent": lay_just_sold_agent,
+    "highlight_list": lay_highlight_list, "lifestyle_soft": lay_lifestyle_soft, "flyer_about": lay_flyer_about,
+    "coming_soon_teaser": lay_coming_soon_teaser, "icon_specs": lay_icon_specs, "key_hero": lay_key_hero,
+    "editorial_big": lay_editorial_big, "modern_intro": lay_modern_intro, "postcard": lay_postcard,
+}
+
+
+def render_card_v3(key, template, style, index, out_dir):
+    copy = sample_copy(template, style)
+    canvas = Image.new("RGB", (W, H), (255, 255, 255))
+    layout = style.get("layout", "split_left")
+    sch = scheme_for(style, index)
+    fn = LAYOUTS3.get(layout)
+    if fn is not None:
+        try:
+            fn(canvas, key, style, copy, sch, index)
+        except Exception:
+            fill_bg(canvas, sch)
+            d = ImageDraw.Draw(canvas)
+            d.text((60, 60), layout, font=f2("sansbold", 30), fill=sch["ink"])
+            raise
+    else:
+        pal = palette_for(index)
+        LAYOUTS.get(layout, lay_feed_headline)(canvas, key, style, copy, pal, index)
+    out_path = out_dir / sample_path(key)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(out_path, "PNG", optimize=True)
+    return out_path

@@ -11,6 +11,7 @@ import {
   type MetaBreakdownRow,
   type MetaInsightRow,
 } from "../providers/meta-reporting.ts";
+import type { MetaReconciledObjects } from "../providers/meta-execution.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
 import { normalizeLeadQualityLabel } from "../operator/overview.ts";
 import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
@@ -91,10 +92,11 @@ export async function getMetaMonitorData(input: {
   const datePreset = range.key === "today" || range.key === "yesterday" ? range.key : undefined;
 
   try {
-    const [insightRows, adEntities, leadFacts] = await Promise.all([
+    const [insightRows, adEntities, leadFacts, managedIds] = await Promise.all([
       fetchMetaInsightRows({ accessToken, accountId, since: range.since, until: range.until, datePreset }),
       fetchMetaAdEntities({ accessToken, accountId }),
       loadLeadFacts(input.serviceSupabase, input.workspaceId, range),
+      loadManagedMetaIds(input.serviceSupabase, input.workspaceId),
     ]);
 
     // Optional extras — each degrades to "hidden panel", never fake data.
@@ -125,7 +127,7 @@ export async function getMetaMonitorData(input: {
       }).catch(() => undefined),
     ]);
 
-    const ads = buildAds({ insightRows, adEntities, leadFacts, placementRows, deviceRows, rangeUntil: range.until });
+    const ads = buildAds({ insightRows, adEntities, leadFacts, managedIds, placementRows, deviceRows, rangeUntil: range.until });
     const daily = buildDaily(insightRows, leadFacts, range);
     const suburbPerformance = buildSuburbPerformance(leadFacts, ads);
     const anglePerformance = buildAnglePerformance(ads);
@@ -137,6 +139,7 @@ export async function getMetaMonitorData(input: {
       budget: resolveBudget(),
       spend: round2(spend),
       impressions: ads.reduce((total, ad) => total + ad.metrics.impressions, 0),
+      reach: ads.reduce((total, ad) => total + ad.metrics.reach, 0),
       clicks: ads.reduce((total, ad) => total + ad.metrics.clicks, 0),
       leads: Math.max(
         ads.reduce((total, ad) => total + ad.metrics.leads, 0),
@@ -305,10 +308,92 @@ function extractAdId(source: unknown): string | null {
   return null;
 }
 
+type ManagedMetaIds = {
+  campaignIds: Set<string>;
+  adsetIds: Set<string>;
+  adIds: Set<string>;
+  /** Maps each managed meta id (ad/adset/campaign) to its owning publish-plan id. */
+  planByMetaId: Map<string, string>;
+};
+
+function emptyManagedMetaIds(): ManagedMetaIds {
+  return {
+    campaignIds: new Set(),
+    adsetIds: new Set(),
+    adIds: new Set(),
+    planByMetaId: new Map(),
+  };
+}
+
+/**
+ * Loads the live Meta object ids (campaign/adset/ad) owned by Blockwise publish
+ * plans for this workspace, plus a map from each meta id to its owning plan id.
+ * Used to flag which monitor ads are managed by Blockwise. Degrades gracefully
+ * to empty sets on any error — never throws.
+ */
+async function loadManagedMetaIds(
+  serviceSupabase: SupabaseServiceClient,
+  workspaceId: string,
+): Promise<ManagedMetaIds> {
+  const result = emptyManagedMetaIds();
+
+  try {
+    const { data, error } = await serviceSupabase
+      .from("meta_publish_plans")
+      .select("id, reconciled_objects_json")
+      .eq("workspace_id", workspaceId)
+      .in("status", ["approved", "publishing", "paused_live", "failed"]);
+
+    if (error || !data) {
+      return result;
+    }
+
+    for (const row of data as Array<{ id: string; reconciled_objects_json: MetaReconciledObjects | null }>) {
+      const planId = row.id;
+      const reconciled = row.reconciled_objects_json;
+
+      if (!reconciled) {
+        continue;
+      }
+
+      const campaignId = reconciled.campaignId;
+      const adsetIds = Object.values(reconciled.adSetIds ?? {});
+      const adIds = Object.values(reconciled.adIds ?? {});
+
+      if (campaignId) {
+        result.campaignIds.add(campaignId);
+
+        if (!result.planByMetaId.has(campaignId)) {
+          result.planByMetaId.set(campaignId, planId);
+        }
+      }
+
+      for (const adsetId of adsetIds) {
+        result.adsetIds.add(adsetId);
+
+        if (!result.planByMetaId.has(adsetId)) {
+          result.planByMetaId.set(adsetId, planId);
+        }
+      }
+
+      // Ad ids take precedence — overwrite any adset/campaign mapping for the id.
+      for (const adId of adIds) {
+        result.adIds.add(adId);
+        result.planByMetaId.set(adId, planId);
+      }
+    }
+  } catch {
+    return emptyManagedMetaIds();
+  }
+
+  return result;
+}
+
 function buildAds(input: {
   insightRows: MetaInsightRow[];
   adEntities: MetaAdEntity[];
   leadFacts: LeadFacts;
+  managedIds: ManagedMetaIds;
   placementRows: MetaBreakdownRow[] | null;
   deviceRows: MetaBreakdownRow[] | null;
   rangeUntil: string;
@@ -321,6 +406,7 @@ function buildAds(input: {
     adsetName: string;
     spend: number;
     impressions: number;
+    reach: number;
     clicks: number;
     platformLeads: number;
     frequencyWeighted: number;
@@ -351,6 +437,7 @@ function buildAds(input: {
       adsetName: row.adset_name ?? "",
       spend: 0,
       impressions: 0,
+      reach: 0,
       clicks: 0,
       platformLeads: 0,
       frequencyWeighted: 0,
@@ -366,6 +453,7 @@ function buildAds(input: {
 
     aggregate.spend += toNumber(row.spend);
     aggregate.impressions += impressions;
+    aggregate.reach += Math.round(toNumber(row.reach));
     aggregate.clicks += clicks;
     aggregate.platformLeads += Math.round(extractMetaLeadCount(row.actions));
 
@@ -391,7 +479,7 @@ function buildAds(input: {
   const placementByAd = groupBreakdown(input.placementRows, placementLabel);
   const deviceByAd = groupBreakdown(input.deviceRows, deviceLabel);
 
-  return Array.from(byAdId.entries())
+  const ads = Array.from(byAdId.entries())
     .map(([adId, aggregate]): MetaAdPerformance => {
       const entity = entityById.get(adId);
       const creative = entity?.creative ?? null;
@@ -400,6 +488,19 @@ function buildAds(input: {
       const validLeads = input.leadFacts.validCountByAdId.get(adId) ?? 0;
       const spend = round2(aggregate.spend);
       const adName = entity?.name ?? aggregate.adName;
+      const variantTags = parseAdVariantTags(adName);
+      const campaignId = aggregate.campaignId;
+      const adsetId = aggregate.adsetId;
+      const managed =
+        input.managedIds.adIds.has(adId) ||
+        input.managedIds.adsetIds.has(adsetId) ||
+        input.managedIds.campaignIds.has(campaignId) ||
+        Boolean(variantTags);
+      const publishPlanId =
+        input.managedIds.planByMetaId.get(adId) ??
+        input.managedIds.planByMetaId.get(adsetId) ??
+        input.managedIds.planByMetaId.get(campaignId) ??
+        null;
       const frequency =
         aggregate.frequencyImpressions > 0
           ? round2(aggregate.frequencyWeighted / aggregate.frequencyImpressions)
@@ -414,6 +515,10 @@ function buildAds(input: {
         adsetName: aggregate.adsetName,
         suburb: resolveSuburb({ adsetName: aggregate.adsetName, campaignName: aggregate.campaignName }),
         status: mapAdStatus(entity?.effective_status),
+        managed,
+        // Set in a post-pass below once every ad's managed flag is known.
+        campaignManaged: false,
+        publishPlanId,
         landingPageUrl: creative?.object_story_spec?.link_data?.link ?? null,
         metaPermalinkUrl: entity?.preview_shareable_link ?? null,
         creative: {
@@ -428,6 +533,7 @@ function buildAds(input: {
         metrics: {
           spend,
           impressions: aggregate.impressions,
+          reach: aggregate.reach,
           clicks: aggregate.clicks,
           ctr: safeRate(aggregate.clicks, aggregate.impressions),
           leads,
@@ -439,15 +545,28 @@ function buildAds(input: {
         },
         placementBreakdown: placementByAd.get(adId),
         deviceBreakdown: deviceByAd.get(adId),
-        variantTags: parseAdVariantTags(adName),
+        variantTags,
         fatigued: detectCreativeFatigue({
           frequency,
           recent: { impressions: aggregate.recentImpressions, clicks: aggregate.recentClicks },
           prior: { impressions: aggregate.priorImpressions, clicks: aggregate.priorClicks },
         }),
       };
-    })
-    .sort((a, b) => b.metrics.spend - a.metrics.spend);
+    });
+
+  // Campaign-level drift flag: a campaign is "managed" if any of its ads are
+  // managed, or if the campaign id itself is owned by a publish plan.
+  const managedCampaignIds = new Set(ads.filter((ad) => ad.managed).map((ad) => ad.campaignId));
+
+  for (const campaignId of input.managedIds.campaignIds) {
+    managedCampaignIds.add(campaignId);
+  }
+
+  for (const ad of ads) {
+    ad.campaignManaged = managedCampaignIds.has(ad.campaignId);
+  }
+
+  return ads.sort((a, b) => b.metrics.spend - a.metrics.spend);
 }
 
 /**
@@ -511,7 +630,7 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
+  const spendByDate = new Map<string, { spend: number; impressions: number; clicks: number; platformLeads: number }>();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -520,9 +639,11 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0 };
+    const existing = spendByDate.get(date) ?? { spend: 0, impressions: 0, clicks: 0, platformLeads: 0 };
 
     existing.spend += toNumber(row.spend);
+    existing.impressions += Math.round(toNumber(row.impressions));
+    existing.clicks += Math.round(toNumber(row.clicks));
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
     spendByDate.set(date, existing);
   }
@@ -538,6 +659,8 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
     points.push({
       date,
       spend,
+      impressions: insights?.impressions ?? 0,
+      clicks: insights?.clicks ?? 0,
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,
       validCpl: safeCpl(spend, validLeads),

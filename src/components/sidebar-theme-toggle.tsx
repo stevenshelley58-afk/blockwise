@@ -8,7 +8,7 @@ type SidebarTheme = "dark" | "light";
 const STORAGE_KEY = "bw-sidebar";
 
 export function SidebarThemeToggle() {
-  const [theme, setTheme] = useState<SidebarTheme>("dark");
+  const [theme, setTheme] = useState<SidebarTheme>("light");
 
   // Sync from the attribute set by the pre-paint inline script.
   useEffect(() => {

@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise — Meta ads for real estate agents</title>
+<style>
+  :root{
+    --ink:#0f1115; --ink-soft:#3a3f4a; --muted:#6b7280;
+    --line:#e7e8ec; --bg:#fafbfc; --panel:#f6f7f9; --panel-2:#eef0f3;
+    --accent:#1f6feb; --accent-soft:rgba(31,111,235,.12);
+    --green:#1a7f4b; --green-dot:#23a35e;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  a{color:inherit;text-decoration:none}
+
+  /* ---------- nav ---------- */
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;max-width:1136px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:9px;font:700 18px/1 inherit;letter-spacing:-.01em}
+  .brand .mark{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#0b3d91)}
+  .nav__links{display:flex;gap:26px;font:500 14.5px/1 inherit;color:var(--ink-soft)}
+  .nav__links a:hover{color:var(--ink)}
+  .nav__cta{display:flex;align-items:center;gap:16px}
+  .nav__login{font:500 14.5px/1 inherit;color:var(--ink-soft)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:600 15px/1 inherit;border:0;border-radius:11px;padding:0 20px;height:50px;cursor:pointer;white-space:nowrap;transition:transform .08s ease,opacity .15s ease}
+  .btn:active{transform:translateY(1px)}
+  .btn--ink{background:var(--ink);color:#fff}
+  .btn--ink:hover{opacity:.92}
+  .btn--sm{height:40px;padding:0 15px;font-size:14px;border-radius:10px}
+  .btn--ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+
+  /* ---------- hero ---------- */
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 inherit;color:var(--ink-soft);background:#fff;border:1px solid var(--line);padding:7px 13px;border-radius:999px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+  .hero{text-align:center;padding:56px 0 60px}
+  .hero h1{font:700 clamp(34px,5vw,56px)/1.06 inherit;letter-spacing:-.02em;margin:22px auto 16px;max-width:20ch;text-wrap:balance}
+  .hero .sub{font:400 19px/1.5 inherit;color:var(--ink-soft);max-width:48ch;margin:0 auto}
+  .trial{font:500 13.5px/1 inherit;color:var(--muted);margin-top:18px}
+  .trial b{color:var(--ink-soft);font-weight:600}
+
+  /* ---------- search + typeahead ---------- */
+  .searchwrap{position:relative;max-width:580px;margin:30px auto 0}
+  .searchbar{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 8px 30px rgba(15,17,21,.06);transition:border-color .15s ease,box-shadow .15s ease}
+  .searchbar.is-open{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,111,235,.16)}
+  .searchbar svg{width:20px;height:20px;color:var(--muted);flex:0 0 auto}
+  .searchbar input{flex:1;border:0;outline:0;font:400 16px/1 inherit;color:var(--ink);background:transparent}
+  .ac{position:absolute;left:0;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 22px 50px rgba(15,17,21,.14);padding:7px;z-index:30;display:none;text-align:left;max-height:340px;overflow:auto}
+  .ac.is-open{display:block}
+  .ac__group{font:600 11px/1 inherit;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:11px 12px 6px}
+  .ac__item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;cursor:pointer}
+  .ac__item:hover,.ac__item.is-active{background:var(--panel)}
+  .ac__ico{width:32px;height:32px;border-radius:9px;background:var(--panel-2);display:grid;place-items:center;flex:0 0 auto;color:var(--ink-soft)}
+  .ac__ico svg{width:16px;height:16px}
+  .ac__txt b{display:block;font:600 14.5px/1.2 inherit}
+  .ac__txt span{font:500 12.5px/1 inherit;color:var(--muted)}
+  .ac__count{margin-left:auto;font:600 12.5px/1 inherit;color:var(--accent);background:var(--accent-soft);padding:5px 9px;border-radius:7px}
+  .ac__empty{padding:18px 14px;color:var(--muted);font:500 14px/1.4 inherit}
+
+  /* ---------- hero ad strip (pre-search) ---------- */
+  .adrow{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:760px;margin:46px auto 0}
+  .adcard{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(15,17,21,.05);text-align:left}
+  .adcard__img{position:relative;height:118px}
+  .adcard__img span.tag{position:absolute;top:10px;left:10px;font:600 11px/1 inherit;color:var(--ink);background:rgba(255,255,255,.92);padding:6px 9px;border-radius:7px}
+  .g1{background:linear-gradient(135deg,#c7d2fe,#93a5e8)}
+  .g2{background:linear-gradient(135deg,#bfe3d0,#8fcaa6)}
+  .g3{background:linear-gradient(135deg,#fcd9b6,#f3b985)}
+  .g4{background:linear-gradient(135deg,#f5c6d6,#e495b3)}
+  .g5{background:linear-gradient(135deg,#cdd3da,#9aa6b2)}
+  .g6{background:linear-gradient(135deg,#bfe0e8,#86bdcb)}
+  .adcard figcaption{padding:11px 13px 13px}
+  .adcard figcaption b{display:block;font:600 13.5px/1.2 inherit;color:var(--ink)}
+  .adcard figcaption span{font:500 11.5px/1 inherit;color:var(--muted);display:block;margin-top:4px}
+  .adrow__note{text-align:center;font:500 13px/1 inherit;color:var(--muted);margin-top:20px}
+
+  /* ---------- how it works ---------- */
+  .how{padding:58px 0 70px;border-top:1px solid var(--line)}
+  .how__head{text-align:center;margin-bottom:44px}
+  .how__head h2{font:700 clamp(26px,3.5vw,38px)/1.1 inherit;letter-spacing:-.02em;margin-top:16px}
+  .how__steps{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 10px 30px rgba(15,17,21,.04)}
+  .how__step{position:relative;padding:32px 28px 30px;border-right:1px solid var(--line)}
+  .how__step:last-child{border-right:0}
+  .how__n{position:absolute;top:28px;right:28px;font:700 12.5px/1 inherit;color:var(--muted)}
+  .how__ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:18px;color:var(--accent);background:var(--accent-soft)}
+  .how__ico svg{width:21px;height:21px}
+  .how__step h3{font:700 18px/1.2 inherit;letter-spacing:-.01em;margin-bottom:8px}
+  .how__step p{font:400 14.5px/1.5 inherit;color:var(--ink-soft)}
+  @media(max-width:760px){.how__steps{grid-template-columns:1fr}.how__step{border-right:0;border-bottom:1px solid var(--line)}.how__step:last-child{border-bottom:0}}
+  /* B concept — signal -> leads graphic */
+  .how__sub{font:400 16px/1.55 inherit;color:var(--muted);margin:12px auto 0;max-width:48ch}
+  .how-fig{position:relative;margin:34px auto 0;max-width:1024px;border-radius:24px;border:1px solid var(--line);padding:14px;
+    background:radial-gradient(120% 90% at 18% 12%,#eef3fb 0,rgba(238,243,251,0) 55%),radial-gradient(120% 100% at 88% 92%,#f1eefb 0,rgba(241,238,251,0) 55%),linear-gradient(160deg,#f6f8fc,#f7f6fc)}
+  .how-fig svg{width:100%;height:auto;display:block}
+  .bSig{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.8s cubic-bezier(.4,.7,.3,1) .15s}
+  .how-fig.play .bSig{stroke-dashoffset:0}
+  .bSpark{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.2s ease 1s}
+  .how-fig.play .bSpark{stroke-dashoffset:0}
+  .bBlip{animation:bBlip 2.4s ease-in-out infinite}
+  @keyframes bBlip{0%,100%{opacity:1}50%{opacity:.35}}
+  .how__steps2{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:26px auto 0;max-width:1024px}
+  .how__s{padding:0 8px}
+  .how__s b{display:flex;align-items:center;gap:9px;font:700 16px/1.3 inherit}
+  .how__s b em{font-style:normal;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+  .e1{background:linear-gradient(135deg,#4f97ff,#1f5fd6)}
+  .e2{background:linear-gradient(135deg,#2fd2c2,#10a294)}
+  .e3{background:linear-gradient(135deg,#9a7fff,#5a36e0)}
+  .how__s p{font:400 14px/1.5 inherit;color:var(--ink-soft);margin-top:8px}
+  @media (prefers-reduced-motion: reduce){.bSig,.bSpark{transition:none;stroke-dashoffset:0}.bBlip{animation:none}}
+  @media(max-width:760px){.how__steps2{grid-template-columns:1fr;gap:16px}}
+
+  /* ---------- dashboard showcase ---------- */
+  .dash{padding:18px 0 74px}
+  .dash__head{text-align:center;margin-bottom:38px}
+  .dash__head h2{font:700 clamp(26px,3.5vw,38px)/1.1 inherit;letter-spacing:-.02em;margin-top:16px}
+  .dash__head .lead{font:400 17px/1.55 inherit;color:var(--ink-soft);max-width:50ch;margin:14px auto 0}
+  .board{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px rgba(15,17,21,.08);overflow:hidden}
+  .board__bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 22px;border-bottom:1px solid var(--line)}
+  .board__title{display:flex;align-items:center;gap:12px;font:700 15px/1 inherit}
+  .board__live{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 inherit;color:var(--green)}
+  .board__live i{width:7px;height:7px;border-radius:50%;background:var(--green-dot);box-shadow:0 0 0 3px rgba(35,163,94,.16);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .board__range{display:flex;gap:3px;background:var(--panel);border-radius:9px;padding:3px}
+  .board__range button{border:0;background:transparent;font:600 12.5px/1 inherit;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer}
+  .board__range button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,17,21,.1)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .kpi{padding:20px 22px;border-right:1px solid var(--line)}
+  .kpi:last-child{border-right:0}
+  .kpi__k{font:600 11.5px/1 inherit;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+  .kpi__v{font:700 28px/1 inherit;letter-spacing:-.02em;margin:13px 0 9px}
+  .delta{display:inline-flex;align-items:center;gap:4px;font:600 12.5px/1 inherit;color:var(--green)}
+  .delta--muted{color:var(--muted)}
+  .board__chart{padding:24px 20px 6px}
+  .board__chart svg{width:100%;height:auto;display:block}
+  .chart-legend{display:flex;gap:20px;padding:6px 24px 20px;font:500 12.5px/1 inherit;color:var(--muted)}
+  .chart-legend span{display:inline-flex;align-items:center;gap:7px}
+  .chart-legend i{width:11px;height:11px;border-radius:3px}
+  .camps{border-top:1px solid var(--line)}
+  .crow{display:grid;grid-template-columns:1.7fr .9fr .7fr .8fr;gap:10px;align-items:center;padding:14px 22px;border-bottom:1px solid var(--line);font:500 14px/1 inherit}
+  .crow:last-child{border-bottom:0}
+  .crow--head{font:600 11.5px/1 inherit;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--panel)}
+  .crow__name{font-weight:600;color:var(--ink)}
+  .crow__num{text-align:right;font-variant-numeric:tabular-nums}
+  .cstatus{display:inline-flex;align-items:center;gap:6px;font:600 12.5px/1 inherit}
+  .cstatus i{width:7px;height:7px;border-radius:50%}
+  .cstatus--active{color:var(--green)} .cstatus--active i{background:var(--green-dot)}
+  .cstatus--paused{color:#9a6f1f} .cstatus--paused i{background:#c79534}
+  @media(max-width:760px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .kpi:nth-child(2){border-right:0}
+    .kpi:nth-child(1),.kpi:nth-child(2){border-bottom:1px solid var(--line)}
+    .crow{grid-template-columns:1.4fr .8fr .8fr}
+    .crow__spend{display:none}
+  }
+
+  /* ---------- trust & control ---------- */
+  .trust{padding:18px 0 76px}
+  .trust__grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  .trust__copy h2{font:700 clamp(26px,3.4vw,36px)/1.12 inherit;letter-spacing:-.02em;margin:16px 0 0}
+  .trust__copy .lead{font:400 17px/1.55 inherit;color:var(--ink-soft);margin:16px 0 0;max-width:42ch}
+  .checks{list-style:none;margin:26px 0 0;display:grid;gap:14px}
+  .checks li{display:flex;align-items:flex-start;gap:12px;font:500 15.5px/1.4 inherit;color:var(--ink)}
+  .checks svg{width:22px;height:22px;flex:0 0 auto;color:var(--green);margin-top:-1px}
+  .approve{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 60px rgba(15,17,21,.08);padding:22px;display:flex;flex-direction:column;gap:16px}
+  .approve__top{display:flex;align-items:center;justify-content:space-between;font:700 14px/1 inherit}
+  .approve__tag{font:600 12px/1 inherit;color:var(--accent);background:var(--accent-soft);padding:6px 10px;border-radius:8px}
+  .approve__ad{display:flex;gap:13px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px}
+  .approve__img{width:58px;height:58px;border-radius:10px;flex:0 0 auto}
+  .approve__adtxt b{display:block;font:600 14px/1.25 inherit}
+  .approve__adtxt span{display:block;font:500 12.5px/1.4 inherit;color:var(--muted);margin-top:4px}
+  .approve__rows{display:grid;gap:0;border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .approve__rows div{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font:500 13.5px/1 inherit}
+  .approve__rows div:last-child{border-bottom:0}
+  .approve__rows span{color:var(--muted)}
+  .approve__rows b{font-weight:600;color:var(--ink)}
+  .approve__btns{display:flex;gap:10px}
+  .approve__note{font:500 12px/1.4 inherit;color:var(--muted);text-align:center;margin-top:-2px}
+  @media(max-width:760px){.trust__grid{grid-template-columns:1fr;gap:34px}}
+
+  /* ---------- pricing ---------- */
+  .pricing{padding:18px 0 80px;border-top:1px solid var(--line)}
+  .pricing__head{text-align:center;margin:46px 0 40px}
+  .pricing__head h2{font:700 clamp(26px,3.5vw,38px)/1.1 inherit;letter-spacing:-.02em;margin-top:16px}
+  .pricing__head .lead{font:400 17px/1.5 inherit;color:var(--ink-soft);margin:14px auto 0;max-width:46ch}
+  .ptiers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:start}
+  .ptier{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px 26px;box-shadow:0 10px 30px rgba(15,17,21,.04);display:flex;flex-direction:column}
+  .ptier--pop{border:1.5px solid var(--accent);box-shadow:0 24px 60px rgba(31,111,235,.14);position:relative}
+  .ptier__badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font:600 11.5px/1 inherit;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px;border-radius:999px}
+  .ptier__name{font:700 16px/1 inherit;letter-spacing:-.01em}
+  .ptier__price{font:700 40px/1 inherit;letter-spacing:-.03em;margin:18px 0 2px}
+  .ptier__price em{font:600 15px/1 inherit;font-style:normal;color:var(--muted)}
+  .ptier__per{font:500 13px/1 inherit;color:var(--muted)}
+  .ptier__desc{font:400 14px/1.5 inherit;color:var(--ink-soft);margin:14px 0 20px;min-height:42px}
+  .ptier .btn{width:100%;justify-content:center}
+  .plist{list-style:none;margin:22px 0 0;display:grid;gap:12px}
+  .plist li{display:flex;align-items:flex-start;gap:10px;font:500 14px/1.4 inherit;color:var(--ink)}
+  .plist svg{width:19px;height:19px;flex:0 0 auto;color:var(--green);margin-top:0}
+  .pricing__note{text-align:center;font:500 13.5px/1 inherit;color:var(--muted);margin-top:30px}
+  @media(max-width:760px){.ptiers{grid-template-columns:1fr}.ptier--pop{order:-1}}
+
+  /* ---------- results ---------- */
+  .results{display:none;padding:8px 0 70px}
+  .results.is-open{display:block}
+  .results__head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+  .results__title{font:700 26px/1.15 inherit;letter-spacing:-.01em}
+  .results__title em{font-style:normal;color:var(--accent)}
+  .results__sub{font:500 14px/1 inherit;color:var(--muted);margin-top:8px}
+  .results__back{display:inline-flex;align-items:center;gap:7px;font:600 14px/1 inherit;color:var(--ink-soft);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer}
+  .results__back:hover{color:var(--ink)}
+  .filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{font:600 13.5px/1 inherit;color:var(--ink-soft);background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;transition:all .12s ease}
+  .chip:hover{border-color:#cfd2d8}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .filters--platform{margin-bottom:24px}
+  .filters--platform .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+
+  /* results control bar */
+  .resbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;padding-top:18px;border-top:1px solid var(--line)}
+  .summary{font:500 13.5px/1.5 inherit;color:var(--muted)}
+  .summary b{color:var(--ink);font-weight:700}
+  .summary .sep{margin:0 9px;opacity:.4}
+  .sort{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 inherit;color:var(--ink-soft)}
+  .sort select{font:600 13.5px/1 inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer}
+  .loadmore{display:none;justify-content:center;margin-top:30px}
+  .loadmore.is-open{display:flex}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .ad{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,17,21,.05);display:flex;flex-direction:column;animation:rise .35s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .ad__media{position:relative;height:150px}
+  .ad__angle{position:absolute;top:11px;left:11px;font:600 11px/1 inherit;color:var(--ink);background:rgba(255,255,255,.93);padding:6px 10px;border-radius:8px}
+  .ad__plat{position:absolute;top:11px;right:11px;width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.93);display:grid;place-items:center}
+  .ad__plat svg{width:15px;height:15px}
+  .ad__body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:9px;flex:1}
+  .ad__agency{display:flex;align-items:center;gap:8px;font:600 13px/1 inherit;color:var(--ink)}
+  .ad__avatar{width:24px;height:24px;border-radius:50%;background:var(--panel-2);display:grid;place-items:center;font:700 11px/1 inherit;color:var(--ink-soft)}
+  .ad__head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .ad__status{display:inline-flex;align-items:center;gap:5px;font:600 11px/1 inherit;padding:5px 8px;border-radius:7px}
+  .ad__status svg{width:12px;height:12px}
+  .ad__status--ok{color:var(--green);background:rgba(35,163,94,.12)}
+  .ad__status--draft{color:#9a6f1f;background:rgba(199,149,52,.14)}
+  .ad__where{font:600 12px/1 inherit;color:var(--muted)}
+  .ad__headline{font:700 15px/1.3 inherit;color:var(--ink);letter-spacing:-.01em}
+  .ad__copy{font:500 13.5px/1.45 inherit;color:var(--ink-soft)}
+  .ad__cta{font:600 12px/1 inherit;color:var(--ink-soft);background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:7px}
+  .ad__meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:11px;border-top:1px solid var(--line)}
+  .ad__live{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 inherit;color:var(--green)}
+  .ad__live i{width:6px;height:6px;border-radius:50%;background:var(--green-dot);box-shadow:0 0 0 3px rgba(35,163,94,.16)}
+  .ad__use{font:600 12.5px/1 inherit;color:var(--accent);background:var(--accent-soft);border:0;border-radius:8px;padding:8px 11px;cursor:pointer}
+  .ad__use:hover{background:rgba(31,111,235,.2)}
+
+  .noresults{text-align:center;padding:50px 20px;color:var(--muted);font:500 15px/1.5 inherit}
+
+  /* ---------- closing CTA ---------- */
+  .cta{margin:6px 0 66px;background:var(--ink);border-radius:24px;padding:62px 40px;text-align:center;color:#fff}
+  .cta .eyebrow{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#d4d8df}
+  .cta .eyebrow .dot{box-shadow:0 0 0 4px rgba(255,255,255,.12)}
+  .cta h2{font:700 clamp(28px,3.8vw,42px)/1.08 inherit;letter-spacing:-.025em;margin:18px auto 0;max-width:17ch;color:#fff}
+  .cta p{font:400 17px/1.55 inherit;color:#aeb4be;margin:15px auto 0;max-width:44ch}
+  .cta__btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .btn--white{background:#fff;color:var(--ink)}
+  .btn--white:hover{opacity:.92}
+  .btn--outline{background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff}
+  .btn--outline:hover{background:rgba(255,255,255,.08)}
+
+  /* ---------- footer ---------- */
+  .site{border-top:1px solid var(--line);background:#fff}
+  .foot{max-width:1080px;margin:0 auto;padding:52px 28px 32px;display:grid;grid-template-columns:1.7fr .8fr .8fr .8fr;gap:30px}
+  .foot__brand{display:flex;align-items:center;gap:9px;font:700 18px/1 inherit}
+  .foot__brand .mark{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#0b3d91)}
+  .foot__brand-col p{font:400 14px/1.6 inherit;color:var(--muted);margin:14px 0 0;max-width:34ch}
+  .foot__mail{display:inline-block;margin-top:14px;font:600 14px/1 inherit;color:var(--accent)}
+  .foot__col h4{font:700 12px/1 inherit;text-transform:uppercase;letter-spacing:.08em;color:var(--ink);margin-bottom:15px}
+  .foot__col a{display:block;font:500 14px/1 inherit;color:var(--ink-soft);margin-bottom:11px}
+  .foot__col a:hover{color:var(--ink)}
+  .foot__bot{border-top:1px solid var(--line)}
+  .foot__bot > div{max-width:1080px;margin:0 auto;padding:18px 28px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font:500 13px/1 inherit;color:var(--muted)}
+  @media(max-width:760px){.foot{grid-template-columns:1fr 1fr}.foot__brand-col{grid-column:1/-1}}
+
+  /* ---------- motion & polish ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    body.anim .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+    body.anim .reveal.in{opacity:1;transform:none}
+    body.anim .stagger > *{opacity:0;transform:translateY(18px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
+    body.anim .stagger.in > *{opacity:1;transform:none}
+    body.anim .stagger.in > *:nth-child(1){transition-delay:.04s}
+    body.anim .stagger.in > *:nth-child(2){transition-delay:.12s}
+    body.anim .stagger.in > *:nth-child(3){transition-delay:.20s}
+    body.anim .stagger.in > *:nth-child(4){transition-delay:.28s}
+    body.anim .stagger.in > *:nth-child(5){transition-delay:.36s}
+    body.anim .stagger.in > *:nth-child(6){transition-delay:.44s}
+    body.anim .stagger.in > *:nth-child(7){transition-delay:.52s}
+    /* dashboard chart draw-on */
+    body.anim .board__chart polyline{stroke-dasharray:820;stroke-dashoffset:820;transition:stroke-dashoffset 1.6s ease .25s}
+    body.anim .board.in .board__chart polyline{stroke-dashoffset:0}
+    body.anim .board__chart path{opacity:0;transition:opacity .9s ease .5s}
+    body.anim .board.in .board__chart path{opacity:1}
+    body.anim .board__chart circle{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.3);transition:opacity .3s ease 1.5s,transform .45s cubic-bezier(.2,1.5,.4,1) 1.45s}
+    body.anim .board.in .board__chart circle{opacity:1;transform:scale(1)}
+  }
+  /* hover micro-interactions */
+  .ad,.adcard,.ptier{transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s ease}
+  .ad:hover,.adcard:hover{transform:translateY(-5px);box-shadow:0 22px 44px rgba(15,17,21,.12)}
+  .ptier:hover{transform:translateY(-5px);box-shadow:0 22px 50px rgba(15,17,21,.10)}
+  .ptier--pop:hover{box-shadow:0 30px 66px rgba(31,111,235,.18)}
+  .how__step{transition:background .2s ease}
+  .how__step:hover{background:var(--panel)}
+  .btn{transition:transform .1s ease,opacity .15s ease,box-shadow .2s ease}
+  .btn--ink:hover,.btn--white:hover,.btn--accent:hover{transform:translateY(-1px)}
+  .ad__use,.chip,.kpi{transition:all .15s ease}
+  .kpi:hover{background:var(--panel)}
+  /* hero ambient glow */
+  .hero{position:relative}
+  .hero::before{content:"";position:absolute;left:50%;top:-60px;width:min(900px,94%);height:430px;transform:translateX(-50%);background:radial-gradient(60% 80% at 50% 0,rgba(31,111,235,.085),transparent 70%);z-index:-1;pointer-events:none}
+  /* subtle property line-art on card imagery */
+  .adcard__img,.ad__media,.approve__img{position:relative}
+  .adcard__img::after,.ad__media::after,.approve__img::after{content:"";position:absolute;right:10px;bottom:9px;width:46px;height:46px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'><path d='M3 11l9-7 9 7'/><path d='M5 10v9h14v-9'/><path d='M10 19v-5h4v5'/></svg>") no-repeat center/contain;opacity:.32;pointer-events:none}
+  .approve__img::after{width:32px;height:32px;right:6px;bottom:6px}
+
+  /* ---------- toast ---------- */
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:14px 18px;border-radius:12px;font:600 14px/1.3 inherit;box-shadow:0 18px 50px rgba(15,17,21,.3);opacity:0;pointer-events:none;transition:all .25s ease;z-index:60;max-width:340px}
+  .toast.is-open{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:760px){
+    .nav__links{display:none}
+    .adrow,.grid{grid-template-columns:1fr}
+    .adrow{max-width:340px}
+    .results__head{align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<!-- nav -->
+<header class="nav">
+  <a class="brand" href="#"><span class="mark"></span>blockwise</a>
+  <nav class="nav__links">
+    <a href="#">How it works</a>
+    <a href="#">Pricing</a>
+    <a href="#">Examples</a>
+  </nav>
+  <div class="nav__cta">
+    <a class="nav__login" href="#">Log in</a>
+    <a class="btn btn--ink btn--sm" href="#">Start free</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- landing (hero + how it works) -->
+  <div id="landing">
+  <section class="hero stagger">
+    <span class="eyebrow"><span class="dot"></span> Meta ads for real estate agents</span>
+    <h1>See every ad running in your suburb.</h1>
+    <p class="sub">Ads built from what's actually working in your area. Start getting leads today.</p>
+
+    <div class="searchwrap">
+      <form class="searchbar" id="searchbar" autocomplete="off" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        <input id="q" type="text" placeholder="Enter a suburb, postcode, agent or agency"
+               aria-label="Search by suburb, postcode, agent or agency"
+               aria-autocomplete="list" aria-controls="ac" />
+        <button class="btn btn--ink" type="submit">Show me the ads</button>
+      </form>
+      <div class="ac" id="ac" role="listbox" aria-label="Search suggestions"></div>
+    </div>
+    <p class="trial">7-day trial · 10 ad packs · <b>No card required</b></p>
+
+    <!-- pre-search proof strip -->
+    <div class="adrow" id="adrow" aria-label="Example real estate ads">
+      <figure class="adcard"><div class="adcard__img g1"><span class="tag">Spearwood</span></div><figcaption><b>Local Selling Plan for Spearwood</b><span>Free appraisal</span></figcaption></figure>
+      <figure class="adcard"><div class="adcard__img g3"><span class="tag">Canning Vale</span></div><figcaption><b>Plan your Canning Vale sale</b><span>Local seller planning guide</span></figcaption></figure>
+      <figure class="adcard"><div class="adcard__img g5"><span class="tag">South Perth</span></div><figcaption><b>Before you list, fix these 10 things</b><span>What is your home worth in today's market?</span></figcaption></figure>
+    </div>
+    <p class="adrow__note" id="adrowNote"><span class="count" data-count="23">23</span> ads built across 4 Perth suburbs</p>
+  </section>
+
+  <!-- how it works -->
+  <section class="how" id="howSec">
+    <div class="how__head reveal">
+      <span class="eyebrow"><span class="dot"></span> How it works</span>
+      <h2>From local signal to real leads.</h2>
+      <p class="how__sub">We scan the area, prepare the campaign, and the leads come in.</p>
+    </div>
+    <div class="how-fig reveal" id="bFig"><svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, prepare the campaign, leads come in">
+<defs>
+<linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient>
+<linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient>
+<linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient>
+<linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient>
+<filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter>
+</defs>
+<line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/>
+<path id="bSig" class="bSig" d="M250,180.0 L254,177.9 L258,175.8 L262,173.7 L266,171.6 L270,169.6 L274,167.5 L278,165.5 L282,163.5 L286,161.5 L290,159.6 L294,157.7 L298,155.8 L302,154.0 L306,152.2 L310,150.5 L314,148.8 L318,147.2 L322,145.6 L326,144.1 L330,142.7 L334,141.3 L338,140.0 L342,138.8 L346,137.6 L350,136.6 L354,135.6 L358,134.6 L362,133.8 L366,133.0 L370,132.3 L374,131.8 L378,131.2 L382,130.8 L386,130.5 L390,130.2 L394,130.1 L398,130.0 L402,130.0 L406,130.1 L410,130.3 L414,130.6 L418,131.0 L422,131.4 L426,132.0 L430,132.6 L434,133.3 L438,134.1 L442,135.0 L446,135.9 L450,137.0 L454,138.1 L458,139.3 L462,140.5 L466,141.9 L470,143.2 L474,144.7 L478,146.2 L482,147.8 L486,149.4 L490,151.1 L494,152.9 L498,154.7 L502,156.5 L506,158.4 L510,160.3 L514,162.3 L518,164.2 L522,166.3 L526,168.3 L530,170.3 L534,172.4 L538,174.5 L542,176.6 L546,178.7 L550,180.8 L554,182.9 L558,185.0 L562,187.1 L566,189.2 L570,191.2 L574,193.3 L578,195.3 L582,197.3 L586,199.3 L590,201.2 L594,203.1 L598,204.9 L602,206.7 L606,208.5 L610,210.2 L614,211.8 L618,213.4 L622,215.0 L626,216.4 L630,217.8 L634,219.2 L638,220.5 L642,221.7 L646,222.8 L650,223.8 L654,224.8 L658,225.7 L662,226.5 L666,227.2 L670,227.9 L674,228.5 L678,228.9 L682,229.3 L686,229.6 L690,229.8 L694,230.0 L698,230.0 L702,229.9 L706,229.8 L710,229.6 L714,229.3 L718,228.9 L722,228.4 L726,227.8 L730,227.1 L734,226.4 L738,225.6 L742,224.7 L746,223.7 L750,222.6 L754,221.5 L758,220.3 L762,219.0 L766,217.6 L770,216.2 L774,214.7 L778,213.2 L782,211.6 L786,209.9 L790,208.2 L794,206.4 L798,204.6 L802,202.8 L806,200.9 L810,198.9 L814,197.0 L818,195.0 L822,193.0 L826,190.9 L830,188.8 L834,186.8 L838,184.7 L842,182.6 L846,180.5 L850,178.4 L854,176.3 L858,174.2 L862,172.1 L866,170.0 L870,168.0 L874,165.9 L878,163.9 L882,161.9 L886,160.0 L890,158.1 L894,156.2 L898,154.4 L902,152.6 L906,150.9 L910,149.2 L914,147.5 L918,146.0 L922,144.5 L926,143.0 L930,141.6 L934,140.3 L938,139.1 L942,137.9 L946,136.8 L950,135.8 L954,134.8 L958,134.0 L962,133.2 L966,132.5 L970,131.9 L974,131.4 L978,130.9 L982,130.6 L986,130.3 L990,130.1 L994,130.0 L998,130.0 L1002,130.1 L1006,130.3 L1010,130.5 L1014,130.9 L1018,131.3 L1022,131.8 L1026,132.5 L1030,133.1 L1034,133.9 L1038,134.8 L1042,135.7 L1046,136.7 L1050,137.8 L1054,139.0 L1058,140.2 L1062,141.5 L1066,142.9 L1070,144.4 L1074,145.9 L1078,147.4 L1082,149.1 L1086,150.8 L1090,152.5 L1094,154.3 L1098,156.1 L1102,158.0 L1106,159.9 L1110,161.8 L1114,163.8 L1118,165.8 L1122,167.8 L1126,169.9 L1130,172.0 L1134,174.0 L1138,176.1 L1142,178.2 L1146,180.3 L1150,182.4 L1154,184.5 L1158,186.6 L1162,188.7 L1166,190.8 L1170,192.8 L1174,194.8 L1178,196.8 L1182,198.8 L1186,200.7 L1190,202.6 L1194,204.5 L1198,206.3 L1202,208.1 L1206,209.8 L1210,211.5 L1214,213.1 L1218,214.6 L1222,216.1 L1226,217.5 L1230,218.9 L1234,220.2 L1238,221.4 L1242,222.5 L1246,223.6 L1250,224.6 L1254,225.5 L1258,226.3 L1262,227.1 L1266,227.8 L1270,228.3 L1274,228.8 L1278,229.2 L1282,229.6 L1286,229.8 L1290,229.9" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="330" cy="143" r="4.5" fill="#1fb3a6"/><circle cx="480" cy="147" r="4.5" fill="#1fb3a6"/><circle cx="630" cy="218" r="4.5" fill="#1fb3a6"/><circle cx="780" cy="212" r="4.5" fill="#1fb3a6"/><circle cx="930" cy="142" r="4.5" fill="#1fb3a6"/><circle cx="1080" cy="148" r="4.5" fill="#1fb3a6"/><circle cx="1230" cy="219" r="4.5" fill="#1fb3a6"/>
+<circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle>
+<circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><line x1="214" y1="180" x2="386" y2="180" stroke="#2fbfb0" stroke-opacity=".18" stroke-width="2"/><line x1="300" y1="94" x2="300" y2="266" stroke="#2fbfb0" stroke-opacity=".18" stroke-width="2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle cx="298" cy="201" r="4" fill="#9aa3b4"/><circle class="bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="305" cy="144" r="4" fill="#9aa3b4"/><circle class="bBlip" cx="294" cy="136" r="5" fill="#1f6feb"/><circle cx="287" cy="151" r="4" fill="#9aa3b4"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/>
+<rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><circle cx="718" cy="147" r="8" fill="#fff" fill-opacity=".55"/><path d="M698,162 l22,-16 16,11 28,-20" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linejoin="round"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text>
+<rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text id="bLeads" x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">0</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text id="bCpl" x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$0</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path class="bSpark" d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/>
+</svg></div>
+    <ol class="how__steps2 reveal">
+      <li class="how__s"><b><em class="e1">1</em> Scan</b><p>See local lead angles.</p></li>
+      <li class="how__s"><b><em class="e2">2</em> Prepared</b><p>Blockwise prepares the campaign.</p></li>
+      <li class="how__s"><b><em class="e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
+    </ol>
+  </section>
+  <script>
+  (function(){
+    var fig=document.getElementById('bFig'); if(!fig) return;
+    function cnt(el,to,pre){var s=null;function f(t){if(!s)s=t;var p=Math.min((t-s)/1100,1);
+      el.textContent=(pre||'')+Math.round(p*to);if(p<1)requestAnimationFrame(f);}requestAnimationFrame(f);}
+    var done=false;
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){
+      if(e.isIntersecting&&!done){done=true;fig.classList.add('play');
+        cnt(document.getElementById('bLeads'),47,'');cnt(document.getElementById('bCpl'),13,'$');}
+    });},{threshold:.3});
+    io.observe(fig);
+  })();
+  </script>
+
+  <!-- dashboard showcase -->
+  <section class="dash">
+    <div class="dash__head reveal">
+      <span class="eyebrow"><span class="dot"></span> Live dashboard</span>
+      <h2>Finally understand what your ads are doing.</h2>
+      <p class="lead">Leads, spend and clicks in one clean view — updated live. No spreadsheets, no digging through Meta Ads Manager.</p>
+    </div>
+
+    <div class="board reveal">
+      <div class="board__bar">
+        <div class="board__title">Campaign performance <span class="board__live"><i></i> Live</span></div>
+        <div class="board__range">
+          <button aria-pressed="true">7d</button>
+          <button aria-pressed="false">30d</button>
+          <button aria-pressed="false">90d</button>
+        </div>
+      </div>
+
+      <div class="kpis stagger">
+        <div class="kpi">
+          <div class="kpi__k">Leads</div>
+          <div class="kpi__v"><span class="count" data-count="47">47</span></div>
+          <span class="delta">▲ 18% vs last week</span>
+        </div>
+        <div class="kpi">
+          <div class="kpi__k">Ad spend</div>
+          <div class="kpi__v"><span class="count" data-count="612" data-prefix="$">$612</span></div>
+          <span class="delta delta--muted">$25 / day · on track</span>
+        </div>
+        <div class="kpi">
+          <div class="kpi__k">Clicks</div>
+          <div class="kpi__v"><span class="count" data-count="1940">1,940</span></div>
+          <span class="delta">▲ 9% vs last week</span>
+        </div>
+        <div class="kpi">
+          <div class="kpi__k">Cost per lead</div>
+          <div class="kpi__v"><span class="count" data-count="13.02" data-prefix="$" data-decimals="2">$13.02</span></div>
+          <span class="delta">▼ 6% — cheaper</span>
+        </div>
+      </div>
+
+      <div class="board__chart">
+        <svg viewBox="0 0 600 210" role="img" aria-label="Leads over the last 7 days, trending up">
+          <defs>
+            <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1f6feb" stop-opacity=".20"/>
+              <stop offset="1" stop-color="#1f6feb" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line x1="40" y1="20"  x2="568" y2="20"  stroke="#eef0f3"/>
+          <line x1="40" y1="95"  x2="568" y2="95"  stroke="#eef0f3"/>
+          <line x1="40" y1="170" x2="568" y2="170" stroke="#eef0f3"/>
+          <path d="M40,128 L128,108 L216,116 L304,82 L392,90 L480,52 L568,33 L568,170 L40,170 Z" fill="url(#leadFill)"/>
+          <polyline points="40,128 128,108 216,116 304,82 392,90 480,52 568,33"
+                    fill="none" stroke="#1f6feb" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="568" cy="33" r="5" fill="#fff" stroke="#1f6feb" stroke-width="2.6"/>
+          <g fill="#9aa0aa" font-size="11" font-family="inherit" text-anchor="middle">
+            <text x="40"  y="196">Mon</text>
+            <text x="128" y="196">Tue</text>
+            <text x="216" y="196">Wed</text>
+            <text x="304" y="196">Thu</text>
+            <text x="392" y="196">Fri</text>
+            <text x="480" y="196">Sat</text>
+            <text x="568" y="196">Sun</text>
+          </g>
+        </svg>
+      </div>
+      <div class="chart-legend">
+        <span><i style="background:#1f6feb"></i> Leads this week</span>
+        <span><i style="background:#dfe3e8"></i> Previous week</span>
+      </div>
+
+      <div class="camps">
+        <div class="crow crow--head">
+          <span>Campaign</span><span>Status</span><span class="crow__num">Leads</span><span class="crow__num crow__spend">Spend</span>
+        </div>
+        <div class="crow">
+          <span class="crow__name">Mt Lawley · Free appraisal</span>
+          <span class="cstatus cstatus--active"><i></i> Active</span>
+          <span class="crow__num">18</span>
+          <span class="crow__num crow__spend">$324</span>
+        </div>
+        <div class="crow">
+          <span class="crow__name">Subiaco · Just listed</span>
+          <span class="cstatus cstatus--active"><i></i> Active</span>
+          <span class="crow__num">11</span>
+          <span class="crow__num crow__spend">$210</span>
+        </div>
+        <div class="crow">
+          <span class="crow__name">Cottesloe · Open home</span>
+          <span class="cstatus cstatus--paused"><i></i> Paused</span>
+          <span class="crow__num">7</span>
+          <span class="crow__num crow__spend">$98</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- trust & control -->
+  <section class="trust">
+    <div class="trust__grid">
+      <div class="trust__copy reveal">
+        <span class="eyebrow"><span class="dot"></span> Approval &amp; control</span>
+        <h2>Nothing spends until you say so.</h2>
+        <p class="lead">Blockwise builds the ad — you approve it. You stay in control of every dollar, every claim and every campaign.</p>
+        <ul class="checks stagger">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Approve every ad before it goes live</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Runs through your own Meta ad account</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> You set the budget and the schedule</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Claims &amp; brand checked before sign-off</li>
+        </ul>
+      </div>
+
+      <aside class="approve reveal" aria-label="Ad pending your approval">
+        <div class="approve__top"><span>Ready for your approval</span><span class="approve__tag">1 pending</span></div>
+        <div class="approve__ad">
+          <div class="approve__img g3"></div>
+          <div class="approve__adtxt">
+            <b>Free appraisal · Mount Lawley</b>
+            <span>What's your home worth in today's market? Free, no-obligation appraisal.</span>
+          </div>
+        </div>
+        <div class="approve__rows">
+          <div><span>Budget</span><b>$25 / day</b></div>
+          <div><span>Audience</span><b>Mount Lawley · 8 km</b></div>
+          <div><span>Billed to</span><b>Your Meta account</b></div>
+        </div>
+        <div class="approve__btns">
+          <button class="btn btn--ink" style="height:46px;flex:1;justify-content:center">Approve &amp; launch</button>
+          <button class="btn btn--ghost" style="height:46px">Edit</button>
+        </div>
+        <p class="approve__note">Ad spend is billed by Meta directly to your account — never to Blockwise.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- pricing  (NOTE: prices are placeholders — set your real numbers) -->
+  <section class="pricing" id="pricing">
+    <div class="pricing__head reveal">
+      <span class="eyebrow"><span class="dot"></span> Pricing</span>
+      <h2>Simple pricing. Cancel anytime.</h2>
+      <p class="lead">Start free with 10 ad packs. Pick a plan when you're ready — your ad spend is always separate and paid to Meta.</p>
+    </div>
+
+    <div class="ptiers stagger">
+      <div class="ptier">
+        <div class="ptier__name">Solo</div>
+        <div class="ptier__price">$49<em> /mo</em></div>
+        <div class="ptier__per">billed monthly</div>
+        <p class="ptier__desc">For the individual agent running their own listings.</p>
+        <a class="btn btn--ink" href="#">Start free</a>
+        <ul class="plist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> 10 ad packs / month</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> All 6 campaign angles</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Live performance dashboard</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Approve before launch</li>
+        </ul>
+      </div>
+
+      <div class="ptier ptier--pop">
+        <span class="ptier__badge">Most popular</span>
+        <div class="ptier__name">Team</div>
+        <div class="ptier__price">$149<em> /mo</em></div>
+        <div class="ptier__per">billed monthly</div>
+        <p class="ptier__desc">For a growing team that wants to outpace the suburb.</p>
+        <a class="btn btn--ink" href="#">Start free</a>
+        <ul class="plist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> 40 ad packs / month</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Up to 5 users</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Competitor ad search for your area</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Everything in Solo</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Priority support</li>
+        </ul>
+      </div>
+
+      <div class="ptier">
+        <div class="ptier__name">Agency</div>
+        <div class="ptier__price">Custom</div>
+        <div class="ptier__per">let's talk</div>
+        <p class="ptier__desc">For multi-office agencies with volume and onboarding needs.</p>
+        <a class="btn btn--ghost" href="#">Book a demo</a>
+        <ul class="plist">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Unlimited ad packs</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Unlimited users &amp; offices</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Managed setup &amp; onboarding</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7"/></svg> Dedicated account manager</li>
+        </ul>
+      </div>
+    </div>
+    <p class="pricing__note">7-day free trial on every plan · No card required · Ad spend paid separately to Meta</p>
+  </section>
+
+  <!-- closing CTA -->
+  <section class="cta reveal">
+    <span class="eyebrow"><span class="dot"></span> Get started</span>
+    <h2>See what's running in your suburb today.</h2>
+    <p>Search your area free, see the live ads, and build your first campaign in minutes.</p>
+    <div class="cta__btns">
+      <a class="btn btn--white" href="#">Start free — no card</a>
+      <a class="btn btn--outline" href="#">Book a 15-min demo</a>
+    </div>
+  </section>
+  </div><!-- /landing -->
+
+  <!-- results -->
+  <section class="results" id="results" aria-live="polite">
+    <div class="results__head">
+      <div>
+        <div class="results__title" id="resTitle"></div>
+        <div class="results__sub" id="resSub"></div>
+      </div>
+      <button class="results__back" id="resBack">← New search</button>
+    </div>
+
+    <div class="filters" id="angleFilters"></div>
+    <div class="filters filters--platform" id="platformFilters">
+      <button class="chip" data-platform="All" aria-pressed="true">All platforms</button>
+      <button class="chip" data-platform="Facebook" aria-pressed="false">Facebook</button>
+      <button class="chip" data-platform="Instagram" aria-pressed="false">Instagram</button>
+    </div>
+
+    <div class="resbar">
+      <div class="summary" id="summary"></div>
+      <label class="sort">Sort
+        <select id="sort">
+          <option value="recommended">Recommended</option>
+          <option value="newest">Newest first</option>
+          <option value="longest">Longest running</option>
+          <option value="angle">By angle</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="loadmore" id="loadmoreWrap">
+      <button class="btn btn--ghost" id="loadMore"></button>
+    </div>
+  </section>
+
+</main>
+
+<!-- footer -->
+<footer class="site">
+  <div class="foot">
+    <div class="foot__brand-col">
+      <div class="foot__brand"><span class="mark"></span>blockwise</div>
+      <p>Meta ads for real estate agents. See what's running nearby, then launch ads built from what's working in your area.</p>
+      <a class="foot__mail" href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
+    </div>
+    <div class="foot__col">
+      <h4>Product</h4>
+      <a href="#">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#">Live dashboard</a>
+      <a href="#">Examples</a>
+    </div>
+    <div class="foot__col">
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Managed setup</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="foot__col">
+      <h4>Legal</h4>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Data deletion</a>
+    </div>
+  </div>
+  <div class="foot__bot">
+    <div>
+      <span>© 2026 Blockwise. All rights reserved.</span>
+      <span>Perth, WA · built for real estate teams</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA LAYER — swap fetchAds()/buildIndex() for your real ad DB.
+   Records mirror what a /api/ads response would return.
+   ============================================================ */
+const SUBURBS = [
+  {name:"Spearwood",    postcode:"6163"},
+  {name:"Canning Vale", postcode:"6155"},
+  {name:"Scarborough",  postcode:"6019"},
+  {name:"South Perth",  postcode:"6151"}
+];
+
+/* ============================================================
+   REAL ADS — snapshot from Supabase project "blockwise"
+   (public.adstudio_campaign_variants × adstudio_campaigns).
+   To go live, replace this array with: GET /api/ads → same shape.
+   ============================================================ */
+const ADS = [
+  {suburb:"Spearwood",postcode:"6163",angle:"Free appraisal",headline:"Local Selling Plan for Spearwood",offer:"What is your home worth in today's market?",cta:"Learn more",status:"approved",platform:"Facebook",days:1,grad:"g1"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Free appraisal",headline:"Get a local selling plan",offer:"What is your home worth in today's market?",cta:"Learn more",status:"draft",platform:"Instagram",days:1,grad:"g3"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Market update",headline:"Spearwood Market Report Q2 2026",offer:"Free suburb market report",cta:"Download",status:"approved",platform:"Facebook",days:1,grad:"g5"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Market update",headline:"Free Spearwood Market Report Q2 2026",offer:"Free suburb market report",cta:"Download",status:"approved",platform:"Instagram",days:1,grad:"g6"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Market update",headline:"Spearwood market update, April 2026",offer:"Free suburb market report",cta:"Download",status:"draft",platform:"Facebook",days:1,grad:"g2"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Investor",headline:"Investor Snapshot: Spearwood",offer:"Investor suburb snapshot",cta:"Learn more",status:"approved",platform:"Facebook",days:1,grad:"g4"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Coming soon",headline:"Coming soon: Spearwood family home",offer:"Free appraisal",cta:"Contact us",status:"draft",platform:"Instagram",days:2,grad:"g1"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Coming soon",headline:"Free Spearwood house appraisal",offer:"Free appraisal",cta:"Contact us",status:"approved",platform:"Facebook",days:2,grad:"g3"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Just listed",headline:"Find your Spearwood home value",offer:"What is your home worth in today's market?",cta:"Learn more",status:"approved",platform:"Facebook",days:7,grad:"g5"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Seller checklist",headline:"Spearwood Seller Checklist",offer:"Top things to do before selling",cta:"Download",status:"draft",platform:"Instagram",days:7,grad:"g6"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Just listed",headline:"A fresh local listing to watch",offer:"What is your home worth in today's market?",cta:"Request price update",status:"draft",platform:"Instagram",days:9,grad:"g2"},
+  {suburb:"Spearwood",postcode:"6163",angle:"Market update",headline:"Spearwood market report ready",offer:"Free suburb market report",cta:"Get the report",status:"approved",platform:"Facebook",days:1,grad:"g4"},
+  {suburb:"Canning Vale",postcode:"6155",angle:"Seller checklist",headline:"Plan your Canning Vale sale",offer:"Local seller planning guide",cta:"Download checklist",status:"approved",platform:"Facebook",days:1,grad:"g6"},
+  {suburb:"Canning Vale",postcode:"6155",angle:"Pre-sale prep",headline:"Know what to fix before you sell",offer:"Free pre-sale preparation checklist",cta:"Download checklist",status:"approved",platform:"Instagram",days:1,grad:"g1"},
+  {suburb:"Canning Vale",postcode:"6155",angle:"Appraisal prep",headline:"Get appraisal-ready faster",offer:"Seven-day appraisal prep plan",cta:"Download checklist",status:"approved",platform:"Facebook",days:1,grad:"g3"},
+  {suburb:"Canning Vale",postcode:"6155",angle:"Seller checklist",headline:"Top 10 prep tips for Canning Vale sellers",offer:"Top 10 things to do before selling",cta:"Download checklist",status:"approved",platform:"Instagram",days:1,grad:"g5"},
+  {suburb:"Canning Vale",postcode:"6155",angle:"Seller checklist",headline:"Top 10 seller tasks in Canning Vale",offer:"Top 10 things to do before selling",cta:"Download checklist",status:"draft",platform:"Facebook",days:1,grad:"g2"},
+  {suburb:"Scarborough",postcode:"6019",angle:"Seller checklist",headline:"Seller checklist for Scarborough homeowners",offer:"Top 10 things to do before selling",cta:"Download checklist",status:"draft",platform:"Facebook",days:14,grad:"g4"},
+  {suburb:"Scarborough",postcode:"6019",angle:"Market update",headline:"Plan your sale with local context",offer:"Top 10 things to do before selling",cta:"Download checklist",status:"draft",platform:"Instagram",days:14,grad:"g6"},
+  {suburb:"Scarborough",postcode:"6019",angle:"Seller checklist",headline:"Selling soon? Start with this checklist",offer:"Top 10 things to do before selling",cta:"Download checklist",status:"draft",platform:"Facebook",days:14,grad:"g1"},
+  {suburb:"South Perth",postcode:"6151",angle:"Seller checklist",headline:"Seller checklist for South Perth homeowners",offer:"What is your home worth in today's market?",cta:"Request price update",status:"draft",platform:"Facebook",days:13,grad:"g3"},
+  {suburb:"South Perth",postcode:"6151",angle:"Pre-sale prep",headline:"Small prep can improve buyer interest",offer:"What is your home worth in today's market?",cta:"Request price update",status:"draft",platform:"Instagram",days:13,grad:"g5"},
+  {suburb:"South Perth",postcode:"6151",angle:"Pre-sale prep",headline:"Before you list, fix these 10 things",offer:"What is your home worth in today's market?",cta:"Request price update",status:"approved",platform:"Facebook",days:13,grad:"g6"}
+];
+const ANGLES = [...new Set(ADS.map(a => a.angle))];
+
+/* ---- swap-ready query API (returns matching ads) ---- */
+function fetchAds(entity){
+  // entity = {type, value}  → in production: GET /api/ads?type=&value=
+  return ADS.filter(ad=>{
+    if(entity.type==="suburb")   return ad.suburb===entity.value;
+    if(entity.type==="postcode") return ad.postcode===entity.value;
+    if(entity.type==="angle")    return ad.angle===entity.value;
+    // free text fallback
+    const t = entity.value.toLowerCase();
+    return [ad.suburb,ad.postcode,ad.angle,ad.headline].join(" ").toLowerCase().includes(t);
+  });
+}
+
+/* ---- predictive index ---- */
+function searchIndex(qRaw){
+  const q = qRaw.trim().toLowerCase();
+  if(!q) return [];
+  const out = [];
+  SUBURBS.forEach(s=>{
+    if(s.name.toLowerCase().includes(q) || s.postcode.startsWith(q))
+      out.push({type:"suburb", label:s.name, sub:s.postcode+" · WA", value:s.name,
+                count:ADS.filter(a=>a.suburb===s.name).length});
+  });
+  SUBURBS.forEach(s=>{
+    if(s.postcode.startsWith(q) && !out.find(o=>o.value===s.name))
+      out.push({type:"postcode", label:s.postcode, sub:s.name+" · WA", value:s.postcode,
+                count:ADS.filter(a=>a.postcode===s.postcode).length});
+  });
+  ANGLES.forEach(a=>{
+    if(a.toLowerCase().includes(q))
+      out.push({type:"angle", label:a, sub:"Ad angle", value:a,
+                count:ADS.filter(x=>x.angle===a).length});
+  });
+  return out.slice(0,8);
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const input = $("#q"), ac = $("#ac"), bar = $("#searchbar");
+const results = $("#results"), grid = $("#grid");
+let active = -1, current = [];        // typeahead state
+let lastEntity = null, angleFilter = "All", platformFilter = "All";
+let sortMode = "recommended", shown = 12;
+const PAGE = 12;
+
+const TYPE_ICON = {
+  suburb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  postcode:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>',
+  agency:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>',
+  agent:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+  angle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.6 13.4 11 3.8H4v7l9.6 9.6a2 2 0 0 0 2.8 0l4.2-4.2a2 2 0 0 0 0-2.8Z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>'
+};
+const PLAT_ICON = {
+  Facebook:'<svg viewBox="0 0 24 24" fill="#1877f2"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12Z"/></svg>',
+  Instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="#c13584" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#c13584" stroke="none"/></svg>'
+};
+const GROUP_LABEL = {suburb:"Suburbs",postcode:"Postcodes",angle:"Ad angles"};
+
+/* ---------- typeahead render ---------- */
+function renderAC(){
+  current = searchIndex(input.value);
+  active = -1;
+  if(!input.value.trim()){ closeAC(); return; }
+  if(!current.length){
+    ac.innerHTML = '<div class="ac__empty">No matches yet — try a suburb like “Spearwood”, a postcode, or an angle.</div>';
+    openAC(); return;
+  }
+  let html = "", lastType = "";
+  current.forEach((item,i)=>{
+    if(item.type!==lastType){ html += `<div class="ac__group">${GROUP_LABEL[item.type]}</div>`; lastType = item.type; }
+    html += `<div class="ac__item" role="option" data-i="${i}">
+      <span class="ac__ico">${TYPE_ICON[item.type]}</span>
+      <span class="ac__txt"><b>${item.label}</b><span>${item.sub}</span></span>
+      <span class="ac__count">${item.count} ads</span>
+    </div>`;
+  });
+  ac.innerHTML = html;
+  ac.querySelectorAll(".ac__item").forEach(el=>{
+    el.addEventListener("mousedown",e=>{ e.preventDefault(); choose(current[+el.dataset.i]); });
+  });
+  openAC();
+}
+function openAC(){ ac.classList.add("is-open"); bar.classList.add("is-open"); }
+function closeAC(){ ac.classList.remove("is-open"); bar.classList.remove("is-open"); }
+function setActive(n){
+  const items = [...ac.querySelectorAll(".ac__item")];
+  if(!items.length) return;
+  active = (n+items.length)%items.length;
+  items.forEach(el=>el.classList.remove("is-active"));
+  items[active].classList.add("is-active");
+  items[active].scrollIntoView({block:"nearest"});
+}
+
+/* ---------- choose entity → run search ---------- */
+function choose(item){
+  input.value = item.label;
+  closeAC();
+  runSearch({type:item.type, value:item.value, label:item.label, sub:item.sub});
+}
+function runSearch(entity){
+  lastEntity = entity; angleFilter="All"; platformFilter="All";
+  sortMode = "recommended"; shown = PAGE; $("#sort").value = "recommended";
+  const ads = fetchAds(entity);
+  $("#landing").style.display = "none";
+  results.classList.add("is-open");
+
+  const labels = {suburb:"in",postcode:"in",angle:"·"};
+  $("#resTitle").innerHTML = `${ads.length} ${ads.length===1?"ad":"ads"} ${labels[entity.type]||"for"} <em>${entity.label}</em>`;
+  $("#resSub").textContent = entity.sub ? entity.sub : "From your ad library";
+
+  buildAngleFilters(ads);
+  buildPlatformFilters();
+  renderGrid();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* current filtered + sorted set */
+function getFiltered(){
+  let ads = fetchAds(lastEntity);
+  if(angleFilter!=="All")    ads = ads.filter(a=>a.angle===angleFilter);
+  if(platformFilter!=="All") ads = ads.filter(a=>a.platform===platformFilter);
+  if(sortMode==="newest")      ads = ads.slice().sort((a,b)=>a.days-b.days);
+  else if(sortMode==="longest")ads = ads.slice().sort((a,b)=>b.days-a.days);
+  else if(sortMode==="angle")  ads = ads.slice().sort((a,b)=>ANGLES.indexOf(a.angle)-ANGLES.indexOf(b.angle));
+  return ads;
+}
+
+/* insight summary above the grid */
+function buildSummary(ads){
+  if(!ads.length){ $("#summary").innerHTML=""; return; }
+  const byAngle = {}; let fb=0;
+  ads.forEach(a=>{ byAngle[a.angle]=(byAngle[a.angle]||0)+1; if(a.platform==="Facebook") fb++; });
+  const top = Object.entries(byAngle).sort((a,b)=>b[1]-a[1])[0];
+  const fbPct = Math.round(fb/ads.length*100);
+  $("#summary").innerHTML =
+    `<b>${ads.length}</b> ads`+
+    `<span class="sep">·</span>most common angle: <b>${top[0]}</b> (${top[1]})`+
+    `<span class="sep">·</span><b>${fbPct}%</b> Facebook`;
+}
+
+function buildAngleFilters(ads){
+  const counts = {}; ads.forEach(a=>counts[a.angle]=(counts[a.angle]||0)+1);
+  const present = ANGLES.filter(a=>counts[a]);
+  let html = `<button class="chip" data-angle="All" aria-pressed="true">All angles</button>`;
+  present.forEach(a=> html += `<button class="chip" data-angle="${a}" aria-pressed="false">${a} <span style="opacity:.55">${counts[a]}</span></button>`);
+  const wrap = $("#angleFilters"); wrap.innerHTML = html;
+  wrap.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+    angleFilter = c.dataset.angle; shown = PAGE;
+    wrap.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x===c));
+    renderGrid();
+  }));
+}
+function buildPlatformFilters(){
+  const wrap = $("#platformFilters");
+  wrap.querySelectorAll(".chip").forEach(c=>{
+    c.setAttribute("aria-pressed", c.dataset.platform==="All");
+    c.onclick = ()=>{
+      platformFilter = c.dataset.platform; shown = PAGE;
+      wrap.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x===c));
+      renderGrid();
+    };
+  });
+}
+
+function renderGrid(){
+  const all = getFiltered();
+  buildSummary(all);
+  if(!all.length){
+    grid.innerHTML = `<div class="noresults" style="grid-column:1/-1">No ads match that filter. Try “All angles”.</div>`;
+    $("#loadmoreWrap").classList.remove("is-open");
+    return;
+  }
+  const ads = all.slice(0, shown);
+  grid.innerHTML = ads.map(ad=>{
+    const approved = ad.status==="approved";
+    const badge = approved
+      ? '<span class="ad__status ad__status--ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m5 13 4 4L19 7"/></svg> Approved</span>'
+      : '<span class="ad__status ad__status--draft">Draft</span>';
+    return `<article class="ad">
+      <div class="ad__media ${ad.grad}">
+        <span class="ad__angle">${ad.angle}</span>
+        <span class="ad__plat" title="${ad.platform}">${PLAT_ICON[ad.platform]}</span>
+      </div>
+      <div class="ad__body">
+        <div class="ad__head">${badge}<span class="ad__where">${ad.suburb}</span></div>
+        <div class="ad__headline">${ad.headline}</div>
+        <div class="ad__copy">${ad.offer}</div>
+        <div class="ad__meta">
+          <span class="ad__cta">${ad.cta}</span>
+          <button class="ad__use" data-headline="${ad.headline}" data-suburb="${ad.suburb}">Use this ad →</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+  grid.querySelectorAll(".ad__use").forEach(b=>b.addEventListener("click",()=>{
+    toast(`Loading “${b.dataset.headline}” into the builder…`);
+  }));
+  // pagination
+  const wrap = $("#loadmoreWrap"), btn = $("#loadMore");
+  if(all.length > shown){
+    btn.textContent = `Load more — showing ${ads.length} of ${all.length}`;
+    wrap.classList.add("is-open");
+  } else {
+    wrap.classList.remove("is-open");
+  }
+}
+
+/* ---------- events ---------- */
+input.addEventListener("input", renderAC);
+input.addEventListener("focus", ()=>{ if(input.value.trim()) renderAC(); });
+input.addEventListener("keydown", e=>{
+  if(!ac.classList.contains("is-open")) return;
+  if(e.key==="ArrowDown"){ e.preventDefault(); setActive(active+1); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); setActive(active-1); }
+  else if(e.key==="Enter" && active>=0){ e.preventDefault(); choose(current[active]); }
+  else if(e.key==="Escape"){ closeAC(); }
+});
+bar.addEventListener("submit", e=>{
+  e.preventDefault();
+  if(active>=0 && current[active]){ choose(current[active]); return; }
+  if(current.length){ choose(current[0]); return; }
+  if(input.value.trim()) runSearch({type:"text", value:input.value.trim(), label:input.value.trim(), sub:"Matching ads"});
+});
+document.addEventListener("click", e=>{ if(!e.target.closest(".searchwrap")) closeAC(); });
+$("#resBack").addEventListener("click", ()=>{
+  results.classList.remove("is-open");
+  $("#landing").style.display = "";
+  input.value=""; input.focus();
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+$("#sort").addEventListener("change", e=>{ sortMode = e.target.value; shown = PAGE; renderGrid(); });
+$("#loadMore").addEventListener("click", ()=>{ shown += PAGE; renderGrid(); });
+
+let toastT;
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("is-open");
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("is-open"), 2600);
+}
+
+/* ---------- motion: scroll-reveal, count-up, chart draw ---------- */
+(function motion(){
+  if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.body.classList.add("anim");
+
+  const reveal = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); reveal.unobserve(e.target); } });
+  }, {threshold:.16, rootMargin:"0px 0px -8% 0px"});
+  document.querySelectorAll(".reveal, .stagger").forEach(el=>reveal.observe(el));
+
+  const counters = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ countUp(e.target); counters.unobserve(e.target); } });
+  }, {threshold:.6});
+  document.querySelectorAll(".count").forEach(el=>counters.observe(el));
+
+  function countUp(el){
+    const target = parseFloat(el.dataset.count || "0");
+    const dec = parseInt(el.dataset.decimals || "0", 10);
+    const pre = el.dataset.prefix || "", suf = el.dataset.suffix || "";
+    const dur = 1100, t0 = performance.now();
+    const fmt = v => pre + v.toLocaleString("en-AU",{minimumFractionDigits:dec,maximumFractionDigits:dec}) + suf;
+    (function tick(t){
+      const p = Math.min(1, (t - t0)/dur), eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * eased);
+      if(p < 1) requestAnimationFrame(tick); else el.textContent = fmt(target);
+    })(t0);
+  }
+})();
+</script>
+</body>
+</html>

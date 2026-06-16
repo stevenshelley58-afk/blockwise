@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockwise — Self-serve mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#16181d; --ink-soft:#5b616e; --ink-faint:#9aa0ad;
+    --line:#e9ebef; --line-soft:#f0f1f4; --good:#1f9d6b; --good-bg:#e7f4ee;
+    --warn:#c98a1b; --warn-bg:#fbf1df; --chip:#eef0f3; --radius:18px;
+    --shadow:0 1px 2px rgba(16,18,23,.04), 0 8px 30px rgba(16,18,23,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+
+  /* Sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:26px 18px}
+  .brand{display:flex;align-items:center;gap:12px;padding:6px 10px 26px}
+  .logo{width:30px;height:30px;border-radius:9px;background:var(--ink);display:grid;place-items:center}
+  .logo i{width:11px;height:11px;background:#fff;border-radius:3px}
+  .brand b{font-size:19px;font-weight:600;letter-spacing:-.02em}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:13px;padding:10px 12px;border-radius:11px;color:var(--ink-soft);text-decoration:none;font-size:14.5px;font-weight:500;cursor:pointer;transition:.15s}
+  .nav a svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;flex:none}
+  .nav a:hover{background:var(--line-soft);color:var(--ink)}
+  .nav a.active{background:var(--ink);color:#fff}
+  .nav .label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);padding:18px 12px 8px;font-weight:600}
+  .side .spacer{flex:1}
+  .user{display:flex;align-items:center;gap:11px;padding:12px 10px;border-top:1px solid var(--line);margin-top:10px}
+  .user img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+  .user b{font-size:14px;font-weight:600}
+  .user span{display:block;font-size:11.5px;color:var(--ink-faint)}
+
+  /* Topbar */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .top{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:18px 38px;border-bottom:1px solid var(--line)}
+  .org{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:500;color:var(--ink)}
+  .org .dot{width:7px;height:7px;border-radius:50%;background:var(--good)}
+  .bell{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);cursor:pointer}
+  .bell svg{width:18px;height:18px;stroke:var(--ink-soft);fill:none;stroke-width:1.7}
+
+  .canvas{padding:40px 48px 70px;max-width:1120px;width:100%;margin:0 auto;flex:1}
+  .screen{display:none;animation:fade .25s ease}
+  .screen.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h1.title{font-size:42px;margin:0 0 10px;line-height:1.04}
+  p.lede{font-size:17px;color:var(--ink-soft);max-width:560px;line-height:1.5;margin:0 0 28px}
+  .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);font-weight:600;margin:0 0 14px}
+
+  .btn{display:inline-flex;align-items:center;gap:9px;border:none;border-radius:999px;padding:13px 26px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+  .btn.dark{background:var(--ink);color:#fff}
+  .btn.dark:hover{transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--ink);padding:13px 8px}
+  .btn.line{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn.sm{padding:9px 16px;font-size:13px}
+  .row{display:flex;align-items:center;gap:8px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:26px 28px}
+
+  .hero-actions{display:flex;align-items:center;gap:22px;margin-bottom:46px}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+  .step{padding:24px;border-radius:16px;border:1px solid var(--line);background:#fff;position:relative;cursor:pointer;transition:.15s}
+  .step:hover{border-color:#d3d7df;transform:translateY(-2px)}
+  .step .n{width:30px;height:30px;border-radius:9px;background:var(--chip);display:grid;place-items:center;font-weight:600;font-size:14px;margin-bottom:14px}
+  .step.done .n{background:var(--good-bg);color:var(--good)}
+  .step h3{margin:0 0 6px;font-size:16px;font-weight:600}
+  .step p{margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.45}
+  .step .tag{position:absolute;top:22px;right:22px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px}
+  .tag.done{background:var(--good-bg);color:var(--good)}
+  .tag.now{background:var(--ink);color:#fff}
+
+  .banner{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 26px;border-radius:16px;background:linear-gradient(100deg,#16181d,#2b2f3a);color:#fff;margin-bottom:34px}
+  .banner h3{margin:0 0 4px;font-size:18px;font-weight:600}
+  .banner p{margin:0;font-size:13.5px;color:#c4c8d2}
+  .banner .btn.dark{background:#fff;color:var(--ink)}
+
+  .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+  .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff}
+  .field textarea{min-height:84px;resize:vertical}
+  .field .hint{font-size:12px;color:var(--ink-faint);margin-top:6px}
+  .hint{font-size:12px;color:var(--ink-faint)}
+
+  .swatches{display:flex;gap:10px}
+  .sw{width:42px;height:42px;border-radius:11px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+  .sw.sel{box-shadow:0 0 0 2px var(--ink)}
+
+  .preview-ad{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+  .preview-ad .img{height:150px;background:linear-gradient(135deg,#dfe6ef,#c5d0de);display:grid;place-items:center;color:#8a96a8;font-size:13px}
+  .preview-ad .body{padding:16px}
+  .preview-ad .body .b{font-size:12px;color:var(--ink-faint);margin-bottom:6px}
+  .preview-ad .body h4{margin:0 0 6px;font-size:15px}
+  .preview-ad .body p{margin:0;font-size:13px;color:var(--ink-soft)}
+  .mini-cta{margin-top:12px;display:inline-block;font-size:12px;font-weight:600;background:var(--ink);color:#fff;padding:7px 14px;border-radius:8px}
+
+  .int-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .int{display:flex;align-items:center;gap:16px;padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:#fff}
+  .int .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;font-size:16px;flex:none}
+  .int .meta{flex:1;min-width:0}
+  .int .meta b{font-size:15px}
+  .int .meta span{display:block;font-size:12.5px;color:var(--ink-faint);margin-top:2px}
+  .pill{font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  .pill.on{background:var(--good-bg);color:var(--good);border-color:transparent}
+
+  /* performance + radar */
+  .hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-bottom:34px}
+  .hero-side{display:flex;align-items:center;gap:12px;flex:none}
+  .range-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:13.5px;font-weight:600;color:var(--ink-soft);background:#fff;cursor:pointer}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}
+  .kpi{padding:22px;border:1px solid var(--line);border-radius:16px;background:#fff;position:relative;overflow:hidden}
+  .kpi .k{font-size:12.5px;color:var(--ink-faint);font-weight:500}
+  .kpi .v{font-size:28px;font-weight:600;margin:8px 0 4px;letter-spacing:-.02em}
+  .kpi .d{font-size:12.5px;font-weight:600}
+  .up{color:var(--good)} .down{color:#c0392b}
+  .spark{display:flex;align-items:flex-end;gap:4px;height:30px;margin-top:14px}
+  .spark i{flex:1;background:linear-gradient(180deg,#3a4150,#16181d);border-radius:3px;opacity:.9}
+  .spark.down i{background:linear-gradient(180deg,#cdd3dc,#9aa0ad)}
+  .perf-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:24px}
+  .chart{height:210px;display:flex;align-items:flex-end;gap:12px;padding:18px 4px 0}
+  .bar{flex:1;background:linear-gradient(180deg,#3a4150,#16181d);border-radius:8px 8px 4px 4px;position:relative}
+  .bar span{position:absolute;bottom:-22px;left:0;right:0;text-align:center;font-size:11px;color:var(--ink-faint)}
+  .legend{margin-top:6px}
+  .leg{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:500;margin:14px 0 7px}
+  .leg b{margin-left:auto;font-weight:600}
+  .leg em{width:10px;height:10px;border-radius:3px;font-style:normal;display:inline-block}
+  .track{height:7px;background:var(--line);border-radius:99px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px}
+  .d1{background:#16181d}.d2{background:#3f6fd1}.d3{background:#1f9d6b}.d4{background:#c98a1b}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;padding:0 14px 12px}
+  td{padding:14px;border-top:1px solid var(--line-soft);font-size:13.5px}
+  td .nm{font-weight:600}
+
+  .radar-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .rstat{padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:#fff}
+  .rstat b{display:block;font-size:30px;font-weight:600;letter-spacing:-.02em}
+  .rstat span{font-size:13px;color:var(--ink-faint)}
+  .radar-item{display:flex;align-items:center;gap:18px;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:12px}
+  .radar-item .thumb{width:60px;height:60px;border-radius:10px;background:linear-gradient(135deg,#e6ebf2,#cdd6e3);flex:none}
+  .radar-item .info{flex:1}
+  .radar-item .info b{font-size:14.5px}
+  .radar-item .info p{margin:4px 0 0;font-size:13px;color:var(--ink-soft)}
+  .badge{font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px}
+  .badge.new{background:var(--warn-bg);color:var(--warn)}
+  .badge.spike{background:var(--good-bg);color:var(--good)}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 18px}
+  .section-head h2{font-size:21px;margin:0;font-weight:600;letter-spacing:-.01em}
+  .muted{color:var(--ink-soft);font-size:14px}
+  .mt{margin-top:34px}
+  .progress-wrap{display:flex;align-items:center;gap:14px;margin:6px 0 30px}
+  .progress{flex:1;height:7px;background:var(--line);border-radius:99px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--ink);border-radius:99px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand"><span class="logo"><i></i></span><b>Blockwise</b></div>
+    <nav class="nav">
+      <a data-go="overview" class="active">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Overview</a>
+      <a data-go="performance">
+        <svg viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 6-8"/><path d="M4 4v16h16"/></svg>
+        Performance</a>
+      <a data-go="radar">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+        Ad Radar</a>
+      <a data-go="overview">
+        <svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 1-3.5 3.5L16 18l-4-2.5L8 18l.5-5.5L5 9l5-1z"/></svg>
+        Ad Studio</a>
+      <div class="label">Set up</div>
+      <a data-go="identity">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+        Identity</a>
+      <a data-go="integrations">
+        <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l2-2a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-2 2a5 5 0 007 7l1-1"/></svg>
+        Integrations</a>
+    </nav>
+    <div class="spacer"></div>
+    <nav class="nav">
+      <a data-go="overview">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 1h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2L10 23h4l.5-2.6c.7-.3 1.4-.7 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
+        Workspace</a>
+    </nav>
+    <div class="user">
+      <img src="https://i.pravatar.cc/80?img=12" alt="">
+      <div><b>Mark</b><span>Northstar Realty</span></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="top">
+      <div class="org"><span class="dot"></span>Northstar Realty — AU</div>
+      <div class="bell"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+    </div>
+
+    <div class="canvas">
+
+      <!-- ============ OVERVIEW ============ -->
+      <section id="overview" class="screen show">
+        <h1 class="title serif">Welcome back, Mark.</h1>
+        <p class="lede">You're three short steps from your first live ad. We'll handle the targeting, sizing, and distribution — you bring one image and a few words.</p>
+        <div class="hero-actions">
+          <button class="btn dark" data-go="identity">Launch your first ad
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <button class="btn ghost">View templates</button>
+        </div>
+
+        <div class="banner">
+          <div>
+            <h3>Fastest path to your first ad</h3>
+            <p>Most Northstar listings go live in under 4 minutes. Pick up where you left off.</p>
+          </div>
+          <button class="btn dark" data-go="identity">Resume setup</button>
+        </div>
+
+        <p class="eyebrow">Setup — 1 of 3 complete</p>
+        <div class="progress-wrap">
+          <div class="progress"><i style="width:33%"></i></div>
+          <span class="muted">33%</span>
+        </div>
+
+        <div class="steps">
+          <div class="step done" data-go="identity">
+            <span class="tag done">Done</span>
+            <div class="n">✓</div>
+            <h3>Brand identity</h3>
+            <p>Logo, colours and voice so every ad looks unmistakably Northstar.</p>
+          </div>
+          <div class="step" data-go="integrations">
+            <span class="tag now">Next</span>
+            <div class="n">2</div>
+            <h3>Connect channels</h3>
+            <p>Link Meta, Google and TikTok once — publish everywhere after.</p>
+          </div>
+          <div class="step" data-go="performance">
+            <div class="n">3</div>
+            <h3>Create & launch</h3>
+            <p>Drop in a listing photo, approve the copy, and go live.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ IDENTITY ============ -->
+      <section id="identity" class="screen">
+        <p class="eyebrow">Step 1 — Brand identity</p>
+        <h1 class="title serif">Make every ad sound like you.</h1>
+        <p class="lede">Set this once. Blockwise applies it automatically to every ad it generates, so you skip the formatting every time.</p>
+
+        <div class="grid2">
+          <div class="card pad">
+            <div class="field">
+              <label>Business name</label>
+              <input value="Northstar Realty" />
+            </div>
+            <div class="field">
+              <label>Logo</label>
+              <div class="row">
+                <div class="logo" style="width:46px;height:46px;border-radius:12px"><i style="width:16px;height:16px"></i></div>
+                <button class="btn line sm">Replace</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Brand colours</label>
+              <div class="swatches">
+                <div class="sw sel" style="background:#16181d"></div>
+                <div class="sw" style="background:#1f5fbf"></div>
+                <div class="sw" style="background:#1f9d6b"></div>
+                <div class="sw" style="background:#c98a1b"></div>
+                <div class="sw" style="background:#b0405a"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Voice & tone</label>
+              <select><option>Warm & trustworthy</option><option>Bold & energetic</option><option>Premium & understated</option></select>
+              <div class="hint">Used to write captions and headlines.</div>
+            </div>
+            <div class="field">
+              <label>One line about your business</label>
+              <textarea>Boutique residential agency selling premium coastal homes across NSW.</textarea>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn dark" data-go="integrations">Save & continue</button>
+              <button class="btn ghost" data-go="overview">Back</button>
+            </div>
+          </div>
+
+          <div>
+            <p class="eyebrow">Live preview</p>
+            <div class="preview-ad">
+              <div class="img">Your listing photo</div>
+              <div class="body">
+                <div class="b">NORTHSTAR REALTY · Sponsored</div>
+                <h4>Wake up to the water.</h4>
+                <p>3-bed coastal retreat now open for inspection. Book your private viewing.</p>
+                <span class="mini-cta">Enquire now</span>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:14px">Updates as you edit your identity.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ INTEGRATIONS ============ -->
+      <section id="integrations" class="screen">
+        <p class="eyebrow">Step 2 — Connect channels</p>
+        <h1 class="title serif">Connect once. Publish everywhere.</h1>
+        <p class="lede">Link your ad accounts and Blockwise resizes, reformats and posts each ad to every channel for you.</p>
+
+        <div class="int-grid">
+          <div class="int">
+            <div class="ico" style="background:#1877f2">f</div>
+            <div class="meta"><b>Meta — Facebook & Instagram</b><span>Connected · Northstar Realty AU</span></div>
+            <span class="pill on">Connected</span>
+          </div>
+          <div class="int">
+            <div class="ico" style="background:linear-gradient(135deg,#ea4335,#4285f4)">G</div>
+            <div class="meta"><b>Google Ads</b><span>Search, Display & YouTube</span></div>
+            <span class="pill" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'Connected':'Connect'">Connect</span>
+          </div>
+          <div class="int">
+            <div class="ico" style="background:#000">♪</div>
+            <div class="meta"><b>TikTok Ads</b><span>Short-form video placements</span></div>
+            <span class="pill" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'Connected':'Connect'">Connect</span>
+          </div>
+          <div class="int">
+            <div class="ico" style="background:#0a66c2">in</div>
+            <div class="meta"><b>LinkedIn</b><span>Reach buyers & investors</span></div>
+            <span class="pill" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'Connected':'Connect'">Connect</span>
+          </div>
+        </div>
+
+        <div class="card pad mt" style="display:flex;align-items:center;justify-content:space-between;gap:24px">
+          <div>
+            <h3 style="margin:0 0 4px;font-size:16px">You're connected to enough to launch.</h3>
+            <p class="muted" style="margin:0">One channel is all you need to go live. Add more anytime.</p>
+          </div>
+          <button class="btn dark" data-go="performance">Create my first ad
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ============ PERFORMANCE ============ -->
+      <section id="performance" class="screen">
+        <p class="eyebrow">Performance</p>
+        <div class="hero-row">
+          <div>
+            <h1 class="title serif">Every ad, working for you.</h1>
+            <p class="lede" style="margin-bottom:0">Last 30 days across all channels. Enquiries are up and your cost per enquiry is falling — here's where it's coming from.</p>
+          </div>
+          <div class="hero-side">
+            <button class="btn dark" data-go="identity">New ad
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <div class="range-pill">Last 30 days
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k">Impressions</div><div class="v">184.2k</div><div class="d up">▲ 12.4%</div><div class="spark"><i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:70%"></i><i style="height:85%"></i><i style="height:100%"></i></div></div>
+          <div class="kpi"><div class="k">Clicks</div><div class="v">6,910</div><div class="d up">▲ 8.1%</div><div class="spark"><i style="height:50%"></i><i style="height:45%"></i><i style="height:62%"></i><i style="height:58%"></i><i style="height:75%"></i><i style="height:88%"></i></div></div>
+          <div class="kpi"><div class="k">Enquiries</div><div class="v">342</div><div class="d up">▲ 21.0%</div><div class="spark"><i style="height:35%"></i><i style="height:50%"></i><i style="height:46%"></i><i style="height:68%"></i><i style="height:84%"></i><i style="height:100%"></i></div></div>
+          <div class="kpi"><div class="k">Cost / enquiry</div><div class="v">$7.40</div><div class="d down">▼ 5.2%</div><div class="spark down"><i style="height:100%"></i><i style="height:88%"></i><i style="height:92%"></i><i style="height:74%"></i><i style="height:66%"></i><i style="height:58%"></i></div></div>
+        </div>
+
+        <div class="perf-grid">
+          <div class="card pad">
+            <div class="section-head"><h2 style="font-size:17px">Enquiries by week</h2><span class="muted">vs. previous period</span></div>
+            <div class="chart">
+              <div class="bar" style="height:48%"><span>W1</span></div>
+              <div class="bar" style="height:63%"><span>W2</span></div>
+              <div class="bar" style="height:55%"><span>W3</span></div>
+              <div class="bar" style="height:78%"><span>W4</span></div>
+              <div class="bar" style="height:92%"><span>W5</span></div>
+              <div class="bar" style="height:100%"><span>W6</span></div>
+            </div>
+          </div>
+          <div class="card pad">
+            <div class="section-head"><h2 style="font-size:17px">Channel mix</h2><span class="muted">enquiries</span></div>
+            <div class="legend">
+              <div class="leg"><em class="d1"></em>Meta<b>52%</b></div>
+              <div class="track"><i class="d1" style="width:52%"></i></div>
+              <div class="leg"><em class="d2"></em>Google<b>27%</b></div>
+              <div class="track"><i class="d2" style="width:27%"></i></div>
+              <div class="leg"><em class="d3"></em>TikTok<b>15%</b></div>
+              <div class="track"><i class="d3" style="width:15%"></i></div>
+              <div class="leg"><em class="d4"></em>LinkedIn<b>6%</b></div>
+              <div class="track"><i class="d4" style="width:6%"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card pad mt">
+          <div class="section-head"><h2 style="font-size:17px">Top performing ads</h2><span class="muted">by enquiries</span></div>
+          <table>
+            <thead><tr><th>Ad</th><th>Channel</th><th>Spend</th><th>Enquiries</th><th>CPE</th></tr></thead>
+            <tbody>
+              <tr><td class="nm">Wake up to the water</td><td>Meta</td><td>$640</td><td>118</td><td>$5.42</td></tr>
+              <tr><td class="nm">Coastal retreat · open Sat</td><td>Google</td><td>$520</td><td>86</td><td>$6.05</td></tr>
+              <tr><td class="nm">Last 2 apartments left</td><td>Meta</td><td>$410</td><td>71</td><td>$5.77</td></tr>
+              <tr><td class="nm">Invest by the bay</td><td>TikTok</td><td>$300</td><td>67</td><td>$4.48</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ AD RADAR ============ -->
+      <section id="radar" class="screen">
+        <p class="eyebrow">Ad Radar</p>
+        <div class="hero-row">
+          <div>
+            <h1 class="title serif">Know what your market is running.</h1>
+            <p class="lede" style="margin-bottom:0">Live competitor ads across Coastal NSW. Spot a winning angle and remix it into your branding in one click.</p>
+          </div>
+          <div class="hero-side">
+            <div class="range-pill">Coastal NSW
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="radar-stats">
+          <div class="rstat"><b>23</b><span>Active competitor ads</span></div>
+          <div class="rstat"><b>4</b><span>New today</span></div>
+          <div class="rstat"><b>3</b><span>Spending up sharply</span></div>
+        </div>
+
+        <div class="section-head" style="margin-top:30px"><h2 style="font-size:17px">Active in your market · Coastal NSW</h2><button class="btn line sm">Filter</button></div>
+
+        <div class="radar-item">
+          <div class="thumb"></div>
+          <div class="info"><b>Seaside Property Co.</b><p>"Your bay-front life starts here" · Meta · running 9 days</p></div>
+          <span class="badge spike">▲ High spend</span>
+          <button class="btn line sm" data-go="identity">Remix</button>
+        </div>
+        <div class="radar-item">
+          <div class="thumb"></div>
+          <div class="info"><b>Harbour & Co Realty</b><p>"Auction this Saturday — register now" · Google · new today</p></div>
+          <span class="badge new">New</span>
+          <button class="btn line sm" data-go="identity">Remix</button>
+        </div>
+        <div class="radar-item">
+          <div class="thumb"></div>
+          <div class="info"><b>Blue Line Estates</b><p>"3 reasons to buy coastal in 2026" · TikTok · running 4 days</p></div>
+          <span class="badge spike">▲ Trending</span>
+          <button class="btn line sm" data-go="identity">Remix</button>
+        </div>
+
+        <div class="banner mt">
+          <div>
+            <h3>Turn a trend into your ad</h3>
+            <p>We'll adapt the winning angle to your branding and listings automatically.</p>
+          </div>
+          <button class="btn dark" data-go="identity">Create from a trend</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('show',s.id===id));
+    document.querySelectorAll('.nav a[data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-go]');
+    if(t){e.preventDefault();go(t.dataset.go);}
+  });
+</script>
+</body>
+</html>

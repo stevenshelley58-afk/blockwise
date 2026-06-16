@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise — Results with inline management (mock)</title>
+<style>
+  :root{
+    --bg:#f4f4f2; --surface:#ffffff; --surface-2:#f7f7f5; --line:rgba(20,20,20,.10);
+    --line-2:rgba(20,20,20,.18); --text:#16161a; --text-2:#5f5f5a; --text-3:#8a8a85;
+    --black:#16161a; --green-bg:#e1f5ee; --green-fg:#0f6e56; --green-line:#1d9e75;
+    --amber-bg:#faeeda; --amber-fg:#854f0b; --amber-line:#ef9f27;
+    --red-bg:#fcebeb; --red-fg:#a32d2d; --red-line:#e24b4a;
+    --info-bg:#e6f1fb; --info-fg:#185fa5; --info-line:#378add;
+    --purple-fg:#534ab7; --teal-line:#1d9e75; --radius:10px; --radius-lg:14px;
+  }
+  [data-theme="dark"]{
+    --bg:#16161a; --surface:#1f1f24; --surface-2:#26262c; --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.20); --text:#f3f3f1; --text-2:#aeaea8; --text-3:#7d7d78;
+    --black:#000; --green-bg:#0d2a23; --green-fg:#5dcaa5; --amber-bg:#33260f; --amber-fg:#fac775;
+    --red-bg:#2e1414; --red-fg:#f09595; --info-bg:#0c2c47; --info-fg:#85b7eb; --purple-fg:#afa9ec;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+  .side{background:var(--surface);border-right:.5px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px}
+  .brand{display:flex;align-items:center;gap:9px;padding:4px 8px 18px;font-weight:600;font-size:17px}
+  .brand .logo{width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  .brand .logo span{background:var(--text);border-radius:2px}
+  .brand .logo span:nth-child(3){opacity:.45}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--radius);color:var(--text-2);text-decoration:none;font-weight:500;font-size:14px}
+  .nav a:hover{background:var(--surface-2);color:var(--text)}
+  .nav a.active{background:var(--black);color:#fff}
+  .nav a.active svg{stroke:#fff}
+  .nav a svg{width:18px;height:18px;stroke:var(--text-2);stroke-width:2;fill:none}
+  .nav a.removed{position:relative;opacity:.4;text-decoration:line-through;pointer-events:none}
+  .nav a.removed .tag{position:absolute;right:8px;font-size:9.5px;letter-spacing:.04em;background:var(--red-bg);color:var(--red-fg);padding:2px 6px;border-radius:99px;text-decoration:none;font-weight:600}
+  .main{display:flex;flex-direction:column;min-width:0}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:.5px solid var(--line);background:var(--surface)}
+  .ws{display:flex;align-items:center;gap:8px;border:.5px solid var(--line-2);border-radius:99px;padding:8px 16px;font-weight:500}
+  .top-right{display:flex;align-items:center;gap:14px}
+  .iconbtn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:99px;border:.5px solid var(--line);background:transparent;color:var(--text-2);cursor:pointer}
+  .iconbtn:hover{background:var(--surface-2);color:var(--text)}
+  .iconbtn svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none}
+  .user{text-align:right;line-height:1.25}
+  .user b{font-weight:600;font-size:13px}
+  .user span{display:block;font-size:11.5px;color:var(--text-3)}
+  .inbox{position:relative}
+  .chip{display:flex;align-items:center;gap:7px;border:.5px solid var(--line-2);background:var(--surface-2);border-radius:99px;padding:7px 13px;cursor:pointer;font-weight:500;font-size:13px;color:var(--text)}
+  .chip:hover{border-color:var(--text-3)}
+  .chip svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+  .chip .count{background:var(--amber-line);color:#3a230a;font-weight:600;border-radius:99px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;padding:0 5px}
+  .inbox-panel{position:absolute;right:0;top:48px;width:340px;background:var(--surface);border:.5px solid var(--line-2);border-radius:var(--radius-lg);box-shadow:0 14px 40px rgba(0,0,0,.16);padding:8px;z-index:40;display:none}
+  .inbox-panel.open{display:block}
+  .inbox-panel h4{margin:8px 10px 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+  .gate{border:.5px solid var(--line);border-radius:var(--radius);padding:11px 12px;margin:6px 4px}
+  .gate .lbl{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--amber-fg);background:var(--amber-bg);padding:3px 7px;border-radius:99px}
+  .gate p{margin:8px 0 2px;font-weight:500}
+  .gate small{color:var(--text-3)}
+  .gate-actions{display:flex;gap:7px;margin-top:10px}
+  .content{padding:26px 28px 80px;overflow:auto}
+  .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);font-weight:600;margin-bottom:6px}
+  h1{font-size:28px;font-weight:600;margin:0 0 4px}
+  .sub{color:var(--text-2);margin:0 0 4px;max-width:660px}
+  .synced{font-size:12px;color:var(--text-3);margin:10px 0 22px;display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:99px;background:var(--green-line)}
+  .ann{display:flex;gap:12px;align-items:flex-start;background:var(--info-bg);border-radius:var(--radius-lg);padding:13px 16px;margin-bottom:22px;font-size:13px;color:var(--info-fg)}
+  .ann svg{width:18px;height:18px;flex:none;margin-top:1px;stroke:currentColor;stroke-width:2;fill:none}
+  .ann b{font-weight:600}
+  .ann button{margin-left:auto;background:transparent;border:none;color:var(--info-fg);cursor:pointer;font-weight:600;flex:none}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+  .kpi{background:var(--surface);border:.5px solid var(--line);border-radius:var(--radius-lg);padding:15px 17px}
+  .kpi .k{font-size:12.5px;color:var(--text-2);margin-bottom:7px}
+  .kpi .v{font-size:24px;font-weight:600;letter-spacing:-.01em}
+  .kpi .d{font-size:11.5px;margin-top:4px;color:var(--green-fg)}
+  .panel{background:var(--surface);border:.5px solid var(--line);border-radius:var(--radius-lg);padding:16px 18px}
+  .panel h3{margin:0 0 2px;font-size:14px;font-weight:600}
+  .panel .csub{font-size:11.5px;color:var(--text-3);margin:0 0 10px}
+  .trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .big{font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .funnel-row{display:grid;grid-template-columns:120px 1fr 120px;align-items:center;gap:12px;margin:10px 0}
+  .funnel-row .flabel{font-size:12.5px;color:var(--text-2)}
+  .funnel-row .ftrack{height:30px;border-radius:8px;background:var(--info-line);display:flex;align-items:center;padding:0 12px;color:#fff;font-weight:600;font-size:13px}
+  .funnel-row .frate{font-size:12px;color:var(--text-3);text-align:right}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 8px}
+  .sec-head h2{font-size:18px;font-weight:600;margin:0}
+  .ownkey{display:flex;gap:16px;font-size:12px;color:var(--text-2);margin:2px 0 16px;flex-wrap:wrap}
+  .own{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px}
+  .own svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.2;fill:none}
+  .own-managed{background:var(--info-bg);color:var(--info-fg)}
+  .own-ext{background:var(--surface-2);color:var(--text-2);border:.5px solid var(--line)}
+  .camp{background:var(--surface);border:.5px solid var(--line);border-radius:var(--radius-lg);margin-bottom:16px;overflow:hidden}
+  .camp-head{display:flex;align-items:center;gap:12px;padding:15px 18px;background:var(--surface-2)}
+  .camp-head .ctitle{font-weight:600;font-size:15px}
+  .camp-head .cmeta{font-size:12px;color:var(--text-2)}
+  .camp-head .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .drift{display:flex;align-items:flex-start;gap:9px;background:var(--amber-bg);color:var(--amber-fg);padding:10px 18px;font-size:12.5px;line-height:1.5}
+  .drift svg{width:15px;height:15px;flex:none;margin-top:2px;stroke:currentColor;stroke-width:2;fill:none}
+  .drift b{font-weight:600}
+  .adset{border-top:.5px solid var(--line);padding:14px 18px}
+  .adset-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .adset-head .stitle{font-weight:600;font-size:13.5px}
+  .adset-head .smeta{font-size:11.5px;color:var(--text-3)}
+  .adset-head .right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .level-tag{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);border:.5px solid var(--line);border-radius:99px;padding:2px 7px}
+  .ads{margin-top:12px;border-top:.5px dashed var(--line);padding-top:6px}
+  .adrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:.5px dashed var(--line)}
+  .adrow:last-child{border-bottom:none}
+  .thumb{width:42px;height:42px;border-radius:8px;background:var(--surface-2);flex:none;display:flex;align-items:center;justify-content:center;color:var(--text-3)}
+  .thumb svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .adrow .ainfo{min-width:0;flex:1}
+  .adrow .aname{font-weight:500;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .adrow .ametrics{font-size:12px;color:var(--text-2);margin-top:2px}
+  .adrow .aright{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .fatigue{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--amber-fg);background:var(--amber-bg);padding:2px 7px;border-radius:99px}
+  .fatigue svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.4;fill:none}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;white-space:nowrap}
+  .badge svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.4;fill:none}
+  .b-active{background:var(--green-bg);color:var(--green-fg)}
+  .b-paused{background:var(--surface-2);color:var(--text-2);border:.5px solid var(--line)}
+  .b-pausing{background:var(--amber-bg);color:var(--amber-fg)}
+  .b-failed{background:var(--red-bg);color:var(--red-fg)}
+  .b-applying{background:var(--info-bg);color:var(--info-fg)}
+  .spin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:99px;animation:sp .7s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  button.btn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12.5px;font-weight:500;border:.5px solid var(--line-2);background:transparent;color:var(--text);border-radius:var(--radius);padding:7px 12px;cursor:pointer}
+  button.btn:hover{background:var(--surface-2)}
+  button.btn:disabled{opacity:.45;cursor:not-allowed}
+  button.btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none}
+  button.sm{padding:5px 10px;font-size:12px}
+  button.primary{background:var(--black);color:#fff;border-color:var(--black)}
+  button.primary:hover{opacity:.9;background:var(--black)}
+  button.danger{border-color:var(--red-line);color:var(--red-fg)}
+  .pill-tag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:99px}
+  .t-gated{background:var(--amber-bg);color:var(--amber-fg)}
+  .stepper{display:inline-flex;align-items:center;border:.5px solid var(--line-2);border-radius:var(--radius);overflow:hidden}
+  .stepper button{border:none;background:transparent;color:var(--text);padding:6px 10px;cursor:pointer;font-size:14px;line-height:1}
+  .stepper button:hover{background:var(--surface-2)}
+  .stepper .val{padding:0 11px;min-width:50px;text-align:center;font-weight:600;font-size:12.5px}
+  .mlink{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--info-fg);text-decoration:none;font-weight:500}
+  .mlink svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none}
+  .alert{width:100%;display:none;align-items:flex-start;gap:9px;border-radius:var(--radius);padding:10px 13px;margin-top:10px;font-size:12.5px;line-height:1.5}
+  .alert.show{display:flex}
+  .alert svg{width:15px;height:15px;flex:none;margin-top:1px;stroke:currentColor;stroke-width:2;fill:none}
+  .alert.warn{background:var(--amber-bg);color:var(--amber-fg)}
+  .alert.err{background:var(--red-bg);color:var(--red-fg)}
+  .alert.ok{background:var(--green-bg);color:var(--green-fg)}
+  .alert b{font-weight:600}
+  /* ad breakdown */
+  .break-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+  .bcard{background:var(--surface);border:.5px solid var(--line);border-radius:var(--radius-lg);padding:16px 18px}
+  .bcard .bhead{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .bcard .bhead .thumb{width:52px;height:52px}
+  .bcard .bname{font-weight:600;font-size:14px}
+  .bcard .bmeta{font-size:11.5px;color:var(--text-3);margin-top:2px}
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .mgrid .m{background:var(--surface-2);border-radius:8px;padding:9px 11px}
+  .mgrid .m .k{font-size:11px;color:var(--text-2)}
+  .mgrid .m .v{font-size:16px;font-weight:600;margin-top:2px}
+  .bsplit{display:grid;grid-template-columns:1fr 96px;gap:14px;align-items:center;border-top:.5px solid var(--line);padding-top:13px}
+  .bbar{display:grid;grid-template-columns:78px 1fr 34px;align-items:center;gap:8px;margin:6px 0;font-size:11.5px}
+  .bbar .t{height:7px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+  .bbar .t i{display:block;height:100%;background:var(--info-line);border-radius:99px}
+  .bbar .n{text-align:right;color:var(--text-2);font-weight:600}
+  .donut-wrap{text-align:center}
+  .donut-leg{font-size:10.5px;color:var(--text-2);margin-top:6px;line-height:1.5}
+  .donut-leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  .blinks{display:flex;gap:14px;margin-top:13px;border-top:.5px solid var(--line);padding-top:11px}
+  .scrim{position:fixed;inset:0;background:rgba(10,10,12,.5);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .scrim.open{display:flex}
+  .modal{background:var(--surface);border-radius:var(--radius-lg);max-width:430px;width:100%;padding:24px;border:.5px solid var(--line-2)}
+  .modal .lock{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--amber-fg);background:var(--amber-bg);padding:5px 10px;border-radius:99px;margin-bottom:14px}
+  .modal h3{margin:0 0 8px;font-size:18px;font-weight:600}
+  .modal p{margin:0 0 18px;color:var(--text-2);font-size:13.5px}
+  .modal .delta{font-weight:600;color:var(--text)}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+  .demobar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:.5px solid var(--line-2);border-radius:99px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:9px 16px;display:flex;align-items:center;gap:13px;font-size:12.5px;z-index:50}
+  .demobar label{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--text-2);font-weight:500}
+  .switch{position:relative;width:36px;height:20px;background:var(--line-2);border-radius:99px;transition:.2s}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:99px;transition:.2s}
+  input.sw{display:none}
+  input.sw:checked + .switch{background:var(--red-line)}
+  input.sw:checked + .switch::after{transform:translateX(16px)}
+  text{font-family:inherit}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="logo"><span></span><span></span><span></span><span></span></span>blockwise</div>
+    <nav class="nav">
+      <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Home</a>
+      <a href="#" class="active"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16l4-5 3 3 4-6"/></svg>Results</a>
+      <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>Ad Radar</a>
+      <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 4"/></svg>Ad Studio</a>
+      <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M17 11a3 3 0 100-6"/><path d="M16 20c0-2-1-3.6-3-4.4"/></svg>Leads</a>
+      <a href="#" class="removed"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Approvals<span class="tag">removed</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="17" r="2"/></svg>Settings</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="ws">Northstar Realty — AU <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="top-right">
+        <div class="inbox">
+          <button class="chip" id="inboxBtn"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H7l-3 3V4z"/></svg> Waiting on you <span class="count" id="inboxCount">2</span></button>
+          <div class="inbox-panel" id="inboxPanel">
+            <h4>Needs your sign-off</h4>
+            <div class="gate" id="gate-budget">
+              <span class="lbl">Gated · raises spend</span>
+              <p>Raise ad-set budget — Canning Vale Sellers</p>
+              <small>System proposes A$40 → <b>A$55</b>/day · best CTR ad set</small>
+              <div class="gate-actions"><button class="btn primary sm" onclick="resolveGate('gate-budget',true)">Approve &amp; apply</button><button class="btn sm" onclick="resolveGate('gate-budget',false)">Dismiss</button></div>
+            </div>
+            <div class="gate" id="gate-publish">
+              <span class="lbl">Gated · publish</span>
+              <p>Publish — “Willetton open home” lead pack</p>
+              <small>Draft ready · goes live on Meta once approved</small>
+              <div class="gate-actions"><button class="btn primary sm" onclick="resolveGate('gate-publish',true)">Approve &amp; publish</button><button class="btn sm" onclick="resolveGate('gate-publish',false)">Dismiss</button></div>
+            </div>
+            <div class="gate" id="gate-empty" style="display:none;text-align:center;color:var(--text-3)"><p style="font-weight:500">Nothing waiting 🎉</p><small>Pause, resume and budget cuts happen immediately — no queue.</small></div>
+          </div>
+        </div>
+        <button class="iconbtn" id="themeBtn" title="Toggle theme"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
+        <div class="user"><b>Mark</b><span>owner · mark@blockwise.test</span></div>
+      </div>
+    </header>
+    <div class="content">
+      <div class="eyebrow">Performance</div>
+      <h1>Results</h1>
+      <p class="sub">How your ads are doing, and everything you need to manage them — pause, resume and budget, right where you see the numbers.</p>
+      <div class="synced"><span class="dot"></span> Live from Meta · last synced 2 min ago · status read back from Meta, never assumed</div>
+      <div class="ann">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div><b>What changed:</b> Approvals page removed. Reach / impressions / clicks lead the metrics. Pause, resume &amp; budget cuts apply immediately; only spend-raising or data-out actions route through the <b>Waiting on you</b> inbox. Controls show only on entities Blockwise manages.</div>
+        <button onclick="this.parentElement.style.display='none'">Dismiss</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">Reach</div><div class="v">8,920</div><div class="d">people · +14% vs prior</div></div>
+        <div class="kpi"><div class="k">Impressions</div><div class="v">23,080</div><div class="d">+11% vs prior</div></div>
+        <div class="kpi"><div class="k">Link clicks</div><div class="v">529</div><div class="d">+8% vs prior</div></div>
+        <div class="kpi"><div class="k">CTR</div><div class="v">2.3%</div><div class="d">avg 1.6% benchmark</div></div>
+        <div class="kpi"><div class="k">Leads</div><div class="v">75</div><div class="d">+19 vs prior</div></div>
+        <div class="kpi"><div class="k">Spend</div><div class="v">A$1,610</div><div class="d" style="color:var(--text-3)">A$21.50 / lead</div></div>
+      </div>
+      <div class="trend-grid">
+        <div class="panel"><h3>Impressions over time</h3><p class="csub">Daily · last 14 days</p><div class="big">23,080</div><div id="chart-impr"></div></div>
+        <div class="panel"><h3>Link clicks over time</h3><p class="csub">Daily · last 14 days</p><div class="big">529</div><div id="chart-clicks"></div></div>
+        <div class="panel"><h3>Spend over time</h3><p class="csub">Daily · last 14 days</p><div class="big">A$1,610</div><div id="chart-spend"></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:26px"><h3>From impression to lead</h3><p class="csub">How the funnel converts this period</p><div id="funnel"></div></div>
+      <div class="sec-head"><h2>Campaigns</h2></div>
+      <div class="ownkey">
+        <span class="own own-managed"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Managed by Blockwise — full controls</span>
+        <span class="own own-ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/></svg>Added in Meta — read-only</span>
+      </div>
+      <div id="camplist"></div>
+      <div class="sec-head"><h2>Ad breakdown</h2></div>
+      <p class="ownkey" style="display:block;margin-bottom:14px">Per-ad detail — creative, full metrics, placements and devices.</p>
+      <div class="break-grid" id="adbreak"></div>
+    </div>
+  </div>
+</div>
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <span class="lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg> Gated · raises spend</span>
+    <h3>Raise ad-set budget?</h3>
+    <p id="modalText"></p>
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" id="modalConfirm">Approve &amp; apply</button></div>
+  </div>
+</div>
+<div class="demobar"><span style="color:var(--text-3);font-weight:600">Demo</span><label><input type="checkbox" class="sw" id="failToggle"><span class="switch"></span> Simulate Meta failure on next action</label></div>
+<script>
+const fmt = n => 'A$'+n.toLocaleString();
+const num = n => n.toLocaleString();
+
+function areaChart(el, data, color, h){
+  h=h||56; const w=210, pad=3;
+  const vals=data.filter(v=>v!=null);
+  const max=Math.max(...vals), min=Math.min(...vals); const span=(max-min)||1;
+  const x=i=>pad+i*((w-2*pad)/(data.length-1));
+  const y=v=>h-pad-((v-min)/span)*(h-2*pad);
+  let line='',area='',started=false,lastX=0;
+  data.forEach((v,i)=>{ if(v==null) return; const px=x(i),py=y(v);
+    if(!started){ line+='M'+px+' '+py; area+='M'+px+' '+(h-pad)+' L'+px+' '+py; started=true; }
+    else { line+=' L'+px+' '+py; area+=' L'+px+' '+py; } lastX=px; });
+  area+=' L'+lastX+' '+(h-pad)+' Z';
+  document.getElementById(el).innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="'+h+'" preserveAspectRatio="none"><path d="'+area+'" fill="'+color+'" opacity="0.14"/><path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+function funnelRender(el){
+  const steps=[['Impressions',23080,null],['Link clicks',529,'2.3% CTR'],['Leads',75,'14.2% of clicks']];
+  const max=steps[0][1];
+  document.getElementById(el).innerHTML=steps.map(s=>{
+    const w=Math.max(14, Math.round(s[1]/max*100));
+    return '<div class="funnel-row"><span class="flabel">'+s[0]+'</span><span class="ftrack" style="width:'+w+'%">'+num(s[1])+'</span><span class="frate">'+(s[2]||'')+'</span></div>';
+  }).join('');
+}
+function deviceDonut(segs,size){
+  size=size||72; const r=size/2-6, c=2*Math.PI*r, cx=size/2;
+  let off=0;
+  const circles=segs.map(s=>{
+    const len=c*s.pct/100; const el='<circle cx="'+cx+'" cy="'+cx+'" r="'+r+'" fill="none" stroke="'+s.color+'" stroke-width="10" stroke-dasharray="'+len+' '+(c-len)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 '+cx+' '+cx+')"/>';
+    off+=len; return el;
+  }).join('');
+  return '<svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'">'+circles+'</svg>';
+}
+
+const campaigns = [
+  { id:'c1', name:'Canning Vale Sellers', managed:true, status:'ACTIVE',
+    adsets:[
+      { id:'s1', name:'Seller prep — broad', managed:true, status:'ACTIVE', budget:40,
+        ads:[
+          {id:'a1', name:'Seller prep review video', managed:true, status:'ACTIVE', reach:3120, impressions:6240, clicks:178, leads:21, spend:380, freq:2.0, fatigued:false,
+            place:[['Facebook Feed',54],['Instagram Feed',31],['Stories',15]], device:[['Mobile',83,'#378add'],['Desktop',12,'#534ab7'],['Tablet',5,'#1d9e75']]},
+          {id:'a2', name:'Top 10 things before selling', managed:true, status:'ACTIVE', reach:2010, impressions:4980, clicks:96, leads:13, spend:232, freq:2.48, fatigued:true,
+            place:[['Facebook Feed',61],['Instagram Feed',22],['Stories',17]], device:[['Mobile',88,'#378add'],['Desktop',8,'#534ab7'],['Tablet',4,'#1d9e75']]},
+        ]},
+      { id:'s2', name:'Seller prep — lookalike 1%', managed:true, status:'PAUSED', budget:25,
+        ads:[ {id:'a3', name:'Appraisal carousel', managed:true, status:'PAUSED', reach:1450, impressions:2900, clicks:61, leads:8, spend:210, freq:2.0, fatigued:false,
+            place:[['Facebook Feed',49],['Instagram Feed',38],['Stories',13]], device:[['Mobile',79,'#378add'],['Desktop',16,'#534ab7'],['Tablet',5,'#1d9e75']]} ]},
+    ]},
+  { id:'c2', name:'Riverton Listings', managed:true, status:'ACTIVE', drift:true,
+    adsets:[
+      { id:'s3', name:'Just listed — riverfront', managed:true, status:'ACTIVE', budget:45,
+        ads:[
+          {id:'a4', name:'Riverfront listing reel', managed:true, status:'ACTIVE', reach:2880, impressions:5760, clicks:150, leads:27, spend:540, freq:2.0, fatigued:false,
+            place:[['Instagram Feed',46],['Facebook Feed',38],['Stories',16]], device:[['Mobile',85,'#378add'],['Desktop',11,'#534ab7'],['Tablet',4,'#1d9e75']]},
+          {id:'a5', name:'Riverton — agent added (manual)', managed:false, status:'ACTIVE', reach:1600, impressions:3200, clicks:44, leads:6, spend:248, freq:2.0, fatigued:false,
+            place:[['Facebook Feed',70],['Instagram Feed',20],['Stories',10]], device:[['Mobile',76,'#378add'],['Desktop',20,'#534ab7'],['Tablet',4,'#1d9e75']]},
+        ]},
+    ]},
+];
+
+const ctr = a => (a.clicks/a.impressions*100).toFixed(2)+'%';
+function adsetAgg(s){ return s.ads.reduce((o,a)=>({leads:o.leads+a.leads,spend:o.spend+a.spend,clicks:o.clicks+a.clicks,impressions:o.impressions+a.impressions}),{leads:0,spend:0,clicks:0,impressions:0}); }
+
+const camplist=document.getElementById('camplist'), adbreak=document.getElementById('adbreak');
+function statusBadge(s){
+  if(s==='ACTIVE') return '<span class="badge b-active"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>Active</span>';
+  if(s==='PAUSED') return '<span class="badge b-paused"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>Paused</span>';
+  if(s==='PAUSING') return '<span class="badge b-pausing"><span class="spin"></span>Pausing…</span>';
+  if(s==='RESUMING') return '<span class="badge b-applying"><span class="spin"></span>Resuming…</span>';
+  if(s==='FAILED') return '<span class="badge b-failed"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Pause failed</span>';
+  if(s==='APPLYING') return '<span class="badge b-applying"><span class="spin"></span>Applying…</span>';
+  return '';
+}
+const ownBadge = m => m
+  ? '<span class="own own-managed"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Managed</span>'
+  : '<span class="own own-ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/></svg>Added in Meta</span>';
+function pauseBtnFor(level,obj){
+  const id=obj.id,s=obj.status;
+  if(!obj.managed) return '<button class="btn sm" disabled title="Created in Meta — manage there">Pause</button>';
+  if(s==='ACTIVE') return `<button class="btn sm" onclick="doPause('${level}','${id}')"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>Pause</button>`;
+  if(s==='PAUSED') return `<button class="btn sm" onclick="doResume('${level}','${id}')"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>Resume</button>`;
+  if(s==='FAILED') return `<button class="btn sm danger" onclick="doPause('${level}','${id}')"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>Retry pause</button>`;
+  return '<button class="btn sm" disabled><span class="spin" style="border-color:var(--text-3);border-right-color:transparent"></span>Working…</button>';
+}
+
+function render(){
+  camplist.innerHTML = campaigns.map(c=>{
+    const adsets=c.adsets.map(s=>{
+      const ag=adsetAgg(s);
+      const ads=s.ads.map(a=>`
+        <div class="adrow">
+          <div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 4"/></svg></div>
+          <div class="ainfo">
+            <div class="aname">${a.name} ${ownBadge(a.managed)} ${a.fatigued?'<span class="fatigue"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>fatigue</span>':''}</div>
+            <div class="ametrics">${num(a.impressions)} impr · ${num(a.clicks)} clicks · ${ctr(a)} CTR · ${a.leads} leads</div>
+          </div>
+          <div class="aright">${statusBadge(a.status)}${a.managed?pauseBtnFor('ad',a):'<a class="mlink" href="#">Manage in Meta <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 13v6H5V5h6"/></svg></a>'}</div>
+        </div>`).join('');
+      return `
+        <div class="adset">
+          <div class="adset-head">
+            <div><div class="stitle">${s.name} <span class="level-tag">ad set</span></div><div class="smeta">${num(ag.impressions)} impr · ${num(ag.clicks)} clicks · ${ag.leads} leads · ${fmt(ag.spend)}</div></div>
+            <div class="right">
+              <span style="font-size:11.5px;color:var(--text-3)">budget / day</span>
+              <div class="stepper"><button onclick="stepBudget('${s.id}',-5)">−</button><span class="val" id="step-${s.id}">${fmt(s.budget)}</span><button onclick="stepBudget('${s.id}',5)">+</button></div>
+              <button class="btn sm primary" id="apply-${s.id}" style="display:none" onclick="applyBudget('${s.id}')">Apply</button>
+              ${statusBadge(s.status)}${pauseBtnFor('set',s)}
+            </div>
+          </div>
+          <div class="alert" id="alert-${s.id}"></div>
+          <div class="ads">${ads}</div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="camp">
+        <div class="camp-head"><div><div class="ctitle">${c.name} ${ownBadge(c.managed)}</div><div class="cmeta">Campaign · ${c.adsets.length} ad set${c.adsets.length>1?'s':''}</div></div><div class="right">${statusBadge(c.status)}${pauseBtnFor('camp',c)}</div></div>
+        ${c.drift?`<div class="drift"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>Drift detected:</b> 1 ad here was added directly in Meta Ads Manager. Shown read-only and excluded from Blockwise optimisation. <a class="mlink" href="#" style="display:inline">Adopt into Blockwise</a></div></div>`:''}
+        ${adsets}
+        <div class="alert" id="alert-${c.id}"></div>
+      </div>`;
+  }).join('');
+}
+
+function renderAdBreakdown(){
+  const flat=[]; campaigns.forEach(c=>c.adsets.forEach(s=>s.ads.forEach(a=>flat.push({a,c,s}))));
+  adbreak.innerHTML=flat.map(({a,c,s})=>{
+    const placeMax=Math.max(...a.place.map(p=>p[1]));
+    const bars=a.place.map(p=>`<div class="bbar"><span>${p[0]}</span><span class="t"><i style="width:${Math.round(p[1]/placeMax*100)}%"></i></span><span class="n">${p[1]}%</span></div>`).join('');
+    const leg=a.device.map(d=>`<div><i style="background:${d[2]}"></i>${d[0]} ${d[1]}%</div>`).join('');
+    return `
+      <div class="bcard">
+        <div class="bhead">
+          <div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 4"/></svg></div>
+          <div style="flex:1;min-width:0"><div class="bname">${a.name}</div><div class="bmeta">${c.name} · ${s.name}</div></div>
+          ${statusBadge(a.status)}
+        </div>
+        ${a.fatigued?'<div class="alert show warn" style="margin-top:0;margin-bottom:12px"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>Creative fatigue — frequency '+'2.5, CTR falling. Consider a fresh creative.</div></div>':''}
+        <div class="mgrid">
+          <div class="m"><div class="k">Reach</div><div class="v">${num(a.reach)}</div></div>
+          <div class="m"><div class="k">Impressions</div><div class="v">${num(a.impressions)}</div></div>
+          <div class="m"><div class="k">Clicks</div><div class="v">${num(a.clicks)}</div></div>
+          <div class="m"><div class="k">CTR</div><div class="v">${ctr(a)}</div></div>
+          <div class="m"><div class="k">Frequency</div><div class="v">${a.freq.toFixed(1)}</div></div>
+          <div class="m"><div class="k">Leads</div><div class="v">${a.leads}</div></div>
+        </div>
+        <div class="bsplit">
+          <div>${bars}</div>
+          <div class="donut-wrap">${deviceDonut(a.device.map(d=>({pct:d[1],color:d[2]})))}<div class="donut-leg">${leg}</div></div>
+        </div>
+        <div class="blinks"><a class="mlink" href="#">Open landing page <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 13v6H5V5h6"/></svg></a><a class="mlink" href="#">View in Meta <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 13v6H5V5h6"/></svg></a></div>
+      </div>`;
+  }).join('');
+}
+
+function findObj(level,id){
+  if(level==='camp') return campaigns.find(c=>c.id===id);
+  if(level==='set'){ for(const c of campaigns){ const s=c.adsets.find(x=>x.id===id); if(s) return s; } }
+  if(level==='ad'){ for(const c of campaigns) for(const s of c.adsets){ const a=s.ads.find(x=>x.id===id); if(a) return a; } }
+}
+function alertHostFor(level,id){
+  if(level==='ad'){ for(const c of campaigns) for(const s of c.adsets){ if(s.ads.find(x=>x.id===id)) return 'alert-'+s.id; } }
+  return 'alert-'+id;
+}
+function doPause(level,id){ runTransition(level,id,'PAUSING','PAUSED','Pause'); }
+function doResume(level,id){ runTransition(level,id,'RESUMING','ACTIVE','Resume'); }
+function runTransition(level,id,working,done,verb){
+  const o=findObj(level,id); if(!o) return;
+  o.status=working; render(); renderAdBreakdown();
+  const willFail=document.getElementById('failToggle').checked && verb==='Pause';
+  setTimeout(()=>{
+    const host=alertHostFor(level,id);
+    if(willFail){ o.status='FAILED'; render(); renderAdBreakdown();
+      showAlert(host,'err','✕ Pause didn’t reach Meta — <b>this '+level+' is still spending.</b> Auto-retrying… use Retry if it persists.');
+      document.getElementById('failToggle').checked=false;
+    } else {
+      o.status=done;
+      if(o.adsets){ o.adsets.forEach(s=>{ s.status=done; s.ads.forEach(a=>{if(a.managed)a.status=done;}); }); }
+      if(o.ads){ o.ads.forEach(a=>{if(a.managed)a.status=done;}); }
+      render(); renderAdBreakdown();
+      const noun=level==='camp'?'Campaign':level==='set'?'Ad set':'Ad';
+      showAlert(host,'ok','✓ Meta confirmed '+noun+' status = '+(verb==='Pause'?'PAUSED. Spend stopped.':'ACTIVE. Live again.'));
+    }
+  },2200);
+}
+function showAlert(hostId,kind,html){
+  const el=document.getElementById(hostId); if(!el) return;
+  el.className='alert show '+kind;
+  const icon = kind==='err' ? '<svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+  el.innerHTML=icon+'<div>'+html+'</div>';
+  if(kind==='ok') setTimeout(()=>{ if(el) el.className='alert'; },4000);
+}
+const pending={};
+function stepBudget(id,delta){
+  const s=findObj('set',id); const cur=pending[id]??s.budget; const next=Math.max(5,cur+delta);
+  pending[id]=next; document.getElementById('step-'+id).textContent=fmt(next);
+  const apply=document.getElementById('apply-'+id);
+  apply.style.display = next!==s.budget?'inline-flex':'none';
+  apply.textContent = next>s.budget?'Apply ↗':'Apply';
+}
+function applyBudget(id){ const s=findObj('set',id),next=pending[id]; if(next>s.budget) openModal(id,next); else commitBudget(id,next); }
+function commitBudget(id,next){ const s=findObj('set',id),prev=s.status; s.status='APPLYING'; render();
+  setTimeout(()=>{ s.budget=next; delete pending[id]; s.status=prev; render(); showAlert('alert-'+id,'ok','✓ Meta confirmed ad-set daily budget = '+fmt(next)+'.'); },1600);
+}
+let modalId=null,modalNext=null;
+function openModal(id,next){ modalId=id; modalNext=next; const s=findObj('set',id);
+  document.getElementById('modalText').innerHTML='Raise <b>'+s.name+'</b> from <span class="delta">'+fmt(s.budget)+'</span> to <span class="delta">'+fmt(next)+'/day</span>. Budget is set at the ad-set level. This increases spend, so it needs your sign-off before it reaches Meta.';
+  document.getElementById('scrim').classList.add('open');
+}
+function closeModal(){ document.getElementById('scrim').classList.remove('open'); }
+document.getElementById('modalConfirm').onclick=()=>{ closeModal(); commitBudget(modalId,modalNext); };
+document.getElementById('scrim').addEventListener('click',e=>{ if(e.target.id==='scrim') closeModal(); });
+const inboxBtn=document.getElementById('inboxBtn'), inboxPanel=document.getElementById('inboxPanel');
+inboxBtn.onclick=e=>{ e.stopPropagation(); inboxPanel.classList.toggle('open'); };
+document.addEventListener('click',()=>inboxPanel.classList.remove('open'));
+inboxPanel.addEventListener('click',e=>e.stopPropagation());
+let gateCount=2;
+function resolveGate(gid,approved){ const g=document.getElementById(gid); if(!g) return;
+  g.style.opacity=.4; g.innerHTML='<p style="margin:4px;color:var(--text-3);font-weight:500">'+(approved?'Approved — sent to Meta ✓':'Dismissed')+'</p>';
+  gateCount--; const c=document.getElementById('inboxCount');
+  if(gateCount<=0){ c.style.display='none'; document.getElementById('gate-empty').style.display='block'; } else c.textContent=gateCount;
+}
+document.getElementById('themeBtn').onclick=()=>{ const r=document.documentElement; r.dataset.theme=r.dataset.theme==='dark'?'':'dark'; drawCharts(); };
+function drawCharts(){
+  areaChart('chart-impr',[1200,1450,1380,1700,1620,1900,2100,1850,2200,2400,2300,2600,2750,2630],'#378add');
+  areaChart('chart-clicks',[28,34,31,40,37,46,52,44,55,60,57,64,70,67],'#1d9e75');
+  areaChart('chart-spend',[88,104,98,120,112,130,142,124,150,162,156,176,188,170],'#534ab7');
+  funnelRender('funnel');
+}
+render(); renderAdBreakdown(); drawCharts();
+</script>
+</body>
+</html>

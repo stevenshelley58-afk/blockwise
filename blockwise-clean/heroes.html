@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Suburb Signals — Hero Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FCFBF8; --paper-2:#F3F2EC; --paper-3:#ECEAE2;
+  --ink:#100F0C; --ink-2:#45443E; --ink-3:#76746B; --ink-4:#A3A199;
+  --line:rgba(16,15,12,0.10); --line-2:rgba(16,15,12,0.06);
+  --accent:oklch(0.66 0.20 41); --accent-d:oklch(0.58 0.20 40); --accent-t:oklch(0.95 0.04 60);
+  --live:oklch(0.70 0.15 152); --on-accent:#fff;
+  --display:"Space Grotesk",system-ui,sans-serif;
+  --body:"Hanken Grotesk",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --maxw:1180px; --pad:clamp(20px,5vw,64px); --r:14px; --r-lg:22px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
+  font-weight:450;font-size:17px;line-height:1.55;letter-spacing:-0.006em;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+img{max-width:100%;display:block;}
+button{font-family:inherit;cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+::selection{background:var(--accent);color:#fff;}
+.wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:var(--pad);}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-0.03em;line-height:1.02;margin:0;}
+em{font-style:normal;color:var(--accent);}
+
+/* eyebrow */
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.16em;
+  text-transform:uppercase;color:var(--ink-3);display:inline-flex;align-items:center;gap:9px;}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--live);}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:9px;height:50px;padding:0 24px;border-radius:100px;
+  font-family:var(--body);font-weight:600;font-size:16px;letter-spacing:-0.01em;border:1px solid transparent;
+  white-space:nowrap;transition:transform .25s var(--ease),background .25s var(--ease),box-shadow .25s var(--ease),border-color .2s;}
+.btn--accent{background:var(--accent);color:var(--on-accent);box-shadow:0 1px 2px rgba(16,15,12,.12);}
+.btn--accent:hover{background:var(--accent-d);transform:translateY(-2px);box-shadow:0 10px 26px -10px var(--accent);}
+.btn--ink{background:var(--ink);color:#fff;}
+.btn--ink:hover{transform:translateY(-2px);box-shadow:0 12px 26px -12px rgba(16,15,12,.5);}
+.btn--ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+.btn--ghost:hover{border-color:var(--ink);transform:translateY(-2px);}
+.btn .arr{transition:transform .25s var(--ease);}
+.btn:hover .arr{transform:translateX(3px);}
+
+/* ========== concept switcher (not part of the hero) ========== */
+.switch{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:200;
+  display:flex;gap:4px;padding:5px;border-radius:100px;background:color-mix(in oklch,var(--paper) 80%,transparent);
+  backdrop-filter:blur(14px) saturate(1.3);border:1px solid var(--line);box-shadow:0 10px 30px -16px rgba(16,15,12,.4);}
+.switch button{height:34px;padding:0 14px;border:0;border-radius:100px;background:transparent;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:500;}
+.switch button.on{background:var(--ink);color:#fff;}
+.switch button:hover:not(.on){color:var(--ink);}
+
+.heroblock{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+  position:relative;border-bottom:1px solid var(--line-2);padding-block:120px 64px;}
+.tag{position:absolute;top:18px;left:var(--pad);font-family:var(--mono);font-size:11px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);}
+.tag b{color:var(--ink-2);font-weight:600;}
+
+/* mini brand mark reused in heroes */
+.brand{display:inline-flex;align-items:center;gap:9px;font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:-0.02em;}
+.brand .mark{width:18px;height:18px;border-radius:6px;background:var(--ink);position:relative;}
+.brand .mark::after{content:"";position:absolute;inset:5px;border-radius:2px;background:var(--accent);}
+
+/* ===== search field (shared) ===== */
+.ssearch{display:flex;align-items:center;gap:8px;background:var(--paper);border:1.5px solid var(--ink);
+  border-radius:100px;padding:7px 7px 7px 20px;max-width:560px;box-shadow:0 14px 40px -22px rgba(16,15,12,.6);
+  transition:box-shadow .25s var(--ease);}
+.ssearch:focus-within{box-shadow:0 18px 50px -22px var(--accent);}
+.ssearch svg{width:20px;height:20px;color:var(--ink-3);flex:none;}
+.ssearch input{flex:1;border:0;background:transparent;outline:none;font-family:var(--body);
+  font-size:17px;color:var(--ink);min-width:0;}
+.ssearch input::placeholder{color:var(--ink-4);}
+
+/* live counter pill */
+.livepill{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:13px;
+  color:var(--ink-2);background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:8px 15px;}
+.livepill .blip{width:8px;height:8px;border-radius:50%;background:var(--live);position:relative;}
+.livepill .blip::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--live);
+  animation:ping 2s var(--ease) infinite;}
+@keyframes ping{0%{transform:scale(1);opacity:.6;}70%{transform:scale(2.6);opacity:0;}100%{opacity:0;}}
+.livepill b{color:var(--ink);font-weight:600;}
+
+/* suburb chips */
+.subchips{display:flex;flex-wrap:wrap;gap:8px;}
+.subchips button{height:34px;padding:0 14px;border-radius:100px;border:1px solid var(--line);
+  background:var(--paper);font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink-2);
+  transition:.2s var(--ease);}
+.subchips button:hover{border-color:var(--ink);transform:translateY(-1px);}
+
+/* ===== ad card (compact, shared) ===== */
+.adc{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:13px;
+  box-shadow:0 1px 0 var(--line-2);}
+.adc__h{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.adc__av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  font-family:var(--display);font-weight:600;font-size:12px;flex:none;}
+.adc__n{font-weight:600;font-size:13.5px;line-height:1.1;}
+.adc__m{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.04em;}
+.adc__t{font-size:13px;color:var(--ink-2);line-height:1.4;margin:0 0 9px;}
+.adc__img{height:96px;border-radius:9px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--g1,#cfe0e6),var(--g2,#8fb0bd));}
+.adc__cap{position:absolute;left:9px;bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(255,255,255,.92);text-shadow:0 1px 6px rgba(0,0,0,.3);}
+.adc__live{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;
+  color:var(--live);margin-top:9px;}
+.adc__live .d{width:6px;height:6px;border-radius:50%;background:var(--live);}
+
+/* ============================================================
+   HERO 1 — SEARCH-FIRST (the input is the hero)
+   ============================================================ */
+#h1 .wrap{text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px;}
+#h1 h1{font-size:clamp(40px,6.6vw,80px);letter-spacing:-0.035em;text-wrap:balance;max-width:16ch;}
+#h1 .sub{font-size:clamp(17px,1.8vw,21px);color:var(--ink-2);max-width:50ch;margin:0;}
+#h1 .ssearch{margin-inline:auto;width:100%;}
+#h1 #h1suburb{font-weight:600;}
+
+/* ============================================================
+   HERO 2 — SPLIT-SCREEN LIVE FEED
+   ============================================================ */
+#h2 .grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:clamp(32px,5vw,72px);align-items:center;}
+#h2 h1{font-size:clamp(36px,4.8vw,62px);letter-spacing:-0.034em;text-wrap:balance;margin-top:18px;}
+#h2 .sub{font-size:clamp(17px,1.6vw,20px);color:var(--ink-2);max-width:46ch;margin:20px 0 0;}
+#h2 .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px;}
+#h2 .trust{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px;font-family:var(--mono);font-size:12px;color:var(--ink-3);}
+#h2 .trust span{display:inline-flex;align-items:center;gap:7px;}
+#h2 .trust span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);}
+.feed{position:relative;height:560px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--paper-2);overflow:hidden;box-shadow:0 30px 70px -40px rgba(16,15,12,.5);}
+.feed__bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:9px;
+  padding:13px 16px;background:color-mix(in oklch,var(--paper-2) 86%,transparent);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--ink-2);}
+.feed__bar .blip{width:8px;height:8px;border-radius:50%;background:var(--live);position:relative;}
+.feed__bar .blip::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--live);animation:ping 2s var(--ease) infinite;}
+.feed__track{position:absolute;top:46px;left:0;right:0;padding:14px;display:flex;flex-direction:column;gap:12px;
+  animation:scrollfeed 26s linear infinite;}
+.feed:hover .feed__track{animation-play-state:paused;}
+@keyframes scrollfeed{from{transform:translateY(0);}to{transform:translateY(-50%);}}
+.feed::after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;z-index:2;pointer-events:none;
+  background:linear-gradient(transparent,var(--paper-2));}
+
+/* ============================================================
+   HERO 3 — BOLD EDITORIAL / OVERSIZED TYPE
+   ============================================================ */
+#h3{background:var(--ink);color:var(--paper);}
+#h3 .tag{color:rgba(252,251,248,.4);}
+#h3 .tag b{color:rgba(252,251,248,.7);}
+#h3 .eyebrow{color:rgba(252,251,248,.55);}
+#h3 .brand{color:var(--paper);}
+#h3 .brand .mark{background:var(--paper);}
+#h3 h1{font-size:clamp(52px,11vw,150px);line-height:0.92;letter-spacing:-0.045em;text-wrap:balance;
+  max-width:14ch;margin-top:24px;color:var(--paper);}
+#h3 .sub{font-size:clamp(18px,2vw,24px);color:rgba(252,251,248,.7);max-width:44ch;margin:30px 0 0;}
+#h3 .cta{margin-top:38px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+#h3 .btn--ghost{color:var(--paper);border-color:rgba(252,251,248,.3);}
+#h3 .btn--ghost:hover{border-color:var(--paper);}
+#h3 .peek{position:absolute;right:var(--pad);bottom:48px;width:230px;transform:rotate(3deg);
+  opacity:.96;display:none;}
+#h3 .peek .adc{background:var(--paper);color:var(--ink);box-shadow:0 30px 70px -30px rgba(0,0,0,.6);}
+@media(min-width:1080px){#h3 .peek{display:block;}}
+
+/* ============================================================
+   HERO 4 — AREA SIGNAL MAP
+   ============================================================ */
+#h4 .grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(32px,5vw,64px);align-items:center;}
+#h4 h1{font-size:clamp(36px,5vw,64px);letter-spacing:-0.034em;text-wrap:balance;margin-top:18px;}
+#h4 .sub{font-size:clamp(17px,1.6vw,20px);color:var(--ink-2);max-width:44ch;margin:20px 0 0;}
+#h4 .ssearch{margin-top:28px;}
+#h4 .hint{margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--ink-3);}
+.mapcard{position:relative;aspect-ratio:1/1;border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;background:
+    linear-gradient(var(--line-2) 1px,transparent 1px) 0 0/100% 11.111%,
+    linear-gradient(90deg,var(--line-2) 1px,transparent 1px) 0 0/11.111% 100%,
+    var(--paper-2);
+  box-shadow:0 30px 70px -40px rgba(16,15,12,.5);}
+.mapcard__roads::before,.mapcard__roads::after{content:"";position:absolute;background:var(--line);}
+.mapcard__roads::before{left:0;right:0;top:38%;height:2px;transform:rotate(-4deg);}
+.mapcard__roads::after{top:0;bottom:0;left:54%;width:2px;transform:rotate(3deg);}
+.ping{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--accent);
+  transform:translate(-50%,-50%);box-shadow:0 0 0 0 var(--accent);}
+.ping::after{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--accent);
+  animation:radar 2.8s var(--ease) infinite;}
+.ping.green{background:var(--live);}
+.ping.green::after{border-color:var(--live);}
+@keyframes radar{0%{transform:scale(1);opacity:.7;}70%{transform:scale(4);opacity:0;}100%{opacity:0;}}
+.mapcard__count{position:absolute;left:16px;bottom:16px;z-index:4;background:color-mix(in oklch,var(--paper) 88%,transparent);
+  backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:12px;padding:11px 15px;}
+.mapcard__count .n{font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-0.02em;line-height:1;}
+.mapcard__count .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:4px;}
+.mapcard__scan{position:absolute;inset:0;z-index:3;background:linear-gradient(90deg,transparent,color-mix(in oklch,var(--accent) 16%,transparent),transparent);
+  width:40%;transform:translateX(-120%);animation:sweepx 4s var(--ease) infinite;pointer-events:none;}
+@keyframes sweepx{0%{transform:translateX(-120%);}60%,100%{transform:translateX(320%);}}
+
+@media(max-width:880px){
+  #h2 .grid,#h4 .grid{grid-template-columns:1fr;}
+  #h2 .feed{height:440px;}
+  .switch button{padding:0 10px;font-size:10.5px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .feed__track{animation:none;}
+  .ping::after,.livepill .blip::after,.feed__bar .blip::after,.mapcard__scan{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- concept switcher -->
+<div class="switch" role="tablist" aria-label="Hero concepts">
+  <button class="on" data-go="h1">01 · Search-first</button>
+  <button data-go="h2">02 · Live feed</button>
+  <button data-go="h3">03 · Editorial</button>
+  <button data-go="h4">04 · Signal map</button>
+</div>
+
+<!-- ============ HERO 1 ============ -->
+<section class="heroblock" id="h1">
+  <div class="tag"><b>Concept 01</b> — Search-first · the suburb input is the hero</div>
+  <div class="wrap">
+    <div class="brand"><span class="mark"></span>Suburb Signals</div>
+    <h1>See every ad running in <em id="h1suburb">your suburb</em>.</h1>
+    <p class="sub">Type a suburb. We surface every active real estate ad your competitors are running there — live, in seconds.</p>
+    <form class="ssearch" id="h1form" autocomplete="off">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <input id="h1input" type="text" placeholder="Enter your suburb — e.g. Cottesloe, WA" aria-label="Suburb" />
+      <button class="btn btn--accent" type="submit">Reveal the signals <span class="arr">→</span></button>
+    </form>
+    <div class="livepill"><span class="blip"></span><b id="h1count">1,284</b>&nbsp;active ads detected in <span id="h1area">Perth</span> right now</div>
+    <div class="subchips">
+      <button data-sub="Cottesloe" data-n="264">Cottesloe</button>
+      <button data-sub="Subiaco" data-n="318">Subiaco</button>
+      <button data-sub="Mount Lawley" data-n="372">Mount Lawley</button>
+      <button data-sub="Fremantle" data-n="446">Fremantle</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HERO 2 ============ -->
+<section class="heroblock" id="h2">
+  <div class="tag"><b>Concept 02</b> — Split-screen · live competitor feed</div>
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="brand"><span class="mark"></span>Suburb Signals</div>
+        <div class="eyebrow" style="margin-top:22px;"><span class="dot"></span> Live in your market</div>
+        <h1>Your competitors are<br>advertising. <em>Watch them.</em></h1>
+        <p class="sub">Suburb Signals streams every active Meta ad in your area into one feed — the agencies, the copy, the creative, how long it's been running.</p>
+        <div class="cta">
+          <a class="btn btn--ink" href="#">Scan my suburb <span class="arr">→</span></a>
+          <a class="btn btn--ghost" href="#">See how it works</a>
+        </div>
+        <div class="trust"><span>Live ads in seconds</span><span>No login to look</span><span>Updated daily</span></div>
+      </div>
+      <div class="feed" aria-label="Live ad feed (example data)">
+        <div class="feed__bar"><span class="blip"></span> LIVE · <b style="color:var(--ink)">Perth, WA</b> · <span id="h2count">1,284</span> active ads</div>
+        <div class="feed__track" id="h2track"><!-- cards injected (doubled for seamless loop) --></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HERO 3 ============ -->
+<section class="heroblock" id="h3">
+  <div class="tag"><b>Concept 03</b> — Bold editorial · oversized type</div>
+  <div class="wrap">
+    <div class="brand"><span class="mark"></span>Suburb Signals</div>
+    <div class="eyebrow" style="margin-top:22px;"><span class="dot"></span> Local ad intelligence</div>
+    <h1>Who's advertising on <em>your street?</em></h1>
+    <p class="sub">Every real estate ad running in your suburb, surfaced in one place. Then turn one listing into leads of your own.</p>
+    <div class="cta">
+      <a class="btn btn--accent" href="#">Reveal my suburb <span class="arr">→</span></a>
+      <a class="btn btn--ghost" href="#">Watch 60-sec demo</a>
+    </div>
+  </div>
+  <div class="peek">
+    <div class="adc">
+      <div class="adc__h"><div class="adc__av" style="background:#7a3b5d">HV</div>
+        <div><div class="adc__n">Harbourview Estate</div><div class="adc__m">Sponsored · Facebook</div></div></div>
+      <p class="adc__t"><b>SOLD in 9 days 🔑</b> Thinking of selling in South Perth?</p>
+      <div class="adc__img" style="--g1:#d8d2dd;--g2:#a097b8"><span class="adc__cap">Sold · 9 days</span></div>
+      <div class="adc__live"><span class="d"></span>Active 11d</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HERO 4 ============ -->
+<section class="heroblock" id="h4">
+  <div class="tag"><b>Concept 04</b> — Area signal map · gamified discovery</div>
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <div class="brand"><span class="mark"></span>Suburb Signals</div>
+        <h1 style="margin-top:22px;">Drop your suburb.<br>Watch the <em>signals</em> light up.</h1>
+        <p class="sub">Each ping is a live ad running near you right now. Enter your suburb and see exactly who's competing for your sellers.</p>
+        <form class="ssearch" id="h4form" autocomplete="off">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input id="h4input" type="text" placeholder="Enter your suburb" aria-label="Suburb" />
+          <button class="btn btn--accent" type="submit">Light it up <span class="arr">→</span></button>
+        </form>
+        <div class="hint" id="h4hint">Try Subiaco, Cottesloe or Fremantle →</div>
+      </div>
+      <div class="mapcard" id="h4map">
+        <div class="mapcard__roads"></div>
+        <div class="mapcard__scan"></div>
+        <!-- pings injected -->
+        <div class="mapcard__count"><div class="n" id="h4n">372</div><div class="l">Live ads detected · <span id="h4area">Mount Lawley</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ---- shared demo dataset (sharpened, authentic-style seed; real Meta ads swap in later) ---- */
+var ADS = [
+  {ag:"Coastline Realty",in:"CR",c:"#3b6ea5",pf:"Facebook",t:"<b>JUST LISTED ◆ Cottesloe.</b> 4-bed beachside entertainer, 280m to the sand. Private inspections this weekend only.",cap:"4 bed · Cottesloe",g1:"#cfe0e6",g2:"#8fb0bd",d:6},
+  {ag:"Bluestone Property Co",in:"BP",c:"#2f5d50",pf:"Instagram",t:"OPEN SAT 11:00–11:30am. Renovated character home in the heart of Subiaco — walk to cafés & train.",cap:"Open Sat · 11am",g1:"#e9ddc9",g2:"#c7ad84",d:3},
+  {ag:"Harbourview Estate",in:"HV",c:"#7a3b5d",pf:"Facebook · Instagram",t:"<b>SOLD in 9 days 🔑</b> Thinking of selling in South Perth? See what your home could be worth.",cap:"Sold · 9 days",g1:"#d8d2dd",g2:"#a097b8",d:11},
+  {ag:"Westmark Residential",in:"WM",c:"#b5532f",pf:"Facebook",t:"FREE Mount Lawley appraisal. Know your number before the spring market. No obligation.",cap:"Free appraisal",g1:"#f0d9c4",g2:"#d99e6f",d:8},
+  {ag:"Anchor & Bay",in:"AB",c:"#34506b",pf:"Instagram",t:"AUCTION this Saturday 2pm — South Perth riverside. Register to bid or watch online.",cap:"Auction · Sat 2pm",g1:"#cdd9e0",g2:"#8aa7b6",d:5},
+  {ag:"Fremantle Co.",in:"FC",c:"#5a6b34",pf:"Facebook",t:"Character cottage walking distance to the Cappuccino Strip. Inspect this weekend.",cap:"Just listed · Freo",g1:"#dde6cf",g2:"#a7bd7f",d:4}
+];
+function card(a){
+  return '<div class="adc"><div class="adc__h"><div class="adc__av" style="background:'+a.c+'">'+a.in+'</div>'+
+    '<div><div class="adc__n">'+a.ag+'</div><div class="adc__m">Sponsored · '+a.pf+'</div></div></div>'+
+    '<p class="adc__t">'+a.t+'</p>'+
+    '<div class="adc__img" style="--g1:'+a.g1+';--g2:'+a.g2+'"><span class="adc__cap">'+a.cap+'</span></div>'+
+    '<div class="adc__live"><span class="d"></span>Active '+a.d+'d</div></div>';
+}
+function animateNum(el,to){
+  if(!el) return; var from=parseInt((el.textContent||"0").replace(/[^0-9]/g,""))||0,t0=performance.now();
+  (function step(now){var p=Math.min((now-t0)/700,1),e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*e).toLocaleString();
+    if(p<1)requestAnimationFrame(step);})(t0);
+}
+
+/* ---- switcher ---- */
+document.querySelectorAll('.switch button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.switch button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    document.getElementById(b.dataset.go).scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+// keep switcher synced to scroll
+var blocks=['h1','h2','h3','h4'].map(function(id){return document.getElementById(id);});
+window.addEventListener('scroll',function(){
+  var y=window.scrollY+window.innerHeight*0.5,cur='h1';
+  blocks.forEach(function(el){if(el.offsetTop<=y)cur=el.id;});
+  document.querySelectorAll('.switch button').forEach(function(x){x.classList.toggle('on',x.dataset.go===cur);});
+},{passive:true});
+
+/* ---- Hero 1: search-first ---- */
+(function(){
+  var input=document.getElementById('h1input'),sub=document.getElementById('h1suburb'),
+      area=document.getElementById('h1area'),count=document.getElementById('h1count');
+  function reveal(name,n){
+    sub.textContent=name; if(area)area.textContent=name; animateNum(count,n);
+  }
+  document.getElementById('h1form').addEventListener('submit',function(e){
+    e.preventDefault(); var v=(input.value||'').trim(); if(!v)return;
+    reveal(v.replace(/,.*$/,''), 180+Math.floor(Math.random()*420));
+  });
+  document.querySelectorAll('#h1 .subchips button').forEach(function(b){
+    b.addEventListener('click',function(){input.value=b.dataset.sub;reveal(b.dataset.sub,+b.dataset.n);});
+  });
+})();
+
+/* ---- Hero 2: live feed ---- */
+(function(){
+  var track=document.getElementById('h2track'); if(!track)return;
+  var html=ADS.map(card).join(''); track.innerHTML=html+html; // doubled for seamless loop
+})();
+
+/* ---- Hero 4: signal map ---- */
+(function(){
+  var map=document.getElementById('h4map'),n=document.getElementById('h4n'),
+      area=document.getElementById('h4area'),input=document.getElementById('h4input'),
+      hint=document.getElementById('h4hint');
+  if(!map)return;
+  function seedPings(k){
+    map.querySelectorAll('.ping').forEach(function(p){p.remove();});
+    for(var i=0;i<k;i++){
+      var s=document.createElement('span');
+      s.className='ping'+(Math.random()<0.3?' green':'');
+      s.style.left=(12+Math.random()*76)+'%';
+      s.style.top=(12+Math.random()*70)+'%';
+      s.style.animationDelay=(Math.random()*2.2)+'s';
+      map.appendChild(s);
+    }
+  }
+  function light(name,count){
+    if(area)area.textContent=name; animateNum(n,count);
+    seedPings(Math.max(10,Math.min(28,Math.round(count/16))));
+    if(hint)hint.textContent='Showing live signals near '+name;
+  }
+  seedPings(16);
+  document.getElementById('h4form').addEventListener('submit',function(e){
+    e.preventDefault(); var v=(input.value||'').trim(); if(!v)return;
+    light(v.replace(/,.*$/,''),180+Math.floor(Math.random()*420));
+  });
+})();
+</script>
+</body>
+</html>

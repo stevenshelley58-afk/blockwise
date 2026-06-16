@@ -21,6 +21,7 @@ export type MetaInsightRow = {
   spend?: string | number;
   impressions?: string | number;
   clicks?: string | number;
+  reach?: string | number;
   ctr?: string | number;
   cpc?: string | number;
   frequency?: string | number;
@@ -145,6 +146,7 @@ export async function fetchMetaReporting(input: {
       "spend",
       "impressions",
       "clicks",
+      "reach",
       "ctr",
       "cpc",
       "actions",
@@ -273,6 +275,7 @@ export async function fetchMetaInsightRows(input: {
       "spend",
       "impressions",
       "clicks",
+      "reach",
       "actions",
       "frequency",
       "date_start",

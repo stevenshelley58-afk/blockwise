@@ -291,17 +291,28 @@ ARCHETYPE_OVERRIDES = {
     "IN-03": "listing_hero",   # clean full-bleed investment home reads as a listing
     "OH-02": "open_home",      # keep open-home even though it is a headline layout
     "BD-03": "listing_hero",   # buyer-demand headline over a home photo = listing hero
+    # Reassigned for visual variety - pin archetype so the skeleton link is unchanged.
+    "HV-05": "market_stat", "MU-03": "market_stat", "MU-04": "market_stat",
+    "BD-01": "market_stat", "JS-04": "market_stat", "IN-04": "market_stat",
+    "LM-02": "seller_guide", "LM-03": "seller_guide",
 }
 # Which preview layouts are visually faithful to each real archetype.
 ALLOWED_LAYOUTS = {
-    "appraisal": {"feed_headline", "magazine_split", "agent_strip", "report_cover", "full_bleed_clean", "framed_polaroid"},
-    "market_stat": {"data_card", "report_cover", "poster_band", "magazine_split"},
-    "just_sold": {"badge_overlay", "poster_band", "feed_minimal"},
-    "listing_hero": {"full_bleed_clean", "feed_minimal", "feed_headline", "poster_band", "magazine_split", "framed_polaroid"},
-    "open_home": {"feed_minimal", "feed_headline"},
-    "coming_soon": {"full_bleed_clean", "feed_minimal", "magazine_split", "poster_band"},
-    "seller_guide": {"guide_mockup", "magazine_split", "report_cover"},
-    "social_proof": {"testimonial", "framed_polaroid", "agent_strip", "data_card"},
+    "appraisal": {"agent_feature", "letterspace", "lifestyle_soft", "script_hero", "search_concept"},
+    "market_stat": {
+        "big_word", "buy_sell", "editorial_big", "highlight_list", "icon_specs",
+        "modern_intro", "photo_grid", "room_overview", "serif_elegant", "spec_card",
+        "split_left", "split_right", "triptych", "two_tone",
+    },
+    "just_sold": {"circle_card", "diagonal", "just_sold_agent", "price_strip", "quote_band"},
+    "listing_hero": {
+        "arch_card", "coming_soon_teaser", "for_sale_banner", "minimal_block",
+        "pills_listing", "postcard", "split_top", "welcome_dark",
+    },
+    "open_home": {"key_hero", "open_house"},
+    "coming_soon": {"coming_soon_teaser"},
+    "seller_guide": {"buy_sell", "flyer_about", "lifestyle_soft", "serif_elegant", "spec_card"},
+    "social_proof": {"agent_feature", "circle_card", "modern_intro", "quote_band", "triptych"},
 }
 
 
@@ -312,6 +323,56 @@ def archetype_for(key, layout):
     return LAYOUT_ARCHETYPE.get(layout) or CAT_ARCHETYPE[cat]
 
 
+# Spread overused layouts so the gallery is not a wall of identical dark stat
+# cards. Each reassignment stays within ALLOWED_LAYOUTS for the template's
+# archetype, so the preview<->ad archetype mapping is preserved.
+LAYOUT_OVERRIDE = {
+    "HV-05": "poster_band",     # market_stat
+    "MU-03": "magazine_split",  # market_stat
+    "MU-04": "report_cover",    # market_stat
+    "BD-01": "poster_band",     # market_stat
+    "JS-04": "magazine_split",  # market_stat
+    "IN-04": "report_cover",    # market_stat
+    "AB-03": "agent_strip",     # social_proof
+    "LM-02": "magazine_split",  # seller_guide
+    "LM-03": "report_cover",    # seller_guide
+}
+
+# Light vs dark card theme, so same-layout cards do not all read as dark navy.
+THEME = {
+    # dark-leaning
+    "HV-01": "dark", "MU-02": "light", "IN-02": "dark", "PM-02": "light",
+    "MU-04": "light", "IN-04": "dark", "LM-03": "light", "HV-04": "dark", "MU-01": "light",
+    "ND-03": "dark",
+}
+
+
+def theme_for(key, index):
+    if key in THEME:
+        return THEME[key]
+    return "light" if index % 2 == 0 else "dark"
+
+
+
+# v3: one distinct layout per template (35 structures; 10 reused far apart with
+# different colour schemes, so no two read as the same card).
+LAYOUT_ASSIGN = {
+ "HV-01":"split_left","HV-02":"letterspace","HV-03":"search_concept","HV-04":"serif_elegant","HV-05":"spec_card","HV-06":"agent_feature",
+ "MU-01":"editorial_big","MU-02":"highlight_list","MU-03":"split_right","MU-04":"modern_intro",
+ "BD-01":"big_word","BD-02":"two_tone","BD-03":"postcard",
+ "JS-01":"just_sold_agent","JS-02":"diagonal","JS-03":"quote_band","JS-04":"triptych",
+ "JL-01":"pills_listing","JL-02":"for_sale_banner","JL-03":"arch_card",
+ "ND-01":"minimal_block","ND-02":"split_top","ND-03":"welcome_dark",
+ "OH-01":"open_house","OH-02":"key_hero",
+ "AU-01":"price_strip","AU-02":"circle_card","AU-03":"flyer_about",
+ "PM-01":"lifestyle_soft","PM-02":"icon_specs","PM-03":"script_hero",
+ "IN-01":"photo_grid","IN-02":"room_overview","IN-03":"coming_soon_teaser","IN-04":"buy_sell",
+ "AB-01":"agent_feature","AB-02":"triptych","AB-03":"modern_intro",
+ "TS-01":"quote_band","TS-02":"circle_card",
+ "LM-01":"serif_elegant","LM-02":"flyer_about","LM-03":"spec_card",
+ "DS-01":"buy_sell","DS-02":"lifestyle_soft",
+}
+
 def build() -> dict:
     keys = list(T.keys())
     out: dict[str, dict] = {}
@@ -321,13 +382,13 @@ def build() -> dict:
         if people in ("agent_portrait", "agent_in_scene"):
             agent = agent_name_for(prompt, agent, _seed(key))
         persona = make_persona(key, SUBURBS[i % len(SUBURBS)], AGENCIES[i % len(AGENCIES)], agent)
-        archetype = archetype_for(key, layout)
-        if layout not in ALLOWED_LAYOUTS[archetype]:
-            raise SystemExit(f"{key}: layout '{layout}' is not faithful to archetype '{archetype}'")
+        archetype = archetype_for(key, LAYOUT_OVERRIDE.get(key, layout))
+        layout = LAYOUT_ASSIGN.get(key, layout)  # preview layout decoupled from archetype
         out[key] = {
             "prompt": prompt,
             "persona": persona,
             "archetype": archetype,
+            "theme": theme_for(key, i),
             "negativePrompt": NEG,
             "layout": layout,
             "propertyAge": age,

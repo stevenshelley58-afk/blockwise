@@ -8,6 +8,11 @@ export type MetaMonitorSummary = {
   budget: number | null;
   spend: number;
   impressions: number;
+  /**
+   * Approximate sum of ad-level reach. Meta reach is deduplicated per object and
+   * not truly additive, so this overcounts unique people reached across ads.
+   */
+  reach: number;
   clicks: number;
   leads: number;
   validLeads: number;
@@ -23,6 +28,8 @@ export type MetaMonitorSummary = {
 export type MetaDailyPoint = {
   date: string;
   spend: number;
+  impressions: number;
+  clicks: number;
   leads: number;
   validLeads: number;
   validCpl: number | null;
@@ -68,6 +75,15 @@ export type MetaAdPerformance = {
   adsetName: string;
   suburb: string | null;
   status: MetaAdStatus;
+  /**
+   * True when this ad (or its adset/campaign) is owned by a Blockwise publish
+   * plan, or when it carries Ad Studio variant tags. Drives inline management.
+   */
+  managed: boolean;
+  /** True when any ad in the same campaign is managed by Blockwise. */
+  campaignManaged: boolean;
+  /** Id of the owning meta_publish_plans row, or null when unmanaged. */
+  publishPlanId: string | null;
   landingPageUrl: string | null;
   metaPermalinkUrl: string | null;
   creative: {
@@ -82,6 +98,7 @@ export type MetaAdPerformance = {
   metrics: {
     spend: number;
     impressions: number;
+    reach: number;
     clicks: number;
     ctr: number | null;
     leads: number;

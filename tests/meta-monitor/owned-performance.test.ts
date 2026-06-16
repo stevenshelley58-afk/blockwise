@@ -36,6 +36,9 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
         adsetName: "Suburb - Perth",
         suburb: "Perth",
         status: "ACTIVE",
+        managed: false,
+        campaignManaged: false,
+        publishPlanId: null,
         landingPageUrl: null,
         metaPermalinkUrl: null,
         creative: {
@@ -50,6 +53,7 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
         metrics: {
           spend: 123.45,
           impressions: 2000,
+          reach: 1200,
           clicks: 80,
           ctr: 0.04,
           leads: 12,
@@ -71,6 +75,9 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
         adsetName: "Suburb - Perth",
         suburb: "Perth",
         status: "ACTIVE",
+        managed: false,
+        campaignManaged: false,
+        publishPlanId: null,
         landingPageUrl: null,
         metaPermalinkUrl: null,
         creative: {
@@ -85,6 +92,7 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
         metrics: {
           spend: 10,
           impressions: 100,
+          reach: 60,
           clicks: 1,
           ctr: 0.01,
           leads: 0,
