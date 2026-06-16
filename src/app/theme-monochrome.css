@@ -2,16 +2,15 @@
  * Monochrome theme overrides.
  *
  * Whole-app visual refresh applied through design tokens + scoped presentational
- * rules — no markup or logic changes beyond removing two empty KPI cards.
- * Imported AFTER globals.css so these values win by source order. Delete this
- * file and its import in layout.tsx to revert.
+ * rules. Imported AFTER globals.css so these values win by source order. Delete
+ * this file and its import in layout.tsx to revert.
  *
  * Changes vs. the navy "Executive Precision" base:
  *   - Near-black monochrome accent (buttons, links, active states) replacing navy
  *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
  *   - Light sidebar by default with a solid black active pill
  *   - Rounder cards, gentle card elevation, and pill-shaped buttons
- *   - Roomier page layout + larger editorial hero headings (desktop)
+ *   - Tightened, balanced dashboard spacing (compact KPI cards)
  * Display font (Manrope) is intentionally unchanged.
  */
 
@@ -38,9 +37,9 @@
   --r-panel: 20px;
   --r-ctl: 10px;
 
-  /* Gentle elevation so cards lift off the canvas (like the mockup) */
-  --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 6px 22px rgba(16, 18, 23, 0.06);
-  --shadow-float: 0 10px 34px rgba(16, 18, 23, 0.10);
+  /* Gentle elevation so cards lift off the canvas */
+  --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 5px 18px rgba(16, 18, 23, 0.05);
+  --shadow-float: 0 10px 30px rgba(16, 18, 23, 0.09);
 
   /* Focus ring tuned to the new accent */
   --ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
@@ -58,86 +57,79 @@
   --brand-ink: #16181d;
 }
 
-/* Pill-shaped buttons to match the mockup (presentational only) */
+/* Pill-shaped buttons (presentational only) */
 .button {
   border-radius: 9999px;
-  min-height: 42px;
-  padding: 0 20px;
+  min-height: 40px;
+  padding: 0 18px;
 }
 
-/* ---------------------------------------------------------------------------
-   Layout & hierarchy polish so the dashboards read like the redesign mockup.
-   Centred, roomier canvas + a lighter eyebrow apply at all widths; the larger
-   hero headings and KPI cards are scoped to >=641px so the existing mobile
-   rules in globals.css stay authoritative. Markup and data are unchanged.
-   --------------------------------------------------------------------------- */
-
-.content {
-  max-width: 1280px;
-  margin-inline: auto;
-}
-
-/* Lighter, more refined eyebrow (was heavy near-black) */
+/* Lighter, more refined eyebrow */
 .eyebrow {
   color: var(--faint);
   font-weight: 600;
 }
 
+/* Centre the page on very wide screens without going sparse. */
+.content {
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Balanced dashboard density (desktop, >=641px so mobile rules stay
+   authoritative). KPI cards size to their content instead of leaving an empty
+   band below, and values are sized to read cleanly even when short ("$3") or
+   long ("Unavailable"). Markup and data are unchanged.
+   --------------------------------------------------------------------------- */
 @media (min-width: 641px) {
   .content {
-    padding: 40px 44px 64px;
-    gap: 30px;
+    padding: 30px 34px 52px;
+    gap: 20px;
   }
 
-  /* Editorial hero heading (shared PageHeading — e.g. Ad Radar) */
-  .page-heading {
-    gap: 26px;
-  }
   .page-heading h1 {
-    font-size: 40px;
-    line-height: 1.06;
-    margin-bottom: 10px;
+    font-size: 32px;
+    line-height: 1.12;
   }
   .page-heading .lead {
-    font-size: 16.5px;
+    font-size: 15.5px;
     line-height: 1.55;
   }
 
-  /* Performance dashboard: bigger title + roomier KPI cards */
   .mm-page {
-    gap: 28px;
+    gap: 18px;
   }
   .mm-title-row h1 {
-    font-size: 33px;
+    font-size: 27px;
   }
-  .mm-subtitle {
-    font-size: 14px;
-    margin-top: 8px;
+
+  /* Compact KPI cards — no tall empty bottom, tidy value scale */
+  .mm-kpi.metric-card {
+    min-height: 0;
   }
   .mm-kpi {
-    padding: 20px 20px 18px;
+    padding: 18px 18px 16px;
   }
   .mm-kpi-icon {
-    width: 36px;
-    height: 36px;
-    margin-bottom: 13px;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 12px;
   }
   .mm-kpi-label {
-    font-size: 13px;
+    font-size: 12.5px;
   }
   .mm-kpi-value {
-    font-size: 27px;
+    font-size: 22px;
     font-weight: 700;
+    letter-spacing: -0.02em;
   }
-  .mm-chart-panel h3,
-  .mm-table-head h3,
-  .mm-section-title {
-    font-size: 16px;
+  .mm-kpi-compare {
+    margin-top: 5px;
   }
 }
 
-/* Results KPI row now has four metrics (Spend, Leads, Valid CPL, Budget) —
-   lay them out evenly on wide screens instead of the old six-up grid. */
+/* Results KPI row has four metrics — lay them out 4-up on wide screens. */
 @media (min-width: 1241px) {
   .mm-kpi-grid {
     grid-template-columns: repeat(4, 1fr);
