@@ -10,6 +10,7 @@ import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar"
 import "./globals.css";
 import "./meta-monitor.css";
 import "./landing.css";
+import "./theme-monochrome.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -69,13 +70,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en-AU"
       className={`${inter.variable} ${manrope.variable}`}
-      data-sidebar-theme="dark"
+      data-sidebar-theme="light"
       suppressHydrationWarning
     >
       <head>
         {/* Set sidebar theme before paint to avoid a flash */}
         <Script id="sidebar-theme-init" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem('bw-sidebar')||'dark';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
+          {`try{var t=localStorage.getItem('bw-sidebar')||'light';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
         </Script>
       </head>
       <body>

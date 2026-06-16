@@ -1,0 +1,47 @@
+/*
+ * Monochrome theme overrides.
+ *
+ * Whole-app visual refresh applied purely through design tokens — no markup or
+ * logic changes. Imported AFTER globals.css so these :root / sidebar values win
+ * by source order. Delete this file and its import in layout.tsx to revert.
+ *
+ * Changes vs. the navy "Executive Precision" base:
+ *   - Near-black monochrome accent (buttons, links, active states) replacing navy
+ *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
+ *   - Light sidebar by default with a solid black active pill
+ * Display font (Manrope) is intentionally unchanged.
+ */
+
+:root {
+  /* Surfaces & neutrals */
+  --bg: #f6f7f9;
+  --surface-subtle: #f1f2f4;
+  --ink: #16181d;
+  --muted: #545a66;
+  --faint: #9aa0ad;
+  --line: #e9ebef;
+  --line-soft: #f0f1f4;
+  --line-heavy: #d3d7df;
+
+  /* Monochrome accent (was deep navy) */
+  --accent: #16181d;
+  --accent-strong: #0b0c10;
+  --accent-press: #000000;
+  --accent-tint: #f1f2f4;
+  --blue: #16181d;
+
+  /* Focus ring tuned to the new accent */
+  --ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
+}
+
+/* Light sidebar: white surface, solid near-black active pill */
+[data-sidebar-theme="light"] {
+  --side-bg: #ffffff;
+  --side-ink: #5b616e;
+  --side-ink-active: #ffffff;
+  --side-line: #e9ebef;
+  --side-cap: #9aa0ad;
+  --side-active-bg: #16181d;
+  --side-hover-bg: #f0f1f4;
+  --brand-ink: #16181d;
+}
