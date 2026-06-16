@@ -32,6 +32,17 @@
 - If trigger.dev tasks or Supabase migrations changed, deploy/apply them and
   confirm they register before merge.
 
+## Completion hygiene
+
+- Before reporting a task done, handing off, or opening a PR, use
+  `hermes/skills/blockwise-agent-cleanup/SKILL.md`.
+- Clean only artifacts the agent created or can prove are disposable; never
+  revert, delete, or hide unrelated user work.
+- Agent-created source changes must be committed/pushed/PR'd, deleted, or
+  explicitly blocked. Do not leave them as anonymous dirty-worktree residue.
+- Final reports must state what cleanup ran, what verification passed, and what
+  intentionally remains dirty or blocked.
+
 ## Tooling
 
 - Use the official CLI/MCP/plugin for GitHub, Vercel, and Supabase. Start the
