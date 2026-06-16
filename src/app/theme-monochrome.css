@@ -1,14 +1,16 @@
 /*
  * Monochrome theme overrides.
  *
- * Whole-app visual refresh applied purely through design tokens — no markup or
- * logic changes. Imported AFTER globals.css so these :root / sidebar values win
- * by source order. Delete this file and its import in layout.tsx to revert.
+ * Whole-app visual refresh applied through design tokens + a few presentational
+ * class overrides — no markup or logic changes. Imported AFTER globals.css so
+ * these values win by source order. Delete this file and its import in
+ * layout.tsx to revert.
  *
  * Changes vs. the navy "Executive Precision" base:
  *   - Near-black monochrome accent (buttons, links, active states) replacing navy
  *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
  *   - Light sidebar by default with a solid black active pill
+ *   - Rounder cards, gentle card elevation, and pill-shaped buttons
  * Display font (Manrope) is intentionally unchanged.
  */
 
@@ -30,6 +32,15 @@
   --accent-tint: #f1f2f4;
   --blue: #16181d;
 
+  /* Softer, rounder shapes */
+  --r-card: 16px;
+  --r-panel: 20px;
+  --r-ctl: 10px;
+
+  /* Gentle elevation so cards lift off the canvas (like the mockup) */
+  --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 6px 22px rgba(16, 18, 23, 0.06);
+  --shadow-float: 0 10px 34px rgba(16, 18, 23, 0.10);
+
   /* Focus ring tuned to the new accent */
   --ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
 }
@@ -44,4 +55,11 @@
   --side-active-bg: #16181d;
   --side-hover-bg: #f0f1f4;
   --brand-ink: #16181d;
+}
+
+/* Pill-shaped buttons to match the mockup (presentational only) */
+.button {
+  border-radius: 9999px;
+  min-height: 42px;
+  padding: 0 20px;
 }
