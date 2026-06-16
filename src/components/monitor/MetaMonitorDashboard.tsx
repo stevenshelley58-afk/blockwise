@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-import { BadgePercent, MousePointerClick, Tag, UserCheck, UserPlus, Wallet } from "lucide-react";
+import { MousePointerClick, Tag, UserPlus, Wallet } from "lucide-react";
 import { useState } from "react";
 
-import { calculateTrend, formatCurrency, formatPercent, safeCpl, safeRate } from "@/lib/meta-monitor/calculations";
+import { calculateTrend, formatCurrency, formatPercent, safeCpl } from "@/lib/meta-monitor/calculations";
 import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
@@ -131,7 +131,6 @@ export function MetaMonitorDashboard({
 function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void; refreshing?: boolean }) {
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
-  const validLeadRate = safeRate(summary.validLeads, summary.leads);
   const validCpl = safeCpl(summary.spend, summary.validLeads);
   const budgetRemaining = summary.budget != null ? Math.max(summary.budget - summary.spend, 0) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
@@ -157,22 +156,6 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
           value={summary.leads.toLocaleString("en-AU")}
           compareText={compare}
           trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
-        />
-        <MetaKpiCard
-          icon={UserCheck}
-          iconTone="slate"
-          label="Valid leads"
-          value={summary.validLeads.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.validLeads, previous.validLeads) : null}
-        />
-        <MetaKpiCard
-          icon={BadgePercent}
-          iconTone="orange"
-          label="Valid lead rate"
-          value={validLeadRate != null ? formatPercent(validLeadRate, 1) : "Unavailable"}
-          compareText={compare}
-          trend={previous ? calculateTrend(validLeadRate, previous.validLeadRate) : null}
         />
         <MetaKpiCard
           icon={Tag}

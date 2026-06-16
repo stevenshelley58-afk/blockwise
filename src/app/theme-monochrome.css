@@ -2,8 +2,9 @@
  * Monochrome theme overrides.
  *
  * Whole-app visual refresh applied through design tokens + scoped presentational
- * rules — no markup or logic changes. Imported AFTER globals.css so these values
- * win by source order. Delete this file and its import in layout.tsx to revert.
+ * rules — no markup or logic changes beyond removing two empty KPI cards.
+ * Imported AFTER globals.css so these values win by source order. Delete this
+ * file and its import in layout.tsx to revert.
  *
  * Changes vs. the navy "Executive Precision" base:
  *   - Near-black monochrome accent (buttons, links, active states) replacing navy
@@ -132,5 +133,13 @@
   .mm-table-head h3,
   .mm-section-title {
     font-size: 16px;
+  }
+}
+
+/* Results KPI row now has four metrics (Spend, Leads, Valid CPL, Budget) —
+   lay them out evenly on wide screens instead of the old six-up grid. */
+@media (min-width: 1241px) {
+  .mm-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
