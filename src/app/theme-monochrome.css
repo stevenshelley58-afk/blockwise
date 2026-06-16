@@ -1,16 +1,16 @@
 /*
  * Monochrome theme overrides.
  *
- * Whole-app visual refresh applied through design tokens + a few presentational
- * class overrides — no markup or logic changes. Imported AFTER globals.css so
- * these values win by source order. Delete this file and its import in
- * layout.tsx to revert.
+ * Whole-app visual refresh applied through design tokens + scoped presentational
+ * rules — no markup or logic changes. Imported AFTER globals.css so these values
+ * win by source order. Delete this file and its import in layout.tsx to revert.
  *
  * Changes vs. the navy "Executive Precision" base:
  *   - Near-black monochrome accent (buttons, links, active states) replacing navy
  *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
  *   - Light sidebar by default with a solid black active pill
  *   - Rounder cards, gentle card elevation, and pill-shaped buttons
+ *   - Roomier page layout + larger editorial hero headings (desktop)
  * Display font (Manrope) is intentionally unchanged.
  */
 
@@ -62,4 +62,75 @@
   border-radius: 9999px;
   min-height: 42px;
   padding: 0 20px;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout & hierarchy polish so the dashboards read like the redesign mockup.
+   Centred, roomier canvas + a lighter eyebrow apply at all widths; the larger
+   hero headings and KPI cards are scoped to >=641px so the existing mobile
+   rules in globals.css stay authoritative. Markup and data are unchanged.
+   --------------------------------------------------------------------------- */
+
+.content {
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+/* Lighter, more refined eyebrow (was heavy near-black) */
+.eyebrow {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+@media (min-width: 641px) {
+  .content {
+    padding: 40px 44px 64px;
+    gap: 30px;
+  }
+
+  /* Editorial hero heading (shared PageHeading — e.g. Ad Radar) */
+  .page-heading {
+    gap: 26px;
+  }
+  .page-heading h1 {
+    font-size: 40px;
+    line-height: 1.06;
+    margin-bottom: 10px;
+  }
+  .page-heading .lead {
+    font-size: 16.5px;
+    line-height: 1.55;
+  }
+
+  /* Performance dashboard: bigger title + roomier KPI cards */
+  .mm-page {
+    gap: 28px;
+  }
+  .mm-title-row h1 {
+    font-size: 33px;
+  }
+  .mm-subtitle {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .mm-kpi {
+    padding: 20px 20px 18px;
+  }
+  .mm-kpi-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 13px;
+  }
+  .mm-kpi-label {
+    font-size: 13px;
+  }
+  .mm-kpi-value {
+    font-size: 27px;
+    font-weight: 700;
+  }
+  .mm-chart-panel h3,
+  .mm-table-head h3,
+  .mm-section-title {
+    font-size: 16px;
+  }
 }
