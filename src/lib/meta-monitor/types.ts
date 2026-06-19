@@ -9,6 +9,8 @@ export type MetaMonitorSummary = {
   spend: number;
   impressions: number;
   clicks: number;
+  /** Total reach (people) for the range. Additive; absent on sample/empty payloads. */
+  reach?: number;
   leads: number;
   validLeads: number;
   previousPeriod?: {
@@ -26,6 +28,9 @@ export type MetaDailyPoint = {
   leads: number;
   validLeads: number;
   validCpl: number | null;
+  /** Daily impressions/clicks. Additive; absent on sample/empty payloads. */
+  impressions?: number;
+  clicks?: number;
 };
 
 export type SuburbPerformance = {
