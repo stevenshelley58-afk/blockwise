@@ -13,13 +13,13 @@ export function HomeMotion() {
     const root = document.querySelector(".bwx");
     if (!root) return;
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    root.classList.add("anim");
+    root.classList.add("bwx-anim");
     const observers: IntersectionObserver[] = [];
 
     const reveal = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); reveal.unobserve(e.target); } });
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("bwx-in"); reveal.unobserve(e.target); } });
     }, { threshold: 0.16, rootMargin: "0px 0px -8% 0px" });
-    root.querySelectorAll(".reveal, .stagger").forEach((el) => reveal.observe(el));
+    root.querySelectorAll(".bwx-reveal, .bwx-stagger").forEach((el) => reveal.observe(el));
     observers.push(reveal);
 
     function countUp(el: Element) {
@@ -38,7 +38,7 @@ export function HomeMotion() {
     const counters = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { countUp(e.target); counters.unobserve(e.target); } });
     }, { threshold: 0.6 });
-    root.querySelectorAll(".count").forEach((el) => counters.observe(el));
+    root.querySelectorAll(".bwx-count").forEach((el) => counters.observe(el));
     observers.push(counters);
 
     const fig = root.querySelector("#bFig");
@@ -52,7 +52,7 @@ export function HomeMotion() {
       const io = new IntersectionObserver((es) => {
         es.forEach((e) => {
           if (e.isIntersecting && !done) {
-            done = true; fig.classList.add("play");
+            done = true; fig.classList.add("bwx-play");
             cnt(fig.querySelector("#bLeads"), 47, "");
             cnt(fig.querySelector("#bCpl"), 13, "$");
           }
