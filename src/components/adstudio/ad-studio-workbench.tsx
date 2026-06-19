@@ -220,6 +220,38 @@ type RepairResponse = {
   error?: string;
 };
 
+// WS6 (cost-safe slice): memoize repair responses by the EXACT request payload.
+// Identical payload => identical expected result, so a hit is always correct;
+// a miss is byte-identical to calling the endpoint directly. This dedupes paid
+// image-fit calls and makes a repeat fit instant, without speculative pre-warm.
+type RepairSuccess = { repairs: NonNullable<RepairResponse["repairs"]> };
+const repairResponseCache = new Map<string, RepairSuccess>();
+const REPAIR_CACHE_MAX = 24;
+
+async function fetchRepairImageCached(body: Record<string, unknown>): Promise<RepairSuccess> {
+  const key = JSON.stringify(body);
+  const cached = repairResponseCache.get(key);
+  if (cached) return cached;
+
+  const response = await fetch("/api/adstudio/repair-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = (await response.json().catch(() => ({}))) as RepairResponse;
+  if (!response.ok || !json.repairs?.length) {
+    throw new Error(json.error || "Could not fit that image.");
+  }
+
+  const result: RepairSuccess = { repairs: json.repairs };
+  if (repairResponseCache.size >= REPAIR_CACHE_MAX) {
+    const oldest = repairResponseCache.keys().next().value;
+    if (oldest !== undefined) repairResponseCache.delete(oldest);
+  }
+  repairResponseCache.set(key, result);
+  return result;
+}
+
 function applyRepairedImagesToVariant(input: {
   pack: AdStudioCampaignPack;
   variantId: string | undefined;
@@ -790,28 +822,20 @@ export function AdStudioWorkbench({
     studio.setBusy(true);
     studio.setBusyMessage(options?.message ?? "Fitting photo to ad sizes...");
     try {
-      const response = await fetch("/api/adstudio/repair-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandKitId: brandKit.brandKitId,
-          sourceImage,
-          targetFormats: formats,
-          campaignContext: {
-            goal: campaignGoal,
-            offer: offerLabel,
-            market,
-            propertyType,
-            headline: copyForPatch.headline,
-            description: copyForPatch.description,
-          },
-          layoutBriefs,
-        }),
+      const json = await fetchRepairImageCached({
+        brandKitId: brandKit.brandKitId,
+        sourceImage,
+        targetFormats: formats,
+        campaignContext: {
+          goal: campaignGoal,
+          offer: offerLabel,
+          market,
+          propertyType,
+          headline: copyForPatch.headline,
+          description: copyForPatch.description,
+        },
+        layoutBriefs,
       });
-      const json = (await response.json().catch(() => ({}))) as RepairResponse;
-      if (!response.ok || !json.repairs?.length) {
-        throw new Error(json.error || "Could not fit that image.");
-      }
 
       const repairedPack = applyRepairedImagesToVariant({
         pack: basePack,

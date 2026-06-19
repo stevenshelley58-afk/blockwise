@@ -13,6 +13,44 @@ export const creativeSkeletonArchetypeSchema = z.enum([
   "social_proof",
 ]);
 
+const normalizedRectSchema = z
+  .object({
+    x: normalizedNumberSchema,
+    y: normalizedNumberSchema,
+    width: normalizedNumberSchema,
+    height: normalizedNumberSchema,
+  })
+  .strict()
+  .refine((rect) => rect.x + rect.width <= 1, "image frame exceeds canvas width")
+  .refine((rect) => rect.y + rect.height <= 1, "image frame exceeds canvas height");
+
+// Optional per-aspect overrides; the matching format wins when present, else the
+// frame's base rect is used. Partial — a template only specifies the sizes it tunes.
+const imageFramePerSizeSchema = z
+  .object({
+    "1:1": normalizedRectSchema.optional(),
+    "4:5": normalizedRectSchema.optional(),
+    "9:16": normalizedRectSchema.optional(),
+    "1.91:1": normalizedRectSchema.optional(),
+  })
+  .strict();
+
+// Where the listing photo sits on the canvas (normalized 0..1). Absent => the
+// composition/full-bleed default is used, so this stays backward compatible.
+export const creativeImageFrameSchema = z
+  .object({
+    id: z.string().trim().min(1).max(80),
+    x: normalizedNumberSchema,
+    y: normalizedNumberSchema,
+    width: normalizedNumberSchema,
+    height: normalizedNumberSchema,
+    clip: z.enum(["rect", "circle", "arch"]).optional(),
+    per_size: imageFramePerSizeSchema.optional(),
+  })
+  .strict()
+  .refine((frame) => frame.x + frame.width <= 1, "image frame exceeds canvas width")
+  .refine((frame) => frame.y + frame.height <= 1, "image frame exceeds canvas height");
+
 export const creativeSkeletonSchema = z
   .object({
     version: z.literal(1).default(1),
@@ -70,8 +108,12 @@ export const creativeSkeletonSchema = z
       .strict(),
     variables: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
     confidence: z.number().min(0).max(100),
+    // Optional photo placement spots. Absent => composition/full-bleed default
+    // (backward compatible). The first frame is the primary listing photo.
+    image_frames: z.array(creativeImageFrameSchema).min(1).max(6).optional(),
   })
   .strict();
 
 export type CreativeSkeleton = z.infer<typeof creativeSkeletonSchema>;
 export type CreativeSkeletonArchetype = z.infer<typeof creativeSkeletonArchetypeSchema>;
+export type CreativeImageFrame = z.infer<typeof creativeImageFrameSchema>;
