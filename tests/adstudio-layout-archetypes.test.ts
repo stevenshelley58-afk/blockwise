@@ -75,14 +75,15 @@ test("generated first-ad creative keeps uploaded owner image as the source visua
   assert.ok(creative);
 
   const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-  const announcementBand = creative.canvas.objects.find((object) => object.role === "announcement_band");
   assert.equal(image?.content, uploadedImage);
   assert.equal(image?.assetId, undefined);
+  assert.equal(creative.canvas.composition?.id, "posterGradient");
   assert.deepEqual(
     { x: image?.x, y: image?.y, width: image?.width, height: image?.height },
     { x: 0, y: 0, width: creative.canvas.width, height: creative.canvas.height },
   );
-  assert.ok(announcementBand, "coming_soon archetype should add its support band");
+  assert.ok(creative.canvas.objects.some((object) => object.role === "background_below" && object.locked));
+  assert.ok(creative.canvas.objects.some((object) => object.role === "cta_text" && !object.locked));
 });
 
 test("layout QA passes generated archetype creatives and reports deterministic failures", () => {

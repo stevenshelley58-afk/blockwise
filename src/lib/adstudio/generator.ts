@@ -786,6 +786,7 @@ function buildCreative(input: {
     sourceImageDataUrl: input.sourceImageDataUrl,
     subheadline: input.subheadline,
     templateId: input.template?.id,
+    templateKey: input.template?.templateKey,
     templateName: input.template?.name,
     creativeSkeleton: input.template?.creativeSkeleton,
   });

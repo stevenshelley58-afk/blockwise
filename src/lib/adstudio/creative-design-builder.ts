@@ -38,6 +38,7 @@ export function objectToDesignJson(
     width: object.width,
     height: object.height ?? defaultObjectHeight(object),
     fill: object.fill,
+    clip: object.clip,
     selectable: !object.locked,
     evented: !object.locked,
     hasControls: !object.locked,

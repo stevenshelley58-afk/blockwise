@@ -1,3 +1,5 @@
+import { renderCompositionCreativeSvg } from "./creative/composition-to-creative.ts";
+import { reRenderCompositionCreative } from "./creative/composition-sync.ts";
 import { renderCreativeSvg } from "./renderer.ts";
 import type { AdStudioCanvasObject, AdStudioCreative } from "./types.ts";
 
@@ -15,6 +17,7 @@ export const FABRIC_JSON_EXTRA_KEYS = [
   "lockRotation",
   "hasControls",
   "excludeFromExport",
+  "clip",
 ] as const;
 
 export type CreativeLayerEditableKind = "template" | "headline" | "description" | "cta" | "image" | "logo";
@@ -39,6 +42,7 @@ export type CreativeDesignObjectJson = Record<string, unknown> & {
   src?: string;
   fill?: string;
   fontSize?: number;
+  clip?: AdStudioCanvasObject["clip"];
   [BLOCKWISE_FABRIC_META_KEY]?: CreativeLayerMeta;
 };
 
@@ -99,6 +103,13 @@ export function syncCreativeWithCopyAndImage(
   copy: CreativeCopyFields,
   imageSrc: string,
 ): AdStudioCreative {
+  if (creative.canvas.composition) {
+    return reRenderCompositionCreative(creative, {
+      copy,
+      photoSrc: imageSrc,
+    });
+  }
+
   const objects = creative.canvas.objects.map((object) => syncObjectWithCopyAndImage(object, copy, imageSrc));
   const designJson = getCreativeDesignJson(creative);
   const next = {
@@ -117,6 +128,8 @@ export function syncCreativeWithCopyAndImage(
 }
 
 export function repairCreativeTextLayout(creative: AdStudioCreative): AdStudioCreative {
+  if (creative.canvas.composition) return creative;
+
   const repaired = repairCanvasObjects(creative.canvas.objects, creative.canvas.height, creative.format);
   if (!repaired.changed) return creative;
 
@@ -132,7 +145,7 @@ export function repairCreativeTextLayout(creative: AdStudioCreative): AdStudioCr
 
   return {
     ...next,
-    previewSvg: renderCreativeSvg(next),
+    previewSvg: next.canvas.composition ? renderCompositionCreativeSvg(next) : renderCreativeSvg(next),
   };
 }
 
@@ -163,11 +176,17 @@ export function saveCreativeDesignJson(creative: AdStudioCreative, designJson: C
       ...creative.canvas,
       fabricJson: designJson,
       objects,
+      composition: creative.canvas.composition
+        ? {
+            ...creative.canvas.composition,
+            copy: compositionCopyFromObjects(creative.canvas.composition.copy, objects),
+          }
+        : undefined,
     },
   };
   return {
     ...next,
-    previewSvg: renderCreativeSvg(next),
+    previewSvg: next.canvas.composition ? renderCompositionCreativeSvg(next) : renderCreativeSvg(next),
   };
 }
 
@@ -197,11 +216,17 @@ export function applySelectedLayerPatch(
       ...creative.canvas,
       objects,
       fabricJson: nextDesign,
+      composition: creative.canvas.composition
+        ? {
+            ...creative.canvas.composition,
+            copy: compositionCopyFromObjects(creative.canvas.composition.copy, objects),
+          }
+        : undefined,
     },
   };
   return {
     ...next,
-    previewSvg: renderCreativeSvg(next),
+    previewSvg: next.canvas.composition ? renderCompositionCreativeSvg(next) : renderCreativeSvg(next),
   };
 }
 
@@ -316,6 +341,20 @@ function patchDesignObject(object: CreativeDesignObjectJson, patch: CreativeLaye
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function compositionCopyFromObjects(
+  copy: NonNullable<AdStudioCreative["canvas"]["composition"]>["copy"],
+  objects: AdStudioCanvasObject[],
+): NonNullable<AdStudioCreative["canvas"]["composition"]>["copy"] {
+  const byRole = new Map(objects.map((object) => [object.role, object]));
+  return {
+    ...copy,
+    headline: byRole.get("headline")?.content ?? copy.headline,
+    subhead: byRole.get("subheadline")?.content ?? copy.subhead,
+    cta: byRole.get("cta_text")?.content ?? byRole.get("cta_button")?.content ?? copy.cta,
+    brand: byRole.get("brand_logo")?.content ?? copy.brand,
+  };
 }
 
 function repairCanvasObjects(
