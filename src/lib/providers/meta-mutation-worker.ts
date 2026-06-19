@@ -13,7 +13,7 @@ function providerWritesEnabled() {
 type MetaMutationRow = {
   id: string;
   workspace_id: string;
-  meta_publish_plan_id: string;
+  meta_publish_plan_id: string | null;
   action: MetaPlanMutationAction;
   status: MetaPlanMutation["status"];
   payload_json: Record<string, unknown>;
@@ -45,10 +45,17 @@ export async function executeMetaMutationById(input: {
     return skipped;
   }
 
-  const plan = await loadMetaPublishPlan(input.serviceSupabase, {
-    workspaceId: input.workspaceId,
-    planId: mutation.planId,
-  });
+  // A plan-backed mutation resolves its token from the plan's provider
+  // connection. Inline management of a Meta-created object has no plan, so we
+  // resolve the workspace's Meta provider connection directly.
+  const providerConnectionId = mutation.planId
+    ? (
+        await loadMetaPublishPlan(input.serviceSupabase, {
+          workspaceId: input.workspaceId,
+          planId: mutation.planId,
+        })
+      ).providerConnectionId
+    : await resolveWorkspaceMetaConnectionId(input.serviceSupabase, input.workspaceId);
   const approvalStatus = mutation.approvalRequestId
     ? await loadApprovalStatus(input.serviceSupabase, input.workspaceId, mutation.approvalRequestId)
     : "draft";
@@ -60,7 +67,7 @@ export async function executeMetaMutationById(input: {
   });
 
   try {
-    const tokens = await loadStoredProviderTokens(input.serviceSupabase, plan.providerConnectionId);
+    const tokens = await loadStoredProviderTokens(input.serviceSupabase, providerConnectionId);
 
     if (!tokens.accessToken) {
       throw new Error("Meta mutation cannot run without a stored Meta access token.");
@@ -105,6 +112,34 @@ export async function executeMetaMutationById(input: {
     await updateMutation(input.serviceSupabase, failed);
     throw error;
   }
+}
+
+/**
+ * Resolve the active Meta provider connection for a workspace. Used for inline
+ * management mutations that have no owning publish plan (Meta-created objects).
+ */
+export async function resolveWorkspaceMetaConnectionId(
+  serviceSupabase: SupabaseServiceClient,
+  workspaceId: string,
+): Promise<string> {
+  const { data, error } = await serviceSupabase
+    .from("provider_connections")
+    .select("id,status")
+    .eq("workspace_id", workspaceId)
+    .eq("provider", "meta")
+    .neq("status", "not_connected")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data?.id) {
+    throw new Error("No connected Meta provider connection for this workspace.");
+  }
+
+  return data.id as string;
 }
 
 export async function loadMutation(
