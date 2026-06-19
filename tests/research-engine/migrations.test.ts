@@ -489,8 +489,28 @@ test("ad attribution links migration indexes and backfills from existing researc
   );
   assert.match(
     sql,
+    /with page_agent_name_matches as[\s\S]*position\([\s\S]*'page_name_agent_exact'[\s\S]*'codex\.direct_page_name_match'/i,
+    "unambiguous advertiser page names must be persisted as direct agent attribution links",
+  );
+  assert.match(
+    sql,
+    /'page_name_agent_agency'[\s\S]*from research\.ad_attribution_links agent_link[\s\S]*agent_link\.evidence_type = 'page_name_agent_exact'/i,
+    "agency links must be derived from exact page-name agent links",
+  );
+  assert.match(
+    sql,
+    /'agent_agency_resolution'[\s\S]*join research\.agents agent on agent\.id = ap\.agent_id/i,
+    "agency links must also backfill from resolved agent pages whose agent has an agency",
+  );
+  assert.match(
+    sql,
     /insert into research\.ad_attribution_links[\s\S]*'postcode'[\s\S]*from research\.ad_area_matches am[\s\S]*join research\.observed_ads oa on oa\.id = am\.observed_ad_id/i,
     "postcode attribution links must backfill from ad_area_matches",
+  );
+  assert.match(
+    sql,
+    /least\([\s\S]*coalesce\(oa\.first_seen_at, oa\.created_at, now\(\)\)[\s\S]*coalesce\(oa\.last_seen_at, oa\.created_at, now\(\)\)[\s\S]*\)[\s\S]*greatest\(/i,
+    "backfills must order dirty historical first_seen_at/last_seen_at values defensively",
   );
 });
 
