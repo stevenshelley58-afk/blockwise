@@ -5,6 +5,7 @@ import {
   buildModelFallbackAlert,
   dedupeKeyForFallback,
   emitModelFallbackAlert,
+  modelFallbackDedupeSize,
   resetModelFallbackAlertDedupe,
 } from "../src/lib/alerts/model-fallback-alert.ts";
 
@@ -99,4 +100,41 @@ test("emitModelFallbackAlert never throws when delivery fails", async () => {
   );
   assert.equal(result.sent, false);
   assert.equal(result.error, "resend down");
+});
+
+test("emitModelFallbackAlert retries after a failed delivery instead of suppressing for the window", async () => {
+  resetModelFallbackAlertDedupe();
+  let attempts = 0;
+  const send = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error("resend down");
+    return { email: true, whatsapp: false };
+  };
+  const event = { stage: "adstudio.copy", fromModel: "gpt-5.5", toModel: "env_default", reason: "boom" };
+  const now = () => 1_000; // same instant, well inside the window
+
+  const first = await emitModelFallbackAlert(event, { send, now, dedupeWindowMs: 60_000 });
+  assert.equal(first.sent, false, "first delivery fails");
+
+  const second = await emitModelFallbackAlert(event, { send, now, dedupeWindowMs: 60_000 });
+  assert.equal(second.sent, true, "a failed send must not de-dupe the retry");
+  assert.equal(attempts, 2);
+});
+
+test("emitModelFallbackAlert prunes entries past their window so the map stays bounded", async () => {
+  resetModelFallbackAlertDedupe();
+  const send = async () => ({ email: true, whatsapp: false });
+  let clock = 0;
+  const now = () => clock;
+
+  // Three distinct targets at t=0 leave three live entries.
+  for (const toModel of ["a", "b", "c"]) {
+    await emitModelFallbackAlert({ stage: "s", fromModel: "p", toModel, reason: "x" }, { send, now, dedupeWindowMs: 1_000 });
+  }
+  assert.equal(modelFallbackDedupeSize(), 3);
+
+  // After the window elapses, the next emit prunes the three stale keys, leaving one.
+  clock = 5_000;
+  await emitModelFallbackAlert({ stage: "s", fromModel: "p", toModel: "d", reason: "x" }, { send, now, dedupeWindowMs: 1_000 });
+  assert.equal(modelFallbackDedupeSize(), 1);
 });

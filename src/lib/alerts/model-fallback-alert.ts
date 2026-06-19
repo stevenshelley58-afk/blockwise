@@ -78,27 +78,46 @@ export async function emitModelFallbackAlert(
   const windowMs = deps.dedupeWindowMs ?? DEFAULT_DEDUPE_WINDOW_MS;
   const send = deps.send ?? sendPaidServiceAlert;
   const key = dedupeKeyForFallback(event);
+  const current = now();
+
+  // Drop entries past their window first, so the map only ever holds keys that
+  // can still de-dupe — bounding it to the active (stage, model) set.
+  pruneExpired(current, windowMs);
 
   const previous = lastSentAt.get(key);
-  const current = now();
   if (previous !== undefined && current - previous < windowMs) {
     return { sent: false, deduped: true };
   }
-  // Record before sending so a flapping primary cannot spam even if delivery is slow.
+  // Record before sending so a burst of requests hitting the same dead primary
+  // de-dupes immediately rather than each firing its own email.
   lastSentAt.set(key, current);
 
   try {
     const delivery = await send(buildModelFallbackAlert(event));
     return { sent: true, deduped: false, delivery };
   } catch (error) {
-    // An alert must never break the generation it is reporting on.
+    // Delivery failed: roll back the de-dupe record so the next request retries
+    // instead of the owner being silently kept in the dark for the whole window.
+    // (An alert must also never break the generation it is reporting on.)
+    lastSentAt.delete(key);
     return { sent: false, deduped: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function pruneExpired(current: number, windowMs: number): void {
+  for (const [key, sentAt] of lastSentAt) {
+    if (current - sentAt >= windowMs) lastSentAt.delete(key);
   }
 }
 
 /** Clears the de-dupe window. Test-only. */
 export function resetModelFallbackAlertDedupe(): void {
   lastSentAt.clear();
+}
+
+/** Number of live de-dupe entries. Test-only (asserts the map stays bounded). */
+export function modelFallbackDedupeSize(): number {
+  return lastSentAt.size;
 }
 
 function truncate(value: string, limit: number): string {
