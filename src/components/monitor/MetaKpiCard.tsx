@@ -3,8 +3,9 @@ import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { formatPercent } from "@/lib/meta-monitor/calculations";
 
 export function MetaKpiCard(props: {
-  icon: LucideIcon;
-  iconTone: "blue" | "green" | "slate" | "orange" | "rose" | "indigo";
+  /** Optional — kept for call-site compatibility; the card no longer renders an icon. */
+  icon?: LucideIcon;
+  iconTone?: "blue" | "green" | "slate" | "orange" | "rose" | "indigo";
   label: string;
   value: string;
   compareText?: string;
@@ -15,16 +16,12 @@ export function MetaKpiCard(props: {
   /** 0–1 budget-consumed progress; renders the progress variant. */
   progress?: number;
 }) {
-  const Icon = props.icon;
   const trend = props.trend ?? null;
   const isUp = trend != null && trend >= 0;
   const isGood = trend != null && (props.goodWhenDown ? trend <= 0 : trend >= 0);
 
   return (
     <article className="metric-card mm-kpi">
-      <div className={`mm-kpi-icon tone-${props.iconTone}`}>
-        <Icon size={16} aria-hidden />
-      </div>
       <div className="mm-kpi-label">{props.label}</div>
       <div className="mm-kpi-value">{props.value}</div>
       {props.compareText ? <div className="mm-kpi-compare">{props.compareText}</div> : null}

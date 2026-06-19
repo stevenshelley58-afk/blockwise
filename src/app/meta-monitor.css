@@ -47,7 +47,7 @@
 .mm-kpi-icon.tone-rose { background: var(--rose-soft); color: var(--rose); }
 .mm-kpi-icon.tone-indigo { background: var(--accent-tint); color: var(--accent-strong); }
 .mm-kpi-label { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-bottom: 5px; }
-.mm-kpi-value { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mm-kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; color: var(--ink); font-variant-numeric: tabular-nums; }
 .mm-kpi-compare { font-size: 11.5px; color: var(--faint); margin-top: 6px; }
 .mm-kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; margin-top: 7px; }
 .mm-kpi-trend.good { color: var(--green); }
@@ -203,22 +203,17 @@
   .mm-kpi {
     padding: 13px 15px;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr auto;
     grid-template-rows: auto auto auto;
     column-gap: 14px;
     row-gap: 2px;
     align-items: center;
   }
-  .mm-kpi-icon {
-    grid-column: 1; grid-row: 1 / span 3;
-    width: 40px; height: 40px;
-    margin-bottom: 0; align-self: center;
-  }
-  .mm-kpi-label { grid-column: 2; grid-row: 1; margin-bottom: 0; font-size: 13px; }
-  .mm-kpi-value { grid-column: 2; grid-row: 2; font-size: 22px; }
-  .mm-kpi-compare { grid-column: 2; grid-row: 3; margin-top: 0; }
+  .mm-kpi-label { grid-column: 1; grid-row: 1; margin-bottom: 0; font-size: 13px; }
+  .mm-kpi-value { grid-column: 1; grid-row: 2; font-size: 24px; }
+  .mm-kpi-compare { grid-column: 1; grid-row: 3; margin-top: 0; }
   .mm-kpi-trend {
-    grid-column: 3; grid-row: 1 / span 3;
+    grid-column: 2; grid-row: 1 / span 3;
     align-self: center; justify-self: end; margin-top: 0;
     padding: 4px 9px; border-radius: 999px;
   }
