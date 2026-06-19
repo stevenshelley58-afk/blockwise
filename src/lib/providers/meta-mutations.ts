@@ -17,7 +17,12 @@ export type MetaPlanMutationPayload = {
 export type MetaPlanMutation = {
   mutationId: string;
   workspaceId: string;
-  planId: string;
+  /**
+   * Owning Blockwise publish plan, or null for inline management of a
+   * Meta-created object (the worker then resolves the Meta token from the
+   * workspace's provider connection instead of a plan).
+   */
+  planId: string | null;
   action: MetaPlanMutationAction;
   status: MetaPlanMutationStatus;
   payload: MetaPlanMutationPayload;
@@ -53,7 +58,7 @@ export type MetaMutationLogEntry = {
 
 export function buildMetaPlanMutation(input: {
   workspaceId: string;
-  planId: string;
+  planId: string | null;
   requestedBy?: string | null;
   action: MetaPlanMutationAction;
   payload: MetaPlanMutationPayload;
@@ -66,7 +71,7 @@ export function buildMetaPlanMutation(input: {
   return {
     mutationId,
     workspaceId: input.workspaceId,
-    planId: input.planId,
+    planId: input.planId ?? null,
     action: input.action,
     status: "requested",
     payload: input.payload,
