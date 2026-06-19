@@ -32,6 +32,20 @@ type LocationSearchRowsResult = { rows: CustomerMetaAdLibraryCardRow[]; active: 
 
 const DEFAULT_SEARCH_ROW_LIMIT = 200;
 const DEFAULT_SEARCH_RESULT_LIMIT = 50;
+const FALLBACK_TEXT_SEARCH_COLUMNS = [
+  "agent_name",
+  "agency_name",
+  "page_name",
+  "library_id",
+  "headline",
+  "body",
+  "description",
+  "postcode",
+  "suburb",
+  "state",
+  "destination_url",
+  "cta",
+] as const;
 const LOCATION_TEXT_COLUMNS = ["headline", "body", "description", "destination_url"] as const;
 const IGNORED_LOCATION_SEARCH_TERMS = new Set([
   "act",
@@ -239,18 +253,9 @@ function buildFallbackSearchFilter(q: string): string {
   }
 
   const needle = `%${escaped}%`;
-  return [
-    `page_name.ilike.${needle}`,
-    `library_id.ilike.${needle}`,
-    `headline.ilike.${needle}`,
-    `body.ilike.${needle}`,
-    `description.ilike.${needle}`,
-    `postcode.ilike.${needle}`,
-    `suburb.ilike.${needle}`,
-    `state.ilike.${needle}`,
-    `destination_url.ilike.${needle}`,
-    `cta.ilike.${needle}`,
-  ].join(",");
+  // Agent/agency matches are strict DB-backed attribution from the customer
+  // card view. Page/library/copy matches remain normal advertiser search.
+  return FALLBACK_TEXT_SEARCH_COLUMNS.map((column) => `${column}.ilike.${needle}`).join(",");
 }
 
 function isMissingRankedSearchSchemaError(error: { code?: string; message?: string }): boolean {

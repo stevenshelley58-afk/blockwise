@@ -4,7 +4,10 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { searchCustomerMetaAdLibraryCards } from "../src/lib/research/ad-radar-card-search.ts";
-import type { CustomerMetaAdLibraryCardRow } from "../src/lib/research/customer-meta-card.ts";
+import {
+  CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
+  type CustomerMetaAdLibraryCardRow,
+} from "../src/lib/research/customer-meta-card.ts";
 
 const routeSource = readFileSync(
   join(process.cwd(), "src/app/api/research/ads/search/route.ts"),
@@ -48,6 +51,61 @@ test("ad card search uses ranked full-text search when the schema contract is av
     args: { p_query: "Ray White", p_limit: 200, p_sort: "recent" },
   }]);
   assert.equal(fake.queries.length, 0);
+});
+
+test("ad card fallback search uses strict DB-backed agency attribution fields", async () => {
+  const fake = new FakeSearchClient([
+    row({
+      card_id: "agency-attributed-card",
+      agency_id: "agency-1",
+      agency_name: "Harbour Lane Property",
+      page_name: "Local advertiser page",
+      attribution_links: [{ source: "advertiser_page", subject: "agency" }],
+    }),
+  ]);
+
+  const cards = await searchCustomerMetaAdLibraryCards(fake.client, {
+    query: "Harbour Lane",
+    sort: "recent",
+  });
+
+  assert.deepEqual(cards.map((card) => card.id), ["agency-attributed-card"]);
+  assert.equal(cards[0]?.agencyId, "agency-1");
+  assert.equal(cards[0]?.agencyName, "Harbour Lane Property");
+  assert.deepEqual(cards[0]?.attributionLinks, [{ source: "advertiser_page", subject: "agency" }]);
+  assert.ok(CUSTOMER_META_AD_LIBRARY_CARD_SELECT.includes("agency_name"));
+  assert.ok(CUSTOMER_META_AD_LIBRARY_CARD_SELECT.includes("attribution_links"));
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("or").some((args) => String(args[0]).includes("agency_name.ilike.%Harbour Lane%"))),
+    "fallback advertiser search should use agency_name from the safe card view",
+  );
+});
+
+test("ad card fallback search uses strict DB-backed agent attribution fields", async () => {
+  const fake = new FakeSearchClient([
+    row({
+      card_id: "agent-attributed-card",
+      agent_id: "agent-1",
+      agent_name: "Grace Okafor",
+      body: "Local market update.",
+      attribution_links: [{ source: "advertiser_page", subject: "agent" }],
+    }),
+  ]);
+
+  const cards = await searchCustomerMetaAdLibraryCards(fake.client, {
+    query: "Grace Okafor",
+    sort: "recent",
+  });
+
+  assert.deepEqual(cards.map((card) => card.id), ["agent-attributed-card"]);
+  assert.equal(cards[0]?.agentId, "agent-1");
+  assert.equal(cards[0]?.agentName, "Grace Okafor");
+  assert.deepEqual(cards[0]?.attributionLinks, [{ source: "advertiser_page", subject: "agent" }]);
+  assert.ok(CUSTOMER_META_AD_LIBRARY_CARD_SELECT.includes("agent_name"));
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("or").some((args) => String(args[0]).includes("agent_name.ilike.%Grace Okafor%"))),
+    "fallback advertiser search should use agent_name from the safe card view, not request-time broad attribution",
+  );
 });
 
 test("ad card search keeps postcode searches exact unless surrounding suburbs are included", async () => {
@@ -178,6 +236,11 @@ function row(input: Partial<CustomerMetaAdLibraryCardRow> & { card_id: string })
   return {
     card_id: input.card_id,
     library_id: input.library_id ?? input.card_id,
+    agent_id: input.agent_id ?? null,
+    agent_name: input.agent_name ?? null,
+    agency_id: input.agency_id ?? null,
+    agency_name: input.agency_name ?? null,
+    attribution_links: input.attribution_links ?? [],
     page_id: input.page_id ?? null,
     page_name: input.page_name ?? "Agency",
     page_url: input.page_url ?? null,
