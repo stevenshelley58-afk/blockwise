@@ -5,20 +5,37 @@ import {
   diffForAlerts,
   formatAlert,
   toState,
+  type ServiceStatus,
   type WatchdogState,
 } from "./paid-service-watchdog.ts";
 import { sendPaidServiceAlert } from "./notify.ts";
+import type { AlertMessage } from "./notify.ts";
 
 export const PAID_SERVICE_WATCHDOG_STATE_KEY = "paid_service_watchdog_state";
 
-export async function runPaidServiceWatchdog(supabase: SupabaseClient) {
-  const statuses = await collectPaidServiceStatuses(supabase);
+// Seams so the alerting wiring (escalate-at-WARN-and-CRITICAL) is unit-testable
+// without live provider polling. Production uses the real collect/send.
+export type PaidServiceWatchdogDeps = {
+  collect?: (supabase: SupabaseClient) => Promise<ServiceStatus[]>;
+  send?: (message: AlertMessage) => Promise<{ email: boolean; whatsapp: boolean }>;
+};
+
+export async function runPaidServiceWatchdog(
+  supabase: SupabaseClient,
+  deps: PaidServiceWatchdogDeps = {},
+) {
+  const collect = deps.collect ?? collectPaidServiceStatuses;
+  const send = deps.send ?? sendPaidServiceAlert;
+
+  const statuses = await collect(supabase);
   const previous = await loadPreviousWatchdogState(supabase);
   const diff = diffForAlerts(previous, statuses);
   let delivery: { email: boolean; whatsapp: boolean } | null = null;
 
+  // diffForAlerts escalates on every level rise (ok→warn, warn→critical,
+  // ok→critical), so both the 80% WARN and 95% CRITICAL thresholds email.
   if (diff.escalations.length > 0 || diff.recoveries.length > 0) {
-    delivery = await sendPaidServiceAlert(formatAlert(diff, statuses));
+    delivery = await send(formatAlert(diff, statuses));
   }
 
   await saveWatchdogState(supabase, toState(statuses));

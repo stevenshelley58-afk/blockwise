@@ -138,6 +138,7 @@ export async function getMetaMonitorData(input: {
       spend: round2(spend),
       impressions: ads.reduce((total, ad) => total + ad.metrics.impressions, 0),
       clicks: ads.reduce((total, ad) => total + ad.metrics.clicks, 0),
+      reach: Math.round(insightRows.reduce((total, row) => total + toNumber(row.reach), 0)),
       leads: Math.max(
         ads.reduce((total, ad) => total + ad.metrics.leads, 0),
         leadFacts.totalLeads,
@@ -511,7 +512,7 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
+  const spendByDate = new Map<string, { spend: number; platformLeads: number; impressions: number; clicks: number }>();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -520,10 +521,12 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0 };
+    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0, impressions: 0, clicks: 0 };
 
     existing.spend += toNumber(row.spend);
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
+    existing.impressions += Math.round(toNumber(row.impressions));
+    existing.clicks += Math.round(toNumber(row.clicks));
     spendByDate.set(date, existing);
   }
 
@@ -541,6 +544,8 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,
       validCpl: safeCpl(spend, validLeads),
+      impressions: insights?.impressions ?? 0,
+      clicks: insights?.clicks ?? 0,
     });
   }
 

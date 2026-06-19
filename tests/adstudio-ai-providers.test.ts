@@ -5,6 +5,7 @@ import {
   createOpenAiImageProvider,
   createOpenRouterTextProvider,
   generateMixedImageVariantsInParallel,
+  resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
@@ -72,15 +73,25 @@ test("createOpenAiImageProvider defaults client creative generation to GPT Image
   assert.equal(output.model, "gpt-image-2");
 });
 
-test("createOpenAiImageProvider sends reference-image jobs to images edits", async () => {
+test("createOpenAiImageProvider exposes reference-capable image capabilities", () => {
+  const provider = createOpenAiImageProvider({ env: { OPENAI_API_KEY: "oa_test" } });
+
+  assert.equal(provider.capabilities.imageToImage, true);
+  assert.equal(provider.capabilities.inpainting, true);
+  assert.equal(provider.capabilities.multiReference, true);
+});
+
+test("createOpenAiImageProvider sends locked-template reference work to images/edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createOpenAiImageProvider({
-    env: {
-      OPENAI_API_KEY: "oa_test",
-    },
+    env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), init: init ?? {} });
-      return new Response(JSON.stringify({ data: [{ b64_json: "ZWRpdGVk" }] }), { status: 200 });
+
+      return new Response(JSON.stringify({ data: [{ b64_json: "ZWRpdGVk" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     },
   });
 
@@ -91,16 +102,88 @@ test("createOpenAiImageProvider sends reference-image jobs to images edits", asy
     stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
   });
-  const form = calls[0]?.init.body as FormData;
 
-  assert.equal(calls[0]?.url, "https://api.openai.com/v1/images/edits");
-  assert.equal((calls[0]?.init.headers as Record<string, string>).Authorization, "Bearer oa_test");
-  assert.equal(form.get("model"), "gpt-image-2");
-  assert.equal(form.get("quality"), "high");
-  assert.equal(form.get("size"), "1024x1024");
-  assert.ok(form.get("image") instanceof Blob);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://api.openai.com/v1/images/edits");
+  const headers = calls[0].init.headers as Record<string, string>;
+  assert.equal(headers.Authorization, "Bearer oa_test");
+  assert.equal(headers["Content-Type"], undefined);
+
+  const body = calls[0].init.body as FormData;
+  assert.equal(body.get("model"), "gpt-image-2");
+  assert.equal(body.get("size"), "1024x1024");
+  assert.equal(body.get("quality"), "high");
+  assert.equal(body.get("n"), "1");
+  assert.ok(body.get("image") instanceof Blob);
+  assert.equal(body.has("mask"), false);
+  assert.doesNotMatch(String(body.get("prompt")), /data:image/);
+
   assert.equal(output.assetUrl, "data:image/png;base64,ZWRpdGVk");
-  assert.equal(output.providerMetadata.endpoint, "images.edit");
+  assert.equal(output.model, "gpt-image-2");
+  assert.equal(output.providerMetadata.mode, "edit");
+});
+
+test("createOpenAiImageProvider attaches a mask when one is supplied", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const provider = createOpenAiImageProvider({
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(JSON.stringify({ data: [{ b64_json: "bWFza2Vk" }] }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    prompt: "Extend to story frame",
+    referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+    maskImage: "data:image/png;base64,bWFzaw==",
+    aspectRatio: "9:16",
+    stylePreset: "truth_preserving_real_estate_repair",
+    requiresReferenceAssets: true,
+  });
+
+  const body = calls[0].init.body as FormData;
+  assert.ok(body.get("mask"), "mask must be attached when provided");
+});
+
+test("createOpenAiImageProvider honours quality tier and the Cloudflare gateway for edits", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const provider = createOpenAiImageProvider({
+    env: {
+      OPENAI_API_KEY: "oa_test",
+      BLOCKWISE_OPENAI_IMAGE_QUALITY: "medium",
+      CLOUDFLARE_AI_GATEWAY_URL: "https://gateway.example/v1/acct/gw/openai/images/generations",
+      CLOUDFLARE_AI_GATEWAY_TOKEN: "cf_test",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(JSON.stringify({ data: [{ b64_json: "Zm9v" }] }), { status: 200 });
+    },
+  });
+
+  await provider.generate({
+    prompt: "Prepare this listing photo",
+    referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+    aspectRatio: "1:1",
+    stylePreset: "locked_template_photo_prep",
+    requiresReferenceAssets: true,
+  });
+
+  assert.equal(calls[0].url, "https://gateway.example/v1/acct/gw/openai/images/edits");
+  assert.equal((calls[0].init.headers as Record<string, string>)["cf-aig-authorization"], "Bearer cf_test");
+  assert.equal((calls[0].init.body as FormData).get("quality"), "medium");
+});
+
+test("resolveOpenAiImageEditsUrl derives the edits endpoint from a gateway URL", () => {
+  assert.equal(resolveOpenAiImageEditsUrl({}), "https://api.openai.com/v1/images/edits");
+  assert.equal(
+    resolveOpenAiImageEditsUrl({ CLOUDFLARE_AI_GATEWAY_URL: "https://gw/openai/images/generations" }),
+    "https://gw/openai/images/edits",
+  );
+  assert.equal(
+    resolveOpenAiImageEditsUrl({ CLOUDFLARE_AI_GATEWAY_URL: "https://gw/openai/generations" }),
+    "https://gw/openai/edits",
+  );
 });
 
 test("generateMixedImageVariantsInParallel fans out two GPT Image and two Nano Banana jobs", async () => {

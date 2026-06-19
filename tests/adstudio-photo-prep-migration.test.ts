@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const migrationPath = "supabase/migrations/202606200002_adstudio_photo_prep_assets.sql";
-const archiveMigrationPath = "supabase/migrations/202606200003_archive_legacy_adstudio_repair_assets.sql";
+const migrationPath = "supabase/migrations/202606200005_adstudio_photo_prep_assets.sql";
+const archiveMigrationPath = "supabase/migrations/202606200006_archive_legacy_adstudio_repair_assets.sql";
 const sql = readFileSync(migrationPath, "utf8");
 const archiveSql = readFileSync(archiveMigrationPath, "utf8");
 

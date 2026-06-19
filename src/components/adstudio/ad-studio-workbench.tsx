@@ -879,8 +879,8 @@ export function AdStudioWorkbench({
         onClick: () => openTemplatePicker(),
       },
       {
-        title: "Add and fit media",
-        detail: mediaDone ? "A photo is attached. Auto fit is available in Media." : "Upload a property photo and fit every ad size.",
+        title: "Add media",
+        detail: mediaDone ? "A photo is attached." : "Upload a property photo for the selected template.",
         done: mediaDone,
         action: "Media",
         onClick: () => goToSection("media"),
@@ -903,8 +903,8 @@ export function AdStudioWorkbench({
         onClick: () => openTemplatePicker(),
       },
       {
-        title: "Media and auto fit",
-        detail: "Upload, replace, extend, and fit the property photo across all sizes.",
+        title: "Media",
+        detail: "Upload, replace, and reuse approved property photos.",
         icon: Sparkles,
         action: "Open",
         onClick: () => goToSection("media"),

@@ -53,6 +53,13 @@ export type ImageProviderRequest = {
   seed?: number;
   /** When true, the provider must actually consume referenceAssets as image input. */
   requiresReferenceAssets?: boolean;
+  /**
+   * Optional mask (a `data:` URL) for reference-based edits. Transparent pixels
+   * mark the region the model may repaint (the outpaint margin); opaque pixels
+   * are preserved. Honoured by providers that support inpainting; ignored by the
+   * rest. The mask is applied to the first reference asset.
+   */
+  maskImage?: string;
 };
 
 export type ImageProviderResponse = {

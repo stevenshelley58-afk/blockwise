@@ -5,6 +5,7 @@ import { ExternalLink, ImageOff, Play } from "lucide-react";
 import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import type { MetaAdPerformance } from "@/lib/meta-monitor/types";
 
+import { AdManagementControls } from "./AdManagementControls";
 import { BreakdownBars } from "./BreakdownBars";
 import { DeviceDonut } from "./DeviceDonut";
 
@@ -64,6 +65,10 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
       <div className="mm-ad-actions">
         <ActionLink href={ad.landingPageUrl} label="Open landing page" />
         <ActionLink href={ad.metaPermalinkUrl} label="View in Meta" />
+      </div>
+
+      <div className="mm-ad-manage">
+        <AdManagementControls adId={ad.adId} status={ad.status} />
       </div>
     </article>
   );

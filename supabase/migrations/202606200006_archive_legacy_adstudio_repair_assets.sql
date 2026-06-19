@@ -1,5 +1,5 @@
 -- Remove legacy Ad Studio repair outputs from the live brand asset library after
--- 202606200002 backfills them into adstudio_photo_prep_assets.
+-- 202606200005 backfills them into adstudio_photo_prep_assets.
 --
 -- Safety: only rows explicitly marked as old AI repair outputs are touched, and
 -- deletion happens only after an archive row-count check succeeds.

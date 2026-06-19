@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { getMetaMonitorData } from "@/lib/meta-monitor/getMetaMonitorData";
+import { getResultsPayload } from "@/lib/meta-monitor/getResultsPayload";
 import { parseMonitorRange } from "@/lib/monitor/dashboard-data";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const { supabase, access } = guard;
 
   const serviceSupabase = createSupabaseServiceClient();
-  const payload = await getMetaMonitorData({
+  const payload = await getResultsPayload({
     supabase,
     serviceSupabase,
     workspaceId: access.workspaceId,

@@ -120,7 +120,7 @@
     font-size: 12.5px;
   }
   .mm-kpi-value {
-    font-size: 22px;
+    font-size: 30px;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
@@ -129,9 +129,9 @@
   }
 }
 
-/* Results KPI row has four metrics — lay them out 4-up on wide screens. */
+/* Results KPI row has six metrics — lay them out 6-up on wide screens. */
 @media (min-width: 1241px) {
   .mm-kpi-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 }

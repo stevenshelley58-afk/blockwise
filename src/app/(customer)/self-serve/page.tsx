@@ -1,12 +1,21 @@
-import { ArrowRight, Palette, PenLine, Plug } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
-import { PageHeading } from "@/components/page-heading";
-import { SetupChecklist, type SetupChecklistItem } from "@/components/self-serve/setup-checklist";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
+import "./self-serve.css";
+
 export const dynamic = "force-dynamic";
+
+type Step = {
+  id: string;
+  n: number;
+  title: string;
+  description: string;
+  href: string;
+  complete: boolean;
+};
 
 export default async function SelfServePage() {
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
@@ -21,72 +30,101 @@ export default async function SelfServePage() {
       .neq("status", "revoked"),
   ]);
 
+  const businessName = (brandKits.data ?? []).map((k) => k.business_name).find((n) => n && n.trim() !== "")?.trim();
   const hasAd = (campaigns.count ?? 0) > 0;
-  const hasBrand = (brandKits.data ?? []).some((kit) => kit.business_name && kit.business_name.trim() !== "");
+  const hasBrand = Boolean(businessName);
   const hasConnection = (connections.count ?? 0) > 0;
-  const checklist: SetupChecklistItem[] = [
-    {
-      id: "first-ad",
-      label: "Create your first ad",
-      description: "Use one image and a short brief to generate Story, Feed, and Square.",
-      complete: hasAd,
-      href: "/ad-studio?first=1",
-    },
+
+  const steps: Step[] = [
     {
       id: "brand",
-      label: "Confirm your brand",
-      description: "Add the basics so draft copy and colours feel like your agency.",
+      n: 1,
+      title: "Brand identity",
+      description: "Logo, colours and voice so every ad looks unmistakably yours.",
+      href: "/ad-studio/brand",
       complete: hasBrand,
-      href: "/onboarding",
     },
     {
-      id: "connections",
-      label: "Connect Meta before publishing",
-      description: "You can leave this until the ad is approved and ready to launch.",
-      complete: hasConnection,
+      id: "connect",
+      n: 2,
+      title: "Connect channels",
+      description: "Link Meta once — you only need it when an approved ad is ready to publish.",
       href: "/settings#connections",
+      complete: hasConnection,
+    },
+    {
+      id: "create",
+      n: 3,
+      title: "Create & launch",
+      description: "Drop in a listing photo, approve the copy, and generate Story, Feed and Square.",
+      href: "/ad-studio?first=1",
+      complete: hasAd,
     },
   ];
 
+  const completedCount = steps.filter((s) => s.complete).length;
+  const progress = Math.round((completedCount / steps.length) * 100);
+  const nextStep = steps.find((s) => !s.complete) ?? steps[steps.length - 1];
+  const greeting = businessName ? `Welcome back, ${businessName}.` : "Welcome back.";
+
   return (
-    <main className="content">
+    <main className="content bw-hub">
       <ConfirmRegistrationTracker />
-      <PageHeading
-        eyebrow="Home"
-        title="Create your first ad"
-        description="Start with one image and a short brief. Meta is only needed when you are ready to publish."
-        actions={
-          <div className="wizard-actions">
-            <Link className="button" href="/ad-studio?first=1">
-              Create first ad
-              <ArrowRight aria-hidden size={16} />
-            </Link>
-            <Link className="button secondary" href="/onboarding">
-              Set up workspace
-            </Link>
-          </div>
-        }
-      />
 
-      <SetupChecklist items={checklist} />
+      <h1 className="bwh-title">{greeting}</h1>
+      <p className="bwh-lede">
+        You&rsquo;re a few short steps from your first live ad. Bring one image and a few words — Blockwise handles the
+        targeting, sizing and formats.
+      </p>
+      <div className="bwh-actions">
+        <Link className="bwh-btn bwh-btn-dark" href="/ad-studio?first=1">
+          Launch your first ad
+          <ArrowRight aria-hidden size={16} />
+        </Link>
+        <Link className="bwh-btn bwh-btn-ghost" href="/ad-studio">
+          View templates
+        </Link>
+      </div>
 
-      <section className="grid cols-3" aria-label="Next actions">
-        <article className="item-card">
-          <PenLine aria-hidden color="#123e75" size={20} />
-          <h3>Create</h3>
-          <p className="item-meta">Turn one listing photo and a short brief into Meta-ready ad formats.</p>
-        </article>
-        <article className="item-card">
-          <Palette aria-hidden color="#123e75" size={20} />
-          <h3>Brand</h3>
-          <p className="item-meta">Keep colours, tone, and compliance defaults tidy before review.</p>
-        </article>
-        <article className="item-card">
-          <Plug aria-hidden color="#123e75" size={20} />
-          <h3>Publish later</h3>
-          <p className="item-meta">Connect Meta only when the ad is approved and ready to go live.</p>
-        </article>
-      </section>
+      <div className="bwh-banner">
+        <div>
+          <h3>Fastest path to your first ad</h3>
+          <p>Most listings go live in under 4 minutes. Pick up where you left off.</p>
+        </div>
+        <Link className="bwh-btn bwh-btn-light" href={nextStep.href}>
+          {completedCount === steps.length ? "Create another ad" : "Resume setup"}
+        </Link>
+      </div>
+
+      <p className="bwh-eyebrow">Setup — {completedCount} of {steps.length} complete</p>
+      <div className="bwh-progress-wrap">
+        <div className="bwh-progress">
+          <i style={{ width: `${progress}%` }} />
+        </div>
+        <span className="bwh-muted">{progress}%</span>
+      </div>
+
+      <div className="bwh-steps">
+        {steps.map((step) => {
+          const isNext = !step.complete && step.id === nextStep.id;
+          return (
+            <Link
+              key={step.id}
+              href={step.href}
+              className={`bwh-step${step.complete ? " bwh-done" : ""}`}
+            >
+              {step.complete ? (
+                <span className="bwh-tag bwh-tag-done">Done</span>
+              ) : isNext ? (
+                <span className="bwh-tag bwh-tag-now">Next</span>
+              ) : null}
+              <span className="bwh-n">{step.complete ? <Check aria-hidden size={16} /> : step.n}</span>
+              <h3>{step.title}</h3>
+              <p>{step.description}</p>
+            </Link>
+          );
+        })}
+      </div>
     </main>
   );
 }
