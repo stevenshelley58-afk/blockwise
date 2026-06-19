@@ -3,6 +3,11 @@ import { resolveDeliveryStoppedAt } from "./schemas/meta-ad-library.ts";
 export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
   "card_id",
   "library_id",
+  "agent_id",
+  "agent_name",
+  "agency_id",
+  "agency_name",
+  "attribution_links",
   "page_id",
   "page_name",
   "page_url",
@@ -43,6 +48,11 @@ export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
 export type CustomerMetaAdLibraryCardRow = {
   card_id: string | null;
   library_id: string | null;
+  agent_id?: string | null;
+  agent_name?: string | null;
+  agency_id?: string | null;
+  agency_name?: string | null;
+  attribution_links?: unknown;
   page_id: string | null;
   page_name: string | null;
   page_url: string | null;
@@ -87,9 +97,16 @@ export type CustomerMetaAdLibraryMedia = {
   posterUrl: string | null;
 };
 
+export type CustomerMetaAdLibraryAttributionLink = Record<string, unknown>;
+
 export type CustomerMetaAdLibraryCard = {
   id: string;
   libraryId: string | null;
+  agentId: string | null;
+  agentName: string | null;
+  agencyId: string | null;
+  agencyName: string | null;
+  attributionLinks: CustomerMetaAdLibraryAttributionLink[];
   pageId: string | null;
   pageName: string;
   pageUrl: string | null;
@@ -143,6 +160,11 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
   return {
     id,
     libraryId,
+    agentId: cleanString(row.agent_id),
+    agentName: cleanCustomerMetaDisplayText(row.agent_name),
+    agencyId: cleanString(row.agency_id),
+    agencyName: cleanCustomerMetaDisplayText(row.agency_name),
+    attributionLinks: normaliseAttributionLinks(row.attribution_links),
     pageId: cleanString(row.page_id),
     pageName,
     pageUrl: normalisePublicUrl(row.page_url),
@@ -235,6 +257,11 @@ function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryM
 
 function addMedia(media: Map<string, CustomerMetaAdLibraryMedia>, item: CustomerMetaAdLibraryMedia) {
   if (!media.has(item.url)) media.set(item.url, item);
+}
+
+function normaliseAttributionLinks(value: unknown): CustomerMetaAdLibraryAttributionLink[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is CustomerMetaAdLibraryAttributionLink => Boolean(item) && typeof item === "object" && !Array.isArray(item));
 }
 
 type ParsedMediaAsset = {

@@ -36,8 +36,6 @@ const surfacingViews = [
 const safeCustomerForbiddenColumns = [
   "observed_ad_id",
   "advertiser_page_id",
-  "agent_id",
-  "agency_id",
   "ad_creative_id",
   "classification",
   "raw_payload",
@@ -100,12 +98,29 @@ test("customer research view separates ad-area evidence from advertiser service 
   const customerCardView = latestViewDefinition("v_customer_meta_ad_library_cards");
   const sql = allMigrationSql();
 
-  assert.match(customerCardView, /\bam\.postcode\s+as\s+area_match_postcode\b/i);
-  assert.match(customerCardView, /\bam\.suburb\s+as\s+area_match_suburb\b/i);
-  assert.match(customerCardView, /\bam\.match_type\s+as\s+area_match_type\b/i);
-  assert.match(customerCardView, /\bcoalesce\(ad_areas\.postcodes,\s*array\[am\.postcode\]\)\s+as\s+ad_area_postcodes\b/i);
+  assert.match(customerCardView, /join\s+research\.ad_attribution_links\s+area_link[\s\S]*area_link\.link_type\s*=\s*'postcode'/i);
+  assert.match(customerCardView, /\barea_link\.postcode\s+as\s+area_match_postcode\b/i);
+  assert.match(customerCardView, /\barea_link\.suburb\s+as\s+area_match_suburb\b/i);
+  assert.match(customerCardView, /\barea_link\.evidence_type\s+as\s+area_match_type\b/i);
+  assert.match(customerCardView, /\bcoalesce\(ad_areas\.postcodes,\s*array\[area_link\.postcode\]\)\s+as\s+ad_area_postcodes\b/i);
   assert.match(customerCardView, /\bcoalesce\(service_areas\.postcodes,\s*'\{\}'::text\[\]\)\s+as\s+service_area_postcodes\b/i);
   assert.match(sql, /comment on column research\.v_customer_meta_ad_library_cards\.postcodes[\s\S]*Legacy display field/i);
+});
+
+test("customer research view exposes customer-safe ad attribution links", () => {
+  const customerCardView = latestViewDefinition("v_customer_meta_ad_library_cards");
+
+  assert.match(customerCardView, /\bagent_link\.agent_id\b/i);
+  assert.match(customerCardView, /\bagent\.full_name\s+as\s+agent_name\b/i);
+  assert.match(customerCardView, /\bagency_link\.agency_id\b/i);
+  assert.match(customerCardView, /\bagency\.name\s+as\s+agency_name\b/i);
+  assert.match(customerCardView, /\bcoalesce\(attribution\.links,\s*'\[\]'::jsonb\)\s+as\s+attribution_links\b/i);
+  assert.match(customerCardView, /from\s+research\.ad_attribution_links\s+aal[\s\S]*where\s+aal\.observed_ad_id\s*=\s*oa\.id/i);
+  assert.doesNotMatch(
+    customerCardView.split(/\bfrom\b/i)[0] ?? customerCardView,
+    /\baal\.evidence\b|\bas\s+evidence\b/i,
+    "customer card attribution summary must not expose raw attribution evidence",
+  );
 });
 
 test("customer authenticated research history uses the same safe ad contract as customer cards", () => {

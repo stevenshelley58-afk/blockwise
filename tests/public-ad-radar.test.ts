@@ -332,6 +332,11 @@ function card(input: Partial<CustomerMetaAdLibraryCard> & { id: string }): Custo
   return {
     id: input.id,
     libraryId: input.libraryId ?? null,
+    agentId: input.agentId ?? null,
+    agentName: input.agentName ?? null,
+    agencyId: input.agencyId ?? null,
+    agencyName: input.agencyName ?? null,
+    attributionLinks: input.attributionLinks ?? [],
     pageId: input.pageId ?? null,
     pageName: input.pageName ?? "Agency",
     pageUrl: input.pageUrl ?? null,
