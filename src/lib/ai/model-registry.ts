@@ -10,6 +10,7 @@ export type ModelProfileKey =
   | "vision_extract"
   | "image_draft"
   | "image_final"
+  | "image_generative"
   | "compliance_review"
   | "disabled_profile";
 
@@ -136,17 +137,18 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     task: "Schema-bound classifications, planning outputs, and internal objects",
     enabled: true,
     requiresStructuredOutput: true,
-    maxRunCostUsd: 0.35,
+    // best now, cost-tune later — operator can dial internal stages back per-profile.
+    maxRunCostUsd: 0.5,
     defaultTemperature: 0.2,
     primary: {
       provider: "openai",
-      model: "gpt-4.1-mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
+      model: "gpt-5.5",
+      inputUsdPerMillionTokens: 5,
+      outputUsdPerMillionTokens: 30,
       imageUsdPerUnit: 0,
       supportsStructuredOutput: true,
-      maxContextTokens: 128_000,
-      maxLatencyMs: 8_000,
+      maxContextTokens: 1_000_000,
+      maxLatencyMs: 12_000,
     },
     fallbacks: [
       {
@@ -177,16 +179,17 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     task: "Observed ad screenshots, landing page captures, and creative classification",
     enabled: true,
     requiresStructuredOutput: true,
-    maxRunCostUsd: 0.5,
+    // best now, cost-tune later. gpt-5.5 is natively vision-capable.
+    maxRunCostUsd: 0.6,
     defaultTemperature: 0.1,
     primary: {
       provider: "openai",
-      model: "gpt-4.1-mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
+      model: "gpt-5.5",
+      inputUsdPerMillionTokens: 5,
+      outputUsdPerMillionTokens: 30,
       imageUsdPerUnit: 0.01,
       supportsStructuredOutput: true,
-      maxContextTokens: 128_000,
+      maxContextTokens: 1_000_000,
       maxLatencyMs: 12_000,
     },
     fallbacks: [],
@@ -250,6 +253,37 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     requiresStructuredOutput: false,
     maxRunCostUsd: 2,
     defaultTemperature: 0.65,
+    primary: {
+      provider: "openai",
+      model: "gpt-image-2",
+      inputUsdPerMillionTokens: 5,
+      outputUsdPerMillionTokens: 30,
+      imageUsdPerUnit: 0.211,
+      supportsStructuredOutput: false,
+      maxContextTokens: 16_000,
+      maxLatencyMs: 60_000,
+    },
+    fallbacks: [
+      {
+        provider: "openai",
+        model: "gpt-image-1.5",
+        inputUsdPerMillionTokens: 5,
+        outputUsdPerMillionTokens: 10,
+        imageUsdPerUnit: 0.133,
+        supportsStructuredOutput: false,
+        maxContextTokens: 16_000,
+        maxLatencyMs: 60_000,
+      },
+    ],
+  },
+  image_generative: {
+    key: "image_generative",
+    label: "Image generative",
+    task: "Fully generative ad creatives (\"Create more options\") from a brief plus the user's photo",
+    enabled: true,
+    requiresStructuredOutput: false,
+    maxRunCostUsd: 2.5,
+    defaultTemperature: 0.85,
     primary: {
       provider: "openai",
       model: "gpt-image-2",

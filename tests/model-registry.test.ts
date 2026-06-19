@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   estimateRunCostUsd,
+  isModelProfileKey,
   normalizeModelSlug,
   resolveEffectiveModelProfile,
   resolveModelProfile,
@@ -10,16 +11,59 @@ import {
   shouldBlockForCostPolicy,
 } from "../src/lib/ai/model-registry.ts";
 
-test("resolveModelProfile returns the active model and ordered fallback chain for a task", () => {
+test("resolveModelProfile defaults structured copy to the best text model with a cheaper fallback chain", () => {
   const resolved = resolveModelProfile("structured_json");
 
   assert.equal(resolved.profile.key, "structured_json");
-  assert.equal(resolved.primary.model, "gpt-4.1-mini");
+  // best-by-default now (cost-tune later via the operator console)
+  assert.equal(resolved.primary.model, "gpt-5.5");
   assert.deepEqual(
     resolved.fallbacks.map((candidate) => candidate.model),
     ["gpt-4.1", "google/gemini-2.0-flash-001"],
   );
   assert.equal(resolved.profile.requiresStructuredOutput, true);
+});
+
+test("vision_classification defaults to the best vision-capable model", () => {
+  const resolved = resolveModelProfile("vision_classification");
+
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-5.5");
+  assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
+});
+
+test("image_generative is a distinct OpenAI-first profile defaulting to the best image model", () => {
+  assert.equal(isModelProfileKey("image_generative"), true);
+
+  const resolved = resolveModelProfile("image_generative");
+  assert.equal(resolved.profile.key, "image_generative");
+  assert.equal(resolved.primary.provider, "openai");
+  assert.equal(resolved.primary.model, "gpt-image-2");
+  assert.deepEqual(
+    resolved.fallbacks.map((candidate) => candidate.model),
+    ["gpt-image-1.5"],
+  );
+  // distinct from the fit/extend profile so the operator can tune it separately
+  assert.notEqual(resolved.profile.maxRunCostUsd, resolveModelProfile("image_final").profile.maxRunCostUsd);
+});
+
+test("resolveEffectiveModelProfile applies a persisted override to image_generative", () => {
+  const resolved = resolveEffectiveModelProfile("image_generative", [
+    {
+      profileKey: "image_generative",
+      provider: "openrouter",
+      model: "google/gemini-3-pro-image-preview",
+      inputUsdPerMillionTokens: 2,
+      outputUsdPerMillionTokens: 12,
+      imageUsdPerUnit: 2,
+      supportsStructuredOutput: true,
+      maxContextTokens: 65_536,
+      maxLatencyMs: 60_000,
+    },
+  ]);
+
+  assert.equal(resolved.primary.provider, "openrouter");
+  assert.equal(resolved.primary.model, "google/gemini-3-pro-image-preview");
 });
 
 test("vision_extract profile is structured and vision-capable for creative skeletons", () => {

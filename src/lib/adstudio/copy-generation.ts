@@ -6,6 +6,7 @@ import {
   createTextProviderForCandidate,
 } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
+import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle, type PromptKey } from "../operator/prompts/prompt-registry.ts";
@@ -200,10 +201,12 @@ async function generateCopyWithProfile(
   imageUrl?: string,
 ): Promise<CopyGenerationResult> {
   const profile = await resolveRuntimeModelProfile("structured_json");
+  const candidates = modelCandidateAttempts(profile);
+  const legacyProvider = pickProvider();
   const attempts: CopyGenerationResult["attempts"] = [];
   let lastError: unknown = null;
 
-  for (const candidate of modelCandidateAttempts(profile)) {
+  for (const [index, candidate] of candidates.entries()) {
     const provider = createTextProviderForCandidate(candidate);
     attempts.push({ provider: provider.providerName, model: candidate.model, status: "attempted" });
 
@@ -229,10 +232,20 @@ async function generateCopyWithProfile(
         status: "failed",
         error: error instanceof Error ? error.message : String(error),
       };
+
+      // A configured model just failed — tell the owner their chosen model is down.
+      // De-duped by stage+toModel, so a burst of requests sends one alert.
+      const toModel = candidates[index + 1]?.model ?? (legacyProvider ? "env_default" : undefined);
+      if (toModel) {
+        void emitModelFallbackAlert({
+          stage: "adstudio.copy",
+          fromModel: candidate.model,
+          toModel,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
-
-  const legacyProvider = pickProvider();
 
   if (legacyProvider) {
     attempts.push({ provider: legacyProvider.providerName, model: "env_default", status: "attempted" });
