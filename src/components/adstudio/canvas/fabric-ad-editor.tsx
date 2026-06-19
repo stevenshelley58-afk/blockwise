@@ -1,8 +1,8 @@
 "use client";
 
-import { Bot, Image as ImageIcon, RotateCcw, RotateCw, ScanSearch } from "lucide-react";
+import { Bot, Image as ImageIcon, RotateCcw, RotateCw, ScanSearch, Sparkles } from "lucide-react";
 import { Canvas, Circle, FabricImage, Path, Rect, Textbox, type FabricObject } from "fabric";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BLOCKWISE_FABRIC_META_KEY,
@@ -37,6 +37,13 @@ export type FabricAdEditorProps = {
   onCreativeChange: (creative: AdStudioCreative) => void;
   onRequestImageReplace: () => void;
   onPatchSelectedLayer: () => void | Promise<void>;
+};
+
+type MoreOptionsState = {
+  loading: boolean;
+  error: string | null;
+  options: Array<{ image: string; index: number }>;
+  complianceIssues: string[];
 };
 
 export function FabricAdEditor({
@@ -208,6 +215,90 @@ export function FabricAdEditor({
     });
   }, [brandKit, commitCanvas]);
 
+  // WS7 "Create more options": opt-in generative alternatives. Fully isolated —
+  // a failure here only affects this button, never the canvas/Create flow.
+  const [moreOptions, setMoreOptions] = useState<MoreOptionsState>({
+    loading: false,
+    error: null,
+    options: [],
+    complianceIssues: [],
+  });
+
+  const handleCreateMoreOptions = useCallback(async () => {
+    const currentCopy = copyRef.current;
+    const photo = imageSrcRef.current;
+    const format = creativeRef.current.format;
+    setMoreOptions((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const promptSeed = [
+        "Alternative finished real estate lead-gen ad creative.",
+        currentCopy.headline ? `Headline intent: ${currentCopy.headline}.` : "",
+        brandKit.visualStyle.styleTags.length ? `Brand style: ${brandKit.visualStyle.styleTags.join(", ")}.` : "",
+        "Keep it premium, on-brand, and faithful to the supplied property photo.",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const response = await fetch("/api/adstudio/generate-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: promptSeed,
+          copyText: [currentCopy.headline, currentCopy.description, currentCopy.cta].filter(Boolean).join(" — "),
+          sourceImage: photo || undefined,
+          aspectRatio: format,
+          brandKitId: brandKit.brandKitId,
+          optionCount: 3,
+          brand: {
+            palette: [brandKit.colours.primary, brandKit.colours.accent].filter(Boolean),
+            styleTags: brandKit.visualStyle.styleTags,
+            imageTreatment: brandKit.visualStyle.imageTreatment,
+          },
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        options?: Array<{ image?: string; index?: number }>;
+        compliance?: { pass?: boolean; issues?: Array<{ code?: string }> };
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Could not create more options.");
+      }
+      const options = Array.isArray(payload.options)
+        ? payload.options
+            .filter((option): option is { image: string; index: number } => typeof option?.image === "string")
+            .map((option, index) => ({ image: option.image, index: option.index ?? index }))
+        : [];
+      const complianceIssues =
+        payload.compliance && payload.compliance.pass === false
+          ? (payload.compliance.issues ?? []).map((issue) => issue.code ?? "").filter(Boolean)
+          : [];
+      setMoreOptions({ loading: false, error: null, options, complianceIssues });
+    } catch (error) {
+      setMoreOptions({
+        loading: false,
+        error: error instanceof Error ? error.message : "Could not create more options.",
+        options: [],
+        complianceIssues: [],
+      });
+    }
+  }, [brandKit]);
+
+  const applyMoreOption = useCallback(
+    (src: string) => {
+      if (!src) return;
+      onImageChange(src);
+      setMoreOptions({ loading: false, error: null, options: [], complianceIssues: [] });
+    },
+    [onImageChange],
+  );
+
+  const dismissMoreOptions = useCallback(() => {
+    setMoreOptions({ loading: false, error: null, options: [], complianceIssues: [] });
+  }, []);
+
+  const showOptionsPanel =
+    moreOptions.options.length > 0 || moreOptions.error !== null || moreOptions.complianceIssues.length > 0;
+
   return (
     <div className="studio-fabric-editor">
       <div className="studio-fabric-toolbar" aria-label="Creative editor tools">
@@ -237,7 +328,52 @@ export function FabricAdEditor({
           <Bot aria-hidden size={16} />
           <span>Rewrite text</span>
         </button>
+        <button
+          title="Generate alternative finished creatives from your photo and copy"
+          type="button"
+          disabled={moreOptions.loading}
+          onClick={() => void handleCreateMoreOptions()}
+        >
+          <Sparkles aria-hidden size={16} />
+          <span>{moreOptions.loading ? "Creating…" : "More options"}</span>
+        </button>
       </div>
+      {showOptionsPanel && (
+        <div
+          className="studio-fabric-options"
+          style={{ display: "flex", gap: 8, padding: "8px 12px", flexWrap: "wrap", alignItems: "center" }}
+        >
+          {moreOptions.error && <span style={{ color: "#b42318", fontSize: 13 }}>{moreOptions.error}</span>}
+          {moreOptions.complianceIssues.length > 0 && (
+            <span style={{ color: "#b54708", fontSize: 13 }}>
+              Compliance check flagged: {moreOptions.complianceIssues.join(", ")}
+            </span>
+          )}
+          {moreOptions.options.map((option) => (
+            <button
+              key={option.index}
+              type="button"
+              title="Use this option as the photo"
+              onClick={() => applyMoreOption(option.image)}
+              style={{ padding: 0, border: "1px solid #d0d5dd", borderRadius: 8, overflow: "hidden", lineHeight: 0, cursor: "pointer" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={option.image}
+                alt={`Option ${option.index + 1}`}
+                width={72}
+                height={72}
+                style={{ objectFit: "cover", display: "block" }}
+              />
+            </button>
+          ))}
+          {showOptionsPanel && (
+            <button type="button" onClick={dismissMoreOptions} title="Dismiss options" style={{ fontSize: 13 }}>
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
       <div className="studio-fabric-shell" data-format={creative.format} data-selected={selectedElement}>
         <canvas ref={canvasElementRef} />
       </div>
