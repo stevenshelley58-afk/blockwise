@@ -14,11 +14,6 @@ type MediaPanelProps = {
   onUploadImage: (file: File) => void | Promise<void>;
   onUploadRejected: (message: string) => void;
   onSelectImage?: (src: string) => void;
-  onGenerateBackground?: () => void;
-  generatingBackground?: boolean;
-  onRepairCurrent?: () => void;
-  onRepairAll?: () => void;
-  repairingImage?: boolean;
 };
 
 export function MediaPanel({
@@ -29,18 +24,13 @@ export function MediaPanel({
   onUploadImage,
   onUploadRejected,
   onSelectImage,
-  onGenerateBackground,
-  generatingBackground = false,
-  onRepairCurrent,
-  onRepairAll,
-  repairingImage = false,
 }: MediaPanelProps) {
   const selectedAsset = mediaAssets.find((asset) => asset.src === primaryImage);
   const currentLabel = selectedAsset?.label ?? primaryImageName ?? "Uploaded image";
 
   return (
     <>
-      <PanelHeader title="Media" detail="Click the image layer, then replace, fit, or repair it for every ad size." />
+      <PanelHeader title="Media" detail="Click the image layer, then replace it with an approved uploaded asset." />
       <div className="studio-current-media" aria-label="Current image">
         <img src={primaryImage} alt="" />
         <span>
@@ -68,25 +58,6 @@ export function MediaPanel({
         onFileAccepted={onUploadImage}
         onFileRejected={onUploadRejected}
       />
-      {onGenerateBackground && (
-        <button className="studio-btn secondary block" type="button" disabled={generatingBackground} onClick={onGenerateBackground}>
-          {generatingBackground ? "Generating background..." : "Generate background"}
-        </button>
-      )}
-      {(onRepairCurrent || onRepairAll) && (
-        <div className="studio-image-repair-actions" aria-label="Auto image fit">
-          {onRepairAll && (
-            <button className="studio-btn accent block" type="button" disabled={repairingImage} onClick={onRepairAll}>
-              {repairingImage ? "Fitting photo..." : "Auto fit all ad sizes"}
-            </button>
-          )}
-          {onRepairCurrent && (
-            <button className="studio-btn secondary block" type="button" disabled={repairingImage} onClick={onRepairCurrent}>
-              Auto fit current size
-            </button>
-          )}
-        </div>
-      )}
       <div className="studio-media-grid">
         {mediaAssets.map((asset) => (
           <button

@@ -80,6 +80,24 @@ export {
   validateMetaLeadAdPack,
 } from "./platform-rules.ts";
 export {
+  buildPhotoPrepCacheKey,
+  buildPreparePhotoForTemplateFramePrompt,
+  buildTemplateRenderFrame,
+  deterministicPreparedPhotoAsset,
+  selectedImageSlot,
+  templateRenderFrameSchema,
+  type PreparedPhotoAsset,
+  type PhotoPrepContext,
+  type PhotoPrepMethod,
+  type TemplateImageSlot,
+  type TemplateRenderFrame,
+} from "./photo-prep.ts";
+export {
+  preparePhotoAssetsForTemplate,
+  preparedPhotoUrlsByFormat,
+  type PreparedPhotoAssetsByFormat,
+} from "./photo-prep-service.ts";
+export {
   createDeterministicImageProvider,
   createDeterministicTextProvider,
   createDeterministicVisionProvider,
@@ -95,11 +113,6 @@ export {
   resolveApprovedAdStudioTemplate,
   templatePromptHint,
 } from "./template-resolver.ts";
-export {
-  buildSkeletonGenerationContext,
-  buildSkeletonMaskSvgDataUrl,
-  type SkeletonGenerationContext,
-} from "./skeleton-to-prompt.ts";
 export { ADSTUDIO_TEMPLATE_VERSIONS, type AdStudioTemplateVersion } from "./templates.ts";
 export type {
   AdStudioBrandKit,

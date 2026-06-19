@@ -26,9 +26,10 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.doesNotMatch(mobileBody, /label: "Design"/);
   assert.match(mediaPanel, /studio-current-media/);
   assert.match(mediaPanel, /Upload image/);
-  assert.match(mediaPanel, /Auto fit all ad sizes/);
+  assert.match(mediaPanel, /Replace/);
   assert.match(mediaPanel, /AssetUploadDropzone/);
   assert.match(mediaPanel, /capturePagePaste/);
+  assert.doesNotMatch(mediaPanel, /Auto fit all ad sizes|Auto fit current size|studio-image-repair-actions/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "templates"/);
 });
 

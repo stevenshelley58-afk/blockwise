@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildAdStudioLiveResult, generateAdStudioCampaignPack } from "@/lib/adstudio";
+import {
+  buildAdStudioLiveResult,
+  generateAdStudioCampaignPack,
+  preparePhotoAssetsForTemplate,
+  preparedPhotoUrlsByFormat,
+} from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   refundReservedTrialCredit,
@@ -56,6 +61,12 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
     return "Selected template was not found.";
   }
   return null;
+}
+
+function providerReadableSourceImage(request: NextRequest, ref: string | undefined, resolved: string | undefined): string | undefined {
+  if (resolved) return resolved;
+  if (ref?.startsWith("/ads/")) return new URL(ref, request.url).toString();
+  return undefined;
 }
 
 function generationDedupKey(workspaceId: string, body: unknown): string {
@@ -145,6 +156,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: brandKitResult.error }, { status: brandKitResult.status });
     }
 
+    const sourceImageRef = body.sourceImageDataUrl ?? body.firstAd?.imageDataUrl;
+    const sourceImageUrl = await resolveAdStudioImageForModel(
+      context.supabase,
+      context.access.workspaceId,
+      sourceImageRef,
+    );
+    const templatePrepSourceImage = providerReadableSourceImage(request, sourceImageRef, sourceImageUrl);
+    const preparedTemplatePhotos = resolvedTemplate && body.firstAd?.mode === "template"
+      ? await preparePhotoAssetsForTemplate({
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          brandKit: brandKitResult.brandKit,
+          template: resolvedTemplate,
+          formats: body.firstAd.formats,
+          sourceImageRef: body.firstAd.imageDataUrl,
+          sourceImageForModel: templatePrepSourceImage ?? "",
+          campaign: {
+            goal: body.goal ?? resolvedTemplate.goal,
+            offerId: body.offerId ?? resolvedTemplate.offerId,
+            market: {
+              suburb: body.suburb ?? "Scarborough",
+              city: body.city ?? "Perth",
+              state: body.state ?? "WA",
+            },
+          },
+          brief: body.firstAd.description,
+        })
+      : {};
+
     let pack = generateAdStudioCampaignPack({
       workspaceId: context.access.workspaceId,
       brandKit: brandKitResult.brandKit,
@@ -159,13 +199,9 @@ export async function POST(request: NextRequest) {
       variantCount: body.variantCount ?? 5,
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
+      sourceImagesByFormat: preparedPhotoUrlsByFormat(preparedTemplatePhotos),
       resolvedTemplate,
     });
-    const sourceImageUrl = await resolveAdStudioImageForModel(
-      context.supabase,
-      context.access.workspaceId,
-      body.sourceImageDataUrl ?? body.firstAd?.imageDataUrl,
-    );
     pack = await enrichCampaignPackCopyWithAi({
       pack,
       workspaceId: context.access.workspaceId,

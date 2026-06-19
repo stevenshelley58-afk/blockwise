@@ -34,6 +34,7 @@ export type GenerateCampaignPackInput = {
   variantCount?: number;
   firstAd?: FirstAdInput;
   sourceImageDataUrl?: string;
+  sourceImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   resolvedTemplate?: AdStudioTemplate | null;
 };
 
@@ -146,7 +147,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       brandKit: input.brandKit,
       format,
       template,
-      sourceImageDataUrl,
+      sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       subheadline: copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );

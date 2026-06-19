@@ -135,6 +135,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
         throw new Error("OPENAI_API_KEY is not configured.");
       }
 
+
       // Reference-based fit/extend → /images/edits (multipart). Otherwise the
       // text-to-image /images/generations path (JSON), unchanged.
       const response = input.requiresReferenceAssets

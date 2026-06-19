@@ -15,6 +15,13 @@ import {
   type CreativeLayerMeta,
 } from "@/lib/adstudio/creative-design-json.ts";
 import { buildCreativeDesignJson } from "@/lib/adstudio/creative-design-builder.ts";
+import {
+  CENTER_FOCAL,
+  computeFocalPointFromImageSource,
+  focalCoverPlacement,
+  type FocalPoint,
+  type FrameBox,
+} from "@/lib/adstudio/smart-crop.ts";
 import type { AdStudioBrandKit, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import type { SelectedElement } from "../preview";
 import { useCreativeHistory } from "./use-creative-history";
@@ -472,7 +479,7 @@ async function addImageObject(canvas: Canvas, object: CreativeDesignObjectJson, 
       clip: object.clip,
       clipPath: clipPathForFrame(frame, object.clip),
     });
-    fitImageToFrame(image, frame.width, frame.height);
+    fitImageToFrame(image, frame, focalForImage(image));
     attachMeta(image, meta);
     canvas.add(image);
   } catch {
@@ -629,7 +636,7 @@ async function replaceImageLayer(canvas: Canvas, src: string, options: { select?
       clip: currentImage.clip,
       clipPath: clipPathForFrame(frame, currentImage.clip),
     });
-    fitImageToFrame(image, frame.width, frame.height);
+    fitImageToFrame(image, frame, focalForImage(image));
     attachMeta(image, meta);
     canvas.add(image);
     if (options.select !== false) canvas.setActiveObject(image);
@@ -643,20 +650,59 @@ function fitSelectedImage(canvas: Canvas | null) {
   const object = canvas.getActiveObject() as BlockwiseFabricObject | undefined;
   const meta = object ? getMeta(object) : null;
   if (!object || meta?.editableKind !== "image") return;
-  const width = Math.round(numberOr(object.width, 320) * numberOr(object.scaleX, 1));
-  const height = Math.round(numberOr(object.height, 240) * numberOr(object.scaleY, 1));
-  fitImageToFrame(object, width, height);
+  const frame = frameFromObject(object);
+  const focal = object instanceof FabricImage ? focalForImage(object) : CENTER_FOCAL;
+  fitImageToFrame(object, frame, focal);
   canvas.requestRenderAll();
 }
 
-function fitImageToFrame(object: BlockwiseFabricObject, frameWidth: number, frameHeight: number) {
-  const sourceWidth = numberOr(object.width, frameWidth);
-  const sourceHeight = numberOr(object.height, frameHeight);
-  const scale = Math.max(frameWidth / sourceWidth, frameHeight / sourceHeight);
+// Cover-fit the image into the frame, then offset it so the busiest part of
+// the photo (the focal point) lands at the frame centre instead of pinning a
+// corner and clipping the subject away.
+function fitImageToFrame(object: BlockwiseFabricObject, frame: FrameBox, focal: FocalPoint = CENTER_FOCAL) {
+  const sourceWidth = numberOr(object.width, frame.width);
+  const sourceHeight = numberOr(object.height, frame.height);
+  const placement = focalCoverPlacement({ frame, sourceWidth, sourceHeight, focal });
   object.set({
-    scaleX: scale,
-    scaleY: scale,
+    scaleX: placement.scale,
+    scaleY: placement.scale,
+    left: placement.left,
+    top: placement.top,
   });
+}
+
+// Best-effort saliency focal point for a Fabric image; centre on any failure.
+function focalForImage(image: FabricImage): FocalPoint {
+  try {
+    const element = image.getElement() as CanvasImageSource | undefined;
+    if (!element) return CENTER_FOCAL;
+    return computeFocalPointFromImageSource(
+      element,
+      numberOr(image.width, 0),
+      numberOr(image.height, 0),
+    );
+  } catch {
+    return CENTER_FOCAL;
+  }
+}
+
+// The clip rect is absolutely positioned, so it carries the true frame box in
+// canvas coordinates - the reliable source when re-fitting an existing image.
+function frameFromObject(object: BlockwiseFabricObject): FrameBox {
+  const clip = (object as { clipPath?: FabricObject }).clipPath;
+  if (clip) {
+    const width = numberOr(clip.width, 0) * numberOr(clip.scaleX, 1);
+    const height = numberOr(clip.height, 0) * numberOr(clip.scaleY, 1);
+    if (width > 0 && height > 0) {
+      return { left: numberOr(clip.left, 0), top: numberOr(clip.top, 0), width, height };
+    }
+  }
+  return {
+    left: numberOr(object.left, 0),
+    top: numberOr(object.top, 0),
+    width: Math.round(numberOr(object.width, 320) * numberOr(object.scaleX, 1)),
+    height: Math.round(numberOr(object.height, 240) * numberOr(object.scaleY, 1)),
+  };
 }
 
 function fitImageContainToFrame(object: BlockwiseFabricObject, frameWidth: number, frameHeight: number) {
@@ -817,6 +863,7 @@ function applyDisplaySize(canvas: Canvas, creative: AdStudioCreative) {
   );
 }
 
+// Coerce a possibly-undefined Fabric numeric prop to a finite number.
 function numberOr(value: unknown, fallback: number): number;
 function numberOr(value: unknown, fallback: undefined): undefined;
 function numberOr(value: unknown, fallback: number | undefined): number | undefined {

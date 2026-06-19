@@ -2,6 +2,25 @@ import { z } from "zod";
 
 const normalizedNumberSchema = z.number().min(0).max(1);
 
+const normalizedRectShape = {
+  x: normalizedNumberSchema,
+  y: normalizedNumberSchema,
+  width: normalizedNumberSchema,
+  height: normalizedNumberSchema,
+};
+
+const imageFrameSchema = z
+  .object({
+    ...normalizedRectShape,
+    id: z.string().trim().min(1).max(80),
+    role: z.enum(["primary", "secondary", "agent_headshot"]).default("primary"),
+    formats: z.array(z.enum(["1:1", "4:5", "9:16", "1.91:1"])).min(1).max(4).optional(),
+    prompt_hint: z.string().trim().min(1).max(240).optional(),
+  })
+  .strict()
+  .refine((frame) => frame.x + frame.width <= 1, "image frame exceeds canvas width")
+  .refine((frame) => frame.y + frame.height <= 1, "image frame exceeds canvas height");
+
 export const creativeSkeletonArchetypeSchema = z.enum([
   "listing_hero",
   "coming_soon",
@@ -66,6 +85,7 @@ export const creativeSkeletonSchema = z
       .object({
         focal_point: z.string().trim().min(1).max(120),
         horizon: z.enum(["low", "middle", "high", "none"]),
+        image_frames: z.array(imageFrameSchema).min(1).max(8).optional(),
         copy_safe_zones: z
           .array(
             z

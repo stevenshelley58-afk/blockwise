@@ -7,11 +7,6 @@ import {
   generateMixedImageVariantsInParallel,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
-import {
-  generateTruthPreservingRepair,
-  supportsTruthPreservingRepair,
-} from "../src/lib/adstudio/image-repair.ts";
-import type { ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -78,23 +73,22 @@ test("createOpenAiImageProvider defaults client creative generation to GPT Image
   assert.equal(output.model, "gpt-image-2");
 });
 
-test("createOpenAiImageProvider satisfies the truth-preserving repair capability gate", () => {
+test("createOpenAiImageProvider exposes reference-capable image capabilities", () => {
   const provider = createOpenAiImageProvider({ env: { OPENAI_API_KEY: "oa_test" } });
 
   assert.equal(provider.capabilities.imageToImage, true);
   assert.equal(provider.capabilities.inpainting, true);
   assert.equal(provider.capabilities.multiReference, true);
-  assert.equal(supportsTruthPreservingRepair(provider), true);
 });
 
-test("createOpenAiImageProvider sends reference-image fit to the images/edits endpoint", async () => {
+test("createOpenAiImageProvider sends locked-template reference work to images/edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createOpenAiImageProvider({
     env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), init: init ?? {} });
 
-      return new Response(JSON.stringify({ data: [{ b64_json: "cmVwYWlyZWQ=" }] }), {
+      return new Response(JSON.stringify({ data: [{ b64_json: "ZWRpdGVk" }] }), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
@@ -102,10 +96,10 @@ test("createOpenAiImageProvider sends reference-image fit to the images/edits en
   });
 
   const output = await provider.generate({
-    prompt: "Repair this listing photo",
+    prompt: "Prepare this listing photo for a locked template frame",
     referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-    aspectRatio: "9:16",
-    stylePreset: "truth_preserving_real_estate_repair",
+    aspectRatio: "1:1",
+    stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
   });
 
@@ -113,20 +107,18 @@ test("createOpenAiImageProvider sends reference-image fit to the images/edits en
   assert.equal(calls[0].url, "https://api.openai.com/v1/images/edits");
   const headers = calls[0].init.headers as Record<string, string>;
   assert.equal(headers.Authorization, "Bearer oa_test");
-  // multipart boundary must be set by fetch itself, never application/json
   assert.equal(headers["Content-Type"], undefined);
 
   const body = calls[0].init.body as FormData;
   assert.equal(body.get("model"), "gpt-image-2");
-  assert.equal(body.get("size"), "1024x1792");
+  assert.equal(body.get("size"), "1024x1024");
   assert.equal(body.get("quality"), "high");
   assert.equal(body.get("n"), "1");
-  assert.ok(body.get("image"), "reference image must be attached");
+  assert.ok(body.get("image") instanceof Blob);
   assert.equal(body.has("mask"), false);
-  // data: URL must not be dumped into the prompt text
   assert.doesNotMatch(String(body.get("prompt")), /data:image/);
 
-  assert.equal(output.assetUrl, "data:image/png;base64,cmVwYWlyZWQ=");
+  assert.equal(output.assetUrl, "data:image/png;base64,ZWRpdGVk");
   assert.equal(output.model, "gpt-image-2");
   assert.equal(output.providerMetadata.mode, "edit");
 });
@@ -170,10 +162,10 @@ test("createOpenAiImageProvider honours quality tier and the Cloudflare gateway 
   });
 
   await provider.generate({
-    prompt: "Repair this listing photo",
+    prompt: "Prepare this listing photo",
     referenceAssets: ["data:image/png;base64,aW1hZ2U="],
     aspectRatio: "1:1",
-    stylePreset: "truth_preserving_real_estate_repair",
+    stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
   });
 
@@ -192,53 +184,6 @@ test("resolveOpenAiImageEditsUrl derives the edits endpoint from a gateway URL",
     resolveOpenAiImageEditsUrl({ CLOUDFLARE_AI_GATEWAY_URL: "https://gw/openai/generations" }),
     "https://gw/openai/edits",
   );
-});
-
-test("truth-preserving repair skips unsupported providers and uses reference-capable provider", async () => {
-  let unsupportedCalled = false;
-  let supportedCalled = false;
-  const unsupported: ImageProviderAdapter = {
-    providerName: "openai",
-    providerType: "image_generation",
-    capabilities: { textToImage: true },
-    async generate() {
-      unsupportedCalled = true;
-      throw new Error("Should not be called");
-    },
-  };
-  const supported: ImageProviderAdapter = {
-    providerName: "openrouter",
-    providerType: "image_generation",
-    capabilities: { textToImage: true, imageToImage: true, multiReference: true },
-    async generate(input) {
-      supportedCalled = true;
-      assert.equal(input.requiresReferenceAssets, true);
-      assert.deepEqual(input.referenceAssets, ["data:image/png;base64,aW1hZ2U="]);
-      return {
-        assetUrl: "data:image/png;base64,cmVwYWlyZWQ=",
-        seed: 1,
-        model: "reference-model",
-        providerMetadata: { provider: "openrouter" },
-      };
-    },
-  };
-
-  const result = await generateTruthPreservingRepair({
-    imageInput: {
-      prompt: "Repair this listing photo",
-      referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-      aspectRatio: "1:1",
-      stylePreset: "truth_preserving_real_estate_repair",
-    },
-    providers: [unsupported, supported],
-  });
-
-  assert.equal(unsupportedCalled, false);
-  assert.equal(supportedCalled, true);
-  assert.equal(result.providerName, "openrouter");
-  assert.equal(result.result.assetUrl, "data:image/png;base64,cmVwYWlyZWQ=");
-  assert.equal(result.attempts[0]?.status, "failed");
-  assert.equal(result.attempts[1]?.status, "completed");
 });
 
 test("generateMixedImageVariantsInParallel fans out two GPT Image and two Nano Banana jobs", async () => {
