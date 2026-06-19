@@ -114,6 +114,14 @@ export function MetaMonitorDashboard({
         <DemoModeNotice metaConnectHref={metaConnectHref} />
       ) : null}
 
+      {payload.source === "sample" && payload.connected ? (
+        <div className="mm-oauth-notice mm-oauth-notice--warning" role="status">
+          <span>
+            Showing sample data — your live Meta results will appear here automatically once your ads start delivering.
+          </span>
+        </div>
+      ) : null}
+
       {!summary ? (
         isRefreshing ? <MonitorDashboardSkeleton /> : (
           <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
