@@ -286,8 +286,18 @@ export function FabricAdEditor({
   const applyMoreOption = useCallback(
     (src: string) => {
       if (!src) return;
-      onImageChange(src);
-      setMoreOptions({ loading: false, error: null, options: [], complianceIssues: [] });
+      try {
+        onImageChange(src);
+        setMoreOptions({ loading: false, error: null, options: [], complianceIssues: [] });
+      } catch (error) {
+        // Honour the isolation contract: never let applying an option crash the editor.
+        setMoreOptions({
+          loading: false,
+          error: error instanceof Error ? error.message : "Could not apply that option.",
+          options: [],
+          complianceIssues: [],
+        });
+      }
     },
     [onImageChange],
   );
