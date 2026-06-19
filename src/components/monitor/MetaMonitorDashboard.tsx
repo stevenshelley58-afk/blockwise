@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-import { MousePointerClick, Tag, UserPlus, Wallet } from "lucide-react";
+import { Eye, MousePointerClick, Percent, UserPlus, Users, Wallet } from "lucide-react";
 import { useState } from "react";
 
-import { calculateTrend, formatCurrency, formatPercent, safeCpl } from "@/lib/meta-monitor/calculations";
+import { calculateTrend, formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
@@ -16,15 +16,14 @@ import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
 import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
-import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
 // initial /results JS on mobile. Behaviour is unchanged — charts still render client-side.
 const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
-const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 
-const SPEND_COLOR = "#123e75";
-const LEADS_COLOR = "#31c46f";
+const IMPRESSIONS_COLOR = "#3b82f6";
+const CLICKS_COLOR = "#22a06b";
+const SPEND_COLOR = "#6d5ae6";
 
 export type OAuthNotice = {
   tone: "success" | "error" | "warning";
@@ -131,8 +130,10 @@ export function MetaMonitorDashboard({
 function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void; refreshing?: boolean }) {
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
-  const validCpl = safeCpl(summary.spend, summary.validLeads);
-  const budgetRemaining = summary.budget != null ? Math.max(summary.budget - summary.spend, 0) : null;
+  const reach = summary.reach ?? 0;
+  const ctr = summary.impressions > 0 ? summary.clicks / summary.impressions : null;
+  const dailyNote = `Daily · last ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}`;
+  const totalStyle = { fontSize: 28, fontWeight: 650, letterSpacing: "-0.02em", margin: "2px 0 12px" } as const;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
   const wrapperStyle = refreshing
     ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
@@ -141,14 +142,10 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
   return (
     <div style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
       <div className="mm-kpi-grid">
-        <MetaKpiCard
-          icon={Wallet}
-          iconTone="blue"
-          label="Spend"
-          value={formatCurrency(summary.spend)}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
-        />
+        <MetaKpiCard icon={Users} iconTone="blue" label="Reach" value={reach.toLocaleString("en-AU")} compareText="people reached" />
+        <MetaKpiCard icon={Eye} iconTone="indigo" label="Impressions" value={summary.impressions.toLocaleString("en-AU")} compareText={compare} />
+        <MetaKpiCard icon={MousePointerClick} iconTone="green" label="Link clicks" value={summary.clicks.toLocaleString("en-AU")} compareText={compare} />
+        <MetaKpiCard icon={Percent} iconTone="slate" label="CTR" value={ctr != null ? formatPercent(ctr, 1) : "—"} compareText="clicks ÷ impressions" />
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
@@ -158,67 +155,47 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
           trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
         />
         <MetaKpiCard
-          icon={Tag}
+          icon={Wallet}
           iconTone="rose"
-          label="Valid CPL"
-          value={validCpl != null ? formatCurrency(validCpl) : "Unavailable"}
+          label="Spend"
+          value={formatCurrency(summary.spend)}
           compareText={compare}
-          trend={previous ? calculateTrend(validCpl, previous.validCpl) : null}
-          goodWhenDown
-        />
-        <MetaKpiCard
-          icon={MousePointerClick}
-          iconTone="indigo"
-          label="Budget remaining"
-          value={budgetRemaining != null ? formatCurrency(budgetRemaining) : "Not set"}
-          compareText={summary.budget != null ? `of ${formatCurrency(summary.budget)}` : "No monthly budget set"}
-          progress={summary.budget != null && summary.budget > 0 ? summary.spend / summary.budget : undefined}
+          trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
         />
       </div>
 
       <div className="mm-chart-grid">
         <section className="panel mm-chart-panel">
+          <h3>Impressions over time</h3>
+          <p className="mm-chart-note">{dailyNote}</p>
+          <div style={totalStyle}>{summary.impressions.toLocaleString("en-AU")}</div>
+          <SmoothAreaChart
+            id="impressions"
+            color={IMPRESSIONS_COLOR}
+            data={payload.daily.map((point) => ({ date: point.date, value: point.impressions ?? 0 }))}
+            valueFormatter={(value) => Math.round(value).toLocaleString("en-AU")}
+          />
+        </section>
+        <section className="panel mm-chart-panel">
+          <h3>Link clicks over time</h3>
+          <p className="mm-chart-note">{dailyNote}</p>
+          <div style={totalStyle}>{summary.clicks.toLocaleString("en-AU")}</div>
+          <SmoothAreaChart
+            id="clicks"
+            color={CLICKS_COLOR}
+            data={payload.daily.map((point) => ({ date: point.date, value: point.clicks ?? 0 }))}
+            valueFormatter={(value) => Math.round(value).toLocaleString("en-AU")}
+          />
+        </section>
+        <section className="panel mm-chart-panel">
           <h3>Spend over time</h3>
+          <p className="mm-chart-note">{dailyNote}</p>
+          <div style={totalStyle}>{formatCurrency(summary.spend)}</div>
           <SmoothAreaChart
             id="spend"
             color={SPEND_COLOR}
             data={payload.daily.map((point) => ({ date: point.date, value: point.spend }))}
             valueFormatter={(value) => formatCurrency(value)}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Valid leads over time</h3>
-          <SmoothAreaChart
-            id="valid-leads"
-            color={LEADS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.validLeads }))}
-            valueFormatter={(value) => String(Math.round(value))}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Valid CPL over time</h3>
-          <p className="mm-chart-note">Gaps mark days with no valid leads — a $0 CPL is never shown.</p>
-          <SmoothAreaChart
-            id="valid-cpl"
-            color={LEADS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.validCpl }))}
-            valueFormatter={(value) => formatCurrency(value)}
-          />
-        </section>
-      </div>
-
-      <div className="mm-chart-grid two">
-        <section className="panel mm-chart-panel">
-          <h3>Valid leads by suburb</h3>
-          <SuburbBarChart rows={payload.suburbPerformance} />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Budget pacing</h3>
-          <BudgetPacingChart
-            daily={payload.daily}
-            budget={summary.budget}
-            spend={summary.spend}
-            range={payload.range}
           />
         </section>
       </div>
