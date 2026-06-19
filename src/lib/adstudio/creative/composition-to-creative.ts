@@ -12,8 +12,12 @@ import {
   type TextEl,
 } from "./preview-engine.ts";
 import { svgDataUrl } from "./svg-data-url.ts";
+import type { FrameRect } from "../image-frame.ts";
 import { getCanvasSize } from "../renderer.ts";
 import type { AdStudioCanvasObject, AdStudioCreative, AdStudioFormat } from "../types.ts";
+
+/** Optional template image-spot override (already resolved to canvas pixels). */
+export type ImageFrameOverride = FrameRect & { clip?: "rect" | "circle" | "arch" };
 
 type EditableRole = "headline" | "subheadline" | "cta_button" | "cta_text" | "primary_image" | "brand";
 
@@ -38,6 +42,12 @@ export type CompositionCreativeInput = {
     headingFont?: string | null;
     bodyFont?: string | null;
   };
+  /**
+   * Optional template image-spot (WS5). When set, the primary listing photo is
+   * placed into this pixel rect instead of the composition's default position.
+   * Resolve it from a CreativeSkeleton's image_frames via resolveImageFrameRect.
+   */
+  imageFrame?: ImageFrameOverride;
 };
 
 export type SplitSceneResult = {
@@ -109,7 +119,7 @@ export function compositionToCreative(input: CompositionCreativeInput): AdStudio
     const role = editableRoleForElement(element, input.copy, element.kind === "photo");
     if (!role) continue;
     if (role === "primary_image" && element.kind === "photo") {
-      objects.push(photoObject(element, input.photoSrc));
+      objects.push(photoObject(element, input.photoSrc, input.imageFrame));
     } else if (role === "cta_button" && element.kind === "rect") {
       ctaButton = rectObject(element, "cta", "cta_button", input.copy.cta);
     } else if (role === "cta_text" && element.kind === "text") {
@@ -198,17 +208,26 @@ function editableRoleForElement(element: Element, copy: CompositionCopy | undefi
   return null;
 }
 
-function photoObject(element: PhotoEl, photoSrc: string | null | undefined): AdStudioCanvasObject {
+function photoObject(
+  element: PhotoEl,
+  photoSrc: string | null | undefined,
+  frame?: ImageFrameOverride,
+): AdStudioCanvasObject {
+  // A template image-spot (WS5) wins over the composition's default placement.
+  const rect = frame
+    ? { x: frame.x, y: frame.y, width: frame.width, height: frame.height }
+    : { x: Math.round(element.x), y: Math.round(element.y), width: Math.round(element.w), height: Math.round(element.h) };
+
   return {
     objectId: "primary_image",
     type: "image",
     role: "primary_image",
     content: photoSrc ?? undefined,
-    clip: element.clip ?? "rect",
-    x: Math.round(element.x),
-    y: Math.round(element.y),
-    width: Math.round(element.w),
-    height: Math.round(element.h),
+    clip: frame?.clip ?? element.clip ?? "rect",
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
     locked: false,
   };
 }
