@@ -2,6 +2,8 @@ import type {
   ModelCandidate,
 } from "@/lib/ai/model-registry";
 
+import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
 import type {
   ImageProviderAdapter,
   ImageProviderRequest,
@@ -20,6 +22,8 @@ type ProviderOptions = {
   env?: EnvLike;
   fetchImpl?: typeof fetch;
   model?: string;
+  /** OpenAI image quality tier ("low" | "medium" | "high" | "auto"). */
+  quality?: string;
 };
 
 type MixedImageVariantOptions = {
@@ -34,6 +38,9 @@ type MixedImageVariantOptions = {
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
+const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
+// best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
+const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
 
 export function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
@@ -106,13 +113,20 @@ export function createOpenAiTextProvider(options: ProviderOptions = {}): TextPro
 export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
+  const quality = options.quality ?? env.BLOCKWISE_OPENAI_IMAGE_QUALITY ?? DEFAULT_OPENAI_IMAGE_QUALITY;
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
     providerName: "openai",
     providerType: "image_generation",
+    // gpt-image-2's /images/edits consumes one or more reference images plus an
+    // optional mask, so it satisfies the truth-preserving repair gate
+    // (imageToImage && multiReference) — see supportsTruthPreservingRepair.
     capabilities: {
       textToImage: true,
+      imageToImage: true,
+      inpainting: true,
+      multiReference: true,
     },
     async generate(input) {
       const apiKey = env.OPENAI_API_KEY;
@@ -120,25 +134,27 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       if (!apiKey) {
         throw new Error("OPENAI_API_KEY is not configured.");
       }
-      if (input.requiresReferenceAssets) {
-        throw new Error("Reference-image generation is not configured for auto fit.");
-      }
 
-      const response = await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          ...gatewayHeaders(env),
-        },
-        body: JSON.stringify({
-          model,
-          prompt: buildImagePrompt(input),
-          size: imageSizeForAspect(input.aspectRatio),
-          quality: "high",
-          n: 1,
-        }),
-      });
+      // Reference-based fit/extend → /images/edits (multipart). Otherwise the
+      // text-to-image /images/generations path (JSON), unchanged.
+      const response = input.requiresReferenceAssets
+        ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
+        : await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              ...gatewayHeaders(env),
+            },
+            body: JSON.stringify({
+              model,
+              prompt: buildImagePrompt(input),
+              size: imageSizeForAspect(input.aspectRatio),
+              quality,
+              n: 1,
+            }),
+          });
+
       const payload = (await response.json()) as {
         data?: Array<{ url?: string; b64_json?: string }>;
         error?: { message?: string };
@@ -154,10 +170,89 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
         assetUrl: first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : ""),
         seed: input.seed ?? 0,
         model,
-        providerMetadata: { provider: "openai", referenceAssets: input.referenceAssets.length },
+        providerMetadata: {
+          provider: "openai",
+          referenceAssets: input.referenceAssets.length,
+          mode: input.requiresReferenceAssets ? "edit" : "generation",
+        },
       };
     },
   };
+}
+
+/** Resolves the /images/edits endpoint, honouring a Cloudflare AI Gateway URL. */
+export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
+  const gateway = env.CLOUDFLARE_AI_GATEWAY_URL;
+  if (!gateway) return OPENAI_IMAGE_EDITS_URL;
+  // A real gateway mirrors the OpenAI path (…/openai/images/generations); swap the
+  // trailing endpoint to edits. If the URL doesn't expose that segment, use it
+  // verbatim — same best-effort posture as the generations path.
+  if (gateway.includes("/images/generations")) {
+    return gateway.replace("/images/generations", "/images/edits");
+  }
+  if (/\/generations\/?$/.test(gateway)) {
+    return gateway.replace(/\/generations(\/?)$/, "/edits$1");
+  }
+  return gateway;
+}
+
+async function postOpenAiImageEdit(input: {
+  env: EnvLike;
+  apiKey: string;
+  model: string;
+  quality: string;
+  input: ImageProviderRequest;
+  fetchImpl: typeof fetch;
+}): Promise<Response> {
+  const references = input.input.referenceAssets;
+  if (!references.length) {
+    throw new Error("Reference-image edit requires at least one image.");
+  }
+
+  const form = new FormData();
+  form.set("model", input.model);
+  form.set("prompt", buildImagePrompt(input.input, { includeReferenceList: false }));
+  form.set("size", imageSizeForAspect(input.input.aspectRatio));
+  form.set("quality", input.quality);
+  form.set("n", "1");
+
+  const single = references.length === 1;
+  for (const [index, reference] of references.entries()) {
+    const blob = await imageReferenceToBlob(reference, input.fetchImpl);
+    // Single reference uses `image`; multiple uses `image[]` per the API contract.
+    form.append(single ? "image" : "image[]", blob, `reference-${index}.png`);
+  }
+
+  if (input.input.maskImage) {
+    const maskBlob = await imageReferenceToBlob(input.input.maskImage, input.fetchImpl);
+    form.set("mask", maskBlob, "mask.png");
+  }
+
+  // No explicit Content-Type — fetch sets the multipart boundary itself.
+  return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+      ...gatewayHeaders(input.env),
+    },
+    body: form,
+  });
+}
+
+// Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
+async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch): Promise<Blob> {
+  if (reference.startsWith("data:")) {
+    const decoded = dataUrlToUploadBytes(reference);
+    // Copy into a fresh ArrayBuffer-backed view so it satisfies BlobPart.
+    const bytes = new Uint8Array(decoded.bytes.byteLength);
+    bytes.set(decoded.bytes);
+    return new Blob([bytes], { type: decoded.contentType });
+  }
+  const response = await fetchImpl(reference);
+  if (!response.ok) {
+    throw new Error(`Reference image could not be fetched (${response.status}).`);
+  }
+  return response.blob();
 }
 
 export function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
@@ -411,13 +506,19 @@ function gatewayHeaders(env: EnvLike): Record<string, string> {
     : {};
 }
 
-function buildImagePrompt(input: ImageProviderRequest): string {
+function buildImagePrompt(
+  input: ImageProviderRequest,
+  options: { includeReferenceList?: boolean } = {},
+): string {
+  const includeReferenceList = options.includeReferenceList ?? true;
   return [
     input.prompt,
     `Aspect ratio: ${input.aspectRatio}.`,
     `Style preset: ${input.stylePreset}.`,
     input.negativePrompt ? `Avoid: ${input.negativePrompt}.` : "",
-    input.referenceAssets.length ? `Reference assets: ${input.referenceAssets.join(", ")}.` : "",
+    includeReferenceList && input.referenceAssets.length
+      ? `Reference assets: ${input.referenceAssets.join(", ")}.`
+      : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -457,9 +558,5 @@ function extractImageUrl(content: unknown): string | undefined {
 }
 
 function imageSizeForAspect(aspectRatio: string): string {
-  if (aspectRatio === "9:16") return "1024x1792";
-  if (aspectRatio === "1.91:1") return "1792x1024";
-  if (aspectRatio === "4:5") return "1024x1280";
-
-  return "1024x1024";
+  return formatImageSize(outpaintTargetForAspect(aspectRatio));
 }
