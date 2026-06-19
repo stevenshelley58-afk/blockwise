@@ -17,6 +17,7 @@ const firstTesterDataCleanupMigration = "supabase/migrations/202606120003_first_
 const coverageDefectDedupeMigration = "supabase/migrations/202606120004_coverage_defect_dedupe.sql";
 const mediaAssetsDedupeMigration = "supabase/migrations/202606150002_dedupe_media_assets.sql";
 const mediaAssetsContentHashDedupeMigration = "supabase/migrations/202606150003_dedupe_media_asset_content_hash.sql";
+const adAttributionLinksMigration = "supabase/migrations/202606200004_research_ad_attribution_links.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -424,4 +425,95 @@ test("coverage defect dedupe migration collapses existing active duplicates", ()
     /collapsed_duplicate_count[\s\S]*collapsed_duplicate_ids/i,
     "canonical rows should retain collapse metadata for operator traceability",
   );
+});
+
+test("ad attribution links migration creates a typed service-role-only attribution table", () => {
+  const sql = readFileSync(adAttributionLinksMigration, "utf8");
+
+  assert.match(sql, /create table if not exists research\.ad_attribution_links/i);
+  assert.match(sql, /observed_ad_id uuid not null references research\.observed_ads \(id\) on delete cascade/i);
+  assert.match(sql, /link_type text not null[\s\S]*check \(link_type in \('agent', 'agency', 'postcode'\)\)/i);
+  for (const column of [
+    "agent_id uuid references research.agents",
+    "agency_id uuid references research.agencies",
+    "postcode text",
+    "suburb text",
+    "state text",
+    "evidence_type text not null",
+    "confidence numeric(5, 2) not null default 0",
+    "source text not null",
+    "evidence jsonb not null default '{}'::jsonb",
+    "first_seen_at timestamptz not null default now()",
+    "last_seen_at timestamptz not null default now()",
+    "created_at timestamptz not null default now()",
+    "updated_at timestamptz not null default now()",
+  ]) {
+    assert.match(sql, new RegExp(column.replace(/[(){}]/g, "\\$&"), "i"), `expected ${column}`);
+  }
+  assert.match(sql, /constraint ad_attribution_links_subject_matches_type[\s\S]*link_type = 'agent'[\s\S]*agent_id is not null/i);
+  assert.match(sql, /constraint ad_attribution_links_subject_matches_type[\s\S]*link_type = 'agency'[\s\S]*agency_id is not null/i);
+  assert.match(sql, /constraint ad_attribution_links_subject_matches_type[\s\S]*link_type = 'postcode'[\s\S]*postcode is not null/i);
+  assert.match(sql, /alter table research\.ad_attribution_links enable row level security/i);
+  assert.match(sql, /revoke all on research\.ad_attribution_links from public, anon, authenticated/i);
+  assert.match(sql, /grant select, insert, update, delete on research\.ad_attribution_links to service_role/i);
+  assert.match(sql, /create policy ad_attribution_links_service_role_all[\s\S]*to service_role[\s\S]*using \(true\)[\s\S]*with check \(true\)/i);
+  assert.doesNotMatch(sql, /grant\s+[^;]*on research\.ad_attribution_links to authenticated/i);
+  assert.doesNotMatch(sql, /grant\s+[^;]*on research\.ad_attribution_links to anon/i);
+});
+
+test("ad attribution links migration indexes and backfills from existing research attribution sources", () => {
+  const sql = readFileSync(adAttributionLinksMigration, "utf8");
+
+  for (const index of [
+    "ad_attribution_links_agent_unique_idx",
+    "ad_attribution_links_agency_unique_idx",
+    "ad_attribution_links_postcode_unique_idx",
+    "ad_attribution_links_observed_idx",
+    "ad_attribution_links_type_confidence_idx",
+    "ad_attribution_links_agent_idx",
+    "ad_attribution_links_agency_idx",
+    "ad_attribution_links_postcode_idx",
+  ]) {
+    assert.match(sql, new RegExp(`create (?:unique )?index if not exists ${index}`, "i"), `expected ${index}`);
+  }
+
+  assert.match(
+    sql,
+    /insert into research\.ad_attribution_links[\s\S]*'agent'[\s\S]*join research\.advertiser_pages ap on ap\.id = oa\.advertiser_page_id[\s\S]*ap\.agent_id is not null/i,
+    "agent attribution links must backfill from advertiser_pages.agent_id",
+  );
+  assert.match(
+    sql,
+    /insert into research\.ad_attribution_links[\s\S]*'agency'[\s\S]*join research\.advertiser_pages ap on ap\.id = oa\.advertiser_page_id[\s\S]*ap\.agency_id is not null/i,
+    "agency attribution links must backfill from advertiser_pages.agency_id",
+  );
+  assert.match(
+    sql,
+    /insert into research\.ad_attribution_links[\s\S]*'postcode'[\s\S]*from research\.ad_area_matches am[\s\S]*join research\.observed_ads oa on oa\.id = am\.observed_ad_id/i,
+    "postcode attribution links must backfill from ad_area_matches",
+  );
+});
+
+test("ad attribution links migration rebuilds the customer card view from safe attribution summaries", () => {
+  const sql = readFileSync(adAttributionLinksMigration, "utf8");
+
+  assert.match(sql, /create or replace view research\.v_customer_meta_ad_library_cards as/i);
+  assert.match(sql, /join research\.ad_attribution_links area_link[\s\S]*area_link\.link_type = 'postcode'/i);
+  for (const field of [
+    "agent_link.agent_id",
+    "agent.full_name as agent_name",
+    "agency_link.agency_id",
+    "agency.name as agency_name",
+    "coalesce(attribution.links, '[]'::jsonb) as attribution_links",
+  ]) {
+    assert.match(sql, new RegExp(field.replace(/[()[\]{}]/g, "\\$&"), "i"), `expected ${field}`);
+  }
+  assert.match(sql, /jsonb_build_object\([\s\S]*'linkType'[\s\S]*'evidenceType'[\s\S]*'confidence'[\s\S]*'source'/i);
+  assert.doesNotMatch(sql, /'evidence',\s*aal\.evidence/i, "customer-safe attribution links must not expose raw evidence");
+  assert.match(sql, /ap\.status in \('resolved_collectable', 'no_ads_confirmed'\)/i);
+  assert.match(sql, /research\.valid_external_ad_id\(oa\.external_ad_id\)/i);
+  assert.match(sql, /research\.page_is_verified_real_estate\(ap\.id\)/i);
+  assert.match(sql, /research\.creative_is_real_estate\(ac\.classification, ac\.ad_type, ac\.primary_intent\)/i);
+  assert.match(sql, /ac\.display_state = 'displayable'/i);
+  assert.match(sql, /grant select on research\.v_customer_meta_ad_library_cards to authenticated, anon, service_role/i);
 });
