@@ -1,6 +1,6 @@
 import { MetaMonitorDashboard, type OAuthNotice } from "@/components/monitor/MetaMonitorDashboard";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { getMetaMonitorData } from "@/lib/meta-monitor/getMetaMonitorData";
+import { getResultsPayload } from "@/lib/meta-monitor/getResultsPayload";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ export default async function ResultsPage({
 }) {
   const resolvedParams = await searchParams;
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
-  const initialPayload = await getMetaMonitorData({
+  const initialPayload = await getResultsPayload({
     supabase,
     serviceSupabase: createSupabaseServiceClient(),
     workspaceId: access.workspaceId,
