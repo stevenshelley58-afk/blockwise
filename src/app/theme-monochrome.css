@@ -1,0 +1,137 @@
+/*
+ * Monochrome theme overrides.
+ *
+ * Whole-app visual refresh applied through design tokens + scoped presentational
+ * rules. Imported AFTER globals.css so these values win by source order. Delete
+ * this file and its import in layout.tsx to revert.
+ *
+ * Changes vs. the navy "Executive Precision" base:
+ *   - Near-black monochrome accent (buttons, links, active states) replacing navy
+ *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
+ *   - Light sidebar by default with a solid black active pill
+ *   - Rounder cards, gentle card elevation, and pill-shaped buttons
+ *   - Tightened, balanced dashboard spacing (compact KPI cards)
+ * Display font (Manrope) is intentionally unchanged.
+ */
+
+:root {
+  /* Surfaces & neutrals */
+  --bg: #f6f7f9;
+  --surface-subtle: #f1f2f4;
+  --ink: #16181d;
+  --muted: #545a66;
+  --faint: #9aa0ad;
+  --line: #e9ebef;
+  --line-soft: #f0f1f4;
+  --line-heavy: #d3d7df;
+
+  /* Monochrome accent (was deep navy) */
+  --accent: #16181d;
+  --accent-strong: #0b0c10;
+  --accent-press: #000000;
+  --accent-tint: #f1f2f4;
+  --blue: #16181d;
+
+  /* Softer, rounder shapes */
+  --r-card: 16px;
+  --r-panel: 20px;
+  --r-ctl: 10px;
+
+  /* Gentle elevation so cards lift off the canvas */
+  --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 5px 18px rgba(16, 18, 23, 0.05);
+  --shadow-float: 0 10px 30px rgba(16, 18, 23, 0.09);
+
+  /* Focus ring tuned to the new accent */
+  --ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
+}
+
+/* Light sidebar: white surface, solid near-black active pill */
+[data-sidebar-theme="light"] {
+  --side-bg: #ffffff;
+  --side-ink: #5b616e;
+  --side-ink-active: #ffffff;
+  --side-line: #e9ebef;
+  --side-cap: #9aa0ad;
+  --side-active-bg: #16181d;
+  --side-hover-bg: #f0f1f4;
+  --brand-ink: #16181d;
+}
+
+/* Pill-shaped buttons (presentational only) */
+.button {
+  border-radius: 9999px;
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+/* Lighter, more refined eyebrow */
+.eyebrow {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+/* Centre the page on very wide screens without going sparse. */
+.content {
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Balanced dashboard density (desktop, >=641px so mobile rules stay
+   authoritative). KPI cards size to their content instead of leaving an empty
+   band below, and values are sized to read cleanly even when short ("$3") or
+   long ("Unavailable"). Markup and data are unchanged.
+   --------------------------------------------------------------------------- */
+@media (min-width: 641px) {
+  .content {
+    padding: 30px 34px 52px;
+    gap: 20px;
+  }
+
+  .page-heading h1 {
+    font-size: 32px;
+    line-height: 1.12;
+  }
+  .page-heading .lead {
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+
+  .mm-page {
+    gap: 18px;
+  }
+  .mm-title-row h1 {
+    font-size: 27px;
+  }
+
+  /* Compact KPI cards — no tall empty bottom, tidy value scale */
+  .mm-kpi.metric-card {
+    min-height: 0;
+  }
+  .mm-kpi {
+    padding: 18px 18px 16px;
+  }
+  .mm-kpi-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 12px;
+  }
+  .mm-kpi-label {
+    font-size: 12.5px;
+  }
+  .mm-kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .mm-kpi-compare {
+    margin-top: 5px;
+  }
+}
+
+/* Results KPI row has four metrics — lay them out 4-up on wide screens. */
+@media (min-width: 1241px) {
+  .mm-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
