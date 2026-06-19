@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  assemblePhotoPrepPrompt,
   assembleImagePrompt,
   assembleMetaCopyPrompt,
   assembleSkeletonExtractionPrompt,
@@ -45,6 +46,7 @@ const copyKeys: PromptKey[] = [
 const imageKeys: PromptKey[] = [
   "adstudio.image.system",
   "adstudio.image.input_template",
+  "adstudio.image.prepare_template_frame.v1",
   "adstudio.image.brand_rules",
   "adstudio.image.negative_prompt",
   "adstudio.image.aspect_ratio_rules",
@@ -246,6 +248,63 @@ test("image assembly includes negative prompt, aspect ratio rules, and redacted 
   assert.match(prompt.fullPrompt, /Requested aspect ratio: 9:16/);
   assert.match(prompt.fullPrompt, /image\/png data URL/);
   assert.equal(prompt.fullPrompt.includes("aW1hZ2U="), false);
+});
+
+test("photo prep prompt registry key locks template ownership", async () => {
+  const section = await getActivePromptSection(
+    "adstudio.image.prepare_template_frame.v1",
+    PROMPT_FALLBACKS["adstudio.image.prepare_template_frame.v1"],
+    null,
+  );
+  const listedKeys = listPromptKeys().map((prompt) => prompt.key);
+
+  assert.equal(listedKeys.includes("adstudio.image.prepare_template_frame.v1"), true);
+  assert.equal(section.metadata.section_type, "input_template");
+  assert.match(section.body, /locked ad template frame/);
+  assert.match(section.body, /Do not create a finished advertisement/);
+  assert.match(section.body, /Do not add text/);
+  assert.match(section.body, /Do not add logos/);
+  assert.match(section.body, /Do not add badges/);
+  assert.match(section.body, /Do not add borders/);
+  assert.match(section.body, /Do not change the template layout/);
+  assert.match(section.body, /Return only the edited photo asset/);
+  assert.doesNotMatch(section.body, /make an ad/i);
+});
+
+test("photo prep prompt assembly renders locked frame context from the registry", async () => {
+  const bundle = await getActivePromptBundle(imageKeys, undefined, null);
+  const prompt = assemblePhotoPrepPrompt({
+    bundle,
+    context: {
+      workspaceId: "workspace_1",
+      imageHash: "sha256_image",
+      sourceImageRef: "/api/adstudio/media?path=workspace_1%2Flisting.jpg",
+      template: { key: "just_listed", version: 2, name: "Just Listed", archetype: "listing_hero" },
+      frame: {
+        format: "4:5",
+        canvas: { widthPx: 1080, heightPx: 1350 },
+        imageSlots: [{ id: "primary_photo", role: "primary", x: 0, y: 0, width: 1, height: 1 }],
+        copySafeZones: [{ id: "headline", x: 0.06, y: 0.58, width: 0.62, height: 0.25 }],
+        lockedLayout: true,
+      },
+      imageSlotId: "primary_photo",
+      campaign: {
+        goal: "seller_leads",
+        offerId: "home_value_update",
+        market: { suburb: "Scarborough", city: "Perth", state: "WA" },
+      },
+      brand: { palette: ["#14314f"], imageTreatment: "Bright natural light." },
+      brief: "Use the front exterior.",
+    },
+  });
+
+  assert.match(prompt.fullPrompt, /Do not create a finished advertisement/);
+  assert.match(prompt.fullPrompt, /Image slot: primary_photo/);
+  assert.match(prompt.fullPrompt, /Copy safe zones: headline/);
+  assert.match(prompt.fullPrompt, /Market: Scarborough, Perth, WA/);
+  assert.match(prompt.fullPrompt, /Avoid: rendered text/);
+  assert.equal(prompt.promptVersions.some((version) => version.key === "adstudio.image.prepare_template_frame.v1"), true);
+  assert.doesNotMatch(prompt.fullPrompt, /aW1hZ2U=/);
 });
 
 test("prompt preview runner is assemble-only by default and blocks provider execution", async () => {

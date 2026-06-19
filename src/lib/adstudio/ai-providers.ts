@@ -34,6 +34,7 @@ type MixedImageVariantOptions = {
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
+const OPENAI_IMAGE_EDIT_URL = "https://api.openai.com/v1/images/edits";
 
 export function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
@@ -113,6 +114,9 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
     providerType: "image_generation",
     capabilities: {
       textToImage: true,
+      imageToImage: true,
+      inpainting: true,
+      multiReference: true,
     },
     async generate(input) {
       const apiKey = env.OPENAI_API_KEY;
@@ -120,8 +124,18 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       if (!apiKey) {
         throw new Error("OPENAI_API_KEY is not configured.");
       }
-      if (input.requiresReferenceAssets) {
-        throw new Error("Reference-image generation is not configured for auto fit.");
+
+      if (input.requiresReferenceAssets || input.referenceAssets.length > 0) {
+        if (!input.referenceAssets.length) {
+          throw new Error("Reference-image generation requires at least one image.");
+        }
+        return generateOpenAiImageEdit({
+          env,
+          fetchImpl,
+          apiKey,
+          model,
+          input,
+        });
       }
 
       const response = await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
@@ -156,6 +170,55 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
         model,
         providerMetadata: { provider: "openai", referenceAssets: input.referenceAssets.length },
       };
+    },
+  };
+}
+
+async function generateOpenAiImageEdit(input: {
+  env: EnvLike;
+  fetchImpl: typeof fetch;
+  apiKey: string;
+  model: string;
+  input: ImageProviderRequest;
+}): Promise<ImageProviderResponse> {
+  const body = new FormData();
+  body.set("model", input.model);
+  body.set("prompt", buildImagePrompt(input.input));
+  body.set("size", imageSizeForAspect(input.input.aspectRatio));
+  body.set("quality", "high");
+  body.set("n", "1");
+
+  input.input.referenceAssets.slice(0, 16).forEach((asset, index) => {
+    body.append(index === 0 ? "image" : "image[]", imageBlobFromDataUrl(asset), `reference-${index + 1}.png`);
+  });
+
+  const response = await input.fetchImpl(input.env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_EDIT_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+      ...gatewayHeaders(input.env),
+    },
+    body,
+  });
+  const payload = (await response.json()) as {
+    data?: Array<{ url?: string; b64_json?: string }>;
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? `Provider image edit request failed with ${response.status}.`);
+  }
+
+  const first = payload.data?.[0];
+
+  return {
+    assetUrl: first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : ""),
+    seed: input.input.seed ?? 0,
+    model: input.model,
+    providerMetadata: {
+      provider: "openai",
+      endpoint: "images.edit",
+      referenceAssets: input.input.referenceAssets.length,
     },
   };
 }
@@ -409,6 +472,18 @@ function gatewayHeaders(env: EnvLike): Record<string, string> {
   return env.CLOUDFLARE_AI_GATEWAY_TOKEN
     ? { "cf-aig-authorization": `Bearer ${env.CLOUDFLARE_AI_GATEWAY_TOKEN}` }
     : {};
+}
+
+function imageBlobFromDataUrl(dataUrl: string): Blob {
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error("OpenAI image edits require resolved data URL reference images.");
+  }
+
+  const contentType = match[1] ?? "image/png";
+  const base64 = match[2] ?? "";
+  const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+  return new Blob([bytes], { type: contentType });
 }
 
 function buildImagePrompt(input: ImageProviderRequest): string {

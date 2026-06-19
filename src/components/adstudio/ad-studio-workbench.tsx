@@ -32,8 +32,6 @@ import type {
 } from "@/lib/adstudio";
 import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
-import { buildLayoutBrief } from "@/lib/adstudio/layout-brief.ts";
-import { buildSkeletonGenerationContext } from "@/lib/adstudio/skeleton-to-prompt.ts";
 
 import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
@@ -215,25 +213,20 @@ function commitVariantEdits(input: {
   };
 }
 
-type RepairResponse = {
-  repairs?: Array<{ format: AdStudioFormat; image: string; model: string; provider: string }>;
-  error?: string;
-};
-
-function applyRepairedImagesToVariant(input: {
+function applyImageToVariantFormats(input: {
   pack: AdStudioCampaignPack;
   variantId: string | undefined;
   copy: CopyState;
-  repairs: Array<{ format: AdStudioFormat; image: string }>;
+  formats: AdStudioFormat[];
+  image: string;
 }): AdStudioCampaignPack {
-  if (!input.variantId || input.repairs.length === 0) return input.pack;
-  const imageByFormat = new Map(input.repairs.map((repair) => [repair.format, repair.image]));
+  if (!input.variantId || input.formats.length === 0 || !input.image) return input.pack;
+  const formats = new Set(input.formats);
   return {
     ...input.pack,
     creatives: input.pack.creatives.map((creative) => {
       if (creative.variantId !== input.variantId) return creative;
-      const repairedImage = imageByFormat.get(creative.format);
-      return repairedImage ? syncCreativeWithCopyAndImage(creative, input.copy, repairedImage) : creative;
+      return formats.has(creative.format) ? syncCreativeWithCopyAndImage(creative, input.copy, input.image) : creative;
     }),
   };
 }
@@ -280,8 +273,6 @@ export function AdStudioWorkbench({
   const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
-  const [generatingBackground, setGeneratingBackground] = useState(false);
-  const [repairingImage, setRepairingImage] = useState(false);
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -437,11 +428,15 @@ export function AdStudioWorkbench({
       return;
     }
     if (pack.variants.length > 0 && selectedVariant?.variantId) {
-      void repairImageForFormats(currentVariantFormats, {
-        sourceImage: uploaded.src,
+      const updatedPack = applyImageToVariantFormats({
+        pack,
         variantId: selectedVariant.variantId,
-        message: "Fitting replacement photo to all ad sizes...",
+        copy,
+        formats: currentVariantFormats,
+        image: uploaded.src,
       });
+      setPack(updatedPack);
+      studio.setSaveState("saving");
     }
     const copyUntouched =
       copy.primaryText === seededCopyRef.current.primaryText &&
@@ -765,156 +760,6 @@ export function AdStudioWorkbench({
     await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext, primaryImage);
   }
 
-  async function repairImageForFormats(targetFormats: AdStudioFormat[], options?: {
-    sourceImage?: string;
-    basePack?: AdStudioCampaignPack;
-    variantId?: string;
-    copyOverride?: CopyState;
-    message?: string;
-  }) {
-    const formats = Array.from(new Set(targetFormats)).filter(Boolean);
-    const sourceImage = options?.sourceImage ?? primaryImage;
-    const basePack = options?.basePack ?? pack;
-    const variantId = options?.variantId ?? selectedVariant?.variantId;
-    const copyForPatch = options?.copyOverride ?? copy;
-    if (!sourceImage || !variantId || formats.length === 0 || repairingImage) return null;
-
-    const layoutBriefs = Object.fromEntries(
-      formats.map((format) => {
-        const creative = basePack.creatives.find((item) => item.variantId === variantId && item.format === format);
-        return [format, creative ? buildLayoutBrief(creative) : ""];
-      }),
-    );
-
-    setRepairingImage(true);
-    studio.setBusy(true);
-    studio.setBusyMessage(options?.message ?? "Fitting photo to ad sizes...");
-    try {
-      const response = await fetch("/api/adstudio/repair-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandKitId: brandKit.brandKitId,
-          sourceImage,
-          targetFormats: formats,
-          campaignContext: {
-            goal: campaignGoal,
-            offer: offerLabel,
-            market,
-            propertyType,
-            headline: copyForPatch.headline,
-            description: copyForPatch.description,
-          },
-          layoutBriefs,
-        }),
-      });
-      const json = (await response.json().catch(() => ({}))) as RepairResponse;
-      if (!response.ok || !json.repairs?.length) {
-        throw new Error(json.error || "Could not fit that image.");
-      }
-
-      const repairedPack = applyRepairedImagesToVariant({
-        pack: basePack,
-        variantId,
-        copy: copyForPatch,
-        repairs: json.repairs,
-      });
-      setPack(repairedPack);
-      const activeRepair = json.repairs.find((repair) => repair.format === editorFormat) ?? json.repairs[0];
-      if (activeRepair) {
-        setPrimaryImage(activeRepair.image);
-        setPrimaryImageName(`Auto fitted ${activeRepair.format}`);
-      }
-      setSelectedElement("image");
-      studio.setSection("media");
-      studio.setSaveState("saving");
-      studio.showToast(formats.length > 1 ? "Photo fitted for all ad sizes" : "Photo fitted for this size");
-      return repairedPack;
-    } catch (error) {
-      studio.showToast(error instanceof Error ? error.message : "Could not fit that image");
-      return null;
-    } finally {
-      setRepairingImage(false);
-      studio.setBusy(false);
-    }
-  }
-
-  async function generateBackgroundImage() {
-    if (!currentCreative || generatingBackground) return;
-    setGeneratingBackground(true);
-    studio.setBusy(true);
-    studio.setBusyMessage("Generating background");
-    try {
-      // Derive a composition brief from the template's real geometry so the
-      // generated photo leaves room exactly where the headline/CTA sit, and
-      // pass the current listing photo as a reference so the model conditions
-      // on the real property instead of inventing a generic streetscape.
-      const layoutBrief = buildLayoutBrief(currentCreative);
-      const activeTemplate = activeTemplateKey
-        ? adTemplates.find((template) => template.templateKey === activeTemplateKey || template.id === activeTemplateKey)
-        : undefined;
-      const skeletonContext = activeTemplate?.creativeSkeleton
-        ? buildSkeletonGenerationContext(activeTemplate.creativeSkeleton, {
-            format: currentCreative.format,
-            fallbackBrief: layoutBrief,
-          })
-        : null;
-      const referenceImage = primaryImage;
-      const referenceAssets: string[] = !referenceImage
-        ? []
-        : referenceImage.startsWith("data:image/") || /^https?:\/\//i.test(referenceImage)
-          ? [referenceImage]
-          : referenceImage.startsWith("/") && typeof window !== "undefined"
-            ? [`${window.location.origin}${referenceImage}`]
-            : [];
-
-      const prompt = [
-        copy.headline,
-        copy.description,
-        market,
-        propertyType,
-        "real estate advertising background",
-        skeletonContext?.brief ?? layoutBrief,
-        skeletonContext ? `Copy-safe mask: ${skeletonContext.maskSvgDataUrl}` : "",
-        referenceAssets.length
-          ? "Use the supplied reference photo as the real property: preserve its building, architecture and setting; only improve lighting, framing and overall quality."
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      const response = await fetch("/api/adstudio/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          aspectRatio: currentCreative.format,
-          stylePreset: "premium_editorial_real_estate",
-          brandKitId: brandKit.brandKitId,
-          referenceAssets,
-          brand: {
-            palette: [brandKit.colours.primary, brandKit.colours.secondary, brandKit.colours.accent].filter(Boolean),
-            styleTags: brandKit.visualStyle.styleTags,
-            imageTreatment: brandKit.visualStyle.imageTreatment,
-          },
-        }),
-      });
-      const json = (await response.json().catch(() => ({}))) as { image?: string; error?: string };
-      if (!response.ok || !json.image) throw new Error(json.error || "Could not generate background.");
-      setPrimaryImage(json.image);
-      setPrimaryImageName("Generated background");
-      setSelectedElement("image");
-      studio.setSection("media");
-      studio.setSaveState("saving");
-      studio.showToast("Background generated");
-    } catch (error) {
-      studio.showToast(error instanceof Error ? error.message : "Could not generate background");
-    } finally {
-      setGeneratingBackground(false);
-      studio.setBusy(false);
-    }
-  }
-
   // Adds another generated ad idea from the current defaults.
   function addVariant() {
     generateVariantsForAngle(selectedAngle, campaignGoal);
@@ -933,20 +778,11 @@ export function AdStudioWorkbench({
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
-    const generatedPack = await generateFirstAd(input);
+    await generateFirstAd(input);
     setActiveTemplateKey(input.templateKey ?? input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
     studio.setMobileTab("media");
-    if (generatedPack) {
-      void repairImageForFormats(input.formats, {
-        sourceImage: input.imageDataUrl,
-        basePack: generatedPack,
-        variantId: generatedPack.variants[0]?.variantId,
-        copyOverride: seedCopy(generatedPack),
-        message: "Fitting photo to Story, Feed and Square...",
-      });
-    }
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
@@ -997,11 +833,6 @@ export function AdStudioWorkbench({
         onUploadRejected={studio.showToast}
         onSelectImage={selectMediaImage}
         mediaAssets={mediaAssets}
-        onGenerateBackground={() => void generateBackgroundImage()}
-        generatingBackground={generatingBackground}
-        onRepairCurrent={() => void repairImageForFormats([editorFormat], { message: "Fitting photo to this ad size..." })}
-        onRepairAll={() => void repairImageForFormats(currentVariantFormats, { message: "Fitting photo to all ad sizes..." })}
-        repairingImage={repairingImage}
       />
     );
   }

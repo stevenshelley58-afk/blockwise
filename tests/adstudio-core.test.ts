@@ -321,6 +321,57 @@ test("first-ad generation uses the uploaded image as the full creative visual", 
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
 });
 
+test("template first-ad generation uses prepared photo assets per creative format", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "free_appraisal");
+  assert.ok(template);
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "appraisal_bookings",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "home_value_update",
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: template.templateKey ?? template.id,
+      description: "Free appraisal for local owners.",
+      imageDataUrl: "data:image/png;base64,original",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: template,
+    sourceImagesByFormat: {
+      "9:16": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fstory.png",
+      "4:5": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png",
+      "1:1": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png",
+    },
+  });
+
+  const imageByFormat = Object.fromEntries(
+    pack.creatives.map((creative) => [
+      creative.format,
+      creative.canvas.objects.find((object) => object.role === "primary_image")?.content,
+    ]),
+  );
+
+  assert.equal(imageByFormat["9:16"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fstory.png");
+  assert.equal(imageByFormat["4:5"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png");
+  assert.equal(imageByFormat["1:1"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png");
+  assert.notEqual(imageByFormat["9:16"], imageByFormat["4:5"]);
+});
+
 test("template generation treats observed ads as evidence, not the campaign source", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",

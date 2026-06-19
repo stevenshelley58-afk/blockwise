@@ -140,7 +140,6 @@
 .studio-selected-text-field small[data-over="true"],.studio-field-error{color:var(--rose,#ba1a1a)!important}
 .studio-selected-text-field textarea{width:100%;resize:vertical;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:10px 11px;outline:none;font-size:13.5px;line-height:1.45}
 .studio-selected-text-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
-.studio-image-repair-actions{display:grid;gap:8px}
 .studio-mode-seg{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--line-soft);border-radius:10px;padding:3px;gap:3px}
 .studio-mode-seg button{padding:9px 4px;border:0;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--muted);background:transparent;display:flex;align-items:center;justify-content:center;gap:6px}
 .studio-mode-seg button.active{background:#fff;color:var(--accent);box-shadow:var(--st-sh-1);font-weight:650}

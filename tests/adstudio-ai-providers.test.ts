@@ -6,8 +6,6 @@ import {
   createOpenRouterTextProvider,
   generateMixedImageVariantsInParallel,
 } from "../src/lib/adstudio/ai-providers.ts";
-import { generateTruthPreservingRepair } from "../src/lib/adstudio/image-repair.ts";
-import type { ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -74,77 +72,35 @@ test("createOpenAiImageProvider defaults client creative generation to GPT Image
   assert.equal(output.model, "gpt-image-2");
 });
 
-test("createOpenAiImageProvider refuses reference-image repair without calling text-only generation", async () => {
-  let called = false;
+test("createOpenAiImageProvider sends reference-image jobs to images edits", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createOpenAiImageProvider({
     env: {
       OPENAI_API_KEY: "oa_test",
     },
-    fetchImpl: async () => {
-      called = true;
-      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(JSON.stringify({ data: [{ b64_json: "ZWRpdGVk" }] }), { status: 200 });
     },
   });
 
-  await assert.rejects(
-    () =>
-      provider.generate({
-        prompt: "Repair this listing photo",
-        referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-        aspectRatio: "1:1",
-        stylePreset: "truth_preserving_real_estate_repair",
-        requiresReferenceAssets: true,
-      }),
-    /not configured for auto fit/,
-  );
-  assert.equal(called, false);
-});
-
-test("truth-preserving repair skips unsupported providers and uses reference-capable provider", async () => {
-  let unsupportedCalled = false;
-  let supportedCalled = false;
-  const unsupported: ImageProviderAdapter = {
-    providerName: "openai",
-    providerType: "image_generation",
-    capabilities: { textToImage: true },
-    async generate() {
-      unsupportedCalled = true;
-      throw new Error("Should not be called");
-    },
-  };
-  const supported: ImageProviderAdapter = {
-    providerName: "openrouter",
-    providerType: "image_generation",
-    capabilities: { textToImage: true, imageToImage: true, multiReference: true },
-    async generate(input) {
-      supportedCalled = true;
-      assert.equal(input.requiresReferenceAssets, true);
-      assert.deepEqual(input.referenceAssets, ["data:image/png;base64,aW1hZ2U="]);
-      return {
-        assetUrl: "data:image/png;base64,cmVwYWlyZWQ=",
-        seed: 1,
-        model: "reference-model",
-        providerMetadata: { provider: "openrouter" },
-      };
-    },
-  };
-
-  const result = await generateTruthPreservingRepair({
-    imageInput: {
-      prompt: "Repair this listing photo",
-      referenceAssets: ["data:image/png;base64,aW1hZ2U="],
-      aspectRatio: "1:1",
-      stylePreset: "truth_preserving_real_estate_repair",
-    },
-    providers: [unsupported, supported],
+  const output = await provider.generate({
+    prompt: "Prepare this listing photo for a locked template frame",
+    referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+    aspectRatio: "1:1",
+    stylePreset: "locked_template_photo_prep",
+    requiresReferenceAssets: true,
   });
+  const form = calls[0]?.init.body as FormData;
 
-  assert.equal(unsupportedCalled, false);
-  assert.equal(supportedCalled, true);
-  assert.equal(result.providerName, "openrouter");
-  assert.equal(result.result.assetUrl, "data:image/png;base64,cmVwYWlyZWQ=");
-  assert.equal(result.attempts[0]?.status, "failed");
-  assert.equal(result.attempts[1]?.status, "completed");
+  assert.equal(calls[0]?.url, "https://api.openai.com/v1/images/edits");
+  assert.equal((calls[0]?.init.headers as Record<string, string>).Authorization, "Bearer oa_test");
+  assert.equal(form.get("model"), "gpt-image-2");
+  assert.equal(form.get("quality"), "high");
+  assert.equal(form.get("size"), "1024x1024");
+  assert.ok(form.get("image") instanceof Blob);
+  assert.equal(output.assetUrl, "data:image/png;base64,ZWRpdGVk");
+  assert.equal(output.providerMetadata.endpoint, "images.edit");
 });
 
 test("generateMixedImageVariantsInParallel fans out two GPT Image and two Nano Banana jobs", async () => {

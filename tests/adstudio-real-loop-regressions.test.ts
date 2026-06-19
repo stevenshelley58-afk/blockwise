@@ -187,6 +187,9 @@ test("campaign creation uses shared copy enrichment without changing copy route 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
+  assert.match(createRoute, /preparePhotoAssetsForTemplate/);
+  assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
+  assert.doesNotMatch(createRoute, /\/api\/adstudio\/repair-image|\/api\/adstudio\/generate-image/);
   // A0: variants enrich in parallel; zero-success still surfaces a real failure
   // instead of silently shipping the unwritten template copy.
   assert.match(enrichment, /Promise\.allSettled/);
@@ -285,6 +288,11 @@ test("dead Ad Studio stub endpoints stay deleted", () => {
     "src/app/api/adstudio/brand-kits/[id]/rescan/route.ts",
     "src/app/api/adstudio/creatives/[id]/render/route.ts",
     "src/app/api/adstudio/bulk-drafts/route.ts",
+    "src/app/api/adstudio/repair-image/route.ts",
+    "src/app/api/adstudio/generate-image/route.ts",
+    "src/lib/adstudio/image-repair.ts",
+    "src/lib/adstudio/layout-brief.ts",
+    "src/lib/adstudio/skeleton-to-prompt.ts",
   ]) {
     assert.equal(existsSync(path), false, path);
   }
@@ -338,7 +346,6 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
   assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : AD_STUDIO_TEMPLATES/);
   assert.doesNotMatch(workbench, /NEXT_PUBLIC_ADSTUDIO_SKELETON_GENERATION/);
-  assert.match(workbench, /activeTemplate\?\.creativeSkeleton/);
   assert.match(route, /export async function GET/);
   assert.match(route, /export async function PATCH/);
   assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
@@ -383,6 +390,8 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(dialog, /templateKey: isBlank \? undefined : selectedTemplate\?\.templateKey \?\? selectedTemplate\?\.id/);
   assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
   assert.match(createRoute, /resolvedTemplate/);
+  assert.match(createRoute, /preparePhotoAssetsForTemplate/);
+  assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
   assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
   assert.match(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
   assert.match(generator, /templateKey/);

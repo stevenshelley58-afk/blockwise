@@ -17,6 +17,7 @@ export const PROMPT_GROUPS = [
     promptKeys: [
       "adstudio.image.system",
       "adstudio.image.input_template",
+      "adstudio.image.prepare_template_frame.v1",
       "adstudio.image.brand_rules",
       "adstudio.image.negative_prompt",
       "adstudio.image.aspect_ratio_rules",
@@ -70,6 +71,7 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.copy.compliance_rules": "compliance_rules",
   "adstudio.image.system": "system",
   "adstudio.image.input_template": "input_template",
+  "adstudio.image.prepare_template_frame.v1": "input_template",
   "adstudio.image.brand_rules": "brand_rules",
   "adstudio.image.negative_prompt": "negative_prompt",
   "adstudio.image.aspect_ratio_rules": "aspect_ratio_rules",
@@ -185,6 +187,43 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 {{ASPECT_RATIO_RULES}}
 
 {{NEGATIVE_PROMPT}}`,
+  "adstudio.image.prepare_template_frame.v1": `Prepare this real-estate photo for a locked ad template frame.
+
+You are editing only the photo asset that will sit inside the template image slot.
+Do not create a finished advertisement.
+Do not add text.
+Do not add logos.
+Do not add badges.
+Do not add borders.
+Do not add buttons.
+Do not add icons.
+Do not add graphic overlays.
+Do not change the template layout.
+
+The final template, typography, logo, CTA, and copy will be composited after this step.
+
+Goal:
+Create the strongest premium real-estate photo asset for this exact frame.
+
+You may crop tighter, reframe, or extend the image edges when that produces the best result.
+Preserve the truth of the property.
+Do not invent rooms, pools, views, landscaping, architectural features, fixtures, furniture, or property condition.
+When extending, continue only plausible visual content from the existing image edges.
+
+{{IMAGE_INPUT}}
+
+{{BRAND_CONSTRAINTS}}
+
+{{CAMPAIGN_INPUT}}
+
+{{CUSTOMER_BRIEF}}
+
+Composition guidance:
+Keep the most commercially useful real-estate visual subject strong.
+Avoid awkward empty areas, accidental letterboxing, distorted geometry, warped walls, stretched windows, broken rooflines, fake reflections, or unnatural skies.
+Where copy safe zones overlap the image, keep those areas visually calm and lower contrast when possible.
+
+Return only the edited photo asset.`,
   "adstudio.image.brand_rules": `Brand image rules:
 - Use the approved palette and visual treatment as constraints.
 - Keep the image suitable for real-estate lead generation.

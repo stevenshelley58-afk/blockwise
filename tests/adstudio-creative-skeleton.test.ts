@@ -30,3 +30,39 @@ test("creative skeleton rejects copy-safe zones outside the canvas", () => {
 
   assert.equal(creativeSkeletonSchema.safeParse(invalid).success, false);
 });
+
+test("creative skeleton accepts bounded template image frames", () => {
+  const parsed = creativeSkeletonSchema.parse({
+    ...(fixture.creativeSkeletons[0] as Record<string, unknown>),
+    composition: {
+      ...((fixture.creativeSkeletons[0] as { composition: Record<string, unknown> }).composition),
+      image_frames: [
+        {
+          id: "primary_photo",
+          role: "primary",
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+          formats: ["9:16", "4:5", "1:1"],
+          prompt_hint: "Keep the exterior facade strong.",
+        },
+      ],
+    },
+  });
+
+  assert.equal(parsed.composition.image_frames?.[0]?.id, "primary_photo");
+  assert.equal(parsed.composition.image_frames?.[0]?.role, "primary");
+});
+
+test("creative skeleton rejects image frames outside the canvas", () => {
+  const invalid = {
+    ...(fixture.creativeSkeletons[0] as Record<string, unknown>),
+    composition: {
+      ...((fixture.creativeSkeletons[0] as { composition: Record<string, unknown> }).composition),
+      image_frames: [{ id: "bad", x: 0.75, y: 0, width: 0.5, height: 1 }],
+    },
+  };
+
+  assert.equal(creativeSkeletonSchema.safeParse(invalid).success, false);
+});
