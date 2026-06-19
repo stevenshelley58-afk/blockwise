@@ -1,6 +1,10 @@
 import { deterministicUuid } from "./id.ts";
 import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
+import { compositionToCreative } from "./creative/composition-to-creative.ts";
+import { buildPalette, fontStacks } from "./creative/preview-engine.ts";
+import { compositionForTemplate } from "./creative/template-composition.ts";
 import type { CreativeSkeleton } from "../ad-template-library/skeleton.ts";
+import type { CompositionCopy } from "./creative/compositions.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -38,6 +42,7 @@ export type BuildArchetypeCreativeInput = {
   sourceImageDataUrl?: string;
   subheadline?: string;
   templateId?: string;
+  templateKey?: string;
   templateName?: string;
   creativeSkeleton?: CreativeSkeleton;
 };
@@ -61,6 +66,8 @@ type LayoutGeometry = {
   scrim: string;
   supportObjects: AdStudioCanvasObject[];
 };
+
+const COMPOSITION_FORMATS = new Set<AdStudioFormat>(["4:5", "1:1", "9:16"]);
 
 export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): LayoutArchetypeId {
   const templateId = input.templateId?.toLowerCase();
@@ -98,6 +105,43 @@ export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): Lay
 }
 
 export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdStudioCreative {
+  if (input.templateId && COMPOSITION_FORMATS.has(input.format)) {
+    const compositionId = compositionForTemplate({
+      id: input.templateId,
+      templateKey: input.templateKey ?? input.templateId,
+      goal: input.campaign.goal,
+      offerId: input.campaign.offerId,
+    });
+    const primary = input.brandKit.colours?.primary ?? "#14314f";
+    const accent = input.brandKit.colours?.accent ?? "#e7b24b";
+
+    return compositionToCreative({
+      compositionId,
+      format: input.format,
+      palette: buildPalette(primary, accent),
+      stacks: fontStacks(input.brandKit.typography?.headingFont, input.brandKit.typography?.bodyFont),
+      copy: compositionCopyForInput(input),
+      photoSrc: input.sourceImageDataUrl ?? null,
+      ids: {
+        creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
+        campaignId: input.campaign.campaignId,
+        variantId: input.variant.variantId,
+      },
+      safeZones: {
+        metaStory: input.format === "9:16",
+        googleDemandGen: input.format !== "1.91:1",
+      },
+      paletteSeed: {
+        primary,
+        accent,
+      },
+      fontSeed: {
+        headingFont: input.brandKit.typography?.headingFont,
+        bodyFont: input.brandKit.typography?.bodyFont,
+      },
+    });
+  }
+
   const archetype = input.creativeSkeleton?.archetype ?? selectLayoutArchetype({
     templateId: input.templateId,
     templateName: input.templateName,
@@ -218,6 +262,45 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     ...creativeBase,
     previewSvg: renderCreativeSvg(creativeBase, input.brandKit),
   };
+}
+
+function compositionCopyForInput(input: BuildArchetypeCreativeInput): CompositionCopy {
+  const brand = input.brandKit.identity.tradingName || input.brandKit.identity.businessName || "Your agency";
+  const suburb = input.campaign.market.suburb;
+  const templateName = input.templateName ?? input.variant.angle;
+  return {
+    brand,
+    eyebrow: compositionEyebrow(templateName, input.campaign.offerId),
+    headline: input.variant.headline,
+    subhead: input.subheadline ?? fallbackSubheadline(selectLayoutArchetype({
+      templateId: input.templateId,
+      templateName: input.templateName,
+      offerId: input.campaign.offerId,
+      goal: input.campaign.goal,
+      angle: input.variant.angle,
+      headline: input.variant.headline,
+    }), suburb),
+    cta: input.variant.cta,
+    stat: "+12.4%",
+    statLabel: `${suburb} market movement`,
+    features: compositionFeatures(input.campaign.offerId),
+  };
+}
+
+function compositionEyebrow(templateName: string, offerId: string): string {
+  if (/open/i.test(templateName) || /open_home/.test(offerId)) return "Open home";
+  if (/sold/i.test(templateName) || /recent_sales/.test(offerId)) return "Recent result";
+  if (/market/i.test(templateName) || /market|snapshot/.test(offerId)) return "Market update";
+  if (/appraisal|price|value/i.test(templateName) || /home_value|appraisal/.test(offerId)) return "Price update";
+  if (/coming/i.test(templateName)) return "Coming soon";
+  return "Local guide";
+}
+
+function compositionFeatures(offerId: string): string[] {
+  if (/open_home/.test(offerId)) return ["Compare the property", "Clarify your questions", "Plan the next step"];
+  if (/recent_sales|market|snapshot/.test(offerId)) return ["Recent local activity", "Plain-English context", "Owner next steps"];
+  if (/home_value|appraisal/.test(offerId)) return ["Current local context", "Property-specific update", "No obligation"];
+  return ["Prep before photos", "Fix buyer friction", "Plan your timing"];
 }
 
 function geometryForArchetype(

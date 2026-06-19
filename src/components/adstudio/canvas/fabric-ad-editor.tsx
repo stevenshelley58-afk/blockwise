@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot, Image as ImageIcon, RotateCcw, RotateCw, ScanSearch } from "lucide-react";
-import { Canvas, FabricImage, Rect, Textbox, type FabricObject } from "fabric";
+import { Canvas, Circle, FabricImage, Path, Rect, Textbox, type FabricObject } from "fabric";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import {
@@ -22,6 +22,7 @@ import { useCreativeHistory } from "./use-creative-history";
 type BlockwiseFabricObject = FabricObject & {
   [BLOCKWISE_FABRIC_META_KEY]?: CreativeLayerMeta;
   text?: string;
+  clip?: CreativeDesignObjectJson["clip"];
 };
 
 export type FabricAdEditorProps = {
@@ -322,7 +323,8 @@ async function addImageObject(canvas: Canvas, object: CreativeDesignObjectJson, 
       top: frame.top,
       originX: "left",
       originY: "top",
-      clipPath: clipRect(frame),
+      clip: object.clip,
+      clipPath: clipPathForFrame(frame, object.clip),
     });
     fitImageToFrame(image, frame.width, frame.height);
     attachMeta(image, meta);
@@ -368,7 +370,7 @@ async function addLogoObject(canvas: Canvas, object: CreativeDesignObjectJson, m
         top: frame.top,
         originX: "left",
         originY: "top",
-        clipPath: clipRect(frame),
+        clipPath: clipPathForFrame(frame),
       });
       fitImageContainToFrame(image, frame.width, frame.height);
       attachMeta(image, meta);
@@ -461,11 +463,12 @@ async function replaceImageLayer(canvas: Canvas, src: string, options: { select?
   const current = canvas.getObjects().find((object) => getMeta(object)?.role === "primary_image");
   const meta = current ? getMeta(current) : null;
   if (!current || !meta) return;
+  const currentImage = current as BlockwiseFabricObject;
   const frame = {
-    left: numberOr(current.left, 0),
-    top: numberOr(current.top, 0),
-    width: Math.round(numberOr(current.width, 320) * numberOr(current.scaleX, 1)),
-    height: Math.round(numberOr(current.height, 240) * numberOr(current.scaleY, 1)),
+    left: numberOr(currentImage.left, 0),
+    top: numberOr(currentImage.top, 0),
+    width: Math.round(numberOr(currentImage.width, 320) * numberOr(currentImage.scaleX, 1)),
+    height: Math.round(numberOr(currentImage.height, 240) * numberOr(currentImage.scaleY, 1)),
   };
   canvas.remove(current);
 
@@ -477,7 +480,8 @@ async function replaceImageLayer(canvas: Canvas, src: string, options: { select?
       top: frame.top,
       originX: "left",
       originY: "top",
-      clipPath: clipRect(frame),
+      clip: currentImage.clip,
+      clipPath: clipPathForFrame(frame, currentImage.clip),
     });
     fitImageToFrame(image, frame.width, frame.height);
     attachMeta(image, meta);
@@ -519,7 +523,33 @@ function fitImageContainToFrame(object: BlockwiseFabricObject, frameWidth: numbe
   });
 }
 
-function clipRect(frame: { left: number; top: number; width: number; height: number }) {
+function clipPathForFrame(
+  frame: { left: number; top: number; width: number; height: number },
+  clip: CreativeDesignObjectJson["clip"] = "rect",
+) {
+  if (clip === "circle") {
+    return new Circle({
+      left: frame.left,
+      top: frame.top,
+      radius: Math.min(frame.width, frame.height) / 2,
+      originX: "left",
+      originY: "top",
+      absolutePositioned: true,
+    });
+  }
+
+  if (clip === "arch") {
+    const r = frame.width / 2;
+    return new Path(
+      `M ${frame.left} ${frame.top + frame.height} V ${frame.top + r} A ${r} ${r} 0 0 1 ${frame.left + frame.width} ${frame.top + r} V ${frame.top + frame.height} Z`,
+      {
+        originX: "left",
+        originY: "top",
+        absolutePositioned: true,
+      },
+    );
+  }
+
   return new Rect({
     left: frame.left,
     top: frame.top,
