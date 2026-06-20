@@ -10,11 +10,14 @@ import { createSupabaseServiceClient } from "../supabase/service.ts";
 import { createImageProviderForCandidate, createOpenRouterImageProvider } from "./ai-providers.ts";
 import { mediaUrlForStoragePath } from "./assets.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { imageDimensionsFromDataUrl } from "./image-dimensions.ts";
 import {
   buildPhotoPrepCacheKey,
   buildTemplateRenderFrame,
   deterministicPreparedPhotoAsset,
+  selectPhotoPrepMethod,
   type PhotoPrepContext,
+  type PhotoPrepDecisionMethod,
   type PreparedPhotoAsset,
 } from "./photo-prep.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
@@ -170,6 +173,9 @@ function buildPhotoPrepContextEntries(
 ): Array<{ format: AdStudioFormat; context: PhotoPrepContext }> {
   const sourceImageHash = hashSourceImage(input.sourceImageForModel);
   const formats = Array.from(new Set(input.formats));
+  // Header-only dimension parse (no codec dep) so the chokepoint can choose
+  // deterministic crop vs model reframe/extend. Null for non-data refs.
+  const sourceDimensions = imageDimensionsFromDataUrl(input.sourceImageForModel);
 
   return formats.map((format) => ({
     format,
@@ -177,6 +183,9 @@ function buildPhotoPrepContextEntries(
       workspaceId: input.workspaceId,
       imageHash: sourceImageHash,
       sourceImageRef: input.sourceImageRef,
+      sourceImage: sourceDimensions
+        ? { naturalWidth: sourceDimensions.width, naturalHeight: sourceDimensions.height }
+        : undefined,
       template: {
         key: input.template.templateKey ?? input.template.id,
         version: input.template.creativeSkeleton?.version ?? 1,
@@ -218,6 +227,17 @@ async function prepareOnePhotoAsset(input: {
   const cached = await loadCachedPhotoPrepAsset(input.supabase, input.context.workspaceId, cacheKey);
   if (cached) return cached;
 
+  // The chokepoint decides the method. When the source already fits the slot a
+  // deterministic slice-crop is faithful and free, so skip the paid model call.
+  const method = selectPhotoPrepMethod(input.context);
+  if (method === "deterministic_smart_crop") {
+    return deterministicPreparedPhotoAsset({
+      context: input.context,
+      assetUrl: input.sourceImageForModel,
+      method: "deterministic_smart_crop",
+    });
+  }
+
   const assembled = assemblePhotoPrepPrompt({ bundle: input.bundle, context: input.context });
   const imageInput: ImageProviderRequest = {
     prompt: assembled.fullPrompt,
@@ -253,6 +273,7 @@ async function prepareOnePhotoAsset(input: {
       sourceImageHash: input.context.imageHash,
       sourceImageRef: input.context.sourceImageRef,
       assetUrl: generation.result.assetUrl,
+      method,
       promptVersionId: input.promptVersionId,
       providerName: generation.providerName,
       modelName: generation.modelName,
@@ -392,6 +413,7 @@ async function persistPreparedPhotoAsset(input: {
   sourceImageHash: string;
   sourceImageRef: string;
   assetUrl: string;
+  method: PhotoPrepDecisionMethod;
   promptVersionId: string | null;
   providerName: string;
   modelName: string;
@@ -408,7 +430,7 @@ async function persistPreparedPhotoAsset(input: {
     frame_id: input.context.imageSlotId,
     format: input.context.frame.format,
     cache_key: input.cacheKey,
-    method: "model_reframe",
+    method: input.method,
     storage_path: stored.storagePath,
     source_url: stored.sourceUrl,
     width_px: input.context.frame.canvas.widthPx,
@@ -430,7 +452,7 @@ async function persistPreparedPhotoAsset(input: {
     assetUrl: stored.publicUrl,
     widthPx: input.context.frame.canvas.widthPx,
     heightPx: input.context.frame.canvas.heightPx,
-    method: "model_reframe",
+    method: input.method,
     templateKey: input.context.template.key,
     templateVersion: input.context.template.version,
     frameId: input.context.imageSlotId,
