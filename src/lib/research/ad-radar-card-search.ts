@@ -153,7 +153,7 @@ function filterCards(
     if (filters.agent && card.agentName !== filters.agent) return false;
     if (filters.adType && card.adType !== filters.adType) return false;
     if (filters.format && card.adFormat !== filters.format) return false;
-    if (hook && !card.hooks.some((value) => value.toLowerCase().includes(hook))) return false;
+    if (hook && !(card.hooks ?? []).some((value) => value.toLowerCase().includes(hook))) return false;
     return true;
   });
 }

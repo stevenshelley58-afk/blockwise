@@ -140,9 +140,9 @@ export type CustomerMetaAdLibraryCard = {
   description: string | null;
   cta: string | null;
   destinationUrl: string | null;
-  adType: string | null;
-  adFormat: string | null;
-  hooks: string[];
+  adType?: string | null;
+  adFormat?: string | null;
+  hooks?: string[];
   media: CustomerMetaAdLibraryMedia[];
 };
 
