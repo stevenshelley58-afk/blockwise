@@ -487,11 +487,11 @@ export function NewAdDialog({
                     <span className="studio-explore-count">{visibleTemplates.length} templates</span>
                   </div>
                   <div className="studio-explore-grid">
-                    {visibleTemplates.map((template, index) => (
+                    {visibleTemplates.map((template) => (
                       <article key={template.id} className="studio-explore-card">
-                        <div className={`studio-explore-thumb g${index % 7}`}>
+                        <div className="studio-explore-thumb">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={templatePreviewSrc(template, brandKit)} alt="" />
+                          <img src={templatePreviewSrc(template, brandKit)} alt="" loading="lazy" decoding="async" />
                           {isNewTemplate(template) && <span className="studio-explore-badge">NEW</span>}
                         </div>
                         <div className="studio-explore-meta">
@@ -531,9 +531,9 @@ export function NewAdDialog({
                   ) : reuseAds.length === 0 ? (
                     <p className="studio-explore-msg">{reuseError || "No previous ads yet. Start from a template or competitor research instead."}</p>
                   ) : (
-                    reuseAds.map((ad, index) => (
+                    reuseAds.map((ad) => (
                       <article key={ad.id} className="studio-explore-card">
-                        <div className={`studio-explore-thumb g${index % 7}`}>
+                        <div className="studio-explore-thumb">
                           <span className="studio-explore-ph">
                             <Copy aria-hidden size={22} />
                           </span>
@@ -563,9 +563,9 @@ export function NewAdDialog({
                       {radarError || "No saved ads yet. Save ads from Ad Radar, then use them here."} <a href="/ad-radar">Open Ad Radar</a>
                     </p>
                   ) : (
-                    radarAds.map((ad, index) => (
+                    radarAds.map((ad) => (
                       <article key={ad.savedId} className="studio-explore-card">
-                        <div className={`studio-explore-thumb g${index % 7}`}>
+                        <div className="studio-explore-thumb">
                           <span className="studio-explore-ph">
                             <Radar aria-hidden size={22} />
                           </span>
@@ -750,13 +750,6 @@ const EXPLORE_STYLES = `
 .studio-explore-thumb img{position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);object-fit:contain;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.16);display:block}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.7px;color:rgba(15,23,42,.35)}
 .studio-explore-badge{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;letter-spacing:.4px;background:#c9f24a;color:#1c2b08;border-radius:999px;padding:3px 9px}
-.studio-explore-thumb.g0{background:#edf5e7}
-.studio-explore-thumb.g1{background:#e8f0fb}
-.studio-explore-thumb.g2{background:#fbeee2}
-.studio-explore-thumb.g3{background:#efeafb}
-.studio-explore-thumb.g4{background:#fbe9f1}
-.studio-explore-thumb.g5{background:#e4f5f0}
-.studio-explore-thumb.g6{background:#eef3e2}
 .studio-explore-thumb.blank{background:var(--accent-tint);color:var(--accent)}
 .studio-explore-plus{width:46px;height:46px;border-radius:999px;background:#fff;box-shadow:var(--st-sh-1);display:grid;place-items:center;color:var(--accent)}
 .studio-explore-meta{display:flex;flex-direction:column;gap:7px;padding:14px;flex:1}
