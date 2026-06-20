@@ -10,7 +10,7 @@ import { calculateTrend, formatCurrency, formatPercent } from "@/lib/meta-monito
 import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
-import { AdsSummaryTable } from "./AdsSummaryTable";
+import { CampaignsManagement } from "./CampaignsManagement";
 import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
@@ -214,8 +214,8 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
 
       {payload.ads.length > 0 ? (
         <>
-          <AdsSummaryTable ads={payload.ads} onSelectAd={onSelectAd} />
-          <h3 className="mm-section-title">Ad performance details</h3>
+          <CampaignsManagement ads={payload.ads} onSelectAd={onSelectAd} />
+          <h3 className="mm-section-title">Ad breakdown</h3>
           <div className="mm-ad-grid">
             {payload.ads.map((ad) => (
               <AdPerformanceCard key={ad.adId} ad={ad} />

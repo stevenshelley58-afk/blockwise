@@ -135,3 +135,54 @@
     grid-template-columns: repeat(6, 1fr);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Results: match the approved mock — flat, thin, content-sized cards (no heavy
+   lifted shadow / 132px min-height) and a clean Campaigns management table.
+   Blockwise neutral tokens throughout.
+   --------------------------------------------------------------------------- */
+@media (min-width: 641px) {
+  .mm-kpi.metric-card,
+  .mm-chart-panel.panel,
+  .mm-ad-card.panel {
+    box-shadow: 0 1px 2px rgba(16, 18, 23, 0.04);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+}
+
+.rx-campaigns { margin-top: 4px; }
+.rx-camp-head h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.rx-camp-head p { margin: 4px 0 12px; font-size: 13px; color: var(--muted); }
+.rx-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(16, 18, 23, 0.04); }
+.rx-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rx-table thead th { text-align: right; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--surface-subtle); white-space: nowrap; }
+.rx-table thead th.rx-left { text-align: left; }
+.rx-table td { text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.rx-table td.rx-left { text-align: left; }
+.rx-table tbody tr:last-child td { border-bottom: 0; }
+.rx-camp-row { cursor: pointer; }
+.rx-camp-row:hover { background: var(--surface-subtle); }
+.rx-sub-row td { background: var(--surface-subtle); }
+.rx-indent1 { padding-left: 30px !important; }
+.rx-indent2 { padding-left: 46px !important; }
+.rx-name { font-weight: 600; color: var(--ink); }
+.rx-muted { color: var(--muted); font-weight: 500; }
+.rx-chev { color: var(--faint); vertical-align: middle; margin-right: 6px; transition: transform 0.15s; }
+.rx-chev-open { transform: rotate(90deg); }
+.rx-thumb { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; border: 1px solid var(--line); flex-shrink: 0; }
+.rx-thumb-empty { display: inline-flex; align-items: center; justify-content: center; background: var(--surface-subtle); color: var(--faint); }
+.rx-ad-name-btn { display: inline-flex; align-items: center; gap: 9px; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.rx-ad-name-btn:hover .rx-muted { color: var(--ink); }
+.rx-tag { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; }
+.rx-tag-fatigue { background: var(--amber-soft, #fdf8ee); color: var(--amber); }
+.rx-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.rx-btn { border: 1px solid var(--line-heavy); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; font-size: 12px; padding: 5px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.rx-btn:hover { background: var(--surface-subtle); }
+.rx-btn-primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.rx-btn-danger { color: var(--rose); border-color: var(--rose); }
+.rx-confirm { display: inline-flex; gap: 6px; }
+.rx-state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+.rx-state-pushing { color: var(--accent); }
+.rx-state-done { color: var(--green); }
+@media (max-width: 760px) { .rx-card { overflow-x: auto; } .rx-table { min-width: 680px; } }
