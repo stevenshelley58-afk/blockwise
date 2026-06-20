@@ -10,11 +10,14 @@ import {
 
 import { uploadAdStudioMedia } from "./media-upload";
 
+/** What an asset depicts — drives the library filters and template slot matching. */
+export type AssetRole = "property" | "person" | "logo" | "background";
+
 export const MEDIA_ASSETS = [
-  { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story" },
-  { src: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Property image", ratio: "Feed" },
-  { src: "/ads/ad-hillco.jpg", label: "Living room hero", type: "Brand asset", ratio: "Square" },
-  { src: "/ads/ad-coastline.jpg", label: "River market view", type: "Previously used", ratio: "Landscape" },
+  { src: "/ads/ad-northstar.jpg", label: "South Perth skyline", type: "Uploaded", ratio: "Story", role: "background" },
+  { src: "/ads/ad-hillview.jpg", label: "Modern family home", type: "Property image", ratio: "Feed", role: "property" },
+  { src: "/ads/ad-hillco.jpg", label: "Living room hero", type: "Brand asset", ratio: "Square", role: "property" },
+  { src: "/ads/ad-coastline.jpg", label: "River market view", type: "Previously used", ratio: "Landscape", role: "background" },
 ];
 
 export function useMedia(
