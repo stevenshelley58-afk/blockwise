@@ -13,6 +13,7 @@ import { dataUrlToUploadBytes } from "./generated-media.ts";
 import {
   buildPhotoPrepCacheKey,
   buildTemplateRenderFrame,
+  deterministicPreparedPhotoAsset,
   type PhotoPrepContext,
   type PreparedPhotoAsset,
 } from "./photo-prep.ts";
@@ -26,6 +27,7 @@ const PHOTO_PREP_PROMPT_KEYS: PromptKey[] = [
   "adstudio.image.brand_rules",
   "adstudio.image.negative_prompt",
 ];
+const DEFAULT_PHOTO_PREP_TIMEOUT_MS = 25_000;
 
 type SupabaseLike = {
   from(table: string): any;
@@ -77,6 +79,7 @@ export async function preparePhotoAssetsForTemplate(input: {
   brief?: string;
   supabase?: SupabaseLike;
   providers?: ImageProviderAdapter[];
+  timeoutMs?: number;
 }): Promise<PreparedPhotoAssetsByFormat> {
   if (!input.sourceImageForModel) {
     throw new Error("Source image could not be read for template photo preparation.");
@@ -127,6 +130,7 @@ export async function preparePhotoAssetsForTemplate(input: {
         bundle,
         promptVersionId,
         providers: input.providers,
+        timeoutMs: input.timeoutMs ?? DEFAULT_PHOTO_PREP_TIMEOUT_MS,
       });
 
       return [format, asset] as const;
@@ -151,6 +155,7 @@ async function prepareOnePhotoAsset(input: {
   bundle: Awaited<ReturnType<typeof getActivePromptBundle>>;
   promptVersionId: string | null;
   providers?: ImageProviderAdapter[];
+  timeoutMs: number;
 }): Promise<PreparedPhotoAsset> {
   const cacheKey = buildPhotoPrepCacheKey(input.context);
   const cached = await loadCachedPhotoPrepAsset(input.supabase, input.context.workspaceId, cacheKey);
@@ -167,9 +172,18 @@ async function prepareOnePhotoAsset(input: {
   };
   const correlationId = randomUUID();
   const startedAt = Date.now();
+  const abortController = new AbortController();
+  const timedImageInput: ImageProviderRequest = {
+    ...imageInput,
+    signal: abortController.signal,
+  };
 
   try {
-    const generation = await generatePhotoPrepImage(imageInput, input.providers);
+    const generation = await withPhotoPrepTimeout(
+      generatePhotoPrepImage(timedImageInput, input.providers),
+      input.timeoutMs,
+      abortController,
+    );
     if (!generation.result.assetUrl) {
       throw new Error("Template photo preparation returned an empty image.");
     }
@@ -241,7 +255,43 @@ async function prepareOnePhotoAsset(input: {
       status: "failed",
       error,
     });
-    throw error;
+    const fallback = deterministicPreparedPhotoAsset({
+      context: input.context,
+      assetUrl: input.sourceImageForModel,
+      method: "fallback_smart_crop",
+    });
+    console.warn(JSON.stringify({
+      level: "warning",
+      msg: "adstudio_photo_prep_fallback",
+      workspaceId: input.context.workspaceId,
+      templateKey: input.context.template.key,
+      format: input.context.frame.format,
+      timeoutMs: input.timeoutMs,
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return fallback;
+  }
+}
+
+async function withPhotoPrepTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  abortController: AbortController,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error(`Template photo preparation exceeded ${timeoutMs}ms.`);
+          abortController.abort(error);
+          reject(error);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

@@ -83,6 +83,7 @@ test("createOpenAiImageProvider exposes reference-capable image capabilities", (
 
 test("createOpenAiImageProvider sends locked-template reference work to images/edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
+  const abortController = new AbortController();
   const provider = createOpenAiImageProvider({
     env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async (url, init) => {
@@ -101,10 +102,12 @@ test("createOpenAiImageProvider sends locked-template reference work to images/e
     aspectRatio: "1:1",
     stylePreset: "locked_template_photo_prep",
     requiresReferenceAssets: true,
+    signal: abortController.signal,
   });
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://api.openai.com/v1/images/edits");
+  assert.equal(calls[0].init.signal, abortController.signal);
   const headers = calls[0].init.headers as Record<string, string>;
   assert.equal(headers.Authorization, "Bearer oa_test");
   assert.equal(headers["Content-Type"], undefined);

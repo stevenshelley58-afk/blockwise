@@ -142,6 +142,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
         ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
         : await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
             method: "POST",
+            signal: input.signal,
             headers: {
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
@@ -219,19 +220,20 @@ async function postOpenAiImageEdit(input: {
 
   const single = references.length === 1;
   for (const [index, reference] of references.entries()) {
-    const blob = await imageReferenceToBlob(reference, input.fetchImpl);
+    const blob = await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal);
     // Single reference uses `image`; multiple uses `image[]` per the API contract.
     form.append(single ? "image" : "image[]", blob, `reference-${index}.png`);
   }
 
   if (input.input.maskImage) {
-    const maskBlob = await imageReferenceToBlob(input.input.maskImage, input.fetchImpl);
+    const maskBlob = await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal);
     form.set("mask", maskBlob, "mask.png");
   }
 
   // No explicit Content-Type — fetch sets the multipart boundary itself.
   return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
     method: "POST",
+    signal: input.input.signal,
     headers: {
       Authorization: `Bearer ${input.apiKey}`,
       ...gatewayHeaders(input.env),
@@ -241,7 +243,7 @@ async function postOpenAiImageEdit(input: {
 }
 
 // Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
-async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch): Promise<Blob> {
+async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch, signal?: AbortSignal): Promise<Blob> {
   if (reference.startsWith("data:")) {
     const decoded = dataUrlToUploadBytes(reference);
     // Copy into a fresh ArrayBuffer-backed view so it satisfies BlobPart.
@@ -249,7 +251,7 @@ async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch):
     bytes.set(decoded.bytes);
     return new Blob([bytes], { type: decoded.contentType });
   }
-  const response = await fetchImpl(reference);
+  const response = await fetchImpl(reference, { signal });
   if (!response.ok) {
     throw new Error(`Reference image could not be fetched (${response.status}).`);
   }
@@ -281,6 +283,7 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
 
       const response = await fetchImpl(OPENROUTER_CHAT_URL, {
         method: "POST",
+        signal: input.signal,
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
