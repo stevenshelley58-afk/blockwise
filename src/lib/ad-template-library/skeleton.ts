@@ -137,3 +137,5 @@ export const creativeSkeletonSchema = z
 export type CreativeSkeleton = z.infer<typeof creativeSkeletonSchema>;
 export type CreativeSkeletonArchetype = z.infer<typeof creativeSkeletonArchetypeSchema>;
 export type CreativeImageFrame = z.infer<typeof creativeImageFrameSchema>;
+/** A role-tagged photo slot inside composition.image_frames (primary | secondary | agent_headshot). */
+export type CompositionImageFrame = z.infer<typeof imageFrameSchema>;

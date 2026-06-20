@@ -48,6 +48,12 @@ export type CompositionCreativeInput = {
    * Resolve it from a CreativeSkeleton's image_frames via resolveImageFrameRect.
    */
   imageFrame?: ImageFrameOverride;
+  /**
+   * Extra placed image objects (secondary gallery photos and agent_headshot
+   * cut-outs) from the template's image_frames, appended above the scene. The
+   * primary frame is handled via imageFrame/photoSrc; these are everything else.
+   */
+  extraImageObjects?: AdStudioCanvasObject[];
 };
 
 export type SplitSceneResult = {
@@ -145,6 +151,10 @@ export function compositionToCreative(input: CompositionCreativeInput): AdStudio
       height: size.height,
       locked: true,
     });
+  }
+
+  if (input.extraImageObjects?.length) {
+    objects.push(...input.extraImageObjects);
   }
 
   objects.push(...copyObjects);

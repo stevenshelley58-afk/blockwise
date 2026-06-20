@@ -1,4 +1,5 @@
 import { deterministicUuid } from "./id.ts";
+import { buildTemplateImageObjects } from "./image-frame.ts";
 import { getCanvasSize, renderCreativeSvg } from "./renderer.ts";
 import { compositionToCreative } from "./creative/composition-to-creative.ts";
 import { buildPalette, fontStacks } from "./creative/preview-engine.ts";
@@ -105,6 +106,21 @@ export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): Lay
 }
 
 export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdStudioCreative {
+  const size = getCanvasSize(input.format);
+  // Multi-slot placement from the template's role-tagged image_frames. Empty when
+  // the template carries no frames (e.g. the seeded templates), so both render
+  // paths fall back to their existing single full-bleed placement.
+  const placedImages = buildTemplateImageObjects({
+    frames: input.creativeSkeleton?.composition.image_frames,
+    format: input.format,
+    canvasWidth: size.width,
+    canvasHeight: size.height,
+    primarySrc: input.sourceImageDataUrl,
+    listingImages: input.brandKit.assets.listingImages,
+    headshots: input.brandKit.assets.headshots,
+  });
+  const primaryPlaced = placedImages.find((image) => image.role === "primary_image");
+
   if (input.templateId && COMPOSITION_FORMATS.has(input.format)) {
     const compositionId = compositionForTemplate({
       id: input.templateId,
@@ -121,7 +137,13 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
       palette: buildPalette(primary, accent),
       stacks: fontStacks(input.brandKit.typography?.headingFont, input.brandKit.typography?.bodyFont),
       copy: compositionCopyForInput(input),
-      photoSrc: input.sourceImageDataUrl ?? null,
+      photoSrc: primaryPlaced?.content ?? input.sourceImageDataUrl ?? null,
+      // A template image_frame overrides the composition's default photo spot;
+      // secondary/headshot frames are appended above the scene.
+      imageFrame: primaryPlaced
+        ? { x: primaryPlaced.x, y: primaryPlaced.y, width: primaryPlaced.width, height: primaryPlaced.height ?? primaryPlaced.width }
+        : undefined,
+      extraImageObjects: placedImages.filter((image) => image.role !== "primary_image"),
       ids: {
         creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
         campaignId: input.campaign.campaignId,
@@ -150,7 +172,6 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     angle: input.variant.angle,
     headline: input.variant.headline,
   });
-  const size = getCanvasSize(input.format);
   const fallbackGeometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
   const geometry = input.creativeSkeleton
     ? geometryForSkeleton(input.creativeSkeleton, input.format, size, input.brandKit, fallbackGeometry)
@@ -171,6 +192,13 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     canvasHeight: size.height,
     format: input.format,
   });
+  // Primary/secondary photos sit under the scrim for text contrast; an
+  // agent_headshot cut-out sits above it so it stays clear. No frames => the
+  // single full-bleed primary image (unchanged for the seeded templates).
+  const belowScrimImages = placedImages.length
+    ? placedImages.filter((image) => image.role !== "agent_headshot_image")
+    : [primaryImageObject(size, input.sourceImageDataUrl, input.brandKit)];
+  const aboveScrimImages = placedImages.filter((image) => image.role === "agent_headshot_image");
   const creativeBase: Omit<AdStudioCreative, "previewSvg"> = {
     creativeId: deterministicUuid(`${input.variant.variantId}:${input.format}`),
     campaignId: input.campaign.campaignId,
@@ -182,8 +210,9 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
       backgroundAssetId: `background_${input.variant.variantId}`,
       objects: [
         backgroundObject(size, input.brandKit),
-        primaryImageObject(size, input.sourceImageDataUrl, input.brandKit),
+        ...belowScrimImages,
         scrimObject(size, geometry.scrim),
+        ...aboveScrimImages,
         ...geometry.supportObjects,
         {
           objectId: "headline",

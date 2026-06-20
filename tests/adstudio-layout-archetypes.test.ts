@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildArchetypeCreative,
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
   runLayoutQA,
   selectLayoutArchetype,
 } from "../src/lib/adstudio/index.ts";
-import type { AdStudioCreative } from "../src/lib/adstudio/types.ts";
+import type { AdStudioCampaign, AdStudioCampaignVariant, AdStudioCreative } from "../src/lib/adstudio/types.ts";
+import type { CreativeSkeleton } from "../src/lib/ad-template-library/skeleton.ts";
 
 const sampleHtml = `
   <html>
@@ -104,6 +106,100 @@ test("every composite creative is tagged source=template_composite (both render 
   for (const creative of pack.creatives) {
     assert.equal(creative.source, "template_composite", `format ${creative.format} missing composite source tag`);
   }
+});
+
+function miniCampaign(): AdStudioCampaign {
+  return {
+    campaignId: "camp_1",
+    workspaceId: "workspace_demo",
+    brandKitId: "bk_1",
+    name: "Scarborough Just Sold",
+    goal: "seller_leads",
+    market: { country: "AU", state: "WA", city: "Perth", suburb: "Scarborough" },
+    audienceIntent: "sellers",
+    offerId: "recent_sales_report",
+    platforms: ["meta"],
+    creativeFormats: ["1.91:1"],
+    status: "ready",
+  };
+}
+
+function miniVariant(): AdStudioCampaignVariant {
+  return {
+    variantId: "var_1",
+    campaignId: "camp_1",
+    angle: "Recent result",
+    headline: "Just sold in Scarborough",
+    offer: "Recent sales report",
+    cta: "Request update",
+    score: {
+      score: 90,
+      notes: [],
+      warnings: [],
+      dimensions: { offerClarity: 20, localRelevance: 15, leadIntentStrength: 20, brandFit: 15, complianceSafety: 20, visualHierarchy: 10 },
+    },
+    status: "approved",
+    lockedFields: [],
+  };
+}
+
+function frameSkeleton(): CreativeSkeleton {
+  return {
+    version: 1,
+    archetype: "just_sold",
+    shot: { type: "exterior_hero", lighting: "golden hour", mood: "aspirational" },
+    composition: {
+      focal_point: "facade",
+      horizon: "low",
+      image_frames: [
+        { id: "p", role: "primary", x: 0, y: 0, width: 1, height: 0.72 },
+        { id: "h", role: "agent_headshot", x: 0.72, y: 0.7, width: 0.2, height: 0.2 },
+      ],
+      copy_safe_zones: [{ id: "z", x: 0.06, y: 0.74, width: 0.6, height: 0.2, priority: "primary" }],
+    },
+    color: { palette: ["#123456"], overlay: "bottom scrim", contrast: "high" },
+    text_system: { headline_zone: "lower_left", badge: "sold_ribbon", cta_style: "solid_pill" },
+    copy: { hook_style: "statement", headline_pattern: "Just sold in {suburb}", cta: "Request update" },
+    variables: ["suburb"],
+    confidence: 90,
+  };
+}
+
+test("buildArchetypeCreative places multi-slot frames incl agent_headshot cut-out (archetype path)", () => {
+  const brandKit = approvedBrandKit();
+  const creative = buildArchetypeCreative({
+    campaign: miniCampaign(),
+    variant: miniVariant(),
+    brandKit: { ...brandKit, assets: { ...brandKit.assets, listingImages: [], headshots: ["data:image/png;base64,HEAD"] } },
+    format: "1.91:1", // archetype path (not a composition format)
+    sourceImageDataUrl: "data:image/png;base64,USER",
+    creativeSkeleton: frameSkeleton(),
+  });
+
+  const images = creative.canvas.objects.filter((object) => object.type === "image");
+  const primary = images.find((object) => object.role === "primary_image");
+  const headshot = images.find((object) => object.role === "agent_headshot_image");
+  assert.equal(primary?.content, "data:image/png;base64,USER");
+  assert.ok(headshot, "expected an agent_headshot image object");
+  assert.equal(headshot?.clip, "circle");
+  // The headshot renders as a clipped cut-out (circle) in the preview SVG.
+  assert.match(creative.previewSvg, /clipPath/);
+});
+
+test("buildArchetypeCreative keeps a single full-bleed image when the template has no frames", () => {
+  const creative = buildArchetypeCreative({
+    campaign: miniCampaign(),
+    variant: miniVariant(),
+    brandKit: approvedBrandKit(),
+    format: "1.91:1",
+    sourceImageDataUrl: "data:image/png;base64,USER",
+    // no creativeSkeleton => full-bleed fallback
+  });
+  const images = creative.canvas.objects.filter((object) => object.type === "image");
+  assert.equal(images.length, 1);
+  assert.equal(images[0]?.role, "primary_image");
+  assert.equal(images[0]?.width, creative.canvas.width);
+  assert.equal(images[0]?.height, creative.canvas.height);
 });
 
 test("layout QA passes generated archetype creatives and reports deterministic failures", () => {
