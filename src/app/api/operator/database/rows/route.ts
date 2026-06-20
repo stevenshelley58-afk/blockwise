@@ -54,23 +54,21 @@ export async function GET(request: NextRequest) {
   const search = (params.get("search") ?? "").trim();
 
   const supabase = createSupabaseServiceClient();
-  let query = supabase
-    .from(table.name)
-    .select("*", { count: "estimated" })
-    .order(orderBy, { ascending: dir === "asc", nullsFirst: false })
-    .range(offset, offset + limit - 1);
+  let filter = supabase.from(table.name).select("*", { count: "estimated" });
 
   if (search) {
     const term = safeTerm(search);
     if (term) {
       const textCols = table.columns.filter((c) => columnKind(c.type) === "text").slice(0, 12);
       if (textCols.length) {
-        query = query.or(textCols.map((c) => `${c.name}.ilike.%${term}%`).join(","));
+        filter = filter.or(textCols.map((c) => `${c.name}.ilike.%${term}%`).join(","));
       }
     }
   }
 
-  const { data, error, count } = await query;
+  const { data, error, count } = await filter
+    .order(orderBy, { ascending: dir === "asc", nullsFirst: false })
+    .range(offset, offset + limit - 1);
   if (error) {
     return NextResponse.json({ error: "read_failed", detail: error.message }, { status: 400 });
   }

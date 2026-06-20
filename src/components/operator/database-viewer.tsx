@@ -2,7 +2,7 @@
 "use client";
 
 import { Columns3, Database, RefreshCw, Search, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   columnKind,
@@ -322,7 +322,7 @@ export function DatabaseViewer() {
 
     const open = () => editable && setEditingCell({ rowId: id, col: col.name });
 
-    let inner: React.ReactNode;
+    let inner: ReactNode;
     if (display === null) inner = <span className="dbv-null">NULL</span>;
     else if (kind === "bool") {
       const on = display === "true";
