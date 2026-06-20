@@ -10,12 +10,14 @@ import {
   FileText,
   Home,
   Image as ImageIcon,
+  Layers,
   LayoutGrid,
   Plus,
   RefreshCw,
   Send,
   Settings2,
   Sparkles,
+  User,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -925,6 +927,30 @@ export function AdStudioWorkbench({
       },
     ];
 
+    const learnCards = [
+      {
+        title: "Use your headshot",
+        detail: "Upload a photo of yourself once — reuse it across every ad.",
+        icon: User,
+        action: "How it works",
+        onClick: () => goToSection("media"),
+      },
+      {
+        title: "Add a listing photo",
+        detail: "Drop in the property shot and fit it across every ad size.",
+        icon: ImageIcon,
+        action: "How it works",
+        onClick: () => goToSection("media"),
+      },
+      {
+        title: "Overlay yourself on a listing",
+        detail: "Combine a house photo and your cut-out into one polished ad.",
+        icon: Layers,
+        action: "How it works",
+        onClick: () => openTemplatePicker(),
+      },
+    ];
+
     return (
       <div className="studio-home-panel">
         <header className="studio-home-head">
@@ -983,6 +1009,23 @@ export function AdStudioWorkbench({
                   <strong>{tool.title}</strong>
                   <small>{tool.detail}</small>
                   <em>{tool.action} <ArrowRight aria-hidden size={14} /></em>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="studio-home-tools" aria-labelledby="studio-home-learn-title">
+          <h2 id="studio-home-learn-title">Learn the basics</h2>
+          <div>
+            {learnCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <button key={card.title} type="button" onClick={card.onClick}>
+                  <span><Icon aria-hidden size={20} /></span>
+                  <strong>{card.title}</strong>
+                  <small>{card.detail}</small>
+                  <em>{card.action} <ArrowRight aria-hidden size={14} /></em>
                 </button>
               );
             })}
