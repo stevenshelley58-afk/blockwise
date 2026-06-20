@@ -349,6 +349,10 @@ test("skeleton extraction prompts are active and assemble to strict JSON instruc
   assert.match(prompt.fullPrompt, /copy_safe_zones/);
   assert.match(prompt.fullPrompt, /Pick the closest existing Ad Studio archetype/);
   assert.match(prompt.fullPrompt, /Headline: Perth Market Update/);
+  // The extractor must emit image_frames (the root gap) with roles, so mined and
+  // sample-imported templates carry real photo slots, not just copy-safe zones.
+  assert.match(prompt.fullPrompt, /image_frames/);
+  assert.match(prompt.fullPrompt, /agent_headshot/);
   assert.equal(prompt.promptVersions.length, 4);
 });
 

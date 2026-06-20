@@ -243,15 +243,18 @@ Observed ad:
 
 {{OUTPUT_SCHEMA}}`,
   "adstudio.skeleton.output_schema": `Return one JSON object:
-{"version":1,"archetype":"listing_hero|coming_soon|open_home|just_sold|market_stat|appraisal|seller_guide|social_proof","shot":{"type":string,"lighting":string,"mood":string},"composition":{"focal_point":string,"horizon":"low|middle|high|none","copy_safe_zones":[{"id":string,"x":number,"y":number,"width":number,"height":number,"priority":"primary|secondary|cta"}]},"color":{"palette":[string],"overlay":string,"contrast":"low|medium|high"},"text_system":{"headline_zone":string,"badge":string,"cta_style":string},"copy":{"hook_style":string,"headline_pattern":string,"cta":string},"variables":[string],"confidence":number}`,
+{"version":1,"archetype":"listing_hero|coming_soon|open_home|just_sold|market_stat|appraisal|seller_guide|social_proof","shot":{"type":string,"lighting":string,"mood":string},"composition":{"focal_point":string,"horizon":"low|middle|high|none","image_frames":[{"id":string,"role":"primary|secondary|agent_headshot","x":number,"y":number,"width":number,"height":number,"formats":["1:1|4:5|9:16|1.91:1"],"prompt_hint":string}],"copy_safe_zones":[{"id":string,"x":number,"y":number,"width":number,"height":number,"priority":"primary|secondary|cta"}]},"color":{"palette":[string],"overlay":string,"contrast":"low|medium|high"},"text_system":{"headline_zone":string,"badge":string,"cta_style":string},"copy":{"hook_style":string,"headline_pattern":string,"cta":string},"variables":[string],"confidence":number}`,
   "adstudio.skeleton.extraction_rules": `Extraction rules:
 - Infer reusable structure, not one-off content.
 - Coordinates are normalized 0..1 relative to the ad canvas.
+- image_frames are the rectangular spots where the listing photo(s) sit; always return at least one frame.
+- Assign each frame a role: the largest/dominant photo is "primary"; a person or cut-out portrait is "agent_headshot"; smaller repeated photos are "secondary".
+- If the creative is a single full-bleed photo, return one primary frame at {x:0,y:0,width:1,height:1}.
 - copy_safe_zones are areas where overlaid text can sit without covering the main subject.
 - Pick the closest existing Ad Studio archetype; do not invent archetype names.
 - Use Australian residential real-estate context.
 - confidence is 0..100 based on visual clarity and certainty.
-- Reject hallucinated metrics, prices, or guarantees; encode patterns only.`,
+- Reject hallucinated metrics, prices, or guarantees; encode patterns and placement only.`,
   "adstudio.background.system": `Generate a premium real-estate background image prompt for an ad creative. The background must support overlaid copy and brand elements. Do not render final ad text inside the image.`,
   "adstudio.background.input_template": `{{BRAND_CONSTRAINTS}}
 
