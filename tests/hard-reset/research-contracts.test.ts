@@ -224,6 +224,7 @@ test("work queue claiming is atomic and has no legacy orchestrator fallback path
   assert.ok(claimSql, "research.claim_work_queue_jobs must be defined in migrations");
   assert.match(claimSql, /for\s+update\s+skip\s+locked/i, "queue claim RPC must use FOR UPDATE SKIP LOCKED");
   assert.match(claimSql, /update\s+research\.work_queue/i, "claim RPC must mark claimed jobs in the same transaction");
+  assert.match(claimSql, /least\(coalesce\(p_limit,\s*1\),\s*500\)/i, "claim RPC must allow controlled first-fill drain batches above 100");
   assert.doesNotMatch(read(paths.hardResetMigration), /orchestrator_list_due_pages/i, "legacy orchestrator claim RPC must not be recreated in the hard reset migration");
 });
 
