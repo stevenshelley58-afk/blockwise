@@ -179,7 +179,10 @@ function copyFieldsFromPack(copyPack: AdStudioPlatformCopyPack): AdStudioCopyFie
     primaryText: copyPack.meta.primaryText[0] ?? "",
     headline: copyPack.meta.headlines[0] ?? copyPack.landingPage.headline,
     description: copyPack.meta.descriptions[0] ?? copyPack.landingPage.subheadline,
-    cta: ctaLabel(copyPack.meta.cta),
+    // Preserve the human CTA string (e.g. "Request price update") rather than
+    // re-deriving it from the 4-value Meta enum, which collapses anything that
+    // isn't download/contact/sign into "Learn more".
+    cta: copyPack.landingPage.cta || ctaLabel(copyPack.meta.cta),
   };
 }
 
