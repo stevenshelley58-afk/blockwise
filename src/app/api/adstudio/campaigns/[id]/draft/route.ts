@@ -4,18 +4,13 @@ import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   compactAdStudioCampaignPackForTransport,
+  loadAdStudioCampaignPack,
   persistAdStudioCampaignPack,
-  rowToBrandKit,
-  rowToCampaignPack,
 } from "@/lib/adstudio/persistence";
-import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
-import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
@@ -44,7 +39,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Campaign ID does not match draft payload." }, { status: 400 });
     }
 
-    const existingPack = await loadExistingCampaignPack(access.supabase, access.access.workspaceId, id);
+    const existingPack = await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id);
     const submittedPack = normalizeSubmittedCampaignPack(
       body.campaignPack,
       id,
@@ -57,7 +52,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const persisted = await persistAdStudioCampaignPack(access.supabase, campaignPack, access.access.userId);
     const responsePack = persisted.error
       ? campaignPack
-      : (await loadExistingCampaignPack(access.supabase, access.access.workspaceId, id)) ?? campaignPack;
+      : (await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id)) ?? campaignPack;
     const liveResult = buildAdStudioLiveResult({
       data: compactAdStudioCampaignPackForTransport(responsePack),
       persistenceError: persisted.error?.message,
@@ -71,63 +66,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   } catch (error) {
     return errorResponse(error, 400);
   }
-}
-
-async function loadExistingCampaignPack(
-  supabase: SupabaseServerClient,
-  workspaceId: string,
-  campaignId: string,
-): Promise<AdStudioCampaignPack | null> {
-  const { data: campaign, error: campaignError } = await supabase
-    .from("adstudio_campaigns")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("id", campaignId)
-    .maybeSingle();
-
-  if (campaignError) throw new Error(campaignError.message);
-  if (!campaign) return null;
-
-  const [brandKitRow, variants, creatives, copy, compliance] = await Promise.all([
-    supabase
-      .from("adstudio_brand_kits")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("id", String(campaign.brand_kit_id))
-      .maybeSingle(),
-    supabase.from("adstudio_campaign_variants").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-    supabase.from("adstudio_creatives").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-    supabase.from("adstudio_platform_copy").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
-    supabase
-      .from("adstudio_compliance_reports")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("campaign_id", campaignId)
-      .order("checked_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  if (brandKitRow.error) throw new Error(brandKitRow.error.message);
-  if (variants.error) throw new Error(variants.error.message);
-  if (creatives.error) throw new Error(creatives.error.message);
-  if (copy.error) throw new Error(copy.error.message);
-  if (compliance.error) throw new Error(compliance.error.message);
-  if (!brandKitRow.data) return null;
-
-  const brandKit = applyBrandAssetRows(
-    rowToBrandKit(brandKitRow.data),
-    await loadAdStudioBrandAssetRows(supabase, workspaceId, String(campaign.brand_kit_id)),
-  );
-
-  return rowToCampaignPack({
-    brandKit,
-    campaign,
-    variants: variants.data ?? [],
-    creatives: creatives.data ?? [],
-    copy: copy.data ?? [],
-    compliance: compliance.data ?? null,
-  });
 }
 
 function mergeCampaignPack(existing: AdStudioCampaignPack, submitted: AdStudioCampaignPack): AdStudioCampaignPack {

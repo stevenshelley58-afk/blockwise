@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { compactAdStudioCampaignPackForTransport, loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (error) return errorResponse(error);
   if (!campaign) return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
 
-  return NextResponse.json({ campaign, variants, creatives, copy, compliance });
+  const campaignPack = await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id);
+
+  return NextResponse.json({
+    campaign,
+    variants,
+    creatives,
+    copy,
+    compliance,
+    campaignPack: campaignPack ? compactAdStudioCampaignPackForTransport(campaignPack) : null,
+  });
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {

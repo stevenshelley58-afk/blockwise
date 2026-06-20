@@ -14,6 +14,15 @@ import {
 
 export type AdRadarCardSearchSort = "recent" | "longest";
 
+export type AdRadarCardSearchFilters = {
+  status?: "active" | "inactive";
+  agency?: string;
+  agent?: string;
+  adType?: string;
+  format?: string;
+  hook?: string;
+};
+
 type SearchSupabaseClient = {
   schema: (schema: "research") => any;
 };
@@ -22,6 +31,7 @@ type SearchInput = {
   query: string;
   sort?: AdRadarCardSearchSort;
   includeSurroundingSuburbs?: boolean;
+  filters?: AdRadarCardSearchFilters;
   rowLimit?: number;
   resultLimit?: number;
 };
@@ -70,19 +80,26 @@ export async function searchCustomerMetaAdLibraryCards(
   const q = normaliseAdRadarCardSearchQuery(input.query);
   const sort = input.sort === "longest" ? "longest" : "recent";
   const includeSurroundingSuburbs = input.includeSurroundingSuburbs === true;
-  const rowLimit = clampLimit(input.rowLimit ?? DEFAULT_SEARCH_ROW_LIMIT, 1, 500);
+  const filters = normaliseCardSearchFilters(input.filters);
+  const hasFilters = Object.keys(filters).length > 0;
+  // Widen the candidate window when filters are active so the post-slice page
+  // still fills up after the database narrows the results.
+  const defaultRowLimit = hasFilters ? 500 : DEFAULT_SEARCH_ROW_LIMIT;
+  const rowLimit = clampLimit(input.rowLimit ?? defaultRowLimit, 1, 500);
   const resultLimit = clampLimit(input.resultLimit ?? DEFAULT_SEARCH_RESULT_LIMIT, 1, 100);
   if (!q) return [];
 
-  const locationSearch = await loadPrioritisedLocationRows(supabase, q, sort, rowLimit, includeSurroundingSuburbs);
+  const locationSearch = await loadPrioritisedLocationRows(supabase, q, sort, rowLimit, includeSurroundingSuburbs, filters);
   let rows = locationSearch.active ? locationSearch.rows : null;
 
-  if (!locationSearch.active && shouldUseRankedFullTextSearch(q)) {
+  // The ranked RPC does not accept facet filters, so skip it when filters are
+  // active and use the filterable fallback/structured paths instead.
+  if (!locationSearch.active && !hasFilters && shouldUseRankedFullTextSearch(q)) {
     rows = await loadRankedFullTextRows(supabase, q, sort, rowLimit);
   }
 
   if (!locationSearch.active && rows === null) {
-    const fallback = await loadFallbackSearchRows(supabase, q, sort, rowLimit);
+    const fallback = await loadFallbackSearchRows(supabase, q, sort, rowLimit, filters);
     if (fallback.error) throw new Error(fallback.error.message);
     rows = fallback.rows;
   }
@@ -95,6 +112,38 @@ export async function searchCustomerMetaAdLibraryCards(
   return sortedCards.slice(0, resultLimit);
 }
 
+function normaliseCardSearchFilters(filters?: AdRadarCardSearchFilters): AdRadarCardSearchFilters {
+  if (!filters) return {};
+  const result: AdRadarCardSearchFilters = {};
+  if (filters.status === "active" || filters.status === "inactive") result.status = filters.status;
+  const agency = filters.agency?.trim();
+  if (agency) result.agency = agency;
+  const agent = filters.agent?.trim();
+  if (agent) result.agent = agent;
+  const adType = filters.adType?.trim();
+  if (adType) result.adType = adType;
+  const format = filters.format?.trim();
+  if (format) result.format = format;
+  const hook = filters.hook?.trim();
+  if (hook) result.hook = hook;
+  return result;
+}
+
+function applyCardSearchFilters(query: any, filters: AdRadarCardSearchFilters): any {
+  let next = query;
+  if (filters.status) next = next.eq("active_status", filters.status);
+  if (filters.agency) next = next.eq("agency_name", filters.agency);
+  if (filters.agent) next = next.eq("agent_name", filters.agent);
+  if (filters.adType) next = next.eq("ad_type", filters.adType);
+  if (filters.format) next = next.eq("format", filters.format);
+  if (filters.hook) next = next.ilike("hooks_text", `%${escapeLikeContains(filters.hook)}%`);
+  return next;
+}
+
+function escapeLikeContains(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
 export function normaliseAdRadarCardSearchQuery(value: string): string {
   return value.replace(/[(),]/g, "").trim();
 }
@@ -105,17 +154,18 @@ async function loadPrioritisedLocationRows(
   sort: AdRadarCardSearchSort,
   rowLimit: number,
   includeSurroundingSuburbs: boolean,
+  filters: AdRadarCardSearchFilters,
 ): Promise<LocationSearchRowsResult> {
   const guess = resolveAdRadarLocationSearch(q, { includeSurroundingSuburbs });
   if (!guess || !shouldPrioritiseAdRadarLocationSearch(q, guess)) {
     return { rows: [], active: false, guess: null };
   }
 
-  const structuredLoaders = buildStructuredLocationLoaders(supabase, guess, sort, rowLimit);
+  const structuredLoaders = buildStructuredLocationLoaders(supabase, guess, sort, rowLimit, filters);
   const structuredBatches = await Promise.all(structuredLoaders.map((load) => load()));
   const structuredRows = dedupeRowsByCardId(structuredBatches.flat());
 
-  const textLoaders = buildLocationTextLoaders(supabase, guess, sort, rowLimit);
+  const textLoaders = buildLocationTextLoaders(supabase, guess, sort, rowLimit, filters);
   const textBatches = await Promise.all(textLoaders.map(loadRecoverableLocationTextRows));
 
   return {
@@ -130,17 +180,18 @@ function buildStructuredLocationLoaders(
   guess: AdRadarLocationGuess,
   sort: AdRadarCardSearchSort,
   rowLimit: number,
+  filters: AdRadarCardSearchFilters,
 ): Array<() => Promise<CustomerMetaAdLibraryCardRow[]>> {
   const loaders: Array<() => Promise<CustomerMetaAdLibraryCardRow[]>> = [];
   const postcodes = locationPostcodes(guess);
 
   if (postcodes.length > 0) {
-    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.in("postcode", postcodes)));
-    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.overlaps("ad_area_postcodes", postcodes)));
+    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.in("postcode", postcodes), filters));
+    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.overlaps("ad_area_postcodes", postcodes), filters));
   }
 
   for (const term of locationTextTerms(guess).filter((term) => !/^\d{4}$/u.test(term))) {
-    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.ilike("suburb", escapeLikeTerm(term))));
+    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.ilike("suburb", escapeLikeTerm(term)), filters));
   }
 
   return loaders;
@@ -151,13 +202,14 @@ function buildLocationTextLoaders(
   guess: AdRadarLocationGuess,
   sort: AdRadarCardSearchSort,
   rowLimit: number,
+  filters: AdRadarCardSearchFilters,
 ): Array<() => Promise<CustomerMetaAdLibraryCardRow[]>> {
   const loaders: Array<() => Promise<CustomerMetaAdLibraryCardRow[]>> = [];
 
   for (const term of locationTextTerms(guess).slice(0, 8)) {
     const needle = `%${escapeLikeTerm(term)}%`;
     for (const column of LOCATION_TEXT_COLUMNS) {
-      loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.ilike(column, needle)));
+      loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.ilike(column, needle), filters));
     }
   }
 
@@ -201,12 +253,15 @@ async function loadFallbackSearchRows(
   q: string,
   sort: AdRadarCardSearchSort,
   rowLimit: number,
+  filters: AdRadarCardSearchFilters,
 ): Promise<SearchRowsResult> {
-  const { data, error } = await supabase
+  let query = supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .or(buildFallbackSearchFilter(q))
+    .or(buildFallbackSearchFilter(q));
+  query = applyCardSearchFilters(query, filters);
+  const { data, error } = await query
     .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
       ascending: sort === "longest",
       nullsFirst: false,
@@ -221,6 +276,7 @@ async function fetchSearchRows(
   sort: AdRadarCardSearchSort,
   limit: number,
   applyFilter: (query: any) => any,
+  filters: AdRadarCardSearchFilters = {},
 ): Promise<CustomerMetaAdLibraryCardRow[]> {
   let query = supabase
     .schema("research")
@@ -233,6 +289,7 @@ async function fetchSearchRows(
     .limit(limit);
 
   query = applyFilter(query);
+  query = applyCardSearchFilters(query, filters);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];
