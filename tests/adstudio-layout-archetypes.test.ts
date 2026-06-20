@@ -186,6 +186,50 @@ test("buildArchetypeCreative places multi-slot frames incl agent_headshot cut-ou
   assert.match(creative.previewSvg, /clipPath/);
 });
 
+function skeletonWith(archetype: CreativeSkeleton["archetype"]): CreativeSkeleton {
+  return {
+    ...frameSkeleton(),
+    archetype,
+    // Neutral badge so the optional ribbon support object never differs by archetype.
+    text_system: { headline_zone: "lower_left", badge: "clean panel", cta_style: "solid_pill" },
+  };
+}
+
+test("frame-carrying template geometry is independent of the per-archetype recipe (Phase 8)", () => {
+  const build = (archetype: CreativeSkeleton["archetype"]) =>
+    buildArchetypeCreative({
+      campaign: miniCampaign(),
+      variant: miniVariant(),
+      brandKit: approvedBrandKit(),
+      format: "1.91:1",
+      sourceImageDataUrl: "data:image/png;base64,USER",
+      creativeSkeleton: skeletonWith(archetype),
+    });
+
+  const justSold = build("just_sold");
+  const appraisal = build("appraisal");
+  const headlineOf = (creative: AdStudioCreative) => creative.canvas.objects.find((object) => object.role === "headline");
+  const a = headlineOf(justSold);
+  const b = headlineOf(appraisal);
+  assert.ok(a && b);
+  // Same frames + copy-safe zones => same copy geometry, regardless of archetype.
+  assert.deepEqual({ x: a.x, y: a.y, width: a.width }, { x: b.x, y: b.y, width: b.width });
+});
+
+test("agent_profile/brand skeletons are accepted and still place their frames", () => {
+  const brandKit = approvedBrandKit();
+  const creative = buildArchetypeCreative({
+    campaign: miniCampaign(),
+    variant: miniVariant(),
+    brandKit: { ...brandKit, assets: { ...brandKit.assets, headshots: ["data:image/png;base64,HEAD"] } },
+    format: "1.91:1",
+    sourceImageDataUrl: "data:image/png;base64,USER",
+    creativeSkeleton: skeletonWith("agent_profile"),
+  });
+  assert.ok(creative.canvas.objects.some((object) => object.role === "agent_headshot_image"));
+  assert.ok(creative.canvas.objects.some((object) => object.role === "headline"));
+});
+
 test("buildArchetypeCreative keeps a single full-bleed image when the template has no frames", () => {
   const creative = buildArchetypeCreative({
     campaign: miniCampaign(),

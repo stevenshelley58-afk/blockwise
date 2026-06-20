@@ -30,6 +30,10 @@ export const creativeSkeletonArchetypeSchema = z.enum([
   "appraisal",
   "seller_guide",
   "social_proof",
+  // Looser ad-DB categories the sample generator needs; geometry for these comes
+  // from image_frames + copy_safe_zones, not a hardcoded per-archetype recipe.
+  "agent_profile",
+  "brand",
 ]);
 
 const normalizedRectSchema = z

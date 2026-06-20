@@ -164,7 +164,7 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     });
   }
 
-  const archetype = input.creativeSkeleton?.archetype ?? selectLayoutArchetype({
+  const archetype = toLayoutArchetype(input.creativeSkeleton?.archetype) ?? selectLayoutArchetype({
     templateId: input.templateId,
     templateName: input.templateName,
     offerId: input.campaign.offerId,
@@ -172,10 +172,21 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     angle: input.variant.angle,
     headline: input.variant.headline,
   });
-  const fallbackGeometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
+  // Decoupling (Phase 8): a template that carries image_frames derives its copy
+  // geometry from the skeleton on top of the archetype-independent base, so the
+  // hardcoded per-archetype recipe no longer affects its output. Legacy
+  // skeleton/no-frames templates keep using the archetype recipe as the base.
+  const hasFrames = (input.creativeSkeleton?.composition.image_frames?.length ?? 0) > 0;
+  const archetypeGeometry = geometryForArchetype(archetype, input.format, size, input.brandKit);
   const geometry = input.creativeSkeleton
-    ? geometryForSkeleton(input.creativeSkeleton, input.format, size, input.brandKit, fallbackGeometry)
-    : fallbackGeometry;
+    ? geometryForSkeleton(
+        input.creativeSkeleton,
+        input.format,
+        size,
+        input.brandKit,
+        hasFrames ? baseGeometry(input.format, size) : archetypeGeometry,
+      )
+    : archetypeGeometry;
   const subheadline = input.subheadline ?? fallbackSubheadline(archetype, input.campaign.market.suburb);
   const text = textLayout({
     headline: input.variant.headline,
@@ -333,6 +344,37 @@ function compositionFeatures(offerId: string): string[] {
   return ["Prep before photos", "Fix buyer friction", "Plan your timing"];
 }
 
+// Archetype-independent base geometry: margins, default copy block, CTA, and
+// logo placement, with no support objects. Frame-carrying templates (Part A)
+// build on THIS plus their own image_frames + copy_safe_zones, so removing or
+// changing a per-archetype recipe below does not change their output.
+function baseGeometry(format: AdStudioFormat, size: CanvasSize): LayoutGeometry {
+  const isStory = format === "9:16";
+  const isLandscape = format === "1.91:1";
+  const marginX = Math.round(size.width * (isLandscape ? 0.07 : 0.08));
+  const baseHeadlineSize = isStory ? 70 : isLandscape ? 50 : 64;
+
+  return {
+    marginX,
+    copyX: marginX,
+    copyY: Math.round(size.height * (isStory ? 0.53 : isLandscape ? 0.32 : 0.5)),
+    copyWidth: Math.round(size.width * (isLandscape ? 0.55 : 0.76)),
+    headlineSize: baseHeadlineSize,
+    subheadSize: Math.max(28, Math.round(baseHeadlineSize * 0.42)),
+    ctaX: marginX,
+    ctaWidth: Math.min(Math.round(size.width * (isLandscape ? 0.28 : 0.36)), 360),
+    ctaHeight: isLandscape ? 66 : 78,
+    logoX: marginX,
+    logoY: Math.round(size.height * (isLandscape ? 0.08 : 0.07)),
+    logoWidth: isLandscape ? 164 : 180,
+    logoHeight: isLandscape ? 58 : 64,
+    scrim: "rgba(7, 14, 25, 0.48)",
+    supportObjects: [],
+  };
+}
+
+// The legacy per-archetype geometry recipes (scrims/panels/ribbons). Used only as
+// the fallback for templates that do NOT carry image_frames.
 function geometryForArchetype(
   archetype: LayoutArchetypeId,
   format: AdStudioFormat,
@@ -341,83 +383,60 @@ function geometryForArchetype(
 ): LayoutGeometry {
   const isStory = format === "9:16";
   const isLandscape = format === "1.91:1";
-  const marginX = Math.round(size.width * (isLandscape ? 0.07 : 0.08));
-  const logoWidth = isLandscape ? 164 : 180;
-  const logoHeight = isLandscape ? 58 : 64;
-  const ctaHeight = isLandscape ? 66 : 78;
-  const ctaWidth = Math.min(Math.round(size.width * (isLandscape ? 0.28 : 0.36)), 360);
-  const baseCopyWidth = Math.round(size.width * (isLandscape ? 0.55 : 0.76));
-  const baseHeadlineSize = isStory ? 70 : isLandscape ? 50 : 64;
-  const supportObjects: AdStudioCanvasObject[] = [];
-  let copyX = marginX;
-  let copyY = Math.round(size.height * (isStory ? 0.53 : isLandscape ? 0.32 : 0.5));
-  let copyWidth = baseCopyWidth;
-  let headlineSize = baseHeadlineSize;
-  let subheadSize = Math.max(28, Math.round(baseHeadlineSize * 0.42));
-  let ctaX = marginX;
-  let logoX = marginX;
-  let logoY = Math.round(size.height * (isLandscape ? 0.08 : 0.07));
-  let scrim = "rgba(7, 14, 25, 0.48)";
+  const g = baseGeometry(format, size);
+  const marginX = g.marginX;
 
   if (archetype === "coming_soon") {
-    copyY = Math.round(size.height * (isStory ? 0.38 : isLandscape ? 0.28 : 0.36));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.68));
-    scrim = "rgba(7, 14, 25, 0.54)";
-    supportObjects.push(bandObject(size, "announcement_band", 0.12, isLandscape ? 0.18 : 0.16, brandKit.colours.accent));
+    g.copyY = Math.round(size.height * (isStory ? 0.38 : isLandscape ? 0.28 : 0.36));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.68));
+    g.scrim = "rgba(7, 14, 25, 0.54)";
+    g.supportObjects.push(bandObject(size, "announcement_band", 0.12, isLandscape ? 0.18 : 0.16, brandKit.colours.accent));
   } else if (archetype === "open_home") {
-    copyY = Math.round(size.height * (isStory ? 0.46 : isLandscape ? 0.24 : 0.42));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.47 : 0.7));
-    scrim = "rgba(7, 14, 25, 0.44)";
-    supportObjects.push(panelObject(size, "details_panel", marginX, copyY - 42, copyWidth + 80, isLandscape ? 250 : 430));
+    g.copyY = Math.round(size.height * (isStory ? 0.46 : isLandscape ? 0.24 : 0.42));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.47 : 0.7));
+    g.scrim = "rgba(7, 14, 25, 0.44)";
+    g.supportObjects.push(panelObject(size, "details_panel", marginX, g.copyY - 42, g.copyWidth + 80, isLandscape ? 250 : 430));
   } else if (archetype === "just_sold") {
-    copyY = Math.round(size.height * (isStory ? 0.56 : isLandscape ? 0.36 : 0.53));
-    scrim = "rgba(7, 14, 25, 0.5)";
-    supportObjects.push(ribbonObject(size, "sold_ribbon", marginX, logoY + logoHeight + 28, brandKit.colours.primary));
+    g.copyY = Math.round(size.height * (isStory ? 0.56 : isLandscape ? 0.36 : 0.53));
+    g.scrim = "rgba(7, 14, 25, 0.5)";
+    g.supportObjects.push(ribbonObject(size, "sold_ribbon", marginX, g.logoY + g.logoHeight + 28, brandKit.colours.primary));
   } else if (archetype === "market_stat") {
-    copyX = isLandscape ? Math.round(size.width * 0.48) : marginX;
-    copyY = Math.round(size.height * (isStory ? 0.47 : isLandscape ? 0.26 : 0.45));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.43 : 0.68));
-    ctaX = copyX;
-    headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
-    scrim = "rgba(7, 14, 25, 0.36)";
-    supportObjects.push(sidePanelObject(size, "market_panel", copyX - 34, brandKit.colours.secondary));
+    g.copyX = isLandscape ? Math.round(size.width * 0.48) : marginX;
+    g.copyY = Math.round(size.height * (isStory ? 0.47 : isLandscape ? 0.26 : 0.45));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.43 : 0.68));
+    g.ctaX = g.copyX;
+    g.headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
+    g.scrim = "rgba(7, 14, 25, 0.36)";
+    g.supportObjects.push(sidePanelObject(size, "market_panel", g.copyX - 34, brandKit.colours.secondary));
   } else if (archetype === "appraisal") {
-    copyX = isLandscape ? Math.round(size.width * 0.5) : marginX;
-    copyY = Math.round(size.height * (isStory ? 0.51 : isLandscape ? 0.27 : 0.48));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.42 : 0.7));
-    ctaX = copyX;
-    scrim = "rgba(7, 14, 25, 0.42)";
-    supportObjects.push(panelObject(size, "value_panel", copyX - 34, copyY - 44, copyWidth + 76, isLandscape ? 312 : 520));
+    g.copyX = isLandscape ? Math.round(size.width * 0.5) : marginX;
+    g.copyY = Math.round(size.height * (isStory ? 0.51 : isLandscape ? 0.27 : 0.48));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.42 : 0.7));
+    g.ctaX = g.copyX;
+    g.scrim = "rgba(7, 14, 25, 0.42)";
+    g.supportObjects.push(panelObject(size, "value_panel", g.copyX - 34, g.copyY - 44, g.copyWidth + 76, isLandscape ? 312 : 520));
   } else if (archetype === "seller_guide") {
-    copyY = Math.round(size.height * (isStory ? 0.5 : isLandscape ? 0.3 : 0.47));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.52 : 0.72));
-    scrim = "rgba(7, 14, 25, 0.46)";
-    supportObjects.push(panelObject(size, "guide_panel", marginX - 20, copyY - 44, copyWidth + 72, isLandscape ? 300 : 500));
+    g.copyY = Math.round(size.height * (isStory ? 0.5 : isLandscape ? 0.3 : 0.47));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.52 : 0.72));
+    g.scrim = "rgba(7, 14, 25, 0.46)";
+    g.supportObjects.push(panelObject(size, "guide_panel", marginX - 20, g.copyY - 44, g.copyWidth + 72, isLandscape ? 300 : 500));
   } else if (archetype === "social_proof") {
-    copyY = Math.round(size.height * (isStory ? 0.52 : isLandscape ? 0.34 : 0.49));
-    copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.7));
-    headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
-    scrim = "rgba(7, 14, 25, 0.4)";
-    supportObjects.push(panelObject(size, "proof_panel", marginX - 18, copyY - 50, copyWidth + 68, isLandscape ? 296 : 480));
+    g.copyY = Math.round(size.height * (isStory ? 0.52 : isLandscape ? 0.34 : 0.49));
+    g.copyWidth = Math.round(size.width * (isLandscape ? 0.5 : 0.7));
+    g.headlineSize = isStory ? 64 : isLandscape ? 46 : 58;
+    g.scrim = "rgba(7, 14, 25, 0.4)";
+    g.supportObjects.push(panelObject(size, "proof_panel", marginX - 18, g.copyY - 50, g.copyWidth + 68, isLandscape ? 296 : 480));
   }
 
-  return {
-    marginX,
-    copyX,
-    copyY,
-    copyWidth,
-    headlineSize,
-    subheadSize,
-    ctaX,
-    ctaWidth,
-    ctaHeight,
-    logoX,
-    logoY,
-    logoWidth,
-    logoHeight,
-    scrim,
-    supportObjects,
-  };
+  return g;
+}
+
+// Map the looser CreativeSkeleton archetype (incl. agent_profile/brand) to a
+// legacy LayoutArchetypeId recipe. Only used as the no-frames fallback.
+function toLayoutArchetype(archetype: CreativeSkeleton["archetype"] | undefined): LayoutArchetypeId | null {
+  if (!archetype) return null;
+  if (archetype === "agent_profile" || archetype === "brand") return "social_proof";
+  return archetype;
 }
 
 function geometryForSkeleton(
