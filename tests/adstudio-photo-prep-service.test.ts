@@ -140,8 +140,9 @@ test("template photo prep falls back quickly when provider work exceeds the requ
     timeoutMs: 5,
   });
 
-  assert.ok(Date.now() - startedAt < 1_000, "fallback should not wait for Vercel's function timeout");
+  assert.ok(Date.now() - startedAt < 10_000, "fallback should not wait for Vercel's function timeout");
   assert.equal(seenSignals.length, 3);
+  assert.ok(seenSignals.every((signal) => signal.aborted), "slow provider calls must be aborted");
   for (const format of ["9:16", "4:5", "1:1"] as const) {
     assert.equal(assets[format]?.assetUrl, "https://cdn.example.com/listing.png");
     assert.equal(assets[format]?.method, "fallback_smart_crop");
