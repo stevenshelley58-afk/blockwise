@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
@@ -13,6 +13,8 @@ import { seedCopy, toMetaCta } from "./use-copy";
 import type { StudioSection } from "./use-ad-studio";
 
 const EXPORT_RENDER_TIMEOUT_MS = 45_000;
+const PHOTO_PREP_POLL_INTERVAL_MS = 3_500;
+const PHOTO_PREP_POLL_TIMEOUT_MS = 90_000;
 
 /** Staged generation progress shown as skeleton variant cards + honest phase labels. */
 export type GenerationProgress = {
@@ -44,6 +46,19 @@ export type ExportFormatStatus = {
   format: AdStudioFormat;
   label: string;
   state: "rendering" | "done" | "failed";
+};
+
+type TemplatePhotoPrepStatus = {
+  status: "skipped" | "cached" | "queued" | "queue_failed";
+  readyFormats: AdStudioFormat[];
+  pendingFormats: AdStudioFormat[];
+  taskId?: string;
+  error?: string;
+};
+
+type GenerateCampaignResponse = {
+  campaignPack: AdStudioCampaignPack;
+  photoPrep?: TemplatePhotoPrepStatus;
 };
 
 // Mirrors META_EXPORT_FORMATS in browser-creative-renderer.ts — formats outside
@@ -105,8 +120,18 @@ export function useCampaignActions(s: CampaignActionsState) {
   // second upstream generation/export while the first is still running.
   const generateInFlightRef = useRef(false);
   const exportInFlightRef = useRef(false);
+  const packRef = useRef(s.pack);
+  const photoPrepPollIdRef = useRef(0);
   // Per-format export progress; null when no export is showing status.
   const [exportStatus, setExportStatus] = useState<ExportFormatStatus[] | null>(null);
+
+  useEffect(() => {
+    packRef.current = s.pack;
+  }, [s.pack]);
+
+  useEffect(() => () => {
+    photoPrepPollIdRef.current += 1;
+  }, []);
 
   function parseMarket() {
     const [suburbPart, statePart] = s.market.split(",").map((p) => p.trim());
@@ -229,7 +254,7 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const m = parseMarket();
-      const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
+      const payload = await postJson<GenerateCampaignResponse>("/api/adstudio/campaigns", {
         firstAd: input,
         goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
         offerId: offerIdFromLabel(s.offerLabel, s.offers, s.pack.campaign.offerId),
@@ -250,6 +275,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setSaveState("saved");
       s.setSection("media");
       s.showToast("Generated Story, Feed, and Square");
+      startTemplatePhotoPrepPolling(payload.campaignPack, payload.photoPrep);
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
       return payload.campaignPack;
     } catch (error) {
@@ -262,6 +288,43 @@ export function useCampaignActions(s: CampaignActionsState) {
       stopPhases();
       generateInFlightRef.current = false;
     }
+  }
+
+  function startTemplatePhotoPrepPolling(initialPack: AdStudioCampaignPack, photoPrep: TemplatePhotoPrepStatus | undefined) {
+    if (photoPrep?.status !== "queued" || photoPrep.pendingFormats.length === 0) return;
+
+    const pollId = photoPrepPollIdRef.current + 1;
+    photoPrepPollIdRef.current = pollId;
+    const campaignId = initialPack.campaign.campaignId;
+    const initialSignature = imageSignature(initialPack);
+    const startedAt = Date.now();
+
+    const poll = async () => {
+      if (photoPrepPollIdRef.current !== pollId) return;
+
+      try {
+        const response = await fetch(`/api/adstudio/campaigns/${campaignId}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => ({}))) as { campaignPack?: AdStudioCampaignPack | null };
+        if (response.ok && payload.campaignPack && imageSignature(payload.campaignPack) !== initialSignature) {
+          const merged = mergeDraftResponsePack(packRef.current, payload.campaignPack);
+          packRef.current = merged;
+          s.setPack(merged);
+          const selectedImage = primaryImageForVariant(merged, s.selectedVariantIndex);
+          if (selectedImage) s.setPrimaryImage(selectedImage);
+          s.setSaveState("saved");
+          s.showToast("Template photos updated");
+          return;
+        }
+      } catch {
+        // Generation already returned usable fallback images; polling is opportunistic.
+      }
+
+      if (Date.now() - startedAt < PHOTO_PREP_POLL_TIMEOUT_MS && photoPrepPollIdRef.current === pollId) {
+        window.setTimeout(poll, PHOTO_PREP_POLL_INTERVAL_MS);
+      }
+    };
+
+    window.setTimeout(poll, PHOTO_PREP_POLL_INTERVAL_MS);
   }
 
   async function saveDraft(options: {
@@ -397,6 +460,29 @@ function exportableFormats(pack: AdStudioCampaignPack): AdStudioFormat[] {
     .map((creative) => creative.format)
     .filter((format) => EXPORT_FORMAT_LABELS[format] !== undefined);
   return Array.from(new Set(formats));
+}
+
+function imageSignature(pack: AdStudioCampaignPack): string {
+  return pack.creatives
+    .map((creative) => `${creative.creativeId}:${primaryImageSource(creative) ?? ""}`)
+    .join("|");
+}
+
+function primaryImageForVariant(pack: AdStudioCampaignPack, selectedVariantIndex: number): string | null {
+  const variantId = pack.variants[selectedVariantIndex]?.variantId ?? pack.variants[0]?.variantId;
+  if (!variantId) return null;
+
+  for (const format of ["9:16", "4:5", "1:1"] as AdStudioFormat[]) {
+    const image = primaryImageSource(pack.creatives.find((creative) => creative.variantId === variantId && creative.format === format));
+    if (image) return image;
+  }
+
+  return primaryImageSource(pack.creatives.find((creative) => creative.variantId === variantId)) ?? null;
+}
+
+function primaryImageSource(creative: AdStudioCampaignPack["creatives"][number] | null | undefined): string | undefined {
+  const image = creative?.canvas.objects.find((object) => object.role === "primary_image");
+  return image?.content || image?.assetId;
 }
 
 /** Each format renders with its own timeout, so one stall delivers the rest. */

@@ -93,9 +93,12 @@ export {
   type TemplateRenderFrame,
 } from "./photo-prep.ts";
 export {
+  fallbackPhotoAssetsForTemplate,
+  loadCachedPhotoAssetsForTemplate,
   preparePhotoAssetsForTemplate,
   preparedPhotoUrlsByFormat,
   type PreparedPhotoAssetsByFormat,
+  type TemplatePhotoPrepInput,
 } from "./photo-prep-service.ts";
 export {
   createDeterministicImageProvider,

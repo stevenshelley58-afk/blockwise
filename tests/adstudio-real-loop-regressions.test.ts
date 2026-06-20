@@ -187,7 +187,10 @@ test("campaign creation uses shared copy enrichment without changing copy route 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(createRoute, /preparePhotoAssetsForTemplate/);
+  assert.match(createRoute, /loadCachedPhotoAssetsForTemplate/);
+  assert.match(createRoute, /fallbackPhotoAssetsForTemplate/);
+  assert.match(createRoute, /queueAdStudioTemplatePhotoPrep/);
+  assert.doesNotMatch(createRoute, /await preparePhotoAssetsForTemplate/);
   assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
   assert.doesNotMatch(createRoute, /\/api\/adstudio\/repair-image|\/api\/adstudio\/generate-image/);
   // A0: variants enrich in parallel; zero-success still surfaces a real failure
@@ -390,7 +393,10 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(dialog, /templateKey: isBlank \? undefined : selectedTemplate\?\.templateKey \?\? selectedTemplate\?\.id/);
   assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
   assert.match(createRoute, /resolvedTemplate/);
-  assert.match(createRoute, /preparePhotoAssetsForTemplate/);
+  assert.match(createRoute, /loadCachedPhotoAssetsForTemplate/);
+  assert.match(createRoute, /fallbackPhotoAssetsForTemplate/);
+  assert.match(createRoute, /queueAdStudioTemplatePhotoPrep/);
+  assert.doesNotMatch(createRoute, /await preparePhotoAssetsForTemplate/);
   assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
   assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
   assert.match(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);

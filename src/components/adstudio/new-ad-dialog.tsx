@@ -128,6 +128,9 @@ export function NewAdDialog({
   const [reuseError, setReuseError] = useState("");
   const [radarAds, setRadarAds] = useState<RadarAd[] | null>(null);
   const [radarError, setRadarError] = useState("");
+  const preloadKeyRef = useRef("");
+  const isBlank = templateId === "";
+  const selectedTemplate = templates.find((template) => template.id === templateId);
 
   useEffect(() => {
     if (!open) return;
@@ -237,10 +240,59 @@ export function NewAdDialog({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  useEffect(() => {
+    const trimmed = description.trim();
+    if (
+      !open ||
+      step !== "brief" ||
+      isBlank ||
+      !selectedTemplate ||
+      !imageDataUrl ||
+      uploadingImage ||
+      trimmed.length < 8
+    ) {
+      return;
+    }
 
-  const isBlank = templateId === "";
-  const selectedTemplate = templates.find((template) => template.id === templateId);
+    const preloadKey = [
+      selectedTemplate.templateKey ?? selectedTemplate.id,
+      imageDataUrl,
+      trimmed,
+    ].join("|");
+    if (preloadKeyRef.current === preloadKey) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      preloadKeyRef.current = preloadKey;
+      void fetch("/api/adstudio/template-photo-prep", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          brandKit,
+          goal: selectedTemplate.goal,
+          offerId: selectedTemplate.offerId,
+          firstAd: {
+            mode: "template",
+            source: "template_library",
+            templateId: selectedTemplate.id,
+            templateKey: selectedTemplate.templateKey ?? selectedTemplate.id,
+            imageBriefId: selectedTemplate.imageBriefId,
+            description: trimmed,
+            imageDataUrl,
+            formats: ["9:16", "4:5", "1:1"],
+          },
+        }),
+      }).catch(() => {});
+    }, 800);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [brandKit, description, imageDataUrl, isBlank, open, selectedTemplate, step, uploadingImage]);
+
+  if (!open) return null;
 
   const visibleTemplates = templates.filter((template) => {
     if (filter === "all") return true;
