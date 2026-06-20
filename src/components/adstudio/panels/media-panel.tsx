@@ -26,11 +26,6 @@ type MediaPanelProps = {
   onUploadImage: (file: File) => void | Promise<void>;
   onUploadRejected: (message: string) => void;
   onSelectImage?: (src: string) => void;
-  onGenerateBackground?: () => void;
-  generatingBackground?: boolean;
-  onRepairCurrent?: () => void;
-  onRepairAll?: () => void;
-  repairingImage?: boolean;
 };
 
 type RoleFilter = AssetRole | "all";
@@ -63,11 +58,6 @@ export function MediaPanel({
   onUploadImage,
   onUploadRejected,
   onSelectImage,
-  onGenerateBackground,
-  generatingBackground = false,
-  onRepairCurrent,
-  onRepairAll,
-  repairingImage = false,
 }: MediaPanelProps) {
   const [filter, setFilter] = useState<RoleFilter>("all");
 
@@ -145,27 +135,6 @@ export function MediaPanel({
         onFileAccepted={onUploadImage}
         onFileRejected={onUploadRejected}
       />
-
-      {(onGenerateBackground || onRepairCurrent || onRepairAll) && (
-        <div aria-label="Adjust the selected photo">
-          <p style={subheadStyle}>Adjust the selected photo</p>
-          {onRepairAll && (
-            <button className="studio-btn accent block" type="button" disabled={repairingImage} onClick={onRepairAll}>
-              {repairingImage ? "Fitting photo..." : "Auto fit all ad sizes"}
-            </button>
-          )}
-          {onRepairCurrent && (
-            <button className="studio-btn secondary block" type="button" disabled={repairingImage} onClick={onRepairCurrent}>
-              Auto fit current size
-            </button>
-          )}
-          {onGenerateBackground && (
-            <button className="studio-btn secondary block" type="button" disabled={generatingBackground} onClick={onGenerateBackground}>
-              {generatingBackground ? "Generating background..." : "Generate background"}
-            </button>
-          )}
-        </div>
-      )}
 
       <p style={subheadStyle}>Your library</p>
       {presentRoles.length > 0 && (
