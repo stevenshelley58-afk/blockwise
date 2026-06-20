@@ -5,10 +5,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { MetricCard } from "@/components/metric-card";
-import { AdRadarAdvertiserSearch } from "@/components/research/ad-radar-advertiser-search";
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
-import type { AdvertiserSuggestion } from "@/lib/research/advertiser-autocomplete";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
 type ResearchSort = "recent" | "longest";
@@ -70,7 +68,7 @@ type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
 
 export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSurrounding, initialLocationLabel, initialNote }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [sort] = useState<ResearchSort>(initialSort);
+  const [sort, setSort] = useState<ResearchSort>(initialSort);
   const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -79,7 +77,6 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   const [cards, setCards] = useState<CustomerMetaAdLibraryCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [selectedAdvertiser, setSelectedAdvertiser] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function doSearch(
@@ -117,19 +114,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   }
 
   function onSearch(q: string) {
-    setSelectedAdvertiser(null);
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
     doSearch(q, sort, includeSurrounding, filters);
-  }
-
-  function onSelectAdvertiser(advertiser: AdvertiserSuggestion) {
-    setSelectedAdvertiser(advertiser.pageName);
-    setQuery(advertiser.pageName);
-    setAgencyOptions([]);
-    setAgentOptions([]);
-    doSearch(advertiser.pageName, sort, includeSurrounding, filters);
   }
 
   function onToggleSurrounding(nextValue: boolean) {
@@ -147,6 +135,12 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
     if (searched && query.trim()) doSearch(query, sort, includeSurrounding, EMPTY_FILTERS);
+  }
+
+  function onChangeSort(nextSort: ResearchSort) {
+    if (nextSort === sort) return;
+    setSort(nextSort);
+    if (searched && query.trim()) doSearch(query, nextSort, includeSurrounding, filters);
   }
 
   useEffect(() => {
@@ -168,29 +162,49 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
     .sort()
     .at(-1);
 
+  const sortButtonStyle = (active: boolean): CSSProperties => ({
+    fontSize: 13,
+    fontWeight: 700,
+    padding: "6px 14px",
+    border: "none",
+    background: active ? "var(--navy, #131b2e)" : "transparent",
+    color: active ? "#fff" : "var(--ink)",
+    cursor: "pointer",
+  });
+
   return (
     <>
-      <section className="panel research-search-panel">
+      <style>{`
+        .ad-radar-search-card { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 14px; }
+        .ad-radar-search-card .research-search-form { width: 100%; align-items: center; }
+        .ad-radar-search-card .research-search-form > label { flex: 1 1 260px; min-width: 0; }
+        .ad-radar-search-card .research-location-field { width: 100%; }
+        .ad-radar-search-card .research-location-note { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+        .ad-radar-filters-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+      `}</style>
+      <section className="panel research-search-panel ad-radar-search-card">
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
           initialValue={initialQuery || initialLocationLabel}
           isSubmitting={loading}
           onSearch={onSearch}
-          placeholder="6008, Subiaco, Ray White, appraisal"
+          placeholder="Postcode, suburb, agency, or agent"
           surface="research"
         />
-        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px 18px" }}>
-          <label className="research-surrounding-toggle">
-            <input
-              checked={includeSurrounding}
-              name="includeSurrounding"
-              onChange={(event) => onToggleSurrounding(event.target.checked)}
-              type="checkbox"
-              value="1"
-            />
-            <span>Include surrounding suburbs</span>
-          </label>
+
+        <label className="research-surrounding-toggle">
+          <input
+            checked={includeSurrounding}
+            name="includeSurrounding"
+            onChange={(event) => onToggleSurrounding(event.target.checked)}
+            type="checkbox"
+            value="1"
+          />
+          <span>Include surrounding suburbs</span>
+        </label>
+
+        <div className="ad-radar-filters-row">
           <button
             type="button"
             aria-expanded={filtersOpen}
@@ -233,10 +247,32 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             )}
             <ChevronDown size={15} style={{ transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
           </button>
+
+          <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href="/ad-radar/swipe-file"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "var(--ink)", textDecoration: "none" }}
+            >
+              <Bookmark size={13} /> Swipe file
+            </Link>
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>Sort</span>
+            <div
+              role="group"
+              aria-label="Sort ads"
+              style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}
+            >
+              <button type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} style={sortButtonStyle(sort === "recent")}>
+                Most recent
+              </button>
+              <button type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} style={{ ...sortButtonStyle(sort === "longest"), borderLeft: "1px solid var(--line)" }}>
+                Longest running
+              </button>
+            </div>
+          </div>
         </div>
 
         {filtersOpen && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+          <div style={{ paddingTop: 4 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
               <label style={fieldStyle}>
                 <span style={fieldLabelStyle}>Status</span>
@@ -317,10 +353,6 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           </div>
         )}
 
-        <div className="research-advertiser-divider">
-          <span>or pick an advertiser</span>
-        </div>
-        <AdRadarAdvertiserSearch onSelect={onSelectAdvertiser} />
         <div className="research-freshness">
           <Clock3 size={14} />
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
@@ -347,35 +379,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
                 {activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} applied` : ""}.
               </p>
             </div>
-            <div className="research-sort" role="group" aria-label="Sort ads">
-              <Link className="research-sort-option" href="/ad-radar/swipe-file">
-                <Bookmark size={13} /> Swipe file
-              </Link>
-              <span className="research-sort-label">Sort</span>
-              <a
-                className={`research-sort-option${sort === "recent" ? " is-active" : ""}`}
-                href={buildResearchHref(query, "recent", includeSurrounding)}
-                aria-current={sort === "recent" ? "true" : undefined}
-              >
-                Most recent
-              </a>
-              <a
-                className={`research-sort-option${sort === "longest" ? " is-active" : ""}`}
-                href={buildResearchHref(query, "longest", includeSurrounding)}
-                aria-current={sort === "longest" ? "true" : undefined}
-              >
-                Longest running
-              </a>
-            </div>
           </div>
 
           {cards.length > 0 ? (
             <AdRadarResultsGrid cards={cards} />
-          ) : selectedAdvertiser ? (
-            <div className="research-empty-state">
-              <h3>No ads running for {selectedAdvertiser}</h3>
-              <p>This advertiser has no live ads in the Blockwise research database right now.</p>
-            </div>
           ) : activeFilterCount > 0 ? (
             <div className="research-empty-state">
               <h3>No ads matched your filters</h3>
@@ -391,15 +398,6 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
       )}
     </>
   );
-}
-
-function buildResearchHref(q: string, sort: ResearchSort, includeSurrounding: boolean): string {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (sort !== "recent") params.set("sort", sort);
-  if (includeSurrounding) params.set("includeSurrounding", "1");
-  const qs = params.toString();
-  return qs ? `/ad-radar?${qs}` : "/ad-radar";
 }
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {
