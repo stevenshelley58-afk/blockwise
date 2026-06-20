@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createOpenAiImageProvider, createOpenRouterImageProvider } from "./ai-providers.ts";
 import { runCreativeQA } from "./creative-qa.ts";
+import { getActivePromptBundle } from "../operator/prompts/prompt-registry.ts";
 import { deterministicUuid } from "./id.ts";
 import { generateAdStudioCampaignPack } from "./generator.ts";
 import type { ImageProviderAdapter, TextProviderAdapter } from "./providers.ts";
@@ -84,6 +85,10 @@ export async function generateBulkCell(
     visualHierarchy: variant.score.dimensions.visualHierarchy,
   };
 
+  // Vision QA prompt comes from the operator registry (adstudio.qa.v1), never inline.
+  const qaBundle = await getActivePromptBundle(["adstudio.qa.v1"]);
+  const qaSystemPrompt = qaBundle["adstudio.qa.v1"]?.body;
+
   // Generate up to maxRolls image candidates and keep the first that passes QA.
   for (let roll = 0; roll < maxRolls; roll++) {
     let assetUrl: string;
@@ -111,6 +116,7 @@ export async function generateBulkCell(
       candidateContentHash: candidateHash,
       knownContentHashes: input.knownContentHashes ?? [],
       visionProvider: input.visionProvider,
+      qaSystemPrompt,
     });
 
     if (!qa.pass) continue;

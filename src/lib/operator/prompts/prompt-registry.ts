@@ -47,6 +47,11 @@ export const PROMPT_GROUPS = [
     label: "Scoring",
     promptKeys: ["adstudio.scoring.system"],
   },
+  {
+    key: "qa",
+    label: "Creative QA",
+    promptKeys: ["adstudio.qa.v1"],
+  },
 ] as const;
 
 export const PROMPT_KEYS = PROMPT_GROUPS.flatMap((group) => group.promptKeys);
@@ -83,6 +88,7 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.background.input_template": "input_template",
   "adstudio.background.negative_prompt": "negative_prompt",
   "adstudio.scoring.system": "system",
+  "adstudio.qa.v1": "system",
 } satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
@@ -277,6 +283,26 @@ Be discriminating: identical-quality variants may tie, but reserve top scores fo
 Respond with ONLY compact JSON:
 {"variants":[{"variantId": string, "offerClarity": number, "localRelevance": number, "leadIntentStrength": number, "brandFit": number, "complianceSafety": number, "visualHierarchy": number, "notes": [string], "warnings": [string]}]}
 Include every variantId you were given exactly once. Keep notes short (max 3) and warnings only for real risks.`,
+  "adstudio.qa.v1": `You are a quality reviewer for Australian real estate ad creatives.
+Examine the image and return ONLY compact JSON:
+{
+  "pass": true | false,
+  "reasons": ["reason if fail, empty array if pass"],
+  "has_us_cues": true | false,
+  "has_garbled_text": true | false,
+  "has_distorted_faces": true | false,
+  "has_warped_buildings": true | false,
+  "is_low_resolution": true | false,
+  "is_au_appropriate": true | false
+}
+Fail (pass=false) if ANY of these are true:
+- American houses, mailboxes, yard signs, flags, HOA lawns (has_us_cues)
+- Garbled, distorted, or unreadable rendered text (has_garbled_text)
+- Distorted or malformed faces (has_distorted_faces)
+- Warped or physically impossible buildings (has_warped_buildings)
+- Clearly blurry, pixelated, or low-resolution image (is_low_resolution)
+Pass only if is_au_appropriate and none of the fail conditions apply.
+Output JSON only.`,
 };
 
 const PROMPT_KEY_SET = new Set<string>(PROMPT_KEYS);

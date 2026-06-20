@@ -5,6 +5,7 @@ import {
   SCORE_GATE_THRESHOLD,
   runComplianceGate,
   runCreativeQA,
+  runRenderedTileQA,
   runScoreGate,
   runSkeletonQA,
   runSimilarityGuard,
@@ -12,7 +13,9 @@ import {
   type ScoreDimensions,
 } from "../src/lib/adstudio/creative-qa.ts";
 import { creativeSkeletonSchema } from "../src/lib/ad-template-library/skeleton.ts";
-import { createDeterministicTextProvider } from "../src/lib/adstudio/providers.ts";
+import { createDeterministicTextProvider, type TextProviderRequest } from "../src/lib/adstudio/providers.ts";
+import { extractBrandKitFromWebsite, generateAdStudioCampaignPack } from "../src/lib/adstudio/index.ts";
+import { PROMPT_FALLBACKS } from "../src/lib/operator/prompts/prompt-registry.ts";
 
 // ─── runVisionQA ─────────────────────────────────────────────────────────────
 
@@ -93,6 +96,57 @@ test("runVisionQA uses reasons from provider when already populated", async () =
   const result = await runVisionQA("https://cdn.test/ad-04.jpg", provider);
   assert.equal(result.pass, false);
   assert.deepEqual(result.reasons, ["American mailbox visible", "flag cue detected"]);
+});
+
+test("runVisionQA defaults to the registry adstudio.qa.v1 prompt and forwards a custom one", async () => {
+  let captured = "";
+  const provider = {
+    ...createDeterministicTextProvider(),
+    generate: async (request: TextProviderRequest) => {
+      captured = request.system;
+      return { json: { pass: true, reasons: [] }, rawText: "{}", usage: {}, providerMetadata: {} };
+    },
+  };
+
+  await runVisionQA("https://cdn.test/a.jpg", provider);
+  assert.equal(captured, PROMPT_FALLBACKS["adstudio.qa.v1"], "defaults to the registry QA prompt, not an inline literal");
+
+  await runVisionQA("https://cdn.test/a.jpg", provider, "OPERATOR OVERRIDE PROMPT");
+  assert.equal(captured, "OPERATOR OVERRIDE PROMPT", "forwards the operator's active QA prompt");
+});
+
+test("runRenderedTileQA scores the composited tile and re-runs cheaply on edits", () => {
+  const brandKit = {
+    ...extractBrandKitFromWebsite({
+      workspaceId: "workspace_demo",
+      websiteUrl: "https://northstar.example",
+      marketCountry: "AU",
+      htmlByUrl: { "https://northstar.example": "<html><head><title>Northstar</title></head><body></body></html>" },
+    }),
+    reviewStatus: "approved" as const,
+  };
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit,
+    goal: "appraisal_bookings",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "home_value_update",
+    platforms: ["meta"],
+    creativeFormats: ["4:5"],
+    variantCount: 1,
+  });
+  const creative = pack.creatives[0]!;
+
+  const clean = runRenderedTileQA({ creative, copyText: "Get your free Scarborough market report." });
+  assert.equal(clean.pass, true, JSON.stringify(clean.reasons));
+  assert.equal(clean.layout.pass, true);
+
+  // Re-running after an edit that introduces non-compliant copy fails the tile.
+  const edited = runRenderedTileQA({ creative, copyText: "Guaranteed sale price — search Zillow today." });
+  assert.equal(edited.pass, false);
+  assert.equal(edited.compliance.pass, false);
 });
 
 test("runSkeletonQA passes when zones, palette, legibility, and brief match", () => {
