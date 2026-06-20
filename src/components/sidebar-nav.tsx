@@ -59,6 +59,7 @@ const operatorNavItems: NavItem[] = [
   { href: "/operator/research", label: "Research Ops", icon: Activity },
   { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
   { href: "/operator/database", label: "Database", icon: Database },
+  { href: "/operator/template-samples", label: "Template Samples", icon: ClipboardCheck },
   { href: "/results", label: "Results", icon: LineChart },
   { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
   { href: "/ad-studio", label: "Ad Studio", icon: Star },
