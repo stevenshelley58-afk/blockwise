@@ -176,6 +176,7 @@ export function buildArchetypeCreative(input: BuildArchetypeCreativeInput): AdSt
     campaignId: input.campaign.campaignId,
     variantId: input.variant.variantId,
     format: input.format,
+    source: "template_composite",
     canvas: {
       ...size,
       backgroundAssetId: `background_${input.variant.variantId}`,

@@ -86,6 +86,26 @@ test("generated first-ad creative keeps uploaded owner image as the source visua
   assert.ok(creative.canvas.objects.some((object) => object.role === "cta_text" && !object.locked));
 });
 
+test("every composite creative is tagged source=template_composite (both render paths)", () => {
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: approvedBrandKit(),
+    goal: "appraisal_bookings",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "home_value_update",
+    platforms: ["meta"],
+    // 4:5/1:1/9:16 exercise the composition path; 1.91:1 the archetype path.
+    creativeFormats: ["4:5", "1:1", "9:16", "1.91:1"],
+    variantCount: 2,
+  });
+  assert.ok(pack.creatives.length >= 8);
+  for (const creative of pack.creatives) {
+    assert.equal(creative.source, "template_composite", `format ${creative.format} missing composite source tag`);
+  }
+});
+
 test("layout QA passes generated archetype creatives and reports deterministic failures", () => {
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",

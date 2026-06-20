@@ -157,6 +157,7 @@ export function compositionToCreative(input: CompositionCreativeInput): AdStudio
     campaignId: input.ids.campaignId,
     variantId: input.ids.variantId,
     format: input.format,
+    source: "template_composite",
     canvas: {
       ...size,
       backgroundAssetId: null,
