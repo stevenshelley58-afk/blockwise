@@ -104,11 +104,12 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.match(source, /href="#managed-setup"/);
 });
 
-test("landing page local hero images resolve from public assets", () => {
+test("landing page local image assets resolve from public/", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
-  const assets = [...source.matchAll(/(?:src|srcSet)="(\/hero\/[^"]+)"/g)].map((match) => match[1]);
+  // The centered hero is search-first and intentionally ships no hero photo.
+  // Any /hero or /ads asset the page does reference must still resolve under public/.
+  const assets = [...source.matchAll(/(?:src|srcSet)="(\/(?:hero|ads)\/[^"]+)"/g)].map((match) => match[1]);
 
-  assert.ok(assets.length >= 1, "landing page should use local hero assets");
   for (const asset of assets) {
     assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }
