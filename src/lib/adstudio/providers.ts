@@ -51,6 +51,7 @@ export type ImageProviderRequest = {
   aspectRatio: string;
   stylePreset: string;
   seed?: number;
+  signal?: AbortSignal;
   /** When true, the provider must actually consume referenceAssets as image input. */
   requiresReferenceAssets?: boolean;
   /**
