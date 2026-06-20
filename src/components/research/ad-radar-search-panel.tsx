@@ -2,7 +2,7 @@
 
 import { Bookmark, ChevronDown, Clock3, FileSearch, ImageIcon, MapPin, SlidersHorizontal, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { MetricCard } from "@/components/metric-card";
 import { AdRadarAdvertiserSearch } from "@/components/research/ad-radar-advertiser-search";
@@ -40,15 +40,15 @@ const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "carousel", label: "Carousel" },
 ];
 
-const fieldStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4 };
-const fieldLabelStyle: React.CSSProperties = {
+const fieldStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: 4 };
+const fieldLabelStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.03em",
   color: "var(--muted)",
 };
-const controlStyle: React.CSSProperties = {
+const controlStyle: CSSProperties = {
   minHeight: 36,
   padding: "0 10px",
   border: "1px solid var(--line)",
