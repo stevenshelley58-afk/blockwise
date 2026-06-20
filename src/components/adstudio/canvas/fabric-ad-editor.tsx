@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Image as ImageIcon, RotateCcw, RotateCw, ScanSearch, Sparkles } from "lucide-react";
+import { Bot, Image as ImageIcon, RotateCcw, RotateCw, ScanSearch, Scissors, Sparkles } from "lucide-react";
 import { Canvas, Circle, FabricImage, Path, Rect, Textbox, type FabricObject } from "fabric";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -22,6 +22,7 @@ import {
   type FocalPoint,
   type FrameBox,
 } from "@/lib/adstudio/smart-crop.ts";
+import { removeBackground } from "@/lib/adstudio/cutout.ts";
 import type { AdStudioBrandKit, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import type { SelectedElement } from "../preview";
 import { useCreativeHistory } from "./use-creative-history";
@@ -231,6 +232,60 @@ export function FabricAdEditor({
     complianceIssues: [],
   });
 
+  // On-demand person cut-out. Isolated like "More options": any failure only
+  // flips this button back, it never disturbs the canvas or the Create flow.
+  const [cutout, setCutout] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
+
+  const handleCutoutBackground = useCallback(async () => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const object = canvas.getActiveObject() as BlockwiseFabricObject | undefined;
+    const meta = object ? getMeta(object) : null;
+    if (!object || !(object instanceof FabricImage) || meta?.editableKind !== "image") {
+      setCutout({ loading: false, error: "Select a photo layer first." });
+      return;
+    }
+    const src = object.getSrc();
+    if (!src) {
+      setCutout({ loading: false, error: "That layer has no image to cut out." });
+      return;
+    }
+    const frame = frameFromObject(object);
+    setCutout({ loading: true, error: null });
+    let objectUrl: string | null = null;
+    try {
+      const cutBlob = await removeBackground(src);
+      if (fabricRef.current !== canvas) return;
+      objectUrl = URL.createObjectURL(cutBlob);
+      const image = await FabricImage.fromURL(objectUrl, { crossOrigin: "anonymous" });
+      if (fabricRef.current !== canvas) return;
+      image.set({
+        ...interactiveOptions(meta),
+        left: frame.left,
+        top: frame.top,
+        originX: "left",
+        originY: "top",
+      });
+      fitImageContainToFrame(image, frame.width, frame.height);
+      image.set({ left: frame.left, top: frame.top });
+      attachMeta(image, meta);
+      canvas.remove(object);
+      canvas.add(image);
+      canvas.setActiveObject(image);
+      canvas.requestRenderAll();
+      commitCanvas();
+      setCutout({ loading: false, error: null });
+    } catch (error) {
+      if (fabricRef.current !== canvas) return;
+      setCutout({ loading: false, error: error instanceof Error ? error.message : "Could not cut out the background." });
+    } finally {
+      if (objectUrl) {
+        const url = objectUrl;
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      }
+    }
+  }, [commitCanvas]);
+
   const handleCreateMoreOptions = useCallback(async () => {
     const currentCopy = copyRef.current;
     const photo = imageSrcRef.current;
@@ -341,6 +396,15 @@ export function FabricAdEditor({
           <ScanSearch aria-hidden size={16} />
           <span>Fit photo</span>
         </button>
+        <button
+          title="Cut out the person and overlay them on the photo behind"
+          type="button"
+          disabled={cutout.loading}
+          onClick={() => void handleCutoutBackground()}
+        >
+          <Scissors aria-hidden size={16} />
+          <span>{cutout.loading ? "Cutting out…" : "Cut out background"}</span>
+        </button>
         <button title="Rewrite the selected text" type="button" onClick={() => void onPatchSelectedLayer()}>
           <Bot aria-hidden size={16} />
           <span>Rewrite text</span>
@@ -355,6 +419,11 @@ export function FabricAdEditor({
           <span>{moreOptions.loading ? "Creating…" : "More options"}</span>
         </button>
       </div>
+      {cutout.error && (
+        <div className="studio-fabric-options" style={{ padding: "8px 12px" }}>
+          <span style={{ color: "#b42318", fontSize: 13 }}>{cutout.error}</span>
+        </div>
+      )}
       {showOptionsPanel && (
         <div
           className="studio-fabric-options"
