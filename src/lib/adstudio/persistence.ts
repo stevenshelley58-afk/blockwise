@@ -1,5 +1,6 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -204,21 +205,14 @@ export function compactAdStudioCampaignPackForTransport(pack: AdStudioCampaignPa
 }
 
 function compactCreativesForPersistence(creatives: AdStudioCreative[]): AdStudioCreative[] {
-  const keptImageByVariant = new Set<string>();
-  const preferred = new Set(
-    creatives
-      .filter((creative) => creative.format === "9:16" && primaryImageSource(creative))
-      .map((creative) => creative.variantId),
-  );
+  const keptImageByVariantAndSource = new Set<string>();
 
   return creatives.map((creative) => {
     const primaryImage = primaryImageSource(creative);
-    const keepPrimaryImage =
-      Boolean(primaryImage) &&
-      !keptImageByVariant.has(creative.variantId) &&
-      (creative.format === "9:16" || !preferred.has(creative.variantId));
+    const imageKey = primaryImage ? `${creative.variantId}:${primaryImage}` : "";
+    const keepPrimaryImage = Boolean(primaryImage) && !keptImageByVariantAndSource.has(imageKey);
 
-    if (keepPrimaryImage) keptImageByVariant.add(creative.variantId);
+    if (keepPrimaryImage) keptImageByVariantAndSource.add(imageKey);
 
     return {
       ...creative,
@@ -396,6 +390,63 @@ export function rowToCampaignPack(input: {
     copyPacks: input.copy.map(rowToCopyPack),
     compliance: rowToCompliance(input.compliance, campaignId),
   };
+}
+
+export async function loadAdStudioCampaignPack(
+  supabase: SupabaseServerClient,
+  workspaceId: string,
+  campaignId: string,
+): Promise<AdStudioCampaignPack | null> {
+  const { data: campaign, error: campaignError } = await supabase
+    .from("adstudio_campaigns")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", campaignId)
+    .maybeSingle();
+
+  if (campaignError) throw new Error(campaignError.message);
+  if (!campaign) return null;
+
+  const [brandKitRow, variants, creatives, copy, compliance] = await Promise.all([
+    supabase
+      .from("adstudio_brand_kits")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("id", String(campaign.brand_kit_id))
+      .maybeSingle(),
+    supabase.from("adstudio_campaign_variants").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
+    supabase.from("adstudio_creatives").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
+    supabase.from("adstudio_platform_copy").select("*").eq("workspace_id", workspaceId).eq("campaign_id", campaignId),
+    supabase
+      .from("adstudio_compliance_reports")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("campaign_id", campaignId)
+      .order("checked_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (brandKitRow.error) throw new Error(brandKitRow.error.message);
+  if (variants.error) throw new Error(variants.error.message);
+  if (creatives.error) throw new Error(creatives.error.message);
+  if (copy.error) throw new Error(copy.error.message);
+  if (compliance.error) throw new Error(compliance.error.message);
+  if (!brandKitRow.data) return null;
+
+  const brandKit = applyBrandAssetRows(
+    rowToBrandKit(brandKitRow.data),
+    await loadAdStudioBrandAssetRows(supabase, workspaceId, String(campaign.brand_kit_id)),
+  );
+
+  return rowToCampaignPack({
+    brandKit,
+    campaign,
+    variants: variants.data ?? [],
+    creatives: creatives.data ?? [],
+    copy: copy.data ?? [],
+    compliance: compliance.data ?? null,
+  });
 }
 
 function optionalString(value: unknown): string | null {

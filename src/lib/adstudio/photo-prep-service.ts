@@ -62,7 +62,7 @@ type PhotoPrepAssetRow = {
 
 export type PreparedPhotoAssetsByFormat = Partial<Record<AdStudioFormat, PreparedPhotoAsset>>;
 
-export async function preparePhotoAssetsForTemplate(input: {
+export type TemplatePhotoPrepInput = {
   workspaceId: string;
   userId: string | null;
   brandKit: AdStudioBrandKit;
@@ -80,55 +80,31 @@ export async function preparePhotoAssetsForTemplate(input: {
   supabase?: SupabaseLike;
   providers?: ImageProviderAdapter[];
   timeoutMs?: number;
-}): Promise<PreparedPhotoAssetsByFormat> {
+};
+
+type PhotoPrepWork = {
+  supabase: SupabaseLike;
+  bundle: Awaited<ReturnType<typeof getActivePromptBundle>>;
+  promptVersionId: string | null;
+  entries: Array<{ format: AdStudioFormat; context: PhotoPrepContext }>;
+};
+
+export async function preparePhotoAssetsForTemplate(input: TemplatePhotoPrepInput): Promise<PreparedPhotoAssetsByFormat> {
   if (!input.sourceImageForModel) {
     throw new Error("Source image could not be read for template photo preparation.");
   }
 
-  const supabase = input.supabase ?? createSupabaseServiceClient();
-  const bundle = await getActivePromptBundle(PHOTO_PREP_PROMPT_KEYS);
-  const promptVersion = bundle["adstudio.image.prepare_template_frame.v1"]?.version;
-  const promptVersionId = bundle["adstudio.image.prepare_template_frame.v1"]?.id ?? null;
-  const sourceImageHash = hashSourceImage(input.sourceImageForModel);
-  const formats = Array.from(new Set(input.formats));
+  const work = await buildPhotoPrepWork(input);
   const prepared = await Promise.all(
-    formats.map(async (format) => {
-      const context: PhotoPrepContext = {
-        workspaceId: input.workspaceId,
-        imageHash: sourceImageHash,
-        sourceImageRef: input.sourceImageRef,
-        template: {
-          key: input.template.templateKey ?? input.template.id,
-          version: input.template.creativeSkeleton?.version ?? 1,
-          name: input.template.name,
-          archetype: input.template.creativeSkeleton?.archetype,
-        },
-        frame: buildTemplateRenderFrame({ template: input.template, format }),
-        imageSlotId: "primary_photo",
-        campaign: input.campaign,
-        brand: {
-          palette: [
-            input.brandKit.colours.primary,
-            input.brandKit.colours.secondary,
-            input.brandKit.colours.accent,
-            input.brandKit.colours.background,
-            input.brandKit.colours.text,
-          ].filter(Boolean),
-          imageTreatment: input.brandKit.visualStyle.imageTreatment,
-          voice: input.brandKit.tone.voice,
-        },
-        brief: input.brief,
-        promptVersion,
-      };
-
+    work.entries.map(async ({ format, context }) => {
       const asset = await prepareOnePhotoAsset({
-        supabase,
+        supabase: work.supabase,
         context,
         sourceImageForModel: input.sourceImageForModel,
         userId: input.userId,
         brandKitId: input.brandKit.brandKitId,
-        bundle,
-        promptVersionId,
+        bundle: work.bundle,
+        promptVersionId: work.promptVersionId,
         providers: input.providers,
         timeoutMs: input.timeoutMs ?? DEFAULT_PHOTO_PREP_TIMEOUT_MS,
       });
@@ -140,10 +116,91 @@ export async function preparePhotoAssetsForTemplate(input: {
   return Object.fromEntries(prepared);
 }
 
+export async function loadCachedPhotoAssetsForTemplate(input: TemplatePhotoPrepInput): Promise<PreparedPhotoAssetsByFormat> {
+  if (!input.sourceImageForModel) return {};
+
+  const work = await buildPhotoPrepWork(input);
+  const cached = await Promise.all(
+    work.entries.map(async ({ format, context }) => {
+      const cacheKey = buildPhotoPrepCacheKey(context);
+      const asset = await loadCachedPhotoPrepAsset(work.supabase, context.workspaceId, cacheKey);
+      return [format, asset] as const;
+    }),
+  );
+
+  return Object.fromEntries(cached.filter((entry): entry is [AdStudioFormat, PreparedPhotoAsset] => Boolean(entry[1])));
+}
+
+export function fallbackPhotoAssetsForTemplate(input: TemplatePhotoPrepInput): PreparedPhotoAssetsByFormat {
+  if (!input.sourceImageForModel) return {};
+
+  return Object.fromEntries(
+    buildPhotoPrepContextEntries(input).map(({ format, context }) => [
+      format,
+      deterministicPreparedPhotoAsset({
+        context,
+        assetUrl: input.sourceImageForModel,
+        method: "fallback_smart_crop",
+      }),
+    ]),
+  );
+}
+
 export function preparedPhotoUrlsByFormat(assets: PreparedPhotoAssetsByFormat): Partial<Record<AdStudioFormat, string>> {
   return Object.fromEntries(
     Object.entries(assets).map(([format, asset]) => [format, asset?.assetUrl]).filter((entry): entry is [string, string] => Boolean(entry[1])),
   ) as Partial<Record<AdStudioFormat, string>>;
+}
+
+async function buildPhotoPrepWork(input: TemplatePhotoPrepInput): Promise<PhotoPrepWork> {
+  const supabase = input.supabase ?? createSupabaseServiceClient();
+  const bundle = await getActivePromptBundle(PHOTO_PREP_PROMPT_KEYS);
+  const promptVersion = bundle["adstudio.image.prepare_template_frame.v1"]?.version;
+  return {
+    supabase,
+    bundle,
+    promptVersionId: bundle["adstudio.image.prepare_template_frame.v1"]?.id ?? null,
+    entries: buildPhotoPrepContextEntries(input, promptVersion),
+  };
+}
+
+function buildPhotoPrepContextEntries(
+  input: TemplatePhotoPrepInput,
+  promptVersion?: number,
+): Array<{ format: AdStudioFormat; context: PhotoPrepContext }> {
+  const sourceImageHash = hashSourceImage(input.sourceImageForModel);
+  const formats = Array.from(new Set(input.formats));
+
+  return formats.map((format) => ({
+    format,
+    context: {
+      workspaceId: input.workspaceId,
+      imageHash: sourceImageHash,
+      sourceImageRef: input.sourceImageRef,
+      template: {
+        key: input.template.templateKey ?? input.template.id,
+        version: input.template.creativeSkeleton?.version ?? 1,
+        name: input.template.name,
+        archetype: input.template.creativeSkeleton?.archetype,
+      },
+      frame: buildTemplateRenderFrame({ template: input.template, format }),
+      imageSlotId: "primary_photo",
+      campaign: input.campaign,
+      brand: {
+        palette: [
+          input.brandKit.colours.primary,
+          input.brandKit.colours.secondary,
+          input.brandKit.colours.accent,
+          input.brandKit.colours.background,
+          input.brandKit.colours.text,
+        ].filter(Boolean),
+        imageTreatment: input.brandKit.visualStyle.imageTreatment,
+        voice: input.brandKit.tone.voice,
+      },
+      brief: input.brief,
+      promptVersion,
+    },
+  }));
 }
 
 async function prepareOnePhotoAsset(input: {

@@ -2,9 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   buildAdStudioLiveResult,
+  fallbackPhotoAssetsForTemplate,
   generateAdStudioCampaignPack,
-  preparePhotoAssetsForTemplate,
+  loadCachedPhotoAssetsForTemplate,
   preparedPhotoUrlsByFormat,
+  type PreparedPhotoAssetsByFormat,
+  type TemplatePhotoPrepInput,
 } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
@@ -16,6 +19,7 @@ import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enric
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
+import { queueAdStudioTemplatePhotoPrep, type TemplatePhotoPrepQueueResult } from "@/lib/adstudio/template-photo-prep-queue";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
@@ -35,6 +39,14 @@ type CreateCampaignBody = {
   variantCount?: number;
   firstAd?: FirstAdInput;
   sourceImageDataUrl?: string;
+};
+
+type TemplatePhotoPrepResponse = {
+  status: "skipped" | "cached" | "queued" | "queue_failed";
+  readyFormats: AdStudioFormat[];
+  pendingFormats: AdStudioFormat[];
+  taskId?: string;
+  error?: string;
 };
 
 const inFlightGenerations = new Map<string, number>();
@@ -76,6 +88,51 @@ function generationDedupKey(workspaceId: string, body: unknown): string {
     hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
   }
   return `${workspaceId}:${hash}`;
+}
+
+function photoPrepResponse(input: {
+  resolvedTemplate: boolean;
+  cachedAssets: PreparedPhotoAssetsByFormat;
+  queue: TemplatePhotoPrepQueueResult;
+}): TemplatePhotoPrepResponse {
+  const readyFormats = Object.keys(preparedPhotoUrlsByFormat(input.cachedAssets)) as AdStudioFormat[];
+
+  if (!input.resolvedTemplate) {
+    return { status: "skipped", readyFormats: [], pendingFormats: [] };
+  }
+  if (input.queue.status === "queue_failed") {
+    return {
+      status: "queue_failed",
+      readyFormats,
+      pendingFormats: input.queue.pendingFormats,
+      error: input.queue.error,
+    };
+  }
+  if (input.queue.status === "queued") {
+    return {
+      status: "queued",
+      readyFormats,
+      pendingFormats: input.queue.pendingFormats,
+      taskId: input.queue.taskId,
+    };
+  }
+
+  return { status: "cached", readyFormats, pendingFormats: [] };
+}
+
+async function loadCachedTemplatePhotos(input: TemplatePhotoPrepInput): Promise<PreparedPhotoAssetsByFormat> {
+  try {
+    return await loadCachedPhotoAssetsForTemplate(input);
+  } catch (error) {
+    console.warn(JSON.stringify({
+      level: "warning",
+      msg: "adstudio_template_photo_prep_cache_lookup_failed",
+      workspaceId: input.workspaceId,
+      templateKey: input.template.templateKey ?? input.template.id,
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return {};
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -163,8 +220,8 @@ export async function POST(request: NextRequest) {
       sourceImageRef,
     );
     const templatePrepSourceImage = providerReadableSourceImage(request, sourceImageRef, sourceImageUrl);
-    const preparedTemplatePhotos = resolvedTemplate && body.firstAd?.mode === "template"
-      ? await preparePhotoAssetsForTemplate({
+    const templatePhotoPrepInput = resolvedTemplate && body.firstAd?.mode === "template"
+      ? {
           workspaceId: context.access.workspaceId,
           userId: context.access.userId,
           brandKit: brandKitResult.brandKit,
@@ -182,8 +239,18 @@ export async function POST(request: NextRequest) {
             },
           },
           brief: body.firstAd.description,
-        })
+        } satisfies TemplatePhotoPrepInput
+      : null;
+    const cachedTemplatePhotos = templatePhotoPrepInput ? await loadCachedTemplatePhotos(templatePhotoPrepInput) : {};
+    const immediateTemplatePhotos = templatePhotoPrepInput
+      ? {
+          ...fallbackPhotoAssetsForTemplate(templatePhotoPrepInput),
+          ...cachedTemplatePhotos,
+        }
       : {};
+    const pendingPhotoPrepFormats = templatePhotoPrepInput
+      ? templatePhotoPrepInput.formats.filter((format) => !cachedTemplatePhotos[format])
+      : [];
 
     let pack = generateAdStudioCampaignPack({
       workspaceId: context.access.workspaceId,
@@ -199,9 +266,18 @@ export async function POST(request: NextRequest) {
       variantCount: body.variantCount ?? 5,
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
-      sourceImagesByFormat: preparedPhotoUrlsByFormat(preparedTemplatePhotos),
+      sourceImagesByFormat: preparedPhotoUrlsByFormat(immediateTemplatePhotos),
       resolvedTemplate,
     });
+    const photoPrepQueuePromise = templatePhotoPrepInput
+      ? queueAdStudioTemplatePhotoPrep(
+          {
+            ...templatePhotoPrepInput,
+            campaignId: pack.campaign.campaignId,
+          },
+          pendingPhotoPrepFormats,
+        )
+      : Promise.resolve({ status: "skipped" as const, pendingFormats: [] });
     pack = await enrichCampaignPackCopyWithAi({
       pack,
       workspaceId: context.access.workspaceId,
@@ -212,6 +288,7 @@ export async function POST(request: NextRequest) {
       sourceImageUrl,
     });
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
+    const photoPrepQueue = await photoPrepQueuePromise;
 
     if (persisted.error) {
       await refundReservedTrialCredit(trialReservation);
@@ -227,6 +304,11 @@ export async function POST(request: NextRequest) {
         campaignPack: liveResult.data,
         data: liveResult.data,
         persistence: liveResult.persistence,
+        photoPrep: photoPrepResponse({
+          resolvedTemplate: Boolean(templatePhotoPrepInput),
+          cachedAssets: cachedTemplatePhotos,
+          queue: photoPrepQueue,
+        }),
       },
       { status: 201 },
     );

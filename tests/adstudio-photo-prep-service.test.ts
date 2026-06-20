@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  fallbackPhotoAssetsForTemplate,
   preparePhotoAssetsForTemplate,
   type AdStudioBrandKit,
   type ImageProviderAdapter,
@@ -98,6 +99,33 @@ function createSupabaseStub() {
     },
   };
 }
+
+test("template photo prep can return immediate fallback assets without provider work", () => {
+  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
+  assert.ok(template);
+
+  const assets = fallbackPhotoAssetsForTemplate({
+    workspaceId: "workspace_1",
+    userId: "user_1",
+    brandKit,
+    template,
+    formats: ["9:16", "4:5", "1:1"],
+    sourceImageRef: "/api/adstudio/media?path=workspace_1%2Flisting.png",
+    sourceImageForModel: "https://cdn.example.com/listing.png",
+    campaign: {
+      goal: "seller_leads",
+      offerId: "market_update",
+      market: { suburb: "Scarborough", city: "Perth", state: "WA" },
+    },
+    brief: "good family home",
+  });
+
+  for (const format of ["9:16", "4:5", "1:1"] as const) {
+    assert.equal(assets[format]?.assetUrl, "https://cdn.example.com/listing.png");
+    assert.equal(assets[format]?.method, "fallback_smart_crop");
+    assert.equal(assets[format]?.format, format);
+  }
+});
 
 test("template photo prep falls back quickly when provider work exceeds the request budget", async () => {
   const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
