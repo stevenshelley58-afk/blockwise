@@ -3,7 +3,18 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-import { BarChart3, ChevronDown, ChevronRight, Eye, MousePointerClick, Percent, UserPlus, Wallet } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  ImageOff,
+  MousePointerClick,
+  Percent,
+  Play,
+  UserPlus,
+  Wallet,
+} from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
 import { calculateTrend, formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
@@ -378,6 +389,7 @@ function CampaignManagementTable({
                             <tr className="mm-leaf-ad-row" key={ad.id}>
                               <td className="mm-th-left">
                                 <div className="mm-row-name mm-depth-2">
+                                  <TableCreativePreview ad={ad.ad} />
                                   <button type="button" className="mm-ad-name-btn" onClick={() => onSelectAd(ad.id)}>
                                     {ad.name}
                                   </button>
@@ -407,6 +419,32 @@ function CampaignManagementTable({
         </table>
       </div>
     </section>
+  );
+}
+
+function TableCreativePreview({ ad }: { ad: ResultsCampaignRow["adSets"][number]["ads"][number]["ad"] }) {
+  const src = ad.creative.thumbnailUrl ?? ad.creative.imageUrl ?? ad.creative.videoThumbnailUrl;
+  const mediaLabel = ad.creative.type === "VIDEO" ? "Video preview" : "Image preview";
+
+  if (!src) {
+    return (
+      <span className="mm-table-creative mm-table-creative-empty" aria-label="No creative preview">
+        <ImageOff size={15} aria-hidden />
+      </span>
+    );
+  }
+
+  return (
+    <span className="mm-table-creative">
+      {/* Meta CDN thumbnails are short-lived signed URLs; next/image optimization would break them. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={`${ad.adName} ${mediaLabel.toLowerCase()}`} width={36} height={36} loading="lazy" />
+      {ad.creative.type === "VIDEO" ? (
+        <span className="mm-table-creative-play" aria-label={mediaLabel}>
+          <Play size={10} aria-hidden />
+        </span>
+      ) : null}
+    </span>
   );
 }
 
