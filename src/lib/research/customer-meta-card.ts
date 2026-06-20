@@ -88,6 +88,12 @@ export type CustomerMetaAdLibraryCardRow = {
   ad_area_suburbs?: string[] | null;
   service_area_postcodes?: string[] | null;
   service_area_suburbs?: string[] | null;
+  // Filterable view columns (research.v_customer_meta_ad_library_cards). Not
+  // part of the customer-safe display contract, so they are not selected or
+  // surfaced on the card; they are queried via eq/ilike on the view.
+  ad_type?: string | null;
+  format?: string | null;
+  hooks?: string[] | null;
 };
 
 export type CustomerMetaAdLibraryMedia = {
