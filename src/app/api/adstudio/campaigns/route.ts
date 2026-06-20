@@ -278,15 +278,23 @@ export async function POST(request: NextRequest) {
           pendingPhotoPrepFormats,
         )
       : Promise.resolve({ status: "skipped" as const, pendingFormats: [] });
-    pack = await enrichCampaignPackCopyWithAi({
-      pack,
-      workspaceId: context.access.workspaceId,
-      userId: context.access.userId,
-      brief: body.firstAd?.description,
-      templateName: resolvedTemplate?.name,
-      templateHint: templatePromptHint(resolvedTemplate),
-      sourceImageUrl,
-    });
+    // Selected templates ship their curated, on-brand copy (headline, body, and
+    // CTA) as-is. AI copy enrichment is reserved for the free-form "describe your
+    // ad" flow, where there is no curated copy to preserve. Routing template copy
+    // through enrichment was the regression: it overwrote the curated headline and
+    // body with generic AI text ("Spearwood Double-Storey Price Update") and
+    // collapsed CTAs like "Request price update" down to "Learn more".
+    if (body.firstAd?.mode !== "template") {
+      pack = await enrichCampaignPackCopyWithAi({
+        pack,
+        workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        brief: body.firstAd?.description,
+        templateName: resolvedTemplate?.name,
+        templateHint: templatePromptHint(resolvedTemplate),
+        sourceImageUrl,
+      });
+    }
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
     const photoPrepQueue = await photoPrepQueuePromise;
 
