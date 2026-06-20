@@ -43,6 +43,9 @@ export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
   "ad_area_suburbs",
   "service_area_postcodes",
   "service_area_suburbs",
+  "ad_type",
+  "format",
+  "hooks",
 ].join(",");
 
 export type CustomerMetaAdLibraryCardRow = {
@@ -88,6 +91,9 @@ export type CustomerMetaAdLibraryCardRow = {
   ad_area_suburbs?: string[] | null;
   service_area_postcodes?: string[] | null;
   service_area_suburbs?: string[] | null;
+  ad_type?: string | null;
+  format?: string | null;
+  hooks?: string[] | null;
 };
 
 export type CustomerMetaAdLibraryMedia = {
@@ -134,6 +140,9 @@ export type CustomerMetaAdLibraryCard = {
   description: string | null;
   cta: string | null;
   destinationUrl: string | null;
+  adType: string | null;
+  adFormat: string | null;
+  hooks: string[];
   media: CustomerMetaAdLibraryMedia[];
 };
 
@@ -195,6 +204,9 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     description: cleanCustomerMetaDisplayText(row.description),
     cta: cleanCustomerMetaDisplayText(row.cta),
     destinationUrl: normalisePublicUrl(row.destination_url) ?? normalisePublicUrl(row.cta_url),
+    adType: cleanString(row.ad_type),
+    adFormat: cleanString(row.format),
+    hooks: uniqueDisplayStrings(row.hooks ?? []),
     media: resolveMedia(row),
   };
 }
