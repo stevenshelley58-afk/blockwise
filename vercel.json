@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run typecheck && npm run build",
+  "buildCommand": "npm run test 2>&1 | tail -n 80; false",
   "installCommand": "npm install",
   "regions": ["syd1"],
   "crons": [
