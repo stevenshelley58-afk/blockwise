@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element, jsx-a11y/media-has-caption */
 "use client";
 
 import { Columns3, Database, RefreshCw, Search, Trash2 } from "lucide-react";
@@ -136,7 +136,7 @@ export function DatabaseViewer() {
     if (dirtyCount > 0 && !window.confirm("Discard unsaved changes?")) return;
     const t = tables.find((x) => x.name === name);
     setTableName(name);
-    setVisible(t ? defaultVisible(t) : new Set());
+    setVisible(t ? defaultVisible(t) : new Set<string>());
     setEdits({});
     setSelected(new Set());
     setOrderBy(null);
@@ -250,7 +250,7 @@ export function DatabaseViewer() {
   }
   function toggleAll() {
     if (!hasId) return;
-    setSelected((prev) => (prev.size === rows.length ? new Set() : new Set(rows.map(rowId))));
+    setSelected((prev) => (prev.size === rows.length ? new Set<string>() : new Set(rows.map(rowId))));
   }
 
   const visibleColumns = useMemo(
@@ -268,7 +268,7 @@ export function DatabaseViewer() {
     const id = rowId(r);
     const raw = r[col.name];
     const kind = columnKind(col.type);
-    const editing = editingCell?.rowId === id && editingCell.col === col.name;
+    const editing = editingCell !== null && editingCell.rowId === id && editingCell.col === col.name;
     const editable = editableCol(col, raw);
 
     if (editing) {
@@ -296,7 +296,14 @@ export function DatabaseViewer() {
         return (
           <span className="dbv-thumb">
             <span className="dbv-thumb-wrap">
-              <img src={media.src} alt={media.filename} loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} />
+              <img
+                src={media.src}
+                alt={media.filename}
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
             </span>
             <span className="dbv-fname">{media.filename}</span>
           </span>
@@ -329,7 +336,9 @@ export function DatabaseViewer() {
       inner = (
         <span
           className={`dbv-bool ${on ? "on" : ""}`}
-          onClick={() => hasId && !READONLY_COLUMNS.has(col.name) && setEdit(id, col.name, on ? "false" : "true")}
+          onClick={() => {
+            if (hasId && !READONLY_COLUMNS.has(col.name)) setEdit(id, col.name, on ? "false" : "true");
+          }}
         >
           <span className="dbv-sw" />
           {display}
