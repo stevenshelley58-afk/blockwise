@@ -83,7 +83,7 @@ export async function searchCustomerMetaAdLibraryCards(
   const filters = normaliseCardSearchFilters(input.filters);
   const hasFilters = Object.keys(filters).length > 0;
   // Widen the candidate window when filters are active so the post-slice page
-  // still fills up after narrowing.
+  // still fills up after the database narrows the results.
   const defaultRowLimit = hasFilters ? 500 : DEFAULT_SEARCH_ROW_LIMIT;
   const rowLimit = clampLimit(input.rowLimit ?? defaultRowLimit, 1, 500);
   const resultLimit = clampLimit(input.resultLimit ?? DEFAULT_SEARCH_RESULT_LIMIT, 1, 100);
@@ -92,7 +92,9 @@ export async function searchCustomerMetaAdLibraryCards(
   const locationSearch = await loadPrioritisedLocationRows(supabase, q, sort, rowLimit, includeSurroundingSuburbs, filters);
   let rows = locationSearch.active ? locationSearch.rows : null;
 
-  if (!locationSearch.active && shouldUseRankedFullTextSearch(q)) {
+  // The ranked RPC does not accept facet filters, so skip it when filters are
+  // active and use the filterable fallback/structured paths instead.
+  if (!locationSearch.active && !hasFilters && shouldUseRankedFullTextSearch(q)) {
     rows = await loadRankedFullTextRows(supabase, q, sort, rowLimit);
   }
 
@@ -102,10 +104,7 @@ export async function searchCustomerMetaAdLibraryCards(
     rows = fallback.rows;
   }
 
-  const cards = filterCards(
-    dedupeRowsByCardId(rows ?? []).map(normaliseCustomerMetaAdLibraryCard),
-    filters,
-  );
+  const cards = dedupeRowsByCardId(rows ?? []).map(normaliseCustomerMetaAdLibraryCard);
   const sortedCards = locationSearch.active && locationSearch.guess
     ? matchAdRadarCardsForLocation(cards, locationSearch.guess, sort)
     : sortCards(cards, sort);
@@ -139,23 +138,6 @@ function applyCardSearchFilters(query: any, filters: AdRadarCardSearchFilters): 
   if (filters.format) next = next.eq("format", filters.format);
   if (filters.hook) next = next.ilike("hooks_text", `%${escapeLikeContains(filters.hook)}%`);
   return next;
-}
-
-function filterCards(
-  cards: CustomerMetaAdLibraryCard[],
-  filters: AdRadarCardSearchFilters,
-): CustomerMetaAdLibraryCard[] {
-  if (Object.keys(filters).length === 0) return cards;
-  const hook = filters.hook?.toLowerCase();
-  return cards.filter((card) => {
-    if (filters.status && card.activeStatus !== filters.status) return false;
-    if (filters.agency && card.agencyName !== filters.agency) return false;
-    if (filters.agent && card.agentName !== filters.agent) return false;
-    if (filters.adType && card.adType !== filters.adType) return false;
-    if (filters.format && card.adFormat !== filters.format) return false;
-    if (hook && !(card.hooks ?? []).some((value) => value.toLowerCase().includes(hook))) return false;
-    return true;
-  });
 }
 
 function escapeLikeContains(value: string): string {
