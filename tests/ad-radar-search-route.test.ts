@@ -16,7 +16,16 @@ const routeSource = readFileSync(
 
 test("ad search route delegates to the shared customer card search helper", () => {
   assert.match(routeSource, /normaliseAdRadarCardSearchQuery/);
-  assert.match(routeSource, /searchCustomerMetaAdLibraryCards\(supabase, \{ query: q, sort, includeSurroundingSuburbs \}\)/);
+  assert.match(routeSource, /searchCustomerMetaAdLibraryCards\(supabase, \{ query: q, sort, includeSurroundingSuburbs, filters \}\)/);
+});
+
+test("ad search route parses the supported facet filters", () => {
+  assert.match(routeSource, /params\.get\("status"\)/);
+  assert.match(routeSource, /params\.get\("agency"\)/);
+  assert.match(routeSource, /params\.get\("agent"\)/);
+  assert.match(routeSource, /params\.get\("adType"\)/);
+  assert.match(routeSource, /params\.get\("format"\)/);
+  assert.match(routeSource, /params\.get\("hook"\)/);
 });
 
 test("ad card search caps returned cards after row overfetch and dedupe", async () => {
@@ -51,6 +60,34 @@ test("ad card search uses ranked full-text search when the schema contract is av
     args: { p_query: "Ray White", p_limit: 200, p_sort: "recent" },
   }]);
   assert.equal(fake.queries.length, 0);
+});
+
+test("ad card search pushes facet filters to the database and narrows results", async () => {
+  const fake = new FakeSearchClient([
+    row({ card_id: "active-listing-video", postcode: "6163", suburb: "Spearwood", active_status: "active", ad_type: "listing", format: "video", agency_name: "Ray White" }),
+    row({ card_id: "inactive-listing", postcode: "6163", suburb: "Spearwood", active_status: "inactive", ad_type: "listing", format: "image", agency_name: "Ray White" }),
+    row({ card_id: "active-appraisal", postcode: "6163", suburb: "Spearwood", active_status: "active", ad_type: "appraisal", format: "video", agency_name: "Harcourts" }),
+  ]);
+
+  const cards = await searchCustomerMetaAdLibraryCards(fake.client, {
+    query: "6163",
+    sort: "recent",
+    filters: { status: "active", adType: "listing", format: "video" },
+  });
+
+  assert.deepEqual(cards.map((card) => card.id), ["active-listing-video"]);
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("eq").some((args) => args[0] === "active_status" && args[1] === "active")),
+    "status filter should be pushed to the database",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("eq").some((args) => args[0] === "ad_type" && args[1] === "listing")),
+    "ad type filter should be pushed to the database",
+  );
+  assert.ok(
+    fake.queries.some((query) => query.callArgs("eq").some((args) => args[0] === "format" && args[1] === "video")),
+    "format filter should be pushed to the database",
+  );
 });
 
 test("ad card fallback search uses strict DB-backed agency attribution fields", async () => {
@@ -276,6 +313,9 @@ function row(input: Partial<CustomerMetaAdLibraryCardRow> & { card_id: string })
     ad_area_suburbs: input.ad_area_suburbs ?? (input.suburb ? [input.suburb] : []),
     service_area_postcodes: input.service_area_postcodes ?? [],
     service_area_suburbs: input.service_area_suburbs ?? [],
+    ad_type: input.ad_type ?? null,
+    format: input.format ?? null,
+    hooks: input.hooks ?? null,
   };
 }
 
@@ -322,6 +362,7 @@ class FakeQuery {
   limit(...args: unknown[]) { return this.record("limit", args); }
   or(...args: unknown[]) { return this.record("or", args); }
   ilike(...args: unknown[]) { return this.record("ilike", args); }
+  eq(...args: unknown[]) { return this.record("eq", args); }
   in(...args: unknown[]) { return this.record("in", args); }
   overlaps(...args: unknown[]) { return this.record("overlaps", args); }
 
@@ -363,6 +404,11 @@ class FakeQuery {
           const value = row[column];
           return typeof value === "string" && regex.test(value);
         });
+      }
+
+      if (call.method === "eq" && typeof call.args[0] === "string") {
+        const column = call.args[0] as keyof CustomerMetaAdLibraryCardRow;
+        rows = rows.filter((row) => row[column] === call.args[1]);
       }
     }
 
