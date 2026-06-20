@@ -81,7 +81,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
   { id: "templates", label: "Templates", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
-  { id: "text", label: "Text", icon: FileText },
+  { id: "editor", label: "Editor", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
@@ -90,7 +90,7 @@ const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "templates";
   { id: "home", label: "Home", icon: Home },
   { id: "templates", label: "Templates", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
-  { id: "text", label: "Text", icon: FileText },
+  { id: "editor", label: "Editor", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
@@ -449,7 +449,7 @@ export function AdStudioWorkbench({
     const isNewAd = firstRun || pack.variants.length === 0;
     if (autoDesignedRef.current || generating || !isNewAd || !copyUntouched) return;
     autoDesignedRef.current = true;
-    studio.setSection("text");
+    studio.setSection("editor");
     setSelectedElement("headline");
     studio.setBusy(true);
     studio.setBusyMessage("Designing your ad from your photo...");
@@ -748,7 +748,7 @@ export function AdStudioWorkbench({
       return;
     }
     const textField = copyFieldForSelectedElement(element);
-    if (textField) setSection("text");
+    if (textField) setSection("editor");
   }, [setSection]);
 
   async function patchSelectedLayer() {
@@ -912,11 +912,11 @@ export function AdStudioWorkbench({
         onClick: () => goToSection("media"),
       },
       {
-        title: "Ad text",
+        title: "Ad copy",
         detail: "Click text on the canvas or rewrite selected copy.",
         icon: FileText,
         action: "Edit",
-        onClick: () => goToSection("text"),
+        onClick: () => goToSection("editor"),
       },
       {
         title: "Launch",
@@ -1037,7 +1037,7 @@ export function AdStudioWorkbench({
 
   function renderPanel() {
     if (studio.section === "media") return renderMediaPanel();
-    if (studio.section === "text") return renderTextPanel();
+    if (studio.section === "editor") return renderTextPanel();
     if (studio.section === "publish") {
       // M1: wire real props; H9: pass deleteCampaign
       return (
@@ -1109,7 +1109,7 @@ export function AdStudioWorkbench({
             } else if (item.id === "media") {
               const relevant = readinessItems.filter((ri) => ri.label === "Primary media");
               if (relevant.length > 0) railState = relevant.every((ri) => ri.state === "done") ? "done" : "warn";
-            } else if (item.id === "text") {
+            } else if (item.id === "editor") {
               const labels = ["Ad copy", "Call to action"];
               const relevant = readinessItems.filter((ri) => labels.includes(ri.label));
               if (relevant.length > 0) {
@@ -1197,7 +1197,7 @@ export function AdStudioWorkbench({
                     selectedElement={selectedElement}
                     setSelectedElement={(element) => {
                       setSelectedElement(element);
-                      const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "text" : null;
+                      const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "editor" : null;
                       if (nextSection) studio.setSection(nextSection);
                     }}
                   />
@@ -1229,7 +1229,7 @@ export function AdStudioWorkbench({
                 onEditCopy={(index) => {
                   selectVariant(index);
                   setSelectedElement("headline");
-                  studio.setSection("text");
+                  studio.setSection("editor");
                 }}
                 onReplaceImage={(index) => {
                   selectVariant(index);
@@ -1252,7 +1252,7 @@ export function AdStudioWorkbench({
           </Link>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
+        {(studio.mobileTab === "media" || studio.mobileTab === "editor") && (
           <div className="studio-mobile-format-tabs">
             {(["story", "feed", "square"] as PreviewFormat[]).map((item) => (
               <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
@@ -1266,7 +1266,7 @@ export function AdStudioWorkbench({
           <div className="studio-mobile-panel">{renderHomePanel()}</div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
+        {(studio.mobileTab === "media" || studio.mobileTab === "editor") && (
           <>
             <div className="studio-mobile-preview-wrap">
               <AdPreview
@@ -1280,7 +1280,7 @@ export function AdStudioWorkbench({
                 selectedElement={selectedElement}
                 setSelectedElement={(element) => {
                   setSelectedElement(element);
-                  const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "text" : null;
+                  const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "editor" : null;
                   if (nextSection) {
                     studio.setSection(nextSection);
                     studio.setMobileTab(nextSection);
@@ -1314,7 +1314,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text" || studio.mobileTab === "publish") && (
+        {(studio.mobileTab === "media" || studio.mobileTab === "editor" || studio.mobileTab === "publish") && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}
