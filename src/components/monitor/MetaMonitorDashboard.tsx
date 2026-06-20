@@ -3,27 +3,33 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-import { Eye, MousePointerClick, Percent, UserPlus, Users, Wallet } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, ChevronDown, ChevronRight, Eye, MousePointerClick, Percent, UserPlus, Wallet } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
 
-import { calculateTrend, formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
+import { calculateTrend, formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
+import {
+  buildResultsHierarchy,
+  type ResultsCampaignRow,
+  type ResultsHierarchyStatus,
+} from "@/lib/meta-monitor/results-hierarchy";
 import type { AnglePerformance, MetaMonitorPayload, MonitorRange } from "@/lib/meta-monitor/types";
 
 import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
-import { CampaignsManagement } from "./CampaignsManagement";
+import { AdManagementControls, BudgetManagementControl } from "./AdManagementControls";
 import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
 import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
+import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
 // initial /results JS on mobile. Behaviour is unchanged — charts still render client-side.
 const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
+const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 
-const IMPRESSIONS_COLOR = "#3b82f6";
-const CLICKS_COLOR = "#22a06b";
-const SPEND_COLOR = "#6d5ae6";
+const SPEND_COLOR = "#123e75";
+const LEADS_COLOR = "#31c46f";
 
 export type OAuthNotice = {
   tone: "success" | "error" | "warning";
@@ -114,14 +120,6 @@ export function MetaMonitorDashboard({
         <DemoModeNotice metaConnectHref={metaConnectHref} />
       ) : null}
 
-      {payload.source === "sample" && payload.connected ? (
-        <div className="mm-oauth-notice mm-oauth-notice--warning" role="status">
-          <span>
-            Showing sample data — your live Meta results will appear here automatically once your ads start delivering.
-          </span>
-        </div>
-      ) : null}
-
       {!summary ? (
         isRefreshing ? <MonitorDashboardSkeleton /> : (
           <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
@@ -138,22 +136,49 @@ export function MetaMonitorDashboard({
 function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaMonitorPayload; onSelectAd: (adId: string) => void; refreshing?: boolean }) {
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
-  const reach = summary.reach ?? 0;
-  const ctr = summary.impressions > 0 ? summary.clicks / summary.impressions : null;
-  const dailyNote = `Daily · last ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}`;
-  const totalStyle = { fontSize: 28, fontWeight: 650, letterSpacing: "-0.02em", margin: "2px 0 12px" } as const;
+  const hierarchy = useMemo(() => buildResultsHierarchy(payload.ads), [payload.ads]);
+  const ctr = safeRate(summary.clicks, summary.impressions);
+  const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
   const wrapperStyle = refreshing
     ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
     : undefined;
 
   return (
-    <div style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
+    <div className="mm-dashboard-body" style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
       <div className="mm-kpi-grid">
-        <MetaKpiCard icon={Users} iconTone="blue" label="Reach" value={reach.toLocaleString("en-AU")} compareText="people reached" />
-        <MetaKpiCard icon={Eye} iconTone="indigo" label="Impressions" value={summary.impressions.toLocaleString("en-AU")} compareText={compare} />
-        <MetaKpiCard icon={MousePointerClick} iconTone="green" label="Link clicks" value={summary.clicks.toLocaleString("en-AU")} compareText={compare} />
-        <MetaKpiCard icon={Percent} iconTone="slate" label="CTR" value={ctr != null ? formatPercent(ctr, 1) : "—"} compareText="clicks ÷ impressions" />
+        <MetaKpiCard
+          icon={Eye}
+          iconTone="blue"
+          label="Reach"
+          value={summary.reach.toLocaleString("en-AU")}
+          compareText={compare}
+          trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
+        />
+        <MetaKpiCard
+          icon={BarChart3}
+          iconTone="slate"
+          label="Impressions"
+          value={summary.impressions.toLocaleString("en-AU")}
+          compareText={compare}
+          trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
+        />
+        <MetaKpiCard
+          icon={MousePointerClick}
+          iconTone="indigo"
+          label="Link clicks"
+          value={summary.clicks.toLocaleString("en-AU")}
+          compareText={compare}
+          trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
+        />
+        <MetaKpiCard
+          icon={Percent}
+          iconTone="orange"
+          label="CTR"
+          value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
+          compareText={compare}
+          trend={previous ? calculateTrend(ctr, previousCtr) : null}
+        />
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
@@ -174,31 +199,7 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
 
       <div className="mm-chart-grid">
         <section className="panel mm-chart-panel">
-          <h3>Impressions over time</h3>
-          <p className="mm-chart-note">{dailyNote}</p>
-          <div style={totalStyle}>{summary.impressions.toLocaleString("en-AU")}</div>
-          <SmoothAreaChart
-            id="impressions"
-            color={IMPRESSIONS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.impressions ?? 0 }))}
-            valueFormatter={(value) => Math.round(value).toLocaleString("en-AU")}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Link clicks over time</h3>
-          <p className="mm-chart-note">{dailyNote}</p>
-          <div style={totalStyle}>{summary.clicks.toLocaleString("en-AU")}</div>
-          <SmoothAreaChart
-            id="clicks"
-            color={CLICKS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.clicks ?? 0 }))}
-            valueFormatter={(value) => Math.round(value).toLocaleString("en-AU")}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
           <h3>Spend over time</h3>
-          <p className="mm-chart-note">{dailyNote}</p>
-          <div style={totalStyle}>{formatCurrency(summary.spend)}</div>
           <SmoothAreaChart
             id="spend"
             color={SPEND_COLOR}
@@ -206,16 +207,36 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
             valueFormatter={(value) => formatCurrency(value)}
           />
         </section>
+        <section className="panel mm-chart-panel">
+          <h3>Valid leads over time</h3>
+          <SmoothAreaChart
+            id="valid-leads"
+            color={LEADS_COLOR}
+            data={payload.daily.map((point) => ({ date: point.date, value: point.validLeads }))}
+            valueFormatter={(value) => String(Math.round(value))}
+          />
+        </section>
+        <section className="panel mm-chart-panel">
+          <h3>Valid CPL over time</h3>
+          <p className="mm-chart-note">Gaps mark days with no valid leads — a $0 CPL is never shown.</p>
+          <SmoothAreaChart
+            id="valid-cpl"
+            color={LEADS_COLOR}
+            data={payload.daily.map((point) => ({ date: point.date, value: point.validCpl }))}
+            valueFormatter={(value) => formatCurrency(value)}
+          />
+        </section>
       </div>
-
-      {(payload.anglePerformance?.length ?? 0) > 0 ? (
-        <AnglePerformanceTable rows={payload.anglePerformance ?? []} />
-      ) : null}
 
       {payload.ads.length > 0 ? (
         <>
-          <CampaignsManagement ads={payload.ads} onSelectAd={onSelectAd} />
-          <h3 className="mm-section-title">Ad breakdown</h3>
+          <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} />
+          <div className="mm-section-heading">
+            <div>
+              <h2>Ad breakdown</h2>
+              <p>Per-ad creative, delivery mix, fatigue signals, and links.</p>
+            </div>
+          </div>
           <div className="mm-ad-grid">
             {payload.ads.map((ad) => (
               <AdPerformanceCard key={ad.adId} ad={ad} />
@@ -223,8 +244,246 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
           </div>
         </>
       ) : null}
+
+      <div className="mm-chart-grid two mm-secondary-grid">
+        {payload.suburbPerformance.length > 0 ? (
+          <section className="panel mm-chart-panel">
+            <h3>Valid leads by suburb</h3>
+            <SuburbBarChart rows={payload.suburbPerformance} />
+          </section>
+        ) : null}
+        <section className="panel mm-chart-panel">
+          <h3>Budget pacing</h3>
+          <BudgetPacingChart
+            daily={payload.daily}
+            budget={summary.budget}
+            spend={summary.spend}
+            range={payload.range}
+          />
+        </section>
+      </div>
+
+      {(payload.anglePerformance?.length ?? 0) > 0 ? (
+        <AnglePerformanceTable rows={payload.anglePerformance ?? []} />
+      ) : null}
     </div>
   );
+}
+
+function CampaignManagementTable({
+  rows,
+  onSelectAd,
+}: {
+  rows: ResultsCampaignRow[];
+  onSelectAd: (adId: string) => void;
+}) {
+  const [openRows, setOpenRows] = useState<Set<string>>(() => new Set(rows.map((row) => row.id)));
+
+  function toggle(rowId: string) {
+    setOpenRows((current) => {
+      const next = new Set(current);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  }
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="panel mm-campaign-panel">
+      <div className="mm-section-heading">
+        <div>
+          <h2>Campaigns</h2>
+          <p>Expand campaigns to manage ad sets and ads with approval-gated Meta changes.</p>
+        </div>
+        <div className="mm-campaign-legend" aria-label="Row labels">
+          <OriginTag managed />
+          <OriginTag managed={false} />
+          <span className="mm-origin-tag fatigue">Fatigue</span>
+        </div>
+      </div>
+      <div className="mm-table-scroll">
+        <table className="mm-table mm-campaign-table">
+          <thead>
+            <tr>
+              <th className="mm-th-left">Campaign / ad set / ad</th>
+              <th>Status</th>
+              <th>Daily budget</th>
+              <th>Spend</th>
+              <th>Leads</th>
+              <th>Valid</th>
+              <th>CPL</th>
+              <th className="mm-th-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((campaign) => {
+              const campaignOpen = openRows.has(campaign.id);
+              return (
+                <Fragment key={campaign.id}>
+                  <tr className="mm-campaign-row">
+                    <NameCell
+                      depth={0}
+                      label={campaign.name}
+                      open={campaignOpen}
+                      onToggle={() => toggle(campaign.id)}
+                      managedByBlockwise={campaign.managedByBlockwise}
+                      fatigued={campaign.fatigued}
+                    />
+                    <StatusCell status={campaign.status} />
+                    <td className="muted">-</td>
+                    <MetricCells metrics={campaign.metrics} />
+                    <td className="mm-th-left">
+                      <AdManagementControls
+                        target={{ kind: "campaign", campaignId: campaign.campaignId }}
+                        status={campaign.status}
+                        disabledReason={campaign.campaignId ? undefined : "Missing Meta id"}
+                      />
+                    </td>
+                  </tr>
+                  {campaignOpen
+                    ? campaign.adSets.map((adSet) => (
+                        <Fragment key={adSet.id}>
+                          <tr className="mm-adset-row">
+                            <NameCell
+                              depth={1}
+                              label={adSet.name}
+                              managedByBlockwise={adSet.managedByBlockwise}
+                              fatigued={adSet.fatigued}
+                            />
+                            <StatusCell status={adSet.status} />
+                            <td>
+                              <BudgetManagementControl
+                                adSetId={adSet.adsetId}
+                                dailyBudgetDollars={adSet.dailyBudgetDollars}
+                                disabledReason={adSet.dailyBudgetDollars == null ? "Unavailable" : undefined}
+                              />
+                            </td>
+                            <MetricCells metrics={adSet.metrics} />
+                            <td className="mm-th-left">
+                              <AdManagementControls
+                                target={{ kind: "adset", adSetId: adSet.adsetId }}
+                                status={adSet.status}
+                                disabledReason={adSet.adsetId ? undefined : "Missing Meta id"}
+                              />
+                            </td>
+                          </tr>
+                          {adSet.ads.map((ad) => (
+                            <tr className="mm-leaf-ad-row" key={ad.id}>
+                              <td className="mm-th-left">
+                                <div className="mm-row-name mm-depth-2">
+                                  <button type="button" className="mm-ad-name-btn" onClick={() => onSelectAd(ad.id)}>
+                                    {ad.name}
+                                  </button>
+                                  {ad.fatigued ? <span className="mm-origin-tag fatigue">Fatigue</span> : null}
+                                </div>
+                              </td>
+                              <StatusCell status={ad.status} />
+                              <td className="muted">-</td>
+                              <MetricCells metrics={ad.metrics} />
+                              <td className="mm-th-left">
+                                <AdManagementControls
+                                  target={{ kind: "ad", adId: ad.id }}
+                                  status={ad.status}
+                                  showExport
+                                  disabledReason={ad.id ? undefined : "Missing Meta id"}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      ))
+                    : null}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function NameCell({
+  depth,
+  label,
+  open,
+  onToggle,
+  managedByBlockwise,
+  fatigued,
+}: {
+  depth: 0 | 1;
+  label: string;
+  open?: boolean;
+  onToggle?: () => void;
+  managedByBlockwise: boolean;
+  fatigued: boolean;
+}) {
+  return (
+    <td className="mm-th-left">
+      <div className={`mm-row-name mm-depth-${depth}`}>
+        {onToggle ? (
+          <button type="button" className="mm-disclosure" aria-expanded={open} onClick={onToggle}>
+            {open ? <ChevronDown aria-hidden size={14} /> : <ChevronRight aria-hidden size={14} />}
+            {label}
+          </button>
+        ) : (
+          <span className="mm-row-title">{label}</span>
+        )}
+        <OriginTag managed={managedByBlockwise} />
+        {fatigued ? <span className="mm-origin-tag fatigue">Fatigue</span> : null}
+      </div>
+    </td>
+  );
+}
+
+function MetricCells({ metrics }: { metrics: ResultsCampaignRow["metrics"] }) {
+  return (
+    <>
+      <td>
+        <b>{formatCurrency(metrics.spend)}</b>
+      </td>
+      <td>{metrics.leads.toLocaleString("en-AU")}</td>
+      <td>
+        <b>{metrics.validLeads.toLocaleString("en-AU")}</b>
+      </td>
+      <td>{metrics.validCpl != null ? formatCurrency(metrics.validCpl) : "-"}</td>
+    </>
+  );
+}
+
+function StatusCell({ status }: { status: ResultsHierarchyStatus }) {
+  return (
+    <td>
+      <span className={`mm-pill ${statusTone(status)}`}>{statusLabel(status)}</span>
+    </td>
+  );
+}
+
+function OriginTag({ managed }: { managed: boolean }) {
+  return (
+    <span className={`mm-origin-tag ${managed ? "blockwise" : "meta"}`}>
+      {managed ? "Blockwise" : "In Meta"}
+    </span>
+  );
+}
+
+function statusTone(status: ResultsHierarchyStatus): "green" | "amber" | "neutral" {
+  if (status === "ACTIVE") return "green";
+  if (status === "PAUSED") return "amber";
+
+  return "neutral";
+}
+
+function statusLabel(status: ResultsHierarchyStatus): string {
+  if (status === "MIXED") return "Mixed";
+  return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
 function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {

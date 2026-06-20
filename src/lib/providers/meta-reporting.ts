@@ -19,9 +19,9 @@ export type MetaInsightRow = {
   adset_id?: string;
   adset_name?: string | null;
   spend?: string | number;
+  reach?: string | number;
   impressions?: string | number;
   clicks?: string | number;
-  reach?: string | number;
   ctr?: string | number;
   cpc?: string | number;
   frequency?: string | number;
@@ -242,6 +242,13 @@ export type MetaAdEntity = {
   }) | null;
 };
 
+export type MetaAdSetEntity = {
+  id?: string;
+  name?: string | null;
+  effective_status?: string | null;
+  daily_budget?: string | number | null;
+};
+
 export type MetaBreakdownRow = {
   ad_id?: string;
   impressions?: string | number;
@@ -272,9 +279,9 @@ export async function fetchMetaInsightRows(input: {
       "adset_id",
       "adset_name",
       "spend",
+      "reach",
       "impressions",
       "clicks",
-      "reach",
       "actions",
       "frequency",
       "date_start",
@@ -294,6 +301,19 @@ export async function fetchMetaAdEntities(input: {
     fields:
       "id,name,effective_status,preview_shareable_link,creative{thumbnail_url,image_url,title,body,object_type,video_id,object_story_spec}",
     limit: "200",
+  });
+}
+
+/** Ad set entities with budget for inline Results management. */
+export async function fetchMetaAdSetEntities(input: {
+  accessToken: string;
+  accountId: string;
+}): Promise<MetaAdSetEntity[]> {
+  const accountId = normalizeAccountId(input.accountId);
+
+  return fetchMetaList<MetaAdSetEntity>(`/${accountId}/adsets`, input.accessToken, {
+    fields: "id,name,effective_status,daily_budget",
+    limit: "500",
   });
 }
 

@@ -45,6 +45,7 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
       ) : null}
 
       <dl className="mm-ad-metrics">
+        <Metric label="Reach" value={metrics.reach.toLocaleString("en-AU")} />
         <Metric label="Spend" value={formatCurrency(metrics.spend)} />
         <Metric label="Impressions" value={metrics.impressions.toLocaleString("en-AU")} />
         <Metric label="Clicks" value={metrics.clicks.toLocaleString("en-AU")} />
@@ -63,12 +64,9 @@ export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
       ) : null}
 
       <div className="mm-ad-actions">
+        <AdManagementControls target={{ kind: "ad", adId: ad.adId }} status={ad.status} showExport />
         <ActionLink href={ad.landingPageUrl} label="Open landing page" />
         <ActionLink href={ad.metaPermalinkUrl} label="View in Meta" />
-      </div>
-
-      <div className="mm-ad-manage">
-        <AdManagementControls adId={ad.adId} status={ad.status} />
       </div>
     </article>
   );

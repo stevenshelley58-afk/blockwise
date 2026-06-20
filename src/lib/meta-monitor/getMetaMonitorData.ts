@@ -5,15 +5,19 @@ import { resolveMonitorDateRange } from "../monitor/dashboard-data.ts";
 import {
   extractMetaLeadCount,
   fetchMetaAdEntities,
+  fetchMetaAdSetEntities,
   fetchMetaInsightBreakdown,
   fetchMetaInsightRows,
   type MetaAdEntity,
+  type MetaAdSetEntity,
   type MetaBreakdownRow,
   type MetaInsightRow,
 } from "../providers/meta-reporting.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "../providers/provider-connections.ts";
 import { normalizeLeadQualityLabel } from "../operator/overview.ts";
 import { detectCreativeFatigue, parseAdVariantTags, safeCpl, safeRate } from "./calculations.ts";
+import { isAdBlockwiseManaged, type ManagedMetaObjects } from "./manageability.ts";
+import { loadManagedMetaObjects } from "./managed-plans.ts";
 import { persistOwnedAdPerformanceFromMonitor } from "./owned-performance.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import { resolveSuburb } from "./suburbAttribution.ts";
@@ -91,10 +95,12 @@ export async function getMetaMonitorData(input: {
   const datePreset = range.key === "today" || range.key === "yesterday" ? range.key : undefined;
 
   try {
-    const [insightRows, adEntities, leadFacts] = await Promise.all([
+    const [insightRows, adEntities, adSetEntities, leadFacts, managedObjects] = await Promise.all([
       fetchMetaInsightRows({ accessToken, accountId, since: range.since, until: range.until, datePreset }),
       fetchMetaAdEntities({ accessToken, accountId }),
+      fetchMetaAdSetEntities({ accessToken, accountId }).catch(() => []),
       loadLeadFacts(input.serviceSupabase, input.workspaceId, range),
+      loadManagedMetaObjects(input.serviceSupabase, input.workspaceId),
     ]);
 
     // Optional extras — each degrades to "hidden panel", never fake data.
@@ -125,7 +131,16 @@ export async function getMetaMonitorData(input: {
       }).catch(() => undefined),
     ]);
 
-    const ads = buildAds({ insightRows, adEntities, leadFacts, placementRows, deviceRows, rangeUntil: range.until });
+    const ads = buildAds({
+      insightRows,
+      adEntities,
+      adSetEntities,
+      managedObjects,
+      leadFacts,
+      placementRows,
+      deviceRows,
+      rangeUntil: range.until,
+    });
     const daily = buildDaily(insightRows, leadFacts, range);
     const suburbPerformance = buildSuburbPerformance(leadFacts, ads);
     const anglePerformance = buildAnglePerformance(ads);
@@ -135,10 +150,10 @@ export async function getMetaMonitorData(input: {
       dateRange: { start: range.since, end: range.until, label: range.label },
       lastSyncedAt: now.toISOString(),
       budget: resolveBudget(),
+      reach: ads.reduce((total, ad) => total + ad.metrics.reach, 0),
       spend: round2(spend),
       impressions: ads.reduce((total, ad) => total + ad.metrics.impressions, 0),
       clicks: ads.reduce((total, ad) => total + ad.metrics.clicks, 0),
-      reach: Math.round(insightRows.reduce((total, row) => total + toNumber(row.reach), 0)),
       leads: Math.max(
         ads.reduce((total, ad) => total + ad.metrics.leads, 0),
         leadFacts.totalLeads,
@@ -309,6 +324,8 @@ function extractAdId(source: unknown): string | null {
 function buildAds(input: {
   insightRows: MetaInsightRow[];
   adEntities: MetaAdEntity[];
+  adSetEntities: MetaAdSetEntity[];
+  managedObjects: ManagedMetaObjects;
   leadFacts: LeadFacts;
   placementRows: MetaBreakdownRow[] | null;
   deviceRows: MetaBreakdownRow[] | null;
@@ -320,6 +337,7 @@ function buildAds(input: {
     campaignName: string;
     adsetId: string;
     adsetName: string;
+    reach: number;
     spend: number;
     impressions: number;
     clicks: number;
@@ -350,6 +368,7 @@ function buildAds(input: {
       campaignName: row.campaign_name ?? "Meta campaign",
       adsetId: row.adset_id ?? "",
       adsetName: row.adset_name ?? "",
+      reach: 0,
       spend: 0,
       impressions: 0,
       clicks: 0,
@@ -362,9 +381,11 @@ function buildAds(input: {
       priorClicks: 0,
     };
     const impressions = Math.round(toNumber(row.impressions));
+    const reach = Math.round(toNumber(row.reach));
     const clicks = Math.round(toNumber(row.clicks));
     const frequency = toNumber(row.frequency);
 
+    aggregate.reach += reach;
     aggregate.spend += toNumber(row.spend);
     aggregate.impressions += impressions;
     aggregate.clicks += clicks;
@@ -389,6 +410,7 @@ function buildAds(input: {
   }
 
   const entityById = new Map(input.adEntities.filter((entity) => entity.id).map((entity) => [entity.id as string, entity]));
+  const adSetById = new Map(input.adSetEntities.filter((entity) => entity.id).map((entity) => [entity.id as string, entity]));
   const placementByAd = groupBreakdown(input.placementRows, placementLabel);
   const deviceByAd = groupBreakdown(input.deviceRows, deviceLabel);
 
@@ -401,6 +423,7 @@ function buildAds(input: {
       const validLeads = input.leadFacts.validCountByAdId.get(adId) ?? 0;
       const spend = round2(aggregate.spend);
       const adName = entity?.name ?? aggregate.adName;
+      const adSet = adSetById.get(aggregate.adsetId);
       const frequency =
         aggregate.frequencyImpressions > 0
           ? round2(aggregate.frequencyWeighted / aggregate.frequencyImpressions)
@@ -427,6 +450,7 @@ function buildAds(input: {
           description: creative?.object_story_spec?.link_data?.description ?? null,
         },
         metrics: {
+          reach: aggregate.reach,
           spend,
           impressions: aggregate.impressions,
           clicks: aggregate.clicks,
@@ -440,6 +464,13 @@ function buildAds(input: {
         },
         placementBreakdown: placementByAd.get(adId),
         deviceBreakdown: deviceByAd.get(adId),
+        management: {
+          managedByBlockwise: isAdBlockwiseManaged(
+            { adId, adsetId: aggregate.adsetId, campaignId: aggregate.campaignId },
+            input.managedObjects,
+          ),
+          adsetDailyBudgetDollars: adSetBudgetDollars(adSet?.daily_budget),
+        },
         variantTags: parseAdVariantTags(adName),
         fatigued: detectCreativeFatigue({
           frequency,
@@ -449,6 +480,13 @@ function buildAds(input: {
       };
     })
     .sort((a, b) => b.metrics.spend - a.metrics.spend);
+}
+
+function adSetBudgetDollars(value: string | number | null | undefined): number | null {
+  const minorUnits = toNumber(value);
+  if (minorUnits <= 0) return null;
+
+  return round2(minorUnits / 100);
 }
 
 /**
@@ -512,7 +550,7 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; platformLeads: number; impressions: number; clicks: number }>();
+  const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -521,12 +559,10 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0, impressions: 0, clicks: 0 };
+    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0 };
 
     existing.spend += toNumber(row.spend);
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
-    existing.impressions += Math.round(toNumber(row.impressions));
-    existing.clicks += Math.round(toNumber(row.clicks));
     spendByDate.set(date, existing);
   }
 
@@ -544,8 +580,6 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,
       validCpl: safeCpl(spend, validLeads),
-      impressions: insights?.impressions ?? 0,
-      clicks: insights?.clicks ?? 0,
     });
   }
 
@@ -619,10 +653,16 @@ async function buildPreviousPeriod(input: {
     loadLeadFacts(input.serviceSupabase, input.workspaceId, input.previousRange),
   ]);
   const spend = round2(insightRows.reduce((total, row) => total + toNumber(row.spend), 0));
+  const reach = insightRows.reduce((total, row) => total + Math.round(toNumber(row.reach)), 0);
+  const impressions = insightRows.reduce((total, row) => total + Math.round(toNumber(row.impressions)), 0);
+  const clicks = insightRows.reduce((total, row) => total + Math.round(toNumber(row.clicks)), 0);
   const platformLeads = insightRows.reduce((total, row) => total + Math.round(extractMetaLeadCount(row.actions)), 0);
   const leads = Math.max(platformLeads, leadFacts.totalLeads);
 
   return {
+    reach,
+    impressions,
+    clicks,
     spend,
     leads,
     validLeads: leadFacts.totalValidLeads,

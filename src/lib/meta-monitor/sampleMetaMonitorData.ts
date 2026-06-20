@@ -36,6 +36,7 @@ type SampleAd = {
   creativeType: MetaAdPerformance["creative"]["type"];
   headline: string;
   spend: number;
+  reach: number;
   impressions: number;
   clicks: number;
   leads: number;
@@ -46,44 +47,44 @@ type SampleAd = {
 
 const SAMPLE_ADS: SampleAd[] = [
   {
-    adId: "120208746201302", adName: "Sample · What’s your home worth?", suburb: "Carlingford", status: "ACTIVE",
+    adId: "120208746201302", adName: "Lover (Image)", suburb: "Carlingford", status: "ACTIVE",
     creativeType: "IMAGE", headline: "What's your home really worth?",
-    spend: 1495, impressions: 334500, clicks: 8120, leads: 50, validLeads: 38,
+    spend: 1495, reach: 143200, impressions: 334500, clicks: 8120, leads: 50, validLeads: 38,
     placements: [["Facebook Feed", 72], ["Instagram Feed", 18], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 86], ["Desktop", 11], ["Tablet", 3]],
   },
   {
-    adId: "120208746201303", adName: "Sample · Free 60-second appraisal", suburb: "Carlingford", status: "ACTIVE",
+    adId: "120208746201303", adName: "40% OFF (Image)", suburb: "Carlingford", status: "ACTIVE",
     creativeType: "IMAGE", headline: "Limited appraisal offer",
-    spend: 1142, impressions: 278300, clicks: 6512, leads: 32, validLeads: 21,
+    spend: 1142, reach: 121600, impressions: 278300, clicks: 6512, leads: 32, validLeads: 21,
     placements: [["Facebook Feed", 70], ["Instagram Feed", 20], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 84], ["Desktop", 13], ["Tablet", 3]],
   },
   {
-    adId: "120208746201304", adName: "Sample · The pre-sale checklist", suburb: "Parramatta", status: "ACTIVE",
+    adId: "120208746201304", adName: "Property Checklist (Video)", suburb: "Parramatta", status: "ACTIVE",
     creativeType: "VIDEO", headline: "Selling? Start with this checklist",
-    spend: 1139, impressions: 245900, clicks: 5813, leads: 35, validLeads: 23,
+    spend: 1139, reach: 107800, impressions: 245900, clicks: 5813, leads: 35, validLeads: 23,
     placements: [["Facebook Feed", 68], ["Instagram Feed", 22], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 83], ["Desktop", 14], ["Tablet", 3]],
   },
   {
-    adId: "120208746201305", adName: "Sample · Instant home value report", suburb: "Subiaco", status: "PAUSED",
+    adId: "120208746201305", adName: "Home Value (Image)", suburb: "Subiaco", status: "PAUSED",
     creativeType: "IMAGE", headline: "Free home value report",
-    spend: 926, impressions: 198400, clicks: 4721, leads: 27, validLeads: 17,
+    spend: 926, reach: 89400, impressions: 198400, clicks: 4721, leads: 27, validLeads: 17,
     placements: [["Facebook Feed", 74], ["Instagram Feed", 16], ["Instagram Stories", 7], ["Audience Network", 3]],
     devices: [["Mobile", 88], ["Desktop", 9], ["Tablet", 3]],
   },
   {
-    adId: "120208746201306", adName: "Sample · The 2026 seller’s playbook", suburb: "Eastwood", status: "ACTIVE",
+    adId: "120208746201306", adName: "Seller Guide (Image)", suburb: "Eastwood", status: "ACTIVE",
     creativeType: "IMAGE", headline: "The 2026 seller's guide",
-    spend: 738, impressions: 176200, clicks: 4112, leads: 18, validLeads: 11,
+    spend: 738, reach: 76300, impressions: 176200, clicks: 4112, leads: 18, validLeads: 11,
     placements: [["Facebook Feed", 69], ["Instagram Feed", 21], ["Instagram Stories", 7], ["Audience Network", 3]],
     devices: [["Mobile", 85], ["Desktop", 12], ["Tablet", 3]],
   },
   {
-    adId: "120208746201307", adName: "Sample · Just sold — see the result", suburb: "Marsfield", status: "ACTIVE",
+    adId: "120208746201307", adName: "House Sold (Image)", suburb: "Marsfield", status: "ACTIVE",
     creativeType: "IMAGE", headline: "Just sold near you",
-    spend: 500, impressions: 142300, clicks: 3128, leads: 14, validLeads: 8,
+    spend: 500, reach: 68800, impressions: 142300, clicks: 3128, leads: 14, validLeads: 8,
     placements: [["Facebook Feed", 71], ["Instagram Feed", 19], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 87], ["Desktop", 10], ["Tablet", 3]],
   },
@@ -110,8 +111,6 @@ export function buildSampleMetaMonitorPayload(
       leads: leadsSeries[index],
       validLeads: validSeries[index],
       validCpl: safeCpl(spend, validSeries[index]),
-      impressions: Math.round(spend * 231.6),
-      clicks: Math.round(spend * 5.46),
     };
   });
 
@@ -122,6 +121,7 @@ export function buildSampleMetaMonitorPayload(
   const ads: MetaAdPerformance[] = SAMPLE_ADS.map((ad, adIndex) => {
     const creativeImage = SAMPLE_CREATIVES[adIndex % SAMPLE_CREATIVES.length];
     const adSpend = round2(ad.spend * scale);
+    const reach = Math.round(ad.reach * scale);
     const adLeads = Math.round(ad.leads * scale);
     const adValid = Math.min(Math.round(ad.validLeads * scale), adLeads);
     const impressions = Math.round(ad.impressions * scale);
@@ -131,9 +131,9 @@ export function buildSampleMetaMonitorPayload(
       adId: ad.adId,
       adName: ad.adName,
       campaignId: `c-${ad.suburb.toLowerCase()}`,
-      campaignName: `Sample Campaign · ${ad.suburb} Sellers`,
+      campaignName: `Suburb Appraisal - ${ad.suburb}`,
       adsetId: `as-${ad.suburb.toLowerCase()}`,
-      adsetName: `Sample Audience · ${ad.suburb}`,
+      adsetName: `Suburb - ${ad.suburb}`,
       suburb: ad.suburb,
       status: ad.status,
       landingPageUrl: null,
@@ -148,6 +148,7 @@ export function buildSampleMetaMonitorPayload(
         description: null,
       },
       metrics: {
+        reach,
         spend: adSpend,
         impressions,
         clicks,
@@ -169,6 +170,10 @@ export function buildSampleMetaMonitorPayload(
         impressions: Math.round((impressions * percentage) / 100),
         percentage,
       })),
+      management: {
+        managedByBlockwise: adIndex !== SAMPLE_ADS.length - 1,
+        adsetDailyBudgetDollars: adIndex === SAMPLE_ADS.length - 1 ? null : 35 + adIndex * 5,
+      },
     };
   });
 
@@ -203,13 +208,16 @@ export function buildSampleMetaMonitorPayload(
       dateRange: { start: range.since, end: range.until, label: range.label },
       lastSyncedAt: new Date((input.now ?? new Date()).getTime() - 4 * 60 * 1000).toISOString(),
       budget: SAMPLE_BUDGET,
+      reach: sum(ads.map((ad) => ad.metrics.reach)),
       spend,
       impressions: sum(ads.map((ad) => ad.metrics.impressions)),
       clicks: sum(ads.map((ad) => ad.metrics.clicks)),
-      reach: Math.round(sum(ads.map((ad) => ad.metrics.impressions)) / 2.4),
       leads,
       validLeads,
       previousPeriod: {
+        reach: Math.round(sum(ads.map((ad) => ad.metrics.reach)) / 1.14),
+        impressions: Math.round(sum(ads.map((ad) => ad.metrics.impressions)) / 1.11),
+        clicks: Math.round(sum(ads.map((ad) => ad.metrics.clicks)) / 1.08),
         spend: round2(spend / 1.124),
         leads: Math.round(leads / 1.183),
         validLeads: Math.round(validLeads / 1.082),

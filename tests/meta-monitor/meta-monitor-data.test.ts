@@ -14,6 +14,7 @@ test("sample payload is internally consistent for the 30-day range", () => {
 
   assert.ok(summary);
   assert.equal(summary.spend, 5940);
+  assert.ok(summary.reach > 0);
   assert.equal(summary.leads, 176);
   assert.equal(summary.validLeads, 118);
 
@@ -26,9 +27,11 @@ test("sample payload is internally consistent for the 30-day range", () => {
   assert.equal(dailyLeads, summary.leads);
 
   const adSpend = payload.ads.reduce((total, ad) => total + ad.metrics.spend, 0);
+  const adReach = payload.ads.reduce((total, ad) => total + ad.metrics.reach, 0);
   const adValid = payload.ads.reduce((total, ad) => total + ad.metrics.validLeads, 0);
 
   assert.equal(adSpend, summary.spend);
+  assert.equal(adReach, summary.reach);
   assert.equal(adValid, summary.validLeads);
 
   const suburbValid = payload.suburbPerformance.reduce((total, row) => total + row.validLeads, 0);
@@ -62,6 +65,8 @@ test("sample payload scales to shorter ranges without breaking invariants", () =
 
     for (const ad of payload.ads) {
       assert.ok(ad.metrics.leads >= ad.metrics.validLeads);
+      assert.equal(typeof ad.management.managedByBlockwise, "boolean");
+      assert.ok(ad.management.adsetDailyBudgetDollars == null || ad.management.adsetDailyBudgetDollars > 0);
     }
   }
 });

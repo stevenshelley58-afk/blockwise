@@ -48,6 +48,7 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
           description: null,
         },
         metrics: {
+          reach: 1200,
           spend: 123.45,
           impressions: 2000,
           clicks: 80,
@@ -58,6 +59,10 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
           validCpl: 13.716,
           frequency: 1.5,
           landingPageViews: null,
+        },
+        management: {
+          managedByBlockwise: true,
+          adsetDailyBudgetDollars: 40,
         },
         variantTags: { variantId: "variant1", angle: "market-update", template: "MKT-42" },
         fatigued: false,
@@ -83,6 +88,7 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
           description: null,
         },
         metrics: {
+          reach: 80,
           spend: 10,
           impressions: 100,
           clicks: 1,
@@ -93,6 +99,10 @@ test("persistOwnedAdPerformanceFromMonitor upserts only tagged live ads", async 
           validCpl: null,
           frequency: null,
           landingPageViews: null,
+        },
+        management: {
+          managedByBlockwise: true,
+          adsetDailyBudgetDollars: 40,
         },
         variantTags: null,
       },

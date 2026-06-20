@@ -5,8 +5,8 @@ import type { MonitorDateRange, MonitorRange } from "@/lib/meta-monitor/types";
 const RANGE_OPTIONS: Array<{ value: MonitorRange; label: string }> = [
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
-  { value: "last_7", label: "Last 7 days" },
-  { value: "last_30", label: "Last 30 days" },
+  { value: "last_7", label: "7d" },
+  { value: "last_30", label: "30d" },
 ];
 
 export function MetaMark({ size = 26 }: { size?: number }) {
@@ -44,29 +44,28 @@ export function MetaMonitorHeader(props: {
         <div className="eyebrow">Results</div>
         <div className="mm-title-row">
           <MetaMark />
-          <h1>Meta Ads Overview</h1>
+          <h1>Results</h1>
           {props.isSample ? <span className="mm-chip mm-chip-demo">Demo data</span> : null}
         </div>
-        <p className="mm-subtitle">Performance summary for the {props.range.label.toLowerCase()}</p>
+        <p className="mm-subtitle">Live performance and one-click management for everything Blockwise runs on Meta.</p>
       </div>
       <div className="mm-header-controls">
         <span className="mm-synced">
           <span className="mm-synced-dot" aria-hidden />
           {props.lastSyncedAt ? `Last synced ${timeAgo(props.lastSyncedAt)}` : "Not synced yet"}
         </span>
-        <label className="mm-range">
-          <span className="sr-only">Date range</span>
-          <select
-            value={props.rangeKey}
-            onChange={(event) => props.onRangeChange(event.target.value as MonitorRange)}
-          >
-            {RANGE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label} ({formatRangeSpan(props.range, option.value === props.rangeKey)})
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mm-range-segment" role="group" aria-label={`Date range, ${formatRangeSpan(props.range)}`}>
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={option.value === props.rangeKey ? "active" : undefined}
+              onClick={() => props.onRangeChange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <button className="button secondary" type="button" onClick={props.onRefresh} disabled={props.isRefreshing}>
           <RefreshCw size={14} className={props.isRefreshing ? "mm-spin" : undefined} aria-hidden />
           {props.isRefreshing ? "Refreshing" : "Refresh"}
@@ -76,11 +75,7 @@ export function MetaMonitorHeader(props: {
   );
 }
 
-function formatRangeSpan(range: MonitorDateRange, isCurrent: boolean): string {
-  if (!isCurrent) {
-    return "…";
-  }
-
+function formatRangeSpan(range: MonitorDateRange): string {
   return `${formatDay(range.since)} – ${formatDay(range.until)}`;
 }
 

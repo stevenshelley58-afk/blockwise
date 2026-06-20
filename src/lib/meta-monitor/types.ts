@@ -6,14 +6,16 @@ export type MetaMonitorSummary = {
   dateRange: { start: string; end: string; label: string };
   lastSyncedAt: string | null;
   budget: number | null;
+  reach: number;
   spend: number;
   impressions: number;
   clicks: number;
-  /** Total reach (people) for the range. Additive; absent on sample/empty payloads. */
-  reach?: number;
   leads: number;
   validLeads: number;
   previousPeriod?: {
+    reach: number;
+    impressions: number;
+    clicks: number;
     spend: number;
     leads: number;
     validLeads: number;
@@ -28,9 +30,6 @@ export type MetaDailyPoint = {
   leads: number;
   validLeads: number;
   validCpl: number | null;
-  /** Daily impressions/clicks. Additive; absent on sample/empty payloads. */
-  impressions?: number;
-  clicks?: number;
 };
 
 export type SuburbPerformance = {
@@ -85,6 +84,7 @@ export type MetaAdPerformance = {
     description: string | null;
   };
   metrics: {
+    reach: number;
     spend: number;
     impressions: number;
     clicks: number;
@@ -98,6 +98,10 @@ export type MetaAdPerformance = {
   };
   placementBreakdown?: Array<{ label: string; impressions: number; percentage: number }>;
   deviceBreakdown?: Array<{ label: string; impressions: number; percentage: number }>;
+  management: {
+    managedByBlockwise: boolean;
+    adsetDailyBudgetDollars: number | null;
+  };
   /** Parsed Ad Studio variant tags from the ad name; null/absent for untagged ads. Additive. */
   variantTags?: AdVariantTags | null;
   /** True when frequency > 2.5 and 7-day CTR dropped >=30% vs the prior 7 days (>=1k impressions per window). Additive. */

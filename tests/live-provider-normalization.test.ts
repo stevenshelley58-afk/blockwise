@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { extractMetaLeadCount, fetchMetaInsightRows, normalizeMetaInsightRows } from "../src/lib/providers/meta-reporting.ts";
+import {
+  extractMetaLeadCount,
+  fetchMetaAdSetEntities,
+  fetchMetaInsightRows,
+  normalizeMetaInsightRows,
+} from "../src/lib/providers/meta-reporting.ts";
 import { normalizeGoogleAdsRows } from "../src/lib/providers/google-reporting.ts";
 
 test("Meta lead actions are normalized into lead counts", () => {
@@ -73,6 +78,44 @@ test("Meta single-day insight reads use Ads Manager date presets", async () => {
     assert.match(requestUrl.pathname, /\/act_998540809306211\/insights$/);
     assert.equal(requestUrl.searchParams.get("date_preset"), "today");
     assert.equal(requestUrl.searchParams.has("time_range"), false);
+    assert.match(requestUrl.searchParams.get("fields") ?? "", /\breach\b/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Meta ad set entity reads include daily budget for inline management", async () => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+
+  globalThis.fetch = async (url) => {
+    urls.push(String(url));
+
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: "set_1",
+            name: "Seller prep",
+            effective_status: "ACTIVE",
+            daily_budget: "4000",
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const rows = await fetchMetaAdSetEntities({
+      accessToken: "token",
+      accountId: "998540809306211",
+    });
+    const requestUrl = new URL(urls[0]);
+
+    assert.equal(rows[0]?.daily_budget, "4000");
+    assert.match(requestUrl.pathname, /\/act_998540809306211\/adsets$/);
+    assert.match(requestUrl.searchParams.get("fields") ?? "", /\bdaily_budget\b/);
   } finally {
     globalThis.fetch = originalFetch;
   }
