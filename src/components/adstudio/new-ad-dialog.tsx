@@ -132,6 +132,15 @@ export function NewAdDialog({
   const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
 
+  // "Pick from your library": agents reuse the same property shots and headshots
+  // across ads. Selecting one just sets imageDataUrl (the same value an upload
+  // produces), so it flows through the existing create path unchanged.
+  const libraryAssets: Array<{ src: string; label: string; role: string }> = [
+    ...brandKit.assets.listingImages.map((src, index) => ({ src, label: `Property ${index + 1}`, role: "property" })),
+    ...brandKit.assets.headshots.map((src, index) => ({ src, label: `Agent ${index + 1}`, role: "person" })),
+    ...brandKit.assets.officeImages.map((src, index) => ({ src, label: `Office ${index + 1}`, role: "background" })),
+  ];
+
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -613,6 +622,37 @@ export function NewAdDialog({
                   setUploadingImage(false);
                 }}
               />
+              {libraryAssets.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94a3b8", fontWeight: 700, margin: "0 0 8px" }}>
+                    Or pick from your library
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                    {libraryAssets.map((asset) => {
+                      const tint = asset.role === "person" ? "#006d38" : asset.role === "background" ? "#475569" : "#123e75";
+                      const active = imageDataUrl === asset.src;
+                      return (
+                        <button
+                          key={asset.src}
+                          type="button"
+                          title={asset.label}
+                          onClick={() => {
+                            setImageDataUrl(asset.src);
+                            setImageName(asset.label);
+                            setError("");
+                          }}
+                          style={{ position: "relative", padding: 0, border: active ? "2px solid #123e75" : "1px solid #dfe6f0", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "#fff", aspectRatio: "1 / 1" }}
+                        >
+                          <span aria-hidden style={{ position: "absolute", top: 5, left: 5, zIndex: 2, fontSize: 9, fontWeight: 700, color: "#fff", background: tint, padding: "2px 6px", borderRadius: 9999 }}>
+                            {asset.role === "person" ? "Person" : asset.role === "background" ? "Background" : "Property"}
+                          </span>
+                          <img src={asset.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <label className="studio-newad-field">
                 <span>Short description</span>
                 <textarea
