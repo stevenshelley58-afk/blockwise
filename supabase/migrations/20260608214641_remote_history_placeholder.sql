@@ -1,4 +1,0 @@
--- Placeholder for a migration version already recorded in the linked
--- Supabase production history. The original file was not present in Git.
--- Keep this file empty so local migration history stays aligned without
--- changing production schema.
