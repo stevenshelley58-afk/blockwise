@@ -150,7 +150,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   }
 
   useEffect(() => {
-    if (initialQuery) doSearch(initialQuery, initialSort, initialIncludeSurrounding, EMPTY_FILTERS);
+    if (initialQuery) doSearch(initialQuery, initialSort, initialIncludeSurrounding);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

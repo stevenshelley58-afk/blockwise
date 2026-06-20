@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const params = request.nextUrl.searchParams;
-  const q = normaliseAdRadarCardSearchQuery(params.get("q") ?? "");
-  const sort: AdRadarCardSearchSort = params.get("sort") === "longest" ? "longest" : "recent";
-  const includeSurroundingSuburbs = isTruthySearchParam(params.get("includeSurrounding"));
-  const filters = parseFilters(params);
+  const searchParams = request.nextUrl.searchParams;
+  const q = normaliseAdRadarCardSearchQuery(searchParams.get("q") ?? "");
+  const sort: AdRadarCardSearchSort = searchParams.get("sort") === "longest" ? "longest" : "recent";
+  const includeSurroundingSuburbs = isTruthySearchParam(searchParams.get("includeSurrounding"));
+  const filters = parseFilters(searchParams);
   if (!q) {
     return NextResponse.json({ cards: [] });
   }
