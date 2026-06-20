@@ -2,7 +2,7 @@ import { schedules } from "@trigger.dev/sdk/v3";
 
 import {
   CREATIVE_DNA_VERSION,
-  extractCreativeSkeletonForAd,
+  extractTemplateFromImage,
   type CreativeDnaObservedAd,
 } from "../src/lib/ad-template-library/creative-dna.ts";
 import { createTextProviderForCandidate } from "../src/lib/adstudio/ai-providers.ts";
@@ -132,13 +132,27 @@ export async function runCreativeDnaExtractor(serviceSupabase: SupabaseServiceCl
 async function extractWithFallbacks(
   ad: CreativeDnaObservedAd,
   attempts: ReturnType<typeof modelCandidateAttempts>,
-): Promise<Awaited<ReturnType<typeof extractCreativeSkeletonForAd>>> {
+): Promise<Awaited<ReturnType<typeof extractTemplateFromImage>>> {
   let lastError: unknown = null;
 
   for (const candidate of attempts) {
     try {
-      return await extractCreativeSkeletonForAd({
-        ad,
+      // Source unification: the nightly miner and the operator sample-import path
+      // run the same extractor (source="ad_radar" here).
+      return await extractTemplateFromImage({
+        asset: {
+          imageUrl: ad.imageUrl,
+          observedAdId: ad.observedAdId,
+          adCreativeId: ad.adCreativeId,
+          headline: ad.headline,
+          body: ad.body,
+          cta: ad.cta,
+          adType: ad.adType,
+          primaryIntent: ad.primaryIntent,
+          format: ad.format,
+          advertiserName: ad.advertiserName,
+        },
+        source: "ad_radar",
         provider: createTextProviderForCandidate(candidate, { model: candidate.model }),
       });
     } catch (error) {

@@ -15,6 +15,7 @@ import {
   type CreativeLayerMeta,
 } from "@/lib/adstudio/creative-design-json.ts";
 import { buildCreativeDesignJson } from "@/lib/adstudio/creative-design-builder.ts";
+import { runRenderedTileQA, type RenderedTileQAResult } from "@/lib/adstudio/creative-qa.ts";
 import {
   CENTER_FOCAL,
   computeFocalPointFromImageSource,
@@ -95,6 +96,10 @@ export function FabricAdEditor({
     callbacksRef.current = { onCopyChange, onCreativeChange, onImageChange, onSelectedElementChange };
   });
 
+  // Phase 6: QA on the rendered tile, re-run after every manual edit (pure, no
+  // model call). Scores the final composited layout + AU copy compliance.
+  const [tileQa, setTileQa] = useState<RenderedTileQAResult | null>(null);
+
   const commitCanvas = useCallback((options: { pushHistory?: boolean } = {}) => {
     const canvas = fabricRef.current;
     if (!canvas || suppressCommitRef.current) return;
@@ -107,6 +112,12 @@ export function FabricAdEditor({
     callbacks.onCreativeChange(nextCreative);
     syncCopyFromCanvasJson(designJson, (key, value) => callbacks.onCopyChange(key, value));
     syncImageFromCanvasJson(designJson, (src) => callbacks.onImageChange(src));
+
+    const copyText = nextCreative.canvas.objects
+      .filter((object) => object.type === "text")
+      .map((object) => object.content ?? "")
+      .join(" ");
+    setTileQa(runRenderedTileQA({ creative: nextCreative, copyText }));
   }, []);
 
   useEffect(() => {
@@ -355,6 +366,18 @@ export function FabricAdEditor({
           <span>{moreOptions.loading ? "Creating…" : "More options"}</span>
         </button>
       </div>
+      {tileQa && (
+        <div className="studio-fabric-qa" style={{ padding: "4px 12px", fontSize: 12 }} aria-live="polite">
+          <span style={{ color: tileQa.pass ? "#15803d" : "#b42318" }}>
+            {tileQa.pass
+              ? "✓ Tile QA passed"
+              : `⚠ Tile QA: ${tileQa.reasons.length} issue${tileQa.reasons.length === 1 ? "" : "s"}`}
+          </span>
+          {!tileQa.pass && tileQa.reasons.length > 0 && (
+            <span style={{ marginLeft: 8, opacity: 0.8 }}>{tileQa.reasons.slice(0, 2).join("; ")}</span>
+          )}
+        </div>
+      )}
       {showOptionsPanel && (
         <div
           className="studio-fabric-options"

@@ -189,11 +189,21 @@ export type AdStudioCanvasObject = {
   locked: boolean;
 };
 
+/**
+ * How a creative tile was produced. "template_composite" is the default Create
+ * path: the photo is prepared by the chokepoint and the template/copy/brand are
+ * composited as layers. "generative" is the opt-in "More options" path that
+ * returns a fully model-generated image (additive; never replaces a composite).
+ * Absent => legacy composite (treat as template_composite).
+ */
+export type AdStudioCreativeSource = "template_composite" | "generative";
+
 export type AdStudioCreative = {
   creativeId: string;
   campaignId: string;
   variantId: string;
   format: AdStudioFormat;
+  source?: AdStudioCreativeSource;
   canvas: {
     width: number;
     height: number;

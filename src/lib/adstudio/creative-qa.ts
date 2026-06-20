@@ -1,32 +1,16 @@
+import { runLayoutQA, type LayoutQAResult } from "./layout-qa.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
 import type { TextProviderAdapter } from "./providers.ts";
-import type { AdStudioCampaignPack } from "./types.ts";
+import type { AdStudioCampaignPack, AdStudioCreative } from "./types.ts";
 import type { CreativeSkeleton } from "../ad-template-library/skeleton.ts";
+import { PROMPT_FALLBACKS } from "../operator/prompts/prompt-registry.ts";
 
 export const SCORE_GATE_THRESHOLD = 70;
 
 // ── Vision QA ────────────────────────────────────────────────────────────────
-
-const VISION_QA_SYSTEM = `You are a quality reviewer for Australian real estate ad creatives.
-Examine the image and return ONLY compact JSON:
-{
-  "pass": true | false,
-  "reasons": ["reason if fail, empty array if pass"],
-  "has_us_cues": true | false,
-  "has_garbled_text": true | false,
-  "has_distorted_faces": true | false,
-  "has_warped_buildings": true | false,
-  "is_low_resolution": true | false,
-  "is_au_appropriate": true | false
-}
-Fail (pass=false) if ANY of these are true:
-- American houses, mailboxes, yard signs, flags, HOA lawns (has_us_cues)
-- Garbled, distorted, or unreadable rendered text (has_garbled_text)
-- Distorted or malformed faces (has_distorted_faces)
-- Warped or physically impossible buildings (has_warped_buildings)
-- Clearly blurry, pixelated, or low-resolution image (is_low_resolution)
-Pass only if is_au_appropriate and none of the fail conditions apply.
-Output JSON only.`;
+// The QA system prompt lives in the operator registry (adstudio.qa.v1). Callers
+// pass the active prompt; the registry fallback is the single source of truth so
+// no QA instruction is hardcoded here (Phase 0 contract).
 
 export type VisionQAResult = {
   pass: boolean;
@@ -41,9 +25,10 @@ export type SkeletonQAResult = {
 export async function runVisionQA(
   imageUrl: string,
   provider: TextProviderAdapter,
+  systemPrompt?: string,
 ): Promise<VisionQAResult> {
   const response = await provider.generate({
-    system: VISION_QA_SYSTEM,
+    system: systemPrompt ?? PROMPT_FALLBACKS["adstudio.qa.v1"],
     schemaName: "metaLeadAdPack",
     imageUrl,
     messages: [{ role: "user", content: "Review this ad creative image for AU quality." }],
@@ -242,6 +227,8 @@ export type CreativeQAInput = {
   candidateContentHash?: string;
   visionProvider: TextProviderAdapter;
   scoreThreshold?: number;
+  /** Active adstudio.qa.v1 system prompt from the registry (falls back when omitted). */
+  qaSystemPrompt?: string;
 };
 
 export type CreativeQAResult = {
@@ -257,7 +244,7 @@ export type CreativeQAResult = {
 
 export async function runCreativeQA(input: CreativeQAInput): Promise<CreativeQAResult> {
   const [visionQA, similarity, scoreGate, compliance] = await Promise.all([
-    runVisionQA(input.imageUrl, input.visionProvider),
+    runVisionQA(input.imageUrl, input.visionProvider, input.qaSystemPrompt),
     Promise.resolve(runSimilarityGuard(input.candidateContentHash ?? null, input.knownContentHashes ?? [])),
     Promise.resolve(runScoreGate(input.scoreDimensions, input.scoreThreshold)),
     Promise.resolve(runComplianceGate(input.copyText)),
@@ -268,4 +255,28 @@ export async function runCreativeQA(input: CreativeQAInput): Promise<CreativeQAR
     gates: { visionQA, similarity, scoreGate, compliance },
     score: scoreGate.score,
   };
+}
+
+// ── Rendered-tile QA ──────────────────────────────────────────────────────────
+// QA on the COMPOSITED tile (not the raw input photo). Pure and synchronous, so
+// it can re-run after every manual edit in the editor without a model call: it
+// checks the final layout geometry/legibility and re-runs the AU copy
+// compliance gate. The vision gate above still covers the photo asset itself.
+
+export type RenderedTileQAResult = {
+  pass: boolean;
+  reasons: string[];
+  layout: LayoutQAResult;
+  compliance: ComplianceGateResult;
+};
+
+export function runRenderedTileQA(input: { creative: AdStudioCreative; copyText: string }): RenderedTileQAResult {
+  const layout = runLayoutQA(input.creative);
+  const compliance = runComplianceGate(input.copyText);
+  const reasons = [
+    ...Object.values(layout.checks).flatMap((check) => check.issues.map((issue) => issue.message)),
+    ...compliance.issues.map((issue) => issue.text),
+  ];
+
+  return { pass: layout.pass && compliance.pass, reasons, layout, compliance };
 }

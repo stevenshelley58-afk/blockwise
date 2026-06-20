@@ -30,6 +30,10 @@ export const creativeSkeletonArchetypeSchema = z.enum([
   "appraisal",
   "seller_guide",
   "social_proof",
+  // Looser ad-DB categories the sample generator needs; geometry for these comes
+  // from image_frames + copy_safe_zones, not a hardcoded per-archetype recipe.
+  "agent_profile",
+  "brand",
 ]);
 
 const normalizedRectSchema = z
@@ -137,3 +141,5 @@ export const creativeSkeletonSchema = z
 export type CreativeSkeleton = z.infer<typeof creativeSkeletonSchema>;
 export type CreativeSkeletonArchetype = z.infer<typeof creativeSkeletonArchetypeSchema>;
 export type CreativeImageFrame = z.infer<typeof creativeImageFrameSchema>;
+/** A role-tagged photo slot inside composition.image_frames (primary | secondary | agent_headshot). */
+export type CompositionImageFrame = z.infer<typeof imageFrameSchema>;

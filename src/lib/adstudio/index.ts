@@ -81,11 +81,12 @@ export {
 } from "./platform-rules.ts";
 export {
   buildPhotoPrepCacheKey,
-  buildPreparePhotoForTemplateFramePrompt,
   buildTemplateRenderFrame,
   deterministicPreparedPhotoAsset,
+  selectPhotoPrepMethod,
   selectedImageSlot,
   templateRenderFrameSchema,
+  type PhotoPrepDecisionMethod,
   type PreparedPhotoAsset,
   type PhotoPrepContext,
   type PhotoPrepMethod,

@@ -3,9 +3,9 @@ import test from "node:test";
 
 import {
   buildPhotoPrepCacheKey,
-  buildPreparePhotoForTemplateFramePrompt,
   buildTemplateRenderFrame,
   deterministicPreparedPhotoAsset,
+  selectPhotoPrepMethod,
   selectedImageSlot,
   type PhotoPrepContext,
 } from "../src/lib/adstudio/photo-prep.ts";
@@ -61,20 +61,42 @@ test("photo prep cache key includes template frame and operator versions", () =>
   );
 });
 
-test("photo prep prompt locks template boundaries and returns a photo asset only", () => {
-  const prompt = buildPreparePhotoForTemplateFramePrompt(baseContext);
+test("selectPhotoPrepMethod chooses a free crop when the source already fits the slot", () => {
+  // 9:16 slot (1080x1920). A portrait source of the same aspect needs no model.
+  const method = selectPhotoPrepMethod({
+    frame: baseContext.frame,
+    imageSlotId: baseContext.imageSlotId,
+    sourceImage: { naturalWidth: 1080, naturalHeight: 1920 },
+  });
+  assert.equal(method, "deterministic_smart_crop");
+});
 
-  assert.match(prompt, /Prepare this real-estate photo for a locked ad template frame/);
-  assert.match(prompt, /Do not create a finished advertisement/);
-  assert.match(prompt, /Do not add text/);
-  assert.match(prompt, /Do not add logos/);
-  assert.match(prompt, /Do not add badges/);
-  assert.match(prompt, /Do not add borders/);
-  assert.match(prompt, /Do not change the template layout/);
-  assert.match(prompt, /Return only the edited photo asset/);
-  assert.match(prompt, /Image slot: primary_photo/);
-  assert.match(prompt, /Copy safe zones: headline/);
-  assert.doesNotMatch(prompt, /make an ad/i);
+test("selectPhotoPrepMethod reframes a moderate mismatch and extends a large one", () => {
+  // A 4:5-ish source into a 9:16 slot is a moderate mismatch => reframe.
+  assert.equal(
+    selectPhotoPrepMethod({
+      frame: baseContext.frame,
+      imageSlotId: baseContext.imageSlotId,
+      sourceImage: { naturalWidth: 1080, naturalHeight: 1350 },
+    }),
+    "model_reframe",
+  );
+  // A wide landscape source into a 9:16 slot would crop away too much => extend.
+  assert.equal(
+    selectPhotoPrepMethod({
+      frame: baseContext.frame,
+      imageSlotId: baseContext.imageSlotId,
+      sourceImage: { naturalWidth: 1920, naturalHeight: 1080 },
+    }),
+    "model_extend",
+  );
+});
+
+test("selectPhotoPrepMethod falls back to model_reframe when source dimensions are unknown", () => {
+  assert.equal(
+    selectPhotoPrepMethod({ frame: baseContext.frame, imageSlotId: baseContext.imageSlotId }),
+    "model_reframe",
+  );
 });
 
 test("selectedImageSlot fails loudly when template geometry is missing", () => {

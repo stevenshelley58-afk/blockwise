@@ -6,7 +6,8 @@ import {
   creativeSkeletonSchema,
   type CreativeImageFrame,
 } from "../src/lib/ad-template-library/skeleton.ts";
-import { pickPrimaryImageFrame, resolveImageFrameRect } from "../src/lib/adstudio/image-frame.ts";
+import { buildTemplateImageObjects, pickPrimaryImageFrame, resolveImageFrameRect } from "../src/lib/adstudio/image-frame.ts";
+import type { CompositionImageFrame } from "../src/lib/ad-template-library/skeleton.ts";
 import { compositionToCreative } from "../src/lib/adstudio/creative/composition-to-creative.ts";
 import { buildPalette, fontStacks } from "../src/lib/adstudio/creative/preview-engine.ts";
 
@@ -89,6 +90,66 @@ test("pickPrimaryImageFrame returns the first frame or null", () => {
   assert.equal(pickPrimaryImageFrame([]), null);
   const frame: CreativeImageFrame = { id: "a", x: 0, y: 0, width: 1, height: 1 };
   assert.equal(pickPrimaryImageFrame([frame]), frame);
+});
+
+test("buildTemplateImageObjects places primary, secondary and headshot slots from frames", () => {
+  const frames: CompositionImageFrame[] = [
+    // Declared out of role order to prove deterministic ordering.
+    { id: "h", role: "agent_headshot", x: 0.7, y: 0.7, width: 0.2, height: 0.2 },
+    { id: "p", role: "primary", x: 0, y: 0, width: 1, height: 0.6 },
+    { id: "s", role: "secondary", x: 0, y: 0.6, width: 0.5, height: 0.4 },
+  ];
+  const objects = buildTemplateImageObjects({
+    frames,
+    format: "1:1",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+    primarySrc: "data:image/png;base64,USER",
+    listingImages: ["L0", "L1"],
+    headshots: ["HEAD0"],
+  });
+
+  assert.equal(objects.length, 3);
+  const primary = objects.find((object) => object.role === "primary_image");
+  const secondary = objects.find((object) => object.role === "secondary_image");
+  const headshot = objects.find((object) => object.role === "agent_headshot_image");
+
+  // Primary uses the user's photo, so the first listing image is free for the gallery.
+  assert.equal(primary?.content, "data:image/png;base64,USER");
+  assert.equal(secondary?.content, "L0");
+  assert.equal(headshot?.content, "HEAD0");
+  assert.equal(headshot?.clip, "circle");
+  assert.equal(primary?.clip, "rect");
+  assert.deepEqual(
+    { x: headshot?.x, y: headshot?.y, width: headshot?.width, height: headshot?.height },
+    { x: 700, y: 700, width: 200, height: 200 },
+  );
+});
+
+test("buildTemplateImageObjects falls back to listing images for the primary slot", () => {
+  const objects = buildTemplateImageObjects({
+    frames: [
+      { id: "p", role: "primary", x: 0, y: 0, width: 1, height: 0.6 },
+      { id: "s", role: "secondary", x: 0, y: 0.6, width: 1, height: 0.4 },
+    ],
+    format: "1:1",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+    listingImages: ["L0", "L1"],
+  });
+  assert.equal(objects.find((object) => object.role === "primary_image")?.content, "L0");
+  assert.equal(objects.find((object) => object.role === "secondary_image")?.content, "L1");
+});
+
+test("buildTemplateImageObjects returns [] when no frame matches the format (full-bleed fallback)", () => {
+  const objects = buildTemplateImageObjects({
+    frames: [{ id: "p", role: "primary", x: 0, y: 0, width: 1, height: 1, formats: ["9:16"] }],
+    format: "1:1",
+    canvasWidth: 1000,
+    canvasHeight: 1000,
+    primarySrc: "x",
+  });
+  assert.deepEqual(objects, []);
 });
 
 test("compositionToCreative places the photo into a supplied image frame", () => {

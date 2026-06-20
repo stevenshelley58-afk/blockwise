@@ -22,6 +22,7 @@ export function renderCreativeSvg(
     text: "#131B2E",
     accent: "#123E75",
   };
+  const defs: string[] = [];
   const nodes = objects
     .filter((object) => object.type !== "safe_zone")
     .map((object) => {
@@ -44,7 +45,8 @@ export function renderCreativeSvg(
       if (object.type === "image") {
         const src = object.content ?? object.assetId;
         if (src && isRenderableImageSrc(src)) {
-          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" href="${escapeXml(src)}" preserveAspectRatio="xMidYMid slice"/>`;
+          const clip = imageClipPath(object, defs);
+          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" href="${escapeXml(src)}" preserveAspectRatio="xMidYMid slice"${clip}/>`;
         }
 
         return `<circle cx="${object.x + object.width / 2}" cy="${object.y + (object.height ?? object.width) / 2}" r="${Math.min(object.width, object.height ?? object.width) / 2}" fill="#D9E7E3"/><circle cx="${object.x + object.width / 2}" cy="${object.y + 46}" r="34" fill="#68746F"/><path d="M ${object.x + 38} ${object.y + 142} Q ${object.x + object.width / 2} ${object.y + 72} ${object.x + object.width - 38} ${object.y + 142} Z" fill="#68746F"/>`;
@@ -54,7 +56,23 @@ export function renderCreativeSvg(
     })
     .join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${fills.bg}"/><circle cx="${width - 170}" cy="140" r="150" fill="#FFFFFF" opacity="0.55"/><rect x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.58)}" width="${Math.round(width * 0.46)}" height="${Math.round(height * 0.22)}" rx="24" fill="#FFFFFF" opacity="0.88"/><path d="M${Math.round(width * 0.17)} ${Math.round(height * 0.58)} L${Math.round(width * 0.33)} ${Math.round(height * 0.44)} L${Math.round(width * 0.49)} ${Math.round(height * 0.58)} Z" fill="#FFFFFF" opacity="0.88"/>${nodes}</svg>`;
+  const defsNode = defs.length ? `<defs>${defs.join("")}</defs>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsNode}<rect width="100%" height="100%" fill="${fills.bg}"/><circle cx="${width - 170}" cy="140" r="150" fill="#FFFFFF" opacity="0.55"/><rect x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.58)}" width="${Math.round(width * 0.46)}" height="${Math.round(height * 0.22)}" rx="24" fill="#FFFFFF" opacity="0.88"/><path d="M${Math.round(width * 0.17)} ${Math.round(height * 0.58)} L${Math.round(width * 0.33)} ${Math.round(height * 0.44)} L${Math.round(width * 0.49)} ${Math.round(height * 0.58)} Z" fill="#FFFFFF" opacity="0.88"/>${nodes}</svg>`;
+}
+
+// Clip-path for image cut-outs (agent_headshot circle / arch). Empty for rect.
+function imageClipPath(object: AdStudioCanvasObject, defs: string[]): string {
+  const clip = object.clip ?? "rect";
+  if (clip === "rect") return "";
+  const height = object.height ?? object.width;
+  const id = `clip_${object.objectId.replace(/[^a-z0-9_-]/gi, "_")}_${defs.length}`;
+  if (clip === "circle") {
+    defs.push(`<clipPath id="${id}"><circle cx="${object.x + object.width / 2}" cy="${object.y + height / 2}" r="${Math.min(object.width, height) / 2}"/></clipPath>`);
+  } else {
+    const r = object.width / 2;
+    defs.push(`<clipPath id="${id}"><path d="M${object.x} ${object.y + height} V${object.y + r} A${r} ${r} 0 0 1 ${object.x + object.width} ${object.y + r} V${object.y + height} Z"/></clipPath>`);
+  }
+  return ` clip-path="url(#${id})"`;
 }
 
 function svgFontFamily(

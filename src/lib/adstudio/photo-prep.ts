@@ -165,59 +165,49 @@ export function selectedImageSlot(context: Pick<PhotoPrepContext, "frame" | "ima
   return slot;
 }
 
-export function buildPreparePhotoForTemplateFramePrompt(context: PhotoPrepContext): string {
+// How much the source and slot aspect ratios may differ before the model is
+// needed. Within tolerance a deterministic slice-crop is faithful and free.
+const PHOTO_PREP_ASPECT_MATCH_TOLERANCE = 0.04;
+// Beyond this disparity, cropping to cover would discard too much of the photo,
+// so we extend (outpaint) rather than crop.
+const PHOTO_PREP_EXTEND_DISPARITY = 0.45;
+
+export type PhotoPrepDecisionMethod = Extract<
+  PhotoPrepMethod,
+  "deterministic_smart_crop" | "model_reframe" | "model_extend"
+>;
+
+/**
+ * The chokepoint's method decision for one slot×format. Pure and deterministic:
+ *  - unknown source dimensions => model_reframe (let the model recompose safely).
+ *  - aspect within tolerance => deterministic_smart_crop (no paid model call;
+ *    the renderer slice-crops the source).
+ *  - large aspect mismatch => model_extend (cropping would lose too much).
+ *  - otherwise => model_reframe.
+ * The model paths still enforce truth preservation via the registry framing
+ * prompt; this only decides whether to spend a model call and which intent.
+ */
+export function selectPhotoPrepMethod(
+  context: Pick<PhotoPrepContext, "frame" | "imageSlotId" | "sourceImage">,
+): PhotoPrepDecisionMethod {
   const slot = selectedImageSlot(context);
-  return [
-    "Prepare this real-estate photo for a locked ad template frame.",
-    "",
-    "You are editing only the photo asset that will sit inside the template image slot.",
-    "Do not create a finished advertisement.",
-    "Do not add text.",
-    "Do not add logos.",
-    "Do not add badges.",
-    "Do not add borders.",
-    "Do not add buttons.",
-    "Do not add icons.",
-    "Do not add graphic overlays.",
-    "Do not change the template layout.",
-    "",
-    "The final template, typography, logo, CTA, and copy will be composited after this step.",
-    "",
-    "Goal:",
-    "Create the strongest premium real-estate photo asset for this exact frame.",
-    "",
-    "You may crop tighter, reframe, or extend the image edges when that produces the best result.",
-    "Preserve the truth of the property.",
-    "Do not invent rooms, pools, views, landscaping, architectural features, fixtures, furniture, or property condition.",
-    "When extending, continue only plausible visual content from the existing image edges.",
-    "",
-    "Frame:",
-    `- Format: ${context.frame.format}`,
-    `- Output size: ${context.frame.canvas.widthPx} x ${context.frame.canvas.heightPx}`,
-    `- Image slot: ${formatRect(slot)}`,
-    `- Copy safe zones: ${context.frame.copySafeZones.length ? context.frame.copySafeZones.map(formatRect).join("; ") : "none"}`,
-    slot.promptHint ? `- Template image hint: ${slot.promptHint}` : "",
-    "",
-    "Brand feel:",
-    context.brand?.imageTreatment ?? "Premium, natural, clean real-estate photography.",
-    context.brand?.palette?.length ? `Palette context: ${context.brand.palette.join(", ")}` : "",
-    "",
-    "Campaign:",
-    context.campaign?.goal ? `- Goal: ${context.campaign.goal}` : "",
-    context.campaign?.offerId ? `- Offer: ${context.campaign.offerId}` : "",
-    context.campaign?.market ? `- Market: ${formatMarket(context.campaign.market)}` : "",
-    context.campaign?.propertyType ? `- Property type: ${context.campaign.propertyType}` : "",
-    "",
-    "User brief:",
-    context.brief?.trim() || "No additional brief.",
-    "",
-    "Composition guidance:",
-    "Keep the most commercially useful real-estate visual subject strong.",
-    "Avoid awkward empty areas, accidental letterboxing, distorted geometry, warped walls, stretched windows, broken rooflines, fake reflections, or unnatural skies.",
-    "Where copy safe zones overlap the image, keep those areas visually calm and lower contrast when possible.",
-    "",
-    "Return only the edited photo asset.",
-  ].filter(Boolean).join("\n");
+  const sourceWidth = context.sourceImage?.naturalWidth;
+  const sourceHeight = context.sourceImage?.naturalHeight;
+  if (!sourceWidth || !sourceHeight || sourceWidth <= 0 || sourceHeight <= 0) {
+    return "model_reframe";
+  }
+
+  const slotWidthPx = slot.width * context.frame.canvas.widthPx;
+  const slotHeightPx = slot.height * context.frame.canvas.heightPx;
+  if (slotWidthPx <= 0 || slotHeightPx <= 0) return "model_reframe";
+
+  const sourceAspect = sourceWidth / sourceHeight;
+  const slotAspect = slotWidthPx / slotHeightPx;
+  const disparity = Math.abs(sourceAspect - slotAspect) / Math.max(sourceAspect, slotAspect);
+
+  if (disparity <= PHOTO_PREP_ASPECT_MATCH_TOLERANCE) return "deterministic_smart_crop";
+  if (disparity >= PHOTO_PREP_EXTEND_DISPARITY) return "model_extend";
+  return "model_reframe";
 }
 
 export function deterministicPreparedPhotoAsset(input: {
@@ -262,12 +252,3 @@ function fallbackImageSlot(template: Pick<AdStudioTemplate, "creativeSkeleton" |
   });
 }
 
-function formatRect(rect: AdStudioRect & { id?: string }): string {
-  const prefix = rect.id ? `${rect.id} ` : "";
-  return `${prefix}{x:${rect.x}, y:${rect.y}, width:${rect.width}, height:${rect.height}}`;
-}
-
-function formatMarket(market: NonNullable<PhotoPrepContext["campaign"]>["market"]): string {
-  if (typeof market === "string") return market;
-  return [market?.suburb, market?.city, market?.state].filter(Boolean).join(", ");
-}
