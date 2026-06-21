@@ -36,6 +36,17 @@ test("Hermes deterministic fallback treats unless-sold-prior copy as listing or 
   assert.notEqual(classification.ad_type, "just_sold");
 });
 
+test("Hermes deterministic fallback classifies address-led property videos as listings", () => {
+  const classification = classifyCreativeDeterministically({
+    body: "3 Sandford Ave Lake Coogee. Beautiful family home in prime location. A Must See",
+    cta: "Call now",
+  });
+
+  assert.equal(classification.ad_type, "listing");
+  assert.equal(classification.primary_intent, "listing");
+  assert.equal(classification.is_real_estate_ad, true);
+});
+
 test("Hermes deterministic fallback classifies appraisal and property management copy", () => {
   assert.equal(
     classifyCreativeDeterministically({
