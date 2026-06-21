@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
-import { AuditCharts } from "@/components/research/audit-charts";
+import { AuditCtaButton, AuditViewTracker } from "@/components/research/audit-conversion";
 import { AuditPdfButton } from "@/components/research/audit-pdf-button";
 import { AuditSuggestionsPanel } from "@/components/research/audit-suggestions";
 import { buildAdAudit, type AdAuditResult } from "@/lib/research/ad-audit";
@@ -16,13 +16,17 @@ export const runtime = "nodejs";
 export const metadata: Metadata = {
   title: "Local Ad Market Audit",
   description:
-    "A free, data-backed audit of the real estate Meta ads running in your suburb and surrounding area: key stats, longest-running campaigns, and AI marketing recommendations.",
+    "See the real estate Meta ads running in your suburb, what is working, and the exact campaign to run next.",
   robots: { index: false, follow: false },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const numberFormat = new Intl.NumberFormat("en-AU");
+
+function signupHref(market: string): string {
+  return `/signup?source=audit&market=${encodeURIComponent(market)}`;
+}
 
 export default async function AuditPage({ searchParams }: { searchParams?: SearchParams }) {
   const params = searchParams ? await searchParams : {};
@@ -44,10 +48,9 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
           <Link href="/" className="lp-brand" aria-label="Blockwise home">
             <BlockwiseLogo />
           </Link>
-          <div className="audit-topbar-actions">
-            <Link href="/#radar" className="audit-topbar-link">Run another audit</Link>
-            <Link href="/signup?source=audit" className="lp-btn lp-btn-primary lp-btn-sm">Start free trial</Link>
-          </div>
+          <AuditCtaButton href={signupHref(location)} market={location} className="lp-btn lp-btn-primary lp-btn-sm">
+            Start free trial
+          </AuditCtaButton>
         </div>
       </header>
 
@@ -58,158 +61,136 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
       ) : (
         <Report audit={audit} />
       )}
+
+      {audit ? <AuditViewTracker market={audit.location.label} /> : null}
     </div>
   );
 }
 
 function Report({ audit }: { audit: AdAuditResult }) {
   const { stats, location } = audit;
-  const generatedDate = formatDate(audit.generatedAt);
-  const reportId = buildReportId(location.label, audit.generatedAt);
-  const activePct = Math.round(stats.totals.activeRate * 100);
-  const topAdvertiser = stats.topAdvertisers[0];
+  const href = signupHref(location.label);
+  const top = stats.topAdvertisers[0];
+  const wins = stats.longestRunning.slice(0, 3);
+  const angles = stats.adTypes.slice(0, 4);
+
+  const sting = top
+    ? `${top.name} is running ${numberFormat.format(top.ads)} ads in your area${stats.longestRunningDays > 0 ? `, and the top one has been live ${numberFormat.format(stats.longestRunningDays)} days` : ""}. Long-running ads are the offers winning your sellers - here is what is working, and how to run it yourself.`
+    : `${numberFormat.format(stats.totals.detected)} property ads are running across ${location.label}. Here is what is working, and how to run it yourself.`;
 
   return (
     <main className="audit-shell audit-main">
-      <section className="audit-letterhead">
-        <div className="audit-letterhead-copy">
-          <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit</p>
-          <h1>{location.label} &mdash; Real Estate Ad Audit</h1>
-          <p className="audit-lead">
-            A live scan of the Meta (Facebook &amp; Instagram) ads running across {location.label} and surrounding
-            suburbs, sourced from the public Meta Ad Library.
-          </p>
-          <dl className="audit-meta">
-            <div><dt>Prepared</dt><dd>{generatedDate}</dd></div>
-            <div><dt>Coverage</dt><dd>{location.label} + surrounds</dd></div>
-            <div><dt>Source</dt><dd>Meta Ad Library (live)</dd></div>
-            <div><dt>Report ID</dt><dd>{reportId}</dd></div>
-          </dl>
-        </div>
-        <div className="audit-letterhead-actions">
-          <AuditPdfButton location={location.label} />
-          <span className="audit-letterhead-note">Free &middot; branded PDF</span>
+      <section className="audit-hero">
+        <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit &middot; {location.label}</p>
+        <h1>Here is who is winning the ads in {location.label}.</h1>
+        <p className="audit-hero-sting">{sting}</p>
+        <div className="audit-hero-cta">
+          <AuditCtaButton href={href} market={location.label} className="lp-btn lp-btn-primary lp-btn-big">
+            Build my campaign &mdash; start free
+          </AuditCtaButton>
+          <span className="audit-hero-note">7-day trial &middot; no card required</span>
         </div>
       </section>
 
-      <section className="audit-stats" aria-label="Key statistics">
-        <StatCard value={numberFormat.format(stats.totals.detected)} label="Ads detected" hint="In your area + surrounds" />
-        <StatCard value={numberFormat.format(stats.totals.active)} label="Active right now" hint={`${activePct}% of detected ads`} accent />
-        <StatCard value={numberFormat.format(stats.advertiserCount)} label="Agencies advertising" hint="Distinct advertisers" />
-        <StatCard value={numberFormat.format(stats.longestRunningDays)} label="Longest run (days)" hint="Top continuously-running ad" />
-        <StatCard value={numberFormat.format(stats.newLast30Days)} label="New in 30 days" hint="Fresh creative launched" />
+      <section className="audit-stats audit-stats-3" aria-label="Key statistics">
+        <StatCard value={numberFormat.format(stats.totals.active)} label="Ads running now" hint="In your suburb + surrounds" accent />
+        <StatCard value={numberFormat.format(stats.advertiserCount)} label="Agencies competing" hint="Advertising against you" />
+        <StatCard value={numberFormat.format(stats.longestRunningDays)} label="Longest-running ad" hint="Days live = it converts" />
       </section>
 
-      <p className="audit-snapshot">
-        <strong>Snapshot:</strong> We detected {numberFormat.format(stats.totals.detected)} property ads across{" "}
-        {location.label}, {numberFormat.format(stats.totals.active)} still live ({activePct}%), from{" "}
-        {numberFormat.format(stats.advertiserCount)} advertiser{stats.advertiserCount === 1 ? "" : "s"}.
-        {topAdvertiser ? ` ${topAdvertiser.name} is the most active with ${numberFormat.format(topAdvertiser.ads)} ads detected.` : ""}
-        {stats.capped ? " Figures are based on the most recently active ads in a high-volume market." : ""}
-      </p>
+      {wins.length > 0 ? (
+        <section className="audit-section">
+          <div className="audit-section-head">
+            <h2>What is working in {location.label}</h2>
+            <p>The ads that have run longest &mdash; almost always the ones converting.</p>
+          </div>
+          <div className="audit-wins">
+            {wins.map((ad, index) => (
+              <article className="audit-win" key={ad.id}>
+                <span className="audit-win-rank">{index + 1}</span>
+                <div className="audit-win-body">
+                  <strong>{ad.pageName}</strong>
+                  <p>{ad.headline ?? ad.body ?? ad.cta ?? "Creative ad"}</p>
+                  <div className="audit-win-meta">
+                    <span className="audit-win-days">{numberFormat.format(ad.daysRunning)} days live</span>
+                    {ad.adType ? <span className="audit-chip">{ad.adType}</span> : null}
+                    <StatusPill status={ad.status} />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <Section title="Market activity" subtitle="The shape of advertising in your area at a glance.">
-        <AuditCharts
-          active={stats.totals.active}
-          inactive={stats.totals.inactive}
-          activeRate={stats.totals.activeRate}
-          advertisers={stats.topAdvertisers.slice(0, 6).map((a) => ({ name: a.name, ads: a.ads }))}
-          launches={stats.launchesByMonth.map((b) => ({ label: b.label, count: b.count }))}
-        />
-      </Section>
-
-      <Section title="What is working: longest-running ads" subtitle="Ads that run for months are almost always converting. These are the campaigns proven in your market.">
-        <div className="audit-table-wrap">
-          <table className="audit-table">
-            <thead>
-              <tr><th>#</th><th>Advertiser</th><th>Ad</th><th>Angle</th><th className="audit-num">Running</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {stats.longestRunning.map((ad, index) => (
-                <tr key={ad.id}>
-                  <td className="audit-rank">{index + 1}</td>
-                  <td className="audit-strong">{ad.pageName}</td>
-                  <td className="audit-ad-copy">{ad.headline ?? ad.body ?? ad.cta ?? "Creative ad"}</td>
-                  <td>{ad.adType ?? "-"}</td>
-                  <td className="audit-num">{numberFormat.format(ad.daysRunning)} days</td>
-                  <td><StatusPill status={ad.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      <Section title="Who is advertising most" subtitle="The agencies investing most consistently in Meta ads locally.">
-        <div className="audit-table-wrap">
-          <table className="audit-table">
-            <thead>
-              <tr><th>#</th><th>Agency</th><th className="audit-num">Ads detected</th><th className="audit-num">Active</th><th className="audit-num">Longest run</th></tr>
-            </thead>
-            <tbody>
-              {stats.topAdvertisers.map((advertiser, index) => (
-                <tr key={advertiser.name}>
-                  <td className="audit-rank">{index + 1}</td>
-                  <td className="audit-strong">{advertiser.name}</td>
-                  <td className="audit-num">{numberFormat.format(advertiser.ads)}</td>
-                  <td className="audit-num">{numberFormat.format(advertiser.active)}</td>
-                  <td className="audit-num">{numberFormat.format(advertiser.longestRunningDays)} days</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      <Section title="How the market advertises" subtitle="Formats, platforms and messaging your competitors lean on.">
-        <div className="audit-breakdown">
-          <BreakdownBars title="Formats" items={stats.formats} />
-          <BreakdownBars title="Platforms" items={stats.platforms} />
-          <BreakdownChips title="Most-used calls to action" items={stats.topCtas} />
-          <BreakdownChips title="Common angles and hooks" items={mergeAngles(stats.adTypes, stats.commonHooks)} />
-        </div>
-      </Section>
+      {angles.length > 0 ? (
+        <section className="audit-section">
+          <div className="audit-section-head">
+            <h2>The offers getting traction</h2>
+            <p>Angles your competitors run most &mdash; your fastest path to leads.</p>
+          </div>
+          <AngleBars items={angles} />
+        </section>
+      ) : null}
 
       <section className="audit-section audit-ai-section">
         <div className="audit-section-head">
-          <h2>Marketing recommendations</h2>
-          <p>AI strategy built from the live data above: what to copy, where the gaps are, and what to launch.</p>
+          <h2>Your plan: what to run next</h2>
+          <p>Built from the live data above.</p>
         </div>
         <AuditSuggestionsPanel location={location.label} />
       </section>
 
-      <CtaBand location={location.label} />
+      <section className="audit-cta">
+        <div>
+          <h2>Blockwise builds these ads for {location.label}.</h2>
+          <p>Pick an angle, we draft the ad, lead form and targeting. You approve, then launch from your own ad account.</p>
+        </div>
+        <div className="audit-cta-actions">
+          <AuditCtaButton href={href} market={location.label} className="lp-btn lp-btn-light lp-btn-big">Start free trial</AuditCtaButton>
+          <AuditPdfButton location={location.label} className="lp-btn lp-btn-ghost-light" label="Save as PDF" />
+        </div>
+      </section>
+
       <Methodology />
     </main>
   );
 }
 
 function EmptyState({ audit }: { audit: AdAuditResult }) {
+  const href = signupHref(audit.location.label);
   return (
     <main className="audit-shell audit-main">
-      <section className="audit-letterhead">
-        <div className="audit-letterhead-copy">
-          <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit</p>
-          <h1>{audit.location.label} &mdash; Real Estate Ad Audit</h1>
-          <p className="audit-lead">
-            We did not find active Meta ads for this exact area yet &mdash; our coverage is still expanding here.
-            That is also an opening: very few competitors are advertising in this pocket right now.
-          </p>
-          <dl className="audit-meta">
-            <div><dt>Prepared</dt><dd>{formatDate(audit.generatedAt)}</dd></div>
-            <div><dt>Coverage</dt><dd>{audit.location.label} + surrounds</dd></div>
-            <div><dt>Source</dt><dd>Meta Ad Library (live)</dd></div>
-          </dl>
+      <section className="audit-hero">
+        <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit &middot; {audit.location.label}</p>
+        <h1>Almost no one is advertising in {audit.location.label}.</h1>
+        <p className="audit-hero-sting">
+          We did not find active Meta ads for this exact pocket yet. That is the opening: be the first agent
+          owning the local feed and capture sellers before your competitors show up.
+        </p>
+        <div className="audit-hero-cta">
+          <AuditCtaButton href={href} market={audit.location.label} className="lp-btn lp-btn-primary lp-btn-big">
+            Claim your suburb &mdash; start free
+          </AuditCtaButton>
+          <span className="audit-hero-note">7-day trial &middot; no card required</span>
         </div>
       </section>
       <section className="audit-section audit-ai-section">
         <div className="audit-section-head">
-          <h2>Marketing recommendations</h2>
-          <p>Where to start when the local feed is wide open.</p>
+          <h2>Your plan: where to start</h2>
+          <p>The angles that win when the local feed is wide open.</p>
         </div>
         <AuditSuggestionsPanel location={audit.location.label} />
       </section>
-      <CtaBand location={audit.location.label} />
+      <section className="audit-cta">
+        <div>
+          <h2>Get in first in {audit.location.label}.</h2>
+          <p>Blockwise drafts your first appraisal or just-listed ad in minutes. You approve and launch.</p>
+        </div>
+        <div className="audit-cta-actions">
+          <AuditCtaButton href={href} market={audit.location.label} className="lp-btn lp-btn-light lp-btn-big">Start free trial</AuditCtaButton>
+        </div>
+      </section>
       <Methodology />
     </main>
   );
@@ -224,18 +205,6 @@ function ErrorState({ location }: { location: string }) {
         <Link href={`/audit?location=${encodeURIComponent(location)}`} className="lp-btn lp-btn-primary">Retry audit</Link>
       </section>
     </main>
-  );
-}
-
-function Section({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
-  return (
-    <section className="audit-section">
-      <div className="audit-section-head">
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -254,76 +223,30 @@ function StatusPill({ status }: { status: "active" | "inactive" | "unknown" }) {
   return <span className={`audit-pill audit-pill-${status}`}>{label}</span>;
 }
 
-function BreakdownBars({ title, items }: { title: string; items: Array<{ label: string; count: number }> }) {
-  const top = items.slice(0, 5);
-  const max = top.reduce((value, item) => Math.max(value, item.count), 0) || 1;
+function AngleBars({ items }: { items: Array<{ label: string; count: number }> }) {
+  const max = items.reduce((value, item) => Math.max(value, item.count), 0) || 1;
   return (
     <div className="audit-breakdown-card">
-      <h3>{title}</h3>
-      {top.length > 0 ? (
-        <ul className="audit-bars">
-          {top.map((item) => (
-            <li key={item.label}>
-              <span className="audit-bar-label">{item.label}</span>
-              <span className="audit-bar-track"><span className="audit-bar-fill" style={{ width: `${Math.round((item.count / max) * 100)}%` }} /></span>
-              <span className="audit-bar-count">{numberFormat.format(item.count)}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="audit-breakdown-empty">No data.</p>
-      )}
+      <ul className="audit-bars">
+        {items.map((item) => (
+          <li key={item.label}>
+            <span className="audit-bar-label">{item.label}</span>
+            <span className="audit-bar-track"><span className="audit-bar-fill" style={{ width: `${Math.round((item.count / max) * 100)}%` }} /></span>
+            <span className="audit-bar-count">{numberFormat.format(item.count)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
-  );
-}
-
-function BreakdownChips({ title, items }: { title: string; items: Array<{ label: string; count: number }> }) {
-  const top = items.slice(0, 8);
-  return (
-    <div className="audit-breakdown-card">
-      <h3>{title}</h3>
-      {top.length > 0 ? (
-        <div className="audit-chips">
-          {top.map((item) => (
-            <span className="audit-chip" key={item.label}>{item.label}<i>{numberFormat.format(item.count)}</i></span>
-          ))}
-        </div>
-      ) : (
-        <p className="audit-breakdown-empty">No data.</p>
-      )}
-    </div>
-  );
-}
-
-function CtaBand({ location }: { location: string }) {
-  const href = `/signup?source=audit&market=${encodeURIComponent(location)}`;
-  return (
-    <section className="audit-cta">
-      <div>
-        <h2>Turn this audit into campaigns that run.</h2>
-        <p>Blockwise builds the ads, lead forms and approvals for {location} from the angles already working here.</p>
-      </div>
-      <div className="audit-cta-actions">
-        <Link href={href} className="lp-btn lp-btn-light lp-btn-big">Start free trial</Link>
-        <AuditPdfButton location={location} className="lp-btn lp-btn-ghost-light" label="Download this report" />
-      </div>
-    </section>
   );
 }
 
 function Methodology() {
   return (
     <footer className="audit-methodology">
-      <h3>Methodology and notes</h3>
       <p>
-        Data is sourced from the public Meta Ad Library at the time of the scan and covers ads detected for the
-        searched suburb plus surrounding suburbs and postcodes. Longest-running is measured from each ad delivery
-        start date and is used as a proxy for performance: advertisers rarely keep ads live for months unless they
-        convert. Figures reflect ads detected at scan time and may not capture every advertiser.
-      </p>
-      <p className="audit-disclaimer">
-        Blockwise is an independent tool and is not affiliated with or endorsed by Meta Platforms, Inc. Advertiser and
-        agency names are shown for competitive research only. Copyright {new Date().getFullYear()} Blockwise.
+        Data from the public Meta Ad Library at scan time, covering the searched suburb plus surrounding suburbs and
+        postcodes. Longest-running is a proxy for performance. Blockwise is independent and not affiliated with Meta
+        Platforms, Inc.; advertiser names are shown for competitive research only.
       </p>
     </footer>
   );
@@ -332,33 +255,4 @@ function Methodology() {
 function pickParam(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return value?.trim() ?? "";
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(date);
-}
-
-function buildReportId(label: string, generatedAt: string): string {
-  const date = new Date(generatedAt);
-  const ymd = Number.isNaN(date.getTime())
-    ? "00000000"
-    : `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}${String(date.getUTCDate()).padStart(2, "0")}`;
-  const slug = label.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "AUD";
-  return `BW-${ymd}-${slug}`;
-}
-
-function mergeAngles(
-  adTypes: Array<{ label: string; count: number }>,
-  hooks: Array<{ label: string; count: number }>,
-): Array<{ label: string; count: number }> {
-  const map = new Map<string, { label: string; count: number }>();
-  for (const item of [...adTypes, ...hooks]) {
-    const key = item.label.toLowerCase();
-    const entry = map.get(key) ?? { label: item.label, count: 0 };
-    entry.count += item.count;
-    map.set(key, entry);
-  }
-  return [...map.values()].sort((a, b) => b.count - a.count);
 }
