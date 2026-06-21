@@ -4,6 +4,13 @@
 
 - Delete > simplify > abstract. No speculative abstraction, no future-proofing.
 - Reduce user-facing complexity first, code complexity second.
+- Proper fixes only. Fix the root cause in the owning system; do not ship
+  shortcuts, temporary patches, workarounds, band-aids, bypasses, one-off
+  overlays, or data edits as the final solution. Delete and rebuild the broken
+  path when that is the cleanest fix.
+- When production data is wrong, quantify the blast radius, repair affected
+  data, and add the system guard or regression coverage that prevents the same
+  class of corruption from returning.
 - Fix forward. Quarantine genuinely ambiguous failures and note them in the
   report instead of stalling.
 - Do not replace one messy file with five new messy files.
@@ -49,6 +56,9 @@
   normal login flow when auth is missing instead of avoiding the work.
 - Check CodeGraph freshness (`codegraph_status`) at the start of code work;
   `codegraph sync` if stale.
+- Production deploys must run committed source from git plus the normal deploy
+  path. Do not leave direct VPS file edits, copied files, or local overlays as
+  the running production state.
 
 ## Git scope
 
