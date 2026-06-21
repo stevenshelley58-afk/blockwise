@@ -179,6 +179,7 @@ export type AdStudioCanvasObject = {
   content?: string;
   assetId?: string;
   clip?: "rect" | "circle" | "arch";
+  imageAnchor?: "center" | "top" | "bottom" | "left" | "right" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
   x: number;
   y: number;
   width: number;

@@ -176,11 +176,14 @@ async function imageDataUrl(filePath) {
 function extractionPrompt(input) {
   return {
     system:
-      "You are an expert performance-ad layout extraction model. Return only compact JSON. " +
-      "Your job is to convert the attached Meta real-estate ad image into an editable Blockwise TemplateDesign, not a final image.",
+      "You are an expert Meta real-estate ad art director and layout extraction model. Return only compact JSON. " +
+      "Your job is to convert the attached ad into an editable Blockwise TemplateDesign, not a final image.",
     user: [
       "Extract a reusable editable ad template from the source image.",
       "Do not include the source image itself, source file names, screenshots, or baked pixels in the output.",
+      "The quality target is a professional Canva/Figma-level Meta or Instagram real-estate template, not a flat wireframe.",
+      "Preserve design intent: hierarchy, editorial spacing, photo dominance, premium typography, contrast, CTA placement, and platform-safe margins.",
+      "Use layered panels, bands, scrims, badges, or cards when the source uses them. Avoid one generic photo rectangle plus one generic dark box unless that is truly the source design.",
       "The final output must be strict JSON with a single top-level key named design.",
       "The design must validate this contract:",
       "- templateId: string",
@@ -201,6 +204,9 @@ function extractionPrompt(input) {
       "Make it robust when a different Australian property photo is inserted.",
       "Avoid tiny text. Prefer font sizes: eyebrow 22-34, headline 48-78, body 24-34, CTA 22-30.",
       "Ensure the CTA does not overlap headline/body/address regions.",
+      "Ensure text boxes have enough height for realistic wrapping after replacement copy is inserted.",
+      "Use strong contrast for every text layer against its containing panel or background.",
+      "A good extraction has 8-18 layers, at least one photo slot, at least three editable text roles, one logo, and one visible CTA.",
       "The source ad is attached as the image input.",
       `Use templateId: ${input.templateId}_${input.profileId}.`,
     ].join("\n"),
@@ -389,26 +395,51 @@ function qualityReport(design, creative, samplePhotoDataUrl, sourceDataUrl) {
   const textObjects = objects.filter((object) => object.type === "text");
   const ctaObjects = objects.filter((object) => object.role === "cta_button");
   const imageObjects = objects.filter((object) => object.type === "image");
+  const logoObjects = objects.filter((object) => object.role === "brand_logo");
+  const visualStructureLayers = design.layers.filter((layer) =>
+    layer.type === "shape" && ["panel", "band", "scrim"].includes(layer.role),
+  );
 
   const dimensionsOk = creative.canvas.width === CANVAS.w && creative.canvas.height === CANVAS.h;
   if (!dimensionsOk) problems.push(`wrong canvas ${creative.canvas.width}x${creative.canvas.height}`);
 
+  if (design.layers.length < 8) problems.push("too few layers for a professional reusable template");
+  if (design.layers.length > 22) problems.push("too many layers for a robust editable template");
+  if (visualStructureLayers.length < 2) problems.push("not enough panels, bands, badges, or scrims to preserve design intent");
   if (!imageObjects.length) problems.push("no image slots rendered");
   if (!imageObjects.some((object) => object.content === samplePhotoDataUrl)) problems.push("replacement sample photo was not bound");
+  if (!logoObjects.length) problems.push("brand logo is missing");
+
+  const primaryPhoto = imageObjects.find((object) => object.sourceLayerId === "primary_photo") ?? imageObjects[0];
+  if (primaryPhoto) {
+    const imageArea = primaryPhoto.width * (primaryPhoto.height ?? primaryPhoto.width);
+    const canvasArea = creative.canvas.width * creative.canvas.height;
+    if (imageArea / canvasArea < 0.22) problems.push("primary photo area is too small for a Meta real-estate template");
+  }
 
   const serializedDesign = JSON.stringify(design);
   if (serializedDesign.includes(sourceDataUrl.slice(0, 80))) problems.push("design appears to contain source image data");
 
   for (const text of textObjects) {
-    if ((text.size ?? 0) < 18) problems.push(`${text.objectId} text is below 18px`);
+    const minimumSize = minimumTextSize(text);
+    if ((text.size ?? 0) < minimumSize) problems.push(`${text.objectId} text is below ${minimumSize}px`);
     if ((text.x ?? 0) < 0 || (text.y ?? 0) < 0) problems.push(`${text.objectId} text starts outside canvas`);
+    const requiredHeight = requiredTextHeight(text);
+    const actualHeight = text.height ?? Math.round((text.size ?? 24) * 1.2);
+    if (actualHeight < requiredHeight * 0.9) problems.push(`${text.objectId} text box is too short for wrapped copy`);
+  }
+
+  if (!textObjects.some((object) => object.role === "headline" && (object.size ?? 0) >= 46)) {
+    problems.push("no professional-scale headline");
   }
 
   for (const cta of ctaObjects) {
+    if (cta.width < 180 || (cta.height ?? 0) < 52) problems.push("CTA button is too small");
     for (const text of textObjects.filter((object) => object.objectId !== `${cta.sourceLayerId}_label`)) {
       if (rectsOverlap(cta, text)) problems.push(`CTA overlaps ${text.objectId}`);
     }
   }
+  if (!ctaObjects.length) problems.push("CTA button is missing");
 
   return {
     dimensionsOk,
@@ -419,6 +450,38 @@ function qualityReport(design, creative, samplePhotoDataUrl, sourceDataUrl) {
     problems,
     passed: problems.length === 0,
   };
+}
+
+function minimumTextSize(object) {
+  if (object.role === "headline") return 42;
+  if (object.role === "cta") return 22;
+  if (object.role === "eyebrow" || object.role === "stat") return 20;
+  return 20;
+}
+
+function requiredTextHeight(object) {
+  const size = object.size ?? 24;
+  const lineHeight = object.lineHeight ?? 1.16;
+  return estimateWrappedLineCount(object.content ?? "", object.width, size) * size * lineHeight;
+}
+
+function estimateWrappedLineCount(value, width, size) {
+  const maxChars = Math.max(8, Math.floor(width / Math.max(1, size * 0.52)));
+  const words = String(value).split(/\s+/u).filter(Boolean);
+  if (!words.length) return 1;
+
+  let lines = 1;
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxChars) {
+      current = next;
+    } else {
+      lines += 1;
+      current = word;
+    }
+  }
+  return lines;
 }
 
 async function makeContactSheet({ outDir, sourcePath, candidates }) {

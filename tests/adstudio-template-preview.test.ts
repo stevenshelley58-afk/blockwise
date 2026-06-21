@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite } from "../src/lib/adstudio/index.ts";
+import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite, resolvableAdStudioTemplates } from "../src/lib/adstudio/index.ts";
 import { EXTRACTED_META_SAMPLE_CARD_VERSION } from "../src/lib/adstudio/extracted-meta-template-builder.ts";
 import { templatePreviewDataUrl, templatePreviewSvg } from "../src/lib/adstudio/template-preview.ts";
 
@@ -22,7 +22,7 @@ function brandKit() {
 
 test("templatePreviewSvg renders an extracted Meta template preview", () => {
   const kit = brandKit();
-  const template = AD_STUDIO_TEMPLATES.find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
   assert.ok(template);
   const svg = templatePreviewSvg(template, kit);
   assert.match(svg, /^<svg[\s>]/u);
@@ -33,7 +33,7 @@ test("templatePreviewSvg renders an extracted Meta template preview", () => {
 
 test("templatePreviewDataUrl prefers extracted Meta sample cards in the gallery", () => {
   const kit = brandKit();
-  const template = AD_STUDIO_TEMPLATES.find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
   assert.ok(template);
   assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/meta_055.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
 });
