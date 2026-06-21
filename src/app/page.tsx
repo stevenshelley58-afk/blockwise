@@ -4,22 +4,17 @@ import Link from "next/link";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
-import { HomeMotion } from "@/components/landing/home-motion";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
 import { LandingRadarCards } from "@/components/research/landing-radar-cards";
-
-import "./home-redesign.css";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
 /**
- * Landing page — centered, search-first hero (lp-* design) with the
- * "From local signal to real leads" how-it-works section ported from the
- * prior homepage (scoped under .bwx via home-redesign.css; HomeMotion drives
- * the reveal + count-up). Copy is freely editable.
+ * Landing page — "Executive Precision" design (source: /stitch export, wired
+ * to real app flows). Copy is freely editable.
  */
 
 type FeatureProps = { title: string; copy: string; icon: React.ReactNode };
@@ -36,9 +31,12 @@ function Feature({ title, copy, icon }: FeatureProps) {
   );
 }
 
-/* Animated how-it-works figure (radar → prepared card → live dashboard). */
-const FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, prepare the campaign, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" class="bwx-bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text id="bLeads" x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text id="bCpl" x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path class="bwx-bSpark" d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
-
+/**
+ * Placeholder creative for the hero "Local Ad Radar" ticker. Intentionally
+ * generic slots (no agency names, no /ads/ images) — the real creative drops
+ * in here later. The live, scraped Meta Ad Library cards still render in the
+ * #radar section below via <LandingRadarCards />.
+ */
 const AD_PLACEHOLDERS = [
   "Your ad here · 1200×628",
   "Just Listed · 1080×1080",
@@ -47,6 +45,32 @@ const AD_PLACEHOLDERS = [
   "Just Sold · 1200×628",
   "Market Update · 1080×1080",
 ] as const;
+
+/** "How it works" illustration (radar → prepared card → live dashboard). */
+const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, prepare the campaign, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
+
+/** Scoped styles for the "How it works" section (ported from the prior homepage, blue palette). */
+const HOW_CSS = `
+.lp .lp-how__head{text-align:center;margin-bottom:44px}
+.lp .lp-how__head h2{font-size:clamp(26px,3.5vw,38px);line-height:1.1;letter-spacing:-.02em;margin:16px 0 0;color:var(--lp-ink)}
+.lp .lp-how__sub{font-size:16px;line-height:1.55;color:var(--lp-muted);margin:12px auto 0;max-width:48ch}
+.lp .lp-how-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--lp-body);background:#fff;border:1px solid var(--lp-border);padding:7px 13px;border-radius:999px}
+.lp .lp-how-dot{width:7px;height:7px;border-radius:50%;background:var(--lp-primary);box-shadow:0 0 0 4px rgba(0,107,255,.12)}
+.lp .lp-how-fig{position:relative;margin:0 auto;max-width:1024px;border-radius:24px;border:1px solid var(--lp-border);padding:14px;background:radial-gradient(120% 90% at 18% 12%,#eef3fb 0,rgba(238,243,251,0) 55%),radial-gradient(120% 100% at 88% 92%,#f1eefb 0,rgba(241,238,251,0) 55%),linear-gradient(160deg,#f6f8fc,#f7f6fc)}
+.lp .lp-how-fig svg{width:100%;height:auto;display:block}
+.lp .lp-how-fig .bwx-bBlip{animation:lp-how-blip 2.4s ease-in-out infinite}
+@keyframes lp-how-blip{0%,100%{opacity:1}50%{opacity:.35}}
+.lp .lp-how__steps{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:26px auto 0;max-width:1024px;padding:0}
+.lp .lp-how__s{padding:0 8px}
+.lp .lp-how__s b{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700;line-height:1.3;color:var(--lp-ink)}
+.lp .lp-how__s b em{font-style:normal;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+.lp .lp-how-e1{background:linear-gradient(135deg,#4f97ff,#1f5fd6)}
+.lp .lp-how-e2{background:linear-gradient(135deg,#2fd2c2,#10a294)}
+.lp .lp-how-e3{background:linear-gradient(135deg,#9a7fff,#5a36e0)}
+.lp .lp-how__s p{font-size:14px;line-height:1.5;color:var(--lp-body);margin-top:8px}
+@media (prefers-reduced-motion:reduce){.lp .lp-how-fig .bwx-bBlip{animation:none}}
+@media (max-width:760px){.lp .lp-how__steps{grid-template-columns:1fr;gap:16px}}
+`;
 
 const TABLE_ROWS = [
   { name: "Mt Lawley Appraisal Campaign", status: "Active", clicks: "247", leads: "18", spend: "$324" },
@@ -175,21 +199,20 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="workflow" className="bwx">
-          <div className="bwx-wrap">
-            <div className="bwx-how" style={{ borderTop: "none" }}>
-              <div className="bwx-how__head bwx-reveal">
-                <span className="bwx-eyebrow"><span className="bwx-dot" /> How it works</span>
-                <h2>From local signal to real leads.</h2>
-                <p className="bwx-how__sub">We scan the area, prepare the campaign, and the leads come in.</p>
-              </div>
-              <div className="bwx-how-fig bwx-reveal" id="bFig" dangerouslySetInnerHTML={{ __html: FIG_SVG }} />
-              <ol className="bwx-how__steps2 bwx-reveal">
-                <li className="bwx-how__s"><b><em className="bwx-e1">1</em> Scan</b><p>See local lead angles.</p></li>
-                <li className="bwx-how__s"><b><em className="bwx-e2">2</em> Prepared</b><p>Blockwise prepares the campaign.</p></li>
-                <li className="bwx-how__s"><b><em className="bwx-e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
-              </ol>
+        <section id="workflow" className="lp-section">
+          <style dangerouslySetInnerHTML={{ __html: HOW_CSS }} />
+          <div className="lp-shell">
+            <div className="lp-how__head">
+              <span className="lp-how-eyebrow"><span className="lp-how-dot" aria-hidden /> How it works</span>
+              <h2>From local signal to real leads.</h2>
+              <p className="lp-how__sub">We scan the area, prepare the campaign, and the leads come in.</p>
             </div>
+            <div className="lp-how-fig" aria-hidden dangerouslySetInnerHTML={{ __html: HOW_FIG_SVG }} />
+            <ol className="lp-how__steps">
+              <li className="lp-how__s"><b><em className="lp-how-e1">1</em> Scan</b><p>See local lead angles.</p></li>
+              <li className="lp-how__s"><b><em className="lp-how-e2">2</em> Prepared</b><p>Blockwise prepares the campaign.</p></li>
+              <li className="lp-how__s"><b><em className="lp-how-e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
+            </ol>
           </div>
         </section>
 
@@ -446,7 +469,6 @@ export default function HomePage() {
           </span>
         </div>
       </footer>
-      <HomeMotion />
     </div>
   );
 }
