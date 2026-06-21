@@ -36,6 +36,38 @@ test("Hermes deterministic fallback treats unless-sold-prior copy as listing or 
   assert.notEqual(classification.ad_type, "just_sold");
 });
 
+test("Hermes deterministic fallback classifies address-led property videos as listings", () => {
+  const classification = classifyCreativeDeterministically({
+    body: "3 Sandford Ave Lake Coogee. Beautiful family home in prime location. A Must See",
+    cta: "Call now",
+  });
+
+  assert.equal(classification.ad_type, "listing");
+  assert.equal(classification.primary_intent, "listing");
+  assert.equal(classification.is_real_estate_ad, true);
+});
+
+test("Hermes deterministic fallback keeps address-led retail home ads out of listings", () => {
+  const classification = classifyCreativeDeterministically({
+    headline: "Huge Home Furniture Sale",
+    body: "Visit 23 Example Street Osborne Park for sofas, dining tables, mattresses and homewares.",
+    cta: "Shop now",
+  });
+
+  assert.equal(classification.ad_type, "other");
+  assert.equal(classification.is_real_estate_ad, false);
+});
+
+test("Hermes deterministic fallback classifies auction address copy as listing", () => {
+  const classification = classifyCreativeDeterministically({
+    body: "56 Holland Street, Wembley. Auction on site 27th June. 653m2 development site.",
+    cta: "Learn more",
+  });
+
+  assert.equal(classification.ad_type, "listing");
+  assert.equal(classification.primary_intent, "listing");
+});
+
 test("Hermes deterministic fallback classifies appraisal and property management copy", () => {
   assert.equal(
     classifyCreativeDeterministically({

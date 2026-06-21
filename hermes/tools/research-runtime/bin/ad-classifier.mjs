@@ -415,7 +415,18 @@ function hasAppraisalSignal(text) {
 }
 
 function hasListingSignal(text) {
-  return /\b(new\s+listing|just\s+listed|new\s+to\s+market|for\s+sale|set\s+date\s+sale|offers?\s+(?:over|invited|from)|expressions?\s+of\s+interest|\d+\s*bed(?:room)?s?|\d+\s*bath(?:room)?s?|\d+\s*car\b|\d+\s*sqm\b|property\s+link|price\s+guide)\b/iu.test(text);
+  return (
+    /\b(new\s+listing|just\s+listed|new\s+to\s+market|for\s+sale|set\s+date\s+sale|offers?\s+(?:over|invited|from)|expressions?\s+of\s+interest|\d+\s*bed(?:room)?s?|\d+\s*bath(?:room)?s?|\d+\s*car\b|\d+\s*(?:sqm|m2)\b|property\s+link|price\s+guide|under\s+offer)\b/iu.test(text) ||
+    (hasStreetAddressSignal(text) && hasPropertyListingLanguage(text))
+  );
+}
+
+function hasStreetAddressSignal(text) {
+  return /\b\d{1,5}\s+[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,3}\s+(?:ave(?:nue)?|boulevard|blvd|circle|cir|close|cl|court|ct|cres(?:cent)?|drive|dr|gardens?|gate|grove|gr|highway|hwy|lane|ln|loop|mews|parade|pde|place|pl|road|rd|rise|street|st|terrace|tce|view|vista|way)\b/iu.test(text);
+}
+
+function hasPropertyListingLanguage(text) {
+  return /\b(apartment|auction|beautiful\s+family\s+home|development\s+site|duplex|family\s+home|must\s+see|office|prime\s+location|property|residence|townhouse|unit|villa|warehouse)\b/iu.test(text);
 }
 
 function hasMarketUpdateSignal(text) {

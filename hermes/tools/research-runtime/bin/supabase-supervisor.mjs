@@ -1641,6 +1641,7 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
     body: json(row),
   });
   const agencyId = agencies?.[0]?.id;
+  const verifiedAgencyRow = agencies?.[0] || null;
   if (!agencyId) throw new Error(`Agency upsert returned no id for ${agency.name}`);
 
   await ensureServiceArea({
@@ -1676,10 +1677,30 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
         }),
       });
     } else {
-      const createdAgent = await rest("research", "agents", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: json({
+      const reusableAgent = await findReusableAgentForVerifiedAgency(agentNorm, agency.state, verifiedAgencyRow);
+      if (reusableAgent?.id) {
+        agentId = reusableAgent.id;
+        await rest("research", `agents?id=eq.${agentId}`, {
+          method: "PATCH",
+          body: json({
+            agency_id: agencyId,
+            email: agency.agent.email,
+            phone: agency.agent.phone,
+            website_url: agency.agent.website_url,
+            primary_postcode: agency.agent.primary_postcode || agency.primary_postcode,
+            primary_suburb: agency.agent.primary_suburb || agency.primary_suburb,
+            status: "licensed_verified",
+            review_status: "ready",
+            confidence: agency.confidence,
+            metadata: { image_url: agency.agent.image_url || null, evidence_url: agency.evidence_url },
+            last_seen_at: now(),
+          }),
+        });
+      } else {
+        const createdAgent = await rest("research", "agents", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: json({
           full_name: agency.agent.full_name,
           agency_id: agencyId,
           state: agency.state,
@@ -1692,9 +1713,10 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
           review_status: "ready",
           confidence: agency.confidence,
           metadata: { image_url: agency.agent.image_url || null, evidence_url: agency.evidence_url },
-        }),
-      });
-      agentId = createdAgent?.[0]?.id || null;
+          }),
+        });
+        agentId = createdAgent?.[0]?.id || null;
+      }
     }
     if (agentId) {
       await ensureServiceArea({
@@ -1851,6 +1873,25 @@ async function upsertVerifiedAgency(agency, sourceDocumentId, job) {
       } : null,
     ].filter(Boolean),
   };
+}
+
+async function findReusableAgentForVerifiedAgency(agentNorm, state, verifiedAgencyRow) {
+  const rows = await rest(
+    "research",
+    `agents?select=id,agency_id,agencies(id,name,normalized_name,trading_name,metadata)&normalized_name=eq.${encode(agentNorm)}&state=eq.${encode(state || "WA")}&limit=10`,
+  );
+  return rows.find((row) => !row.agency_id || isLegalEntityAliasAgency(row.agencies, verifiedAgencyRow)) || null;
+}
+
+function isLegalEntityAliasAgency(existingAgency, verifiedAgency) {
+  if (!existingAgency || !verifiedAgency) return false;
+  if (existingAgency.id === verifiedAgency.id) return true;
+  const existingName = normalizeName(existingAgency.normalized_name || existingAgency.trading_name || existingAgency.name);
+  const demirs = verifiedAgency.metadata?.demirs_wa_licence_register || {};
+  const verifiedLegalName = normalizeName(demirs.legal_entity_name || "");
+  if (existingName && verifiedLegalName && existingName === verifiedLegalName) return true;
+  const tradingNames = Array.isArray(demirs.trading_names) ? demirs.trading_names : [];
+  return tradingNames.map((name) => normalizeName(name)).filter(Boolean).includes(existingName);
 }
 
 async function enqueueClassificationJob(creative, parentJob) {
@@ -4309,6 +4350,7 @@ async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, so
   const payloadHash = hash(json(rawPayload));
   const platforms = normalisePlatforms(ad.publisherPlatform);
   const creative = creativeFromMetaAd(ad);
+  const activeStatus = activeStatusForMetaAd(ad);
   const creativeHash = hash(json({
     headline: creative.headline,
     body: creative.body,
@@ -4328,13 +4370,13 @@ async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, so
       advertiser_page_id: advertiserPageId,
       first_seen_provider: sourceProvider,
       platform: normalisePlatformForDb(platforms),
-      active_status: ad.isActive === false ? "inactive" : "active",
+      active_status: activeStatus,
       last_seen_at: now(),
       last_checked_at: now(),
       missing_successive_checks: 0,
       meta_publisher_platforms: platforms,
       ad_delivery_started_at: metaTimestamp(ad.startDate),
-      ad_delivery_stopped_at: metaTimestamp(ad.endDate),
+      ad_delivery_stopped_at: deliveryStoppedAtForMetaAd(ad, activeStatus),
       raw_payload: rawPayload,
       payload_hash: payloadHash,
       metadata: { ad_library_url: ad.inputUrl || `https://www.facebook.com/ads/library/?id=${ad.adArchiveID}`, page_id: ad.pageID },
@@ -4371,6 +4413,30 @@ async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, so
   }
   await upsertAreaMatchesForObservedAd({ advertiserPageId, observedAdId: observedAd.id });
   return { observed_ad_id: observedAd.id, ad_creative_id: adCreative.id, creative_hash: creativeHash, external_ad_id: ad.adArchiveID, media_sources: mediaCount };
+}
+
+function activeStatusForMetaAd(ad) {
+  if (ad?.isActive === true) return "active";
+  if (ad?.isActive === false) return "inactive";
+  const status = firstString(ad?.status)?.toLowerCase();
+  if (status === "active") return "active";
+  if (status === "inactive" || status === "ended" || status === "stopped") return "inactive";
+  return "unknown";
+}
+
+function deliveryStoppedAtForMetaAd(ad, activeStatus = activeStatusForMetaAd(ad)) {
+  const stoppedAt = metaTimestamp(ad?.endDate);
+  if (activeStatus === "active") return null;
+  return stoppedAt;
+}
+
+async function isTrustedConfirmedZeroAdCapture({ advertiserPageId, sourceProvider }) {
+  if (sourceProvider === META_OFFICIAL_SOURCE_PROVIDER) return true;
+  const rows = await rest(
+    "research",
+    `observed_ads?select=id&advertiser_page_id=eq.${encode(advertiserPageId)}&limit=1`,
+  );
+  return rows.length === 0;
 }
 
 async function reconcileMissingObservedAds({ advertiserPageId, seenExternalAdIds, checkedAt = now() }) {
@@ -4946,6 +5012,56 @@ async function handleAdCollector(job) {
   }
   const checkedAt = now();
   if (outcome.itemCount === 0 && outcome.metadata?.confirmed_absence) {
+    const zeroCaptureTrusted = await isTrustedConfirmedZeroAdCapture({
+      advertiserPageId: payload.advertiserPageId,
+      sourceProvider,
+    });
+    if (!zeroCaptureTrusted) {
+      await updateFetchRun(adFetchRunId, {
+        source_provider: sourceProvider,
+        status: "failed",
+        result_summary: {
+          provider: sourceProvider,
+          item_count: 0,
+          confirmed_absence: true,
+          confirmed_absence_ignored: true,
+          metadata: outcome.metadata || {},
+          reason: "untrusted_zero_after_prior_observations",
+        },
+        error: "confirmed zero-ad capture ignored after prior observed ads",
+        cost_usd: outcome.costUsd || 0,
+      });
+      await markAdvertiserPageCheckFailed(payload.advertiserPageId);
+      await insertCoverageDefect({
+        platform: "facebook",
+        reason: "ad_collector_untrusted_zero_after_positive",
+        notes: "Collector received a confirmed zero-ad result from a fallback provider for a page that already has observed ads. Ads and page status were left unchanged pending a reliable recapture.",
+        reported_by: "system",
+        reporter_identity: workerId,
+        status: "open",
+        resolution: {
+          advertiser_page_id: payload.advertiserPageId,
+          meta_page_id: payload.metaPageId,
+          provider: sourceProvider,
+          metadata: outcome.metadata || {},
+        },
+        resolved_advertiser_page_id: payload.advertiserPageId,
+      });
+      await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: 0, reason: "untrusted_zero_after_prior_observations", scope: "page_capture_untrusted_zero" });
+      return {
+        status: "complete",
+        result: {
+          handler: "blockwise-ad-collector",
+          advertiser_page_id: payload.advertiserPageId,
+          meta_page_id: payload.metaPageId,
+          provider: sourceProvider,
+          ads_seen: 0,
+          confirmed_absence: true,
+          confirmed_absence_ignored: true,
+          ingest_tables: ingestTables,
+        },
+      };
+    }
     const reconciliation = await reconcileMissingObservedAds({
       advertiserPageId: payload.advertiserPageId,
       seenExternalAdIds: [],
