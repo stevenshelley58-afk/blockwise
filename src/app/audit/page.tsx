@@ -55,7 +55,7 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
           <nav className="nav-links">
             <a href="#plan">Campaign plan</a>
             <a href="#evidence">Competitor evidence</a>
-            <a href="#lead" className="button button-primary">Build my {label} campaign</a>
+            <a href="#lead" className="lp-btn lp-btn-primary lp-btn-sm">Build my {label} campaign</a>
           </nav>
         </div>
       </header>
@@ -83,7 +83,7 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
       </footer>
 
       <div className="mobile-cta">
-        <a className="button button-primary" href="#lead">Build my {label} campaign</a>
+        <a className="lp-btn lp-btn-primary lp-btn-wide" href="#lead">Build my {label} campaign</a>
       </div>
 
       <AuditViewTracker market={label} />
@@ -109,12 +109,12 @@ function Hero({ label, prepared, stats }: { label: string; prepared: string; sta
     <section className="hero">
       <div className="container hero-grid">
         <div>
-          <div className="eyebrow">{label} ad radar</div>
+          <div className="eyebrow"><span className="eyebrow-dot" />{label} ad radar</div>
           <h1>{headline}</h1>
           <p className="hero-lede">{lede}</p>
           <div className="cta-row">
-            <a className="button button-primary" href="#lead">Build my {label} campaign</a>
-            <a className="button button-secondary" href={detected > 0 ? "#evidence" : "#plan"}>
+            <a className="lp-btn lp-btn-primary lp-btn-big" href="#lead">Build my {label} campaign</a>
+            <a className="lp-btn lp-btn-ghost lp-btn-big" href={detected > 0 ? "#evidence" : "#plan"}>
               {detected > 0 ? "See competitor evidence" : "See the campaign pack"}
             </a>
           </div>
@@ -278,7 +278,7 @@ function LeadSection({ label }: { label: string }) {
             <li>The trial includes 10 ad packs and no card is required.</li>
           </ul>
           <div className="cta-row">
-            <AuditCtaButton href={href} market={label} className="button button-secondary">Start free trial instead</AuditCtaButton>
+            <AuditCtaButton href={href} market={label} className="lp-btn lp-btn-light">Start free trial instead</AuditCtaButton>
           </div>
         </aside>
       </div>
