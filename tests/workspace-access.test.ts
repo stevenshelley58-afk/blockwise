@@ -85,4 +85,19 @@ test("self-serve workspaces can view monitor while monitor workspaces cannot use
     }).status,
     403,
   );
+
+  assert.equal(
+    resolveRequestedWorkspaceAccess({
+      isOperator: false,
+      memberships: [
+        {
+          workspaceId: "workspace_monitor",
+          workspaceMode: "monitor",
+          role: "owner",
+        },
+      ],
+      surface: "property_check",
+    }).status,
+    403,
+  );
 });

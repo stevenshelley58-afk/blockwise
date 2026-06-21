@@ -45,6 +45,11 @@ test("landing page anchors, sections, and claims stay connected", () => {
       "Meta-" + "compliant",
       "guaranteed " + "compliant",
       "guaranteed " + "leads",
+      "legal " + "advice",
+      "full DA " + "assessment",
+      "everything you " + "need",
+      "council-" + "approved",
+      "definitive",
       "reach them " + "first",
       "R" + "OI",
     ].join("|"),
@@ -59,6 +64,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
   const expectedSections = [
     "workflow",
     "campaign-types",
+    "property-check",
     "approval",
     "reporting",
     "free-trial",
@@ -74,6 +80,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
     'className="lp-hero"',
     'id="workflow"',
     'id="campaign-types"',
+    'id="property-check"',
     'id="approval"',
     'id="reporting"',
     'id="free-trial"',
@@ -86,6 +93,11 @@ test("landing page anchors, sections, and claims stay connected", () => {
     assert.ok(index > previousIndex, `${marker} should appear after the previous major section`);
     previousIndex = index;
   }
+
+  assert.match(source, /Your competitors are advertising\. Are you\?/);
+  assert.match(source, /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./);
+  assert.match(source, /Know the property before the call/);
+  assert.match(source, /Run a property check/);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
@@ -160,7 +172,7 @@ test("robots and 404 keep protected routes out of search and anonymous visitors 
   const robots = readFileSync("src/app/robots.ts", "utf8");
   const notFound = readFileSync("src/app/not-found.tsx", "utf8");
 
-  for (const route of ["/home", "/settings", "/pwa", "/reset-password", "/forgot-password"]) {
+  for (const route of ["/home", "/settings", "/pwa", "/reset-password", "/forgot-password", "/property-check"]) {
     assert.match(robots, new RegExp(`"${route}"`));
   }
 
