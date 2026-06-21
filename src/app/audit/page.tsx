@@ -20,14 +20,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type AuditPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const numberFormat = new Intl.NumberFormat("en-AU");
 
-export default async function AuditPage({ searchParams }: AuditPageProps) {
-  const params = await searchParams;
+export default async function AuditPage({ searchParams }: { searchParams?: SearchParams }) {
+  const params = searchParams ? await searchParams : {};
   const location = pickParam(params.location ?? params.q) || "Perth, WA";
 
   let audit: AdAuditResult | null = null;
