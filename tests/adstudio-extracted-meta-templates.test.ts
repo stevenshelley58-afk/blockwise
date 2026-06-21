@@ -41,7 +41,7 @@ function rectsOverlap(
 test("template gallery exposes only quality-gated gold templates", () => {
   const visible = builtInAdStudioTemplates();
   const goldIds = GOLD_AD_STUDIO_TEMPLATES.map((template) => template.id);
-  const expectedIds = EXTRACTED_META_TEMPLATE_DESCRIPTORS.map((descriptor) => descriptor.id);
+  const expectedIds = new Set<string>(EXTRACTED_META_TEMPLATE_DESCRIPTORS.map((descriptor) => descriptor.id));
 
   assert.equal(EXTRACTED_META_TEMPLATE_TOTAL, 330);
   assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, 10);
@@ -52,7 +52,7 @@ test("template gallery exposes only quality-gated gold templates", () => {
   assert.ok(visible.every((template) => template.status === "approved"));
   assert.ok(visible.every((template) => !template.manualFirstPass));
   assert.ok(!visible.some((template) => template.id === "free_appraisal"));
-  assert.ok(!visible.some((template) => expectedIds.includes(template.id)), "extracted first-pass templates stay hidden");
+  assert.ok(!visible.some((template) => expectedIds.has(template.id)), "extracted first-pass templates stay hidden");
 });
 
 test("hidden extracted Meta slice remains resolvable for existing drafts", () => {
