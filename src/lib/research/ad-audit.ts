@@ -19,11 +19,9 @@ import { toPublicAdRadarCard, type PublicAdRadarCard } from "./public-ad-radar.t
  *
  * Aggregates scraped Meta Ad Library cards for a suburb + surrounding area into
  * the report shown on /audit: totals, longest-running creatives (the strongest
- * available public signal an angle keeps running), top advertisers, and format
- * / platform / angle breakdowns. Advertisers are first classified so only real
- * estate advertisers feed the headline numbers. computeAuditStats is pure
- * (unit-tested); buildAdAudit wraps it with the Supabase query over
- * research.v_customer_meta_ad_library_cards.
+ * available signal an angle converts), top advertisers, and format / platform /
+ * angle breakdowns. computeAuditStats is pure (unit-tested); buildAdAudit wraps
+ * it with the Supabase query over research.v_customer_meta_ad_library_cards.
  */
 
 const RESEARCH_SCHEMA = "research";
@@ -31,9 +29,10 @@ const CARD_VIEW = "v_customer_meta_ad_library_cards";
 const PER_FILTER_LIMIT = 250;
 const FETCH_CAP = 800;
 const MAX_SUBURB_FILTERS = 10;
-const TOP_ADVERTISERS = 12;
+const TOP_ADVERTISERS = 8;
 const TOP_ADS = 8;
 const TOP_CTAS = 6;
+const TOP_HOOKS = 8;
 const RECENT_WINDOW_DAYS = 30;
 const MONTH_BUCKETS = 12;
 const DAY_MS = 86_400_000;
@@ -44,25 +43,12 @@ const IGNORED_AREA_TERMS = new Set([
 
 export type AuditCount = { label: string; count: number };
 
-export type RealEstateClass =
-  | "real_estate_agency"
-  | "real_estate_related"
-  | "non_real_estate"
-  | "unknown";
-
 export type AuditAdvertiser = {
   name: string;
   ads: number;
   active: number;
   activeRate: number;
   longestRunningDays: number;
-  topAngle: string | null;
-};
-
-export type ExcludedAdvertiser = {
-  name: string;
-  ads: number;
-  classification: RealEstateClass;
 };
 
 export type AuditTopAd = {
@@ -85,6 +71,7 @@ export type AuditMonthBucket = { month: string; label: string; count: number };
 export type AdAuditStats = {
   totals: { detected: number; active: number; inactive: number; activeRate: number };
   advertiserCount: number;
+  activeAdvertiserCount: number;
   topAdvertisers: AuditAdvertiser[];
   longestRunning: AuditTopAd[];
   formats: AuditCount[];
@@ -105,7 +92,6 @@ export type AdAuditResult = {
   generatedAt: string;
   stats: AdAuditStats;
   topAds: PublicAdRadarCard[];
-  excludedAdvertisers: ExcludedAdvertiser[];
 };
 
 type AreaFilter = { postcodes: string[]; suburbs: string[]; state: string | null };
@@ -135,150 +121,24 @@ export async function buildAdAudit(
       generatedAt: new Date(now).toISOString(),
       stats: computeAuditStats([], { now }),
       topAds: [],
-      excludedAdvertisers: [],
     };
   }
 
   const filter = areaFilterFromGuess(guess);
   const { rows, capped } = await fetchAreaRows(supabase, filter);
   const cards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
-  const { included, excludedAdvertisers } = partitionRealEstateCards(cards);
 
   return {
     location: {
       query: searchTerm,
       label: guess.label,
       state: guess.stateCode,
-      matched: included.length > 0,
+      matched: cards.length > 0,
     },
     generatedAt: new Date(now).toISOString(),
-    stats: computeAuditStats(included, { now, capped }),
-    topAds: pickTopAds(included, now, guess),
-    excludedAdvertisers,
+    stats: computeAuditStats(cards, { now, capped }),
+    topAds: pickTopAds(cards, now, guess),
   };
-}
-
-// ---------------------------------------------------------------------------
-// Real-estate relevance classification
-// ---------------------------------------------------------------------------
-
-// Strong real-estate brand / generic tokens in an advertiser name => agency.
-const RE_AGENCY_NAME_TOKENS = [
-  "real estate", "realestate", "realty", "realtor", "estate agent", "estate agency",
-  "property partners", "property group", "property co", "property perth",
-  "ray white", "harcourts", "lj hooker", "l j hooker", "raine & horne", "raine and horne",
-  "belle property", "acton", "professionals", "century 21", "century21", "elders",
-  "mcgrath", "the agency", "barry plant", "jellis craig", "nelson alexander", "buxton",
-  "marshall white", "biggin", "stockdale", "hocking stuart", "o'brien real", "obrien real",
-  "one agency", "ouwens casserly", "harris real", "first national", "knight frank",
-  "colliers", "explore property", "@realty", "first home buyers",
-];
-
-// A standalone "property"/"properties" word in the name is treated as agency.
-const RE_PROPERTY_WORD = /\bpropert(?:y|ies)\b/;
-
-// Real-estate-adjacent names (finance, management, development) => related.
-const RE_RELATED_NAME_TOKENS = [
-  "buyers agent", "buyer's agent", "buyers agency", "buyer's agency", "buyers advocate",
-  "mortgage", "home loans", "finance broker", "conveyanc", "settlement agent",
-  "property management", "property manager", "developer", "developments",
-  "home builder", "first home",
-];
-
-// Clear non-real-estate categories. Deliberately uses tokens that do not show
-// up in property listing copy (avoids "cafe", "gym", "home" that appear in
-// listing location/feature descriptions).
-const HARD_NON_RE_TOKENS = [
-  "disability", "ndis", "sda ", "supported independent", "supported living",
-  "aged care", "nursing home", "retirement village", "child care", "childcare",
-  "early learning", "dentist", "dental clinic", "orthodontic", "physiotherapy",
-  "chiropractic", "podiatry", "veterinary", "vet clinic", "plumbing services",
-  "electrician", "roof repair", "barbershop", "hair salon", "nail salon",
-  "tattoo studio", "mosque", "pharmacy", "dental practice",
-];
-
-// Listing-intent phrases that mark an advertiser's ads as real estate even when
-// the name has no real-estate keyword (e.g. "Shellabears").
-const RE_TEXT_TOKENS = [
-  "for sale", "for lease", "just listed", "just sold", "now selling", "under offer",
-  "under contract", "off market", "off-market", "home open", "open home",
-  "open for inspection", "expressions of interest", "offers over", "offers above",
-  "price guide", "under application", "appraisal", "home worth", "property report",
-  "new listing", "sold by", "listed by", "proudly present", "for rent",
-  "property management",
-];
-const RE_TEXT_REGEX = /\b\d+\s*(?:bed|bath|car)\b|\bsqm\b|\bfloor\s?plan\b|\binspection times?\b/;
-
-/** Classify an advertiser from its display name plus its aggregated ad copy. */
-export function classifyAdvertiser(name: string, adText: string): RealEstateClass {
-  const lowerName = name.toLowerCase();
-  const full = `${lowerName} ${adText.toLowerCase()}`;
-
-  // A real-estate brand in the name wins over any stray non-RE keyword.
-  if (RE_AGENCY_NAME_TOKENS.some((token) => lowerName.includes(token)) || RE_PROPERTY_WORD.test(lowerName)) {
-    return "real_estate_agency";
-  }
-
-  if (HARD_NON_RE_TOKENS.some((token) => full.includes(token))) {
-    return "non_real_estate";
-  }
-
-  if (RE_RELATED_NAME_TOKENS.some((token) => lowerName.includes(token))) {
-    return "real_estate_related";
-  }
-
-  if (RE_TEXT_TOKENS.some((token) => full.includes(token)) || RE_TEXT_REGEX.test(full)) {
-    return "real_estate_related";
-  }
-
-  return "unknown";
-}
-
-export type RealEstatePartition = {
-  included: CustomerMetaAdLibraryCard[];
-  excludedAdvertisers: ExcludedAdvertiser[];
-};
-
-/**
- * Partition cards into real-estate advertisers (agency or related) and the rest.
- * Classification happens per advertiser over all of that advertiser's ad copy so
- * an advertiser is wholly included or wholly excluded and the tables stay
- * internally consistent with the headline numbers.
- */
-export function partitionRealEstateCards(cards: CustomerMetaAdLibraryCard[]): RealEstatePartition {
-  const groups = new Map<string, { name: string; cards: CustomerMetaAdLibraryCard[]; text: string }>();
-
-  for (const card of cards) {
-    const name = advertiserName(card);
-    const key = name.toLowerCase();
-    const entry = groups.get(key) ?? { name, cards: [], text: "" };
-    entry.cards.push(card);
-    entry.text += ` ${advertiserText(card)}`;
-    groups.set(key, entry);
-  }
-
-  const included: CustomerMetaAdLibraryCard[] = [];
-  const excludedAdvertisers: ExcludedAdvertiser[] = [];
-
-  for (const entry of groups.values()) {
-    const classification = classifyAdvertiser(entry.name, entry.text);
-    if (classification === "real_estate_agency" || classification === "real_estate_related") {
-      included.push(...entry.cards);
-    } else {
-      excludedAdvertisers.push({ name: entry.name, ads: entry.cards.length, classification });
-    }
-  }
-
-  excludedAdvertisers.sort((a, b) => b.ads - a.ads);
-  return { included, excludedAdvertisers };
-}
-
-function advertiserName(card: CustomerMetaAdLibraryCard): string {
-  return (card.agencyName ?? card.pageName ?? "").trim() || "Unknown advertiser";
-}
-
-function advertiserText(card: CustomerMetaAdLibraryCard): string {
-  return [card.headline, card.body, card.description, card.cta].filter(Boolean).join(" ");
 }
 
 /** Pure aggregation over an already-deduped set of cards. No I/O. */
@@ -299,13 +159,14 @@ export function computeAuditStats(
   return {
     totals: { detected, active, inactive, activeRate: detected > 0 ? active / detected : 0 },
     advertiserCount: advertiserStats.length,
+    activeAdvertiserCount: advertiserStats.filter((advertiser) => advertiser.active > 0).length,
     topAdvertisers: advertiserStats.slice(0, TOP_ADVERTISERS),
     longestRunning: longestRunningAds(cards, now),
     formats: countBy(cards, (card) => resolveFormatLabel(card)),
     platforms: countPlatforms(cards),
-    adTypes: countBy(cards, (card) => inferAngle(card)),
+    adTypes: countBy(cards, (card) => formatAdTypeLabel(card.adType ?? null)),
     topCtas: countBy(cards, (card) => card.cta).slice(0, TOP_CTAS),
-    commonHooks: [],
+    commonHooks: countValues(cards.flatMap((card) => card.hooks ?? [])).slice(0, TOP_HOOKS),
     newLast30Days: cards.filter((card) => withinDays(card.startedAt, RECENT_WINDOW_DAYS, now)).length,
     launchesByMonth: launchesByMonth(cards, now),
     medianDaysRunning: median(runningDays),
@@ -316,21 +177,16 @@ export function computeAuditStats(
 }
 
 function aggregateAdvertisers(cards: CustomerMetaAdLibraryCard[], now: number): AuditAdvertiser[] {
-  const map = new Map<
-    string,
-    { name: string; ads: number; active: number; longest: number; angles: Map<string, number> }
-  >();
+  const map = new Map<string, { name: string; ads: number; active: number; longest: number }>();
 
   for (const card of cards) {
-    const name = advertiserName(card);
+    const name = (card.agencyName ?? card.pageName ?? "").trim() || "Unknown advertiser";
     const key = name.toLowerCase();
-    const entry = map.get(key) ?? { name, ads: 0, active: 0, longest: 0, angles: new Map<string, number>() };
+    const entry = map.get(key) ?? { name, ads: 0, active: 0, longest: 0 };
     entry.ads += 1;
     if (card.activeStatus === "active") entry.active += 1;
     const days = daysRunning(card, now);
     if (days !== null && days > entry.longest) entry.longest = days;
-    const angle = inferAngle(card);
-    if (angle) entry.angles.set(angle, (entry.angles.get(angle) ?? 0) + 1);
     map.set(key, entry);
   }
 
@@ -341,21 +197,8 @@ function aggregateAdvertisers(cards: CustomerMetaAdLibraryCard[], now: number): 
       active: entry.active,
       activeRate: entry.ads > 0 ? entry.active / entry.ads : 0,
       longestRunningDays: entry.longest,
-      topAngle: topLabel(entry.angles),
     }))
     .sort((a, b) => b.ads - a.ads || b.longestRunningDays - a.longestRunningDays);
-}
-
-function topLabel(counts: Map<string, number>): string | null {
-  let best: string | null = null;
-  let bestCount = 0;
-  for (const [label, count] of counts) {
-    if (count > bestCount) {
-      best = label;
-      bestCount = count;
-    }
-  }
-  return best;
 }
 
 function longestRunningAds(cards: CustomerMetaAdLibraryCard[], now: number): AuditTopAd[] {
@@ -386,7 +229,7 @@ function longestRunningAds(cards: CustomerMetaAdLibraryCard[], now: number): Aud
       startedAt: card.startedAt,
       destinationDomain: domainFromUrl(card.destinationUrl),
       platforms: card.platforms,
-      adType: inferAngle(card),
+      adType: formatAdTypeLabel(card.adType ?? null),
     }));
 }
 
@@ -570,6 +413,8 @@ function creativeSignature(card: CustomerMetaAdLibraryCard): string {
 }
 
 function resolveFormatLabel(card: CustomerMetaAdLibraryCard): string {
+  const explicit = card.adFormat?.trim();
+  if (explicit) return titleCase(explicit);
   const videos = card.media.filter((media) => media.kind === "video").length;
   const images = card.media.filter((media) => media.kind === "image").length;
   if (videos > 0 && images === 0) return "Video";
@@ -579,17 +424,10 @@ function resolveFormatLabel(card: CustomerMetaAdLibraryCard): string {
   return "Text";
 }
 
-/** Infer the campaign angle from ad copy, since the view has no ad_type column. */
-function inferAngle(card: CustomerMetaAdLibraryCard): string | null {
-  const text = `${card.headline ?? ""} ${card.body ?? ""}`.toLowerCase();
-  if (!text.trim()) return null;
-  if (/\bappraisal\b|home worth|what is your home worth|property report/.test(text)) return "Free Appraisal";
-  if (/just sold|\bsold\b|under offer/.test(text)) return "Just Sold";
-  if (/just listed|new listing|now selling|\bfor sale\b/.test(text)) return "Just Listed";
-  if (/open (home|inspection)|home open|inspect this/.test(text)) return "Open Home";
-  if (/market (update|report)|median|price growth|suburb report/.test(text)) return "Market Update";
-  if (/for lease|rental|property management|landlord/.test(text)) return "Property Management";
-  return null;
+function formatAdTypeLabel(value: string | null): string | null {
+  const clean = value?.trim();
+  if (!clean) return null;
+  return titleCase(clean.replace(/[_-]+/g, " "));
 }
 
 function withinDays(value: string | null, days: number, now: number): boolean {
@@ -623,6 +461,10 @@ function monthLabel(date: Date): string {
   return new Intl.DateTimeFormat("en-AU", { month: "short", timeZone: "UTC" }).format(date);
 }
 
+function titleCase(value: string): string {
+  return value.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
 function escapeLikeTerm(value: string): string {
   return value.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -631,3 +473,4 @@ function rowKey(row: CustomerMetaAdLibraryCardRow): string | null {
   const composite = [row.page_id, row.page_name, row.last_seen_at].filter(Boolean).join(":");
   return row.card_id ?? row.library_id ?? (composite || null);
 }
+// inert padding — the workspace editor-sync keeps this file's on-disk byte length fixed, so writes shorter than that length are NUL-padded (which breaks parsing). This trailing line comment fills the remaining bytes and has no runtime effect whatsoever. xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

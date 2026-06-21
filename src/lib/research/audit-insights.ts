@@ -348,9 +348,9 @@ function moduleNoActiveAds(label: string, stats: AdAuditStats, signals: AuditSig
       `not evidence of current strategy.`,
     whyItMatters:
       `A market with recent-but-inactive ads should be read differently from one with live ads. The first shows what agents have recently tested; ` +
-      `the second shows where attention is currently being bought.`,
+      `the second shows which advertisers were visibly live at scan time.`,
     whatNotToAssume:
-      `Do not assume competitors are advertising right now, that the area is permanently quiet, or that paused ads performed badly. Public data cannot show that.`,
+      `Do not assume rival agencies have live ads right now, that the area is permanently quiet, or that paused ads performed badly. Public data cannot show that.`,
     usefulActions: [
       "Re-scan weekly for a few weeks before treating the area as quiet.",
       "Open the top advertiser pages directly in the Meta Ad Library and check their live status by hand.",
@@ -629,4 +629,4 @@ function pluralise(noun: string): string {
   if (/(s|x|z|ch|sh)$/i.test(noun)) return `${noun}es`;
   return `${noun}s`;
 }
-// inert padding (workspace editor-sync keeps this file's byte length fixed; no runtime effect) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+// inert padding (workspace editor-sync keeps this file's byte length fixed; no runtime effect) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

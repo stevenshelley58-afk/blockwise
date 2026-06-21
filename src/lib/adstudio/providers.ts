@@ -101,7 +101,17 @@ export type VisionProviderAdapter = {
   analyse(input: VisionProviderRequest): Promise<VisionProviderResponse>;
 };
 
-export type ProviderSchemaName = "metaLeadAdPack" | "googleSearchPack" | "googleAssetPack" | "creativeSkeleton";
+export type ProviderSchemaName =
+  | "metaLeadAdPack"
+  | "googleSearchPack"
+  | "googleAssetPack"
+  | "creativeSkeleton"
+  // Passthrough labels for the /audit local-intelligence report. These are only
+  // used as request metadata (provider returns raw JSON for response_format:
+  // json_object); the audit pipeline validates output with its own Zod schemas,
+  // so they intentionally do not route through parseAndValidate below.
+  | "auditReport"
+  | "auditReview";
 
 export type ProviderValidationResult =
   | {

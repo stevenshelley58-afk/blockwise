@@ -46,7 +46,7 @@ export function AuditSnapshotSignup({ location }: { location: string }) {
   return (
     <form className="audit-signup" onSubmit={handleSubmit} noValidate>
       <label className="audit-signup-field">
-        <span className="audit-signup-hint">Email me future snapshots</span>
+        <span className="audit-signup-hint">Work email</span>
         <input
           type="email"
           name="email"
@@ -71,7 +71,7 @@ export function AuditSnapshotSignup({ location }: { location: string }) {
         {state === "submitting" ? "Saving..." : "Email me future snapshots"}
       </button>
       {state === "error" && <p className="audit-signup-error">{message}</p>}
-      <p className="audit-signup-fine">No account, no card. One email per new snapshot, unsubscribe anytime.</p>
+      <p className="audit-signup-fine">No account needed. One email per new snapshot, unsubscribe anytime.</p>
     </form>
   );
 }
