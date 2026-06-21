@@ -14,7 +14,7 @@ test("public homepage does not redirect anonymous visitors to the login screen",
   assert.match(source, /SignInLink/);
 });
 
-test("homepage suburb scan opens the public ad popup instead of the protected Ad Radar page", () => {
+test("homepage suburb scan opens the public audit report instead of the protected Ad Radar page", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
   const scan = readFileSync("src/components/research/landing-ad-radar-scan.tsx", "utf8");
   const form = readFileSync("src/components/research/ad-radar-location-form.tsx", "utf8");
@@ -24,7 +24,7 @@ test("homepage suburb scan opens the public ad popup instead of the protected Ad
   assert.match(source, /LandingAdRadarScan/);
   assert.match(source, /LandingRadarCards/);
   assert.doesNotMatch(source, /Coastline Property|Hillview Agents|Northstar Realty|\/ads\/ad-/);
-  assert.match(scan, /PublicAdRadarDialog/);
+  assert.match(scan, /router\.push\(`\/audit\?location=\$\{encodeURIComponent\(searchTerm\)\}`\)/);
   assert.match(landingCards, /\/api\/research\/locations\/guess/);
   assert.match(landingCards, /\/api\/research\/local-ad-radar/);
   assert.match(scan, /onSearch=\{openScan\}/);
