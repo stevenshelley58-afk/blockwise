@@ -9,6 +9,7 @@ import {
   resolveTemplateDesignForFormat,
   templateDesignSchema,
 } from "../src/lib/adstudio/index.ts";
+import { EXTRACTED_META_SAMPLE_CARD_VERSION } from "../src/lib/adstudio/extracted-meta-template-builder.ts";
 import { EXTRACTED_META_TEMPLATE_DESCRIPTORS, EXTRACTED_META_TEMPLATE_SLICE_SIZE, EXTRACTED_META_TEMPLATE_TOTAL } from "../src/lib/adstudio/extracted-meta-templates.generated.ts";
 import { templatePreviewDataUrl } from "../src/lib/adstudio/template-preview.ts";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
@@ -85,9 +86,9 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     }
 
     assert.equal(resolveTemplateDesignForFormat(template, "1.91:1"), null, `${descriptor.id} should not expose landscape`);
-    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
     assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
-    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
   }
 });
 

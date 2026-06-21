@@ -6,6 +6,7 @@ import type { AdStudioFormat } from "./types.ts";
 
 const META_TEMPLATE_FORMATS = ["9:16", "4:5", "1:1"] as const satisfies readonly AdStudioFormat[];
 type MetaTemplateFormat = (typeof META_TEMPLATE_FORMATS)[number];
+export const EXTRACTED_META_SAMPLE_CARD_VERSION = "gallery-v2";
 
 const CANVAS_BY_FORMAT = {
   "9:16": { w: 1080, h: 1920 },
@@ -36,7 +37,7 @@ function templateFromDescriptor(descriptor: ExtractedMetaDescriptor): AdStudioTe
       cta: descriptor.sampleCopy.cta,
     },
     sampleStyle: sampleStyleFromDescriptor(descriptor),
-    sampleCardImageUrl: `/adstudio-samples/extracted-meta/${descriptor.id}.png`,
+    sampleCardImageUrl: `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
     designs: designSetFromDescriptor(descriptor),
     evidenceScore: descriptor.evidenceScore,
     winnerRationale:

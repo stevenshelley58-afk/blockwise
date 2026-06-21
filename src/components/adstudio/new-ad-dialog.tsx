@@ -85,6 +85,11 @@ function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandK
   return templatePreviewDataUrl(template, brandKit);
 }
 
+function templateHasGalleryPreview(template: AdStudioTemplate, brandKit: AdStudioBrandKit): boolean {
+  const src = templatePreviewSrc(template, brandKit);
+  return src.startsWith("/adstudio-samples/") || src.includes("/template-cards/");
+}
+
 function templateSampleDescription(template: AdStudioTemplate): string {
   if (!template.sampleCopy) return template.promptHint;
   return `${template.sampleCopy.headline} - ${template.sampleCopy.primaryText}`;
@@ -489,7 +494,7 @@ export function NewAdDialog({
                   <div className="studio-explore-grid">
                     {visibleTemplates.map((template) => (
                       <article key={template.id} className="studio-explore-card">
-                        <div className="studio-explore-thumb">
+                        <div className={`studio-explore-thumb${templateHasGalleryPreview(template, brandKit) ? " studio-explore-thumb--sample" : ""}`}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={templatePreviewSrc(template, brandKit)} alt="" loading="lazy" decoding="async" />
                           {isNewTemplate(template) && <span className="studio-explore-badge">NEW</span>}
@@ -747,7 +752,8 @@ const EXPLORE_STYLES = `
 .studio-explore-card{display:flex;min-width:0;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;transition:transform .15s,box-shadow .15s}
 .studio-explore-card:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}
 .studio-explore-thumb{position:relative;height:236px;display:grid;place-items:center;overflow:hidden;background:#eef2f7}
-.studio-explore-thumb img{position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);object-fit:contain;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(15,23,42,.16);display:block}
+.studio-explore-thumb--sample{height:326px;background:linear-gradient(180deg,#f8fafc 0%,#e8edf4 100%)}
+.studio-explore-thumb img{max-width:calc(100% - 24px);max-height:calc(100% - 20px);object-fit:contain;background:#fff;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.18);display:block}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.7px;color:rgba(15,23,42,.35)}
 .studio-explore-badge{position:absolute;top:10px;left:10px;font-size:10px;font-weight:800;letter-spacing:.4px;background:#c9f24a;color:#1c2b08;border-radius:999px;padding:3px 9px}
 .studio-explore-thumb.blank{background:var(--accent-tint);color:var(--accent)}
@@ -767,10 +773,12 @@ const EXPLORE_STYLES = `
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-tabs button{font-size:12.5px;padding:8px 13px}
   .studio-explore-thumb{height:210px}
+  .studio-explore-thumb--sample{height:286px}
 }
 @media(max-width:560px){
   .studio-explore-grid{grid-template-columns:1fr}
   .studio-explore-thumb{height:220px}
+  .studio-explore-thumb--sample{height:320px}
 }
 `;
 // NewAdDialog: Templates pop-up with Templates, Previous ads, and Ad Radar tabs.

@@ -386,7 +386,9 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(dialog, /Previous ads/);
   assert.match(dialog, /Ad Radar/);
   assert.match(dialog, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(dialog, /\.studio-explore-thumb\{[^}]*height:236px/);
+  assert.match(dialog, /studio-explore-thumb--sample/);
+  assert.match(dialog, /\.studio-explore-thumb--sample\{[^}]*height:326px/);
+  assert.match(dialog, /\.studio-explore-thumb img\{[^}]*max-width:calc\(100% - 24px\)[^}]*max-height:calc\(100% - 20px\)/);
   assert.match(dialog, /Use inspiration/);
   assert.doesNotMatch(dialog, /ad\.thumb|ad\.headline \|\| ad\.body|ad\.pageName|Use this ad/);
   assert.match(studioStyles, /\.studio-tpl-photo\{[^}]*object-fit:contain[^}]*background:#fff/);
