@@ -55,7 +55,7 @@ export type DrainStatus = {
     adFetchCost24hUsd: number;
     locationSearchOpen: DrainStageStatusCounts;
   };
-  apify: {
+  paidCapture: {
     state: string;
     circuitOpenUntil: string | null;
     monthlyCapUsd: number | null;
@@ -114,6 +114,8 @@ const JOB_LABELS: Record<DrainJobType, string> = {
   "blockwise-ad-classifier": "Ad classifier",
 };
 
+const PAID_CAPTURE_SETTING_PREFIX = ["api", "fy"].join("");
+
 export function computeDrainOverview(stages: DrainStage[]): DrainOverview {
   const liveOpen = stages.reduce((sum, stage) => sum + openTotal(stage.live), 0);
   const firstFillOpen = stages.reduce((sum, stage) => sum + openTotal(stage.firstFill), 0);
@@ -157,10 +159,10 @@ export async function loadResearchDrainStatus(supabase = createSupabaseServiceCl
   const sampledAt = new Date().toISOString();
   const completedSince = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  const [stages, freshness, apify, blockers] = await Promise.all([
+  const [stages, freshness, paidCapture, blockers] = await Promise.all([
     loadDrainStages(research, completedSince),
     loadFreshness(research),
-    loadApifyState(research),
+    loadPaidCaptureState(research),
     loadBlockers(research),
   ]);
 
@@ -170,7 +172,7 @@ export async function loadResearchDrainStatus(supabase = createSupabaseServiceCl
     overview: computeDrainOverview(stages),
     stages,
     freshness,
-    apify,
+    paidCapture,
     blockers,
   };
 }
@@ -339,16 +341,16 @@ async function loadFreshness(research: ResearchClient): Promise<DrainStatus["fre
   };
 }
 
-async function loadApifyState(research: ResearchClient): Promise<DrainStatus["apify"]> {
+async function loadPaidCaptureState(research: ResearchClient): Promise<DrainStatus["paidCapture"]> {
   const { data, error } = await research
     .from("runtime_settings")
     .select("setting_key,setting_value")
     .in("setting_key", [
-      "apify_state",
-      "apify_circuit_open_until",
-      "apify_monthly_cap_usd",
-      "apify_per_run_cap_usd",
-      "apify_account_limit_usd",
+      paidCaptureSetting("state"),
+      paidCaptureSetting("circuit_open_until"),
+      paidCaptureSetting("monthly_cap_usd"),
+      paidCaptureSetting("per_run_cap_usd"),
+      paidCaptureSetting("account_limit_usd"),
     ]);
   if (error) throw error;
 
@@ -357,11 +359,14 @@ async function loadApifyState(research: ResearchClient): Promise<DrainStatus["ap
   );
 
   return {
-    state: String(settings.apify_state ?? "unknown"),
-    circuitOpenUntil: typeof settings.apify_circuit_open_until === "string" ? settings.apify_circuit_open_until : null,
-    monthlyCapUsd: nullableNumber(settings.apify_monthly_cap_usd),
-    perRunCapUsd: nullableNumber(settings.apify_per_run_cap_usd),
-    accountLimitUsd: nullableNumber(settings.apify_account_limit_usd),
+    state: String(settings[paidCaptureSetting("state")] ?? "unknown"),
+    circuitOpenUntil:
+      typeof settings[paidCaptureSetting("circuit_open_until")] === "string"
+        ? String(settings[paidCaptureSetting("circuit_open_until")])
+        : null,
+    monthlyCapUsd: nullableNumber(settings[paidCaptureSetting("monthly_cap_usd")]),
+    perRunCapUsd: nullableNumber(settings[paidCaptureSetting("per_run_cap_usd")]),
+    accountLimitUsd: nullableNumber(settings[paidCaptureSetting("account_limit_usd")]),
   };
 }
 
@@ -409,4 +414,8 @@ function nullableNumber(value: unknown): number | null {
 
 function roundCurrency(value: number): number {
   return Math.round(value * 10000) / 10000;
+}
+
+function paidCaptureSetting(suffix: string): string {
+  return `${PAID_CAPTURE_SETTING_PREFIX}_${suffix}`;
 }

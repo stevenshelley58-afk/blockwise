@@ -43,7 +43,7 @@ export function ResearchDrainDashboard({ initialStatus }: { initialStatus: Drain
       : status.overview.status === "first_fill_done"
         ? "warn"
         : "info";
-  const apifyTone = status.apify.state === "ready" ? "ok" : "bad";
+  const paidCaptureTone = status.paidCapture.state === "ready" ? "ok" : "bad";
   const latestFetchAge = formatRelative(status.freshness.latestAdFetch?.completedAt ?? null, status.sampledAt);
   const latestIngestAge = formatRelative(status.freshness.latestIngest?.createdAt ?? null, status.sampledAt);
 
@@ -101,10 +101,10 @@ export function ResearchDrainDashboard({ initialStatus }: { initialStatus: Drain
         </Panel>
 
         <Panel title="Paid Capture">
-          <Metric label="Apify circuit" value={status.apify.state} tone={apifyTone} />
+          <Metric label="paid capture circuit" value={status.paidCapture.state} tone={paidCaptureTone} />
           <Metric label="latest ad fetch" value={latestFetchAge} tone={ageTone(status.freshness.latestAdFetch?.completedAt ?? null, status.sampledAt, 2 * 60 * 60)} />
           <Metric label="cost 24h" value={`$${status.freshness.adFetchCost24hUsd.toFixed(4)}`} />
-          <Metric label="per run cap" value={status.apify.perRunCapUsd === null ? "n/a" : `$${status.apify.perRunCapUsd.toFixed(2)}`} />
+          <Metric label="per run cap" value={status.paidCapture.perRunCapUsd === null ? "n/a" : `$${status.paidCapture.perRunCapUsd.toFixed(2)}`} />
         </Panel>
 
         <Panel title="Location Search">
