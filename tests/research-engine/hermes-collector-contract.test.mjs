@@ -13,7 +13,11 @@ const recordEvent = functionBody(supervisor, "recordEvent");
 const setRuntimeSetting = functionBody(supervisor, "setRuntimeSetting");
 const collector = functionBody(supervisor, "handleAdCollector");
 const postIngestJobs = functionBody(supervisor, "enqueuePostIngestJobs");
+const ingestMetaAd = functionBody(supervisor, "ingestMetaAd");
 const missingAdReconciliation = functionBody(supervisor, "reconcileMissingObservedAds");
+const activeStatusForMetaAd = functionBody(supervisor, "activeStatusForMetaAd");
+const deliveryStoppedAtForMetaAd = functionBody(supervisor, "deliveryStoppedAtForMetaAd");
+const trustedZeroAdCapture = functionBody(supervisor, "isTrustedConfirmedZeroAdCapture");
 const mediaCollector = functionBody(supervisor, "handleMediaCollector");
 const upsertMediaAssets = functionBody(supervisor, "upsertMediaAssets");
 const adClassifier = functionBody(supervisor, "handleAdClassifier");
@@ -26,6 +30,8 @@ const agentCensus = functionBody(supervisor, "handleAgentCensus");
 const deferCensusPolicy = functionBody(supervisor, "deferCensusPolicy");
 const sourceBackedStateGate = functionBody(supervisor, "hasCensusSourceForState");
 const verifiedSubjectUpsert = functionBody(supervisor, "upsertVerifiedAgency");
+const reusableAgentForVerifiedAgency = functionBody(supervisor, "findReusableAgentForVerifiedAgency");
+const legalEntityAliasAgency = functionBody(supervisor, "isLegalEntityAliasAgency");
 const pageResolver = functionBody(supervisor, "handlePageResolver");
 const adPageRefresh = functionBody(supervisor, "enqueueDueAdPageRefreshJobs");
 const collectorEnqueue = functionBody(supervisor, "enqueueCollectorForPage");
@@ -380,6 +386,24 @@ test("Hermes source-backed gate does not treat one roster template as national c
     sourceBackedStateGate,
     /return\s+sourceTemplates\.length\s*>\s*0\s*;?/u,
     "a single configured URL template must not make every Australian state look crawlable",
+  );
+});
+
+test("Hermes census rehomes legal-entity agent rows to verified trading-name agencies", () => {
+  assert.match(
+    verifiedSubjectUpsert,
+    /findReusableAgentForVerifiedAgency\(agentNorm, agency\.state, verifiedAgencyRow\)[\s\S]*agency_id:\s*agencyId/u,
+    "agent upsert should reuse and rehome a same-name legal-entity/null-agent row instead of creating or leaving a split profile",
+  );
+  assert.match(
+    reusableAgentForVerifiedAgency,
+    /agents\?select=id,agency_id,agencies[\s\S]*!row\.agency_id \|\| isLegalEntityAliasAgency/u,
+    "reusable-agent lookup must consider null-agency and legal-entity agency rows",
+  );
+  assert.match(
+    legalEntityAliasAgency,
+    /legal_entity_name[\s\S]*existingName === verifiedLegalName[\s\S]*trading_names/u,
+    "legal-entity alias detection must compare DEMIRS legal entity and trading-name metadata",
   );
 });
 
@@ -1259,8 +1283,18 @@ test("Hermes active ad collector reconciles disappeared ads after successful cap
   );
   assert.match(
     collector,
-    /confirmed_absence[\s\S]*reconcileMissingObservedAds[\s\S]*seenExternalAdIds:\s*\[\]/u,
-    "confirmed empty captures should still advance the two-miss inactive confirmation rule",
+    /confirmed_absence[\s\S]*zeroCaptureTrusted[\s\S]*reconcileMissingObservedAds[\s\S]*seenExternalAdIds:\s*\[\]/u,
+    "trusted confirmed empty captures should still advance the two-miss inactive confirmation rule",
+  );
+  assert.match(
+    collector,
+    /confirmed_absence[\s\S]*isTrustedConfirmedZeroAdCapture[\s\S]*confirmed_absence_ignored[\s\S]*ad_collector_untrusted_zero_after_positive/u,
+    "untrusted fallback zero captures after prior evidence must be quarantined instead of reconciling ads",
+  );
+  assert.match(
+    trustedZeroAdCapture,
+    /sourceProvider === META_OFFICIAL_SOURCE_PROVIDER[\s\S]*observed_ads\?select=id[\s\S]*advertiser_page_id=eq\.\$\{encode\(advertiserPageId\)\}[\s\S]*return rows\.length === 0/u,
+    "only the official API, or a page with no prior observed ads, can prove zero ads",
   );
   assert.match(
     missingAdReconciliation,
@@ -1276,6 +1310,24 @@ test("Hermes active ad collector reconciles disappeared ads after successful cap
     collector.slice(collector.indexOf("if (outcome.status !== \"SUCCEEDED\")"), collector.indexOf("const checkedAt = now()")),
     /reconcileMissingObservedAds/u,
     "provider failures must not count as missing ads",
+  );
+});
+
+test("Hermes runtime ingest keeps active ad stop dates null", () => {
+  assert.match(
+    activeStatusForMetaAd,
+    /isActive === true[\s\S]*return "active"[\s\S]*isActive === false[\s\S]*return "inactive"[\s\S]*return "unknown"/u,
+    "runtime ingest must derive the same active/inactive/unknown states as the shared normaliser",
+  );
+  assert.match(
+    deliveryStoppedAtForMetaAd,
+    /activeStatus === "active"\) return null/u,
+    "runtime ingest must not persist provider stop timestamps for active ads",
+  );
+  assert.match(
+    ingestMetaAd,
+    /const activeStatus = activeStatusForMetaAd\(ad\)[\s\S]*active_status:\s*activeStatus[\s\S]*ad_delivery_stopped_at:\s*deliveryStoppedAtForMetaAd\(ad, activeStatus\)/u,
+    "observed_ads writes must use the active-status-aware stop-date helper",
   );
 });
 
