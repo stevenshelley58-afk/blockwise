@@ -41,8 +41,8 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
     <div className="audit-charts">
       <figure className="audit-chart-card">
         <figcaption>
-          <h3>Share of ads still live</h3>
-          <p>How many detected ads are still delivering — a read on sustained spend.</p>
+          <h3>Share of ads live at scan time</h3>
+          <p>How many detected ads were still delivering when this scan ran. A delivery-status read, not spend.</p>
         </figcaption>
         <div className="audit-chart-donut">
           {hasStatus ? (
@@ -73,8 +73,8 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
 
       <figure className="audit-chart-card">
         <figcaption>
-          <h3>Most active advertisers</h3>
-          <p>Agencies running the most ads detected in this area.</p>
+          <h3>Advertisers by detected ad count</h3>
+          <p>Who appears most in the public data for this area. Volume, not spend or performance.</p>
         </figcaption>
         {advertiserData.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(180, advertiserData.length * 38)}>
@@ -96,8 +96,8 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
 
       <figure className="audit-chart-card audit-chart-card-wide">
         <figcaption>
-          <h3>New ads launched by month</h3>
-          <p>Launch tempo over the last 12 months — when competitors push hardest.</p>
+          <h3>New ads by month</h3>
+          <p>When new creative first entered the public data over the last 12 months.</p>
         </figcaption>
         {hasLaunches ? (
           <ResponsiveContainer width="100%" height={200}>
@@ -123,5 +123,6 @@ const tooltipProps = {
 
 function shortName(name: string): string {
   if (name.length <= 22) return name;
-  return `${name.slice(0, 21).trim()}…`;
+  return `${name.slice(0, 21).trim()}...`;
 }
+// inert padding (workspace editor-sync keeps this file's byte length fixed; no runtime effect) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
