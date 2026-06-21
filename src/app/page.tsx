@@ -70,6 +70,7 @@ const HOW_CSS = `
 .lp .lp-how__s p{font-size:14px;line-height:1.5;color:var(--lp-body);margin-top:8px}
 @media (prefers-reduced-motion:reduce){.lp .lp-how-fig .bwx-bBlip{animation:none}}
 @media (max-width:760px){.lp .lp-how__steps{grid-template-columns:1fr;gap:16px}}
+@media (max-width:720px){.lp #radar{order:11}}
 `;
 
 const TABLE_ROWS = [
@@ -172,30 +173,6 @@ export default function HomePage() {
               Blockwise keeps the workflow in one place so teams can create local ads, approve the details,
               and understand results without juggling disconnected tools.
             </p>
-          </div>
-        </section>
-
-        <section id="radar" className="lp-section">
-          <div className="lp-shell">
-            <div className="lp-radar-top">
-              <div>
-                <p className="lp-eyebrow">Local Ad Radar</p>
-                <h2 className="lp-h2">What are your competitors running?</h2>
-                <p className="lp-lead">
-                  Search any market and see active real estate ads.
-                </p>
-              </div>
-              <div className="lp-radar-box">
-                <LandingAdRadarScan
-                  buttonLabel="Scan my market"
-                  initialNote="Start with Perth, WA or choose your suburb."
-                  initialValue="Perth, WA"
-                  placeholder="Enter city, agent, or brokerage"
-                  useBestGuess
-                />
-              </div>
-            </div>
-            <LandingRadarCards />
           </div>
         </section>
 
@@ -422,6 +399,30 @@ export default function HomePage() {
                 Book a walkthrough
               </CtaLink>
             </aside>
+          </div>
+        </section>
+
+        <section id="radar" className="lp-section lp-section-surface">
+          <div className="lp-shell">
+            <div className="lp-radar-top">
+              <div>
+                <p className="lp-eyebrow">Local Ad Radar</p>
+                <h2 className="lp-h2">What are your competitors running?</h2>
+                <p className="lp-lead">
+                  Search any market and see active real estate ads.
+                </p>
+              </div>
+              <div className="lp-radar-box">
+                <LandingAdRadarScan
+                  buttonLabel="Scan my market"
+                  initialNote="Start with Perth, WA or choose your suburb."
+                  initialValue="Perth, WA"
+                  placeholder="Enter city, agent, or brokerage"
+                  useBestGuess
+                />
+              </div>
+            </div>
+            <LandingRadarCards />
           </div>
         </section>
       </main>

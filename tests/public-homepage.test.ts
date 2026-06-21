@@ -76,7 +76,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
   const sectionOrder = [
     'className="lp-hero"',
     'id="problem"',
-    'id="radar"',
     'id="workflow"',
     'id="campaign-types"',
     'id="approval"',
@@ -84,6 +83,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
     'id="free-trial"',
     'id="managed-setup"',
     'id="faq"',
+    'id="radar"',
   ];
   let previousIndex = -1;
   for (const marker of sectionOrder) {
