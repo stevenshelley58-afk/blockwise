@@ -27,6 +27,7 @@ type LandingEvidenceSlabAdsProps = {
 
 const MIN_CARDS = 3;
 const MIN_CREATIVE_EDGE_PX = 240;
+const MAX_SLAB_CARDS = 4;
 const MAX_VISIBLE_LAYERS = 4; // front creative + 3 peeking behind it
 const SLAB_MODES: readonly SlabMode[] = ["fan", "scrub", "reveal"];
 const DEFAULT_MODE: SlabMode = "scrub";
@@ -108,7 +109,7 @@ export function LandingEvidenceSlabAds({
   limit = 7,
   mode: modeProp = DEFAULT_MODE,
 }: LandingEvidenceSlabAdsProps) {
-  const requestedLimit = Math.max(MIN_CARDS, Math.min(limit, 7));
+  const requestedLimit = Math.max(MIN_CARDS, Math.min(limit, MAX_SLAB_CARDS));
   const [state, setState] = useState<SlabState>({ status: "loading" });
   // Track the selection by stable card id, not position, so it stays pinned to
   // the same ad if the deck reindexes (e.g. a background creative fails to load).
