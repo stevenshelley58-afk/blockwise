@@ -1,17 +1,36 @@
 "use client";
 
 import { track } from "@vercel/analytics";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
-type AuditLeadFormProps = {
-  location: string;
-  signupHref: string;
+type Metrics = {
+  detected: number;
+  active: number;
+  advertisers: number;
+  topPlatform: string;
+  topFormat: string;
+  topAngles: string;
 };
 
-export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
+type AuditLeadFormProps = {
+  area: string;
+  label: string;
+  signupHref: string;
+  metrics: Metrics;
+  analytics: Record<string, string | number | boolean>;
+};
+
+export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: AuditLeadFormProps) {
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const started = useRef(false);
+
+  function onFirstInteraction() {
+    if (started.current) return;
+    started.current = true;
+    fireSafe("lead_form_started", analytics);
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,8 +44,14 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
       phone: String(form.get("phone") ?? "").trim(),
       goal: String(form.get("goal") ?? "").trim(),
       notes: String(form.get("notes") ?? "").trim(),
-      location,
+      location: label,
       source: "audit-plan",
+      detected_ads: metrics.detected,
+      active_ads: metrics.active,
+      advertisers: metrics.advertisers,
+      top_platform: metrics.topPlatform,
+      top_format: metrics.topFormat,
+      top_angles: metrics.topAngles,
       company_website: String(form.get("company_website") ?? ""),
     };
 
@@ -38,11 +63,7 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.error ?? "Could not send your plan.");
-      try {
-        track("audit_lead_submit", { market: location });
-      } catch {
-        // analytics best-effort
-      }
+      fireSafe("lead_form_submitted", { ...analytics, goal: payload.goal || "unspecified" });
       setDone(true);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong.");
@@ -54,15 +75,15 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
   if (done) {
     return (
       <div className="audit-lead-done">
-        <h3>Your {location} campaign plan is on the way.</h3>
+        <h3>Your {area} campaign plan is on the way.</h3>
         <p>Check your inbox shortly. Want to start building it now?</p>
-        <a className="lp-btn lp-btn-primary lp-btn-big" href={signupHref}>Start your free trial</a>
+        <a className="lp-btn lp-btn-primary lp-btn-big" href={signupHref} onClick={() => fireSafe("signup_clicked", analytics)}>Start your free trial</a>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} onFocusCapture={onFirstInteraction}>
       <div className="form-row">
         <label>
           Work email
@@ -103,9 +124,29 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
       />
       {error ? <p className="audit-lead-error">{error}</p> : null}
       <button className="lp-btn lp-btn-primary lp-btn-big lp-btn-wide" type="submit" disabled={submitting}>
-        {submitting ? "Sending..." : `Send my ${location} campaign plan`}
+        {submitting ? "Sending..." : `Send my ${area} campaign plan`}
       </button>
       <p className="fine-print">No spam. We email the plan and follow up about a trial or a 15-minute setup call.</p>
     </form>
   );
+}
+
+function fireSafe(event: string, props: Record<string, string | number | boolean>) {
+  try {
+    track(event, props);
+  } catch {
+    // analytics best-effort
+  }
+  if (typeof window === "undefined") return;
+  const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void };
+  try {
+    w.fbq?.("trackCustom", event, props);
+  } catch {
+    // pixel may be blocked
+  }
+  try {
+    w.gtag?.("event", event, props);
+  } catch {
+    // gtag may be absent
+  }
 }

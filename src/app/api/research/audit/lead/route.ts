@@ -17,6 +17,12 @@ const payloadSchema = z.object({
   goal: z.string().trim().max(60).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
   source: z.string().trim().max(40).optional().or(z.literal("")),
+  detected_ads: z.coerce.number().int().min(0).max(100000).optional(),
+  active_ads: z.coerce.number().int().min(0).max(100000).optional(),
+  advertisers: z.coerce.number().int().min(0).max(100000).optional(),
+  top_platform: z.string().trim().max(60).optional().or(z.literal("")),
+  top_format: z.string().trim().max(60).optional().or(z.literal("")),
+  top_angles: z.string().trim().max(200).optional().or(z.literal("")),
   company_website: z.string().max(0).optional().or(z.literal("")),
 });
 
@@ -69,8 +75,25 @@ export async function POST(request: NextRequest) {
   const notes = clean(parsed.data.notes);
   const source = clean(parsed.data.source) ?? "audit-pdf";
   const name = clean(parsed.data.name) ?? clean(parsed.data.agency) ?? "Audit lead";
+
+  const auditContext = [
+    parsed.data.detected_ads != null ? `${parsed.data.detected_ads} ads detected` : null,
+    parsed.data.active_ads != null ? `${parsed.data.active_ads} active` : null,
+    parsed.data.advertisers != null ? `${parsed.data.advertisers} advertisers` : null,
+    clean(parsed.data.top_platform) ? `platform ${clean(parsed.data.top_platform)}` : null,
+    clean(parsed.data.top_format) ? `format ${clean(parsed.data.top_format)}` : null,
+    clean(parsed.data.top_angles) ? `angles ${clean(parsed.data.top_angles)}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   const message =
-    [goal ? `Goal: ${goal}` : null, notes, location ? `Area: ${location}` : null]
+    [
+      goal ? `Goal: ${goal}` : null,
+      notes,
+      location ? `Area: ${location}` : null,
+      auditContext ? `Audit: ${auditContext}` : null,
+    ]
       .filter(Boolean)
       .join(" | ") || (location ? `Free ad audit - ${location}` : "Free ad audit");
 

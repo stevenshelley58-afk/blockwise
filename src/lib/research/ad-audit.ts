@@ -19,9 +19,11 @@ import { toPublicAdRadarCard, type PublicAdRadarCard } from "./public-ad-radar.t
  *
  * Aggregates scraped Meta Ad Library cards for a suburb + surrounding area into
  * the report shown on /audit: totals, longest-running creatives (the strongest
- * available signal an angle converts), top advertisers, and format / platform /
- * angle breakdowns. computeAuditStats is pure (unit-tested); buildAdAudit wraps
- * it with the Supabase query over research.v_customer_meta_ad_library_cards.
+ * available public signal an angle keeps running), top advertisers, and format
+ * / platform / angle breakdowns. Advertisers are first classified so only real
+ * estate advertisers feed the headline numbers. computeAuditStats is pure
+ * (unit-tested); buildAdAudit wraps it with the Supabase query over
+ * research.v_customer_meta_ad_library_cards.
  */
 
 const RESEARCH_SCHEMA = "research";
@@ -29,7 +31,7 @@ const CARD_VIEW = "v_customer_meta_ad_library_cards";
 const PER_FILTER_LIMIT = 250;
 const FETCH_CAP = 800;
 const MAX_SUBURB_FILTERS = 10;
-const TOP_ADVERTISERS = 8;
+const TOP_ADVERTISERS = 12;
 const TOP_ADS = 8;
 const TOP_CTAS = 6;
 const RECENT_WINDOW_DAYS = 30;
@@ -42,12 +44,25 @@ const IGNORED_AREA_TERMS = new Set([
 
 export type AuditCount = { label: string; count: number };
 
+export type RealEstateClass =
+  | "real_estate_agency"
+  | "real_estate_related"
+  | "non_real_estate"
+  | "unknown";
+
 export type AuditAdvertiser = {
   name: string;
   ads: number;
   active: number;
   activeRate: number;
   longestRunningDays: number;
+  topAngle: string | null;
+};
+
+export type ExcludedAdvertiser = {
+  name: string;
+  ads: number;
+  classification: RealEstateClass;
 };
 
 export type AuditTopAd = {
@@ -90,6 +105,7 @@ export type AdAuditResult = {
   generatedAt: string;
   stats: AdAuditStats;
   topAds: PublicAdRadarCard[];
+  excludedAdvertisers: ExcludedAdvertiser[];
 };
 
 type AreaFilter = { postcodes: string[]; suburbs: string[]; state: string | null };
@@ -119,24 +135,150 @@ export async function buildAdAudit(
       generatedAt: new Date(now).toISOString(),
       stats: computeAuditStats([], { now }),
       topAds: [],
+      excludedAdvertisers: [],
     };
   }
 
   const filter = areaFilterFromGuess(guess);
   const { rows, capped } = await fetchAreaRows(supabase, filter);
   const cards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
+  const { included, excludedAdvertisers } = partitionRealEstateCards(cards);
 
   return {
     location: {
       query: searchTerm,
       label: guess.label,
       state: guess.stateCode,
-      matched: cards.length > 0,
+      matched: included.length > 0,
     },
     generatedAt: new Date(now).toISOString(),
-    stats: computeAuditStats(cards, { now, capped }),
-    topAds: pickTopAds(cards, now, guess),
+    stats: computeAuditStats(included, { now, capped }),
+    topAds: pickTopAds(included, now, guess),
+    excludedAdvertisers,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Real-estate relevance classification
+// ---------------------------------------------------------------------------
+
+// Strong real-estate brand / generic tokens in an advertiser name => agency.
+const RE_AGENCY_NAME_TOKENS = [
+  "real estate", "realestate", "realty", "realtor", "estate agent", "estate agency",
+  "property partners", "property group", "property co", "property perth",
+  "ray white", "harcourts", "lj hooker", "l j hooker", "raine & horne", "raine and horne",
+  "belle property", "acton", "professionals", "century 21", "century21", "elders",
+  "mcgrath", "the agency", "barry plant", "jellis craig", "nelson alexander", "buxton",
+  "marshall white", "biggin", "stockdale", "hocking stuart", "o'brien real", "obrien real",
+  "one agency", "ouwens casserly", "harris real", "first national", "knight frank",
+  "colliers", "explore property", "@realty", "first home buyers",
+];
+
+// A standalone "property"/"properties" word in the name is treated as agency.
+const RE_PROPERTY_WORD = /\bpropert(?:y|ies)\b/;
+
+// Real-estate-adjacent names (finance, management, development) => related.
+const RE_RELATED_NAME_TOKENS = [
+  "buyers agent", "buyer's agent", "buyers agency", "buyer's agency", "buyers advocate",
+  "mortgage", "home loans", "finance broker", "conveyanc", "settlement agent",
+  "property management", "property manager", "developer", "developments",
+  "home builder", "first home",
+];
+
+// Clear non-real-estate categories. Deliberately uses tokens that do not show
+// up in property listing copy (avoids "cafe", "gym", "home" that appear in
+// listing location/feature descriptions).
+const HARD_NON_RE_TOKENS = [
+  "disability", "ndis", "sda ", "supported independent", "supported living",
+  "aged care", "nursing home", "retirement village", "child care", "childcare",
+  "early learning", "dentist", "dental clinic", "orthodontic", "physiotherapy",
+  "chiropractic", "podiatry", "veterinary", "vet clinic", "plumbing services",
+  "electrician", "roof repair", "barbershop", "hair salon", "nail salon",
+  "tattoo studio", "mosque", "pharmacy", "dental practice",
+];
+
+// Listing-intent phrases that mark an advertiser's ads as real estate even when
+// the name has no real-estate keyword (e.g. "Shellabears").
+const RE_TEXT_TOKENS = [
+  "for sale", "for lease", "just listed", "just sold", "now selling", "under offer",
+  "under contract", "off market", "off-market", "home open", "open home",
+  "open for inspection", "expressions of interest", "offers over", "offers above",
+  "price guide", "under application", "appraisal", "home worth", "property report",
+  "new listing", "sold by", "listed by", "proudly present", "for rent",
+  "property management",
+];
+const RE_TEXT_REGEX = /\b\d+\s*(?:bed|bath|car)\b|\bsqm\b|\bfloor\s?plan\b|\binspection times?\b/;
+
+/** Classify an advertiser from its display name plus its aggregated ad copy. */
+export function classifyAdvertiser(name: string, adText: string): RealEstateClass {
+  const lowerName = name.toLowerCase();
+  const full = `${lowerName} ${adText.toLowerCase()}`;
+
+  // A real-estate brand in the name wins over any stray non-RE keyword.
+  if (RE_AGENCY_NAME_TOKENS.some((token) => lowerName.includes(token)) || RE_PROPERTY_WORD.test(lowerName)) {
+    return "real_estate_agency";
+  }
+
+  if (HARD_NON_RE_TOKENS.some((token) => full.includes(token))) {
+    return "non_real_estate";
+  }
+
+  if (RE_RELATED_NAME_TOKENS.some((token) => lowerName.includes(token))) {
+    return "real_estate_related";
+  }
+
+  if (RE_TEXT_TOKENS.some((token) => full.includes(token)) || RE_TEXT_REGEX.test(full)) {
+    return "real_estate_related";
+  }
+
+  return "unknown";
+}
+
+export type RealEstatePartition = {
+  included: CustomerMetaAdLibraryCard[];
+  excludedAdvertisers: ExcludedAdvertiser[];
+};
+
+/**
+ * Partition cards into real-estate advertisers (agency or related) and the rest.
+ * Classification happens per advertiser over all of that advertiser's ad copy so
+ * an advertiser is wholly included or wholly excluded and the tables stay
+ * internally consistent with the headline numbers.
+ */
+export function partitionRealEstateCards(cards: CustomerMetaAdLibraryCard[]): RealEstatePartition {
+  const groups = new Map<string, { name: string; cards: CustomerMetaAdLibraryCard[]; text: string }>();
+
+  for (const card of cards) {
+    const name = advertiserName(card);
+    const key = name.toLowerCase();
+    const entry = groups.get(key) ?? { name, cards: [], text: "" };
+    entry.cards.push(card);
+    entry.text += ` ${advertiserText(card)}`;
+    groups.set(key, entry);
+  }
+
+  const included: CustomerMetaAdLibraryCard[] = [];
+  const excludedAdvertisers: ExcludedAdvertiser[] = [];
+
+  for (const entry of groups.values()) {
+    const classification = classifyAdvertiser(entry.name, entry.text);
+    if (classification === "real_estate_agency" || classification === "real_estate_related") {
+      included.push(...entry.cards);
+    } else {
+      excludedAdvertisers.push({ name: entry.name, ads: entry.cards.length, classification });
+    }
+  }
+
+  excludedAdvertisers.sort((a, b) => b.ads - a.ads);
+  return { included, excludedAdvertisers };
+}
+
+function advertiserName(card: CustomerMetaAdLibraryCard): string {
+  return (card.agencyName ?? card.pageName ?? "").trim() || "Unknown advertiser";
+}
+
+function advertiserText(card: CustomerMetaAdLibraryCard): string {
+  return [card.headline, card.body, card.description, card.cta].filter(Boolean).join(" ");
 }
 
 /** Pure aggregation over an already-deduped set of cards. No I/O. */
@@ -174,16 +316,21 @@ export function computeAuditStats(
 }
 
 function aggregateAdvertisers(cards: CustomerMetaAdLibraryCard[], now: number): AuditAdvertiser[] {
-  const map = new Map<string, { name: string; ads: number; active: number; longest: number }>();
+  const map = new Map<
+    string,
+    { name: string; ads: number; active: number; longest: number; angles: Map<string, number> }
+  >();
 
   for (const card of cards) {
-    const name = (card.agencyName ?? card.pageName ?? "").trim() || "Unknown advertiser";
+    const name = advertiserName(card);
     const key = name.toLowerCase();
-    const entry = map.get(key) ?? { name, ads: 0, active: 0, longest: 0 };
+    const entry = map.get(key) ?? { name, ads: 0, active: 0, longest: 0, angles: new Map<string, number>() };
     entry.ads += 1;
     if (card.activeStatus === "active") entry.active += 1;
     const days = daysRunning(card, now);
     if (days !== null && days > entry.longest) entry.longest = days;
+    const angle = inferAngle(card);
+    if (angle) entry.angles.set(angle, (entry.angles.get(angle) ?? 0) + 1);
     map.set(key, entry);
   }
 
@@ -194,8 +341,21 @@ function aggregateAdvertisers(cards: CustomerMetaAdLibraryCard[], now: number): 
       active: entry.active,
       activeRate: entry.ads > 0 ? entry.active / entry.ads : 0,
       longestRunningDays: entry.longest,
+      topAngle: topLabel(entry.angles),
     }))
     .sort((a, b) => b.ads - a.ads || b.longestRunningDays - a.longestRunningDays);
+}
+
+function topLabel(counts: Map<string, number>): string | null {
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [label, count] of counts) {
+    if (count > bestCount) {
+      best = label;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 function longestRunningAds(cards: CustomerMetaAdLibraryCard[], now: number): AuditTopAd[] {
