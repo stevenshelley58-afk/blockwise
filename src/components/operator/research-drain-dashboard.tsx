@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { DrainStage, DrainStatus } from "@/lib/research/drain-status";
+import type { DrainAdPreview, DrainStage, DrainStatus } from "@/lib/research/drain-status";
 
 type LoadState = "idle" | "loading" | "error";
 
@@ -146,6 +146,8 @@ export function ResearchDrainDashboard({ initialStatus }: { initialStatus: Drain
           </tbody>
         </table>
       </section>
+
+      <AdPreviewTable ads={status.adPreviews} sampledAt={status.sampledAt} />
     </main>
   );
 }
@@ -190,6 +192,113 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: "
     <div className="drain-metric">
       <span>{label}</span>
       <b className={tone ? `tone-${tone}` : undefined}>{value}</b>
+    </div>
+  );
+}
+
+function AdPreviewTable({ ads, sampledAt }: { ads: DrainAdPreview[]; sampledAt: string }) {
+  return (
+    <section className="drain-panel drain-ad-panel">
+      <div className="drain-panel-head">
+        <div>
+          <h2>Latest Ads</h2>
+          <p className="drain-note">Recent saved ad cards with renderable media previews.</p>
+        </div>
+        <span>{ads.length}</span>
+      </div>
+      <div className="drain-ad-gridwrap">
+        <table className="drain-table drain-ad-table">
+          <thead>
+            <tr>
+              <th>Preview</th>
+              <th>Advertiser</th>
+              <th>Status</th>
+              <th>Copy</th>
+              <th>Area</th>
+              <th>Last Seen</th>
+              <th>Destination</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ads.map((ad) => (
+              <tr key={ad.id}>
+                <td><AdMediaPreview ad={ad} /></td>
+                <td>
+                  <div className="drain-ad-primary">{ad.pageName}</div>
+                  <div className="drain-ad-meta">{ad.libraryId ? `Library ${ad.libraryId}` : shortId(ad.id)}</div>
+                </td>
+                <td>
+                  <span className={`drain-pill ${ad.activeStatus === "active" ? "ok" : ad.activeStatus === "inactive" ? "warn" : "info"}`}>
+                    {ad.activeStatus}
+                  </span>
+                  {ad.platforms.length > 0 ? (
+                    <div className="drain-ad-meta">{ad.platforms.slice(0, 2).join(", ")}</div>
+                  ) : null}
+                </td>
+                <td>
+                  <div className="drain-ad-copy">{ad.headline ?? ad.body ?? "No copy captured"}</div>
+                  {ad.headline && ad.body ? <div className="drain-ad-meta">{ad.body}</div> : null}
+                </td>
+                <td>
+                  <div>{[ad.suburb, ad.state].filter(Boolean).join(", ") || "Unknown"}</div>
+                  {ad.postcode ? <div className="drain-ad-meta">{ad.postcode}</div> : null}
+                </td>
+                <td>
+                  <div>{formatRelative(ad.lastSeenAt, sampledAt)}</div>
+                  {ad.startedAt ? <div className="drain-ad-meta">started {formatRelative(ad.startedAt, sampledAt)}</div> : null}
+                </td>
+                <td>
+                  {ad.destinationUrl ? (
+                    <a className="drain-ad-link" href={ad.destinationUrl} target="_blank" rel="noreferrer">
+                      {ad.destinationDomain ?? "Open"}
+                    </a>
+                  ) : (
+                    <span className="drain-ad-meta">none</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {ads.length === 0 ? (
+              <tr>
+                <td colSpan={7}>No saved ads are available yet.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function AdMediaPreview({ ad }: { ad: DrainAdPreview }) {
+  const media = ad.media[0] ?? null;
+  if (!media) {
+    return (
+      <div className="drain-ad-preview empty">
+        <span>No media</span>
+      </div>
+    );
+  }
+
+  if (media.kind === "video") {
+    return (
+      <div className="drain-ad-preview">
+        {media.posterUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={media.posterUrl} alt="" loading="lazy" />
+        ) : (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={media.url} muted preload="metadata" />
+        )}
+        <span className="drain-ad-video-badge">Video</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="drain-ad-preview">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={media.url} alt="" loading="lazy" />
     </div>
   );
 }
@@ -476,6 +585,104 @@ const DRAIN_STYLES = `
 }
 .drain-table td span {
   color: #8a95a5;
+}
+.drain-ad-panel {
+  margin-top: 14px;
+}
+.drain-ad-gridwrap {
+  overflow: auto;
+  border: 1px solid #edf1f5;
+  border-radius: 6px;
+  max-height: 620px;
+}
+.drain-ad-table {
+  min-width: 1080px;
+  font-size: 12.5px;
+}
+.drain-ad-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f9fafb;
+  border-top: 0;
+}
+.drain-ad-table td {
+  max-width: 320px;
+}
+.drain-ad-primary {
+  color: #17202c;
+  font-weight: 800;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drain-ad-meta {
+  margin-top: 3px;
+  color: #778396;
+  font-size: 11.5px;
+  line-height: 1.35;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.drain-ad-copy {
+  color: #17202c;
+  font-weight: 700;
+  line-height: 1.35;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.drain-ad-link {
+  color: #123e75;
+  font-weight: 800;
+  text-decoration: none;
+}
+.drain-ad-link:hover {
+  text-decoration: underline;
+}
+.drain-ad-preview {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #dfe5ec;
+  border-radius: 6px;
+  background: #eef2f6;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.drain-ad-preview img,
+.drain-ad-preview video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.drain-ad-preview.empty {
+  color: #778396;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.drain-ad-video-badge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  border-radius: 4px;
+  background: rgba(23, 32, 44, .82);
+  color: #fff !important;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 5px;
+  text-transform: uppercase;
 }
 @media (max-width: 1000px) {
   .drain-hero,

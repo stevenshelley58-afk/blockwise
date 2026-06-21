@@ -18,6 +18,7 @@ const coverageDefectDedupeMigration = "supabase/migrations/202606120004_coverage
 const mediaAssetsDedupeMigration = "supabase/migrations/202606150002_dedupe_media_assets.sql";
 const mediaAssetsContentHashDedupeMigration = "supabase/migrations/202606150003_dedupe_media_asset_content_hash.sql";
 const adAttributionLinksMigration = "supabase/migrations/202606200004_research_ad_attribution_links.sql";
+const drainWorkQueueIndexesMigration = "supabase/migrations/20260621061000_research_drain_work_queue_indexes.sql";
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");
@@ -355,6 +356,22 @@ test("work queue migration allows stale blocked jobs to be archived", () => {
   assert.match(sql, /alter table research\.work_queue\s+add constraint work_queue_status_check/i);
   assert.match(sql, /status in \('pending', 'claimed', 'complete', 'failed', 'blocked', 'archived'\)/i);
   assert.doesNotMatch(sql, /drop table/i);
+});
+
+test("drain dashboard migration indexes exact work queue counts", () => {
+  const sql = readFileSync(drainWorkQueueIndexesMigration, "utf8");
+
+  assert.match(
+    sql,
+    /create index if not exists work_queue_drain_open_idx[\s\S]*on research\.work_queue\s*\(\s*job_type,\s*status,\s*created_at\s*\)[\s\S]*where status in \('pending', 'claimed', 'failed', 'blocked'\)/i,
+    "open first-fill gate counts must stay indexed and exact",
+  );
+  assert.match(
+    sql,
+    /create index if not exists work_queue_drain_complete_idx[\s\S]*on research\.work_queue\s*\(\s*job_type,\s*completed_at desc,\s*created_at\s*\)[\s\S]*where status = 'complete'/i,
+    "completed progress counts must use a narrow partial index",
+  );
+  assert.doesNotMatch(sql, /drop\s+/i);
 });
 
 test("first-tester cleanup archives dead adstudio imports and trims unused operator views", () => {

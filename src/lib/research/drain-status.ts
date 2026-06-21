@@ -1,4 +1,9 @@
 import { createSupabaseServiceClient } from "../supabase/service.ts";
+import {
+  CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
+  normaliseCustomerMetaAdLibraryCard,
+  type CustomerMetaAdLibraryCardRow,
+} from "./customer-meta-card.ts";
 
 export const FIRST_FILL_JOB_TYPES = [
   "blockwise-page-resolver",
@@ -12,6 +17,7 @@ export const FIRST_FILL_START_TS =
 
 const OPEN_STATUSES = ["pending", "claimed", "failed", "blocked"] as const;
 const STALE_PAGE_INTERVAL_MINUTES = 360;
+const AD_PREVIEW_LIMIT = 24;
 
 export type DrainJobType = (typeof FIRST_FILL_JOB_TYPES)[number];
 export type DrainOpenStatus = (typeof OPEN_STATUSES)[number];
@@ -63,6 +69,7 @@ export type DrainStatus = {
     accountLimitUsd: number | null;
   };
   blockers: DrainBlocker[];
+  adPreviews: DrainAdPreview[];
 };
 
 type ResearchClient = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
@@ -93,6 +100,28 @@ type DrainBlocker = {
   reason: string | null;
   error: string | null;
   updatedAt: string | null;
+};
+
+export type DrainAdPreview = {
+  id: string;
+  libraryId: string | null;
+  pageName: string;
+  activeStatus: "active" | "inactive" | "unknown";
+  startedAt: string | null;
+  lastSeenAt: string | null;
+  headline: string | null;
+  body: string | null;
+  destinationUrl: string | null;
+  destinationDomain: string | null;
+  postcode: string | null;
+  suburb: string | null;
+  state: string | null;
+  platforms: string[];
+  media: Array<{
+    kind: "image" | "video";
+    url: string;
+    posterUrl: string | null;
+  }>;
 };
 
 type RuntimeSettingRow = {
@@ -159,11 +188,12 @@ export async function loadResearchDrainStatus(supabase = createSupabaseServiceCl
   const sampledAt = new Date().toISOString();
   const completedSince = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  const [stages, freshness, paidCapture, blockers] = await Promise.all([
+  const [stages, freshness, paidCapture, blockers, adPreviews] = await Promise.all([
     loadDrainStages(research, completedSince),
     loadFreshness(research),
     loadPaidCaptureState(research),
     loadBlockers(research),
+    loadAdPreviews(research),
   ]);
 
   return {
@@ -174,6 +204,7 @@ export async function loadResearchDrainStatus(supabase = createSupabaseServiceCl
     freshness,
     paidCapture,
     blockers,
+    adPreviews,
   };
 }
 
@@ -397,6 +428,44 @@ async function loadBlockers(research: ResearchClient): Promise<DrainBlocker[]> {
   }));
 }
 
+async function loadAdPreviews(research: ResearchClient): Promise<DrainAdPreview[]> {
+  const { data, error } = await research
+    .from("v_customer_meta_ad_library_cards")
+    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
+    .limit(AD_PREVIEW_LIMIT);
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as CustomerMetaAdLibraryCardRow[]).map(normaliseDrainAdPreview);
+}
+
+export function normaliseDrainAdPreview(row: CustomerMetaAdLibraryCardRow): DrainAdPreview {
+  const card = normaliseCustomerMetaAdLibraryCard(row);
+  const destinationUrl = card.destinationUrl;
+
+  return {
+    id: card.id,
+    libraryId: card.libraryId,
+    pageName: card.pageName,
+    activeStatus: card.activeStatus,
+    startedAt: card.startedAt,
+    lastSeenAt: card.lastSeenAt,
+    headline: card.headline,
+    body: card.body,
+    destinationUrl,
+    destinationDomain: destinationUrl ? displayDomain(destinationUrl) : null,
+    postcode: card.postcode,
+    suburb: card.suburb,
+    state: card.state,
+    platforms: card.platforms,
+    media: card.media.map((media) => ({
+      kind: media.kind,
+      url: media.url,
+      posterUrl: media.posterUrl,
+    })),
+  };
+}
+
 async function exactCount(query: any): Promise<number> {
   const { count, error } = await query;
   if (error) throw error;
@@ -418,4 +487,12 @@ function roundCurrency(value: number): number {
 
 function paidCaptureSetting(suffix: string): string {
   return `${PAID_CAPTURE_SETTING_PREFIX}_${suffix}`;
+}
+
+function displayDomain(value: string): string | null {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, "");
+  } catch {
+    return null;
+  }
 }
