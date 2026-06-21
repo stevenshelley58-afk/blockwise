@@ -288,7 +288,7 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
-              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
+              <h2 className="lp-h2 lp-h2-light">Try Blockwise free for 7 days.</h2>
               <p className="lp-lead lp-lead-light">
                 No card required. Review your ads and connect your ad account
                 when you are ready for final setup.
@@ -299,7 +299,6 @@ export default function HomePage() {
             </div>
             <div className="lp-trial-grid">
               <div className="lp-trial-item"><strong>7 days</strong><span>Full access from the minute you confirm your email.</span></div>
-              <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
