@@ -422,6 +422,63 @@ const FLOW_CSS = `
 }
 `;
 
+/** Scoped styles for the #campaign-types "Done for you" comparison (lp-dfy-*). */
+const DFY_CSS = `
+.lp-dfy { background: #f6f8fc; }
+.lp-dfy-card {
+  background: var(--surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 28px;
+  box-shadow: var(--lp-shadow-premium);
+  padding: clamp(28px, 5vw, 64px);
+}
+.lp-dfy-head { margin-bottom: 44px; }
+.lp-dfy-compare {
+  display: grid; grid-template-columns: 1fr 1.08fr;
+  border: 1px solid var(--lp-border); border-radius: 24px; overflow: hidden;
+  background: var(--surface);
+}
+.lp-dfy-panel { padding: 28px; }
+.lp-dfy-before { background: #fbfcff; border-right: 1px solid var(--lp-border); }
+.lp-dfy-after { background: linear-gradient(180deg, #f6f9ff 0%, #ffffff 100%); }
+.lp-dfy-panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin-bottom: 18px;
+}
+.lp-dfy-panel-head h3 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.lp-dfy-badge {
+  border-radius: 999px; padding: 7px 11px; font-size: 12px; line-height: 1;
+  font-weight: 700; white-space: nowrap;
+}
+.lp-dfy-badge-muted { background: var(--surface-subtle); color: var(--lp-muted); }
+.lp-dfy-badge-blue { background: #e8f1ff; color: var(--lp-primary); }
+.lp-dfy-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.lp-dfy-list li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; border: 1px solid var(--lp-border); border-radius: 14px;
+  background: var(--surface); color: var(--lp-muted);
+  font-size: 14.5px; font-weight: 550; line-height: 1.5;
+}
+.lp-dfy-list-after li { color: #344256; border-color: #dce8ff; }
+.lp-dfy-list li strong { color: var(--lp-ink); font-weight: 700; }
+.lp-dfy-x, .lp-dfy-tick {
+  width: 18px; height: 18px; border-radius: 999px;
+  display: inline-grid; place-items: center;
+  font-size: 12px; font-weight: 800; flex: 0 0 auto; margin-top: 1px;
+}
+.lp-dfy-x { background: #fff1f2; color: #b45353; }
+.lp-dfy-tick { background: #e8f3ff; color: var(--lp-primary); }
+.lp-dfy-cta { display: flex; justify-content: center; margin-top: 34px; }
+@media (max-width: 900px) {
+  .lp-dfy-compare { grid-template-columns: 1fr; }
+  .lp-dfy-before { border-right: 0; border-bottom: 1px solid var(--lp-border); }
+}
+@media (max-width: 520px) {
+  .lp-dfy-panel { padding: 20px; }
+  .lp-dfy-panel-head { flex-direction: column; align-items: flex-start; }
+}
+`;
+
 const TABLE_ROWS = [
   { name: "Mt Lawley Appraisal", status: "Active", clicks: "247", leads: "18", spend: "$324" },
   { name: "Subiaco Just Listed", status: "Active", clicks: "182", leads: "11", spend: "$210" },
@@ -609,47 +666,57 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="campaign-types" className="lp-section">
+        <section id="campaign-types" className="lp-section lp-dfy" aria-labelledby="dfy-title">
+          <style dangerouslySetInnerHTML={{ __html: DFY_CSS }} />
           <div className="lp-shell">
-            <div className="lp-center-head">
-              <p className="lp-eyebrow">Done for you</p>
-              <h2 className="lp-h2">We build your real estate ads for you.</h2>
-              <p className="lp-lead">
-                Blockwise writes the ads, builds the lead form and sets everything up. You just
-                approve what goes live, then export the package for final setup in your own ad account.
-              </p>
-            </div>
-            <div className="lp-features">
-              <Feature
-                title="Facebook and Instagram ads"
-                copy="Headlines, primary text, descriptions and creative variants — written for you, ready to run."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z" /></svg>}
-              />
-              <Feature
-                title="Lead forms"
-                copy="Questions, privacy details and thank-you screen, built and matched to your goal."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h10M7 16h6" /></svg>}
-              />
-              <Feature
-                title="Proven local angles"
-                copy="Just Listed, Open Home, Just Sold, Free Appraisal, Buyer Demand and Market Update."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>}
-              />
-              <Feature
-                title="Budget and schedule"
-                copy="We set the spend and timing. Ad spend runs through your own ad account."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg>}
-              />
-              <Feature
-                title="Approval checks"
-                copy="We flag common review issues around claims, pricing language and brand fit before sign off."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></svg>}
-              />
-              <Feature
-                title="Live reporting"
-                copy="Track impressions, clicks, leads, spend and status inside Blockwise."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><rect x="7" y="12" width="3" height="5" /><rect x="12" y="8" width="3" height="9" /><rect x="17" y="5" width="3" height="12" /></svg>}
-              />
+            <div className="lp-dfy-card">
+              <div className="lp-center-head lp-dfy-head">
+                <p className="lp-eyebrow">Done for you</p>
+                <h2 className="lp-h2" id="dfy-title">Approve the ad. Skip the setup work.</h2>
+                <p className="lp-lead">
+                  Blockwise prepares the copy, creative, lead form, budget and reporting. You check
+                  what goes live before anything spends, then export the package for final setup in
+                  your own ad account.
+                </p>
+              </div>
+
+              <div className="lp-dfy-compare">
+                <div className="lp-dfy-panel lp-dfy-before">
+                  <div className="lp-dfy-panel-head">
+                    <h3>Doing it yourself</h3>
+                    <span className="lp-dfy-badge lp-dfy-badge-muted">Manual</span>
+                  </div>
+                  <ul className="lp-dfy-list">
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Write the ad from scratch</span></li>
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Make the image fit each placement</span></li>
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Build the lead form</span></li>
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Set the budget and timing</span></li>
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Check claims, details and brand fit</span></li>
+                    <li><span className="lp-dfy-x" aria-hidden>×</span><span>Dig through Ads Manager for results</span></li>
+                  </ul>
+                </div>
+
+                <div className="lp-dfy-panel lp-dfy-after">
+                  <div className="lp-dfy-panel-head">
+                    <h3>With Blockwise</h3>
+                    <span className="lp-dfy-badge lp-dfy-badge-blue">Ready to approve</span>
+                  </div>
+                  <ul className="lp-dfy-list lp-dfy-list-after">
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Ad copy prepared</strong> for the lead goal</span></li>
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Creative fitted</strong> to Facebook and Instagram</span></li>
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Lead form built</strong> with the right next step</span></li>
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Budget and timing set</strong> before approval</span></li>
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Review issues flagged</strong> before sign-off</span></li>
+                    <li><span className="lp-dfy-tick" aria-hidden>✓</span><span><strong>Results shown</strong> in Blockwise</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="lp-dfy-cta">
+                <CtaLink location="done-for-you-compare" href="/signup" className="lp-btn lp-btn-primary lp-btn-big">
+                  Get your first ad prepared
+                </CtaLink>
+              </div>
             </div>
           </div>
         </section>
