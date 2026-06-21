@@ -165,8 +165,8 @@ export function LandingEvidenceSlabAds({
         }
       }
 
+      const usable = await filterUsableCreativeCards(cards.slice(0, requestedLimit));
       if (!active || controller.signal.aborted) return;
-      const usable = cards.slice(0, requestedLimit);
       setState(usable.length > 0 ? { status: "ready", cards: usable } : { status: "empty" });
     }
 
@@ -423,6 +423,35 @@ function creativeUrl(card: PublicAdRadarCard): string | null {
 
 function hasCreative(card: PublicAdRadarCard): boolean {
   return creativeUrl(card) !== null;
+}
+
+async function filterUsableCreativeCards(cards: PublicAdRadarCard[]): Promise<PublicAdRadarCard[]> {
+  const settled = await Promise.all(
+    cards.map(async (card) => {
+      const creative = creativeUrl(card);
+      if (!creative) return null;
+      return (await hasUsableCreativeEdge(creative)) ? card : null;
+    }),
+  );
+  return settled.filter((card): card is PublicAdRadarCard => card !== null);
+}
+
+function hasUsableCreativeEdge(src: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const timeout = window.setTimeout(() => resolve(true), 2500);
+    const finish = (ok: boolean) => {
+      window.clearTimeout(timeout);
+      resolve(ok);
+    };
+
+    image.onload = () => {
+      const smallestEdge = Math.min(image.naturalWidth, image.naturalHeight);
+      finish(smallestEdge === 0 || smallestEdge >= MIN_CREATIVE_EDGE_PX);
+    };
+    image.onerror = () => finish(false);
+    image.src = src;
+  });
 }
 
 function viewportProgress(element: HTMLElement, viewport: number): number {
