@@ -420,6 +420,328 @@ const FLOW_CSS = `
     transition-duration: 0.001ms !important;
   }
 }
+/* Attached compact workflow replacement. */
+.lp-flow {
+  --flow-ink: #051126;
+  --flow-muted: #657187;
+  --flow-line: #dfe7f2;
+  --flow-blue: #4e7ce7;
+  --flow-teal: #5bbdb5;
+  --flow-purple: #7658ea;
+  background: #ffffff;
+  padding: 110px 0 102px;
+}
+.lp-flow .flow-shell {
+  width: min(1536px, calc(100% - 96px));
+  margin: 0 auto;
+}
+.lp-flow .flow-intro {
+  margin: 0 auto;
+  max-width: 800px;
+  text-align: center;
+}
+.lp-flow .flow-h2 {
+  margin: 0;
+  max-width: none;
+  color: var(--flow-ink);
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-align: center;
+}
+.lp-flow .flow-h2 span { display: block; }
+.lp-flow .flow-sub {
+  margin: 26px auto 0;
+  max-width: 770px;
+  color: var(--flow-muted);
+  font-size: 24px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: center;
+}
+.lp-flow .flow-panel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 402px;
+  margin-top: 72px;
+  overflow: hidden;
+  border: 1px solid var(--flow-line);
+  border-radius: 34px;
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 46%, #f6f3ff 100%);
+  box-shadow: none;
+}
+.lp-flow .flow-track {
+  position: relative;
+  width: min(1120px, 78%);
+  min-height: 222px;
+}
+.lp-flow .flow-path {
+  position: absolute;
+  top: 58px;
+  right: 110px;
+  left: 98px;
+  height: 132px;
+  overflow: visible;
+}
+.lp-flow .flow-radar {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 204px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 22px 54px rgba(35, 58, 92, 0.11);
+}
+.lp-flow .flow-radar::before,
+.lp-flow .flow-radar::after,
+.lp-flow .flow-radar-ring {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(91, 189, 181, 0.28);
+}
+.lp-flow .flow-radar::before { inset: 16px; }
+.lp-flow .flow-radar::after { inset: 48px; }
+.lp-flow .flow-radar-ring { inset: 76px; }
+.lp-flow .flow-radar-sweep {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: conic-gradient(from -46deg, rgba(91, 189, 181, 0.3) 0 44deg, transparent 45deg 360deg);
+}
+.lp-flow .flow-radar-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6c95e7;
+}
+.lp-flow .flow-radar-dot-one { top: 32px; left: 116px; }
+.lp-flow .flow-radar-dot-two { top: 108px; left: 36px; }
+.lp-flow .flow-radar-core {
+  position: absolute;
+  top: 96px;
+  left: 96px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--flow-teal);
+}
+.lp-flow .flow-prepared-card {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  width: 144px;
+  min-height: 144px;
+  transform: translateX(-50%);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(31, 52, 83, 0.12);
+  padding: 18px 20px;
+}
+.lp-flow .flow-prepared-creative {
+  height: 42px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #5b8bf1, #3468d8);
+}
+.lp-flow .flow-prepared-line {
+  height: 7px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #dfe4ec;
+}
+.lp-flow .flow-prepared-line-short { width: 68%; }
+.lp-flow .flow-ready-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 59px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--flow-teal);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 10px;
+}
+.lp-flow .flow-node-dot {
+  position: absolute;
+  right: 312px;
+  top: 142px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--flow-teal);
+}
+.lp-flow .flow-results-card {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 240px;
+  min-height: 156px;
+  border-radius: 21px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(31, 52, 83, 0.13);
+  padding: 20px 22px 18px;
+}
+.lp-flow .flow-results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.lp-flow .flow-results-label {
+  color: #8a93a4;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.lp-flow .flow-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #429d66;
+  font-size: 12px;
+  font-weight: 800;
+}
+.lp-flow .flow-live::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4da66b;
+}
+.lp-flow .flow-results-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 17px;
+}
+.lp-flow .flow-result + .flow-result {
+  border-left: 1px solid #e6ebf3;
+  padding-left: 20px;
+}
+.lp-flow .flow-result-number {
+  display: block;
+  color: #050a16;
+  font-size: 40px;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.lp-flow .flow-result-label {
+  display: block;
+  margin-top: 6px;
+  color: #727b8d;
+  font-size: 14px;
+  line-height: 1.15;
+}
+.lp-flow .flow-sparkline {
+  display: block;
+  width: 154px;
+  height: 24px;
+  margin-top: 10px;
+}
+.lp-flow .flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px;
+  margin-top: 38px;
+}
+.lp-flow .flow-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 15px;
+}
+.lp-flow .flow-step > div { text-align: left; }
+.lp-flow .flow-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1;
+  box-shadow: none;
+}
+.lp-flow .flow-num-blue { background: var(--flow-blue); }
+.lp-flow .flow-num-teal { background: var(--flow-teal); }
+.lp-flow .flow-num-purple { background: var(--flow-purple); }
+.lp-flow .flow-step h3 {
+  margin: 2px 0 12px;
+  color: var(--flow-ink);
+  font-size: 25px;
+  font-weight: 850;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+.lp-flow .flow-step p {
+  margin: 0;
+  color: #263653;
+  font-size: 22px;
+  line-height: 1.35;
+}
+@media (max-width: 1100px) {
+  .lp-flow .flow-shell { width: min(100% - 48px, 960px); }
+  .lp-flow .flow-panel { min-height: 360px; }
+  .lp-flow .flow-track { width: min(920px, 88%); }
+  .lp-flow .flow-radar { width: 176px; top: 30px; }
+  .lp-flow .flow-prepared-card { width: 132px; min-height: 132px; top: 60px; }
+  .lp-flow .flow-results-card { width: 216px; }
+  .lp-flow .flow-node-dot { right: 276px; }
+}
+@media (max-width: 860px) {
+  .lp-flow { padding: 70px 0 78px; }
+  .lp-flow .flow-shell { width: min(100% - 32px, 680px); }
+  .lp-flow .flow-intro,
+  .lp-flow .flow-h2,
+  .lp-flow .flow-sub { text-align: left; }
+  .lp-flow .flow-h2 { font-size: 34px; line-height: 1.18; }
+  .lp-flow .flow-sub { font-size: 18px; margin-top: 20px; }
+  .lp-flow .flow-panel {
+    min-height: 0;
+    margin-top: 36px;
+    padding: 30px 20px;
+    border-radius: 26px;
+    place-items: stretch;
+  }
+  .lp-flow .flow-track {
+    display: grid;
+    width: 100%;
+    min-height: 0;
+    gap: 18px;
+    justify-items: center;
+  }
+  .lp-flow .flow-path,
+  .lp-flow .flow-node-dot { display: none; }
+  .lp-flow .flow-radar,
+  .lp-flow .flow-prepared-card,
+  .lp-flow .flow-results-card {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    transform: none;
+  }
+  .lp-flow .flow-radar { width: 180px; }
+  .lp-flow .flow-steps { grid-template-columns: 1fr; gap: 24px; margin-top: 32px; }
+  .lp-flow .flow-step p { font-size: 18px; }
+}
+@media (max-width: 520px) {
+  .lp-flow .flow-h2 { font-size: 30px; }
+  .lp-flow .flow-h2 span { display: inline; }
+  .lp-flow .flow-h2 span + span::before { content: " "; }
+  .lp-flow .flow-results-card { width: 100%; max-width: 240px; }
+  .lp-flow .flow-step h3 { font-size: 22px; }
+}
 `;
 
 const TABLE_ROWS = [
@@ -482,129 +804,94 @@ export default function HomePage() {
 
         <section id="workflow" className="lp-section lp-flow" aria-labelledby="flow-title">
           <style dangerouslySetInnerHTML={{ __html: FLOW_CSS }} />
-          <div className="lp-shell">
-            <p className="flow-kicker">Meta ads for real estate agents</p>
-            <h2 id="flow-title" className="flow-h2">
-              Too much time is wasted on ads.
-              <br />
-              Not enough time is spent with clients.
-            </h2>
-            <p className="flow-sub">
-              Blockwise handles the setup, creative, approvals and updates so agents can stay out of
-              Ads Manager.
-            </p>
+          <div className="flow-shell">
+            <div className="flow-intro">
+              <h2 id="flow-title" className="flow-h2">
+                <span>Too much time is wasted on ads.</span>
+                <span>Not enough time is spent doing</span>
+                <span>the work that actually matters.</span>
+              </h2>
+              <p className="flow-sub">
+                Blockwise handles the ad work for you. Approve what goes live,
+                receive updates, and focus on your clients.
+              </p>
+            </div>
 
-            <div className="flow-panel">
-              <div className="flow-workflow">
-                <div className="flow-col">
-                  <p className="flow-zone-title">Ad work agents get stuck doing</p>
-                  <div className="flow-task-stack" aria-label="Manual ad tasks">
-                    <article className="flow-task-card">
-                      <strong>Pick suburb audience</strong>
-                      <span>Meta targeting choices</span>
-                      <span className="flow-warn">Needs review</span>
-                    </article>
-                    <article className="flow-task-card">
-                      <strong>Write seller lead copy</strong>
-                      <span>Hooks, headline, CTA</span>
-                      <span className="flow-warn">Draft again</span>
-                    </article>
-                    <article className="flow-task-card">
-                      <strong>Resize listing image</strong>
-                      <span>Feed, story, reels</span>
-                      <span className="flow-warn">Wrong size</span>
-                    </article>
-                    <article className="flow-task-card">
-                      <strong>Set lead form questions</strong>
-                      <span>Contact, suburb, intent</span>
-                      <span className="flow-warn">Not ready</span>
-                    </article>
-                    <article className="flow-task-card">
-                      <strong>Send vendor update</strong>
-                      <span>Spend, leads, result</span>
-                      <span className="flow-warn">Still pending</span>
-                    </article>
-                    <span className="flow-arrow" aria-hidden="true" />
+            <div className="flow-panel" aria-hidden="true">
+              <div className="flow-track">
+                <svg className="flow-path" viewBox="0 0 900 132" preserveAspectRatio="none" focusable="false">
+                  <defs>
+                    <linearGradient id="workflow-line-gradient" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stopColor="#5a9eea" />
+                      <stop offset="52%" stopColor="#5bbdb5" />
+                      <stop offset="100%" stopColor="#6c95e7" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 66H900" fill="none" stroke="#d9e1ee" strokeDasharray="2 12" strokeLinecap="round" strokeWidth="2" />
+                  <path d="M12 66C210 -4 314 19 450 66C585 113 684 129 888 66" fill="none" stroke="url(#workflow-line-gradient)" strokeLinecap="round" strokeWidth="8" />
+                </svg>
+
+                <div className="flow-radar">
+                  <span className="flow-radar-sweep" />
+                  <span className="flow-radar-ring" />
+                  <span className="flow-radar-dot flow-radar-dot-one" />
+                  <span className="flow-radar-dot flow-radar-dot-two" />
+                  <span className="flow-radar-core" />
+                </div>
+
+                <div className="flow-prepared-card">
+                  <div className="flow-prepared-creative" />
+                  <div className="flow-prepared-line" />
+                  <div className="flow-prepared-line flow-prepared-line-short" />
+                  <span className="flow-ready-pill">Ready</span>
+                </div>
+
+                <span className="flow-node-dot" />
+
+                <div className="flow-results-card">
+                  <div className="flow-results-head">
+                    <span className="flow-results-label">Last 7 days</span>
+                    <span className="flow-live">Live</span>
                   </div>
-                </div>
-
-                <div className="flow-col">
-                  <p className="flow-zone-title">Blockwise prepares it</p>
-                  <article className="flow-card flow-review">
-                    <div className="flow-review-head">
-                      <span className="flow-pill green">Ready for review</span>
-                      <span className="flow-pill teal">Seller leads</span>
+                  <div className="flow-results-body">
+                    <div className="flow-result">
+                      <span className="flow-result-number">47</span>
+                      <span className="flow-result-label">leads</span>
                     </div>
-                    <div className="flow-preview-box" aria-hidden="true" />
-                    <div className="flow-fields">
-                      <div className="flow-field"><span className="flow-small">Angle</span><strong>Free appraisal</strong></div>
-                      <div className="flow-field"><span className="flow-small">Creative</span><strong>Prepared</strong></div>
-                      <div className="flow-field"><span className="flow-small">Lead form</span><strong>Ready</strong></div>
-                      <div className="flow-field"><span className="flow-small">Budget</span><strong>$25/day</strong></div>
-                      <div className="flow-field"><span className="flow-small">Updates</span><strong>Daily email</strong></div>
+                    <div className="flow-result">
+                      <span className="flow-result-number">$13</span>
+                      <span className="flow-result-label">cost / lead</span>
                     </div>
-                    <button type="button" className="flow-primary-btn flow-approve">Approve</button>
-                  </article>
-                </div>
-
-                <div className="flow-col">
-                  <p className="flow-zone-title">Then updates are sent</p>
-                  <article className="flow-card flow-daily">
-                    <div className="flow-daily-head">
-                      <h3>Daily update</h3>
-                      <span className="flow-pill green">Example</span>
-                    </div>
-                    <div className="flow-metric-grid">
-                      <div className="flow-metric"><span className="flow-small">Leads</span><b>12</b></div>
-                      <div className="flow-metric"><span className="flow-small">Spend</span><b>$86</b></div>
-                    </div>
-                    <div className="flow-summary">
-                      <div className="flow-row"><span className="flow-small">Best angle</span><strong>Free appraisal</strong></div>
-                      <p className="flow-small">Summary ready without logging into Ads Manager.</p>
-                    </div>
-                    <div className="flow-email-preview" aria-label="Daily update email preview">
-                      <strong>Daily email sent</strong>
-                      <span className="flow-small">Leads, spend and best angle summarized.</span>
-                      <div className="flow-email-line" />
-                      <div className="flow-email-line" />
-                      <div className="flow-email-line" />
-                    </div>
-                    <p className="flow-update-note">
-                      The agent gets the summary without checking dashboards or sending manual updates.
-                    </p>
-                  </article>
+                  </div>
+                  <svg className="flow-sparkline" viewBox="0 0 154 24" focusable="false">
+                    <path d="M1 18L23 14L42 17L63 8L84 11L108 3L130 4L153 4" fill="none" stroke="#5bbdb5" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+                  </svg>
                 </div>
               </div>
             </div>
 
             <div className="flow-steps" aria-label="How this works">
               <div className="flow-step">
-                <span className="flow-num">1</span>
+                <span className="flow-num flow-num-blue">1</span>
                 <div>
-                  <h3>Local signal</h3>
-                  <p>See what agents nearby are using to get attention.</p>
+                  <h3>Scan</h3>
+                  <p>See local lead angles.</p>
                 </div>
               </div>
               <div className="flow-step">
-                <span className="flow-num">2</span>
+                <span className="flow-num flow-num-teal">2</span>
                 <div>
-                  <h3>Ready to approve</h3>
-                  <p>Blockwise prepares the ad, form, budget and schedule.</p>
+                  <h3>Prepared</h3>
+                  <p>Blockwise prepares the ads.</p>
                 </div>
               </div>
               <div className="flow-step">
-                <span className="flow-num">3</span>
+                <span className="flow-num flow-num-purple">3</span>
                 <div>
-                  <h3>Updates sent</h3>
-                  <p>Track leads and spend in the app or daily email.</p>
+                  <h3>Leads</h3>
+                  <p>Approve, run, and track results.</p>
                 </div>
               </div>
-            </div>
-
-            <div className="flow-cta-row">
-              <CtaLink location="done-for-you" href="/signup" className="flow-btn">
-                Get your first ad prepared
-              </CtaLink>
             </div>
           </div>
         </section>
