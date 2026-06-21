@@ -31,28 +31,395 @@ function Feature({ title, copy, icon }: FeatureProps) {
   );
 }
 
-/** "How it works" illustration (radar → prepared card → live dashboard). */
-const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, we prepare the ads, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
-
-/** Scoped styles for the "How it works" section (ported from the prior homepage, blue palette). */
-const HOW_CSS = `
-.lp .lp-how__head{text-align:center;margin-bottom:44px}
-.lp .lp-how__head h2{font-size:clamp(19px,2.4vw,26px);font-weight:600;line-height:1.35;letter-spacing:-.01em;margin:0 auto;max-width:34ch;text-wrap:balance;color:var(--lp-ink)}
-.lp .lp-how__sub{font-size:16px;line-height:1.55;color:var(--lp-muted);margin:14px auto 0;max-width:52ch}
-.lp .lp-how-fig{position:relative;margin:0 auto;max-width:1024px;border-radius:24px;border:1px solid var(--lp-border);padding:14px;background:radial-gradient(120% 90% at 18% 12%,#eef3fb 0,rgba(238,243,251,0) 55%),radial-gradient(120% 100% at 88% 92%,#f1eefb 0,rgba(241,238,251,0) 55%),linear-gradient(160deg,#f6f8fc,#f7f6fc)}
-.lp .lp-how-fig svg{width:100%;height:auto;display:block}
-.lp .lp-how-fig .bwx-bBlip{animation:lp-how-blip 2.4s ease-in-out infinite}
-@keyframes lp-how-blip{0%,100%{opacity:1}50%{opacity:.35}}
-.lp .lp-how__steps{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:26px auto 0;max-width:1024px;padding:0}
-.lp .lp-how__s{padding:0 8px}
-.lp .lp-how__s b{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700;line-height:1.3;color:var(--lp-ink)}
-.lp .lp-how__s b em{font-style:normal;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
-.lp .lp-how-e1{background:linear-gradient(135deg,#4f97ff,#1f5fd6)}
-.lp .lp-how-e2{background:linear-gradient(135deg,#2fd2c2,#10a294)}
-.lp .lp-how-e3{background:linear-gradient(135deg,#9a7fff,#5a36e0)}
-.lp .lp-how__s p{font-size:14px;line-height:1.5;color:var(--lp-body);margin-top:8px}
-@media (prefers-reduced-motion:reduce){.lp .lp-how-fig .bwx-bBlip{animation:none}}
-@media (max-width:760px){.lp .lp-how__steps{grid-template-columns:1fr;gap:16px}}
+/** Scoped styles for the #workflow "wasted time" flow section (flow- namespaced). */
+const FLOW_CSS = `
+.lp-flow {
+  --flow-ink: #071329;
+  --flow-muted: #647187;
+  --flow-line: #dfe7f2;
+  --flow-blue: #1677ff;
+  --flow-teal: #20b8b0;
+  --flow-green: #17aa6b;
+  --flow-gold: #d9a21b;
+  --flow-shadow: 0 24px 76px rgba(15, 32, 64, 0.10);
+  --flow-shadow-sm: 0 12px 34px rgba(15, 32, 64, 0.08);
+  --flow-radius: 28px;
+}
+.lp-flow *,
+.lp-flow *::before,
+.lp-flow *::after { box-sizing: border-box; }
+.lp-flow .flow-kicker {
+  margin: 0;
+  text-align: center;
+  color: var(--flow-blue);
+  font-weight: 850;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.lp-flow .flow-h2 {
+  text-align: center;
+  margin: 16px auto 0;
+  max-width: 820px;
+  font-size: clamp(34px, 4.2vw, 54px);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  color: var(--flow-ink);
+}
+.lp-flow .flow-sub {
+  text-align: center;
+  margin: 22px auto 44px;
+  max-width: 740px;
+  color: var(--flow-muted);
+  font-size: 20px;
+  line-height: 1.55;
+}
+.lp-flow .flow-panel {
+  border: 1px solid var(--flow-line);
+  border-radius: var(--flow-radius);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(32, 184, 176, 0.13), transparent 32%),
+    radial-gradient(circle at 88% 78%, rgba(22, 119, 255, 0.10), transparent 34%),
+    linear-gradient(140deg, #f8fbff, #ffffff 52%, #f5fbfb);
+  box-shadow: var(--flow-shadow);
+  position: relative;
+  overflow: hidden;
+}
+.lp-flow .flow-workflow {
+  padding: 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.lp-flow .flow-col {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  min-height: 548px;
+}
+.lp-flow .flow-zone-title {
+  margin: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 900;
+  color: #728096;
+  white-space: nowrap;
+}
+.lp-flow .flow-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(206, 217, 234, 0.92);
+  border-radius: 22px;
+  box-shadow: var(--flow-shadow-sm);
+}
+.lp-flow .flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.lp-flow .flow-small { font-size: 13px; color: var(--flow-muted); line-height: 1.35; }
+.lp-flow .flow-pill {
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #eef5ff;
+  color: #1f62b8;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.lp-flow .flow-pill.green { background: #eafaf3; color: #0c8958; }
+.lp-flow .flow-pill.teal { background: #e9fbfa; color: #087c78; }
+.lp-flow .flow-primary-btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: var(--flow-ink);
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.lp-flow .flow-task-stack { position: relative; min-height: 0; height: 100%; }
+.lp-flow .flow-task-card {
+  position: absolute;
+  width: 260px;
+  min-height: 92px;
+  display: grid;
+  gap: 7px;
+  padding: 16px 17px;
+  border-radius: 19px;
+  background: #ffffff;
+  border: 1px solid #dfe7f3;
+  box-shadow: 0 14px 30px rgba(18, 34, 64, 0.08);
+  animation: flowTaskFloat 5.8s ease-in-out infinite;
+}
+.lp-flow .flow-task-card strong {
+  font-size: 16px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  color: var(--flow-ink);
+}
+.lp-flow .flow-task-card span { font-size: 13px; color: #7a879b; }
+.lp-flow .flow-task-card .flow-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #9a4b00;
+  background: #fff7e5;
+  border-radius: 999px;
+  padding: 6px 8px;
+  width: max-content;
+}
+.lp-flow .flow-task-card .flow-warn::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--flow-gold);
+}
+.lp-flow .flow-task-card:nth-child(1) { left: 0; top: 0; rotate: -1deg; }
+.lp-flow .flow-task-card:nth-child(2) { left: 72px; top: 86px; rotate: 1deg; animation-delay: 0.2s; }
+.lp-flow .flow-task-card:nth-child(3) { left: 14px; top: 172px; rotate: -0.7deg; animation-delay: 0.4s; }
+.lp-flow .flow-task-card:nth-child(4) { left: 84px; top: 258px; rotate: 1deg; animation-delay: 0.6s; }
+.lp-flow .flow-task-card:nth-child(5) { left: 25px; top: 344px; rotate: -0.8deg; animation-delay: 0.8s; }
+@keyframes flowTaskFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.lp-flow .flow-arrow {
+  position: absolute;
+  right: -10px;
+  top: 252px;
+  width: 72px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--flow-teal));
+}
+.lp-flow .flow-arrow::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -5px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--flow-teal);
+  border-right: 2px solid var(--flow-teal);
+  transform: rotate(45deg);
+}
+.lp-flow .flow-review {
+  padding: 22px;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.lp-flow .flow-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.lp-flow .flow-preview-box {
+  height: 82px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.95), rgba(32, 184, 176, 0.95));
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.lp-flow .flow-preview-box::before {
+  content: "Free appraisal";
+  position: absolute;
+  left: 18px;
+  bottom: 17px;
+  color: #ffffff;
+  font-weight: 950;
+  font-size: 21px;
+  letter-spacing: -0.05em;
+}
+.lp-flow .flow-preview-box::after {
+  content: "";
+  position: absolute;
+  inset: auto -22px -44px 46%;
+  height: 82px;
+  background: rgba(255, 255, 255, 0.23);
+  border-radius: 50%;
+}
+.lp-flow .flow-fields { display: grid; gap: 0; margin: 8px 0 16px; }
+.lp-flow .flow-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #edf1f7;
+  padding: 13px 0;
+}
+.lp-flow .flow-field strong { font-size: 17px; letter-spacing: -0.035em; color: var(--flow-ink); }
+.lp-flow .flow-approve {
+  width: 100%;
+  margin-top: auto;
+  min-height: 52px;
+  animation: flowApproveState 6.2s ease-in-out infinite;
+}
+@keyframes flowApproveState {
+  0%, 63%, 100% { background: var(--flow-ink); }
+  74%, 92% { background: var(--flow-green); }
+}
+.lp-flow .flow-daily {
+  padding: 22px;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.lp-flow .flow-daily-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.lp-flow .flow-daily-head h3 { margin: 0; font-size: 21px; letter-spacing: -0.04em; color: var(--flow-ink); }
+.lp-flow .flow-metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.lp-flow .flow-metric {
+  min-height: 105px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #f5f8fd;
+  border: 1px solid #e4ebf5;
+}
+.lp-flow .flow-metric b {
+  display: block;
+  margin-top: 8px;
+  font-size: 31px;
+  letter-spacing: -0.07em;
+  color: var(--flow-ink);
+}
+.lp-flow .flow-summary {
+  border-top: 1px solid #edf1f7;
+  padding-top: 16px;
+  margin-top: 2px;
+}
+.lp-flow .flow-summary strong { font-size: 17px; letter-spacing: -0.035em; color: var(--flow-ink); }
+.lp-flow .flow-email-preview {
+  margin-top: 18px;
+  padding: 15px;
+  border-radius: 18px;
+  background: #f6f9fd;
+  border: 1px solid #e4ebf5;
+}
+.lp-flow .flow-email-preview strong {
+  display: block;
+  margin-bottom: 6px;
+  letter-spacing: -0.03em;
+  color: var(--flow-ink);
+}
+.lp-flow .flow-email-line {
+  height: 8px;
+  border-radius: 999px;
+  background: #dfe7f2;
+  margin-top: 9px;
+}
+.lp-flow .flow-email-line:nth-child(3) { width: 82%; }
+.lp-flow .flow-email-line:nth-child(4) { width: 58%; }
+.lp-flow .flow-update-note {
+  margin: 0;
+  margin-top: auto;
+  padding-top: 16px;
+  color: var(--flow-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.lp-flow .flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+}
+.lp-flow .flow-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: flex-start;
+}
+.lp-flow .flow-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: #ffffff;
+  font-weight: 950;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--flow-blue), var(--flow-teal));
+  box-shadow: 0 10px 20px rgba(32, 184, 176, 0.2);
+}
+.lp-flow .flow-step h3 { margin: 1px 0 8px; font-size: 20px; letter-spacing: -0.03em; color: var(--flow-ink); }
+.lp-flow .flow-step p { margin: 0; color: var(--flow-muted); line-height: 1.45; font-size: 16px; }
+.lp-flow .flow-cta-row { margin-top: 40px; display: flex; justify-content: center; }
+.lp-flow .flow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 16px;
+  background: var(--flow-blue);
+  color: #ffffff;
+  padding: 14px 22px;
+  font-size: 15px;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 12px 26px rgba(22, 119, 255, 0.22);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.lp-flow .flow-btn:hover { background: #0f63e6; }
+.lp-flow .flow-btn:active { transform: translateY(1px); }
+@media (max-width: 1080px) {
+  .lp-flow .flow-workflow { grid-template-columns: 1fr; padding: 22px; }
+  .lp-flow .flow-col { grid-template-rows: auto 1fr; min-height: auto; }
+  .lp-flow .flow-zone-title { height: auto; white-space: normal; justify-content: flex-start; text-align: left; }
+  .lp-flow .flow-task-stack { min-height: auto; display: grid; gap: 10px; }
+  .lp-flow .flow-task-card {
+    position: relative;
+    width: auto;
+    min-height: auto;
+    left: auto !important;
+    top: auto !important;
+    rotate: 0deg !important;
+    animation: none !important;
+  }
+  .lp-flow .flow-arrow { display: none; }
+  .lp-flow .flow-review,
+  .lp-flow .flow-daily { min-height: auto; }
+}
+@media (max-width: 820px) {
+  .lp-flow .flow-h2 { text-align: left; font-size: 38px; }
+  .lp-flow .flow-sub { text-align: left; font-size: 17px; margin-bottom: 28px; }
+  .lp-flow .flow-kicker { text-align: left; }
+  .lp-flow .flow-steps { grid-template-columns: 1fr; gap: 18px; }
+  .lp-flow .flow-metric-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-flow *,
+  .lp-flow *::before,
+  .lp-flow *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
 `;
 
 const TABLE_ROWS = [
@@ -113,19 +480,132 @@ export default function HomePage() {
             local-ad-radar API. The hero suburb audit handles search. */}
         <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
 
-        <section id="workflow" className="lp-section">
-          <style dangerouslySetInnerHTML={{ __html: HOW_CSS }} />
+        <section id="workflow" className="lp-section lp-flow" aria-labelledby="flow-title">
+          <style dangerouslySetInnerHTML={{ __html: FLOW_CSS }} />
           <div className="lp-shell">
-            <div className="lp-how__head">
-              <h2>Too much time is wasted on ads. Not enough time is spent doing the work that actually matters.</h2>
-              <p className="lp-how__sub">Blockwise handles the ad work for you. Approve what goes live, receive updates, and focus on your clients.</p>
+            <p className="flow-kicker">Meta ads for real estate agents</p>
+            <h2 id="flow-title" className="flow-h2">
+              Too much time is wasted on ads.
+              <br />
+              Not enough time is spent with clients.
+            </h2>
+            <p className="flow-sub">
+              Blockwise handles the setup, creative, approvals and updates so agents can stay out of
+              Ads Manager.
+            </p>
+
+            <div className="flow-panel">
+              <div className="flow-workflow">
+                <div className="flow-col">
+                  <p className="flow-zone-title">Ad work agents get stuck doing</p>
+                  <div className="flow-task-stack" aria-label="Manual ad tasks">
+                    <article className="flow-task-card">
+                      <strong>Pick suburb audience</strong>
+                      <span>Meta targeting choices</span>
+                      <span className="flow-warn">Needs review</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Write seller lead copy</strong>
+                      <span>Hooks, headline, CTA</span>
+                      <span className="flow-warn">Draft again</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Resize listing image</strong>
+                      <span>Feed, story, reels</span>
+                      <span className="flow-warn">Wrong size</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Set lead form questions</strong>
+                      <span>Contact, suburb, intent</span>
+                      <span className="flow-warn">Not ready</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Send vendor update</strong>
+                      <span>Spend, leads, result</span>
+                      <span className="flow-warn">Still pending</span>
+                    </article>
+                    <span className="flow-arrow" aria-hidden="true" />
+                  </div>
+                </div>
+
+                <div className="flow-col">
+                  <p className="flow-zone-title">Blockwise prepares it</p>
+                  <article className="flow-card flow-review">
+                    <div className="flow-review-head">
+                      <span className="flow-pill green">Ready for review</span>
+                      <span className="flow-pill teal">Seller leads</span>
+                    </div>
+                    <div className="flow-preview-box" aria-hidden="true" />
+                    <div className="flow-fields">
+                      <div className="flow-field"><span className="flow-small">Angle</span><strong>Free appraisal</strong></div>
+                      <div className="flow-field"><span className="flow-small">Creative</span><strong>Prepared</strong></div>
+                      <div className="flow-field"><span className="flow-small">Lead form</span><strong>Ready</strong></div>
+                      <div className="flow-field"><span className="flow-small">Budget</span><strong>$25/day</strong></div>
+                      <div className="flow-field"><span className="flow-small">Updates</span><strong>Daily email</strong></div>
+                    </div>
+                    <button type="button" className="flow-primary-btn flow-approve">Approve</button>
+                  </article>
+                </div>
+
+                <div className="flow-col">
+                  <p className="flow-zone-title">Then updates are sent</p>
+                  <article className="flow-card flow-daily">
+                    <div className="flow-daily-head">
+                      <h3>Daily update</h3>
+                      <span className="flow-pill green">Example</span>
+                    </div>
+                    <div className="flow-metric-grid">
+                      <div className="flow-metric"><span className="flow-small">Leads</span><b>12</b></div>
+                      <div className="flow-metric"><span className="flow-small">Spend</span><b>$86</b></div>
+                    </div>
+                    <div className="flow-summary">
+                      <div className="flow-row"><span className="flow-small">Best angle</span><strong>Free appraisal</strong></div>
+                      <p className="flow-small">Summary ready without logging into Ads Manager.</p>
+                    </div>
+                    <div className="flow-email-preview" aria-label="Daily update email preview">
+                      <strong>Daily email sent</strong>
+                      <span className="flow-small">Leads, spend and best angle summarized.</span>
+                      <div className="flow-email-line" />
+                      <div className="flow-email-line" />
+                      <div className="flow-email-line" />
+                    </div>
+                    <p className="flow-update-note">
+                      The agent gets the summary without checking dashboards or sending manual updates.
+                    </p>
+                  </article>
+                </div>
+              </div>
             </div>
-            <div className="lp-how-fig" aria-hidden dangerouslySetInnerHTML={{ __html: HOW_FIG_SVG }} />
-            <ol className="lp-how__steps">
-              <li className="lp-how__s"><b><em className="lp-how-e1">1</em> Scan</b><p>See local lead angles.</p></li>
-              <li className="lp-how__s"><b><em className="lp-how-e2">2</em> Prepared</b><p>Blockwise prepares the ads.</p></li>
-              <li className="lp-how__s"><b><em className="lp-how-e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
-            </ol>
+
+            <div className="flow-steps" aria-label="How this works">
+              <div className="flow-step">
+                <span className="flow-num">1</span>
+                <div>
+                  <h3>Local signal</h3>
+                  <p>See what agents nearby are using to get attention.</p>
+                </div>
+              </div>
+              <div className="flow-step">
+                <span className="flow-num">2</span>
+                <div>
+                  <h3>Ready to approve</h3>
+                  <p>Blockwise prepares the ad, form, budget and schedule.</p>
+                </div>
+              </div>
+              <div className="flow-step">
+                <span className="flow-num">3</span>
+                <div>
+                  <h3>Updates sent</h3>
+                  <p>Track leads and spend in the app or daily email.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flow-cta-row">
+              <CtaLink location="done-for-you" href="/signup" className="flow-btn">
+                Get your first ad prepared
+              </CtaLink>
+            </div>
           </div>
         </section>
 
