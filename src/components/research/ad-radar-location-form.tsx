@@ -93,7 +93,6 @@ export function AdRadarLocationForm({
         } else {
           setValue(label);
         }
-        setNote(`Best guess: ${label}. Scan to see scraped ads for this area.`);
       })
       .catch(() => undefined);
 
