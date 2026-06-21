@@ -85,8 +85,8 @@ end
 $do$;
 
 -- B4: drop the public helpers (catalog dependency makes this fail+rollback if any policy still points at them).
-drop function public.is_operator();
-drop function public.is_workspace_member(uuid);
-drop function public.has_workspace_role(uuid, text[]);
-drop function public.adstudio_has_workspace_access(uuid);
-drop function public.workspace_id_from_storage_path(text);
+drop function if exists public.is_operator();
+drop function if exists public.is_workspace_member(uuid);
+drop function if exists public.has_workspace_role(uuid, text[]);
+drop function if exists public.adstudio_has_workspace_access(uuid);
+drop function if exists public.workspace_id_from_storage_path(text);

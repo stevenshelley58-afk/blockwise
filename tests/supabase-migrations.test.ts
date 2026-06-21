@@ -45,4 +45,5 @@ test("recovered authz migrations are replay-safe for fresh previews", () => {
     hardeningSql.includes("to_regprocedure('public.adstudio_install_workspace_policies(regclass)')"),
   );
   assert.ok(repointSql.includes("schemaname in ('public','storage','research')"));
+  assert.ok(repointSql.includes("drop function if exists public.adstudio_has_workspace_access(uuid)"));
 });
