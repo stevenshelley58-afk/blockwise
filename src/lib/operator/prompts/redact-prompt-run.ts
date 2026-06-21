@@ -395,6 +395,7 @@ function findCostCandidate(profileKey: ModelProfileKey, providerName: string, mo
 function normalizeProviderName(providerName: string): ModelProvider | null {
   if (providerName === "openai") return "openai";
   if (providerName === "openrouter") return "openrouter";
+  if (providerName === "azure") return "azure";
   return null;
 }
 

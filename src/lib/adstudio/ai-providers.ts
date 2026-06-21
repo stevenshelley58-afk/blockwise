@@ -39,6 +39,7 @@ const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
+const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
 // best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
 
@@ -108,6 +109,66 @@ export function createOpenAiTextProvider(options: ProviderOptions = {}): TextPro
       });
     },
   };
+}
+
+export function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const deployment =
+    options.model ??
+    env.AZURE_OPENAI_DEPLOYMENT ??
+    env.AZURE_OPENAI_CHAT_DEPLOYMENT ??
+    env.AZURE_OPENAI_TEXT_DEPLOYMENT ??
+    env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT ??
+    "";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "azure",
+    providerType: "text_generation",
+    capabilities: {
+      structuredJson: true,
+      longContext: true,
+      visionInput: true,
+    },
+    async generate(input) {
+      const apiKey = env.AZURE_OPENAI_API_KEY;
+
+      if (!apiKey) {
+        throw new Error("AZURE_OPENAI_API_KEY is not configured.");
+      }
+      if (!deployment && !env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) {
+        throw new Error("AZURE_OPENAI_DEPLOYMENT is not configured.");
+      }
+
+      return postChatCompletion({
+        url: resolveAzureOpenAiChatUrl(env, deployment),
+        apiKey,
+        model: deployment || "azure-openai",
+        input,
+        fetchImpl,
+        headers: {
+          "api-key": apiKey,
+        },
+        authHeader: false,
+        includeModelInBody: false,
+      });
+    },
+  };
+}
+
+export function resolveAzureOpenAiChatUrl(env: EnvLike, deployment: string): string {
+  if (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) return env.AZURE_OPENAI_CHAT_COMPLETIONS_URL;
+
+  const endpoint = env.AZURE_OPENAI_ENDPOINT?.replace(/\/+$/u, "");
+  if (!endpoint) {
+    throw new Error("AZURE_OPENAI_ENDPOINT is not configured.");
+  }
+  if (!deployment) {
+    throw new Error("AZURE_OPENAI_DEPLOYMENT is not configured.");
+  }
+
+  const apiVersion = env.AZURE_OPENAI_API_VERSION ?? AZURE_OPENAI_DEFAULT_API_VERSION;
+  return `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
 }
 
 export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
@@ -403,9 +464,13 @@ export function createOpenAiVisionProvider(options: ProviderOptions = {}): Visio
 }
 
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
-  return candidate.provider === "openrouter"
-    ? createOpenRouterTextProvider({ ...options, model: candidate.model })
-    : createOpenAiTextProvider({ ...options, model: candidate.model });
+  if (candidate.provider === "openrouter") {
+    return createOpenRouterTextProvider({ ...options, model: candidate.model });
+  }
+  if (candidate.provider === "azure") {
+    return createAzureOpenAiTextProvider({ ...options, model: candidate.model });
+  }
+  return createOpenAiTextProvider({ ...options, model: candidate.model });
 }
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
@@ -421,16 +486,19 @@ async function postChatCompletion(input: {
   input: TextProviderRequest;
   fetchImpl: typeof fetch;
   headers?: Record<string, string>;
+  authHeader?: boolean;
+  includeModelInBody?: boolean;
 }): Promise<TextProviderResponse> {
+  const includeModelInBody = input.includeModelInBody ?? true;
   const response = await input.fetchImpl(input.url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${input.apiKey}`,
+      ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
       "Content-Type": "application/json",
       ...input.headers,
     },
     body: JSON.stringify({
-      model: input.model,
+      ...(includeModelInBody ? { model: input.model } : {}),
       messages: buildChatMessages(input.input),
       response_format: { type: "json_object" },
       temperature: 0.4,

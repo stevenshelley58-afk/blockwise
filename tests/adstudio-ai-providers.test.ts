@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createAzureOpenAiTextProvider,
   createOpenAiImageProvider,
   createOpenRouterTextProvider,
   generateMixedImageVariantsInParallel,
+  resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
 
@@ -39,6 +41,74 @@ test("createOpenRouterTextProvider posts structured prompts and parses JSON resp
   assert.deepEqual(output.json, { platform: "meta", primaryText: ["ok"] });
   assert.equal(output.usage.inputTokens, 12);
   assert.equal(output.providerMetadata.model, "openai/gpt-5.5");
+});
+
+test("createAzureOpenAiTextProvider posts structured multimodal prompts to the deployment endpoint", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const provider = createAzureOpenAiTextProvider({
+    env: {
+      AZURE_OPENAI_API_KEY: "az_test",
+      AZURE_OPENAI_ENDPOINT: "https://blockwise-openai.openai.azure.com/",
+      AZURE_OPENAI_DEPLOYMENT: "gpt-4.1-mini-vision",
+      AZURE_OPENAI_API_VERSION: "2024-10-21",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify({ design: { ok: true } }) } }],
+          usage: { prompt_tokens: 18, completion_tokens: 7 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+
+  const output = await provider.generate({
+    system: "Return JSON",
+    messages: [{ role: "user", content: "Extract this ad" }],
+    imageUrl: "data:image/png;base64,aW1hZ2U=",
+    schemaName: "creativeSkeleton",
+  });
+
+  assert.equal(
+    calls[0].url,
+    "https://blockwise-openai.openai.azure.com/openai/deployments/gpt-4.1-mini-vision/chat/completions?api-version=2024-10-21",
+  );
+  const headers = calls[0].init.headers as Record<string, string>;
+  assert.equal(headers["api-key"], "az_test");
+  assert.equal(headers.Authorization, undefined);
+
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.equal(body.model, undefined);
+  assert.equal(body.response_format.type, "json_object");
+  assert.equal(body.messages[1].content[0].text, "Extract this ad");
+  assert.equal(body.messages[1].content[1].image_url.url, "data:image/png;base64,aW1hZ2U=");
+  assert.deepEqual(output.json, { design: { ok: true } });
+  assert.equal(output.providerMetadata.model, "gpt-4.1-mini-vision");
+});
+
+test("resolveAzureOpenAiChatUrl supports explicit URLs and deployment URLs", () => {
+  assert.equal(
+    resolveAzureOpenAiChatUrl(
+      {
+        AZURE_OPENAI_ENDPOINT: "https://resource.openai.azure.com",
+        AZURE_OPENAI_API_VERSION: "2024-10-21",
+      },
+      "vision deploy",
+    ),
+    "https://resource.openai.azure.com/openai/deployments/vision%20deploy/chat/completions?api-version=2024-10-21",
+  );
+  assert.equal(
+    resolveAzureOpenAiChatUrl(
+      {
+        AZURE_OPENAI_CHAT_COMPLETIONS_URL: "https://custom.azure.test/chat",
+      },
+      "",
+    ),
+    "https://custom.azure.test/chat",
+  );
 });
 
 test("createOpenAiImageProvider defaults client creative generation to GPT Image 2", async () => {

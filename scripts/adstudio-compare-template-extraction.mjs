@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import {
+  createAzureOpenAiTextProvider,
   createOpenAiTextProvider,
   createOpenRouterTextProvider,
 } from "../src/lib/adstudio/ai-providers.ts";
@@ -72,11 +73,11 @@ Options:
   --source PATH              Source ad image. Default: meta_055 candidate.
   --sample-photo PATH        Replacement property photo for rendering.
   --out-dir PATH             Output directory. Default: artifacts/adstudio-template-extraction-comparison.
-  --cheap-provider NAME      openai or openrouter. Default prefers openrouter when available.
+  --cheap-provider NAME      openai, azure, openrouter, or fixture. Default prefers openrouter, azure, then openai.
   --cheap-model NAME         Default openrouter google/gemini-2.0-flash-001 or openai gpt-4.1-mini.
-  --frontier-provider NAME   openai or openrouter. Default prefers openai.
-  --frontier-model NAME      Default openai gpt-5.5 or openrouter openai/gpt-5.5.
-  --fixture                  No API calls; render deterministic fixture designs for tests.
+  --frontier-provider NAME   openai, azure, openrouter, or fixture. Default prefers openai, azure, then openrouter.
+  --frontier-model NAME      Default openai gpt-5.5, azure deployment env/name, or openrouter openai/gpt-5.5.
+  --fixture                  No API calls; render deterministic fixture designs for both profiles.
 `);
 }
 
@@ -90,8 +91,12 @@ function loadEnv() {
 }
 
 function resolveProfiles(args, env) {
-  const cheapProvider = args.cheapProvider || (env.OPENROUTER_API_KEY ? "openrouter" : "openai");
-  const frontierProvider = args.frontierProvider || (env.OPENAI_API_KEY ? "openai" : "openrouter");
+  const cheapProvider = args.fixture
+    ? "fixture"
+    : args.cheapProvider || (env.OPENROUTER_API_KEY ? "openrouter" : hasAzureOpenAiEnv(env) ? "azure" : "openai");
+  const frontierProvider = args.fixture
+    ? "fixture"
+    : args.frontierProvider || (env.OPENAI_API_KEY ? "openai" : hasAzureOpenAiEnv(env) ? "azure" : "openrouter");
 
   return [
     {
@@ -99,28 +104,66 @@ function resolveProfiles(args, env) {
       label: "cheap / fast",
       providerName: cheapProvider,
       model: args.cheapModel ||
-        (cheapProvider === "openrouter" ? "google/gemini-2.0-flash-001" : "gpt-4.1-mini"),
+        defaultModelForProvider(cheapProvider, "cheap", env),
     },
     {
       id: "frontier",
       label: "frontier",
       providerName: frontierProvider,
       model: args.frontierModel ||
-        (frontierProvider === "openrouter" ? "openai/gpt-5.5" : "gpt-5.5"),
+        defaultModelForProvider(frontierProvider, "frontier", env),
     },
   ];
 }
 
 function providerFor(profile, env) {
+  if (profile.providerName === "fixture") {
+    throw new Error("Fixture provider must be run with --fixture or handled before providerFor().");
+  }
   if (profile.providerName === "openrouter") {
     if (!env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured.");
     return createOpenRouterTextProvider({ env, model: profile.model });
+  }
+  if (profile.providerName === "azure") {
+    if (!env.AZURE_OPENAI_API_KEY) throw new Error("AZURE_OPENAI_API_KEY is not configured.");
+    return createAzureOpenAiTextProvider({ env, model: profile.model });
   }
   if (profile.providerName === "openai") {
     if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured.");
     return createOpenAiTextProvider({ env, model: profile.model });
   }
   throw new Error(`Unsupported provider: ${profile.providerName}`);
+}
+
+function defaultModelForProvider(providerName, tier, env) {
+  if (providerName === "openrouter") {
+    return tier === "cheap" ? "google/gemini-2.0-flash-001" : "openai/gpt-5.5";
+  }
+  if (providerName === "azure") {
+    return (
+      env.AZURE_OPENAI_DEPLOYMENT ??
+      env.AZURE_OPENAI_CHAT_DEPLOYMENT ??
+      env.AZURE_OPENAI_TEXT_DEPLOYMENT ??
+      env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT ??
+      (tier === "cheap" ? "gpt-4.1-mini" : "gpt-5.5")
+    );
+  }
+  if (providerName === "fixture") {
+    return "deterministic-fixture";
+  }
+  return tier === "cheap" ? "gpt-4.1-mini" : "gpt-5.5";
+}
+
+function hasAzureOpenAiEnv(env) {
+  return Boolean(
+    env.AZURE_OPENAI_API_KEY &&
+      (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL ||
+        (env.AZURE_OPENAI_ENDPOINT &&
+          (env.AZURE_OPENAI_DEPLOYMENT ||
+            env.AZURE_OPENAI_CHAT_DEPLOYMENT ||
+            env.AZURE_OPENAI_TEXT_DEPLOYMENT ||
+            env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT))),
+  );
 }
 
 async function imageDataUrl(filePath) {
@@ -435,7 +478,7 @@ function escapeXml(value) {
 
 async function runProfile({ args, profile, env, sourceDataUrl, samplePhotoDataUrl }) {
   try {
-    if (args.fixture) {
+    if (args.fixture || profile.providerName === "fixture") {
       const design = fixtureDesign(args.templateId, profile.id);
       const rendered = await renderCandidate({ outDir: args.outDir, profile, design, samplePhotoDataUrl });
       const report = qualityReport(design, rendered.creative, samplePhotoDataUrl, sourceDataUrl);

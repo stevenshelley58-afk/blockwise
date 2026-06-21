@@ -1,6 +1,6 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
-export type ModelProvider = "openai" | "openrouter";
+export type ModelProvider = "openai" | "openrouter" | "azure";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -66,6 +66,7 @@ const SENSITIVE_DATA_CLASSES: WorkforceDataClass[] = ["lead_pii", "provider_toke
 const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_only"> = {
   openai: "allowed",
   openrouter: "allowed",
+  azure: "allowed",
 };
 
 const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
@@ -371,6 +372,9 @@ export function isModelProfileKey(value: string): value is ModelProfileKey {
 export function normalizeModelSlug(provider: ModelProvider, model: string): string {
   if (provider === "openrouter" && model.startsWith("openrouter/")) {
     return model.replace(/^openrouter\//, "");
+  }
+  if (provider === "azure" && model.startsWith("azure/")) {
+    return model.replace(/^azure\//, "");
   }
 
   return model;

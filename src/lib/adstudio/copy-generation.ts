@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  createAzureOpenAiTextProvider,
   createOpenAiTextProvider,
   createOpenRouterTextProvider,
   createTextProviderForCandidate,
@@ -170,9 +171,22 @@ function generationLogInput(input: AdStudioCopyGenerationInput) {
 }
 
 function pickProvider(): TextProviderAdapter | null {
+  if (hasAzureOpenAiEnv(process.env)) return createAzureOpenAiTextProvider();
   if (process.env.OPENAI_API_KEY) return createOpenAiTextProvider();
   if (process.env.OPENROUTER_API_KEY) return createOpenRouterTextProvider();
   return null;
+}
+
+function hasAzureOpenAiEnv(env: NodeJS.ProcessEnv): boolean {
+  return Boolean(
+    env.AZURE_OPENAI_API_KEY &&
+      (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL ||
+        (env.AZURE_OPENAI_ENDPOINT &&
+          (env.AZURE_OPENAI_DEPLOYMENT ||
+            env.AZURE_OPENAI_CHAT_DEPLOYMENT ||
+            env.AZURE_OPENAI_TEXT_DEPLOYMENT ||
+            env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT))),
+  );
 }
 
 function clamp(value: unknown, limit: number, fallback: string): string {
@@ -275,5 +289,5 @@ async function generateCopyWithProfile(
   }
 
   if (lastError instanceof Error) throw lastError;
-  throw new Error("Copy generation is not configured. Add OPENAI_API_KEY or OPENROUTER_API_KEY to enable it.");
+  throw new Error("Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.");
 }

@@ -94,7 +94,27 @@ test("normalizeModelSlug stores OpenRouter model ids without the legacy openrout
     normalizeModelSlug("openrouter", "openrouter/google/gemini-2.0-flash-001"),
     "google/gemini-2.0-flash-001",
   );
+  assert.equal(normalizeModelSlug("azure", "azure/gpt-4.1-mini-vision"), "gpt-4.1-mini-vision");
   assert.equal(normalizeModelSlug("openai", "gpt-4.1-mini"), "gpt-4.1-mini");
+});
+
+test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
+  const resolved = resolveEffectiveModelProfile("vision_extract", [
+    {
+      profileKey: "vision_extract",
+      provider: "azure",
+      model: "azure/gpt-4.1-mini-vision",
+      inputUsdPerMillionTokens: 0.4,
+      outputUsdPerMillionTokens: 1.6,
+      imageUsdPerUnit: 0.01,
+      supportsStructuredOutput: true,
+      maxContextTokens: 128_000,
+      maxLatencyMs: 20_000,
+    },
+  ]);
+
+  assert.equal(resolved.primary.provider, "azure");
+  assert.equal(resolved.primary.model, "gpt-4.1-mini-vision");
 });
 
 test("resolveEffectiveModelProfile prefers a saved model version over static defaults", () => {

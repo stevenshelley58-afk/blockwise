@@ -48,3 +48,36 @@ test("template extraction comparison runner renders fixture outputs without prov
   assert.equal(report.results.every((result) => result.report.dimensionsOk), true);
   assert.equal(report.results.every((result) => result.report.imageSlotCount >= 1), true);
 });
+
+test("template extraction comparison runner supports explicit fixture providers", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "adstudio-template-extract-providers-"));
+  const source = path.join(dir, "source.png");
+  const sample = path.join(dir, "sample.png");
+  const outDir = path.join(dir, "out");
+  writeFileSync(source, ONE_PIXEL_PNG);
+  writeFileSync(sample, ONE_PIXEL_PNG);
+
+  execFileSync(
+    process.execPath,
+    [
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      "scripts/adstudio-compare-template-extraction.mjs",
+      "--cheap-provider",
+      "fixture",
+      "--frontier-provider",
+      "fixture",
+      "--source",
+      source,
+      "--sample-photo",
+      sample,
+      "--out-dir",
+      outDir,
+    ],
+    { cwd: process.cwd(), stdio: "pipe", env: { ...process.env, OPENAI_API_KEY: "", OPENROUTER_API_KEY: "" } },
+  );
+
+  const report = JSON.parse(readFileSync(path.join(outDir, "report.json"), "utf8"));
+  assert.equal(report.fixture, false);
+  assert.deepEqual(report.results.map((result) => result.provider), ["fixture", "fixture"]);
+  assert.equal(report.results.every((result) => result.ok), true);
+});
