@@ -7,6 +7,7 @@ import {
   designLayerSignature,
   generateAdStudioCampaignPack,
   renderDesign,
+  resolvableAdStudioTemplates,
   resolveTemplateDesignForFormat,
   templateDesignSchema,
 } from "../src/lib/adstudio/index.ts";
@@ -14,7 +15,7 @@ import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.
 import type { AdStudioBrandKit } from "../src/lib/adstudio/types.ts";
 
 function extractedTemplate() {
-  const template = builtInAdStudioTemplates().find((item) => item.id === "meta_002");
+  const template = resolvableAdStudioTemplates().find((item) => item.id === "meta_002");
   assert.ok(template, "meta_002 template should exist");
   return template;
 }

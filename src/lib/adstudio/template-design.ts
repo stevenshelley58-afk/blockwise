@@ -72,6 +72,7 @@ const imageSlotLayerSchema = z
     type: z.literal("image_slot"),
     role: z.enum(["primary", "secondary", "agent_headshot"]),
     fit: z.enum(["cover", "contain", "smart"]),
+    anchor: z.enum(["center", "top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"]).optional(),
     mask: z.enum(["none", "feather", "circle", "shape"]).optional(),
     clipShape: rectSchema.optional(),
   })
@@ -161,6 +162,7 @@ export function designLayerSignature(design: TemplateDesign) {
     color: "color" in layer ? layer.color : undefined,
     align: "align" in layer ? layer.align : undefined,
     fit: "fit" in layer ? layer.fit : undefined,
+    anchor: "anchor" in layer ? layer.anchor : undefined,
     mask: "mask" in layer ? layer.mask : undefined,
     source: "source" in layer ? layer.source : undefined,
     label: "label" in layer ? layer.label : undefined,

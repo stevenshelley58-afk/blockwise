@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import {
-  builtInAdStudioTemplates,
+  resolvableAdStudioTemplates,
   renderDesign,
   resolveTemplateDesignForFormat,
 } from "../src/lib/adstudio/index.ts";
@@ -163,6 +163,12 @@ function sampleBrandKit() {
   };
 }
 
+function extractedMetaTemplates() {
+  return resolvableAdStudioTemplates().filter((template) =>
+    template.sampleStyle?.sampleCardImagePath?.startsWith("adstudio-samples/extracted-meta/"),
+  );
+}
+
 function sampleText(template, index) {
   const style = template.sampleStyle;
   const copy = template.sampleCopy;
@@ -213,7 +219,7 @@ async function loadSamplePhotos(samplePhotoDir) {
 async function renderAll(args) {
   const photos = await loadSamplePhotos(args.samplePhotoDir);
   const brandKit = sampleBrandKit();
-  const templates = builtInAdStudioTemplates();
+  const templates = extractedMetaTemplates();
 
   await mkdir(args.outDir, { recursive: true });
 
@@ -238,7 +244,7 @@ async function renderAll(args) {
 }
 
 async function verify(args) {
-  const templates = builtInAdStudioTemplates();
+  const templates = extractedMetaTemplates();
   const problems = [];
 
   for (const template of templates) {

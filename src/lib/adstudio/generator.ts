@@ -5,7 +5,7 @@ import { buildArchetypeCreative } from "./layout-archetypes.ts";
 import { getOfferTemplate } from "./offers.ts";
 import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
-import { resolveTemplateDesignForFormat, type BoundTemplateContent } from "./template-design.ts";
+import { resolveTemplateDesignForFormat, type BoundTemplateContent, type TemplateDesign } from "./template-design.ts";
 import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
   AdStudioBrandKit,
@@ -793,12 +793,7 @@ function buildCreative(input: {
         phone: input.brandKit.contact.phone ?? "",
         handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
       },
-      images: input.sourceImageDataUrl
-        ? {
-            primary: input.sourceImageDataUrl,
-            primary_photo: input.sourceImageDataUrl,
-          }
-        : undefined,
+      images: imageBindingsForDesign(design, input.sourceImageDataUrl),
     };
 
     return renderDesign(design, content, input.brandKit, {
@@ -820,6 +815,26 @@ function buildCreative(input: {
     templateName: input.template?.name,
     creativeSkeleton: input.template?.creativeSkeleton,
   });
+}
+
+function imageBindingsForDesign(
+  design: TemplateDesign,
+  sourceImageDataUrl: string | undefined,
+): BoundTemplateContent["images"] {
+  if (!sourceImageDataUrl) return undefined;
+
+  const bindings: NonNullable<BoundTemplateContent["images"]> = {
+    primary: sourceImageDataUrl,
+    primary_photo: sourceImageDataUrl,
+  };
+
+  for (const layer of design.layers) {
+    if (layer.type !== "image_slot") continue;
+    bindings[layer.id] = sourceImageDataUrl;
+    bindings[layer.role] = sourceImageDataUrl;
+  }
+
+  return bindings;
 }
 
 function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unknown> {

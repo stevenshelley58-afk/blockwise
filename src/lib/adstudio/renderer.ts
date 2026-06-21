@@ -115,7 +115,7 @@ export function renderCreativeSvg(
         const src = object.content ?? object.assetId;
         if (src && isRenderableImageSrc(src)) {
           const clip = imageClipPath(object, defs);
-          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" href="${escapeXml(src)}" preserveAspectRatio="xMidYMid slice"${clip}/>`;
+          return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" href="${escapeXml(src)}" preserveAspectRatio="${preserveAspectRatioForAnchor(object.imageAnchor)} slice"${clip}/>`;
         }
 
         return `<circle cx="${object.x + object.width / 2}" cy="${object.y + (object.height ?? object.width) / 2}" r="${Math.min(object.width, object.height ?? object.width) / 2}" fill="#D9E7E3"/><circle cx="${object.x + object.width / 2}" cy="${object.y + 46}" r="34" fill="#68746F"/><path d="M ${object.x + 38} ${object.y + 142} Q ${object.x + object.width / 2} ${object.y + 72} ${object.x + object.width - 38} ${object.y + 142} Z" fill="#68746F"/>`;
@@ -222,6 +222,7 @@ function layerToCanvasObjects(
       y: rect.y,
       width: rect.width,
       height: rect.height,
+      imageAnchor: layer.anchor,
       clip: layer.mask === "circle" ? "circle" : layer.mask === "shape" ? "arch" : "rect",
       locked: false,
       sourceLayerId: layer.id,
@@ -350,7 +351,7 @@ function renderTemplateObjectSvg(
   if (object.type === "image") {
     const src = object.content ?? object.assetId;
     if (src && isRenderableImageSrc(src)) {
-      return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" href="${escapeXml(src)}" preserveAspectRatio="xMidYMid slice"/>`;
+      return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" href="${escapeXml(src)}" preserveAspectRatio="${preserveAspectRatioForAnchor(object.imageAnchor)} slice"/>`;
     }
 
     return `<rect x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" fill="#D9E7E3"/><path d="M ${object.x} ${object.y + height * 0.72} C ${object.x + object.width * 0.26} ${object.y + height * 0.52}, ${object.x + object.width * 0.5} ${object.y + height * 0.86}, ${object.x + object.width} ${object.y + height * 0.48} L ${object.x + object.width} ${object.y + height} L ${object.x} ${object.y + height} Z" fill="#9EB6AE"/><circle cx="${object.x + object.width * 0.74}" cy="${object.y + height * 0.22}" r="${Math.min(object.width, height) * 0.08}" fill="#F7D98B"/>`;
@@ -402,4 +403,27 @@ export function svgToBytes(svg: string): Uint8Array {
 
 function escapeXml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function preserveAspectRatioForAnchor(anchor: AdStudioCanvasObject["imageAnchor"]): string {
+  switch (anchor) {
+    case "top":
+      return "xMidYMin";
+    case "bottom":
+      return "xMidYMax";
+    case "left":
+      return "xMinYMid";
+    case "right":
+      return "xMaxYMid";
+    case "top_left":
+      return "xMinYMin";
+    case "top_right":
+      return "xMaxYMin";
+    case "bottom_left":
+      return "xMinYMax";
+    case "bottom_right":
+      return "xMaxYMax";
+    default:
+      return "xMidYMid";
+  }
 }

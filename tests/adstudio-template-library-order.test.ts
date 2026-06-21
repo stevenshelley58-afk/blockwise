@@ -6,6 +6,7 @@ import { creativeSkeletonSchema } from "../src/lib/ad-template-library/skeleton.
 import {
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
+  resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
 } from "../src/lib/adstudio/templates.ts";
 
@@ -13,6 +14,16 @@ const fixture = JSON.parse(readFileSync("tests/fixtures/adstudio-template-engine
   creativeSkeletons: unknown[];
 };
 const skeleton = creativeSkeletonSchema.parse(fixture.creativeSkeletons[0]);
+const visibleGoldTemplateIds = [
+  "gold_listing_brochure",
+  "gold_luxury_dark_arch",
+  "gold_just_sold_stamp",
+  "gold_open_home_signboard",
+  "gold_collage_listing",
+  "gold_seller_checklist",
+  "gold_apartment_blue",
+  "gold_under_contract_minimal",
+];
 
 function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
   return {
@@ -33,7 +44,7 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
   };
 }
 
-test("template library ignores old approved rows and only exposes extracted Meta templates", () => {
+test("template library ignores old approved rows and only exposes quality-gated gold templates", () => {
   const leakedPreviewRow = row({
     template_key: "DNA-70",
     category: "creative dna",
@@ -55,9 +66,12 @@ test("template library ignores old approved rows and only exposes extracted Meta
 
   const merged = mergeAdStudioTemplateLibrary(approved);
 
-  assert.equal(merged.length, 10);
-  assert.ok(merged.every((template) => template.id.startsWith("meta_")));
+  assert.deepEqual(merged.map((template) => template.id), visibleGoldTemplateIds);
+  assert.ok(merged.every((template) => template.id.startsWith("gold_")));
   assert.ok(!merged.some((template) => template.id === "DNA-70" || template.id === "OLD-99"));
+
+  assert.equal(resolveAdStudioTemplate("meta_317").id, "meta_317");
+  assert.ok(!merged.some((template) => template.id === "meta_317"));
 });
 
 test("template library exposes only generated sample-card URLs, not observed media URLs", () => {
@@ -98,7 +112,7 @@ test("template library exposes only generated sample-card URLs, not observed med
   }
 });
 
-test("template library does not merge old first-pass rows into the visible picker", () => {
+test("template library does not merge old first-pass rows or hidden extracted templates into the visible picker", () => {
   const oldRows = [
     row({ template_key: "HV-01", adstudio_template_id: "free_appraisal", evidence_score: 99 }),
     row({ template_key: "MU-01", adstudio_template_id: "market_update", evidence_score: 98 }),
@@ -108,16 +122,5 @@ test("template library does not merge old first-pass rows into the visible picke
 
   const merged = mergeAdStudioTemplateLibrary(oldRows);
   assert.ok(!merged.some((template) => template.id === "HV-01" || template.id === "MU-01"));
-  assert.deepEqual(merged.map((template) => template.id), [
-    "meta_002",
-    "meta_021",
-    "meta_040",
-    "meta_044",
-    "meta_055",
-    "meta_094",
-    "meta_142",
-    "meta_245",
-    "meta_259",
-    "meta_317",
-  ]);
+  assert.deepEqual(merged.map((template) => template.id), visibleGoldTemplateIds);
 });
