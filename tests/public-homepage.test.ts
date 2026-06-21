@@ -58,7 +58,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(source, forbiddenClaims);
 
   const expectedSections = [
-    "problem",
     "radar",
     "workflow",
     "campaign-types",
@@ -75,7 +74,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
 
   const sectionOrder = [
     'className="lp-hero"',
-    'id="problem"',
     'id="workflow"',
     'id="campaign-types"',
     'id="approval"',
