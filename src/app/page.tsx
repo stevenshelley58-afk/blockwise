@@ -675,7 +675,8 @@ export default function HomePage() {
                 <h2 className="lp-h2" id="dfy-title">Approve the ad. Skip the setup work.</h2>
                 <p className="lp-lead">
                   Blockwise prepares the copy, creative, lead form, budget and reporting. You check
-                  what goes live before anything spends.
+                  what goes live before anything spends, then export the package for final setup in
+                  your own ad account.
                 </p>
               </div>
 
