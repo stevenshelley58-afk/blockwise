@@ -9,7 +9,7 @@ import { buildAuditNarrative, computeAuditSignals } from "../../src/lib/research
 const SALES =
   /\b(campaign|campaigns|trial|proven|winning|crushing|dominating|unlock|ad pack|ad packs|lead machine|no card required|book a call|start free|build my campaign|approve before export)\b/i;
 const PUBLIC_REPORT_JARGON =
-  /\b(confidence score|signal confidence|data quality notes|data quality|practical interpretation|methodology|what it may mean|what not to assume|useful next check)\b/i;
+  /\b(local advertising signal report|signal report|confidence score|signal confidence|data quality notes|data quality|practical interpretation|methodology|what it may mean|what not to assume|useful next check)\b/i;
 
 type Advertiser = AdAuditStats["topAdvertisers"][number];
 type Count = AdAuditStats["formats"][number];
@@ -138,6 +138,9 @@ test("public audit page does not expose internal report mechanics", () => {
   assert.doesNotMatch(publicSource, /Data quality notes/i);
   assert.doesNotMatch(publicSource, /Practical interpretation/i);
   assert.doesNotMatch(publicSource, /Methodology/i);
+  assert.doesNotMatch(publicSource, /Local Advertising Signal Report/i);
+  assert.doesNotMatch(publicSource, /signal report/i);
+  assert.doesNotMatch(publicSource, /Report ID/i);
   assert.doesNotMatch(publicSource, /What it may mean/i);
   assert.doesNotMatch(publicSource, /What not to assume/i);
   assert.doesNotMatch(publicSource, /Useful next check/i);

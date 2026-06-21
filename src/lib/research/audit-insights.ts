@@ -248,7 +248,7 @@ export function buildAuditNarrative(input: {
   push(moduleWeakClassification(label, stats, signals));
 
   return {
-    headline: `${label} - local advertising signal report`,
+    headline: `${label} - suburb ad scan`,
     snapshot: snapshotParagraphs(label, stats, signals),
     dataQuality: dataQualityNotes(stats, signals),
     blocks,
@@ -344,7 +344,7 @@ function moduleNoActiveAds(label: string, stats: AdAuditStats, signals: AuditSig
         ? `${countLabel(detected, "ad")} were detected around ${label}, but none were active when this scan ran.`
         : `No active real estate ads were detected around ${label} at scan time.`,
     interpretation:
-      `The value of this report is in the recent historical pattern, not current live pressure. Inactive ads are examples of past messaging, ` +
+      `The value here is in the recent historical pattern, not current live pressure. Inactive ads are examples of past messaging, ` +
       `not evidence of current strategy.`,
     whyItMatters:
       `A market with recent-but-inactive ads should be read differently from one with live ads. The first shows what agents have recently tested; ` +
@@ -404,7 +404,7 @@ function moduleOneDominant(label: string, stats: AdAuditStats, signals: AuditSig
     usefulActions: [
       `Review whether ${top.name} is running genuinely different ads or many variants of the same message.`,
       "Compare the dominant advertiser's message against the smaller advertisers to see what they are not saying.",
-      "Weight the rest of the report toward advertisers other than the dominant one.",
+      "Weight the rest of this scan toward advertisers other than the dominant one.",
     ],
     confidence: signals.signalConfidence,
   };
