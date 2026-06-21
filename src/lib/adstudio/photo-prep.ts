@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { AdStudioTemplate } from "./templates.ts";
+import { resolveTemplateDesignForFormat } from "./template-design.ts";
 import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
 import { getCanvasSize } from "./renderer.ts";
 
@@ -108,10 +109,45 @@ export type PreparedPhotoAsset = {
 };
 
 export function buildTemplateRenderFrame(input: {
-  template: Pick<AdStudioTemplate, "creativeSkeleton" | "id" | "templateKey" | "name">;
+  template: Pick<AdStudioTemplate, "creativeSkeleton" | "designs" | "id" | "templateKey" | "name">;
   format: AdStudioFormat;
 }): TemplateRenderFrame {
   const canvas = getCanvasSize(input.format);
+  const design = resolveTemplateDesignForFormat(input.template, input.format);
+  if (design) {
+    const imageSlots = design.layers
+      .filter((layer) => layer.type === "image_slot")
+      .map((layer) => ({
+        id: layer.id,
+        role: layer.role,
+        x: layer.rect.x,
+        y: layer.rect.y,
+        width: layer.rect.w,
+        height: layer.rect.h,
+        promptHint: `${input.template.name ?? design.templateId} ${layer.role} image slot`,
+      }));
+    const copySafeZones = design.layers
+      .filter((layer) => layer.type === "text" || layer.type === "cta_button")
+      .map((layer) => ({
+        id: layer.id,
+        x: layer.rect.x,
+        y: layer.rect.y,
+        width: layer.rect.w,
+        height: layer.rect.h,
+      }));
+
+    return templateRenderFrameSchema.parse({
+      format: input.format,
+      canvas: {
+        widthPx: design.canvas.w,
+        heightPx: design.canvas.h,
+      },
+      imageSlots,
+      copySafeZones,
+      lockedLayout: true,
+    });
+  }
+
   const skeleton = input.template.creativeSkeleton;
   const explicitSlots = (skeleton?.composition.image_frames ?? [])
     .filter((frame) => !frame.formats || frame.formats.includes(input.format))

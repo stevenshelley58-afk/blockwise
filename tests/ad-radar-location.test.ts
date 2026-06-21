@@ -460,6 +460,11 @@ function card(input: Partial<CustomerMetaAdLibraryCard> & { id: string }): Custo
     description: input.description ?? null,
     cta: null,
     destinationUrl: null,
+    agencyName: input.agencyName ?? null,
+    agentName: input.agentName ?? null,
+    adType: input.adType ?? null,
+    adFormat: input.adFormat ?? null,
+    hooks: input.hooks ?? [],
     media: [],
   };
 }

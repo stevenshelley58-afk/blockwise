@@ -3,7 +3,9 @@ import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { buildArchetypeCreative } from "./layout-archetypes.ts";
 import { getOfferTemplate } from "./offers.ts";
+import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
+import { resolveTemplateDesignForFormat, type BoundTemplateContent } from "./template-design.ts";
 import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
   AdStudioBrandKit,
@@ -779,6 +781,33 @@ function buildCreative(input: {
   sourceImageDataUrl?: string;
   subheadline?: string;
 }): AdStudioCreative {
+  const design = resolveTemplateDesignForFormat(input.template, input.format);
+  if (design) {
+    const content: BoundTemplateContent = {
+      text: {
+        eyebrow: input.template?.name ?? input.campaign.offerId,
+        headline: input.variant.headline,
+        subhead: input.subheadline ?? input.variant.offer,
+        body: input.subheadline ?? input.variant.offer,
+        cta: input.variant.cta,
+        phone: input.brandKit.contact.phone ?? "",
+        handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
+      },
+      images: input.sourceImageDataUrl
+        ? {
+            primary: input.sourceImageDataUrl,
+            primary_photo: input.sourceImageDataUrl,
+          }
+        : undefined,
+    };
+
+    return renderDesign(design, content, input.brandKit, {
+      creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:template_design`),
+      campaignId: input.campaign.campaignId,
+      variantId: input.variant.variantId,
+    });
+  }
+
   return buildArchetypeCreative({
     campaign: input.campaign,
     variant: input.variant,
@@ -804,6 +833,7 @@ function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unkno
     status: template.status ?? null,
     promptHint: template.promptHint,
     imageBriefId: template.imageBriefId ?? null,
+    designs: template.designs ?? null,
     evidenceScore: template.evidenceScore ?? null,
     winnerRationale: template.winnerRationale ?? null,
     complianceNote: template.complianceNote ?? null,
