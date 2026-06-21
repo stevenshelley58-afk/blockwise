@@ -184,8 +184,17 @@ export type AdStudioCanvasObject = {
   width: number;
   height?: number;
   font?: "brand_heading" | "brand_body";
+  fontFamily?: string;
   size?: number;
+  lineHeight?: number;
+  weight?: number;
+  align?: "left" | "center" | "right";
+  radius?: number;
+  opacity?: number;
   fill?: string;
+  sourceLayerId?: string;
+  templateRole?: string;
+  templateSlot?: string;
   locked: boolean;
 };
 

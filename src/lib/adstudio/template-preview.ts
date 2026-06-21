@@ -2,6 +2,8 @@ import { buildComposition } from "./creative/compositions.ts";
 import { buildPalette, fontStacks, renderScene } from "./creative/preview-engine.ts";
 import { svgDataUrl, toWellFormedText } from "./creative/svg-data-url.ts";
 import { compositionForTemplate, sampleCopyForTemplate } from "./creative/template-composition.ts";
+import { renderDesignSvg } from "./renderer.ts";
+import { resolveTemplateDesignForFormat } from "./template-design.ts";
 import type { AdStudioTemplate } from "./templates.ts";
 import type { AdStudioBrandKit } from "./types.ts";
 
@@ -60,6 +62,21 @@ export function templatePreviewSvg(template: AdStudioTemplate, brandKit: AdStudi
     statLabel: raw.statLabel,
     features: raw.features ? raw.features.map((f) => sanitise(f)) : undefined,
   };
+
+  const design = resolveTemplateDesignForFormat(template, "4:5");
+  if (design) {
+    return renderDesignSvg(design, {
+      text: {
+        eyebrow: copy.eyebrow,
+        headline: copy.headline,
+        subhead: copy.subhead,
+        body: copy.subhead,
+        cta: copy.cta,
+        phone: brandKit.contact.phone ?? "",
+        handle: brandName,
+      },
+    }, brandKit);
+  }
 
   const compositionId = compositionForTemplate(template);
   const scene = buildComposition(compositionId, { width: 1080, height: 1350, palette, stacks, copy, photo: null });

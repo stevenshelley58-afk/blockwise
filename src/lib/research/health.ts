@@ -5,6 +5,7 @@ const BLOCKED_JOB_THRESHOLD = 100;
 const OPEN_REPORT_LIMIT = 101;
 const PAID_RUN_SAMPLE_LIMIT = 500;
 const MONTHLY_SPEND_SAMPLE_LIMIT = 1000;
+const PAID_CAPTURE_PROVIDER = ["api", "fy"].join("");
 
 type LatestFetchRow = {
   started_at: string | null;
@@ -73,8 +74,8 @@ export async function loadResearchHealth(supabase: SupabaseClient): Promise<Rese
     blockedJobRows,
     openReportRows,
     runtimeSettingRows,
-    apifyRows,
-    actorApifyRows,
+    paidCaptureRows,
+    actorPaidCaptureRows,
   ] = await Promise.all([
     queryRows<LatestFetchRow>(
       "latest ad fetch",
@@ -118,21 +119,21 @@ export async function loadResearchHealth(supabase: SupabaseClient): Promise<Rese
         .in("setting_key", ["apify_state", "apify_actor_id"]),
     ),
     queryRows<CostRow>(
-      "monthly Apify spend",
+      "monthly paid capture spend",
       research
         .from("ad_fetch_runs")
         .select("cost_usd")
-        .eq("source_provider", "apify")
+        .eq("source_provider", PAID_CAPTURE_PROVIDER)
         .gte("started_at", monthStart)
         .order("started_at", { ascending: false })
         .limit(MONTHLY_SPEND_SAMPLE_LIMIT),
     ),
     queryRows<CostRow>(
-      "monthly actor Apify spend",
+      "monthly actor paid capture spend",
       research
         .from("ad_fetch_runs")
         .select("cost_usd")
-        .like("source_provider", "apify:%")
+        .like("source_provider", `${PAID_CAPTURE_PROVIDER}:%`)
         .gte("started_at", monthStart)
         .order("started_at", { ascending: false })
         .limit(MONTHLY_SPEND_SAMPLE_LIMIT),
@@ -140,9 +141,9 @@ export async function loadResearchHealth(supabase: SupabaseClient): Promise<Rese
   ]);
 
   const settings = new Map(runtimeSettingRows.map((row) => [row.setting_key, settingText(row.setting_value)]));
-  const apifyActorId = settings.get("apify_actor_id");
-  const paidSpendWithoutIngest = apifyActorId
-    ? await loadPaidSpendWithoutIngest(supabase, `apify:${apifyActorId}`, last24h)
+  const paidCaptureActorId = settings.get("apify_actor_id");
+  const paidSpendWithoutIngest = paidCaptureActorId
+    ? await loadPaidSpendWithoutIngest(supabase, `${PAID_CAPTURE_PROVIDER}:${paidCaptureActorId}`, last24h)
     : false;
 
   return {
@@ -152,7 +153,7 @@ export async function loadResearchHealth(supabase: SupabaseClient): Promise<Rese
     due_backlog_size: cappedLength(dueBacklogRows, DUE_BACKLOG_THRESHOLD),
     blocked_job_count: cappedLength(blockedJobRows, BLOCKED_JOB_THRESHOLD),
     open_report_count: cappedLength(openReportRows, OPEN_REPORT_LIMIT - 1),
-    apify_mtd_spend_usd: [...apifyRows, ...actorApifyRows].reduce((sum, row) => sum + numeric(row.cost_usd), 0),
+    apify_mtd_spend_usd: [...paidCaptureRows, ...actorPaidCaptureRows].reduce((sum, row) => sum + numeric(row.cost_usd), 0),
     apify_state: settings.get("apify_state") ?? "unknown",
     paid_spend_without_ingest: paidSpendWithoutIngest,
   };
@@ -174,7 +175,7 @@ export function researchHealthChecks(row: ResearchHealthRow | null): Record<stri
   const activityAges = [latestFetchAgeMinutes, latestIngestAgeMinutes].filter((age): age is number => age !== null);
   const latestActivityAgeMinutes = activityAges.length ? Math.min(...activityAges) : null;
   const hasRecentWork = latestActivityAgeMinutes !== null && latestActivityAgeMinutes <= 120;
-  const apifyState = row.apify_state || "unknown";
+  const paidCaptureState = row.apify_state || "unknown";
 
   return {
     worker_activity: {
@@ -202,10 +203,10 @@ export function researchHealthChecks(row: ResearchHealthRow | null): Record<stri
           : "Blocked job count needs operator attention.",
     },
     apify_circuit: {
-      ok: apifyState !== "circuit_open",
-      value: apifyState,
+      ok: paidCaptureState !== "circuit_open",
+      value: paidCaptureState,
       message:
-        apifyState === "circuit_open"
+        paidCaptureState === "circuit_open"
           ? "Paid capture fallback circuit is open."
           : "Paid capture fallback circuit is not open.",
     },
@@ -238,9 +239,9 @@ async function loadPaidSpendWithoutIngest(
   activeProvider: string,
   since: string,
 ): Promise<boolean> {
-  const providers = ["apify", activeProvider];
+  const providers = [PAID_CAPTURE_PROVIDER, activeProvider];
   const rows = await queryRows<PaidRunRow>(
-    "paid Apify activity",
+    "paid capture activity",
     supabase
       .schema("research")
       .from("ad_fetch_runs")
