@@ -359,11 +359,6 @@ function card(input: Partial<CustomerMetaAdLibraryCard> & { id: string }): Custo
     description: input.description ?? null,
     cta: input.cta ?? "Learn more",
     destinationUrl: input.destinationUrl ?? null,
-    agencyName: input.agencyName ?? null,
-    agentName: input.agentName ?? null,
-    adType: input.adType ?? null,
-    adFormat: input.adFormat ?? null,
-    hooks: input.hooks ?? [],
     media: input.media ?? [],
   };
 }
@@ -407,11 +402,6 @@ function row(input: Partial<CustomerMetaAdLibraryCardRow> & { card_id: string })
     ad_area_suburbs: input.ad_area_suburbs ?? (input.suburb ? [input.suburb] : []),
     service_area_postcodes: input.service_area_postcodes ?? [],
     service_area_suburbs: input.service_area_suburbs ?? [],
-    agent_name: input.agent_name ?? null,
-    agency_name: input.agency_name ?? null,
-    ad_type: input.ad_type ?? null,
-    format: input.format ?? null,
-    hooks: input.hooks ?? [],
   };
 }
 
