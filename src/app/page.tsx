@@ -114,7 +114,7 @@ export default function HomePage() {
               <span className="lp-hero-pill-dot" aria-hidden />
               Meta ads for real estate agents
             </span>
-            <h1 id="hero-title">See every ad running in your suburb.</h1>
+            <h1 id="hero-title">Your competitors are advertising. Are you?</h1>
             <p className="lp-hero-sub">
               Ads built from what&rsquo;s actually working in your area. Start getting leads today.
             </p>
