@@ -1064,6 +1064,28 @@ test("Hermes classification backfill cannot starve older unclassified creatives"
   );
 });
 
+test("Hermes compose exposes supervisor scheduler tuning knobs", () => {
+  const schedulerEnvKeys = [
+    "HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES",
+    "HERMES_AD_PAGE_REFRESH_BATCH_SIZE",
+    "HERMES_AD_PAGE_REFRESH_MAX_ACTIVE",
+    "HERMES_LOCATION_AD_SEARCH_INTERVAL_MINUTES",
+    "HERMES_LOCATION_AD_SEARCH_BATCH_SIZE",
+    "HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE",
+    "HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE",
+    "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
+  ];
+
+  for (const key of schedulerEnvKeys) {
+    assert.match(supervisor, new RegExp(`"${key}"`, "u"), `supervisor should read ${key}`);
+    assert.match(
+      researchCompose,
+      new RegExp(`\\b${key}:\\s*\\$\\{${key}:-\\d+\\}`, "u"),
+      `production compose should expose ${key}`,
+    );
+  }
+});
+
 test("Hermes classifier treats stale creative jobs as no-op completions", () => {
   assert.match(
     adClassifier,
