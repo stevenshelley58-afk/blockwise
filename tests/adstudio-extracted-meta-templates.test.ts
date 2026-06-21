@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -11,6 +12,7 @@ import {
 import { EXTRACTED_META_TEMPLATE_DESCRIPTORS, EXTRACTED_META_TEMPLATE_SLICE_SIZE, EXTRACTED_META_TEMPLATE_TOTAL } from "../src/lib/adstudio/extracted-meta-templates.generated.ts";
 import { templatePreviewDataUrl } from "../src/lib/adstudio/template-preview.ts";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
+import { imageDimensionsFromBytes } from "../src/lib/adstudio/image-dimensions.ts";
 import type { AdStudioFormat } from "../src/lib/adstudio/types.ts";
 
 const FORMATS = ["9:16", "4:5", "1:1"] as const satisfies readonly AdStudioFormat[];
@@ -86,5 +88,16 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     assert.equal(template.sampleCardImageUrl, `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
     assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
     assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+  }
+});
+
+test("extracted Meta gallery sample cards stay source-faithful to the selected originals", () => {
+  for (const descriptor of EXTRACTED_META_TEMPLATE_DESCRIPTORS) {
+    const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    assert.deepEqual(
+      imageDimensionsFromBytes(bytes),
+      { width: descriptor.imageSize.w, height: descriptor.imageSize.h },
+      `${descriptor.id} sample card should preserve source image dimensions`,
+    );
   }
 });
