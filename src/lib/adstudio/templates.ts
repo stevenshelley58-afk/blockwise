@@ -1,4 +1,6 @@
-import type { AdStudioGoal } from "./types.ts";
+import { templateDesignSchema, type TemplateDesign, type TemplateDesignSet } from "./template-design.ts";
+import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
+import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/template-design-from-skeleton.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import {
   deriveTemplateSampleStyle,
@@ -23,6 +25,7 @@ export type AdStudioTemplate = {
   sampleCopy?: AdStudioTemplateSampleCopy;
   sampleStyle?: AdStudioTemplateSampleStyle;
   sampleCardImageUrl?: string;
+  designs?: TemplateDesignSet;
   evidenceScore?: number;
   winnerRationale?: string;
   complianceNote?: string;
@@ -47,6 +50,10 @@ export type AdStudioLibraryTemplate = {
   sample_style?: unknown;
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
+  template_design?: unknown;
+  template_designs?: unknown;
+  template_version?: number | string | null;
+  brief_schema?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
@@ -260,6 +267,157 @@ const FIRST_PASS_TEMPLATE_SKELETONS: Record<string, CreativeSkeleton> = {
   }),
 };
 
+const DESIGN_CANVAS: Record<AdStudioFormat, { w: number; h: number }> = {
+  "1:1": { w: 1080, h: 1080 },
+  "4:5": { w: 1080, h: 1350 },
+  "9:16": { w: 1080, h: 1920 },
+  "1.91:1": { w: 1200, h: 628 },
+};
+
+function freeAppraisalDesign(format: AdStudioFormat): TemplateDesign {
+  const panel = format === "9:16"
+    ? { x: 0.08, y: 0.49, w: 0.84, h: 0.31 }
+    : format === "1.91:1"
+      ? { x: 0.52, y: 0.18, w: 0.39, h: 0.58 }
+      : { x: 0.47, y: 0.39, w: 0.45, h: 0.35 };
+  const cta = {
+    x: panel.x + 0.05,
+    y: panel.y + panel.h - 0.09,
+    w: Math.min(0.35, panel.w - 0.1),
+    h: format === "1.91:1" ? 0.1 : 0.065,
+  };
+
+  return templateDesignSchema.parse({
+    templateId: "free_appraisal",
+    version: 1,
+    format,
+    canvas: DESIGN_CANVAS[format],
+    palette: ["#14314F", "#FFFFFF", "#E7B24B", "#0B1720"],
+    fonts: ["Inter", "Inter"],
+    layers: [
+      {
+        id: "background",
+        type: "shape",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        fill: "#14314F",
+        role: "background",
+        locked: true,
+      },
+      {
+        id: "primary_photo",
+        type: "image_slot",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        role: "primary",
+        fit: "smart",
+        mask: "none",
+      },
+      {
+        id: "photo_scrim",
+        type: "shape",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        fill: "#0B1720",
+        opacity: 0.18,
+        role: "scrim",
+        locked: true,
+      },
+      {
+        id: "brand_logo",
+        type: "logo",
+        rect: { x: 0.07, y: format === "9:16" ? 0.045 : 0.055, w: 0.28, h: format === "1.91:1" ? 0.08 : 0.052 },
+        source: "brand_kit",
+      },
+      {
+        id: "appraisal_panel",
+        type: "shape",
+        rect: panel,
+        fill: "#FFFFFF",
+        radius: 24,
+        opacity: 0.92,
+        role: "panel",
+        locked: true,
+      },
+      {
+        id: "eyebrow",
+        type: "text",
+        rect: { x: panel.x + 0.05, y: panel.y + 0.055, w: panel.w - 0.1, h: 0.05 },
+        slot: "eyebrow",
+        align: "left",
+        font: "Inter",
+        size: format === "1.91:1" ? 24 : 30,
+        lineHeight: 1.05,
+        weight: 800,
+        color: "#E7B24B",
+        case: "upper",
+        maxChars: 42,
+        fill: "static",
+        text: "Free appraisal",
+      },
+      {
+        id: "headline",
+        type: "text",
+        rect: { x: panel.x + 0.05, y: panel.y + 0.115, w: panel.w - 0.1, h: panel.h * 0.33 },
+        slot: "headline",
+        align: "left",
+        font: "Inter",
+        size: format === "1.91:1" ? 44 : format === "9:16" ? 58 : 54,
+        lineHeight: 1.02,
+        weight: 900,
+        color: "#0B1720",
+        maxChars: 58,
+        fill: "ai_copy",
+      },
+      {
+        id: "subhead",
+        type: "text",
+        rect: { x: panel.x + 0.05, y: panel.y + panel.h * 0.52, w: panel.w - 0.1, h: panel.h * 0.18 },
+        slot: "subhead",
+        align: "left",
+        font: "Inter",
+        size: format === "1.91:1" ? 24 : 30,
+        lineHeight: 1.18,
+        weight: 600,
+        color: "#24364A",
+        maxChars: 120,
+        fill: "ai_copy",
+      },
+      {
+        id: "cta",
+        type: "cta_button",
+        rect: cta,
+        fill: "#14314F",
+        radius: 999,
+        label: "cta",
+        textColor: "#FFFFFF",
+        font: "Inter",
+        size: format === "1.91:1" ? 22 : 26,
+      },
+      {
+        id: "phone",
+        type: "text",
+        rect: { x: panel.x + panel.w - 0.27, y: cta.y + 0.012, w: 0.22, h: cta.h * 0.7 },
+        slot: "phone",
+        align: "right",
+        font: "Inter",
+        size: format === "1.91:1" ? 18 : 22,
+        lineHeight: 1,
+        weight: 700,
+        color: "#14314F",
+        maxChars: 24,
+        fill: "brand",
+      },
+    ],
+  });
+}
+
+function freeAppraisalDesigns(): TemplateDesignSet {
+  return {
+    "9:16": freeAppraisalDesign("9:16"),
+    "4:5": freeAppraisalDesign("4:5"),
+    "1:1": freeAppraisalDesign("1:1"),
+    "1.91:1": freeAppraisalDesign("1.91:1"),
+  };
+}
+
 function firstPassMetadata(templateKey: string, creativeSkeleton: CreativeSkeleton) {
   return {
     templateKey,
@@ -333,6 +491,7 @@ export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   {
     id: "free_appraisal",
     ...firstPassMetadata("free_appraisal", FIRST_PASS_TEMPLATE_SKELETONS.free_appraisal),
+    designs: freeAppraisalDesigns(),
     name: "Free appraisal",
     goal: "appraisal_bookings",
     offerId: "home_value_update",
@@ -391,6 +550,16 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   });
 
   const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
+  const templateVersion = numberValue(row.template_version) ?? 1;
+  const designs =
+    parseTemplateDesigns(row.template_designs ?? row.template_design) ??
+    (creativeSkeleton
+      ? templateDesignSetFromCreativeSkeleton({
+          templateId: templateKey,
+          version: templateVersion,
+          skeleton: creativeSkeleton,
+        })
+      : undefined);
   const sampleStyle = parseSampleStyle(row.sample_style) ?? deriveTemplateSampleStyle({ ...row, template_key: templateKey });
   const sampleCopy = sampleCopyForTemplate({ ...row, template_key: templateKey }, sampleStyle);
   const sampleCardImageUrl =
@@ -419,6 +588,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     ...(row.compliance_note ? { complianceNote: row.compliance_note } : {}),
     ...(manualFirstPass ? { manualFirstPass: true } : {}),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
+    ...(designs ? { designs } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
   };
 }
@@ -512,6 +682,21 @@ function numberValue(value: unknown): number | undefined {
 function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
   const parsed = creativeSkeletonSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function parseTemplateDesigns(value: unknown): TemplateDesignSet | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const single = templateDesignSchema.safeParse(value);
+  if (single.success) return { [single.data.format]: single.data };
+
+  const designs: TemplateDesignSet = {};
+  for (const format of ["9:16", "4:5", "1:1", "1.91:1"] as const) {
+    const parsed = templateDesignSchema.safeParse(value[format]);
+    if (parsed.success) designs[format] = parsed.data;
+  }
+
+  return Object.keys(designs).length > 0 ? designs : undefined;
 }
 
 function parseSampleStyle(value: unknown): AdStudioTemplateSampleStyle | undefined {

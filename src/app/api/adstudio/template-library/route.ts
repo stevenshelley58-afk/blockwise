@@ -28,7 +28,11 @@ const templatePatchSchema = z.object({
 type TemplatePatchBody = z.infer<typeof templatePatchSchema>;
 
 function isMissingTemplateLibrary(error: { code?: string; message?: string } | null | undefined): boolean {
-  return error?.code === "42P01" || /(?:v_ad_template_library|ad_template_candidates|relation .* does not exist)/i.test(error?.message ?? "");
+  return (
+    error?.code === "42P01" ||
+    error?.code === "42703" ||
+    /(?:v_ad_template_library|ad_template_candidates|relation .* does not exist|column .* does not exist)/i.test(error?.message ?? "")
+  );
 }
 
 function researchClient() {
@@ -48,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await research
     .from("v_ad_template_library")
-    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,sample_card_image_path,sample_style,ai_prompt_seed,creative_skeleton,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
+    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,sample_card_image_path,sample_style,ai_prompt_seed,creative_skeleton,template_designs,template_version,brief_schema,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
     .order("evidence_score", { ascending: false })
     .limit(100);
 
@@ -101,7 +105,7 @@ async function updateTemplateStatus(body: TemplatePatchBody, userId: string) {
       ...patch,
     })
     .eq("template_key", body.templateKey)
-    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,sample_card_image_path,sample_style,ai_prompt_seed,creative_skeleton,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
+    .select("template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,sample_card_image_path,sample_style,ai_prompt_seed,creative_skeleton,template_designs,template_version,brief_schema,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note")
     .maybeSingle();
 
   if (isMissingTemplateLibrary(error)) {

@@ -58,6 +58,12 @@ export {
   type CreativeSkeletonArchetype,
 } from "../ad-template-library/skeleton.ts";
 export {
+  templateDesignFromCreativeSkeleton,
+  templateDesignSetFromCreativeSkeleton,
+  type SkeletonTemplateDesignInput,
+  type SkeletonTemplateDesignSetInput,
+} from "../ad-template-library/template-design-from-skeleton.ts";
+export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
   createOpenAiVisionProvider,
@@ -81,6 +87,7 @@ export {
 } from "./platform-rules.ts";
 export {
   buildPhotoPrepCacheKey,
+  buildPreparePhotoForTemplateFramePrompt,
   buildTemplateRenderFrame,
   deterministicPreparedPhotoAsset,
   selectPhotoPrepMethod,
@@ -102,6 +109,19 @@ export {
   type TemplatePhotoPrepInput,
 } from "./photo-prep-service.ts";
 export {
+  designLayerSignature,
+  resolveTemplateDesignForFormat,
+  templateDesignSchema,
+  templateLayerSchema,
+  type BoundTemplateContent,
+  type TemplateDesign,
+  type TemplateDesignSet,
+  type TemplateLayer,
+  type TemplateRect,
+  type TextFill,
+  type TextSlot,
+} from "./template-design.ts";
+export {
   createDeterministicImageProvider,
   createDeterministicTextProvider,
   createDeterministicVisionProvider,
@@ -110,7 +130,7 @@ export {
   type TextProviderAdapter,
   type VisionProviderAdapter,
 } from "./providers.ts";
-export { renderCreativeSvg } from "./renderer.ts";
+export { renderCreativeSvg, renderDesign, renderDesignSvg, type RenderDesignOptions } from "./renderer.ts";
 export { scoreAdStudioVariant, type VariantScoreInput } from "./scoring.ts";
 export {
   isMissingTemplateLibrary,

@@ -354,7 +354,11 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
   assert.match(route, /from\("v_ad_template_library"\)/);
   assert.match(route, /from\("ad_template_candidates"\)/);
-  assert.match(route, /creative_skeleton,exemplar_observed_ad_ids/);
+  assert.match(route, /creative_skeleton/);
+  assert.match(route, /template_designs/);
+  assert.match(route, /template_version/);
+  assert.match(route, /brief_schema/);
+  assert.match(route, /exemplar_observed_ad_ids/);
   assert.match(route, /sample_card_image_path,sample_style/);
   assert.doesNotMatch(route, /from\("ad_creatives"\)/);
   assert.doesNotMatch(route, /image_storage_path|video_thumbnail_url|media_assets/);
