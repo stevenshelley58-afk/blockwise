@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -93,7 +93,13 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
       assert.ok(design, `${gold.id} should have ${format} design`);
       assert.equal(design.templateId, gold.id);
       assert.deepEqual(templateDesignSchema.parse(design), design);
-      assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
+      const hasImageSlot = design.layers.some((layer) => layer.type === "image_slot");
+      if (gold.id === "gold_market_types_table") {
+        assert.equal(hasImageSlot, false, "market comparison reference is intentionally text/table-led");
+        assert.ok(design.layers.filter((layer) => layer.type === "text").length >= 12);
+      } else {
+        assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
+      }
       assert.ok(design.layers.some((layer) => layer.type === "text" && layer.slot === "headline" && layer.fill === "ai_copy"));
       assert.ok(design.layers.some((layer) => layer.type === "cta_button" && layer.label === "cta"));
 
@@ -111,7 +117,9 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
         },
       }, kit);
       assert.match(creative.previewSvg, /^<svg[\s>]/u);
-      assert.ok(creative.canvas.objects.some((object) => object.sourceLayerId === "primary_photo"));
+      if (hasImageSlot) {
+        assert.ok(creative.canvas.objects.some((object) => object.sourceLayerId === "primary_photo"));
+      }
       assert.ok(creative.canvas.objects.some((object) => object.role === "cta_button"));
       assert.ok(creative.canvas.objects
         .filter((object) => object.type === "text")
@@ -133,14 +141,22 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   assert.doesNotMatch(indexSource, /\bSPECS\b/);
   assert.doesNotMatch(indexSource, /switch\s*\(/);
   assert.doesNotMatch(indexSource, /\blayout\s*:/);
+  assert.equal(existsSync("src/lib/adstudio/gold-templates/primitives.ts"), false);
 
   const moduleFiles = readdirSync("src/lib/adstudio/gold-templates")
-    .filter((file) => file.endsWith(".ts") && file !== "primitives.ts");
+    .filter((file) => file.endsWith(".ts"));
   assert.equal(moduleFiles.length, GOLD_AD_STUDIO_TEMPLATES.length);
+  assert.equal(GOLD_AD_STUDIO_TEMPLATES.length, 10);
   assert.equal(Object.keys(GOLD_TEMPLATE_RENDER_SAMPLES).length, GOLD_AD_STUDIO_TEMPLATES.length);
 
   for (const template of GOLD_AD_STUDIO_TEMPLATES) {
     assert.ok(GOLD_TEMPLATE_RENDER_SAMPLES[template.id], `${template.id} should own its sample render data`);
+    assert.match(template.exemplars?.[0] ?? "", /Reference sample \d{2} from the uploaded board/);
+  }
+
+  for (const moduleFile of moduleFiles) {
+    const source = readFileSync(`src/lib/adstudio/gold-templates/${moduleFile}`, "utf8");
+    assert.doesNotMatch(source, /from\s+["']\.\/primitives\.ts["']/);
   }
 });
 
