@@ -19,6 +19,7 @@ const paths = {
   coverageSchema: "src/lib/research/schemas/coverage.ts",
   defectInvestigateRoute: "src/app/api/operator/research/defects/[id]/investigate/route.ts",
   operatorPostcodeRefresh: "src/lib/operator/postcode-refresh.ts",
+  operatorAssistant: "src/lib/operator/assistant.ts",
   operatorResearchChat: "src/app/api/operator/research/chat/route.ts",
   operatorResearchConsole: "src/components/operator/research-console.tsx",
   operatorResearchPage: "src/app/(operator)/operator/research/page.tsx",
@@ -291,17 +292,21 @@ test("operator postcode refresh creates a due policy and one-off census job", ()
 
 test("operator chat postcode refresh uses the shared census source guard", () => {
   const chat = read(paths.operatorResearchChat);
+  const assistant = read(paths.operatorAssistant);
   const refresh = read(paths.operatorPostcodeRefresh);
 
-  assert.match(chat, /parseRefreshPostcodeCommand/);
-  assert.match(chat, /executeRefreshPostcode\(research, postcode, guard\.email\)/);
+  assert.match(chat, /runOperatorAssistant/);
+  assert.match(chat, /messages:\s*z\.array\(chatMessageSchema\)/);
+  assert.match(chat, /error:\s*["']Invalid operator chat request\.["']/);
+  assert.match(assistant, /executeRefreshPostcode as executeSharedRefreshPostcode/);
+  assert.match(assistant, /executeSharedRefreshPostcode\(research, postcode, email\)/);
   assert.match(
     refresh,
     /No census source for \$\{state\} yet, so I did not queue a postcode census refresh for \$\{postcode\}\./,
     "unsupported chat refreshes must answer honestly instead of implying impossible queued census work",
   );
   assert.doesNotMatch(
-    chat,
+    assistant,
     /job_type:\s*["']blockwise-agent-census["']/,
     "chat must not maintain a separate postcode census queueing path",
   );
