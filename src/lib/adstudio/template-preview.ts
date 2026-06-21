@@ -88,7 +88,7 @@ export function templatePreviewDataUrl(template: AdStudioTemplate, brandKit: AdS
   // original Blockwise creative (no observed-ad pixels), so they are safe to
   // surface in the picker; otherwise fall back to the neutral on-brand mock.
   const sampleCard = template.sampleCardImageUrl;
-  if (typeof sampleCard === "string" && /^https:\/\//u.test(sampleCard)) {
+  if (typeof sampleCard === "string" && (sampleCard.startsWith("/") || /^https:\/\//u.test(sampleCard))) {
     return sampleCard;
   }
   try {

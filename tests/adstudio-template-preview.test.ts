@@ -30,6 +30,13 @@ test("templatePreviewSvg renders an extracted Meta template preview", () => {
   assert.match(svg, /href="https:\/\/realtyplus\.example\.com\/logo\.svg"/u);
 });
 
+test("templatePreviewDataUrl prefers extracted Meta sample cards in the gallery", () => {
+  const kit = brandKit();
+  const template = AD_STUDIO_TEMPLATES.find((t) => t.id === "meta_055");
+  assert.ok(template);
+  assert.equal(templatePreviewDataUrl(template, kit), "/adstudio-samples/extracted-meta/meta_055.png");
+});
+
 test("every template (built-in + a radar-shaped one) produces a preview", () => {
   const kit = brandKit();
   for (const template of AD_STUDIO_TEMPLATES) {

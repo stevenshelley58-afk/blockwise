@@ -36,6 +36,7 @@ function templateFromDescriptor(descriptor: ExtractedMetaDescriptor): AdStudioTe
       cta: descriptor.sampleCopy.cta,
     },
     sampleStyle: sampleStyleFromDescriptor(descriptor),
+    sampleCardImageUrl: `/adstudio-samples/extracted-meta/${descriptor.id}.png`,
     designs: designSetFromDescriptor(descriptor),
     evidenceScore: descriptor.evidenceScore,
     winnerRationale:
@@ -62,7 +63,7 @@ function sampleStyleFromDescriptor(descriptor: ExtractedMetaDescriptor): AdStudi
     address: descriptor.sampleStyle.address,
     propertyDetail: descriptor.sampleStyle.propertyDetail,
     resultDetail: descriptor.sampleStyle.resultDetail,
-    sampleCardImagePath: `extracted-meta/${descriptor.id}.svg`,
+    sampleCardImagePath: `adstudio-samples/extracted-meta/${descriptor.id}.png`,
   };
 }
 

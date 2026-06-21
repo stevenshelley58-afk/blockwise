@@ -83,6 +83,8 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     }
 
     assert.equal(resolveTemplateDesignForFormat(template, "1.91:1"), null, `${descriptor.id} should not expose landscape`);
-    assert.match(templatePreviewDataUrl(template, kit), /^data:image\/svg\+xml;utf8,/u);
+    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/${descriptor.id}.png`);
   }
 });

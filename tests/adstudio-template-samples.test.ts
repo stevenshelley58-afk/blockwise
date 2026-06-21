@@ -52,6 +52,7 @@ test("template card URLs are constrained to generated template-card paths", () =
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example";
   try {
     assert.equal(isSafeTemplateCardImagePath("adstudio-samples/v1/hv-01.png"), true);
+    assert.equal(isSafeTemplateCardImagePath("adstudio-samples/extracted-meta/meta_055.png"), true);
     assert.equal(isSafeTemplateCardImagePath("https://cdn.example/observed.png"), false);
     assert.equal(isSafeTemplateCardImagePath("../observed.png"), false);
     assert.equal(
