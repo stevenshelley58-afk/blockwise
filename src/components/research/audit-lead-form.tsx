@@ -56,7 +56,7 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
       <div className="audit-lead-done">
         <h3>Your {location} campaign plan is on the way.</h3>
         <p>Check your inbox shortly. Want to start building it now?</p>
-        <a className="button button-primary" href={signupHref}>Start your free trial</a>
+        <a className="lp-btn lp-btn-primary lp-btn-big" href={signupHref}>Start your free trial</a>
       </div>
     );
   }
@@ -102,7 +102,7 @@ export function AuditLeadForm({ location, signupHref }: AuditLeadFormProps) {
         style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
       />
       {error ? <p className="audit-lead-error">{error}</p> : null}
-      <button className="button button-primary" type="submit" disabled={submitting}>
+      <button className="lp-btn lp-btn-primary lp-btn-big lp-btn-wide" type="submit" disabled={submitting}>
         {submitting ? "Sending..." : `Send my ${location} campaign plan`}
       </button>
       <p className="fine-print">No spam. We email the plan and follow up about a trial or a 15-minute setup call.</p>
