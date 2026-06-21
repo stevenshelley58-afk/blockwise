@@ -25,7 +25,7 @@ function row(input: Partial<AdStudioLibraryTemplate> = {}): AdStudioLibraryTempl
     template_key: input.template_key ?? "imported-appraisal",
     status: "approved",
     category: input.category ?? "appraisal",
-    adstudio_template_id: input.adstudio_template_id ?? "free_appraisal",
+    adstudio_template_id: input.adstudio_template_id ?? "meta_002",
     offer_id: input.offer_id ?? "home_value_update",
     goal: input.goal ?? "appraisal_bookings",
     headline: input.headline ?? "What could your home be worth?",

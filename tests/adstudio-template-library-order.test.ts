@@ -33,7 +33,7 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
   };
 }
 
-test("template library pins skeleton-backed templates before older evidence-only rows", () => {
+test("template library ignores old approved rows and only exposes extracted Meta templates", () => {
   const leakedPreviewRow = row({
     template_key: "DNA-70",
     category: "creative dna",
@@ -55,15 +55,9 @@ test("template library pins skeleton-backed templates before older evidence-only
 
   const merged = mergeAdStudioTemplateLibrary(approved);
 
-  assert.equal(merged[0]?.id, "DNA-70");
-  assert.equal(merged[0]?.creativeSkeleton?.archetype, skeleton.archetype);
-  assert.deepEqual(merged[0]?.exemplars, ["observed-ad-1"]);
-  assert.equal("previewImageUrl" in merged[0], false);
-  assert.doesNotMatch(merged[0]?.promptHint ?? "", /undersell|Andy Nye|competitor wording/i);
-  assert.doesNotMatch(merged[0]?.name ?? "", /markets don't guarantee|creative dna/i);
-  assert.ok(
-    merged.findIndex((template) => template.id === "DNA-70") < merged.findIndex((template) => template.id === "OLD-99"),
-  );
+  assert.equal(merged.length, 10);
+  assert.ok(merged.every((template) => template.id.startsWith("meta_")));
+  assert.ok(!merged.some((template) => template.id === "DNA-70" || template.id === "OLD-99"));
 });
 
 test("template library exposes only generated sample-card URLs, not observed media URLs", () => {
@@ -104,7 +98,7 @@ test("template library exposes only generated sample-card URLs, not observed med
   }
 });
 
-test("template library hides old first-pass rows from the visible picker merge", () => {
+test("template library does not merge old first-pass rows into the visible picker", () => {
   const oldRows = [
     row({ template_key: "HV-01", adstudio_template_id: "free_appraisal", evidence_score: 99 }),
     row({ template_key: "MU-01", adstudio_template_id: "market_update", evidence_score: 98 }),
@@ -112,9 +106,18 @@ test("template library hides old first-pass rows from the visible picker merge",
     .map((template) => mapAdStudioLibraryTemplate(template))
     .filter((template) => template !== null);
 
-  assert.ok(oldRows.every((template) => template.manualFirstPass), "legacy-backed rows should be marked hidden");
-
   const merged = mergeAdStudioTemplateLibrary(oldRows);
   assert.ok(!merged.some((template) => template.id === "HV-01" || template.id === "MU-01"));
-  assert.ok(merged.some((template) => template.id === "meta_002"));
+  assert.deepEqual(merged.map((template) => template.id), [
+    "meta_002",
+    "meta_021",
+    "meta_040",
+    "meta_044",
+    "meta_055",
+    "meta_094",
+    "meta_142",
+    "meta_245",
+    "meta_259",
+    "meta_317",
+  ]);
 });

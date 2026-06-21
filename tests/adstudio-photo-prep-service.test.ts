@@ -101,7 +101,7 @@ function createSupabaseStub() {
 }
 
 test("template photo prep can return immediate fallback assets without provider work", () => {
-  const template = resolveAdStudioTemplate("market_update");
+  const template = resolveAdStudioTemplate("meta_040");
 
   const assets = fallbackPhotoAssetsForTemplate({
     workspaceId: "workspace_1",
@@ -113,7 +113,7 @@ test("template photo prep can return immediate fallback assets without provider 
     sourceImageForModel: "https://cdn.example.com/listing.png",
     campaign: {
       goal: "seller_leads",
-      offerId: "market_update",
+      offerId: "recent_sales_report",
       market: { suburb: "Scarborough", city: "Perth", state: "WA" },
     },
     brief: "good family home",
@@ -127,7 +127,7 @@ test("template photo prep can return immediate fallback assets without provider 
 });
 
 test("template photo prep falls back quickly when provider work exceeds the request budget", async () => {
-  const template = resolveAdStudioTemplate("market_update");
+  const template = resolveAdStudioTemplate("meta_040");
   const seenSignals: AbortSignal[] = [];
   const slowProvider: ImageProviderAdapter = {
     providerName: "slow-test-provider",
@@ -157,7 +157,7 @@ test("template photo prep falls back quickly when provider work exceeds the requ
     sourceImageForModel: "https://cdn.example.com/listing.png",
     campaign: {
       goal: "seller_leads",
-      offerId: "market_update",
+      offerId: "recent_sales_report",
       market: { suburb: "Scarborough", city: "Perth", state: "WA" },
     },
     brief: "good family home",

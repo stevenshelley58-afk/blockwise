@@ -69,17 +69,22 @@ type LayoutGeometry = {
 };
 
 const COMPOSITION_FORMATS = new Set<AdStudioFormat>(["4:5", "1:1", "9:16"]);
+const EXTRACTED_TEMPLATE_ARCHETYPES: Record<string, LayoutArchetypeId> = {
+  meta_002: "social_proof",
+  meta_021: "listing_hero",
+  meta_040: "listing_hero",
+  meta_044: "open_home",
+  meta_055: "just_sold",
+  meta_094: "listing_hero",
+  meta_142: "just_sold",
+  meta_245: "social_proof",
+  meta_259: "listing_hero",
+  meta_317: "open_home",
+};
 
 export function selectLayoutArchetype(input: LayoutArchetypeSelectionInput): LayoutArchetypeId {
   const templateId = input.templateId?.toLowerCase();
-  if (templateId === "just_listed" || templateId === "new_to_market") return "listing_hero";
-  if (templateId === "coming_soon") return "coming_soon";
-  if (templateId === "open_home") return "open_home";
-  if (templateId === "just_sold") return "just_sold";
-  if (templateId === "market_update") return "market_stat";
-  if (templateId === "price_update" || templateId === "free_appraisal") return "appraisal";
-  if (templateId === "seller_checklist") return "seller_guide";
-  if (templateId === "buyer_demand") return "social_proof";
+  if (templateId && EXTRACTED_TEMPLATE_ARCHETYPES[templateId]) return EXTRACTED_TEMPLATE_ARCHETYPES[templateId];
 
   const haystack = [input.templateId, input.templateName, input.offerId, input.goal, input.angle, input.headline]
     .filter(Boolean)

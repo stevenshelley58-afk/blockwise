@@ -38,11 +38,11 @@ test("extracted Meta slice exposes ten individual visible templates", () => {
   assert.ok(!visible.some((template) => template.id === "free_appraisal"));
 });
 
-test("legacy first-pass templates remain resolvable but hidden from the visible picker", () => {
-  const legacy = resolveAdStudioTemplate("free_appraisal");
-  assert.equal(legacy.id, "free_appraisal");
-  assert.equal(legacy.manualFirstPass, true);
-  assert.ok(!builtInAdStudioTemplates().some((template) => template.id === legacy.id));
+test("old first-pass template keys are deleted from the current template set", () => {
+  const fallback = resolveAdStudioTemplate("free_appraisal");
+  assert.notEqual(fallback.id, "free_appraisal");
+  assert.equal(fallback.id, "meta_002");
+  assert.ok(!builtInAdStudioTemplates().some((template) => template.id === "free_appraisal"));
 });
 
 test("each extracted template has strict renderable TemplateDesign variants", () => {

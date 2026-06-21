@@ -16,9 +16,9 @@ const baseContext: PhotoPrepContext = {
   imageHash: "sha256_abc",
   sourceImageRef: "/api/adstudio/media?path=workspace_1%2Flisting.jpg",
   template: {
-    key: "just_listed",
+    key: "meta_259",
     version: 3,
-    name: "Just Listed",
+    name: "Story 259 - New Listing Stack",
     archetype: "listing_hero",
   },
   frame: {
@@ -57,7 +57,7 @@ const baseContext: PhotoPrepContext = {
 test("photo prep cache key includes template frame and operator versions", () => {
   assert.equal(
     buildPhotoPrepCacheKey(baseContext),
-    "adstudio-photo-prep-v1:workspace_1:sha256_abc:just_listed:3:primary_photo:9%3A16:4:7",
+    "adstudio-photo-prep-v1:workspace_1:sha256_abc:meta_259:3:primary_photo:9%3A16:4:7",
   );
 });
 
@@ -106,8 +106,8 @@ test("selectedImageSlot fails loudly when template geometry is missing", () => {
   );
 });
 
-test("template render frame falls back to a full-bleed image slot for existing skeleton templates", () => {
-  const template = resolveAdStudioTemplate("market_update");
+test("template render frame uses generated TemplateDesign geometry for extracted Meta templates", () => {
+  const template = resolveAdStudioTemplate("meta_055");
 
   const frame = buildTemplateRenderFrame({ template, format: "4:5" });
 
@@ -122,10 +122,10 @@ test("template render frame falls back to a full-bleed image slot for existing s
       width: frame.imageSlots[0]?.width,
       height: frame.imageSlots[0]?.height,
     },
-    { x: 0, y: 0, width: 1, height: 1 },
+    { x: 0.05, y: 0.27, width: 0.9, height: 0.39 },
   );
-  assert.ok(frame.copySafeZones.some((zone) => zone.id === "market_panel"));
-  assert.match(frame.imageSlots[0]?.promptHint ?? "", /focal point/i);
+  assert.ok(frame.copySafeZones.some((zone) => zone.id === "headline"));
+  assert.match(frame.imageSlots[0]?.promptHint ?? "", /Feed 055 - Editorial Just Sold primary image slot/i);
 });
 
 test("deterministicPreparedPhotoAsset preserves template and frame provenance", () => {
@@ -139,7 +139,7 @@ test("deterministicPreparedPhotoAsset preserves template and frame provenance", 
     widthPx: 1080,
     heightPx: 1920,
     method: "deterministic_smart_crop",
-    templateKey: "just_listed",
+    templateKey: "meta_259",
     templateVersion: 3,
     frameId: "primary_photo",
     format: "9:16",

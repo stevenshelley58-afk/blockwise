@@ -1,14 +1,8 @@
-import { createSupabaseServiceClient } from "../supabase/service.ts";
-
 import {
-  mapAdStudioLibraryTemplate,
-  resolvableAdStudioTemplates,
-  type AdStudioLibraryTemplate,
+  builtInAdStudioTemplates,
+  isBuiltInAdStudioTemplate,
   type AdStudioTemplate,
 } from "./templates.ts";
-
-const TEMPLATE_LIBRARY_SELECT =
-  "template_key,status,category,hook_style,funnel_stage,adstudio_template_id,offer_id,goal,headline,primary_text,description,cta,image_brief_id,sample_card_image_path,sample_style,ai_prompt_seed,creative_skeleton,template_designs,template_version,brief_schema,exemplar_observed_ad_ids,evidence_score,winner_rationale,compliance_note";
 
 export function isMissingTemplateLibrary(error: { code?: string; message?: string } | null | undefined): boolean {
   return (
@@ -24,28 +18,7 @@ export async function resolveApprovedAdStudioTemplate(input: {
 }): Promise<AdStudioTemplate> {
   const key = cleanTemplateKey(input.templateKey) ?? cleanTemplateKey(input.templateId);
   if (!key) throw new Error("Selected template was not found.");
-
-  let research;
-  try {
-    research = createSupabaseServiceClient().schema("research");
-  } catch {
-    return resolveBuiltInApprovedTemplate(key);
-  }
-
-  const { data, error } = await research
-    .from("v_ad_template_library")
-    .select(TEMPLATE_LIBRARY_SELECT)
-    .eq("template_key", key)
-    .maybeSingle();
-
-  if (isMissingTemplateLibrary(error)) return resolveBuiltInApprovedTemplate(key);
-  if (error) throw new Error(error.message);
-
-  if (data) {
-    const template = mapAdStudioLibraryTemplate(data as AdStudioLibraryTemplate);
-    if (template) return template;
-  }
-
+  if (!isBuiltInAdStudioTemplate(key)) throw new Error("Selected template was not found or is not approved.");
   return resolveBuiltInApprovedTemplate(key);
 }
 
@@ -64,7 +37,7 @@ export function templatePromptHint(template: AdStudioTemplate | null | undefined
 }
 
 function resolveBuiltInApprovedTemplate(key: string): AdStudioTemplate {
-  const template = resolvableAdStudioTemplates().find((candidate) => candidate.templateKey === key || candidate.id === key);
+  const template = builtInAdStudioTemplates().find((candidate) => candidate.templateKey === key || candidate.id === key);
   if (!template || template.status !== "approved") {
     throw new Error("Selected template was not found or is not approved.");
   }

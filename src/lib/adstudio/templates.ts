@@ -1,5 +1,5 @@
-import { templateDesignSchema, type TemplateDesign, type TemplateDesignSet } from "./template-design.ts";
-import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
+import { templateDesignSchema, type TemplateDesignSet } from "./template-design.ts";
+import type { AdStudioGoal } from "./types.ts";
 import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/template-design-from-skeleton.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import { EXTRACTED_META_AD_STUDIO_TEMPLATES } from "./extracted-meta-template-builder.ts";
@@ -69,466 +69,16 @@ export type AdStudioTemplateVersion = {
   active: boolean;
 };
 
-function firstPassSkeleton(input: {
-  archetype: CreativeSkeleton["archetype"];
-  shotType: string;
-  focalPoint: string;
-  horizon: CreativeSkeleton["composition"]["horizon"];
-  zones: CreativeSkeleton["composition"]["copy_safe_zones"];
-  palette: string[];
-  badge: string;
-  headlinePattern: string;
-  cta: string;
-  variables: string[];
-}): CreativeSkeleton {
-  return {
-    version: 1,
-    archetype: input.archetype,
-    shot: {
-      type: input.shotType,
-      lighting: "natural Australian real-estate light with clean, realistic colour",
-      mood: "premium, practical, local and trustworthy",
-    },
-    composition: {
-      focal_point: input.focalPoint,
-      horizon: input.horizon,
-      copy_safe_zones: input.zones,
-    },
-    color: {
-      palette: input.palette,
-      overlay: "brand-colour overlay or dark scrim only where copy needs contrast",
-      contrast: "high",
-    },
-    text_system: {
-      headline_zone: "large headline in the primary copy-safe zone with clear whitespace around every line",
-      badge: input.badge,
-      cta_style: "solid brand CTA button aligned to the copy block",
-    },
-    copy: {
-      hook_style: input.badge,
-      headline_pattern: input.headlinePattern,
-      cta: input.cta,
-    },
-    variables: input.variables,
-    confidence: 58,
-  };
-}
-
-const FIRST_PASS_TEMPLATE_SKELETONS: Record<string, CreativeSkeleton> = {
-  just_listed: firstPassSkeleton({
-    archetype: "listing_hero",
-    shotType: "front exterior or hero listing image",
-    focalPoint: "property facade in the upper or centre-right frame",
-    horizon: "middle",
-    zones: [
-      { id: "headline_panel", x: 0.06, y: 0.58, width: 0.62, height: 0.25, priority: "primary" },
-      { id: "cta_band", x: 0.06, y: 0.84, width: 0.44, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "warm neutral", "white"],
-    badge: "Just Listed badge above headline",
-    headlinePattern: "Just listed in {suburb}",
-    cta: "See the home",
-    variables: ["suburb", "property_type", "bedrooms", "street"],
-  }),
-  coming_soon: firstPassSkeleton({
-    archetype: "coming_soon",
-    shotType: "teaser crop of property detail, frontage, or lifestyle feature",
-    focalPoint: "property detail in the lower-right or centre frame",
-    horizon: "none",
-    zones: [
-      { id: "announcement_band", x: 0.08, y: 0.26, width: 0.72, height: 0.24, priority: "primary" },
-      { id: "cta_band", x: 0.08, y: 0.54, width: 0.42, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "muted charcoal", "accent"],
-    badge: "Coming Soon announcement band",
-    headlinePattern: "Coming soon to {suburb}",
-    cta: "Get first look",
-    variables: ["suburb", "launch_timing", "property_type"],
-  }),
-  new_to_market: firstPassSkeleton({
-    archetype: "listing_hero",
-    shotType: "fresh listing hero image with strong street or interior feature",
-    focalPoint: "home feature on the right half of frame",
-    horizon: "middle",
-    zones: [
-      { id: "headline_panel", x: 0.07, y: 0.55, width: 0.6, height: 0.26, priority: "primary" },
-      { id: "cta_band", x: 0.07, y: 0.83, width: 0.46, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "white", "fresh green"],
-    badge: "New To Market label",
-    headlinePattern: "New to market in {suburb}",
-    cta: "See recent sales",
-    variables: ["suburb", "local_area", "property_type"],
-  }),
-  open_home: firstPassSkeleton({
-    archetype: "open_home",
-    shotType: "inviting exterior, entry, kitchen, or living image",
-    focalPoint: "main room or facade kept clear of the details panel",
-    horizon: "middle",
-    zones: [
-      { id: "details_panel", x: 0.08, y: 0.42, width: 0.64, height: 0.3, priority: "primary" },
-      { id: "cta_band", x: 0.08, y: 0.74, width: 0.42, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "white", "accent"],
-    badge: "Open Home date/time badge",
-    headlinePattern: "Open home {day} in {suburb}",
-    cta: "Plan your visit",
-    variables: ["suburb", "day", "time", "address"],
-  }),
-  just_sold: firstPassSkeleton({
-    archetype: "just_sold",
-    shotType: "sold property exterior or hero image",
-    focalPoint: "property result visual away from the sold ribbon",
-    horizon: "middle",
-    zones: [
-      { id: "sold_ribbon", x: 0.07, y: 0.18, width: 0.42, height: 0.09, priority: "secondary" },
-      { id: "headline_panel", x: 0.07, y: 0.58, width: 0.64, height: 0.24, priority: "primary" },
-      { id: "cta_band", x: 0.07, y: 0.84, width: 0.46, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "deep charcoal", "white"],
-    badge: "Just Sold ribbon",
-    headlinePattern: "Just sold in {suburb}",
-    cta: "Get local context",
-    variables: ["suburb", "sale_result", "property_type"],
-  }),
-  price_update: firstPassSkeleton({
-    archetype: "appraisal",
-    shotType: "clean owner-focused home image or calm property detail",
-    focalPoint: "home detail on the left or centre with copy on the right",
-    horizon: "middle",
-    zones: [
-      { id: "value_panel", x: 0.45, y: 0.42, width: 0.48, height: 0.3, priority: "primary" },
-      { id: "cta_band", x: 0.45, y: 0.75, width: 0.38, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "soft neutral", "white"],
-    badge: "Price Update value panel",
-    headlinePattern: "What could your {suburb} home be worth?",
-    cta: "Get a price update",
-    variables: ["suburb", "property_type"],
-  }),
-  market_update: firstPassSkeleton({
-    archetype: "market_stat",
-    shotType: "suburb lifestyle, streetscape, or map-like local context image",
-    focalPoint: "local area visual on the left, stats panel on the right",
-    horizon: "high",
-    zones: [
-      { id: "market_panel", x: 0.48, y: 0.28, width: 0.44, height: 0.38, priority: "primary" },
-      { id: "cta_band", x: 0.48, y: 0.7, width: 0.36, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "white", "data accent"],
-    badge: "Market Update stat panel",
-    headlinePattern: "{suburb} market update",
-    cta: "Get the report",
-    variables: ["suburb", "period", "metric"],
-  }),
-  free_appraisal: firstPassSkeleton({
-    archetype: "appraisal",
-    shotType: "approachable agent, home exterior, or owner-friendly property image",
-    focalPoint: "agent or property image away from the right-side value panel",
-    horizon: "middle",
-    zones: [
-      { id: "appraisal_panel", x: 0.47, y: 0.4, width: 0.45, height: 0.32, priority: "primary" },
-      { id: "cta_band", x: 0.47, y: 0.75, width: 0.38, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "white", "accent"],
-    badge: "Free Appraisal offer panel",
-    headlinePattern: "Free appraisal for {suburb} owners",
-    cta: "Book free appraisal",
-    variables: ["suburb", "property_type"],
-  }),
-  buyer_demand: firstPassSkeleton({
-    archetype: "social_proof",
-    shotType: "buyer activity, open-home queue, or attractive local property image",
-    focalPoint: "people or property activity visible outside the proof panel",
-    horizon: "middle",
-    zones: [
-      { id: "proof_panel", x: 0.07, y: 0.5, width: 0.64, height: 0.28, priority: "primary" },
-      { id: "cta_band", x: 0.07, y: 0.8, width: 0.42, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "white", "signal accent"],
-    badge: "Buyer Demand proof badge",
-    headlinePattern: "Buyer demand in {suburb}",
-    cta: "Check buyer demand",
-    variables: ["suburb", "buyer_type", "property_type"],
-  }),
-  seller_checklist: firstPassSkeleton({
-    archetype: "seller_guide",
-    shotType: "seller prep image, styled room, checklist, or ready-to-list home",
-    focalPoint: "clean property or preparation visual above or beside the guide panel",
-    horizon: "none",
-    zones: [
-      { id: "guide_panel", x: 0.08, y: 0.44, width: 0.66, height: 0.32, priority: "primary" },
-      { id: "cta_band", x: 0.08, y: 0.79, width: 0.46, height: 0.08, priority: "cta" },
-    ],
-    palette: ["brand primary", "paper white", "accent"],
-    badge: "Seller Checklist guide panel",
-    headlinePattern: "Seller checklist for {suburb} owners",
-    cta: "Download checklist",
-    variables: ["suburb", "property_type", "timeline"],
-  }),
-};
-
-const DESIGN_CANVAS: Record<AdStudioFormat, { w: number; h: number }> = {
-  "1:1": { w: 1080, h: 1080 },
-  "4:5": { w: 1080, h: 1350 },
-  "9:16": { w: 1080, h: 1920 },
-  "1.91:1": { w: 1200, h: 628 },
-};
-
-function freeAppraisalDesign(format: AdStudioFormat): TemplateDesign {
-  const panel = format === "9:16"
-    ? { x: 0.08, y: 0.49, w: 0.84, h: 0.31 }
-    : format === "1.91:1"
-      ? { x: 0.52, y: 0.18, w: 0.39, h: 0.58 }
-      : { x: 0.47, y: 0.39, w: 0.45, h: 0.35 };
-  const cta = {
-    x: panel.x + 0.05,
-    y: panel.y + panel.h - 0.09,
-    w: Math.min(0.35, panel.w - 0.1),
-    h: format === "1.91:1" ? 0.1 : 0.065,
-  };
-
-  return templateDesignSchema.parse({
-    templateId: "free_appraisal",
-    version: 1,
-    format,
-    canvas: DESIGN_CANVAS[format],
-    palette: ["#14314F", "#FFFFFF", "#E7B24B", "#0B1720"],
-    fonts: ["Inter", "Inter"],
-    layers: [
-      {
-        id: "background",
-        type: "shape",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        fill: "#14314F",
-        role: "background",
-        locked: true,
-      },
-      {
-        id: "primary_photo",
-        type: "image_slot",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        role: "primary",
-        fit: "smart",
-        mask: "none",
-      },
-      {
-        id: "photo_scrim",
-        type: "shape",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        fill: "#0B1720",
-        opacity: 0.18,
-        role: "scrim",
-        locked: true,
-      },
-      {
-        id: "brand_logo",
-        type: "logo",
-        rect: { x: 0.07, y: format === "9:16" ? 0.045 : 0.055, w: 0.28, h: format === "1.91:1" ? 0.08 : 0.052 },
-        source: "brand_kit",
-      },
-      {
-        id: "appraisal_panel",
-        type: "shape",
-        rect: panel,
-        fill: "#FFFFFF",
-        radius: 24,
-        opacity: 0.92,
-        role: "panel",
-        locked: true,
-      },
-      {
-        id: "eyebrow",
-        type: "text",
-        rect: { x: panel.x + 0.05, y: panel.y + 0.055, w: panel.w - 0.1, h: 0.05 },
-        slot: "eyebrow",
-        align: "left",
-        font: "Inter",
-        size: format === "1.91:1" ? 24 : 30,
-        lineHeight: 1.05,
-        weight: 800,
-        color: "#E7B24B",
-        case: "upper",
-        maxChars: 42,
-        fill: "static",
-        text: "Free appraisal",
-      },
-      {
-        id: "headline",
-        type: "text",
-        rect: { x: panel.x + 0.05, y: panel.y + 0.115, w: panel.w - 0.1, h: panel.h * 0.33 },
-        slot: "headline",
-        align: "left",
-        font: "Inter",
-        size: format === "1.91:1" ? 44 : format === "9:16" ? 58 : 54,
-        lineHeight: 1.02,
-        weight: 900,
-        color: "#0B1720",
-        maxChars: 58,
-        fill: "ai_copy",
-      },
-      {
-        id: "subhead",
-        type: "text",
-        rect: { x: panel.x + 0.05, y: panel.y + panel.h * 0.52, w: panel.w - 0.1, h: panel.h * 0.18 },
-        slot: "subhead",
-        align: "left",
-        font: "Inter",
-        size: format === "1.91:1" ? 24 : 30,
-        lineHeight: 1.18,
-        weight: 600,
-        color: "#24364A",
-        maxChars: 120,
-        fill: "ai_copy",
-      },
-      {
-        id: "cta",
-        type: "cta_button",
-        rect: cta,
-        fill: "#14314F",
-        radius: 999,
-        label: "cta",
-        textColor: "#FFFFFF",
-        font: "Inter",
-        size: format === "1.91:1" ? 22 : 26,
-      },
-      {
-        id: "phone",
-        type: "text",
-        rect: { x: panel.x + panel.w - 0.27, y: cta.y + 0.012, w: 0.22, h: cta.h * 0.7 },
-        slot: "phone",
-        align: "right",
-        font: "Inter",
-        size: format === "1.91:1" ? 18 : 22,
-        lineHeight: 1,
-        weight: 700,
-        color: "#14314F",
-        maxChars: 24,
-        fill: "brand",
-      },
-    ],
-  });
-}
-
-function freeAppraisalDesigns(): TemplateDesignSet {
-  return {
-    "9:16": freeAppraisalDesign("9:16"),
-    "4:5": freeAppraisalDesign("4:5"),
-    "1:1": freeAppraisalDesign("1:1"),
-    "1.91:1": freeAppraisalDesign("1.91:1"),
-  };
-}
-
-function firstPassMetadata(templateKey: string, creativeSkeleton: CreativeSkeleton) {
-  return {
-    templateKey,
-    source: "operator" as const,
-    status: "approved" as const,
-    creativeSkeleton,
-    evidenceScore: creativeSkeleton.confidence,
-    winnerRationale: "First-pass/manual operator-approved template skeleton for launch coverage; replace with mined winner-backed version when available.",
-    complianceNote: "Housing-safe first-pass copy frame; avoids guaranteed price, buyer, or sale outcome claims.",
-    manualFirstPass: true,
-  };
-}
-
-export const LEGACY_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
-  {
-    id: "just_listed",
-    ...firstPassMetadata("just_listed", FIRST_PASS_TEMPLATE_SKELETONS.just_listed),
-    name: "Just listed",
-    goal: "seller_leads",
-    offerId: "home_value_update",
-    promptHint: "Promote a newly listed property and invite local owners to compare their own home.",
-  },
-  {
-    id: "coming_soon",
-    ...firstPassMetadata("coming_soon", FIRST_PASS_TEMPLATE_SKELETONS.coming_soon),
-    name: "Coming soon",
-    goal: "seller_leads",
-    offerId: "home_value_update",
-    promptHint: "Tease an upcoming listing and create local interest before launch.",
-  },
-  {
-    id: "new_to_market",
-    ...firstPassMetadata("new_to_market", FIRST_PASS_TEMPLATE_SKELETONS.new_to_market),
-    name: "New to market",
-    goal: "seller_leads",
-    offerId: "recent_sales_report",
-    promptHint: "Announce fresh local activity and prompt owners to check recent sales context.",
-  },
-  {
-    id: "open_home",
-    ...firstPassMetadata("open_home", FIRST_PASS_TEMPLATE_SKELETONS.open_home),
-    name: "Open home",
-    goal: "open_home_followup",
-    offerId: "open_home_followup",
-    promptHint: "Promote inspection interest with date, time, property details, and a simple enquiry path.",
-  },
-  {
-    id: "just_sold",
-    ...firstPassMetadata("just_sold", FIRST_PASS_TEMPLATE_SKELETONS.just_sold),
-    name: "Just sold",
-    goal: "seller_leads",
-    offerId: "recent_sales_report",
-    promptHint: "Use a recent sale as local proof and invite nearby owners to understand their position.",
-  },
-  {
-    id: "price_update",
-    ...firstPassMetadata("price_update", FIRST_PASS_TEMPLATE_SKELETONS.price_update),
-    name: "Price update",
-    goal: "appraisal_bookings",
-    offerId: "home_value_update",
-    promptHint: "Offer a practical home value update without making performance guarantees.",
-  },
-  {
-    id: "market_update",
-    ...firstPassMetadata("market_update", FIRST_PASS_TEMPLATE_SKELETONS.market_update),
-    name: "Market update",
-    goal: "market_update_leads",
-    offerId: "suburb_market_report",
-    promptHint: "Share useful suburb market context for homeowners considering their next move.",
-  },
-  {
-    id: "free_appraisal",
-    ...firstPassMetadata("free_appraisal", FIRST_PASS_TEMPLATE_SKELETONS.free_appraisal),
-    designs: freeAppraisalDesigns(),
-    name: "Free appraisal",
-    goal: "appraisal_bookings",
-    offerId: "home_value_update",
-    promptHint: "Invite owners to request a no-pressure local price update.",
-  },
-  {
-    id: "buyer_demand",
-    ...firstPassMetadata("buyer_demand", FIRST_PASS_TEMPLATE_SKELETONS.buyer_demand),
-    name: "Buyer demand",
-    goal: "seller_leads",
-    offerId: "home_value_update",
-    promptHint: "Explain local buyer demand carefully without over-claiming results.",
-  },
-  {
-    id: "seller_checklist",
-    ...firstPassMetadata("seller_checklist", FIRST_PASS_TEMPLATE_SKELETONS.seller_checklist),
-    name: "Seller checklist",
-    goal: "seller_leads",
-    offerId: "seller_prep_checklist",
-    promptHint: "Offer a practical preparation checklist for owners thinking about selling.",
-  },
-];
-
 export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = EXTRACTED_META_AD_STUDIO_TEMPLATES;
 
-export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
-  ...AD_STUDIO_TEMPLATES,
-  ...LEGACY_AD_STUDIO_TEMPLATES,
-];
+export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = AD_STUDIO_TEMPLATES;
 
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate {
-  return RESOLVABLE_AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
+  return AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
 }
 
 export function isBuiltInAdStudioTemplate(templateId: string | undefined): boolean {
-  return RESOLVABLE_AD_STUDIO_TEMPLATES.some((template) => template.id === templateId);
+  return AD_STUDIO_TEMPLATES.some((template) => template.id === templateId);
 }
 
 export function builtInAdStudioTemplates(): AdStudioTemplate[] {
@@ -536,7 +86,7 @@ export function builtInAdStudioTemplates(): AdStudioTemplate[] {
 }
 
 export function resolvableAdStudioTemplates(): AdStudioTemplate[] {
-  return RESOLVABLE_AD_STUDIO_TEMPLATES.map(withTemplateDefaults);
+  return builtInAdStudioTemplates();
 }
 
 function withTemplateDefaults(template: AdStudioTemplate): AdStudioTemplate {
@@ -555,7 +105,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   if (!templateKey) return null;
 
   const builtInTemplateKey = stringValue(row.adstudio_template_id);
-  const builtIn = RESOLVABLE_AD_STUDIO_TEMPLATES.find((template) =>
+  const builtIn = AD_STUDIO_TEMPLATES.find((template) =>
     template.id === builtInTemplateKey ||
     template.templateKey === builtInTemplateKey ||
     template.id === templateKey ||
@@ -590,7 +140,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  const manualFirstPass = Boolean(builtIn?.manualFirstPass) || /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
+  const manualFirstPass = /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
 
   return {
     id: templateKey,
@@ -615,15 +165,8 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   };
 }
 
-export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdStudioTemplate[] {
-  const visibleApproved = approved.filter((template) => !template.manualFirstPass);
-  if (visibleApproved.length === 0) return builtInAdStudioTemplates();
-  const byId = new Map<string, AdStudioTemplate>();
-  for (const template of visibleApproved) byId.set(template.id, template);
-  for (const template of builtInAdStudioTemplates()) {
-    if (!byId.has(template.id)) byId.set(template.id, template);
-  }
-  return [...byId.values()].sort(compareTemplateVisibility);
+export function mergeAdStudioTemplateLibrary(_approved: AdStudioTemplate[]): AdStudioTemplate[] {
+  return builtInAdStudioTemplates();
 }
 
 export const ADSTUDIO_TEMPLATE_VERSIONS: AdStudioTemplateVersion[] = AD_STUDIO_TEMPLATES.map((template) => ({
@@ -731,20 +274,4 @@ function parseSampleStyle(value: unknown): AdStudioTemplateSampleStyle | undefin
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function compareTemplateVisibility(a: AdStudioTemplate, b: AdStudioTemplate): number {
-  const priority = (template: AdStudioTemplate) => {
-    if (template.creativeSkeleton) return 0;
-    if (template.source === "radar") return 1;
-    return 2;
-  };
-
-  const priorityDiff = priority(a) - priority(b);
-  if (priorityDiff !== 0) return priorityDiff;
-
-  const evidenceDiff = (b.evidenceScore ?? -1) - (a.evidenceScore ?? -1);
-  if (evidenceDiff !== 0) return evidenceDiff;
-
-  return a.name.localeCompare(b.name);
 }

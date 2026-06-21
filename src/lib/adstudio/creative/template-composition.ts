@@ -6,34 +6,18 @@ import type { AdStudioTemplate } from "../templates.ts";
 import type { CompositionCopy, CompositionId } from "./compositions.ts";
 import { COMPOSITION_IDS } from "./compositions.ts";
 
-type SampleCopy = { eyebrow: string; headline: string; subhead: string; cta: string };
-
-// Illustrative copy for the well-known built-in template keys.
-const PREVIEW_COPY: Record<string, SampleCopy> = {
-  just_listed: { eyebrow: "Just Listed", headline: "New on the market in your suburb", subhead: "Fresh activity on your street — see what's drawing buyers right now.", cta: "See the home" },
-  coming_soon: { eyebrow: "Coming Soon", headline: "Something special is coming soon", subhead: "Be first to see it before it hits the market.", cta: "Get first look" },
-  new_to_market: { eyebrow: "New to Market", headline: "Fresh activity on your street", subhead: "A new local listing worth watching this week.", cta: "See recent sales" },
-  open_home: { eyebrow: "Open Home", headline: "Open this Saturday — save your spot", subhead: "Inspect with clear next steps. Bring your questions.", cta: "Plan your visit" },
-  just_sold: { eyebrow: "Just Sold", headline: "Sold - a strong local result", subhead: "Another strong result near you — see what yours could get.", cta: "See what yours could get" },
-  price_update: { eyebrow: "Price Update", headline: "What's your home worth now?", subhead: "A practical local price update based on recent street sales.", cta: "Get a price update" },
-  market_update: { eyebrow: "Market Update", headline: "What sold near you this quarter", subhead: "A plain-English market update for owners weighing a move.", cta: "Get the report" },
-  free_appraisal: { eyebrow: "Free Appraisal", headline: "What's your home worth in 2026?", subhead: "Book a free, no-obligation appraisal from local agents.", cta: "Book free appraisal" },
-  buyer_demand: { eyebrow: "Buyer Demand", headline: "Buyers are searching your suburb", subhead: "See the recent results driving local buyer demand.", cta: "Check buyer demand" },
-  seller_checklist: { eyebrow: "Seller Checklist", headline: "10 things to fix before you list", subhead: "Small prep, bigger buyer interest. Grab the local checklist.", cta: "Download checklist" },
-};
-
-// Explicit, hand-tuned structure per known template key.
+// Explicit, hand-tuned structure per current extracted template key.
 const KEY_TO_COMPOSITION: Record<string, CompositionId> = {
-  just_listed: "bannerArch",
-  new_to_market: "sidebarIndex",
-  coming_soon: "posterGradient",
-  open_home: "eventCard",
-  just_sold: "ribbonSold",
-  price_update: "splitHorizon",
-  market_update: "marketStat",
-  free_appraisal: "appraisalSeal",
-  buyer_demand: "gridFour",
-  seller_checklist: "checklist",
+  meta_002: "splitHorizon",
+  meta_021: "gridFour",
+  meta_040: "magazineCover",
+  meta_044: "eventCard",
+  meta_055: "ribbonSold",
+  meta_094: "bannerArch",
+  meta_142: "ribbonSold",
+  meta_245: "splitHorizon",
+  meta_259: "gridFour",
+  meta_317: "eventCard",
 };
 
 // Fallback by offer id for mined/radar templates.
@@ -49,7 +33,7 @@ const OFFER_TO_COMPOSITION: Record<string, CompositionId> = {
   investor_suburb_snapshot: "statTriple",
   recent_sales_report: "gridFour",
   prelisting_timeline: "splitHorizon",
-  open_home_followup: "quoteProof",
+  open_home_followup: "eventCard",
 };
 
 const GOAL_TO_COMPOSITION: Record<string, CompositionId> = {
@@ -89,14 +73,13 @@ export function sampleCopyForTemplate(
   brandName: string,
 ): CompositionCopy {
   const key = (template.templateKey ?? template.id ?? "").toLowerCase();
-  const base = PREVIEW_COPY[key];
   const mined = template.sampleCopy;
   const name = (template.name || "Template").trim();
   const hint = (template.promptHint || name).trim();
-  const eyebrow = base?.eyebrow ?? name;
-  const headline = base?.headline ?? (mined?.headline ? clip(mined.headline, 60) : clip(hint, 60));
-  const subhead = base?.subhead ?? mined?.description ?? "Written for your suburb — a clear next step for local owners.";
-  const cta = base?.cta ?? mined?.cta ?? "Learn more";
+  const eyebrow = name;
+  const headline = mined?.headline ? clip(mined.headline, 60) : clip(hint, 60);
+  const subhead = mined?.description ?? "Written for your suburb - a clear next step for local owners.";
+  const cta = mined?.cta ?? "Learn more";
   return {
     brand: brandName,
     eyebrow,

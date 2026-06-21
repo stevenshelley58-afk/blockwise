@@ -159,6 +159,7 @@ test("buildTemplateDraftsFromWinners produces draft-only template candidate data
   assert.equal(draft.category, "market_update");
   assert.equal(draft.goal, "market_update_leads");
   assert.equal(draft.offerId, "suburb_market_report");
+  assert.equal(draft.adstudioTemplateId, "meta_040");
   assert.equal(draft.scorerVersion, "winner-scorer-v1");
   assert.deepEqual(draft.sourceObservedAdIds, ["ad-1"]);
   assert.ok(draft.evidenceScore >= WINNER_THRESHOLD);

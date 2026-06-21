@@ -43,17 +43,19 @@ function approvedBrandKit() {
 }
 
 test("selectLayoutArchetype maps the supported real estate archetypes deterministically", () => {
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "just_listed", offerId: "home_value_update" })), "listing_hero");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "coming_soon", offerId: "home_value_update" })), "coming_soon");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "open_home", offerId: "open_home_followup" })), "open_home");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "just_sold", offerId: "recent_sales_report" })), "just_sold");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "market_update", offerId: "suburb_market_report" })), "market_stat");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "free_appraisal", offerId: "home_value_update" })), "appraisal");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "seller_checklist" })), "seller_guide");
-  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "buyer_demand", offerId: "home_value_update" })), "social_proof");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_002", offerId: "prelisting_timeline" })), "social_proof");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_021", offerId: "recent_sales_report" })), "listing_hero");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_040", offerId: "recent_sales_report" })), "listing_hero");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_044", offerId: "open_home_followup" })), "open_home");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_055", offerId: "recent_sales_report" })), "just_sold");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_094", offerId: "recent_sales_report" })), "listing_hero");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_142", offerId: "recent_sales_report" })), "just_sold");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_245", offerId: "prelisting_timeline" })), "social_proof");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_259", offerId: "recent_sales_report" })), "listing_hero");
+  assert.equal(selectLayoutArchetype(baseSelection({ templateId: "meta_317", offerId: "open_home_followup" })), "open_home");
 });
 
-test("generated first-ad creative keeps uploaded owner image as the source visual", () => {
+test("generated first-ad creative keeps uploaded owner image in the extracted template", () => {
   const uploadedImage = "data:image/png;base64,iVBORw0KGgo=";
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",
@@ -67,8 +69,8 @@ test("generated first-ad creative keeps uploaded owner image as the source visua
     variantCount: 1,
     firstAd: {
       mode: "template",
-      templateId: "coming_soon",
-      description: "Coming soon listing for local owners.",
+      templateId: "meta_259",
+      description: "New listing story for local owners.",
       imageDataUrl: uploadedImage,
       formats: ["9:16", "4:5", "1:1"],
     },
@@ -79,13 +81,9 @@ test("generated first-ad creative keeps uploaded owner image as the source visua
   const image = creative.canvas.objects.find((object) => object.role === "primary_image");
   assert.equal(image?.content, uploadedImage);
   assert.equal(image?.assetId, undefined);
-  assert.equal(creative.canvas.composition?.id, "posterGradient");
-  assert.deepEqual(
-    { x: image?.x, y: image?.y, width: image?.width, height: image?.height },
-    { x: 0, y: 0, width: creative.canvas.width, height: creative.canvas.height },
-  );
-  assert.ok(creative.canvas.objects.some((object) => object.role === "background_below" && object.locked));
-  assert.ok(creative.canvas.objects.some((object) => object.role === "cta_text" && !object.locked));
+  assert.equal(creative.canvas.composition?.id, "template_design:meta_259:v1");
+  assert.ok(creative.canvas.objects.some((object) => object.templateSlot === "headline" && !object.locked));
+  assert.ok(creative.canvas.objects.some((object) => object.templateSlot === "cta" && !object.locked));
 });
 
 test("every composite creative is tagged source=template_composite (both render paths)", () => {
