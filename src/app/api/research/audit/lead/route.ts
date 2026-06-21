@@ -9,10 +9,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const payloadSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(120),
+  name: z.string().trim().max(120).optional().or(z.literal("")),
   email: z.string().trim().email("Enter a valid email").max(200),
   agency: z.string().trim().max(160).optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
   location: z.string().trim().max(120).optional().or(z.literal("")),
+  goal: z.string().trim().max(60).optional().or(z.literal("")),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  source: z.string().trim().max(40).optional().or(z.literal("")),
   company_website: z.string().max(0).optional().or(z.literal("")),
 });
 
@@ -61,13 +65,23 @@ export async function POST(request: NextRequest) {
   }
 
   const location = clean(parsed.data.location);
+  const goal = clean(parsed.data.goal);
+  const notes = clean(parsed.data.notes);
+  const source = clean(parsed.data.source) ?? "audit-pdf";
+  const name = clean(parsed.data.name) ?? clean(parsed.data.agency) ?? "Audit lead";
+  const message =
+    [goal ? `Goal: ${goal}` : null, notes, location ? `Area: ${location}` : null]
+      .filter(Boolean)
+      .join(" | ") || (location ? `Free ad audit - ${location}` : "Free ad audit");
+
   const { error } = await supabase.from("demo_requests").insert({
-    name: parsed.data.name,
+    name,
     agency: clean(parsed.data.agency),
     email: parsed.data.email,
+    phone: clean(parsed.data.phone),
     suburb: location,
-    message: location ? `Free ad audit PDF download — ${location}` : "Free ad audit PDF download",
-    source: "audit-pdf",
+    message,
+    source,
     user_agent: request.headers.get("user-agent"),
     referrer: request.headers.get("referer"),
   });
@@ -79,11 +93,12 @@ export async function POST(request: NextRequest) {
 
   try {
     await sendDemoRequestNotification({
-      name: parsed.data.name,
+      name,
       email: parsed.data.email,
       agency: clean(parsed.data.agency),
+      phone: clean(parsed.data.phone),
       suburb: location,
-      message: location ? `Free ad audit PDF download — ${location}` : "Free ad audit PDF download",
+      message,
     });
   } catch (notifyError) {
     console.error("audit-lead notification failed", notifyError);
