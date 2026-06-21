@@ -110,7 +110,7 @@ export default function HomePage() {
         {/* Evidence slab: real Meta Ad Library creative as a layered 3D object,
             with a readout explaining one ad at a time. Reads the existing
             local-ad-radar API. The hero suburb audit handles search. */}
-        <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
+        <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={4} />
 
         <section id="workflow" className="lp-section">
           <style dangerouslySetInnerHTML={{ __html: HOW_CSS }} />
