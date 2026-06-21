@@ -48,7 +48,7 @@ begin
   for r in
     select schemaname, tablename, policyname, permissive, cmd, roles, qual, with_check
     from pg_policies
-    where schemaname in ('public','storage')
+    where schemaname in ('public','storage','research')
       and (coalesce(qual,'') || ' ' || coalesce(with_check,'')) ~
           '\m(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\('
   loop
@@ -76,7 +76,7 @@ do $do$
 declare n int;
 begin
   select count(*) into n from pg_policies
-   where schemaname in ('public','storage')
+   where schemaname in ('public','storage','research')
      and regexp_replace(coalesce(qual,'') || ' ' || coalesce(with_check,''),
            'private\.(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\(', '', 'g')
          ~ '\m(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\(';
