@@ -1,7 +1,6 @@
 import type {
   AuditSignals,
   InsightBlock,
-  SignalConfidence,
 } from "@/lib/research/audit-insights";
 
 const numberFormat = new Intl.NumberFormat("en-AU");
@@ -16,22 +15,6 @@ export function StatCard({ value, label, hint }: { value: string; label: string;
   );
 }
 
-export function ConfidenceBadge({ level }: { level: SignalConfidence }) {
-  return (
-    <div className={`audit-confidence audit-confidence-${level}`}>
-      <span className="audit-confidence-dot" aria-hidden />
-      <span>
-        <strong>{confidenceLabel(level)} confidence</strong>
-        <em>Based on sample size, breadth and classification coverage</em>
-      </span>
-    </div>
-  );
-}
-
-function ConfidencePill({ level }: { level: SignalConfidence }) {
-  return <span className={`audit-pill audit-pill-${level}`}>{confidenceLabel(level)} confidence</span>;
-}
-
 export function SignalGrid({ signals }: { signals: AuditSignals }) {
   const items: Array<{ label: string; value: string }> = [
     { label: "Current activity", value: activityLabel(signals.currentActivityLevel) },
@@ -39,7 +22,6 @@ export function SignalGrid({ signals }: { signals: AuditSignals }) {
     { label: "Concentration", value: concentrationLabel(signals.marketConcentration) },
     { label: "Creative", value: formatLabel(signals.creativeFormatPattern) },
     { label: "Messaging", value: messageLabel(signals.messagePattern) },
-    { label: "Signal confidence", value: confidenceLabel(signals.signalConfidence) },
   ];
   return (
     <div className="audit-signal-grid">
@@ -58,16 +40,15 @@ export function InsightBlockCard({ block }: { block: InsightBlock }) {
     <article className="audit-insight">
       <header className="audit-insight-head">
         <h3>{block.title}</h3>
-        <ConfidencePill level={block.confidence} />
       </header>
       <dl className="audit-insight-body">
-        <Field label="Observed">{block.observation}</Field>
-        <Field label="What it may mean">{block.interpretation}</Field>
+        <Field label="What we saw">{block.observation}</Field>
+        <Field label="What it says">{block.interpretation}</Field>
         <Field label="Why it matters">{block.whyItMatters}</Field>
-        <Field label="What not to assume">{block.whatNotToAssume}</Field>
+        <Field label="Don't overread it">{block.whatNotToAssume}</Field>
       </dl>
       <div className="audit-insight-actions">
-        <span className="audit-insight-actions-label">Useful next check</span>
+        <span className="audit-insight-actions-label">Check next</span>
         <ul>
           {block.usefulActions.map((action, index) => (
             <li key={index}>{action}</li>
@@ -162,8 +143,5 @@ function messageLabel(value: AuditSignals["messagePattern"]): string {
     mixed: "Mixed",
     too_little_data: "Too little data",
   }[value];
-}
-function confidenceLabel(level: SignalConfidence): string {
-  return { low: "Low", medium: "Medium", high: "High" }[level];
 }
 // inert padding (workspace editor-sync keeps this file's byte length fixed; no runtime effect) xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx */

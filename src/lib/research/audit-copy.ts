@@ -41,6 +41,7 @@ const MAX_ATTEMPTS = 3;
 const GEN_TIMEOUT_MS = 22_000;
 const REVIEW_TIMEOUT_MS = 16_000;
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const COPY_VERSION = "plain-suburb-read-v2";
 
 export type AuditNarrativeInput = {
   label: string;
@@ -129,6 +130,10 @@ const ALWAYS_BANNED: RegExp[] = [
   /launch before (they|them|competitors)/i,
   /recommended campaign/i,
   /already working/i,
+  /\bconfidence (score|level|rating)\b/i,
+  /\bdata quality\b/i,
+  /\bmethodology\b/i,
+  /\bpractical interpretation\b/i,
 ];
 
 // Affirmative current-pressure claims that are only acceptable when the market
@@ -340,6 +345,7 @@ const GENERATION_SYSTEM = [
   "You are a calm, skeptical local-advertising analyst. You write a free, data-grounded intelligence report about the real estate ads visible for one suburb in the PUBLIC Meta (Facebook & Instagram) Ad Library.",
   "",
   "This is NOT a landing page, sales page, campaign generator, or trial signup. You never sell anything and never recommend Blockwise.",
+  "Write like a sharp local operator giving a useful read, not like an academic report or internal scoring system.",
   "",
   "Hard rules:",
   "- Every sentence must be one of: a data observation, a cautious interpretation tied to the provided data, a limitation, or a useful action the reader can take TODAY without buying anything.",
@@ -347,6 +353,7 @@ const GENERATION_SYSTEM = [
   "- The Meta Ad Library is an ads-transparency/search tool, not a performance database. Never claim anything is working, proven, converting, winning, or worth launching. Frame everything as a public-data signal ('detected', 'visible', 'at scan time', 'may suggest', 'directional', 'do not assume').",
   "- Active-ad language MUST match the data. If active ads are 0 or low, do NOT imply competitors are advertising now, that attention is currently being bought, or that the market is currently active/contested. Say plainly that this is a historical/recent snapshot, not live pressure.",
   "- Forbidden words/phrases anywhere: campaign, ad pack, trial, no card required, approve before export, build my campaign, launch, proven, working, winning, crushing, dominating, unlock, ROAS, lead machine, book a call, 'competitors are buying attention', 'recommended campaign'.",
+  "- Do not put internal/reporting labels in prose: confidence score, confidence level, data quality, methodology, practical interpretation.",
   "- Do NOT write generic copy that could apply unchanged to any suburb. Anchor each point in this suburb's specific numbers and advertisers.",
   "",
   "Each insight block MUST include all six fields: observation, interpretation, whyItMatters, whatNotToAssume, usefulActions (1-4 free actions), confidence ('low'|'medium'|'high'). Omit a block entirely rather than ship one missing a field.",
@@ -368,6 +375,7 @@ const REVIEW_SYSTEM = [
   "2. Flag any claim implying active advertising/current pressure when active ads are low or zero.",
   "3. Flag advice that could apply unchanged to any suburb (generic_advice).",
   "4. Flag any sales language (sales_language): campaign, ad pack, trial, no card required, approve before export, build my campaign, launch, proven, already working, book a call.",
+  "4a. Flag internal/reporting labels in public prose: confidence score, confidence level, data quality, methodology, practical interpretation.",
   "5. Flag recommendations not traceable to the data.",
   "6. Flag unsupported certainty (claims stated as fact that the public data cannot support).",
   "7. Flag missing limitations about Meta Ad Library data (missing_caveats).",
@@ -653,6 +661,7 @@ function summariseZodError(error: z.ZodError): string {
 export function computeAuditSignature(input: AuditNarrativeInput): string {
   const { label, stats, signals } = input;
   const basis = {
+    copyVersion: COPY_VERSION,
     label,
     detected: stats.totals.detected,
     active: stats.totals.active,

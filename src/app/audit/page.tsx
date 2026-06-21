@@ -7,7 +7,6 @@ import { AuditCharts } from "@/components/research/audit-charts";
 import {
   BreakdownBars,
   BreakdownChips,
-  ConfidenceBadge,
   InsightBlockCard,
   SignalGrid,
   StatCard,
@@ -112,12 +111,12 @@ function Report({
     <main className="audit-shell audit-main">
       <section className="audit-letterhead">
         <div className="audit-letterhead-copy">
-          <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local advertising signal report</p>
-          <h1>{location.label} &mdash; real estate ad signals</h1>
+          <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Suburb ad scan</p>
+          <h1>{location.label} &mdash; what local agents are putting in market</h1>
           <p className="audit-lead">
             A read on the real estate ads visible around {location.label} in the public Meta (Facebook &amp; Instagram) Ad
-            Library at scan time. This is a market readout, not a performance report: it shows what was publicly visible, not
-            what worked.
+            Library at scan time. It shows the messages and advertisers that surfaced in public data, not spend, leads, or
+            which ads worked.
           </p>
           <dl className="audit-meta">
             <div><dt>Prepared</dt><dd>{generatedDate}</dd></div>
@@ -126,9 +125,6 @@ function Report({
             <div><dt>Report ID</dt><dd>{reportId}</dd></div>
           </dl>
         </div>
-        <div className="audit-letterhead-side">
-          <ConfidenceBadge level={narrative.confidence} />
-        </div>
       </section>
 
       <nav className="audit-nav" aria-label="Report sections">
@@ -136,7 +132,7 @@ function Report({
         <a href="#signals">Signals</a>
         <a href="#advertisers">Advertisers</a>
         <a href="#advice">Advice</a>
-        <a href="#methodology">Methodology</a>
+        <a href="#read-this">How to read this</a>
       </nav>
 
       <section id="snapshot" className="audit-section">
@@ -161,8 +157,8 @@ function Report({
 
       <section className="audit-section audit-section-soft">
         <div className="audit-section-head">
-          <h3 className="audit-subhead">Data quality notes</h3>
-          <p>How much weight this snapshot can carry.</p>
+          <h3 className="audit-subhead">Keep in mind</h3>
+          <p>This is public ad data. Useful, but not the whole market.</p>
         </div>
         <ul className="audit-notes">
           {narrative.dataQuality.map((note, index) => <li key={index}>{note}</li>)}
@@ -227,8 +223,8 @@ function Report({
 
       <section id="advice" className="audit-section">
         <div className="audit-section-head">
-          <h2>Practical interpretation</h2>
-          <p>Each read below ties to the data above, with what it may mean and what not to assume.</p>
+          <h2>What stands out</h2>
+          <p>The main reads from this suburb scan.</p>
         </div>
         <div className="audit-insights">
           {narrative.blocks.map((block) => <InsightBlockCard key={block.id} block={block} />)}
@@ -237,18 +233,18 @@ function Report({
 
       <section className="audit-section audit-section-soft">
         <div className="audit-section-head">
-          <h3 className="audit-subhead">Useful next checks</h3>
-          <p>Things a local operator can do today, without buying anything.</p>
+          <h3 className="audit-subhead">What to check next</h3>
+          <p>Open the public ads, compare the messages, and re-scan before drawing a hard conclusion.</p>
         </div>
         <ul className="audit-actions">
           {narrative.usefulActions.map((action, index) => <li key={index}>{action}</li>)}
         </ul>
       </section>
 
-      <section id="methodology" className="audit-section">
+      <section id="read-this" className="audit-section">
         <div className="audit-section-head">
-          <h3 className="audit-subhead">Methodology &amp; limitations</h3>
-          <p>What this report can and cannot tell you.</p>
+          <h3 className="audit-subhead">How to read this</h3>
+          <p>Use this as a public-ad scan, not an inside view of competitor results.</p>
         </div>
         <ul className="audit-limitations">
           {narrative.limitations.map((item, index) => <li key={index}>{item}</li>)}
@@ -261,8 +257,8 @@ function Report({
 
       <section className="audit-followup">
         <div>
-          <h2>Want to see how this shifts?</h2>
-          <p>One snapshot is a weak signal. Leave an email and we&rsquo;ll send future scans of {location.label} as the public data changes. No account needed.</p>
+          <h2>Want the next scan?</h2>
+          <p>Leave an email and we&rsquo;ll send future snapshots for {location.label} when the public data changes. No account needed.</p>
         </div>
         <AuditSnapshotSignup location={location.label} />
       </section>

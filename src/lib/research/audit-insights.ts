@@ -286,8 +286,8 @@ function snapshotParagraphs(label: string, stats: AdAuditStats, signals: AuditSi
     );
   } else if (signals.currentActivityLevel === "high") {
     paragraphs.push(
-      `Several advertisers are visibly active at scan time, so this reads less like a historical archive and more like a market where attention ` +
-        `is currently being bought. The detail worth reading is who, with what message, rather than the headline count alone.`,
+      `Several advertisers are visibly active at scan time, so this is worth reading as current activity, not just an old archive. ` +
+        `The useful detail is who is live and what message they are using, not the headline count alone.`,
     );
   } else {
     paragraphs.push(
@@ -304,28 +304,28 @@ function dataQualityNotes(stats: AdAuditStats, signals: AuditSignals): string[] 
   const detected = stats.totals.detected;
 
   notes.push(
-    `Source: public Meta (Facebook & Instagram) Ad Library, read at scan time. Only advertisers confirmed as real estate agencies surface here; ` +
-      `other local businesses are filtered out before the report is built.`,
+    `This scan uses the public Meta (Facebook & Instagram) Ad Library as it appeared at scan time. Only confirmed real estate advertisers are included; ` +
+      `other local businesses are filtered out.`,
   );
 
   if (detected > 0) {
     notes.push(
-      `Angle classification covers ${percent(signals.classifiedAngleRatio)} of detected ads. ` +
+      `We could read a clear ad angle on ${percent(signals.classifiedAngleRatio)} of detected ads. ` +
         (signals.classifiedAngleRatio < GOOD_CLASSIFICATION
-          ? `That is below half, so treat the message and angle counts as directional only.`
-          : `Treat angle counts as directional rather than exact.`),
+          ? `That is below half, so check the ads by hand before leaning on the angle counts.`
+          : `Use the angle counts as a guide, not a precise ranking.`),
     );
   }
 
   if (stats.capped) {
     notes.push(
-      `This is a high-volume area, so figures are based on the most recently active ads captured rather than every ad ever detected.`,
+      `This is a high-volume area, so the figures are based on the most recently captured ads, not every ad ever shown in the suburb.`,
     );
   }
 
   if (detected > 0 && detected < MIN_SAMPLE) {
     notes.push(
-      `The detected sample is small (${detected}). Single-scan patterns are fragile at this size - a weekly trend will say more than this snapshot.`,
+      `Only ${detected} ads surfaced. That is enough to inspect examples, but not enough to call the whole market from one scan.`,
     );
   }
 
@@ -517,19 +517,19 @@ function moduleWeakClassification(label: string, stats: AdAuditStats, signals: A
   if (signals.classifiedAngleRatio >= GOOD_CLASSIFICATION) return null;
   return {
     id: "weak-classification",
-    title: "Incomplete angle classification",
+    title: "Some ads need a manual read",
     observation:
-      `Only ${percent(signals.classifiedAngleRatio)} of detected ads around ${label} have a resolved angle; the rest are unclassified.`,
+      `We could read a clear angle on ${percent(signals.classifiedAngleRatio)} of detected ads around ${label}; the rest need a manual look.`,
     interpretation:
-      `The scan's message read is incomplete here, so the angle counts are a rough guide rather than a reliable ranking.`,
+      `The message read is incomplete here, so the angle counts are a rough sorting aid rather than a ranking.`,
     whyItMatters:
-      `Over-reading thin classification leads to false confidence about what the market is "saying".`,
+      `If many ads need a manual read, the market may be saying more than the chart shows.`,
     whatNotToAssume:
-      `Do not rank angles precisely or treat the top angle as settled. The unclassified share could change the picture.`,
+      `Do not rank angles tightly or treat the top angle as settled. The unread share could change the picture.`,
     usefulActions: [
-      "Read the ads directly in the Meta Ad Library rather than relying on the angle counts.",
-      "Treat the message section as directional only.",
-      "Re-scan later - classification often improves as more of each ad is captured.",
+      "Open the ads directly in the Meta Ad Library before using the angle counts.",
+      "Group unread ads by hand into listing, appraisal, proof, or brand messages.",
+      "Re-scan later if the angle mix matters to the decision.",
     ],
     confidence: "low",
   };
@@ -546,7 +546,7 @@ function usefulActions(label: string, stats: AdAuditStats, signals: AuditSignals
   }
 
   if (stats.totals.active === 0) {
-    actions.push("Re-scan weekly for about four weeks before calling the market quiet - one empty scan is a weak signal.");
+    actions.push("Re-scan weekly for about four weeks before calling the market quiet - one empty scan is not enough.");
   } else {
     actions.push("Re-scan weekly for about four weeks to turn this snapshot into a trend you can trust.");
   }
