@@ -32,7 +32,6 @@ const MAX_SUBURB_FILTERS = 10;
 const TOP_ADVERTISERS = 8;
 const TOP_ADS = 8;
 const TOP_CTAS = 6;
-const TOP_HOOKS = 8;
 const RECENT_WINDOW_DAYS = 30;
 const MONTH_BUCKETS = 12;
 const DAY_MS = 86_400_000;
@@ -162,9 +161,9 @@ export function computeAuditStats(
     longestRunning: longestRunningAds(cards, now),
     formats: countBy(cards, (card) => resolveFormatLabel(card)),
     platforms: countPlatforms(cards),
-    adTypes: countBy(cards, (card) => formatAdTypeLabel(card.adType)),
+    adTypes: countBy(cards, (card) => inferAngle(card)),
     topCtas: countBy(cards, (card) => card.cta).slice(0, TOP_CTAS),
-    commonHooks: countValues(cards.flatMap((card) => card.hooks)).slice(0, TOP_HOOKS),
+    commonHooks: [],
     newLast30Days: cards.filter((card) => withinDays(card.startedAt, RECENT_WINDOW_DAYS, now)).length,
     launchesByMonth: launchesByMonth(cards, now),
     medianDaysRunning: median(runningDays),
@@ -227,7 +226,7 @@ function longestRunningAds(cards: CustomerMetaAdLibraryCard[], now: number): Aud
       startedAt: card.startedAt,
       destinationDomain: domainFromUrl(card.destinationUrl),
       platforms: card.platforms,
-      adType: formatAdTypeLabel(card.adType),
+      adType: inferAngle(card),
     }));
 }
 
@@ -411,8 +410,6 @@ function creativeSignature(card: CustomerMetaAdLibraryCard): string {
 }
 
 function resolveFormatLabel(card: CustomerMetaAdLibraryCard): string {
-  const explicit = card.adFormat?.trim();
-  if (explicit) return titleCase(explicit);
   const videos = card.media.filter((media) => media.kind === "video").length;
   const images = card.media.filter((media) => media.kind === "image").length;
   if (videos > 0 && images === 0) return "Video";
@@ -422,10 +419,17 @@ function resolveFormatLabel(card: CustomerMetaAdLibraryCard): string {
   return "Text";
 }
 
-function formatAdTypeLabel(value: string | null): string | null {
-  const clean = value?.trim();
-  if (!clean) return null;
-  return titleCase(clean.replace(/[_-]+/g, " "));
+/** Infer the campaign angle from ad copy, since the view has no ad_type column. */
+function inferAngle(card: CustomerMetaAdLibraryCard): string | null {
+  const text = `${card.headline ?? ""} ${card.body ?? ""}`.toLowerCase();
+  if (!text.trim()) return null;
+  if (/\bappraisal\b|home worth|what is your home worth|property report/.test(text)) return "Free Appraisal";
+  if (/just sold|\bsold\b|under offer/.test(text)) return "Just Sold";
+  if (/just listed|new listing|now selling|\bfor sale\b/.test(text)) return "Just Listed";
+  if (/open (home|inspection)|home open|inspect this/.test(text)) return "Open Home";
+  if (/market (update|report)|median|price growth|suburb report/.test(text)) return "Market Update";
+  if (/for lease|rental|property management|landlord/.test(text)) return "Property Management";
+  return null;
 }
 
 function withinDays(value: string | null, days: number, now: number): boolean {
@@ -457,10 +461,6 @@ function monthKey(date: Date): string {
 
 function monthLabel(date: Date): string {
   return new Intl.DateTimeFormat("en-AU", { month: "short", timeZone: "UTC" }).format(date);
-}
-
-function titleCase(value: string): string {
-  return value.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 }
 
 function escapeLikeTerm(value: string): string {

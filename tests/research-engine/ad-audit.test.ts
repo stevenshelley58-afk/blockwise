@@ -17,6 +17,11 @@ function makeCard(overrides: Partial<CustomerMetaAdLibraryCard> & { id: string }
   return {
     id,
     libraryId: null,
+    agentId: null,
+    agentName: null,
+    agencyId: null,
+    agencyName: null,
+    attributionLinks: [],
     pageId: null,
     pageName: "Unknown page",
     pageUrl: null,
@@ -44,21 +49,16 @@ function makeCard(overrides: Partial<CustomerMetaAdLibraryCard> & { id: string }
     description: null,
     cta: null,
     destinationUrl: null,
-    agencyName: null,
-    agentName: null,
-    adType: null,
-    adFormat: null,
-    hooks: [],
     media: [],
     ...rest,
   };
 }
 
 const SAMPLE: CustomerMetaAdLibraryCard[] = [
-  makeCard({ id: "a1", pageName: "Agency A", agencyName: "Agency A", headline: "Free appraisal A", body: "Body A", startedAt: daysAgo(100), activeStatus: "active", adType: "free_appraisal", cta: "Learn More" }),
-  makeCard({ id: "a1b", pageName: "Agency A", agencyName: "Agency A", headline: "Free appraisal A", body: "Body A", startedAt: daysAgo(100), activeStatus: "active", adType: "free_appraisal", cta: "Learn More" }),
-  makeCard({ id: "a2", pageName: "Agency A", agencyName: "Agency A", headline: "Just listed A", startedAt: daysAgo(10), stoppedAt: daysAgo(5), activeStatus: "inactive" }),
-  makeCard({ id: "b1", pageName: "Agency B", agencyName: "Agency B", headline: "Market update B", startedAt: daysAgo(300), activeStatus: "active", platforms: ["Facebook", "Instagram"], hooks: ["scarcity"] }),
+  makeCard({ id: "a1", pageName: "Agency A", agencyName: "Agency A", headline: "Free appraisal for your home", body: "Body A", startedAt: daysAgo(100), activeStatus: "active", cta: "Learn More" }),
+  makeCard({ id: "a1b", pageName: "Agency A", agencyName: "Agency A", headline: "Free appraisal for your home", body: "Body A", startedAt: daysAgo(100), activeStatus: "active", cta: "Learn More" }),
+  makeCard({ id: "a2", pageName: "Agency A", agencyName: "Agency A", headline: "Just listed in your suburb", startedAt: daysAgo(10), stoppedAt: daysAgo(5), activeStatus: "inactive" }),
+  makeCard({ id: "b1", pageName: "Agency B", agencyName: "Agency B", headline: "Market update for buyers", startedAt: daysAgo(300), activeStatus: "active", platforms: ["Facebook", "Instagram"] }),
 ];
 
 test("computeAuditStats returns a clean empty audit", () => {
@@ -96,7 +96,7 @@ test("computeAuditStats dedupes identical creatives in longest-running", () => {
   assert.equal(stats.longestRunningDays, 300);
 });
 
-test("computeAuditStats computes recency, median and breakdowns", () => {
+test("computeAuditStats infers angle, recency, median and breakdowns", () => {
   const stats = computeAuditStats(SAMPLE, { now: NOW });
   assert.equal(stats.newLast30Days, 1);
   assert.equal(stats.medianDaysRunning, 100);
