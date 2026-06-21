@@ -47,12 +47,12 @@ const AD_PLACEHOLDERS = [
 ] as const;
 
 /** "How it works" illustration (radar → prepared card → live dashboard). */
-const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, prepare the campaign, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
+const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, we prepare the ads, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
 
 /** Scoped styles for the "How it works" section (ported from the prior homepage, blue palette). */
 const HOW_CSS = `
 .lp .lp-how__head{text-align:center;margin-bottom:44px}
-.lp .lp-how__head h2{font-size:clamp(26px,3.5vw,38px);line-height:1.1;letter-spacing:-.02em;margin:0 auto;max-width:20ch;color:var(--lp-ink)}
+.lp .lp-how__head h2{font-size:clamp(19px,2.4vw,26px);font-weight:600;line-height:1.35;letter-spacing:-.01em;margin:0 auto;max-width:34ch;text-wrap:balance;color:var(--lp-ink)}
 .lp .lp-how__sub{font-size:16px;line-height:1.55;color:var(--lp-muted);margin:14px auto 0;max-width:52ch}
 .lp .lp-how-fig{position:relative;margin:0 auto;max-width:1024px;border-radius:24px;border:1px solid var(--lp-border);padding:14px;background:radial-gradient(120% 90% at 18% 12%,#eef3fb 0,rgba(238,243,251,0) 55%),radial-gradient(120% 100% at 88% 92%,#f1eefb 0,rgba(241,238,251,0) 55%),linear-gradient(160deg,#f6f8fc,#f7f6fc)}
 .lp .lp-how-fig svg{width:100%;height:auto;display:block}
@@ -72,10 +72,10 @@ const HOW_CSS = `
 `;
 
 const TABLE_ROWS = [
-  { name: "Mt Lawley Appraisal Campaign", status: "Active", clicks: "247", leads: "18", spend: "$324" },
-  { name: "Subiaco Just Listed Campaign", status: "Active", clicks: "182", leads: "11", spend: "$210" },
-  { name: "Cottesloe Open Home Campaign", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
-  { name: "South Perth Auction Campaign", status: "Active", clicks: "145", leads: "9", spend: "$176" },
+  { name: "Mt Lawley Appraisal", status: "Active", clicks: "247", leads: "18", spend: "$324" },
+  { name: "Subiaco Just Listed", status: "Active", clicks: "182", leads: "11", spend: "$210" },
+  { name: "Cottesloe Open Home", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
+  { name: "South Perth Auction", status: "Active", clicks: "145", leads: "9", spend: "$176" },
 ] as const;
 
 export default function HomePage() {
@@ -87,10 +87,7 @@ export default function HomePage() {
             <BlockwiseLogo />
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
-            <a href="#radar">Ad Radar</a>
-            <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
-            <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
@@ -115,14 +112,14 @@ export default function HomePage() {
             </p>
             <div className="lp-hero-scan">
               <LandingAdRadarScan
-                buttonLabel="Scan my suburb"
+                buttonLabel="Free suburb audit"
                 initialNote="Start with Perth, WA or choose your suburb."
                 initialValue="Perth, WA"
                 placeholder="Enter city, agent, or brokerage"
                 useBestGuess
               />
             </div>
-            <p className="lp-hero-microcopy">7-day trial · 10 ad packs · No card required</p>
+            <p className="lp-hero-microcopy">7-day free trial · No credit card required</p>
           </div>
         </section>
 
@@ -173,7 +170,7 @@ export default function HomePage() {
             <div className="lp-how-fig" aria-hidden dangerouslySetInnerHTML={{ __html: HOW_FIG_SVG }} />
             <ol className="lp-how__steps">
               <li className="lp-how__s"><b><em className="lp-how-e1">1</em> Scan</b><p>See local lead angles.</p></li>
-              <li className="lp-how__s"><b><em className="lp-how-e2">2</em> Prepared</b><p>Blockwise prepares the campaign.</p></li>
+              <li className="lp-how__s"><b><em className="lp-how-e2">2</em> Prepared</b><p>Blockwise prepares the ads.</p></li>
               <li className="lp-how__s"><b><em className="lp-how-e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
             </ol>
           </div>
@@ -182,42 +179,42 @@ export default function HomePage() {
         <section id="campaign-types" className="lp-section">
           <div className="lp-shell">
             <div className="lp-center-head">
-              <p className="lp-eyebrow">Campaigns</p>
-              <h2 className="lp-h2">Everything you need to prepare real estate campaigns.</h2>
+              <p className="lp-eyebrow">Done for you</p>
+              <h2 className="lp-h2">We build your real estate ads for you.</h2>
               <p className="lp-lead">
-                Blockwise gives agents and marketing coordinators the tools to create the campaign,
-                approve the details and export the package for final setup in the agency ad account.
+                Blockwise writes the ads, builds the lead form and sets everything up. You just
+                approve what goes live, then export the package for final setup in your own ad account.
               </p>
             </div>
             <div className="lp-features">
               <Feature
                 title="Facebook and Instagram ads"
-                copy="Headlines, primary text, descriptions and creative variants for common property campaign types."
+                copy="Headlines, primary text, descriptions and creative variants — written for you, ready to run."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z" /></svg>}
               />
               <Feature
                 title="Lead forms"
-                copy="Questions, privacy details and thank-you screen, matched to the campaign goal."
+                copy="Questions, privacy details and thank-you screen, built and matched to your goal."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h10M7 16h6" /></svg>}
               />
               <Feature
-                title="Campaign angles"
+                title="Proven local angles"
                 copy="Just Listed, Open Home, Just Sold, Free Appraisal, Buyer Demand and Market Update."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>}
               />
               <Feature
                 title="Budget and schedule"
-                copy="Set spend and duration before final handoff. Ad spend goes through your ad account."
+                copy="We set the spend and timing. Ad spend runs through your own ad account."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg>}
               />
               <Feature
                 title="Approval checks"
-                copy="Flag common review issues around claims, pricing language, brand fit and final sign off."
+                copy="We flag common review issues around claims, pricing language and brand fit before sign off."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></svg>}
               />
               <Feature
                 title="Live reporting"
-                copy="Track impressions, clicks, leads, spend and campaign status inside Blockwise."
+                copy="Track impressions, clicks, leads, spend and status inside Blockwise."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><rect x="7" y="12" width="3" height="5" /><rect x="12" y="8" width="3" height="9" /><rect x="17" y="5" width="3" height="12" /></svg>}
               />
             </div>
@@ -230,7 +227,7 @@ export default function HomePage() {
               <p className="lp-eyebrow">Approval and control</p>
               <h2 className="lp-h2" id="control-title">You stay in control before anything leaves draft.</h2>
               <p className="lp-lead">
-                Every campaign is drafted inside Blockwise, reviewed by your team and exported for
+                Every ad is drafted inside Blockwise, reviewed by your team and exported for
                 final platform setup only after approval.
               </p>
               <ul className="lp-control-list" aria-label="Control points">
@@ -240,20 +237,20 @@ export default function HomePage() {
                 <li><span className="lp-check" aria-hidden>✓</span>See every result in one dashboard</li>
               </ul>
             </div>
-            <div className="lp-table-card" aria-label="Campaign reporting table preview">
+            <div className="lp-table-card" aria-label="Ad performance table preview">
               <div className="lp-table-bar">
                 <div>
-                  <strong>Campaigns</strong>
+                  <strong>Your ads</strong>
                   <span className="lp-badge lp-badge-neutral">Example data</span>
                 </div>
                 <CtaLink location="control-table" href="/signup" className="lp-btn lp-btn-primary lp-btn-sm">
-                  Create campaign
+                  Get started
                 </CtaLink>
               </div>
               <div className="lp-table-scroll">
                 <table className="lp-table">
                   <thead>
-                    <tr><th>Campaign</th><th>Status</th><th>Clicks</th><th>Leads</th><th>Spend</th></tr>
+                    <tr><th>Ad</th><th>Status</th><th>Clicks</th><th>Leads</th><th>Spend</th></tr>
                   </thead>
                   <tbody>
                     {TABLE_ROWS.map((row) => (
@@ -279,10 +276,10 @@ export default function HomePage() {
         <section id="reporting" className="lp-section">
           <div className="lp-shell lp-center-head">
             <p className="lp-eyebrow">Reporting</p>
-            <h2 className="lp-h2">See campaign status, spend, clicks, and leads in Blockwise.</h2>
+            <h2 className="lp-h2">See status, spend, clicks, and leads in Blockwise.</h2>
             <p className="lp-lead">
-              The dashboard brings campaign performance back into the same workspace your team uses
-              for campaign creation and approval.
+              The dashboard brings performance back into the same workspace your team uses
+              to review and approve.
             </p>
           </div>
         </section>
@@ -293,7 +290,7 @@ export default function HomePage() {
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
               <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
               <p className="lp-lead lp-lead-light">
-                No card required. Create draft campaigns, review the ads and connect your ad account
+                No card required. Review your ads and connect your ad account
                 when you are ready for final setup.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
@@ -301,7 +298,7 @@ export default function HomePage() {
               </CtaLink>
             </div>
             <div className="lp-trial-grid">
-              <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the campaign builder from the minute you confirm your email.</span></div>
+              <div className="lp-trial-item"><strong>7 days</strong><span>Full access from the minute you confirm your email.</span></div>
               <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
@@ -313,9 +310,9 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow">Managed setup</p>
-              <h2 className="lp-h2" id="demo-title">Want help preparing your first campaign?</h2>
+              <h2 className="lp-h2" id="demo-title">Want help getting started?</h2>
               <p className="lp-lead">
-                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
+                Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect
                 your ad account and review everything before handoff.
               </p>
             </div>
@@ -332,16 +329,16 @@ export default function HomePage() {
                 <details open>
                   <summary>Who pays for ad spend?</summary>
                   <p>
-                    You do. Campaigns run through your connected ad account and your ad spend is paid to
-                    the platform directly. Blockwise is the software used to create, approve, export and
-                    track the campaign.
+                    You do. Your ads run through your connected ad account and your ad spend is paid to
+                    the platform directly. Blockwise is the software used to build, approve, export and
+                    track your ads.
                   </p>
                 </details>
                 <details>
                   <summary>Do I need a Meta ad account?</summary>
                   <p>
-                    You can create and review campaigns before connecting Meta. To move from draft to a
-                    live campaign, connect your Meta ad account for final setup.
+                    You can review your ads before connecting Meta. To move from draft to live,
+                    connect your Meta ad account for final setup.
                   </p>
                 </details>
                 <details>
@@ -354,7 +351,7 @@ export default function HomePage() {
                 <details>
                   <summary>Can I see results inside Blockwise?</summary>
                   <p>
-                    Yes. Once your campaign is connected, Blockwise shows status, spend, clicks, leads and
+                    Yes. Once your ads are connected, Blockwise shows status, spend, clicks, leads and
                     performance metrics inside the app.
                   </p>
                 </details>
@@ -369,7 +366,7 @@ export default function HomePage() {
                 <details>
                   <summary>What happens after the 7 days?</summary>
                   <p>
-                    Creating campaigns pauses and we ask you to pick a plan. We never took a card, so
+                    Your free access pauses and we ask you to pick a plan. We never took a card, so
                     there is no surprise charge. Your drafts stay put.
                   </p>
                 </details>
@@ -378,7 +375,7 @@ export default function HomePage() {
             <aside className="lp-setup-card">
               <h3>Need a hand getting started?</h3>
               <p>
-                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
+                Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect
                 your ad account and get everything ready for final setup.
               </p>
               <CtaLink location="faq-walkthrough" href="#managed-setup" className="lp-btn lp-btn-hero">
@@ -419,7 +416,7 @@ export default function HomePage() {
             <BlockwiseLogo />
             <p>
               The ad platform for real estate teams. Create, approve, export and track property
-              campaigns from one place.
+              ads from one place.
             </p>
             <p className="lp-footer-contact">
               <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
@@ -428,7 +425,6 @@ export default function HomePage() {
           <div>
             <h4>Product</h4>
             <a href="#radar">Ad Radar</a>
-            <a href="#campaign-types">Campaigns</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
