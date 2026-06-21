@@ -181,8 +181,8 @@ export default function HomePage() {
           <div className="lp-shell">
             <div className="lp-how__head">
               <span className="lp-how-eyebrow"><span className="lp-how-dot" aria-hidden /> How it works</span>
-              <h2>From local signal to real leads.</h2>
-              <p className="lp-how__sub">We scan the area, prepare the campaign, and the leads come in.</p>
+              <h2>Too much time is wasted on ads. Not enough time is spent doing the work that actually matters.</h2>
+              <p className="lp-how__sub">Blockwise handles the ad work for you. Approve what goes live, receive updates, and focus on your clients.</p>
             </div>
             <div className="lp-how-fig" aria-hidden dangerouslySetInnerHTML={{ __html: HOW_FIG_SVG }} />
             <ol className="lp-how__steps">
