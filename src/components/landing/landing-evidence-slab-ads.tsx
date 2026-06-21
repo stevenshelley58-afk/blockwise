@@ -51,7 +51,7 @@ const SLAB_SCROLL_CSS = `
 .lp-slab-creative-placeholder { display: block; background: #eef2f7; }
 
 /* SCRUB - the deck advances through the stack as the section scrolls past. */
-.lp-slab--scrub .lp-slab-deck { animation: none; }
+.lp-slab--scrub .lp-slab-deck { animation: none; transform: none; }
 .lp-slab--scrub .lp-slab-layer { transition: transform .28s cubic-bezier(.22,.61,.36,1), opacity .24s ease; }
 .lp-slab-scrollhint { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); margin: 0; white-space: nowrap; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--lp-faint); }
 
