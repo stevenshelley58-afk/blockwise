@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export const metadata: Metadata = {
   title: "Local Ad Market Audit",
   description:
-    "A free, data-backed audit of the real estate Meta ads running in your suburb and surrounding area — key stats, longest-running campaigns, and AI marketing recommendations.",
+    "A free, data-backed audit of the real estate Meta ads running in your suburb and surrounding area: key stats, longest-running campaigns, and AI marketing recommendations.",
   robots: { index: false, follow: false },
 };
 
@@ -76,7 +76,7 @@ function Report({ audit }: { audit: AdAuditResult }) {
       <section className="audit-letterhead">
         <div className="audit-letterhead-copy">
           <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit</p>
-          <h1>{location.label} — Real Estate Ad Audit</h1>
+          <h1>{location.label} &mdash; Real Estate Ad Audit</h1>
           <p className="audit-lead">
             A live scan of the Meta (Facebook &amp; Instagram) ads running across {location.label} and surrounding
             suburbs, sourced from the public Meta Ad Library.
@@ -90,7 +90,7 @@ function Report({ audit }: { audit: AdAuditResult }) {
         </div>
         <div className="audit-letterhead-actions">
           <AuditPdfButton location={location.label} />
-          <span className="audit-letterhead-note">Free · branded PDF</span>
+          <span className="audit-letterhead-note">Free &middot; branded PDF</span>
         </div>
       </section>
 
@@ -120,7 +120,7 @@ function Report({ audit }: { audit: AdAuditResult }) {
         />
       </Section>
 
-      <Section title="What's working — longest-running ads" subtitle="Ads that run for months are almost always converting. These are the campaigns proven in your market.">
+      <Section title="What is working: longest-running ads" subtitle="Ads that run for months are almost always converting. These are the campaigns proven in your market.">
         <div className="audit-table-wrap">
           <table className="audit-table">
             <thead>
@@ -132,7 +132,7 @@ function Report({ audit }: { audit: AdAuditResult }) {
                   <td className="audit-rank">{index + 1}</td>
                   <td className="audit-strong">{ad.pageName}</td>
                   <td className="audit-ad-copy">{ad.headline ?? ad.body ?? ad.cta ?? "Creative ad"}</td>
-                  <td>{ad.adType ?? "—"}</td>
+                  <td>{ad.adType ?? "-"}</td>
                   <td className="audit-num">{numberFormat.format(ad.daysRunning)} days</td>
                   <td><StatusPill status={ad.status} /></td>
                 </tr>
@@ -142,7 +142,7 @@ function Report({ audit }: { audit: AdAuditResult }) {
         </div>
       </Section>
 
-      <Section title="Who's advertising most" subtitle="The agencies investing most consistently in Meta ads locally.">
+      <Section title="Who is advertising most" subtitle="The agencies investing most consistently in Meta ads locally.">
         <div className="audit-table-wrap">
           <table className="audit-table">
             <thead>
@@ -168,14 +168,14 @@ function Report({ audit }: { audit: AdAuditResult }) {
           <BreakdownBars title="Formats" items={stats.formats} />
           <BreakdownBars title="Platforms" items={stats.platforms} />
           <BreakdownChips title="Most-used calls to action" items={stats.topCtas} />
-          <BreakdownChips title="Common angles & hooks" items={mergeAngles(stats.adTypes, stats.commonHooks)} />
+          <BreakdownChips title="Common angles and hooks" items={mergeAngles(stats.adTypes, stats.commonHooks)} />
         </div>
       </Section>
 
       <section className="audit-section audit-ai-section">
         <div className="audit-section-head">
           <h2>Marketing recommendations</h2>
-          <p>AI strategy built from the live data above — what to copy, where the gaps are, and what to launch.</p>
+          <p>AI strategy built from the live data above: what to copy, where the gaps are, and what to launch.</p>
         </div>
         <AuditSuggestionsPanel location={location.label} />
       </section>
@@ -192,10 +192,10 @@ function EmptyState({ audit }: { audit: AdAuditResult }) {
       <section className="audit-letterhead">
         <div className="audit-letterhead-copy">
           <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit</p>
-          <h1>{audit.location.label} — Real Estate Ad Audit</h1>
+          <h1>{audit.location.label} &mdash; Real Estate Ad Audit</h1>
           <p className="audit-lead">
-            We didn&rsquo;t find active Meta ads for this exact area yet — our coverage is still expanding here.
-            That&rsquo;s also an opening: very few competitors are advertising in this pocket right now.
+            We did not find active Meta ads for this exact area yet &mdash; our coverage is still expanding here.
+            That is also an opening: very few competitors are advertising in this pocket right now.
           </p>
           <dl className="audit-meta">
             <div><dt>Prepared</dt><dd>{formatDate(audit.generatedAt)}</dd></div>
@@ -221,7 +221,7 @@ function ErrorState({ location }: { location: string }) {
   return (
     <main className="audit-shell audit-main">
       <section className="audit-section audit-error">
-        <h1>We couldn&rsquo;t build your audit</h1>
+        <h1>We could not build your audit</h1>
         <p>The live ad scan is temporarily unavailable. Please try again in a moment.</p>
         <Link href={`/audit?location=${encodeURIComponent(location)}`} className="lp-btn lp-btn-primary">Retry audit</Link>
       </section>
@@ -316,16 +316,16 @@ function CtaBand({ location }: { location: string }) {
 function Methodology() {
   return (
     <footer className="audit-methodology">
-      <h3>Methodology &amp; notes</h3>
+      <h3>Methodology and notes</h3>
       <p>
         Data is sourced from the public Meta Ad Library at the time of the scan and covers ads detected for the
-        searched suburb plus surrounding suburbs and postcodes. &ldquo;Longest-running&rdquo; is measured from each
-        ad&rsquo;s delivery start date and is used as a proxy for performance — advertisers rarely keep ads live for
-        months unless they convert. Figures reflect ads detected at scan time and may not capture every advertiser.
+        searched suburb plus surrounding suburbs and postcodes. Longest-running is measured from each ad delivery
+        start date and is used as a proxy for performance: advertisers rarely keep ads live for months unless they
+        convert. Figures reflect ads detected at scan time and may not capture every advertiser.
       </p>
       <p className="audit-disclaimer">
         Blockwise is an independent tool and is not affiliated with or endorsed by Meta Platforms, Inc. Advertiser and
-        agency names are shown for competitive research only. © {new Date().getFullYear()} Blockwise.
+        agency names are shown for competitive research only. Copyright {new Date().getFullYear()} Blockwise.
       </p>
     </footer>
   );
@@ -338,7 +338,7 @@ function pickParam(value: string | string[] | undefined): string {
 
 function formatDate(value: string): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(date);
 }
 
