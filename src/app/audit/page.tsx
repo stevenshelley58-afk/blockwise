@@ -3,9 +3,8 @@ import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { AuditCtaButton, AuditViewTracker } from "@/components/research/audit-conversion";
-import { AuditPdfButton } from "@/components/research/audit-pdf-button";
-import { AuditSuggestionsPanel } from "@/components/research/audit-suggestions";
-import { buildAdAudit, type AdAuditResult } from "@/lib/research/ad-audit";
+import { AuditLeadForm } from "@/components/research/audit-lead-form";
+import { buildAdAudit, type AdAuditResult, type AdAuditStats } from "@/lib/research/ad-audit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import "../audit.css";
@@ -16,7 +15,7 @@ export const runtime = "nodejs";
 export const metadata: Metadata = {
   title: "Local Ad Market Audit",
   description:
-    "See the real estate Meta ads running in your suburb, what is working, and the exact campaign to run next.",
+    "See which agencies are advertising around your suburb and get a ready-to-build campaign plan from Blockwise.",
   robots: { index: false, follow: false },
 };
 
@@ -28,227 +27,328 @@ function signupHref(market: string): string {
   return `/signup?source=audit&market=${encodeURIComponent(market)}`;
 }
 
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "today";
+  return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
 export default async function AuditPage({ searchParams }: { searchParams?: SearchParams }) {
   const params = searchParams ? await searchParams : {};
   const location = pickParam(params.location ?? params.q) || "Perth, WA";
 
   let audit: AdAuditResult | null = null;
-  let failed = false;
   try {
     audit = await buildAdAudit(createSupabaseServiceClient(), { location });
   } catch (error) {
     console.error("audit page build failed", error);
-    failed = true;
   }
+
+  const label = audit?.location.label ?? location;
+  const prepared = audit ? formatDate(audit.generatedAt) : formatDate(new Date().toISOString());
 
   return (
     <div className="audit-page">
-      <header className="audit-topbar">
-        <div className="audit-shell audit-topbar-inner">
-          <Link href="/" className="lp-brand" aria-label="Blockwise home">
-            <BlockwiseLogo />
-          </Link>
-          <AuditCtaButton href={signupHref(location)} market={location} className="lp-btn lp-btn-primary lp-btn-sm">
-            Start free trial
-          </AuditCtaButton>
+      <header className="site-header">
+        <div className="container nav">
+          <Link className="brand" href="/" aria-label="Blockwise home"><BlockwiseLogo /></Link>
+          <nav className="nav-links">
+            <a href="#plan">Campaign plan</a>
+            <a href="#evidence">Competitor evidence</a>
+            <a href="#lead" className="button button-primary">Build my {label} campaign</a>
+          </nav>
         </div>
       </header>
 
-      {failed || !audit ? (
-        <ErrorState location={location} />
-      ) : audit.stats.totals.detected === 0 ? (
-        <EmptyState audit={audit} />
-      ) : (
-        <Report audit={audit} />
-      )}
+      <main>
+        <Hero label={label} prepared={prepared} stats={audit?.stats ?? null} />
+        {audit && audit.stats.totals.detected > 0 ? <Stats stats={audit.stats} /> : null}
+        {audit && audit.stats.totals.detected > 0 ? <Insight label={label} stats={audit.stats} /> : null}
+        <CampaignPack label={label} />
+        <OutputPreview label={label} />
+        <LeadSection label={label} />
+        {audit && audit.stats.totals.detected > 0 ? <Evidence stats={audit.stats} /> : null}
+      </main>
 
-      {audit ? <AuditViewTracker market={audit.location.label} /> : null}
+      <footer className="site-footer">
+        <div className="container footer-grid">
+          <div>
+            <Link className="brand" href="/"><BlockwiseLogo /></Link>
+            <p className="fine-print">Real estate Meta ads workflow: scan, campaign creation, approval, export and reporting.</p>
+          </div>
+          <div>
+            <p className="fine-print">{label} audit prepared {prepared}. Figures reflect ads detected at scan time.</p>
+          </div>
+        </div>
+      </footer>
+
+      <div className="mobile-cta">
+        <a className="button button-primary" href="#lead">Build my {label} campaign</a>
+      </div>
+
+      <AuditViewTracker market={label} />
     </div>
   );
 }
 
-function Report({ audit }: { audit: AdAuditResult }) {
-  const { stats, location } = audit;
-  const href = signupHref(location.label);
-  const top = stats.topAdvertisers[0];
-  const wins = stats.longestRunning.slice(0, 3);
-  const angles = stats.adTypes.slice(0, 4);
-
-  const sting = top
-    ? `${top.name} is running ${numberFormat.format(top.ads)} ads in your area${stats.longestRunningDays > 0 ? `, and the top one has been live ${numberFormat.format(stats.longestRunningDays)} days` : ""}. Long-running ads are the offers winning your sellers - here is what is working, and how to run it yourself.`
-    : `${numberFormat.format(stats.totals.detected)} property ads are running across ${location.label}. Here is what is working, and how to run it yourself.`;
+function Hero({ label, prepared, stats }: { label: string; prepared: string; stats: AdAuditStats | null }) {
+  const detected = stats?.totals.detected ?? 0;
+  const active = stats?.totals.active ?? 0;
+  const advertisers = stats?.advertiserCount ?? 0;
+  const longest = stats?.longestRunningDays ?? 0;
+  const headline =
+    advertisers > 0
+      ? `${numberFormat.format(advertisers)} agencies are advertising around ${label}.`
+      : `Almost no one is advertising in ${label} yet.`;
+  const lede =
+    detected > 0
+      ? `Blockwise found ${numberFormat.format(detected)} local real estate ads, including ${numberFormat.format(active)} still active. Use the strongest public signals to launch a simpler Facebook and Instagram campaign pack for your agency.`
+      : `Few or no competitors are advertising here right now. That is the opening: be the first agent owning the local feed and capture sellers before your competitors show up.`;
 
   return (
-    <main className="audit-shell audit-main">
-      <section className="audit-hero">
-        <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit &middot; {location.label}</p>
-        <h1>Here is who is winning the ads in {location.label}.</h1>
-        <p className="audit-hero-sting">{sting}</p>
-        <div className="audit-hero-cta">
-          <AuditCtaButton href={href} market={location.label} className="lp-btn lp-btn-primary lp-btn-big">
-            Build my campaign &mdash; start free
-          </AuditCtaButton>
-          <span className="audit-hero-note">7-day trial &middot; no card required</span>
-        </div>
-      </section>
-
-      <section className="audit-stats audit-stats-3" aria-label="Key statistics">
-        <StatCard value={numberFormat.format(stats.totals.active)} label="Ads running now" hint="In your suburb + surrounds" accent />
-        <StatCard value={numberFormat.format(stats.advertiserCount)} label="Agencies competing" hint="Advertising against you" />
-        <StatCard value={numberFormat.format(stats.longestRunningDays)} label="Longest-running ad" hint="Days live = it converts" />
-      </section>
-
-      {wins.length > 0 ? (
-        <section className="audit-section">
-          <div className="audit-section-head">
-            <h2>What is working in {location.label}</h2>
-            <p>The ads that have run longest &mdash; almost always the ones converting.</p>
-          </div>
-          <div className="audit-wins">
-            {wins.map((ad, index) => (
-              <article className="audit-win" key={ad.id}>
-                <span className="audit-win-rank">{index + 1}</span>
-                <div className="audit-win-body">
-                  <strong>{ad.pageName}</strong>
-                  <p>{ad.headline ?? ad.body ?? ad.cta ?? "Creative ad"}</p>
-                  <div className="audit-win-meta">
-                    <span className="audit-win-days">{numberFormat.format(ad.daysRunning)} days live</span>
-                    {ad.adType ? <span className="audit-chip">{ad.adType}</span> : null}
-                    <StatusPill status={ad.status} />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {angles.length > 0 ? (
-        <section className="audit-section">
-          <div className="audit-section-head">
-            <h2>The offers getting traction</h2>
-            <p>Angles your competitors run most &mdash; your fastest path to leads.</p>
-          </div>
-          <AngleBars items={angles} />
-        </section>
-      ) : null}
-
-      <section className="audit-section audit-ai-section">
-        <div className="audit-section-head">
-          <h2>Your plan: what to run next</h2>
-          <p>Built from the live data above.</p>
-        </div>
-        <AuditSuggestionsPanel location={location.label} />
-      </section>
-
-      <section className="audit-cta">
+    <section className="hero">
+      <div className="container hero-grid">
         <div>
-          <h2>Blockwise builds these ads for {location.label}.</h2>
-          <p>Pick an angle, we draft the ad, lead form and targeting. You approve, then launch from your own ad account.</p>
+          <div className="eyebrow">{label} ad radar</div>
+          <h1>{headline}</h1>
+          <p className="hero-lede">{lede}</p>
+          <div className="cta-row">
+            <a className="button button-primary" href="#lead">Build my {label} campaign</a>
+            <a className="button button-secondary" href={detected > 0 ? "#evidence" : "#plan"}>
+              {detected > 0 ? "See competitor evidence" : "See the campaign pack"}
+            </a>
+          </div>
+          <div className="trust-row">
+            <span className="trust-item"><span className="trust-dot" />7-day trial</span>
+            <span className="trust-item"><span className="trust-dot" />10 ad packs</span>
+            <span className="trust-item"><span className="trust-dot" />No card required</span>
+            <span className="trust-item"><span className="trust-dot" />Approve before export</span>
+          </div>
         </div>
-        <div className="audit-cta-actions">
-          <AuditCtaButton href={href} market={location.label} className="lp-btn lp-btn-light lp-btn-big">Start free trial</AuditCtaButton>
-          <AuditPdfButton location={location.label} className="lp-btn lp-btn-ghost-light" label="Save as PDF" />
-        </div>
-      </section>
-
-      <Methodology />
-    </main>
+        <aside className="audit-card">
+          <p className="card-kicker">Prepared {prepared}</p>
+          <h2>What the scan found</h2>
+          <p>The market is already active. The fastest conversion path is not more analysis &mdash; it is a clear campaign plan based on the signals below.</p>
+          <div className="mini-stats">
+            <div className="mini-stat"><strong>{numberFormat.format(detected)}</strong><span>competitor ads found</span></div>
+            <div className="mini-stat"><strong>{numberFormat.format(active)}</strong><span>still live now</span></div>
+            <div className="mini-stat"><strong>{numberFormat.format(advertisers)}</strong><span>agencies competing</span></div>
+            <div className="mini-stat"><strong>{numberFormat.format(longest)}</strong><span>day longest-run signal</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }
 
-function EmptyState({ audit }: { audit: AdAuditResult }) {
-  const href = signupHref(audit.location.label);
+function Stats({ stats }: { stats: AdAuditStats }) {
   return (
-    <main className="audit-shell audit-main">
-      <section className="audit-hero">
-        <p className="audit-kicker"><span className="audit-kicker-dot" aria-hidden />Local Ad Market Audit &middot; {audit.location.label}</p>
-        <h1>Almost no one is advertising in {audit.location.label}.</h1>
-        <p className="audit-hero-sting">
-          We did not find active Meta ads for this exact pocket yet. That is the opening: be the first agent
-          owning the local feed and capture sellers before your competitors show up.
-        </p>
-        <div className="audit-hero-cta">
-          <AuditCtaButton href={href} market={audit.location.label} className="lp-btn lp-btn-primary lp-btn-big">
-            Claim your suburb &mdash; start free
-          </AuditCtaButton>
-          <span className="audit-hero-note">7-day trial &middot; no card required</span>
+    <section className="section">
+      <div className="container">
+        <div className="section-head">
+          <h2>Keep the numbers. Make the next step obvious.</h2>
+          <p>The only metrics you need before the recommended campaign pack.</p>
         </div>
-      </section>
-      <section className="audit-section audit-ai-section">
-        <div className="audit-section-head">
-          <h2>Your plan: where to start</h2>
-          <p>The angles that win when the local feed is wide open.</p>
+        <div className="stats-grid">
+          <article className="stat-card"><strong>{numberFormat.format(stats.totals.detected)}</strong><span>Competitor ads found in your area and surrounds</span></article>
+          <article className="stat-card"><strong>{numberFormat.format(stats.totals.active)}</strong><span>Ads still active at scan time</span></article>
+          <article className="stat-card"><strong>{numberFormat.format(stats.advertiserCount)}</strong><span>Distinct agencies advertising locally</span></article>
+          <article className="stat-card"><strong>{numberFormat.format(stats.longestRunningDays)}</strong><span>Longest-running ad signal in days</span></article>
+          <article className="stat-card"><strong>{numberFormat.format(stats.newLast30Days)}</strong><span>New ads detected in the last 30 days</span></article>
         </div>
-        <AuditSuggestionsPanel location={audit.location.label} />
-      </section>
-      <section className="audit-cta">
+      </div>
+    </section>
+  );
+}
+
+function Insight({ label, stats }: { label: string; stats: AdAuditStats }) {
+  const topPlatform = stats.platforms[0]?.label ?? "Facebook";
+  const topFormat = stats.formats[0]?.label ?? "Image";
+  const topAngles = stats.adTypes.slice(0, 2).map((a) => a.label);
+  const anglesText = topAngles.length > 0 ? topAngles.join(" and ") : "Just Listed and Free Appraisal";
+  return (
+    <section className="section">
+      <div className="container insight">
         <div>
-          <h2>Get in first in {audit.location.label}.</h2>
-          <p>Blockwise drafts your first appraisal or just-listed ad in minutes. You approve and launch.</p>
+          <p className="card-kicker">What this means</p>
+          <h2>Competitors are buying local attention now.</h2>
+          <p>A good audit does not make you interpret charts &mdash; it tells you what to launch. Around {label}, the clearest repeat angles are {anglesText} campaigns.</p>
         </div>
-        <div className="audit-cta-actions">
-          <AuditCtaButton href={href} market={audit.location.label} className="lp-btn lp-btn-light lp-btn-big">Start free trial</AuditCtaButton>
+        <ul className="insight-list">
+          <li><strong>Use {topPlatform} first.</strong><span>{topPlatform} has the strongest detected coverage here, so start there before adding complexity.</span></li>
+          <li><strong>Use {topFormat.toLowerCase()} ads first.</strong><span>{topFormat} is the dominant detected format, which keeps production simple and fast.</span></li>
+          <li><strong>Lead with seller intent.</strong><span>Free Appraisal and Market Update campaigns are the clearest path to vendor leads.</span></li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function CampaignPack({ label }: { label: string }) {
+  return (
+    <section className="section" id="plan">
+      <div className="container">
+        <div className="section-head">
+          <h2>Recommended campaign pack for {label}</h2>
+          <p>Three campaigns are enough. More options create friction &mdash; this gives you a direct choice and a clear next step.</p>
         </div>
-      </section>
-      <Methodology />
-    </main>
+        <div className="campaign-grid">
+          <article className="campaign-card">
+            <span className="campaign-pill">Campaign 1</span>
+            <h3>Free Appraisal</h3>
+            <p>Vendor lead capture from homeowners weighing a sale but not ready to call yet.</p>
+            <ul>
+              <li>Meta lead form with suburb and property-type questions</li>
+              <li>Primary CTA: Get my estimate</li>
+              <li>Best audience: homeowners and local property intenders</li>
+            </ul>
+          </article>
+          <article className="campaign-card">
+            <span className="campaign-pill">Campaign 2</span>
+            <h3>Just Listed</h3>
+            <p>Buyer demand, seller proof and retargeting. Shows local activity without a hard sell.</p>
+            <ul>
+              <li>One property-led image creative</li>
+              <li>Primary CTA: View property</li>
+              <li>Best audience: local buyers, lookalikes and retargeting</li>
+            </ul>
+          </article>
+          <article className="campaign-card">
+            <span className="campaign-pill">Campaign 3</span>
+            <h3>Market Update</h3>
+            <p>The lower-pressure campaign for owners who want local context before an appraisal.</p>
+            <ul>
+              <li>Lead magnet: suburb price and activity snapshot</li>
+              <li>Primary CTA: Send me the update</li>
+              <li>Best audience: owners in {label} and surrounding suburbs</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
   );
 }
 
-function ErrorState({ location }: { location: string }) {
+function OutputPreview({ label }: { label: string }) {
   return (
-    <main className="audit-shell audit-main">
-      <section className="audit-section audit-error">
-        <h1>We could not build your audit</h1>
-        <p>The live ad scan is temporarily unavailable. Please try again in a moment.</p>
-        <Link href={`/audit?location=${encodeURIComponent(location)}`} className="lp-btn lp-btn-primary">Retry audit</Link>
-      </section>
-    </main>
+    <section className="section">
+      <div className="container preview-grid">
+        <div className="preview-panel">
+          <p className="card-kicker">Example output</p>
+          <h2>Show the ad, not another chart.</h2>
+          <p>The audit converts into a ready-to-review campaign preview &mdash; the missing bridge between the scan and account creation.</p>
+          <article className="mock-ad">
+            <div className="mock-head">
+              <div className="avatar" aria-hidden="true" />
+              <div><strong>Your Agency</strong><span>Sponsored &middot; Facebook</span></div>
+            </div>
+            <div className="mock-visual"><strong>Thinking of selling in {label}?</strong></div>
+            <p className="mock-copy">Get a local appraisal backed by current buyer demand and recent campaign activity around your suburb.</p>
+            <div className="mock-actions"><span>Free Appraisal campaign</span><span className="mock-button">Learn more</span></div>
+          </article>
+        </div>
+        <div className="output-list">
+          <article className="output-item"><strong>1. Ad copy and creative direction</strong><p>Headlines, primary text, CTA and image direction matched to the chosen campaign angle.</p></article>
+          <article className="output-item"><strong>2. Lead form</strong><p>Recommended questions, thank-you message and qualification fields for appraisal or buyer campaigns.</p></article>
+          <article className="output-item"><strong>3. Budget and schedule</strong><p>A simple launch setup with daily spend, duration and approval checks before export.</p></article>
+          <article className="output-item"><strong>4. Approval checklist</strong><p>Brand, claims, pricing language and final review prompts before anything leaves draft.</p></article>
+        </div>
+      </div>
+    </section>
   );
 }
 
-function StatCard({ value, label, hint, accent }: { value: string; label: string; hint: string; accent?: boolean }) {
+function LeadSection({ label }: { label: string }) {
+  const href = signupHref(label);
   return (
-    <div className={accent ? "audit-stat audit-stat-accent" : "audit-stat"}>
-      <strong>{value}</strong>
-      <span className="audit-stat-label">{label}</span>
-      <span className="audit-stat-hint">{hint}</span>
-    </div>
+    <section className="section" id="lead">
+      <div className="container lead-wrap">
+        <div className="lead-panel">
+          <p className="card-kicker">Low-friction conversion</p>
+          <h2>Get the {label} campaign plan.</h2>
+          <p>Tell us the goal and we will build the angle, ad copy and lead form. Start a trial after, or book a 15-minute setup.</p>
+          <AuditLeadForm location={label} signupHref={href} />
+        </div>
+        <aside className="proof-box">
+          <h3>What happens after you submit</h3>
+          <ul>
+            <li>Blockwise drafts the campaign angle, ad copy and lead form.</li>
+            <li>Your team reviews everything before it is exported.</li>
+            <li>Campaigns run from your own Meta ad account.</li>
+            <li>The trial includes 10 ad packs and no card is required.</li>
+          </ul>
+          <div className="cta-row">
+            <AuditCtaButton href={href} market={label} className="button button-secondary">Start free trial instead</AuditCtaButton>
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }
 
-function StatusPill({ status }: { status: "active" | "inactive" | "unknown" }) {
-  const label = status === "active" ? "Active" : status === "inactive" ? "Inactive" : "Unknown";
-  return <span className={`audit-pill audit-pill-${status}`}>{label}</span>;
-}
-
-function AngleBars({ items }: { items: Array<{ label: string; count: number }> }) {
-  const max = items.reduce((value, item) => Math.max(value, item.count), 0) || 1;
+function Evidence({ stats }: { stats: AdAuditStats }) {
   return (
-    <div className="audit-breakdown-card">
-      <ul className="audit-bars">
-        {items.map((item) => (
-          <li key={item.label}>
-            <span className="audit-bar-label">{item.label}</span>
-            <span className="audit-bar-track"><span className="audit-bar-fill" style={{ width: `${Math.round((item.count / max) * 100)}%` }} /></span>
-            <span className="audit-bar-count">{numberFormat.format(item.count)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function Methodology() {
-  return (
-    <footer className="audit-methodology">
-      <p>
-        Data from the public Meta Ad Library at scan time, covering the searched suburb plus surrounding suburbs and
-        postcodes. Longest-running is a proxy for performance. Blockwise is independent and not affiliated with Meta
-        Platforms, Inc.; advertiser names are shown for competitive research only.
-      </p>
-    </footer>
+    <section className="section" id="evidence">
+      <div className="container">
+        <div className="section-head">
+          <h2>Competitor evidence</h2>
+          <p>Below the recommendation on purpose. It supports trust; it should not be the first thing you decode.</p>
+        </div>
+        <div className="evidence-panel">
+          <details open>
+            <summary>Most active advertisers</summary>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Agency</th><th>Ads detected</th><th>Active</th><th>Longest run</th></tr></thead>
+                <tbody>
+                  {stats.topAdvertisers.map((a) => (
+                    <tr key={a.name}><td>{a.name}</td><td>{numberFormat.format(a.ads)}</td><td>{numberFormat.format(a.active)}</td><td>{numberFormat.format(a.longestRunningDays)} days</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details>
+            <summary>Longest-running ad signals</summary>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Advertiser</th><th>Ad</th><th>Run length</th><th>Status</th></tr></thead>
+                <tbody>
+                  {stats.longestRunning.map((ad) => (
+                    <tr key={ad.id}>
+                      <td>{ad.pageName}</td>
+                      <td>{ad.headline ?? ad.adType ?? "Creative ad"}</td>
+                      <td>{numberFormat.format(ad.daysRunning)} days</td>
+                      <td><span className={ad.status === "active" ? "status" : "status status-muted"}>{ad.status === "active" ? "Active" : "Inactive"}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details>
+            <summary>Detected formats, platforms and angles</summary>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Category</th><th>Detected signal</th></tr></thead>
+                <tbody>
+                  {stats.formats.slice(0, 3).map((f) => (<tr key={`f-${f.label}`}><td>Format</td><td>{f.label}: {numberFormat.format(f.count)} detected</td></tr>))}
+                  {stats.platforms.slice(0, 3).map((p) => (<tr key={`p-${p.label}`}><td>Platform</td><td>{p.label}: {numberFormat.format(p.count)} detected</td></tr>))}
+                  {stats.adTypes.slice(0, 4).map((t) => (<tr key={`t-${t.label}`}><td>Angle</td><td>{t.label}: {numberFormat.format(t.count)} detected</td></tr>))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details>
+            <summary>Methodology and notes</summary>
+            <div className="method-note">
+              <p>Data is sourced from the public Meta Ad Library at scan time and covers ads detected for the searched suburb plus surrounding suburbs and postcodes. Longest-running ads are public signals only &mdash; not proof of ROAS, CPA, lead quality or listing wins.</p>
+              <p>Blockwise is independent and is not affiliated with Meta Platforms, Inc. Advertiser names are shown for competitive research only.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
   );
 }
 
