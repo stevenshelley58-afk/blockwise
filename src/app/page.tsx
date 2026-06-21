@@ -4,48 +4,23 @@ import Link from "next/link";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
+import { HomeMotion } from "@/components/landing/home-motion";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
 import { LandingRadarCards } from "@/components/research/landing-radar-cards";
+
+import "./home-redesign.css";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
 /**
- * Landing page — "Executive Precision" design (source: /stitch export, wired
- * to real app flows). Product-facts reference (informational, not a gate):
- * docs/landing-copy-spec.md. Copy is freely editable.
- *
- * Layout (2026-06-05, design mock v2): light hero with the photo as a rounded
- * card on the right (/public/hero/hero-wide.jpg, hero-tall.jpg on mobile) and
- * the performance card floating over it; radar row renders live scraped ads
- * (IP best-guess area, longest-running fallback); dark "pipeline" treatment
- * for the four steps; campaign table left of the control copy. Perf-card
- * numbers are labeled example data.
+ * Landing page — centered, search-first hero (lp-* design) with the
+ * "From local signal to real leads" how-it-works section ported from the
+ * prior homepage (scoped under .bwx via home-redesign.css; HomeMotion drives
+ * the reveal + count-up). Copy is freely editable.
  */
-
-type PipeStepProps = {
-  label: string;
-  title: string;
-  copy: string;
-  children: React.ReactNode;
-};
-
-function PipeStep({ label, title, copy, children }: PipeStepProps) {
-  return (
-    <div className="lp-pipe-col">
-      <div className="lp-pipe-card" aria-hidden>
-        {children}
-      </div>
-      <div className="lp-pipe-caption">
-        <span className="lp-pipe-label">{label}</span>
-        <h3>{title}</h3>
-        <p>{copy}</p>
-      </div>
-    </div>
-  );
-}
 
 type FeatureProps = { title: string; copy: string; icon: React.ReactNode };
 
@@ -61,12 +36,9 @@ function Feature({ title, copy, icon }: FeatureProps) {
   );
 }
 
-/**
- * Placeholder creative for the hero "Local Ad Radar" ticker. Intentionally
- * generic slots (no agency names, no /ads/ images) — the real creative drops
- * in here later. The live, scraped Meta Ad Library cards still render in the
- * #radar section below via <LandingRadarCards />.
- */
+/* Animated how-it-works figure (radar → prepared card → live dashboard). */
+const FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, prepare the campaign, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" class="bwx-bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text id="bLeads" x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text id="bCpl" x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path class="bwx-bSpark" d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
+
 const AD_PLACEHOLDERS = [
   "Your ad here · 1200×628",
   "Just Listed · 1080×1080",
@@ -203,80 +175,20 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="workflow" className="lp-section lp-pipeline">
-          <div className="lp-shell">
-            <div className="lp-center-head">
-              <p className="lp-eyebrow lp-eyebrow-sky">How it works</p>
-              <h2 className="lp-h2 lp-h2-light">From brief to launch-ready campaign in four steps.</h2>
-            </div>
-            <div className="lp-pipe-grid">
-              <PipeStep
-                label="Step 1 — Brief"
-                title="Create the campaign brief"
-                copy="Choose the campaign type, suburb, goal and property details."
-              >
-                <div className="lp-mock">
-                  <div className="lp-mock-head">New campaign</div>
-                  <div className="lp-mock-field"><span>Campaign type</span><strong>Free appraisal</strong></div>
-                  <div className="lp-mock-cols">
-                    <div className="lp-mock-field"><span>Suburb</span><strong>Mount Lawley</strong></div>
-                    <div className="lp-mock-field"><span>Budget</span><strong>$25 / day</strong></div>
-                  </div>
-                  <div className="lp-mock-field"><span>Goal</span><strong>Seller leads</strong></div>
-                </div>
-              </PipeStep>
-              <PipeStep
-                label="Step 2 — Generate"
-                title="Generate the campaign"
-                copy="Blockwise drafts the ads, creative variants, lead form and campaign settings."
-              >
-                <div className="lp-mock">
-                  <div className="lp-mock-head">Campaign draft</div>
-                  <div className="lp-mock-row">
-                    <span className="lp-mock-thumb" />
-                    <span className="lp-mock-lines"><span className="lp-mock-bar lp-mock-bar-lg" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
-                    <span className="lp-mock-pill">Ad 1</span>
-                  </div>
-                  <div className="lp-mock-row">
-                    <span className="lp-mock-thumb" />
-                    <span className="lp-mock-lines"><span className="lp-mock-bar" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
-                    <span className="lp-mock-pill">Ad 2</span>
-                  </div>
-                  <div className="lp-mock-row">
-                    <span className="lp-mock-thumb lp-mock-thumb-form" />
-                    <span className="lp-mock-lines"><span className="lp-mock-bar lp-mock-bar-lg" /><span className="lp-mock-bar lp-mock-bar-sm" /></span>
-                    <span className="lp-mock-pill lp-mock-pill-blue">Form</span>
-                  </div>
-                </div>
-              </PipeStep>
-              <PipeStep
-                label="Step 3 — Approve"
-                title="Review and approve"
-                copy="Your team checks every claim, disclaimer, image and budget before export."
-              >
-                <div className="lp-mock">
-                  <div className="lp-mock-head">Review &amp; approve</div>
-                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Copy and claims</div>
-                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Images and brand</div>
-                  <div className="lp-mock-check"><span className="lp-mock-tick">✓</span>Budget and schedule</div>
-                  <div className="lp-mock-actions">
-                    <span className="lp-mock-btn">Approve</span>
-                    <span className="lp-mock-btn lp-mock-btn-ghost">Edit</span>
-                  </div>
-                </div>
-              </PipeStep>
-              <div className="lp-pipe-col">
-                <div className="lp-pipe-card lp-pipe-card-dark">
-                  <div className="lp-pipe-launch-icon" aria-hidden>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22 2 11 13" />
-                      <path d="m22 2-7 20-4-9-9-4Z" />
-                    </svg>
-                  </div>
-                  <h3>Export from Blockwise</h3>
-                  <p>Export the reviewed campaign package, connect your ad account when ready and track status inside the app.</p>
-                </div>
+        <section id="workflow" className="bwx">
+          <div className="bwx-wrap">
+            <div className="bwx-how" style={{ borderTop: "none" }}>
+              <div className="bwx-how__head bwx-reveal">
+                <span className="bwx-eyebrow"><span className="bwx-dot" /> How it works</span>
+                <h2>From local signal to real leads.</h2>
+                <p className="bwx-how__sub">We scan the area, prepare the campaign, and the leads come in.</p>
               </div>
+              <div className="bwx-how-fig bwx-reveal" id="bFig" dangerouslySetInnerHTML={{ __html: FIG_SVG }} />
+              <ol className="bwx-how__steps2 bwx-reveal">
+                <li className="bwx-how__s"><b><em className="bwx-e1">1</em> Scan</b><p>See local lead angles.</p></li>
+                <li className="bwx-how__s"><b><em className="bwx-e2">2</em> Prepared</b><p>Blockwise prepares the campaign.</p></li>
+                <li className="bwx-how__s"><b><em className="bwx-e3">3</em> Leads</b><p>Approve, run, and track results.</p></li>
+              </ol>
             </div>
           </div>
         </section>
@@ -534,6 +446,7 @@ export default function HomePage() {
           </span>
         </div>
       </footer>
+      <HomeMotion />
     </div>
   );
 }

@@ -135,7 +135,6 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /Export from Blockwise/);
   assert.match(home, /export the package for final setup/i);
   assert.match(home, /final platform setup only after approval/i);
   assert.match(pricing, /Create, approve, export and track property/);
