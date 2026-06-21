@@ -9,7 +9,7 @@ import {
   selectedImageSlot,
   type PhotoPrepContext,
 } from "../src/lib/adstudio/photo-prep.ts";
-import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
+import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 
 const baseContext: PhotoPrepContext = {
   workspaceId: "workspace_1",
@@ -107,8 +107,7 @@ test("selectedImageSlot fails loudly when template geometry is missing", () => {
 });
 
 test("template render frame falls back to a full-bleed image slot for existing skeleton templates", () => {
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
-  assert.ok(template);
+  const template = resolveAdStudioTemplate("market_update");
 
   const frame = buildTemplateRenderFrame({ template, format: "4:5" });
 

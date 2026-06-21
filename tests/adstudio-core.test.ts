@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   buildAdStudioExportPackage,
   buildAdStudioLiveResult,
-  AD_STUDIO_TEMPLATES,
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
   mergeBrandKitReview,
@@ -13,6 +12,7 @@ import {
   validateGoogleSearchPack,
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
+  resolveAdStudioTemplate,
 } from "../src/lib/adstudio/index.ts";
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
 import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
@@ -330,24 +330,23 @@ test("template first-ad generation uses prepared photo assets per creative forma
       "https://northstar.example": sampleHtml,
     },
   });
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "free_appraisal");
-  assert.ok(template);
+  const template = resolveAdStudioTemplate("meta_002");
 
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",
     brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "appraisal_bookings",
-    suburb: "Scarborough",
+    goal: "seller_leads",
+    suburb: "Bicton",
     city: "Perth",
     state: "WA",
-    offerId: "home_value_update",
+    offerId: "prelisting_timeline",
     platforms: ["meta"],
     variantCount: 1,
     firstAd: {
       mode: "template",
       source: "template_library",
       templateKey: template.templateKey ?? template.id,
-      description: "Free appraisal for local owners.",
+      description: "Agent-led property planning for local owners.",
       imageDataUrl: "data:image/png;base64,original",
       formats: ["9:16", "4:5", "1:1"],
     },
@@ -381,23 +380,22 @@ test("template generation treats observed ads as evidence, not the campaign sour
       "https://northstar.example": sampleHtml,
     },
   });
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
-  assert.ok(template);
+  const template = resolveAdStudioTemplate("meta_055");
 
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",
     brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "market_update_leads",
-    suburb: "Scarborough",
+    goal: "seller_leads",
+    suburb: "North Perth",
     city: "Perth",
     state: "WA",
-    offerId: "suburb_market_report",
+    offerId: "recent_sales_report",
     platforms: ["meta"],
     firstAd: {
       mode: "template",
       source: "template_library",
       templateKey: template.templateKey ?? template.id,
-      description: "Local market update for Scarborough owners.",
+      description: "Recent sale context for North Perth owners.",
       imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
       formats: ["9:16", "4:5", "1:1"],
     },
@@ -408,7 +406,7 @@ test("template generation treats observed ads as evidence, not the campaign sour
     },
   });
 
-  assert.equal(pack.campaign.templateKey, "market_update");
+  assert.equal(pack.campaign.templateKey, "meta_055");
   assert.equal(pack.campaign.sourceObservedAdId, null);
   assert.deepEqual(pack.campaign.templateSnapshot?.exemplars, ["observed-ad-evidence-1"]);
 });

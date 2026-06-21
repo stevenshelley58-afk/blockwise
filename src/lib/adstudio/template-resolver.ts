@@ -1,8 +1,8 @@
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 import {
-  builtInAdStudioTemplates,
   mapAdStudioLibraryTemplate,
+  resolvableAdStudioTemplates,
   type AdStudioLibraryTemplate,
   type AdStudioTemplate,
 } from "./templates.ts";
@@ -64,7 +64,7 @@ export function templatePromptHint(template: AdStudioTemplate | null | undefined
 }
 
 function resolveBuiltInApprovedTemplate(key: string): AdStudioTemplate {
-  const template = builtInAdStudioTemplates().find((candidate) => candidate.templateKey === key || candidate.id === key);
+  const template = resolvableAdStudioTemplates().find((candidate) => candidate.templateKey === key || candidate.id === key);
   if (!template || template.status !== "approved") {
     throw new Error("Selected template was not found or is not approved.");
   }

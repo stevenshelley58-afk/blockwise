@@ -85,17 +85,18 @@ function clip(text: string, max: number): string {
 }
 
 export function sampleCopyForTemplate(
-  template: Pick<AdStudioTemplate, "id" | "templateKey" | "name" | "promptHint" | "goal" | "offerId">,
+  template: Pick<AdStudioTemplate, "id" | "templateKey" | "name" | "promptHint" | "goal" | "offerId" | "sampleCopy">,
   brandName: string,
 ): CompositionCopy {
   const key = (template.templateKey ?? template.id ?? "").toLowerCase();
   const base = PREVIEW_COPY[key];
+  const mined = template.sampleCopy;
   const name = (template.name || "Template").trim();
   const hint = (template.promptHint || name).trim();
   const eyebrow = base?.eyebrow ?? name;
-  const headline = base?.headline ?? clip(hint, 60);
-  const subhead = base?.subhead ?? "Written for your suburb — a clear next step for local owners.";
-  const cta = base?.cta ?? "Learn more";
+  const headline = base?.headline ?? (mined?.headline ? clip(mined.headline, 60) : clip(hint, 60));
+  const subhead = base?.subhead ?? mined?.description ?? "Written for your suburb — a clear next step for local owners.";
+  const cta = base?.cta ?? mined?.cta ?? "Learn more";
   return {
     brand: brandName,
     eyebrow,

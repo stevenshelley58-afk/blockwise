@@ -19,7 +19,7 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
     template_key: input.template_key ?? "TPL-1",
     status: "approved",
     category: input.category ?? "appraisal",
-    adstudio_template_id: "free_appraisal",
+    adstudio_template_id: input.adstudio_template_id ?? "meta_002",
     offer_id: "home_value_update",
     goal: "appraisal_bookings",
     headline: input.headline ?? "Find out what your home is worth",
@@ -102,4 +102,19 @@ test("template library exposes only generated sample-card URLs, not observed med
       process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
     }
   }
+});
+
+test("template library hides old first-pass rows from the visible picker merge", () => {
+  const oldRows = [
+    row({ template_key: "HV-01", adstudio_template_id: "free_appraisal", evidence_score: 99 }),
+    row({ template_key: "MU-01", adstudio_template_id: "market_update", evidence_score: 98 }),
+  ]
+    .map((template) => mapAdStudioLibraryTemplate(template))
+    .filter((template) => template !== null);
+
+  assert.ok(oldRows.every((template) => template.manualFirstPass), "legacy-backed rows should be marked hidden");
+
+  const merged = mergeAdStudioTemplateLibrary(oldRows);
+  assert.ok(!merged.some((template) => template.id === "HV-01" || template.id === "MU-01"));
+  assert.ok(merged.some((template) => template.id === "meta_002"));
 });

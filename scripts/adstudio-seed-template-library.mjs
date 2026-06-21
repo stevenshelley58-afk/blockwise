@@ -12,7 +12,7 @@ import {
   sampleVarianceErrors,
   sampleVarianceSummary,
 } from "../src/lib/adstudio/template-samples.ts";
-import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
+import { RESOLVABLE_AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_SEED_PATH = path.join(ROOT, "ad-template-library", "library-seed.json");
@@ -74,7 +74,7 @@ export function validateSeed(seed) {
   const templateKeys = uniqueValues(templates.map((template) => template.template_key));
   const offerById = new Map(ADSTUDIO_OFFER_TEMPLATES.map((offer) => [offer.offerId, offer]));
   const knownGoals = new Set(ADSTUDIO_OFFER_TEMPLATES.map((offer) => offer.goal));
-  const templateIds = new Set(AD_STUDIO_TEMPLATES.map((template) => template.id));
+  const templateIds = new Set(RESOLVABLE_AD_STUDIO_TEMPLATES.map((template) => template.id));
   const referencedBriefIds = uniqueValues(templates.map((template) => template.image_brief_id).filter(Boolean));
   const offerIds = uniqueValues(templates.map((template) => template.offer_id).filter(Boolean));
   const goals = uniqueValues(templates.map((template) => template.goal).filter(Boolean));

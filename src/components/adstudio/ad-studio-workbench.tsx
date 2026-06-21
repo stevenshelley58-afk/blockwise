@@ -30,7 +30,7 @@ import type {
   AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
-import { AD_STUDIO_TEMPLATES } from "@/lib/adstudio";
+import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
@@ -260,7 +260,8 @@ export function AdStudioWorkbench({
     creatives: initialPack.creatives.map(repairCreativeTextLayout),
   }));
   const searchParams = useSearchParams();
-  const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(AD_STUDIO_TEMPLATES);
+  const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
+  const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(visibleBuiltInTemplates);
   const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
   const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
@@ -317,6 +318,7 @@ export function AdStudioWorkbench({
     preferredPhrases: brandKit.tone.preferredPhrases,
     neverSay: brandKit.tone.avoid,
   };
+  const adTemplates = templateLibrary.length > 0 ? templateLibrary : visibleBuiltInTemplates;
 
   function selectTemplate(templateId?: string) {
     const template = templateId ? adTemplates.find((item) => item.id === templateId) : undefined;
@@ -359,7 +361,7 @@ export function AdStudioWorkbench({
         if (!response.ok || !Array.isArray(payload.templates) || payload.templates.length === 0) return;
         if (!cancelled) setTemplateLibrary(payload.templates);
       } catch {
-        if (!cancelled) setTemplateLibrary(AD_STUDIO_TEMPLATES);
+        if (!cancelled) setTemplateLibrary(visibleBuiltInTemplates);
       }
     }
 
@@ -367,7 +369,7 @@ export function AdStudioWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [visibleBuiltInTemplates, workspaceId]);
 
   const initialMedia = useMemo(
     () => primaryImageForVariant(initialPack, initialPack.variants[0]?.variantId, PREVIEW_TO_AD_FORMAT.story),
@@ -617,8 +619,6 @@ export function AdStudioWorkbench({
   }
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
-  const adTemplates = templateLibrary.length > 0 ? templateLibrary : AD_STUDIO_TEMPLATES;
-
   // First open with no ad yet: keep the embedded Create ad panel visible. The
   // modal only opens from an explicit source choice.
   useEffect(() => {

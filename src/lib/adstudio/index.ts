@@ -47,6 +47,7 @@ export {
   builtInAdStudioTemplates,
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
+  resolvableAdStudioTemplates,
   resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
   type AdStudioTemplate,

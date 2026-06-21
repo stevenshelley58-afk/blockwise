@@ -347,7 +347,8 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
 
   assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
-  assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : AD_STUDIO_TEMPLATES/);
+  assert.match(workbench, /builtInAdStudioTemplates/);
+  assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : visibleBuiltInTemplates/);
   assert.doesNotMatch(workbench, /NEXT_PUBLIC_ADSTUDIO_SKELETON_GENERATION/);
   assert.match(route, /export async function GET/);
   assert.match(route, /export async function PATCH/);

@@ -7,7 +7,7 @@ import {
   type AdStudioBrandKit,
   type ImageProviderAdapter,
 } from "../src/lib/adstudio/index.ts";
-import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
+import { resolveAdStudioTemplate } from "../src/lib/adstudio/templates.ts";
 
 const brandKit: AdStudioBrandKit = {
   brandKitId: "brand_1",
@@ -101,8 +101,7 @@ function createSupabaseStub() {
 }
 
 test("template photo prep can return immediate fallback assets without provider work", () => {
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
-  assert.ok(template);
+  const template = resolveAdStudioTemplate("market_update");
 
   const assets = fallbackPhotoAssetsForTemplate({
     workspaceId: "workspace_1",
@@ -128,8 +127,7 @@ test("template photo prep can return immediate fallback assets without provider 
 });
 
 test("template photo prep falls back quickly when provider work exceeds the request budget", async () => {
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "market_update");
-  assert.ok(template);
+  const template = resolveAdStudioTemplate("market_update");
   const seenSignals: AbortSignal[] = [];
   const slowProvider: ImageProviderAdapter = {
     providerName: "slow-test-provider",

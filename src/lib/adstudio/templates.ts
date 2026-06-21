@@ -2,6 +2,7 @@ import { templateDesignSchema, type TemplateDesign, type TemplateDesignSet } fro
 import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
 import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/template-design-from-skeleton.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
+import { EXTRACTED_META_AD_STUDIO_TEMPLATES } from "./extracted-meta-template-builder.ts";
 import {
   deriveTemplateSampleStyle,
   sampleCopyForTemplate,
@@ -431,7 +432,7 @@ function firstPassMetadata(templateKey: string, creativeSkeleton: CreativeSkelet
   };
 }
 
-export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
+export const LEGACY_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   {
     id: "just_listed",
     ...firstPassMetadata("just_listed", FIRST_PASS_TEMPLATE_SKELETONS.just_listed),
@@ -515,21 +516,36 @@ export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   },
 ];
 
+export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = EXTRACTED_META_AD_STUDIO_TEMPLATES;
+
+export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
+  ...AD_STUDIO_TEMPLATES,
+  ...LEGACY_AD_STUDIO_TEMPLATES,
+];
+
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate {
-  return AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
+  return RESOLVABLE_AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
 }
 
 export function isBuiltInAdStudioTemplate(templateId: string | undefined): boolean {
-  return AD_STUDIO_TEMPLATES.some((template) => template.id === templateId);
+  return RESOLVABLE_AD_STUDIO_TEMPLATES.some((template) => template.id === templateId);
 }
 
 export function builtInAdStudioTemplates(): AdStudioTemplate[] {
-  return AD_STUDIO_TEMPLATES.map((template) => ({
+  return AD_STUDIO_TEMPLATES.map(withTemplateDefaults);
+}
+
+export function resolvableAdStudioTemplates(): AdStudioTemplate[] {
+  return RESOLVABLE_AD_STUDIO_TEMPLATES.map(withTemplateDefaults);
+}
+
+function withTemplateDefaults(template: AdStudioTemplate): AdStudioTemplate {
+  return {
     ...template,
     templateKey: template.templateKey ?? template.id,
     source: template.source ?? "builtin",
     status: template.status ?? "approved",
-  }));
+  };
 }
 
 export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStudioTemplate | null {
@@ -538,7 +554,13 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const templateKey = stringValue(row.template_key);
   if (!templateKey) return null;
 
-  const builtIn = AD_STUDIO_TEMPLATES.find((template) => template.id === stringValue(row.adstudio_template_id));
+  const builtInTemplateKey = stringValue(row.adstudio_template_id);
+  const builtIn = RESOLVABLE_AD_STUDIO_TEMPLATES.find((template) =>
+    template.id === builtInTemplateKey ||
+    template.templateKey === builtInTemplateKey ||
+    template.id === templateKey ||
+    template.templateKey === templateKey
+  );
   const goal = stringValue(row.goal) || builtIn?.goal;
   const offerId = stringValue(row.offer_id) || builtIn?.offerId;
   if (!goal || !offerId) return null;
@@ -568,7 +590,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   const exemplars = Array.isArray(row.exemplar_observed_ad_ids)
     ? row.exemplar_observed_ad_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  const manualFirstPass = /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
+  const manualFirstPass = Boolean(builtIn?.manualFirstPass) || /first-pass|manual|first pass/i.test(row.winner_rationale ?? "");
 
   return {
     id: templateKey,
@@ -594,9 +616,10 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
 }
 
 export function mergeAdStudioTemplateLibrary(approved: AdStudioTemplate[]): AdStudioTemplate[] {
-  if (approved.length === 0) return builtInAdStudioTemplates();
+  const visibleApproved = approved.filter((template) => !template.manualFirstPass);
+  if (visibleApproved.length === 0) return builtInAdStudioTemplates();
   const byId = new Map<string, AdStudioTemplate>();
-  for (const template of approved) byId.set(template.id, template);
+  for (const template of visibleApproved) byId.set(template.id, template);
   for (const template of builtInAdStudioTemplates()) {
     if (!byId.has(template.id)) byId.set(template.id, template);
   }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  builtInAdStudioTemplates,
   buildTemplateRenderFrame,
   designLayerSignature,
   generateAdStudioCampaignPack,
@@ -9,13 +10,12 @@ import {
   resolveTemplateDesignForFormat,
   templateDesignSchema,
 } from "../src/lib/adstudio/index.ts";
-import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
 import type { AdStudioBrandKit } from "../src/lib/adstudio/types.ts";
 
-function freeAppraisalTemplate() {
-  const template = AD_STUDIO_TEMPLATES.find((item) => item.id === "free_appraisal");
-  assert.ok(template, "free_appraisal template should exist");
+function extractedTemplate() {
+  const template = builtInAdStudioTemplates().find((item) => item.id === "meta_002");
+  assert.ok(template, "meta_002 template should exist");
   return template;
 }
 
@@ -53,13 +53,13 @@ function creativeStructure(creative: ReturnType<typeof renderDesign>) {
   }));
 }
 
-test("Free Appraisal carries a strict TemplateDesign for the proof-of-life formats", () => {
-  const template = freeAppraisalTemplate();
+test("extracted Meta templates carry strict TemplateDesigns for proof-of-life formats", () => {
+  const template = extractedTemplate();
 
   for (const format of ["9:16", "4:5", "1:1"] as const) {
     const design = resolveTemplateDesignForFormat(template, format);
     assert.ok(design, `${format} design should be present`);
-    assert.equal(design.templateId, "free_appraisal");
+    assert.equal(design.templateId, "meta_002");
     assert.equal(design.version, 1);
     assert.deepEqual(templateDesignSchema.parse(design), design);
     assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
@@ -69,26 +69,28 @@ test("Free Appraisal carries a strict TemplateDesign for the proof-of-life forma
 });
 
 test("gallery and generated output keep the same template layer structure", () => {
-  const template = freeAppraisalTemplate();
+  const template = extractedTemplate();
   const design = resolveTemplateDesignForFormat(template, "4:5");
   assert.ok(design);
   const kit = brandKit();
 
   const gallery = renderDesign(design, {
     text: {
-      eyebrow: "Free appraisal",
-      headline: "What could your home be worth?",
-      subhead: "A practical local price update.",
-      cta: "Book appraisal",
+      eyebrow: template.name,
+      headline: template.sampleCopy?.headline ?? "Buying or selling in Bicton?",
+      subhead: template.sampleCopy?.primaryText ?? "Clear local property advice.",
+      body: template.sampleCopy?.primaryText ?? "Clear local property advice.",
+      cta: template.sampleCopy?.cta ?? "Start planning",
       phone: "08 5550 1212",
     },
   }, kit);
   const generated = renderDesign(design, {
     text: {
-      eyebrow: "Free appraisal",
-      headline: "Free appraisal for Scarborough owners",
-      subhead: "Get a practical price update before your next move.",
-      cta: "Book free appraisal",
+      eyebrow: template.name,
+      headline: "Plan your next move in Bicton",
+      subhead: "Use local context before buying, selling, or preparing a campaign.",
+      body: "Use local context before buying, selling, or preparing a campaign.",
+      cta: "Talk to an agent",
       phone: "08 5550 1212",
     },
     images: {
@@ -105,7 +107,7 @@ test("gallery and generated output keep the same template layer structure", () =
 });
 
 test("photo prep frame uses TemplateDesign image slots and safe zones", () => {
-  const template = freeAppraisalTemplate();
+  const template = extractedTemplate();
   const frame = buildTemplateRenderFrame({ template, format: "4:5" });
 
   assert.equal(frame.format, "4:5");
@@ -118,31 +120,31 @@ test("photo prep frame uses TemplateDesign image slots and safe zones", () => {
       width: frame.imageSlots[0]?.width,
       height: frame.imageSlots[0]?.height,
     },
-    { x: 0, y: 0, width: 1, height: 1 },
+    { x: 0.02, y: 0.02, width: 0.96, height: 0.39 },
   );
   assert.ok(frame.copySafeZones.some((zone) => zone.id === "headline"));
   assert.ok(frame.copySafeZones.some((zone) => zone.id === "cta"));
 });
 
-test("selected Free Appraisal generation returns template_design creatives", () => {
-  const template = freeAppraisalTemplate();
+test("selected extracted template generation returns template_design creatives", () => {
+  const template = extractedTemplate();
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_design",
     brandKit: brandKit(),
-    goal: "appraisal_bookings",
-    suburb: "Scarborough",
+    goal: "seller_leads",
+    suburb: "Bicton",
     city: "Perth",
     state: "WA",
-    offerId: "home_value_update",
+    offerId: "prelisting_timeline",
     platforms: ["meta"],
     variantCount: 1,
     resolvedTemplate: template,
     firstAd: {
       mode: "template",
       source: "template_library",
-      templateId: "free_appraisal",
-      templateKey: "free_appraisal",
-      description: "Create a free appraisal ad for Scarborough homeowners.",
+      templateId: "meta_002",
+      templateKey: "meta_002",
+      description: "Create an agent-led buying or selling ad for Bicton owners.",
       imageDataUrl: "data:image/png;base64,AAAA",
       formats: ["9:16", "4:5", "1:1"],
     },
@@ -151,7 +153,7 @@ test("selected Free Appraisal generation returns template_design creatives", () 
   assert.equal(pack.creatives.length, 3);
   assert.ok(pack.campaign.templateSnapshot?.designs);
   for (const creative of pack.creatives) {
-    assert.equal(creative.canvas.composition?.id, "template_design:free_appraisal:v1");
+    assert.equal(creative.canvas.composition?.id, "template_design:meta_002:v1");
     assert.ok(creative.canvas.objects.some((object) => object.sourceLayerId === "primary_photo"));
     assert.ok(creative.previewSvg.includes("<svg"));
   }

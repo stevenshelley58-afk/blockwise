@@ -39,3 +39,7 @@ ad-template-library/images/mockups/
 ad-template-library/images/sample-cards/
 ad-template-library/images/sample-sources/
 ad-template-library/qa-report.json
+
+# Extracted source template libraries are local reference inputs only.
+extracted_templates_highres_merged/
+meta_ad_candidates/
