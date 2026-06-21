@@ -26,6 +26,7 @@ type LandingEvidenceSlabAdsProps = {
 };
 
 const MIN_CARDS = 3;
+const MIN_CREATIVE_EDGE_PX = 240;
 const MAX_VISIBLE_LAYERS = 4; // front creative + 3 peeking behind it
 const SLAB_MODES: readonly SlabMode[] = ["fan", "scrub", "reveal"];
 const DEFAULT_MODE: SlabMode = "scrub";
@@ -254,6 +255,15 @@ export function LandingEvidenceSlabAds({
   }
 
   function handleCreativeError(cardId: string) {
+    removeCard(cardId);
+  }
+
+  function handleCreativeLoad(cardId: string, image: HTMLImageElement) {
+    const smallestEdge = Math.min(image.naturalWidth, image.naturalHeight);
+    if (smallestEdge > 0 && smallestEdge < MIN_CREATIVE_EDGE_PX) removeCard(cardId);
+  }
+
+  function removeCard(cardId: string) {
     setState((prev) => {
       if (prev.status !== "ready") return prev;
       const next = prev.cards.filter((card) => card.id !== cardId);
@@ -306,6 +316,7 @@ export function LandingEvidenceSlabAds({
                       fetchPriority={isActive ? "high" : "low"}
                       decoding="async"
                       draggable={false}
+                      onLoad={(event) => handleCreativeLoad(card.id, event.currentTarget)}
                       onError={() => handleCreativeError(card.id)}
                     />
                   ) : (
