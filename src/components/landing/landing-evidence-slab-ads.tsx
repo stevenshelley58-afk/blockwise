@@ -52,6 +52,8 @@ const SLAB_SCROLL_CSS = `
 .lp-slab-creative-placeholder { display: block; background: #eef2f7; }
 
 /* SCRUB - the deck advances through the stack as the section scrolls past. */
+.lp-slab--scrub { min-height: max(1040px, 185vh); overflow: visible; }
+.lp-slab--scrub .lp-slab-grid { position: sticky; top: clamp(76px, 11vh, 116px); }
 .lp-slab--scrub .lp-slab-deck { animation: none; transform: none; }
 .lp-slab--scrub .lp-slab-layer { transition: transform .28s cubic-bezier(.22,.61,.36,1), opacity .24s ease; }
 .lp-slab-scrollhint { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); margin: 0; white-space: nowrap; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--lp-faint); }
@@ -75,6 +77,8 @@ const SLAB_SCROLL_CSS = `
 .lp-slab-switcher button[data-active] { background: var(--hero-accent); color: #fff; }
 
 @media (max-width: 900px) {
+  .lp-slab--scrub { min-height: max(840px, 165vh); }
+  .lp-slab--scrub .lp-slab-grid { top: 74px; }
   .lp-slab-stage { min-height: clamp(360px, 86vw, 480px); padding-inline: 28px; }
   .lp-slab-deck { width: min(390px, 86%); }
   .lp-slab--fan .lp-slab-layer { transform: translateX(calc((var(--index) - var(--mid)) * var(--p, 0) * 40px)) rotate(calc((var(--index) - var(--mid)) * var(--p, 0) * 5deg)); }
@@ -117,6 +121,7 @@ export function LandingEvidenceSlabAds({
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   // Scroll-driven state.
+  const sectionRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const deckRef = useRef<HTMLDivElement | null>(null);
   const [scrollIndex, setScrollIndex] = useState(0);
@@ -209,11 +214,11 @@ export function LandingEvidenceSlabAds({
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const rect = stage.getBoundingClientRect();
       const viewport = window.innerHeight || 1;
-      const start = viewport * 0.9;
-      const end = viewport * 0.25;
-      const progress = clamp((start - rect.top) / (start - end), 0, 1);
+      const progress =
+        mode === "scrub"
+          ? sectionScrollProgress(sectionRef.current ?? stage, viewport)
+          : viewportProgress(stage, viewport);
 
       if (mode === "fan") {
         if (deckRef.current) deckRef.current.style.setProperty("--p", progress.toFixed(4));
@@ -285,11 +290,11 @@ export function LandingEvidenceSlabAds({
   const deckStyle: SlabStyle = { "--mid": (total - 1) / 2, "--n": total };
 
   return (
-    <section className={sectionClass} aria-label="Real local ads from the Meta Ad Library">
+    <section className={sectionClass} ref={sectionRef} aria-label="Real local ads from the Meta Ad Library">
       <style dangerouslySetInnerHTML={{ __html: SLAB_SCROLL_CSS }} />
       <div className="lp-shell lp-slab-grid">
         <div className="lp-slab-stage" ref={stageRef}>
-          <div className="lp-slab-deck" ref={deckRef} style={deckStyle}>
+          <div className="lp-slab-deck" data-active-index={activeIndex} ref={deckRef} style={deckStyle}>
             {cards.map((card, index) => {
               const rel = (index - activeIndex + total) % total;
               const isActive = index === activeIndex;
@@ -418,6 +423,20 @@ function creativeUrl(card: PublicAdRadarCard): string | null {
 
 function hasCreative(card: PublicAdRadarCard): boolean {
   return creativeUrl(card) !== null;
+}
+
+function viewportProgress(element: HTMLElement, viewport: number): number {
+  const rect = element.getBoundingClientRect();
+  const start = viewport * 0.9;
+  const end = viewport * 0.25;
+  return clamp((start - rect.top) / (start - end), 0, 1);
+}
+
+function sectionScrollProgress(element: HTMLElement, viewport: number): number {
+  const rect = element.getBoundingClientRect();
+  const stickyOffset = clamp(viewport * 0.11, 76, 116);
+  const travel = Math.max(rect.height - viewport, viewport * 0.55);
+  return clamp((stickyOffset - rect.top) / travel, 0, 1);
 }
 
 function clamp(value: number, min: number, max: number): number {
