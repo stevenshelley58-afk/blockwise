@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -92,13 +93,31 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
   }
 });
 
-test("extracted Meta gallery sample cards stay source-faithful to the selected originals", () => {
+test("extracted Meta gallery sample cards are rendered from TemplateDesign outputs", () => {
+  const renderer = readFileSync("scripts/adstudio-render-extracted-meta-sample-cards.mjs", "utf8");
+  assert.match(renderer, /renderDesign\(/);
+  assert.match(renderer, /resolveTemplateDesignForFormat\(template, FORMAT\)/);
+  assert.match(renderer, /sharp\(Buffer\.from\(creative\.previewSvg\)\)/);
+  assert.doesNotMatch(renderer, /meta_ad_candidates|sourceFile|SOURCE_ROOT/);
+
   for (const descriptor of EXTRACTED_META_TEMPLATE_DESCRIPTORS) {
     const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`);
     assert.deepEqual(
       imageDimensionsFromBytes(bytes),
-      { width: descriptor.imageSize.w, height: descriptor.imageSize.h },
-      `${descriptor.id} sample card should preserve source image dimensions`,
+      { width: 1080, height: 1350 },
+      `${descriptor.id} sample card should be a Feed 4:5 TemplateDesign render`,
     );
   }
+});
+
+test("extracted Meta gallery renderer verifies committed TemplateDesign sample assets", () => {
+  execFileSync(
+    "node",
+    [
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      "scripts/adstudio-render-extracted-meta-sample-cards.mjs",
+      "--verify-only",
+    ],
+    { stdio: "pipe" },
+  );
 });
