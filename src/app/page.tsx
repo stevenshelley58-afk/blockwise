@@ -52,8 +52,8 @@ const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the
 /** Scoped styles for the "How it works" section (ported from the prior homepage, blue palette). */
 const HOW_CSS = `
 .lp .lp-how__head{text-align:center;margin-bottom:44px}
-.lp .lp-how__head h2{font-size:clamp(26px,3.5vw,38px);line-height:1.1;letter-spacing:-.02em;margin:16px 0 0;color:var(--lp-ink)}
-.lp .lp-how__sub{font-size:16px;line-height:1.55;color:var(--lp-muted);margin:12px auto 0;max-width:48ch}
+.lp .lp-how__head h2{font-size:clamp(26px,3.5vw,38px);line-height:1.1;letter-spacing:-.02em;margin:16px auto 0;max-width:20ch;color:var(--lp-ink)}
+.lp .lp-how__sub{font-size:16px;line-height:1.55;color:var(--lp-muted);margin:14px auto 0;max-width:52ch}
 .lp .lp-how-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--lp-body);background:#fff;border:1px solid var(--lp-border);padding:7px 13px;border-radius:999px}
 .lp .lp-how-dot{width:7px;height:7px;border-radius:50%;background:var(--lp-primary);box-shadow:0 0 0 4px rgba(0,107,255,.12)}
 .lp .lp-how-fig{position:relative;margin:0 auto;max-width:1024px;border-radius:24px;border:1px solid var(--lp-border);padding:14px;background:radial-gradient(120% 90% at 18% 12%,#eef3fb 0,rgba(238,243,251,0) 55%),radial-gradient(120% 100% at 88% 92%,#f1eefb 0,rgba(241,238,251,0) 55%),linear-gradient(160deg,#f6f8fc,#f7f6fc)}
