@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AdRadarLocationForm } from "./ad-radar-location-form";
-import { PublicAdRadarDialog } from "./public-ad-radar-dialog";
 
 type LandingAdRadarScanProps = {
   buttonLabel: string;
@@ -13,6 +12,11 @@ type LandingAdRadarScanProps = {
   useBestGuess?: boolean;
 };
 
+/**
+ * Landing "free audit" entry point. Submitting the suburb/postcode routes to the
+ * full /audit report (built from the same scraped Meta Ad Library data the Local
+ * Ad Radar dialog used to show inline).
+ */
 export function LandingAdRadarScan({
   buttonLabel,
   initialNote,
@@ -20,28 +24,23 @@ export function LandingAdRadarScan({
   placeholder,
   useBestGuess = false,
 }: LandingAdRadarScanProps) {
-  const [location, setLocation] = useState(initialValue);
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   function openScan(searchTerm: string) {
-    setLocation(searchTerm);
-    setOpen(true);
+    router.push(`/audit?location=${encodeURIComponent(searchTerm)}`);
   }
 
   return (
-    <>
-      <AdRadarLocationForm
-        buttonLabel={buttonLabel}
-        emptySearchTerm={initialValue}
-        initialNote={initialNote}
-        initialValue=""
-        onSearch={openScan}
-        placeholder={initialValue || placeholder}
-        surface="landing"
-        useBestGuess={useBestGuess}
-        useBestGuessAsPlaceholder
-      />
-      <PublicAdRadarDialog location={location} open={open} onClose={() => setOpen(false)} />
-    </>
+    <AdRadarLocationForm
+      buttonLabel={buttonLabel}
+      emptySearchTerm={initialValue}
+      initialNote={initialNote}
+      initialValue=""
+      onSearch={openScan}
+      placeholder={initialValue || placeholder}
+      surface="landing"
+      useBestGuess={useBestGuess}
+      useBestGuessAsPlaceholder
+    />
   );
 }
