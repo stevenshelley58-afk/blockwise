@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 test("public homepage does not redirect anonymous visitors to the login screen", () => {
@@ -33,7 +34,7 @@ test("homepage suburb scan opens the public ad popup instead of the protected Ad
   assert.match(route, /createSupabaseServiceClient/);
 });
 
-test("homepage keeps a working lead form and honest, non-dead anchors", () => {
+test("landing page anchors, sections, and claims stay connected", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
   const demoForm = readFileSync("src/components/landing/demo-form.tsx", "utf8");
   const combined = `${source}\n${demoForm}`;
@@ -56,18 +57,61 @@ test("homepage keeps a working lead form and honest, non-dead anchors", () => {
   assert.doesNotMatch(source, new RegExp(staleSignupAnchor));
   assert.doesNotMatch(source, forbiddenClaims);
 
-  // The lead-capture form is wired and lives in the managed-setup section.
-  assert.match(source, /DemoForm/);
-  assert.match(source, /id="managed-setup"/);
-  assert.match(source, /href="#managed-setup"/);
-  assert.match(demoForm, /\/api\/demo-request/);
+  const expectedSections = [
+    "problem",
+    "radar",
+    "workflow",
+    "campaign-types",
+    "approval",
+    "reporting",
+    "free-trial",
+    "managed-setup",
+    "faq",
+  ];
 
-  // IDs are unique and every in-page anchor targets an element that exists.
+  for (const id of expectedSections) {
+    assert.match(source, new RegExp(`id="${id}"`), `missing #${id}`);
+  }
+
+  const sectionOrder = [
+    'className="lp-hero"',
+    'id="problem"',
+    'id="radar"',
+    'id="workflow"',
+    'id="campaign-types"',
+    'id="approval"',
+    'id="reporting"',
+    'id="free-trial"',
+    'id="managed-setup"',
+    'id="faq"',
+  ];
+  let previousIndex = -1;
+  for (const marker of sectionOrder) {
+    const index = source.indexOf(marker);
+    assert.ok(index > previousIndex, `${marker} should appear after the previous major section`);
+    previousIndex = index;
+  }
+
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
+
   const localAnchors = [...source.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map((match) => match[1]);
   for (const target of localAnchors) {
     assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
+  }
+
+  assert.match(source, /href="#free-trial"/);
+  assert.match(source, /href="#managed-setup"/);
+});
+
+test("landing page local image assets resolve from public/", () => {
+  const source = readFileSync("src/app/page.tsx", "utf8");
+  // The centered hero is search-first and intentionally ships no hero photo.
+  // Any /hero or /ads asset the page does reference must still resolve under public/.
+  const assets = [...source.matchAll(/(?:src|srcSet)="(\/(?:hero|ads)\/[^"]+)"/g)].map((match) => match[1]);
+
+  for (const asset of assets) {
+    assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }
 });
 
@@ -91,6 +135,9 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
+  assert.match(home, /Export from Blockwise/);
+  assert.match(home, /export the package for final setup/i);
+  assert.match(home, /final platform setup only after approval/i);
   assert.match(pricing, /Create, approve, export and track property/);
   assert.match(pricing, /\$799/);
   assert.doesNotMatch(pricing, /\$500/);
