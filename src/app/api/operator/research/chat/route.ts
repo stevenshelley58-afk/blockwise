@@ -1,212 +1,75 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  runOperatorAssistant,
+  type OperatorChatMessage,
+  type OperatorProposedAction,
+} from "@/lib/operator/assistant";
 import { requireOperator } from "@/lib/operator/auth";
-import { listHermesSkills } from "@/lib/operator/hermes-assets";
-import { executeRefreshPostcode } from "@/lib/operator/postcode-refresh";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type CoverageRow = {
-  postcode: string;
-  state: string;
-  last_audit_score?: number | null;
-  last_refreshed_at: string | null;
-  live_active_ads: number;
-  live_advertiser_pages?: number;
-  health: string;
-};
+const chatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1).max(4000),
+});
 
-type CoverageSummary = {
-  postcode: string;
-  state: string;
-  score: number;
-  activeAds: number;
-  advertiserPages: number;
-  health: string;
-};
+const proposedActionSchema = z.object({
+  kind: z.enum(["refresh_postcode", "collect_ads_for_page", "set_kill_switch"]),
+  params: z.record(z.unknown()),
+  label: z.string().min(1).max(200),
+  summary: z.string().min(1).max(1000),
+});
 
-type WorkQueueRow = {
-  status: string;
-  is_stale_claim: boolean | null;
-};
+const conversationBodySchema = z.object({
+  messages: z.array(chatMessageSchema).min(1).max(40),
+  confirm: proposedActionSchema.optional(),
+});
 
-const bodySchema = z.object({
+const legacyBodySchema = z.object({
   query: z.string().min(1).max(1000),
 });
 
-const coverageSelects = [
-  "postcode,state,last_audit_score,last_refreshed_at,live_active_ads,live_advertiser_pages,health",
-  "postcode,state,last_refreshed_at,live_active_ads,live_advertiser_pages,health",
-  "postcode,state,last_audit_score,last_refreshed_at,live_active_ads,health",
-  "postcode,state,last_refreshed_at,live_active_ads,health",
-] as const;
+const bodySchema = z.union([conversationBodySchema, legacyBodySchema]);
+
+type ChatBody = z.infer<typeof bodySchema>;
 
 export async function POST(req: Request) {
   const guard = await requireOperator();
   if (!guard.ok) return guard.response;
 
-  const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-
-  const research = createSupabaseServiceClient().schema("research");
-  const queryCoverage = (columns: (typeof coverageSelects)[number]) =>
-    research.from("v_coverage_status").select(columns).order("priority").order("postcode").limit(250);
-  const loadCoverage = async () => {
-    const [firstSelect, ...fallbackSelects] = coverageSelects;
-    let result = await queryCoverage(firstSelect);
-
-    if (!isMissingOptionalCoverageColumn(result.error)) return result;
-
-    for (const columns of fallbackSelects) {
-      result = await queryCoverage(columns);
-      if (!isMissingOptionalCoverageColumn(result.error)) return result;
-    }
-
-    return result;
-  };
-
-  const [coverageResult, jobsResult, defectsResult, runsResult, skills] = await Promise.all([
-    loadCoverage(),
-    research.from("v_operator_work_queue_diagnostics").select("status,is_stale_claim").limit(500),
-    research.from("v_missing_competitors").select("id").limit(500),
-    research.from("ad_fetch_runs").select("id,status,cost_usd,started_at").order("started_at", { ascending: false }).limit(50),
-    listHermesSkills().catch(() => []),
-  ]);
-
-  if (coverageResult.error) return NextResponse.json({ error: coverageResult.error.message }, { status: 500 });
-  if (jobsResult.error) return NextResponse.json({ error: jobsResult.error.message }, { status: 500 });
-  if (defectsResult.error) return NextResponse.json({ error: defectsResult.error.message }, { status: 500 });
-  if (runsResult.error) return NextResponse.json({ error: runsResult.error.message }, { status: 500 });
-
-  const coverage = ((coverageResult.data ?? []) as unknown as CoverageRow[]).map(toCoverageSummary).sort((left, right) => left.score - right.score);
-  const jobs = (jobsResult.data ?? []) as WorkQueueRow[];
-  const activeJobs = jobs.filter((job) => job.status === "pending" || job.status === "claimed").length;
-  const staleJobs = jobs.filter((job) => job.is_stale_claim).length;
-  const failedJobs = jobs.filter((job) => job.status === "failed" || job.status === "blocked").length;
-  const spend24h = (runsResult.data ?? [])
-    .filter((run) => new Date(String(run.started_at)).getTime() > Date.now() - 24 * 3600 * 1000)
-    .reduce((sum, run) => sum + (Number(run.cost_usd) || 0), 0);
-  const rows = coverage.slice(0, 4);
-  const proposedPostcode = rows[0]?.postcode ?? null;
-  const refreshCommand = parseRefreshPostcodeCommand(parsed.data.query);
-
-  if (refreshCommand.isRefreshPostcode) {
-    const postcode = refreshCommand.postcode ?? proposedPostcode;
-    if (!postcode) {
-      const answer = "No postcode is available to refresh.";
-      await recordChatDecision(research, parsed.data.query, answer, rows);
-      return NextResponse.json({ answer, rows });
-    }
-    if (!/^\d{4}$/u.test(postcode)) {
-      return NextResponse.json({ error: "postcode must be four digits" }, { status: 400 });
-    }
-
-    try {
-      const result = await executeRefreshPostcode(research, postcode, guard.email);
-      const answer = result.message;
-      await recordChatDecision(research, parsed.data.query, answer, rows, {
-        action: "refresh_postcode",
-        postcode: result.postcode,
-        state: result.state,
-        sourceBacked: result.sourceBacked,
-        queued: result.queued,
-      });
-      return NextResponse.json({ answer, rows });
-    } catch (error) {
-      const text = error instanceof Error ? error.message : "Could not refresh postcode.";
-      return NextResponse.json({ error: text }, { status: 500 });
-    }
+  const body = bodySchema.safeParse(await req.json().catch(() => null));
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid operator chat request." }, { status: 400 });
   }
 
-  const answer = [
-    `${coverage.length} coverage rows loaded from research.v_coverage_status.`,
-    `${activeJobs} active jobs, ${failedJobs} failed or blocked jobs, ${staleJobs} stale claims.`,
-    `${defectsResult.data?.length ?? 0} coverage defects are visible to the operator view.`,
-    `${skills.length} Hermes skill files are available from hermes/skills.`,
-    `24h collector spend is $${spend24h.toFixed(2)}.`,
-  ].join(" ");
+  try {
+    const result = await runOperatorAssistant({
+      messages: messagesFromBody(body.data),
+      confirm: confirmFromBody(body.data),
+      context: { email: guard.email },
+    });
 
-  await recordChatDecision(research, parsed.data.query, answer, rows);
-
-  return NextResponse.json({
-    answer,
-    rows,
-    proposedAction: proposedPostcode
-      ? {
-          scope: "postcode",
-          value: proposedPostcode,
-          label: `Refresh postcode ${proposedPostcode}`,
-        }
-      : undefined,
-  });
-}
-
-function parseRefreshPostcodeCommand(query: string): { isRefreshPostcode: boolean; postcode?: string } {
-  const normalized = query.trim().toLowerCase().replace(/[?.!]+$/u, "");
-  const match = normalized.match(/^refresh\s+postcode(?:\s+(\d{4}))?$/u);
-  return { isRefreshPostcode: Boolean(match), postcode: match?.[1] };
-}
-
-async function recordChatDecision(
-  research: ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>,
-  query: string,
-  answer: string,
-  rows: CoverageSummary[],
-  action?: Record<string, unknown>,
-) {
-  await research.from("agent_decisions").insert({
-    decision_type: "operator_chat",
-    subject_type: "operator_query",
-    subject_id: `operator-chat:${Date.now()}`,
-    decision: {
-      query,
-      answer,
-      row_count: rows.length,
-      action,
-      sources: ["research.v_coverage_status", "research.v_operator_work_queue_diagnostics", "research.v_missing_competitors", "research.ad_fetch_runs", "hermes/skills"],
-    },
-    rationale: action
-      ? "Operator chat executed a postcode refresh through the shared refresh guard."
-      : "Operator chat response assembled from approved dashboard data sources.",
-    confidence: 100,
-    hermes_skill: "blockwise-operator-chat",
-  });
-}
-
-function toCoverageSummary(row: CoverageRow): CoverageSummary {
-  return {
-    postcode: row.postcode,
-    state: row.state,
-    score: coverageScore(row),
-    activeAds: row.live_active_ads ?? 0,
-    advertiserPages: row.live_advertiser_pages ?? 0,
-    health: row.health,
-  };
-}
-
-function coverageScore(row: CoverageRow): number {
-  if (typeof row.last_audit_score === "number") {
-    return clamp(Math.round(row.last_audit_score), 0, 100);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: readableError(error) }, { status: 500 });
   }
-  if (row.live_active_ads > 0) {
-    return clamp(55 + row.live_active_ads * 8, 55, 100);
-  }
-  if (row.last_refreshed_at) {
-    return 35;
-  }
-  return 0;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+function messagesFromBody(body: ChatBody): OperatorChatMessage[] {
+  if ("messages" in body) return body.messages;
+  return [{ role: "user", content: body.query.trim() }];
 }
 
-function isMissingOptionalCoverageColumn(error: { code?: string; message?: string; details?: string; hint?: string } | null): boolean {
-  if (!error) return false;
-  const text = [error.code, error.message, error.details, error.hint].filter(Boolean).join(" ").toLowerCase();
-  const mentionsOptionalColumn = text.includes("last_audit_score") || text.includes("live_advertiser_pages");
-  return mentionsOptionalColumn && (text.includes("does not exist") || text.includes("could not find") || text.includes("schema cache") || text.includes("42703"));
+function confirmFromBody(body: ChatBody): OperatorProposedAction | undefined {
+  if (!("confirm" in body)) return undefined;
+  return body.confirm;
+}
+
+function readableError(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return "Operator assistant failed.";
 }

@@ -20,9 +20,9 @@ type ProposedAction = {
 };
 
 type ChatResponse = {
-  answer?: string;
-  proposedAction?: ProposedAction;
-  error?: string;
+  answer?: unknown;
+  proposedAction?: unknown;
+  error?: unknown;
 };
 
 type ChatMessage = {
@@ -71,11 +71,12 @@ export function OperatorAssistant({ initialRows, initialPostcode, lastUpdated }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: wireHistory(history), confirm }),
       });
-      const payload = (await response.json()) as ChatResponse;
-      if (!response.ok) throw new Error(payload.error ?? "Operator assistant failed.");
+      const payload = await readChatPayload(response);
+      if (!response.ok) throw new Error(payloadText(payload.error, "Operator assistant failed."));
+      const proposedAction = isProposedAction(payload.proposedAction) ? payload.proposedAction : undefined;
       setMessages((current) => [
         ...current,
-        { role: "assistant", text: payload.answer ?? "No answer was returned.", proposedAction: payload.proposedAction },
+        { role: "assistant", text: payloadText(payload.answer, "No answer was returned."), proposedAction },
       ]);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Operator assistant failed.");
@@ -167,6 +168,36 @@ export function OperatorAssistant({ initialRows, initialPostcode, lastUpdated }:
         </span>
       </form>
     </aside>
+  );
+}
+
+async function readChatPayload(response: Response): Promise<ChatResponse> {
+  try {
+    const payload = await response.json();
+    return payload && typeof payload === "object" ? (payload as ChatResponse) : {};
+  } catch {
+    return {};
+  }
+}
+
+function payloadText(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (value === null || value === undefined) return fallback;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function isProposedAction(value: unknown): value is ProposedAction {
+  if (!value || typeof value !== "object") return false;
+  const action = value as Partial<ProposedAction>;
+  return (
+    (action.kind === "refresh_postcode" || action.kind === "collect_ads_for_page" || action.kind === "set_kill_switch") &&
+    Boolean(action.params && typeof action.params === "object") &&
+    typeof action.label === "string" &&
+    typeof action.summary === "string"
   );
 }
 

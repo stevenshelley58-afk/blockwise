@@ -1,4 +1,5 @@
 import { buildOpenRouterHeaders } from "@/lib/ai/openrouter-client";
+import { executeRefreshPostcode as executeSharedRefreshPostcode } from "@/lib/operator/postcode-refresh";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -396,21 +397,6 @@ async function executeReadTool(research: ResearchClient, name: string, args: Rec
 
 // ---------- action proposal + execution ----------
 
-function stateFromPostcode(postcode: string): string {
-  const n = Number(postcode);
-  if (n >= 6000 && n <= 6999) return "WA";
-  if (n >= 7000 && n <= 7999) return "TAS";
-  if (n >= 5000 && n <= 5999) return "SA";
-  if (n >= 4000 && n <= 4999) return "QLD";
-  if (n >= 3000 && n <= 3999) return "VIC";
-  if (n >= 8000 && n <= 8999) return "VIC";
-  if (n >= 9000 && n <= 9999) return "QLD";
-  if (n >= 800 && n <= 999) return "NT";
-  if ((n >= 200 && n <= 299) || (n >= 2600 && n <= 2618) || (n >= 2900 && n <= 2920)) return "ACT";
-  if (n >= 1000 && n <= 2999) return "NSW";
-  return "WA";
-}
-
 async function buildProposal(
   research: ResearchClient,
   name: string,
@@ -477,45 +463,26 @@ async function recordDecision(
   }
 }
 
-async function executeRefreshPostcode(research: ResearchClient, postcode: string, email: string): Promise<string> {
+async function executeRefreshPostcodeAction(research: ResearchClient, postcode: string, email: string): Promise<string> {
   if (!/^\d{4}$/u.test(postcode)) return "That isn't a valid 4-digit postcode.";
-  const { data: existingPolicy } = await research.from("refresh_policies").select("state").eq("postcode", postcode).limit(1).maybeSingle();
-  const state = (existingPolicy as { state?: string } | null)?.state ?? stateFromPostcode(postcode);
-
-  await research
-    .from("refresh_policies")
-    .upsert(
-      { postcode, state, priority: state === "WA" ? 2 : 4, refresh_cadence_minutes: 1440, next_refresh_at: now(), active: true, notes: "Operator chat triggered immediate refresh" },
-      { onConflict: "postcode,state", ignoreDuplicates: true },
-    );
-  await research.from("refresh_policies").update({ next_refresh_at: now(), active: true }).eq("postcode", postcode).eq("state", state);
-
-  const dedupeKey = `census:${state}:${postcode}`;
-  const payload = { postcode, state, verified_roster_first: true, location_search_allowed: false, legacy_discovery_allowed: false, trigger: "operator_chat_refresh" };
-  const { data: existingJob } = await research
-    .from("work_queue")
-    .select("id,status")
-    .eq("queue_name", "research")
-    .eq("dedupe_key", dedupeKey)
-    .in("status", ["pending", "claimed", "failed", "blocked"])
-    .limit(1)
-    .maybeSingle();
-
-  const existing = existingJob as { id: string; status: string } | null;
-  if (existing && (existing.status === "pending" || existing.status === "claimed")) {
-    await recordDecision(research, email, "postcode", postcode, { action: "refresh_now", already_queued: true }, "Operator chat refresh (already queued)");
-    return `Postcode ${postcode} (${state}) is already queued for a census run — it's in the queue as "${existing.status}". Marked the policy due now so it stays prioritised.`;
-  }
-  if (existing) {
-    await research
-      .from("work_queue")
-      .update({ job_type: "blockwise-agent-census", priority: 15, payload, status: "pending", available_at: now(), claimed_at: null, claimed_by: null, claim_token: null, claim_expires_at: null, attempts: 0, max_attempts: 3, last_error: null, blocked_reason: null, result: {}, completed_at: null })
-      .eq("id", existing.id);
-  } else {
-    await research.from("work_queue").insert({ queue_name: "research", job_type: "blockwise-agent-census", dedupe_key: dedupeKey, priority: 15, payload, status: "pending", max_attempts: 3 });
-  }
-  await recordDecision(research, email, "postcode", postcode, { action: "refresh_now" }, "Operator chat triggered immediate refresh");
-  return `Done — queued an immediate census refresh for postcode ${postcode} (${state}). Hermes should pick it up within ~60s; ask me for status to watch it move.`;
+  const result = await executeSharedRefreshPostcode(research, postcode, email);
+  await recordDecision(
+    research,
+    email,
+    "postcode",
+    postcode,
+    {
+      action: "refresh_postcode",
+      postcode: result.postcode,
+      state: result.state,
+      source_backed: result.sourceBacked,
+      queued: result.queued,
+    },
+    result.queued
+      ? "Operator chat queued a source-backed postcode census refresh."
+      : "Operator chat recorded an unsupported postcode refresh request.",
+  );
+  return result.message;
 }
 
 async function executeCollectAdsForPage(research: ResearchClient, advertiserPageId: string, email: string): Promise<string> {
@@ -557,7 +524,7 @@ async function executeKillSwitch(research: ResearchClient, paused: boolean, emai
 async function executeAction(research: ResearchClient, action: OperatorProposedAction, email: string): Promise<string> {
   switch (action.kind) {
     case "refresh_postcode":
-      return executeRefreshPostcode(research, String(action.params.postcode ?? ""), email);
+      return executeRefreshPostcodeAction(research, String(action.params.postcode ?? ""), email);
     case "collect_ads_for_page":
       return executeCollectAdsForPage(research, String(action.params.advertiserPageId ?? ""), email);
     case "set_kill_switch":
