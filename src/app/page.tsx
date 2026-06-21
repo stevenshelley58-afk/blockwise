@@ -7,7 +7,6 @@ import { DemoForm } from "@/components/landing/demo-form";
 import { LandingEvidenceSlabAds } from "@/components/landing/landing-evidence-slab-ads";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
-import { LandingRadarCards } from "@/components/research/landing-radar-cards";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -54,7 +53,6 @@ const HOW_CSS = `
 .lp .lp-how__s p{font-size:14px;line-height:1.5;color:var(--lp-body);margin-top:8px}
 @media (prefers-reduced-motion:reduce){.lp .lp-how-fig .bwx-bBlip{animation:none}}
 @media (max-width:760px){.lp .lp-how__steps{grid-template-columns:1fr;gap:16px}}
-@media (max-width:720px){.lp #radar{order:11}}
 `;
 
 const TABLE_ROWS = [
@@ -111,7 +109,7 @@ export default function HomePage() {
 
         {/* Evidence slab: real Meta Ad Library creative as a layered 3D object,
             with a readout explaining one ad at a time. Reads the existing
-            local-ad-radar API; live scraped ads also render in #radar below. */}
+            local-ad-radar API. The hero suburb audit handles search. */}
         <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
 
         <section id="workflow" className="lp-section">
@@ -337,30 +335,6 @@ export default function HomePage() {
             </aside>
           </div>
         </section>
-
-        <section id="radar" className="lp-section lp-section-surface">
-          <div className="lp-shell">
-            <div className="lp-radar-top">
-              <div>
-                <p className="lp-eyebrow">Local Ad Radar</p>
-                <h2 className="lp-h2">What are your competitors running?</h2>
-                <p className="lp-lead">
-                  Search any market and see active real estate ads.
-                </p>
-              </div>
-              <div className="lp-radar-box">
-                <LandingAdRadarScan
-                  buttonLabel="Scan my market"
-                  initialNote="Start with Perth, WA or choose your suburb."
-                  initialValue="Perth, WA"
-                  placeholder="Enter city, agent, or brokerage"
-                  useBestGuess
-                />
-              </div>
-            </div>
-            <LandingRadarCards />
-          </div>
-        </section>
       </main>
 
       <footer className="lp-footer" aria-label="Footer">
@@ -377,7 +351,6 @@ export default function HomePage() {
           </div>
           <div>
             <h4>Product</h4>
-            <a href="#radar">Ad Radar</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
