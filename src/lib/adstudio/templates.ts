@@ -1,5 +1,6 @@
 import { templateDesignSchema, type TemplateDesign, type TemplateDesignSet } from "./template-design.ts";
 import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
+import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/template-design-from-skeleton.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import {
   deriveTemplateSampleStyle,
@@ -49,6 +50,10 @@ export type AdStudioLibraryTemplate = {
   sample_style?: unknown;
   ai_prompt_seed?: string | null;
   creative_skeleton?: unknown;
+  template_design?: unknown;
+  template_designs?: unknown;
+  template_version?: number | string | null;
+  brief_schema?: unknown;
   exemplar_observed_ad_ids?: string[] | null;
   evidence_score?: number | string | null;
   winner_rationale?: string | null;
@@ -545,6 +550,16 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   });
 
   const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
+  const templateVersion = numberValue(row.template_version) ?? 1;
+  const designs =
+    parseTemplateDesigns(row.template_designs ?? row.template_design) ??
+    (creativeSkeleton
+      ? templateDesignSetFromCreativeSkeleton({
+          templateId: templateKey,
+          version: templateVersion,
+          skeleton: creativeSkeleton,
+        })
+      : undefined);
   const sampleStyle = parseSampleStyle(row.sample_style) ?? deriveTemplateSampleStyle({ ...row, template_key: templateKey });
   const sampleCopy = sampleCopyForTemplate({ ...row, template_key: templateKey }, sampleStyle);
   const sampleCardImageUrl =
@@ -573,6 +588,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
     ...(row.compliance_note ? { complianceNote: row.compliance_note } : {}),
     ...(manualFirstPass ? { manualFirstPass: true } : {}),
     ...(creativeSkeleton ? { creativeSkeleton } : {}),
+    ...(designs ? { designs } : {}),
     ...(exemplars.length > 0 ? { exemplars } : {}),
   };
 }
@@ -666,6 +682,21 @@ function numberValue(value: unknown): number | undefined {
 function parseCreativeSkeleton(value: unknown): CreativeSkeleton | undefined {
   const parsed = creativeSkeletonSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
+}
+
+function parseTemplateDesigns(value: unknown): TemplateDesignSet | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const single = templateDesignSchema.safeParse(value);
+  if (single.success) return { [single.data.format]: single.data };
+
+  const designs: TemplateDesignSet = {};
+  for (const format of ["9:16", "4:5", "1:1", "1.91:1"] as const) {
+    const parsed = templateDesignSchema.safeParse(value[format]);
+    if (parsed.success) designs[format] = parsed.data;
+  }
+
+  return Object.keys(designs).length > 0 ? designs : undefined;
 }
 
 function parseSampleStyle(value: unknown): AdStudioTemplateSampleStyle | undefined {

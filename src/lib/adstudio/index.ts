@@ -58,6 +58,12 @@ export {
   type CreativeSkeletonArchetype,
 } from "../ad-template-library/skeleton.ts";
 export {
+  templateDesignFromCreativeSkeleton,
+  templateDesignSetFromCreativeSkeleton,
+  type SkeletonTemplateDesignInput,
+  type SkeletonTemplateDesignSetInput,
+} from "../ad-template-library/template-design-from-skeleton.ts";
+export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
   createOpenAiVisionProvider,
