@@ -31,3 +31,12 @@ test("adstudio is available to self-serve builders and operators only", () => {
   assert.equal(canAccessSurface({ role: "viewer", workspaceMode: "self_serve" }, "adstudio"), false);
   assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), false);
 });
+
+test("property check is available to self-serve builders and operators only", () => {
+  assert.equal(canAccessSurface({ role: "operator", workspaceMode: "monitor" }, "property_check"), true);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "self_serve" }, "property_check"), true);
+  assert.equal(canAccessSurface({ role: "admin", workspaceMode: "self_serve" }, "property_check"), true);
+  assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "property_check"), true);
+  assert.equal(canAccessSurface({ role: "viewer", workspaceMode: "self_serve" }, "property_check"), false);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "property_check"), false);
+});

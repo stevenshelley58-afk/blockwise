@@ -48,7 +48,7 @@ begin
   for r in
     select schemaname, tablename, policyname, permissive, cmd, roles, qual, with_check
     from pg_policies
-    where schemaname in ('public','storage')
+    where schemaname in ('public','storage','research')
       and (coalesce(qual,'') || ' ' || coalesce(with_check,'')) ~
           '\m(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\('
   loop
@@ -76,7 +76,7 @@ do $do$
 declare n int;
 begin
   select count(*) into n from pg_policies
-   where schemaname in ('public','storage')
+   where schemaname in ('public','storage','research')
      and regexp_replace(coalesce(qual,'') || ' ' || coalesce(with_check,''),
            'private\.(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\(', '', 'g')
          ~ '\m(is_operator|is_workspace_member|has_workspace_role|adstudio_has_workspace_access|workspace_id_from_storage_path)[[:space:]]*\(';
@@ -85,8 +85,8 @@ end
 $do$;
 
 -- B4: drop the public helpers (catalog dependency makes this fail+rollback if any policy still points at them).
-drop function public.is_operator();
-drop function public.is_workspace_member(uuid);
-drop function public.has_workspace_role(uuid, text[]);
-drop function public.adstudio_has_workspace_access(uuid);
-drop function public.workspace_id_from_storage_path(text);
+drop function if exists public.is_operator();
+drop function if exists public.is_workspace_member(uuid);
+drop function if exists public.has_workspace_role(uuid, text[]);
+drop function if exists public.adstudio_has_workspace_access(uuid);
+drop function if exists public.workspace_id_from_storage_path(text);

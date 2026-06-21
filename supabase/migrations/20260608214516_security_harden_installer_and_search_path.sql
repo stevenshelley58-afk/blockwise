@@ -3,7 +3,14 @@
 
 -- Lock down the policy-installer: it rewrites RLS policies as table owner and must not be
 -- callable by anonymous or signed-in users via /rest/v1/rpc. Keep service_role/postgres.
-REVOKE EXECUTE ON FUNCTION public.adstudio_install_workspace_policies(regclass) FROM PUBLIC, anon, authenticated;
+-- Fresh preview databases replay this recovered ledger before the installer exists.
+do $$
+begin
+  if to_regprocedure('public.adstudio_install_workspace_policies(regclass)') is not null then
+    REVOKE EXECUTE ON FUNCTION public.adstudio_install_workspace_policies(regclass) FROM PUBLIC, anon, authenticated;
+  end if;
+end;
+$$;
 
 -- Pin search_path on the research helper functions (fixes function_search_path_mutable).
 -- These reference only built-ins, so an empty search_path is safe and behaviour-preserving.

@@ -72,6 +72,7 @@ export default function HomePage() {
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
             <a href="#workflow">How it works</a>
+            <a href="#property-check">Property Check</a>
             <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
@@ -169,6 +170,41 @@ export default function HomePage() {
                 copy="Track impressions, clicks, leads, spend and status inside Blockwise."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><rect x="7" y="12" width="3" height="5" /><rect x="12" y="8" width="3" height="9" /><rect x="17" y="5" width="3" height="12" /></svg>}
               />
+            </div>
+          </div>
+        </section>
+
+        <section id="property-check" className="lp-section lp-section-surface">
+          <div className="lp-shell">
+            <div className="lp-center-head">
+              <p className="lp-eyebrow">Property Check</p>
+              <h2 className="lp-h2">Know the property before the call</h2>
+              <p className="lp-lead">
+                Check zoning, overlays, subdivision potential, renovation limits, and planning red flags before
+                speaking to a seller, buyer, or investor.
+              </p>
+            </div>
+            <div className="lp-features">
+              <Feature
+                title="Seller appraisal prep"
+                copy="Walk in with useful property signals, not guesses."
+                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-8h6v8" /></svg>}
+              />
+              <Feature
+                title="Buyer questions"
+                copy="Answer common build, extend, renovate, and subdivision questions with source-cited notes."
+                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.2-3 4" /><path d="M12 17h.01" /></svg>}
+              />
+              <Feature
+                title="Lead follow-up"
+                copy="Turn ad leads into better client conversations."
+                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h6" /><path d="m16 3 5 5" /><path d="m21 3-5 5" /></svg>}
+              />
+            </div>
+            <div className="lp-section-cta">
+              <CtaLink location="property-check" href="/signup?source=property-check" className="lp-btn lp-btn-primary lp-btn-big">
+                Run a property check
+              </CtaLink>
             </div>
           </div>
         </section>
@@ -352,6 +388,7 @@ export default function HomePage() {
           <div>
             <h4>Product</h4>
             <a href="#workflow">How it works</a>
+            <a href="#property-check">Property Check</a>
             <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </div>
