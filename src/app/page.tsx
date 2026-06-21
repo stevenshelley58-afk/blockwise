@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
+import { LandingEvidenceSlabAds } from "@/components/landing/landing-evidence-slab-ads";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
 import { LandingRadarCards } from "@/components/research/landing-radar-cards";
@@ -30,21 +31,6 @@ function Feature({ title, copy, icon }: FeatureProps) {
     </article>
   );
 }
-
-/**
- * Placeholder creative for the hero "Local Ad Radar" ticker. Intentionally
- * generic slots (no agency names, no /ads/ images) — the real creative drops
- * in here later. The live, scraped Meta Ad Library cards still render in the
- * #radar section below via <LandingRadarCards />.
- */
-const AD_PLACEHOLDERS = [
-  "Your ad here · 1200×628",
-  "Just Listed · 1080×1080",
-  "Open Home · 1200×628",
-  "Free Appraisal · 1080×1350",
-  "Just Sold · 1200×628",
-  "Market Update · 1080×1080",
-] as const;
 
 /** "How it works" illustration (radar → prepared card → live dashboard). */
 const HOW_FIG_SVG = `<svg viewBox="0 0 1500 360" role="img" aria-label="Scan the suburb, we prepare the ads, leads come in"><defs><linearGradient id="bRail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f97ff"/><stop offset=".5" stop-color="#2fd2c2"/><stop offset="1" stop-color="#9a7fff"/></linearGradient><linearGradient id="bC1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f97ff"/><stop offset="1" stop-color="#1f5fd6"/></linearGradient><linearGradient id="bC2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd2c2"/><stop offset="1" stop-color="#10a294"/></linearGradient><linearGradient id="bSweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fd2c2" stop-opacity="0"/><stop offset="1" stop-color="#2fd2c2" stop-opacity=".5"/></linearGradient><filter id="bShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3a7a" flood-opacity="0.10"/></filter></defs><line x1="250" y1="180" x2="1290" y2="180" stroke="#dde3ee" stroke-width="2" stroke-dasharray="2 9"/><path id="bSig" d="M250,180 C430,90 560,90 700,180 S950,270 1100,180 1230,120 1290,150" pathLength="1" fill="none" stroke="url(#bRail)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle r="6" fill="#1fb3a6" opacity=".9"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#bSig"/></animateMotion></circle><circle cx="300" cy="180" r="102" fill="#fff" filter="url(#bShadow)"/><circle cx="300" cy="180" r="86" fill="none" stroke="#2fbfb0" stroke-opacity="0.22" stroke-width="2.2"/><circle cx="300" cy="180" r="53" fill="none" stroke="#2fbfb0" stroke-opacity="0.32" stroke-width="2.2"/><circle cx="300" cy="180" r="26" fill="none" stroke="#2fbfb0" stroke-opacity="0.44" stroke-width="2.2"/><path d="M300,180 L346,107 A86,86 0 0,1 386,183 Z" fill="url(#bSweep)"><animateTransform attributeName="transform" type="rotate" from="0 300 180" to="360 300 180" dur="5s" repeatCount="indefinite"/></path><circle class="bwx-bBlip" cx="318" cy="115" r="5" fill="#1f6feb"/><circle class="bwx-bBlip" cx="237" cy="192" r="5" fill="#1f6feb"/><circle cx="300" cy="180" r="5" fill="#2fbfb0"/><rect x="678" y="108" width="144" height="144" rx="28" fill="#fff" filter="url(#bShadow)"/><rect x="698" y="126" width="104" height="42" rx="10" fill="url(#bC1)"/><rect x="698" y="178" width="104" height="8" rx="4" fill="#e3e7ee"/><rect x="698" y="192" width="70" height="8" rx="4" fill="#eaedf2"/><rect x="698" y="212" width="60" height="20" rx="10" fill="url(#bC2)"/><text x="728" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Ready</text><rect x="1080" y="102" width="240" height="156" rx="22" fill="#fff" filter="url(#bShadow)"/><text x="1102" y="134" font-size="13" font-weight="700" letter-spacing="1" fill="#8a90a0">LAST 7 DAYS</text><circle cx="1262" cy="129" r="5" fill="#23a35e"/><text x="1274" y="134" font-size="12.5" font-weight="700" fill="#23a35e">Live</text><text x="1102" y="188" font-size="40" font-weight="800" fill="#0f1115">47</text><text x="1102" y="212" font-size="14" fill="#6b7280">leads</text><line x1="1196" y1="152" x2="1196" y2="214" stroke="#eef0f4" stroke-width="2"/><text x="1218" y="188" font-size="40" font-weight="800" fill="#0f1115">$13</text><text x="1218" y="212" font-size="14" fill="#6b7280">cost / lead</text><path d="M1102,237 L1124,233 L1146,235 L1168,227 L1190,229 L1212,221 L1234,223" pathLength="1" fill="none" stroke="#1fb3a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1234" cy="223" r="4" fill="#1fb3a6"/></svg>`;
@@ -123,42 +109,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Hero ticker: placeholder creative for now (real assets drop in later).
-            Live scraped ads still render in #radar below. aria-hidden — decorative. */}
-        <section className="lp-liveads" aria-label="Sample of local ads">
-          <div className="lp-shell lp-liveads-head">
-            <span className="lp-liveads-live">
-              <span className="lp-liveads-dot" aria-hidden />
-              Local Ad Radar
-            </span>
-            <span className="lp-liveads-area">See what&rsquo;s already running nearby</span>
-          </div>
-          <div className="lp-liveads-rail" aria-hidden>
-            <div className="lp-liveads-track">
-              {[...AD_PLACEHOLDERS, ...AD_PLACEHOLDERS].map((label, index) => (
-                <article className="lp-ad-ph" key={index}>
-                  <div className="lp-ad-ph-head">
-                    <span className="lp-ad-ph-avatar" />
-                    <span className="lp-ad-ph-meta">
-                      <span className="lp-ad-ph-name" />
-                      <span className="lp-ad-ph-sub" />
-                    </span>
-                  </div>
-                  <div className="lp-ad-ph-text">
-                    <span />
-                    <span />
-                  </div>
-                  <div className="lp-ad-ph-image">
-                    <span className="lp-ad-ph-label">{label}</span>
-                  </div>
-                  <div className="lp-ad-ph-foot">
-                    <span className="lp-ad-ph-cta">Learn more</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Evidence slab: real Meta Ad Library creative as a layered 3D object,
+            with a readout explaining one ad at a time. Reads the existing
+            local-ad-radar API; live scraped ads also render in #radar below. */}
+        <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
 
         <section id="workflow" className="lp-section">
           <style dangerouslySetInnerHTML={{ __html: HOW_CSS }} />
