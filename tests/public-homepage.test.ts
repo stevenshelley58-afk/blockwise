@@ -142,8 +142,9 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /export the package for final setup/i);
-  assert.match(home, /final platform setup only after approval/i);
+  assert.match(home, /before anything spends/i);
+  assert.match(home, /before and after approval/i);
+  assert.match(home, /Approve every ad before it goes live/i);
   assert.match(pricing, /Create, approve, export and track property/);
   assert.match(pricing, /\$799/);
   assert.doesNotMatch(pricing, /\$500/);
