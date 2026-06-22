@@ -8,9 +8,13 @@ import {
   buildAgentUpdatePatch,
   buildExistingRosterEnrichment,
   buildExportRow,
+  buildFetchedPageEnrichment,
+  buildPublicPageFetchTargets,
   candidateFromResult,
+  candidateFromFetchedPage,
   classifySocialUrl,
   csvFromRows,
+  extractSocialLinksFromHtml,
   isAgentProspectCandidate,
   isBlockedEvidence,
   isWrongRegionEvidence,
@@ -96,6 +100,12 @@ test("candidate filtering rejects blocked pages, Washington false positives, gen
 test("social URL classification and normalization keep public professional profile URLs", () => {
   assert.equal(classifySocialUrl("https://www.linkedin.com/in/jane-smith-real-estate/"), "linkedin");
   assert.equal(normalizeSocialUrl("https://www.facebook.com/jane.smith.realestate/?ref=page_internal"), "https://facebook.com/jane.smith.realestate");
+  assert.equal(normalizeSocialUrl("https://au.linkedin.com/in/jane-smith-real-estate/"), "https://linkedin.com/in/jane-smith-real-estate");
+  assert.equal(normalizeSocialUrl("https://linkedin.com/public-profile/settings"), null);
+  assert.equal(normalizeSocialUrl("https://youtube.com/@SellingPerthRealEstate/videos"), "https://youtube.com/@SellingPerthRealEstate");
+  assert.equal(normalizeSocialUrl("https://youtube.com/user/REIWAvideochannel"), null);
+  assert.equal(normalizeSocialUrl("https://youtu.be/PBQmbTewf3A"), null);
+  assert.equal(normalizeSocialUrl("https://youtube.com/results?search_query=perth+real+estate"), null);
   assert.equal(normalizeSocialUrl("https://twitter.com/janesmithre"), "https://x.com/janesmithre");
   assert.equal(normalizeSocialUrl("https://instagram.com/p/abc123"), null);
 });
@@ -208,6 +218,124 @@ test("existing roster personalization uses licence-register wording for DEMIRS-o
 
   assert.match(enrichment.personalization_hook, /public WA licence register entry/);
   assert.doesNotMatch(enrichment.personalization_hook ?? "", /public agent profile/);
+});
+
+test("public page fetch targets use current roster URLs and scope agency context", () => {
+  const targets = buildPublicPageFetchTargets(
+    {
+      ...agent,
+      website_url: "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+      metadata: { evidence_url: "https://ols.demirs.wa.gov.au/api/Search/details/1/2/RR/I/GNT" },
+      agency: {
+        website_url: "https://reiwa.com.au/real-estate-agency/northstar-realty-999/",
+      },
+    },
+    3,
+  );
+
+  assert.deepEqual(
+    targets.map((target) => [target.label, target.scope]),
+    [
+      ["agent_website_url", "agent_profile_context"],
+      ["agency_context_url", "agency_context"],
+    ],
+  );
+});
+
+test("public page social extraction normalizes social URLs and filters non-profile links", () => {
+  const links = extractSocialLinksFromHtml(
+    `
+      <a href="https://www.facebook.com/hiveresidential.au?ref=page_internal">Facebook</a>
+      <a href="https://www.instagram.com/hiveresidential_au/">Instagram</a>
+      <a href="https://linkedin.com/company/hive-residential">LinkedIn</a>
+      <a href="https://facebook.com/reiwa">REIWA Facebook</a>
+      <a href="https://linkedin.com/company/reiwa">REIWA LinkedIn</a>
+      <a href="https://youtube.com/user/REIWAvideochannel">REIWA YouTube</a>
+      <a href="https://instagram.com/p/abc123">Post</a>
+    `,
+    "https://reiwa.com.au/real-estate-agency/hive-residential-pty-ltd-160554-0/",
+  );
+
+  assert.deepEqual(links, [
+    { platform: "facebook", url: "https://facebook.com/hiveresidential.au" },
+    { platform: "instagram", url: "https://instagram.com/hiveresidential_au" },
+    { platform: "linkedin", url: "https://linkedin.com/company/hive-residential" },
+  ]);
+});
+
+test("fetched page enrichment merges scoped social evidence without overwriting existing links", () => {
+  const fetched = {
+    ...candidateFromFetchedPage(
+      agent,
+      {
+        url: "https://reiwa.com.au/real-estate-agency/hive-residential-pty-ltd-160554-0/",
+        label: "agency_context_url",
+        scope: "agency_context",
+      },
+      `
+        <title>Hive Residential | REIWA</title>
+        <body>Northstar Realty Subiaco WA real estate agent team
+          <a href="https://www.facebook.com/hiveresidential.au">Facebook</a>
+          <a href="https://www.instagram.com/hiveresidential_au/">Instagram</a>
+        </body>
+      `,
+      "2026-06-22T00:00:00.000Z",
+      200,
+    ),
+    sourceDocumentId: "44444444-4444-4444-4444-444444444444",
+  };
+  const base = {
+    ...buildExistingRosterEnrichment(
+      {
+        ...agent,
+        email: "jane.smith@northstarrealty.com.au",
+        phone: "0412345678",
+        website_url: "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+      },
+      [
+        {
+          source_url: "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+          sourceKind: "reiwa_profile",
+          confidence: 82,
+          evidenceText: "Jane Smith Northstar Realty Subiaco jane.smith@northstarrealty.com.au 0412 345 678",
+          sourceDocumentId: "11111111-1111-1111-1111-111111111111",
+        },
+      ],
+      "2026-06-22T00:00:00.000Z",
+    ),
+    social_links: {
+      facebook: "https://facebook.com/jane.smith.realestate",
+      instagram: null,
+      linkedin: null,
+      youtube: "https://youtube.com/user/REIWAvideochannel",
+      tiktok: null,
+      x: null,
+      other: [],
+    },
+    social_link_scopes: {
+      facebook: "agent_profile_context",
+      instagram: null,
+      linkedin: null,
+      youtube: "source_site_footer",
+      tiktok: null,
+      x: null,
+      other: [],
+    },
+  };
+
+  const enrichment = buildFetchedPageEnrichment(agent, base, [fetched], "2026-06-22T00:00:00.000Z");
+
+  assert.equal(enrichment.email, "jane.smith@northstarrealty.com.au");
+  assert.equal(enrichment.social_links.facebook, "https://facebook.com/jane.smith.realestate");
+  assert.deepEqual(enrichment.social_links.other, ["https://facebook.com/hiveresidential.au"]);
+  assert.equal(enrichment.social_links.instagram, "https://instagram.com/hiveresidential_au");
+  assert.equal(enrichment.social_links.youtube, null);
+  assert.equal(enrichment.social_link_scopes.instagram, "agency_context");
+  assert.deepEqual(enrichment.social_link_scopes.other, [
+    { platform: "facebook", url: "https://facebook.com/hiveresidential.au", scope: "agency_context" },
+  ]);
+  assert.equal(enrichment.social_link_evidence.instagram[0].source_document_id, "44444444-4444-4444-4444-444444444444");
+  assert.ok(enrichment.segment_tags.includes("has_social"));
 });
 
 test("export rows are agent-recipient only and include social fields", () => {

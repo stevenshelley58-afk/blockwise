@@ -11,7 +11,10 @@ export const SOURCE = "exa_prospect_enrichment";
 const EXA_URL = "https://api.exa.ai/search";
 const DEFAULT_NUM_RESULTS = 8;
 const DEFAULT_CONCURRENCY = 3;
+const DEFAULT_MAX_FETCH_PAGES = 3;
+const DEFAULT_FETCH_TIMEOUT_MS = 8000;
 const HIGH_CONFIDENCE = 70;
+const PUBLIC_FETCH_AGENT = "Blockwise WA agent enrichment/1.0";
 const CSV_FIELDS = [
   "agent_id",
   "full_name",
@@ -90,6 +93,8 @@ export function parseArgs(argv) {
     output: null,
     jsonOutput: null,
     existingOnly: false,
+    fetchExistingPages: false,
+    maxFetchPages: DEFAULT_MAX_FETCH_PAGES,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -114,6 +119,12 @@ export function parseArgs(argv) {
         break;
       case "--existing-only":
         args.existingOnly = true;
+        break;
+      case "--fetch-existing-pages":
+        args.fetchExistingPages = true;
+        break;
+      case "--max-fetch-pages":
+        args.maxFetchPages = Number.parseInt(next(), 10);
         break;
       case "--concurrency":
         args.concurrency = Number.parseInt(next(), 10);
@@ -142,6 +153,9 @@ export function parseArgs(argv) {
   }
   if (!Number.isInteger(args.numResults) || args.numResults < 1 || args.numResults > 100) {
     throw new Error("--num-results must be 1..100");
+  }
+  if (!Number.isInteger(args.maxFetchPages) || args.maxFetchPages < 1 || args.maxFetchPages > 8) {
+    throw new Error("--max-fetch-pages must be 1..8");
   }
   return args;
 }
@@ -266,16 +280,52 @@ export function normalizeSocialUrl(url) {
     parsed.search = "";
     parsed.protocol = "https:";
     parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (platform === "linkedin") parsed.hostname = parsed.hostname.replace(/^[a-z]{2}\./, "");
     if (parsed.hostname === "twitter.com") parsed.hostname = "x.com";
+    if (platform === "youtube" && parsed.hostname === "youtu.be") return null;
     parsed.pathname = parsed.pathname
       .replace(/\/+/g, "/")
       .replace(/\/$/, "");
     if (!parsed.pathname || parsed.pathname === "/") return null;
-    if (/\/(?:share|sharer|login|search|hashtag|explore|reel|p|watch)\b/i.test(parsed.pathname)) return null;
+    if (/\/(?:share|sharer|login|search|hashtag|explore|reel|p|watch|results)\b/i.test(parsed.pathname)) return null;
+    if (platform === "linkedin" && !/^\/(?:in|company)\//i.test(parsed.pathname)) return null;
+    if (platform === "instagram" && /^\/(?:accounts|direct|about|developer)\b/i.test(parsed.pathname)) return null;
+    if (platform === "facebook" && /^\/(?:plugins|dialog|events|groups|profile\.php)\b/i.test(parsed.pathname)) return null;
+    if (platform === "x" && /^\/(?:intent|share|search|home|i)\b/i.test(parsed.pathname)) return null;
+    if (platform === "youtube") {
+      const channelPath = parsed.pathname.match(/^\/(@[^/]+|channel\/[^/]+|c\/[^/]+|user\/[^/]+)(?:\/videos)?$/i);
+      if (!channelPath) return null;
+      parsed.pathname = `/${channelPath[1]}`;
+      if (isKnownSourceOwnedSocialPath(platform, parsed.pathname)) return null;
+    } else if (isKnownSourceOwnedSocialPath(platform, parsed.pathname)) {
+      return null;
+    }
     return parsed.toString().replace(/\/$/, "");
   } catch {
     return null;
   }
+}
+
+function isKnownSourceOwnedSocialPath(platform, pathname) {
+  const path = clean(pathname).toLowerCase().replace(/\/+$/, "");
+  if (platform === "youtube") {
+    return [
+      "/user/reiwavideochannel",
+      "/user/reiwa",
+      "/@reiwa",
+      "/c/reiwa",
+      "/c/domaincomau",
+      "/@domaincomau",
+      "/user/domaincomau",
+      "/c/realestatecomau",
+      "/@realestatecomau",
+    ].includes(path);
+  }
+  if (platform === "linkedin") return path === "/company/reiwa" || path === "/company/domain-com-au";
+  if (platform === "facebook") return path === "/reiwa" || path === "/domain.com.au" || path === "/realestate.com.au";
+  if (platform === "instagram") return path === "/reiwa.com.au" || path === "/domain.com.au" || path === "/realestateaus";
+  if (platform === "x") return path === "/reiwa" || path === "/domaincomau" || path === "/realestate_au";
+  return false;
 }
 
 export function classifySourceKind(url) {
@@ -551,6 +601,194 @@ function buildSocialLinks(candidates) {
   return links;
 }
 
+function emptySocialLinks() {
+  return { facebook: null, instagram: null, linkedin: null, youtube: null, tiktok: null, x: null, other: [] };
+}
+
+function emptySocialScopes() {
+  return { facebook: null, instagram: null, linkedin: null, youtube: null, tiktok: null, x: null, other: [] };
+}
+
+function decodeHtmlAttribute(value) {
+  return clean(value)
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function htmlToText(html) {
+  return clean(html)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 5000);
+}
+
+function extractHtmlTitle(html) {
+  const match = clean(html).match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? htmlToText(match[1]).slice(0, 220) : null;
+}
+
+function resolveHref(baseUrl, href) {
+  const raw = decodeHtmlAttribute(href);
+  if (!raw || /^(?:mailto|tel|javascript|data):/i.test(raw)) return null;
+  try {
+    const resolved = new URL(raw, baseUrl);
+    if (!/^https?:$/i.test(resolved.protocol)) return null;
+    resolved.hash = "";
+    return resolved.toString();
+  } catch {
+    return null;
+  }
+}
+
+function isSourceSiteSocialLink(baseUrl, normalizedSocialUrl) {
+  const baseDomain = normalizeDomain(baseUrl);
+  if (baseDomain !== "reiwa.com.au") return false;
+  try {
+    const parsed = new URL(normalizedSocialUrl);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const path = parsed.pathname.toLowerCase().replace(/\/+$/, "");
+    if (host === "facebook.com" && /^\/reiwa(?:\.com\.au)?$/.test(path)) return true;
+    if (host === "instagram.com" && /^\/reiwa(?:\.com\.au)?$/.test(path)) return true;
+    if (host === "linkedin.com" && path === "/company/reiwa") return true;
+    if ((host === "youtube.com" || host === "youtu.be") && /\/reiwa(?:\.com\.au)?$/.test(path)) return true;
+    if (host === "x.com" && /^\/reiwa(?:\.com\.au)?$/.test(path)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export function extractSocialLinksFromHtml(html, baseUrl) {
+  const found = [];
+  const seen = new Set();
+  const hrefPattern = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+  let match;
+  while ((match = hrefPattern.exec(String(html ?? ""))) !== null) {
+    const resolved = resolveHref(baseUrl, match[1] ?? match[2] ?? match[3]);
+    if (!resolved) continue;
+    const normalized = normalizeSocialUrl(resolved);
+    const platform = normalized ? classifySocialUrl(normalized) : null;
+    if (!normalized || !platform) continue;
+    if (isSourceSiteSocialLink(baseUrl, normalized)) continue;
+    const key = `${platform}|${normalized}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    found.push({ platform, url: normalized });
+  }
+  return found;
+}
+
+function socialScopeForTarget(target) {
+  if (target.label === "agency_context_url") return "agency_context";
+  const path = urlPath(target.url);
+  if (path.includes("/real-estate-agency/")) return "agency_context";
+  if (path.includes("/real-estate-agent/")) return "agent_profile_context";
+  if (target.label === "agent_website_url" || target.label === "agent_roster_evidence_url") return "agent_profile_context";
+  return "public_page_context";
+}
+
+export function buildPublicPageFetchTargets(agent, maxPages = DEFAULT_MAX_FETCH_PAGES) {
+  const metadata = agent.metadata && typeof agent.metadata === "object" ? agent.metadata : {};
+  const agency = agent.agency || {};
+  const rawTargets = [
+    { url: clean(agent.website_url), label: "agent_website_url" },
+    { url: clean(metadata.evidence_url), label: "agent_roster_evidence_url" },
+    { url: clean(agency.website_url || agent.agency_website_url), label: "agency_context_url" },
+  ].filter((entry) => {
+    if (!entry.url || !/^https:\/\//i.test(entry.url)) return false;
+    if (normalizeDomain(entry.url) === "ols.demirs.wa.gov.au") return false;
+    return true;
+  });
+
+  const seen = new Set();
+  return rawTargets
+    .filter((entry) => {
+      const key = entry.url.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((entry) => ({ ...entry, scope: socialScopeForTarget(entry) }))
+    .slice(0, maxPages);
+}
+
+function scoreFetchedPageCandidate(agent, target, pageText, socialLinks) {
+  const nameScore = scoreNameMatch(agent.full_name || agent.fullName, pageText);
+  const agencyScore = scoreAgencyMatch(agent, pageText);
+  const areaScore = scoreAreaMatch(agent, pageText);
+  const sourceKind = classifySourceKind(target.url);
+  const scopeBonus = target.scope === "agency_context" ? 4 : 10;
+  const socialBonus = socialLinks.length > 0 ? 8 : 0;
+  const confidence = Math.min(88, nameScore + agencyScore + areaScore + scoreSourceKind(sourceKind) + scopeBonus + socialBonus);
+  return {
+    confidence: Math.max(target.scope === "agency_context" ? 48 : 52, confidence),
+    nameScore,
+    agencyScore,
+    areaScore,
+  };
+}
+
+export function candidateFromFetchedPage(agent, target, html, fetchedAt = new Date().toISOString(), status = 200) {
+  const title = extractHtmlTitle(html);
+  const socialLinks = extractSocialLinksFromHtml(html, target.url).map((link) => ({ ...link, scope: target.scope }));
+  const text = htmlToText(html);
+  const evidenceText = [title, text, ...socialLinks.map((link) => `${link.platform}: ${link.url}`)].filter(Boolean).join("\n").slice(0, 5000);
+  const score = scoreFetchedPageCandidate(agent, target, evidenceText, socialLinks);
+  const snapshot = {
+    agent_id: agent.id,
+    full_name: agent.full_name,
+    agency_name: agent.agency_name || agent.agency?.name || null,
+    source_url: target.url,
+    fetch_label: target.label,
+    fetch_scope: target.scope,
+    status,
+    html_hash: hash(html),
+    social_links_found: socialLinks,
+  };
+  return {
+    source: sourceForUrl(target.url),
+    agent_id: agent.id,
+    source_url: target.url,
+    source_external_id: `public-fetch:${agent.id}:${hash(target.url).slice(0, 32)}`,
+    content_hash: hash(JSON.stringify(snapshot)),
+    fetched_at: fetchedAt,
+    mimeType: "text/html",
+    byte_size: Buffer.byteLength(String(html ?? ""), "utf8"),
+    title,
+    domain: normalizeDomain(target.url),
+    sourceKind: classifySourceKind(target.url),
+    socialPlatform: null,
+    socialLinksFound: socialLinks,
+    socialLinkScopes: Object.fromEntries(socialLinks.map((link) => [link.platform, link.scope])),
+    evidenceText,
+    highlights: socialLinks.map((link) => `${link.platform}: ${link.url}`).slice(0, 5),
+    querySpec: { kind: "public_page_fetch", query: target.label },
+    rank: 1,
+    confidence: score.confidence,
+    nameScore: score.nameScore,
+    agencyScore: score.agencyScore,
+    areaScore: score.areaScore,
+    responseMeta: {
+      request_id: null,
+      search_type: "public_page_fetch",
+      cost_dollars: null,
+      http_status: status,
+    },
+    matchedQueries: [target.label],
+    sourceClasses: [target.label, target.scope],
+    sourceDocumentId: null,
+    existingSnapshot: snapshot,
+    sourceSystem: "public_page_fetch",
+  };
+}
+
 function extractPositioning(candidates) {
   for (const candidate of candidates) {
     const lines = candidate.evidenceText
@@ -736,6 +974,7 @@ function buildExistingEvidenceCandidates(agent, now = new Date().toISOString()) 
         sourceClasses: [entry.label],
         sourceDocumentId: null,
         existingSnapshot: snapshot,
+        sourceSystem: "existing_roster",
       };
     });
 }
@@ -779,6 +1018,125 @@ export function buildExistingRosterEnrichment(agent, candidates, now = new Date(
     enriched_at: now,
   };
   enrichment.personalization_hook = buildPersonalizationHook(agent, enrichment);
+  enrichment.segment_tags = buildSegmentTags(agent, enrichment);
+  return enrichment;
+}
+
+function normalizeColdEmailEnrichment(agent, enrichment, now) {
+  const value = enrichment && typeof enrichment === "object" ? enrichment : {};
+  const normalized = {
+    email: clean(value.email) || clean(agent.email) || null,
+    phone: clean(value.phone) || clean(agent.phone) || null,
+    website_url: clean(value.website_url) || clean(agent.website_url) || null,
+    profile_url: clean(value.profile_url) || clean(agent.website_url) || null,
+    agency_name: clean(value.agency_name || agent.agency_name || agent.agencyName || agent.agency?.name) || null,
+    role: clean(value.role || agent.agency_role || agent.role) || null,
+    office_suburb: clean(value.office_suburb || agent.primary_suburb || agent.primarySuburb || agent.agency?.primary_suburb) || null,
+    service_areas: Array.isArray(value.service_areas) && value.service_areas.length > 0 ? value.service_areas : serviceAreasFromAgent(agent),
+    social_links: { ...emptySocialLinks(), ...(value.social_links || {}), other: Array.isArray(value.social_links?.other) ? value.social_links.other : [] },
+    social_link_scopes: {
+      ...emptySocialScopes(),
+      ...(value.social_link_scopes || {}),
+      other: Array.isArray(value.social_link_scopes?.other) ? value.social_link_scopes.other : [],
+    },
+    social_link_evidence: value.social_link_evidence && typeof value.social_link_evidence === "object" ? value.social_link_evidence : {},
+    positioning: clean(value.positioning) || null,
+    awards_or_stats: Array.isArray(value.awards_or_stats) ? value.awards_or_stats : [],
+    personalization_hook: clean(value.personalization_hook) || null,
+    segment_tags: Array.isArray(value.segment_tags) ? value.segment_tags : [],
+    sendability_status: clean(value.sendability_status) || "needs_review",
+    confidence: Number(value.confidence ?? 0),
+    evidence_urls: Array.isArray(value.evidence_urls) ? value.evidence_urls.filter(Boolean) : [],
+    source_document_ids: Array.isArray(value.source_document_ids) ? value.source_document_ids.filter(Boolean) : [],
+    skipped_reason: clean(value.skipped_reason) || null,
+    enriched_at: clean(value.enriched_at) || now,
+  };
+  return sanitizeEnrichmentSocialLinks(normalized);
+}
+
+function sanitizeEnrichmentSocialLinks(enrichment) {
+  const social = { ...emptySocialLinks() };
+  const scopes = { ...emptySocialScopes() };
+  const evidence = {};
+  for (const platform of ["facebook", "instagram", "linkedin", "youtube", "tiktok", "x"]) {
+    const normalized = normalizeSocialUrl(enrichment.social_links?.[platform]);
+    if (!normalized) continue;
+    social[platform] = normalized;
+    scopes[platform] = clean(enrichment.social_link_scopes?.[platform]) || null;
+    if (Array.isArray(enrichment.social_link_evidence?.[platform])) {
+      evidence[platform] = enrichment.social_link_evidence[platform].filter((entry) => normalizeSocialUrl(entry?.url) === normalized);
+    }
+  }
+  const other = Array.isArray(enrichment.social_links?.other) ? enrichment.social_links.other : [];
+  for (const value of other) {
+    const normalized = normalizeSocialUrl(value);
+    if (!normalized || Object.values(social).includes(normalized) || social.other.includes(normalized)) continue;
+    social.other.push(normalized);
+  }
+  const otherScopes = Array.isArray(enrichment.social_link_scopes?.other) ? enrichment.social_link_scopes.other : [];
+  scopes.other = otherScopes.filter((entry) => normalizeSocialUrl(entry?.url) && social.other.includes(normalizeSocialUrl(entry.url)));
+  return {
+    ...enrichment,
+    social_links: social,
+    social_link_scopes: scopes,
+    social_link_evidence: evidence,
+  };
+}
+
+function recordSocialEvidence(enrichment, platform, url, scope, candidate) {
+  const existing = Array.isArray(enrichment.social_link_evidence?.[platform]) ? enrichment.social_link_evidence[platform] : [];
+  const row = {
+    url,
+    scope,
+    evidence_url: candidate.source_url,
+    source_document_id: candidate.sourceDocumentId ?? null,
+  };
+  if (!existing.some((entry) => entry.url === url && entry.evidence_url === candidate.source_url)) {
+    enrichment.social_link_evidence = {
+      ...(enrichment.social_link_evidence || {}),
+      [platform]: [...existing, row],
+    };
+  }
+}
+
+export function buildFetchedPageEnrichment(agent, baseEnrichment, fetchedCandidates, now = new Date().toISOString()) {
+  const enrichment = normalizeColdEmailEnrichment(agent, baseEnrichment, now);
+  const candidates = fetchedCandidates
+    .filter((candidate) => Array.isArray(candidate.socialLinksFound) && candidate.socialLinksFound.length > 0)
+    .sort((a, b) => b.confidence - a.confidence);
+
+  for (const candidate of candidates) {
+    for (const link of candidate.socialLinksFound) {
+      const platform = link.platform;
+      const url = normalizeSocialUrl(link.url);
+      if (!platform || !url) continue;
+      const scope = clean(link.scope || candidate.socialLinkScopes?.[platform] || "public_page_context");
+      if (enrichment.social_links[platform] === null) {
+        enrichment.social_links[platform] = url;
+        enrichment.social_link_scopes[platform] = scope;
+        recordSocialEvidence(enrichment, platform, url, scope, candidate);
+        continue;
+      }
+      if (enrichment.social_links[platform] === url) {
+        if (!clean(enrichment.social_link_scopes[platform])) enrichment.social_link_scopes[platform] = scope;
+        recordSocialEvidence(enrichment, platform, url, scope, candidate);
+        continue;
+      }
+      if (!enrichment.social_links.other.includes(url)) {
+        enrichment.social_links.other.push(url);
+        enrichment.social_link_scopes.other.push({ platform, url, scope });
+      }
+      recordSocialEvidence(enrichment, platform, url, scope, candidate);
+    }
+  }
+
+  enrichment.confidence = Math.max(enrichment.confidence, ...fetchedCandidates.map((candidate) => candidate.confidence));
+  enrichment.evidence_urls = unique([...fetchedCandidates.map((candidate) => candidate.source_url), ...enrichment.evidence_urls]).slice(0, 20);
+  enrichment.source_document_ids = unique([...fetchedCandidates.map((candidate) => candidate.sourceDocumentId), ...enrichment.source_document_ids]).slice(0, 40);
+  enrichment.skipped_reason = fetchedCandidates.length > 0 ? "public_page_social_discovery_run" : enrichment.skipped_reason || "no_fetchable_existing_public_pages";
+  enrichment.enriched_at = now;
+  enrichment.sendability_status = enrichment.sendability_status === "ready" ? "ready" : sendabilityStatus(enrichment);
+  enrichment.personalization_hook = enrichment.personalization_hook || buildPersonalizationHook(agent, enrichment);
   enrichment.segment_tags = buildSegmentTags(agent, enrichment);
   return enrichment;
 }
@@ -1045,6 +1403,68 @@ async function searchAgent(apiKey, agent, args) {
   };
 }
 
+const publicPageFetchCache = new Map();
+
+async function fetchPublicPage(target) {
+  const key = target.url.toLowerCase();
+  if (publicPageFetchCache.has(key)) return publicPageFetchCache.get(key);
+
+  const promise = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DEFAULT_FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(target.url, {
+        headers: {
+          "User-Agent": PUBLIC_FETCH_AGENT,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.5",
+        },
+        signal: controller.signal,
+      });
+      const html = await response.text();
+      if (!response.ok) {
+        return { ok: false, target, status: response.status, error: `HTTP ${response.status}` };
+      }
+      if (isBlockedEvidence(html)) {
+        return { ok: false, target, status: response.status, error: "blocked_or_permission_denied" };
+      }
+      return { ok: true, target, status: response.status, html };
+    } catch (error) {
+      const message = error?.name === "AbortError" ? "fetch_timeout" : error instanceof Error ? error.message : String(error);
+      return { ok: false, target, status: null, error: message };
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+
+  publicPageFetchCache.set(key, promise);
+  return promise;
+}
+
+async function fetchExistingPageCandidates(agent, args) {
+  const targets = buildPublicPageFetchTargets(agent, args.maxFetchPages);
+  const fetched = await mapLimit(targets, 1, fetchPublicPage);
+  const candidates = [];
+  const failedFetches = [];
+  for (const entry of fetched) {
+    if (!entry?.ok) {
+      failedFetches.push({ query: entry?.target?.url ?? "public_page_fetch", error: entry?.error ?? "fetch_failed" });
+      continue;
+    }
+    const candidate = candidateFromFetchedPage(agent, entry.target, entry.html, new Date().toISOString(), entry.status);
+    if (candidate.socialLinksFound.length === 0) continue;
+    if (isWrongRegionEvidence(candidate.evidenceText)) {
+      failedFetches.push({ query: entry.target.url, error: "wrong_region_evidence" });
+      continue;
+    }
+    candidates.push(candidate);
+  }
+  return {
+    candidates: dedupeCandidates(candidates),
+    failedFetches,
+    fetchedCount: fetched.length,
+  };
+}
+
 async function persistSourceDocuments(research, candidates, dryRun) {
   const idsByExternalId = new Map();
   if (dryRun || candidates.length === 0) return idsByExternalId;
@@ -1076,10 +1496,10 @@ async function persistSourceDocuments(research, candidates, dryRun) {
       source_external_id: candidate.source_external_id,
       fetched_at: candidate.fetched_at,
       content_hash: candidate.content_hash,
-      mime_type: "application/json",
+      mime_type: candidate.mimeType || "application/json",
       byte_size: candidate.byte_size,
       metadata: {
-        source_system: "exa",
+        source_system: candidate.sourceSystem || "exa",
         agent_id: candidate.agent_id,
         query: candidate.querySpec.query,
         query_kind: candidate.querySpec.kind,
@@ -1089,6 +1509,8 @@ async function persistSourceDocuments(research, candidates, dryRun) {
         domain: candidate.domain,
         source_kind: candidate.sourceKind,
         social_platform: candidate.socialPlatform,
+        social_links_found: candidate.socialLinksFound ?? null,
+        social_link_scopes: candidate.socialLinkScopes ?? null,
         rank: candidate.rank,
         confidence: candidate.confidence,
         name_score: candidate.nameScore,
@@ -1113,6 +1535,39 @@ async function persistSourceDocuments(research, candidates, dryRun) {
 }
 
 async function processAgent(research, apiKey, agent, args) {
+  if (args.fetchExistingPages) {
+    const existingCandidates = buildExistingEvidenceCandidates(agent);
+    const fetchedPages = await fetchExistingPageCandidates(agent, args);
+    const allCandidates = [...existingCandidates, ...fetchedPages.candidates];
+    const idsByExternalId = await persistSourceDocuments(research, allCandidates, args.dryRun);
+    const candidates = allCandidates.map((candidate) => ({
+      ...candidate,
+      sourceDocumentId: idsByExternalId.get(documentKey(candidate)) ?? null,
+    }));
+    const existingWithIds = candidates.filter((candidate) => candidate.sourceSystem === "existing_roster");
+    const fetchedWithIds = candidates.filter((candidate) => candidate.sourceSystem === "public_page_fetch");
+    const currentEnrichment = agent.metadata?.cold_email_enrichment?.v1;
+    const baseEnrichment = currentEnrichment && typeof currentEnrichment === "object"
+      ? currentEnrichment
+      : buildExistingRosterEnrichment(agent, existingWithIds);
+    const enrichment = buildFetchedPageEnrichment(agent, baseEnrichment, fetchedWithIds);
+    if (!args.dryRun) {
+      const patch = buildAgentUpdatePatch(agent, enrichment);
+      const { error } = await research.from("agents").update(patch).eq("id", agent.id);
+      if (error) throw new Error(error.message);
+    }
+    return {
+      agent_id: agent.id,
+      ok: true,
+      mode: "fetch_existing_pages",
+      candidate_count: candidates.length,
+      fetched_page_count: fetchedPages.fetchedCount,
+      failed_queries: fetchedPages.failedFetches,
+      rejected_result_count: fetchedPages.fetchedCount - fetchedWithIds.length,
+      export_row: buildExportRow(agent, enrichment),
+    };
+  }
+
   if (args.existingOnly) {
     const existingCandidates = buildExistingEvidenceCandidates(agent);
     const idsByExternalId = await persistSourceDocuments(research, existingCandidates, args.dryRun);
@@ -1176,7 +1631,9 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = { ...process.env, ...loadEnv(".env.local") };
   const apiKey = clean(env.EXA_API_KEY);
-  if (!apiKey && !args.existingOnly) throw new Error("Set EXA_API_KEY for Exa prospect enrichment, or use --existing-only to backfill current roster evidence");
+  if (!apiKey && !args.existingOnly && !args.fetchExistingPages) {
+    throw new Error("Set EXA_API_KEY for Exa prospect enrichment, or use --existing-only / --fetch-existing-pages to use current roster evidence");
+  }
   const supabaseUrl = clean(env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL);
   const serviceKey = clean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY || env.SERVICE_ROLE_KEY);
   if (!supabaseUrl || !serviceKey) throw new Error("Missing Supabase service credentials");
@@ -1196,7 +1653,9 @@ async function main() {
     ready_rows: rows.filter((row) => row.sendability_status === "ready").length,
     needs_review_rows: rows.filter((row) => row.sendability_status === "needs_review").length,
     missing_email_rows: rows.filter((row) => row.sendability_status === "missing_email").length,
+    rows_with_social: rows.filter((row) => row.facebook_url || row.instagram_url || row.linkedin_url || row.youtube_url || row.tiktok_url || row.x_url).length,
     candidate_count: results.reduce((sum, row) => sum + row.candidate_count, 0),
+    fetched_page_count: results.reduce((sum, row) => sum + (row.fetched_page_count ?? 0), 0),
     rejected_result_count: results.reduce((sum, row) => sum + row.rejected_result_count, 0),
     failed_queries: results.flatMap((row) => row.failed_queries.map((entry) => ({ agent_id: row.agent_id, ...entry }))),
     outputs,
@@ -1213,6 +1672,8 @@ Options:
   --agent-id UUID        Enrich one existing research.agents row
   --missing-only         Only select agents missing contact/profile/social enrichment
   --existing-only        Do not call Exa; backfill from current agent roster evidence
+  --fetch-existing-pages Fetch current public profile/agency pages and merge social links
+  --max-fetch-pages N    Public pages per agent in fetch mode, 1..8. Default: ${DEFAULT_MAX_FETCH_PAGES}
   --concurrency N        Concurrent agents. Default: ${DEFAULT_CONCURRENCY}
   --num-results N        Exa results per query, 1..100. Default: ${DEFAULT_NUM_RESULTS}
   --output PATH          CSV export path

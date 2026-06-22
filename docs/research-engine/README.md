@@ -55,3 +55,16 @@ The app-side `sourceProviderSchema` must include every source string written to
    by the DEMIRS sync.
 2. `exa_roster_search` for source-surface discovery that supports the WA roster.
 3. `exa_prospect_enrichment` for agent-only cold-email enrichment evidence.
+
+## WA Agent Prospect Enrichment
+
+Use `scripts/research/enrich-wa-agent-prospects-with-exa.mjs` against the
+existing `research.agents` WA roster only. The runner exports agent recipients;
+agencies are context only.
+
+- `--existing-only` backfills cold-email metadata from current roster, REIWA,
+  and DEMIRS evidence without calling Exa.
+- `--fetch-existing-pages` fetches known public profile/agency pages, stores
+  source documents for pages with accepted social evidence, and merges scoped
+  social links into `agents.metadata.cold_email_enrichment.v1`.
+- Full Exa discovery still requires `EXA_API_KEY`.
