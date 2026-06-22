@@ -1,35 +1,46 @@
+import type { TextSlot } from "./template-design.ts";
 import type { AdStudioTemplate } from "./templates.ts";
-import type { GoldTemplateRenderSample } from "./gold-templates/primitives.ts";
-import { GOLD_SAMPLE_CARD_VERSION } from "./gold-templates/primitives.ts";
-import { apartmentBlueSample, apartmentBlueTemplate } from "./gold-templates/apartment-blue.ts";
-import { collageListingSample, collageListingTemplate } from "./gold-templates/collage-listing.ts";
-import { justSoldStampSample, justSoldStampTemplate } from "./gold-templates/just-sold-stamp.ts";
-import { listingBrochureSample, listingBrochureTemplate } from "./gold-templates/listing-brochure.ts";
-import { luxuryDarkArchSample, luxuryDarkArchTemplate } from "./gold-templates/luxury-dark-arch.ts";
-import { openHomeSignboardSample, openHomeSignboardTemplate } from "./gold-templates/open-home-signboard.ts";
-import { sellerChecklistSample, sellerChecklistTemplate } from "./gold-templates/seller-checklist.ts";
-import { underContractMinimalSample, underContractMinimalTemplate } from "./gold-templates/under-contract-minimal.ts";
+import { dreamHomeBrandSample, dreamHomeBrandTemplate } from "./gold-templates/dream-home-brand.ts";
+import { elevatedLivingEditorialSample, elevatedLivingEditorialTemplate } from "./gold-templates/elevated-living-editorial.ts";
+import { elevateResidencesSample, elevateResidencesTemplate } from "./gold-templates/elevate-residences.ts";
+import { firstBuyerNotesSample, firstBuyerNotesTemplate } from "./gold-templates/first-buyer-notes.ts";
+import { homeBuyerTipsSample, homeBuyerTipsTemplate } from "./gold-templates/home-buyer-tips.ts";
+import { houseForRentBlueSample, houseForRentBlueTemplate } from "./gold-templates/house-for-rent-blue.ts";
+import { interiorDesignCollageSample, interiorDesignCollageTemplate } from "./gold-templates/interior-design-collage.ts";
+import { luxuryApartmentShowcaseSample, luxuryApartmentShowcaseTemplate } from "./gold-templates/luxury-apartment-showcase.ts";
+import { luxuryVillaNightSample, luxuryVillaNightTemplate } from "./gold-templates/luxury-villa-night.ts";
+import { marketTypesTableSample, marketTypesTableTemplate } from "./gold-templates/market-types-table.ts";
 
-export { GOLD_SAMPLE_CARD_VERSION };
+export const GOLD_SAMPLE_CARD_VERSION = "reference-board-pack-v1";
+
+export type GoldTemplateRenderSample = {
+  photoFile: string;
+  photoFiles?: Record<string, string>;
+  text: Partial<Record<TextSlot, string>>;
+};
 
 export const GOLD_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
-  listingBrochureTemplate,
-  luxuryDarkArchTemplate,
-  justSoldStampTemplate,
-  openHomeSignboardTemplate,
-  collageListingTemplate,
-  sellerChecklistTemplate,
-  apartmentBlueTemplate,
-  underContractMinimalTemplate,
+  homeBuyerTipsTemplate,
+  interiorDesignCollageTemplate,
+  marketTypesTableTemplate,
+  elevateResidencesTemplate,
+  luxuryApartmentShowcaseTemplate,
+  luxuryVillaNightTemplate,
+  elevatedLivingEditorialTemplate,
+  dreamHomeBrandTemplate,
+  houseForRentBlueTemplate,
+  firstBuyerNotesTemplate,
 ];
 
 export const GOLD_TEMPLATE_RENDER_SAMPLES: Record<string, GoldTemplateRenderSample> = {
-  [listingBrochureTemplate.id]: listingBrochureSample,
-  [luxuryDarkArchTemplate.id]: luxuryDarkArchSample,
-  [justSoldStampTemplate.id]: justSoldStampSample,
-  [openHomeSignboardTemplate.id]: openHomeSignboardSample,
-  [collageListingTemplate.id]: collageListingSample,
-  [sellerChecklistTemplate.id]: sellerChecklistSample,
-  [apartmentBlueTemplate.id]: apartmentBlueSample,
-  [underContractMinimalTemplate.id]: underContractMinimalSample,
+  [homeBuyerTipsTemplate.id]: homeBuyerTipsSample,
+  [interiorDesignCollageTemplate.id]: interiorDesignCollageSample,
+  [marketTypesTableTemplate.id]: marketTypesTableSample,
+  [elevateResidencesTemplate.id]: elevateResidencesSample,
+  [luxuryApartmentShowcaseTemplate.id]: luxuryApartmentShowcaseSample,
+  [luxuryVillaNightTemplate.id]: luxuryVillaNightSample,
+  [elevatedLivingEditorialTemplate.id]: elevatedLivingEditorialSample,
+  [dreamHomeBrandTemplate.id]: dreamHomeBrandSample,
+  [houseForRentBlueTemplate.id]: houseForRentBlueSample,
+  [firstBuyerNotesTemplate.id]: firstBuyerNotesSample,
 };

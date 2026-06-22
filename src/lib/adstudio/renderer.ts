@@ -328,13 +328,16 @@ function renderTemplateCreativeSvg(
   brandKit?: Pick<AdStudioBrandKit, "identity" | "typography">,
 ): string {
   const { width, height, objects } = creative.canvas;
-  const nodes = objects.map((object) => renderTemplateObjectSvg(object, brandKit)).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${nodes}</svg>`;
+  const defs: string[] = [];
+  const nodes = objects.map((object) => renderTemplateObjectSvg(object, brandKit, defs)).join("");
+  const defsNode = defs.length ? `<defs>${defs.join("")}</defs>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsNode}${nodes}</svg>`;
 }
 
 function renderTemplateObjectSvg(
   object: AdStudioCanvasObject,
   brandKit?: Pick<AdStudioBrandKit, "identity" | "typography">,
+  defs: string[] = [],
 ): string {
   const height = object.height ?? object.width;
   if (object.type === "text") return renderTextObjectSvg(object, brandKit);
@@ -351,7 +354,8 @@ function renderTemplateObjectSvg(
   if (object.type === "image") {
     const src = object.content ?? object.assetId;
     if (src && isRenderableImageSrc(src)) {
-      return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" href="${escapeXml(src)}" preserveAspectRatio="${preserveAspectRatioForAnchor(object.imageAnchor)} slice"/>`;
+      const clip = imageClipPath(object, defs);
+      return `<image x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" href="${escapeXml(src)}" preserveAspectRatio="${preserveAspectRatioForAnchor(object.imageAnchor)} slice"${clip}/>`;
     }
 
     return `<rect x="${object.x}" y="${object.y}" width="${object.width}" height="${height}" fill="#D9E7E3"/><path d="M ${object.x} ${object.y + height * 0.72} C ${object.x + object.width * 0.26} ${object.y + height * 0.52}, ${object.x + object.width * 0.5} ${object.y + height * 0.86}, ${object.x + object.width} ${object.y + height * 0.48} L ${object.x + object.width} ${object.y + height} L ${object.x} ${object.y + height} Z" fill="#9EB6AE"/><circle cx="${object.x + object.width * 0.74}" cy="${object.y + height * 0.22}" r="${Math.min(object.width, height) * 0.08}" fill="#F7D98B"/>`;

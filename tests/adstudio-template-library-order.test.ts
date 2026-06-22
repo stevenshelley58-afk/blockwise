@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { creativeSkeletonSchema } from "../src/lib/ad-template-library/skeleton.ts";
+import { ADSTUDIO_OFFER_TEMPLATES } from "../src/lib/adstudio/offers.ts";
 import {
+  builtInAdStudioTemplates,
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
+  resolvableAdStudioTemplates,
   resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
 } from "../src/lib/adstudio/templates.ts";
@@ -15,14 +18,16 @@ const fixture = JSON.parse(readFileSync("tests/fixtures/adstudio-template-engine
 };
 const skeleton = creativeSkeletonSchema.parse(fixture.creativeSkeletons[0]);
 const visibleGoldTemplateIds = [
-  "gold_listing_brochure",
-  "gold_luxury_dark_arch",
-  "gold_just_sold_stamp",
-  "gold_open_home_signboard",
-  "gold_collage_listing",
-  "gold_seller_checklist",
-  "gold_apartment_blue",
-  "gold_under_contract_minimal",
+  "gold_home_buyer_tips",
+  "gold_interior_design_collage",
+  "gold_market_types_table",
+  "gold_elevate_residences",
+  "gold_luxury_apartment_showcase",
+  "gold_luxury_villa_night",
+  "gold_elevated_living_editorial",
+  "gold_dream_home_brand",
+  "gold_house_for_rent_blue",
+  "gold_first_buyer_notes",
 ];
 
 function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
@@ -123,4 +128,14 @@ test("template library does not merge old first-pass rows or hidden extracted te
   const merged = mergeAdStudioTemplateLibrary(oldRows);
   assert.ok(!merged.some((template) => template.id === "HV-01" || template.id === "MU-01"));
   assert.deepEqual(merged.map((template) => template.id), visibleGoldTemplateIds);
+});
+
+test("all visible and resolvable templates reference executable offer templates", () => {
+  const offerIds = new Set(ADSTUDIO_OFFER_TEMPLATES.map((offer) => offer.offerId));
+  const templates = [...builtInAdStudioTemplates(), ...resolvableAdStudioTemplates()];
+  const missing = templates
+    .filter((template) => !offerIds.has(template.offerId))
+    .map((template) => `${template.id}:${template.offerId}`);
+
+  assert.deepEqual(missing, []);
 });

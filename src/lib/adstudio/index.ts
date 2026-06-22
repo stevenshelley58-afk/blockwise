@@ -106,6 +106,7 @@ export {
   loadCachedPhotoAssetsForTemplate,
   preparePhotoAssetsForTemplate,
   preparedPhotoUrlsByFormat,
+  preparedPhotoUrlsByFormatAndSlot,
   type PreparedPhotoAssetsByFormat,
   type TemplatePhotoPrepInput,
 } from "./photo-prep-service.ts";

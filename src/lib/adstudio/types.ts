@@ -36,6 +36,8 @@ export type FirstAdInput = {
   referenceIntent?: string;
   description: string;
   imageDataUrl: string;
+  imageDataUrls?: string[];
+  imageSlotDataUrls?: Record<string, string>;
   formats: ["9:16", "4:5", "1:1"];
 };
 

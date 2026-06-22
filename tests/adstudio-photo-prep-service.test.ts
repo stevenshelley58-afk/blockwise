@@ -120,9 +120,10 @@ test("template photo prep can return immediate fallback assets without provider 
   });
 
   for (const format of ["9:16", "4:5", "1:1"] as const) {
-    assert.equal(assets[format]?.assetUrl, "https://cdn.example.com/listing.png");
-    assert.equal(assets[format]?.method, "fallback_smart_crop");
-    assert.equal(assets[format]?.format, format);
+    const asset = assets[format]?.primary_photo;
+    assert.equal(asset?.assetUrl, "https://cdn.example.com/listing.png");
+    assert.equal(asset?.method, "fallback_smart_crop");
+    assert.equal(asset?.format, format);
   }
 });
 
@@ -170,8 +171,9 @@ test("template photo prep falls back quickly when provider work exceeds the requ
   assert.equal(seenSignals.length, 3);
   assert.ok(seenSignals.every((signal) => signal.aborted), "slow provider calls must be aborted");
   for (const format of ["9:16", "4:5", "1:1"] as const) {
-    assert.equal(assets[format]?.assetUrl, "https://cdn.example.com/listing.png");
-    assert.equal(assets[format]?.method, "fallback_smart_crop");
-    assert.equal(assets[format]?.format, format);
+    const asset = assets[format]?.primary_photo;
+    assert.equal(asset?.assetUrl, "https://cdn.example.com/listing.png");
+    assert.equal(asset?.method, "fallback_smart_crop");
+    assert.equal(asset?.format, format);
   }
 });

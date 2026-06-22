@@ -7,6 +7,7 @@ import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
 import { resolveTemplateDesignForFormat, type BoundTemplateContent, type TemplateDesign } from "./template-design.ts";
 import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
+import { getStandaloneRenderer } from "./standalone-templates/index.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -37,6 +38,7 @@ export type GenerateCampaignPackInput = {
   firstAd?: FirstAdInput;
   sourceImageDataUrl?: string;
   sourceImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
+  sourceImageSlotsByFormat?: Partial<Record<AdStudioFormat, Record<string, string>>>;
   resolvedTemplate?: AdStudioTemplate | null;
 };
 
@@ -66,6 +68,12 @@ type OfferCopySeed = {
   followUpSms: string[];
   followUpEmail: Array<{ subject: string; body: string }>;
   assetLongHeadline: string;
+};
+
+type ImageBindingInput = {
+  primary?: string;
+  imageDataUrls?: string[];
+  imageSlotDataUrls?: Record<string, string>;
 };
 
 const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
@@ -142,6 +150,8 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     }),
   );
   const sourceImageDataUrl = input.sourceImageDataUrl ?? input.firstAd?.imageDataUrl;
+  const sourceImageDataUrls = input.firstAd?.imageDataUrls;
+  const imageSlotDataUrls = input.firstAd?.imageSlotDataUrls;
   const creatives = variants.flatMap((variant, index) =>
     formats.map((format) => buildCreative({
       campaign,
@@ -150,6 +160,11 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       format,
       template,
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
+      sourceImageDataUrls,
+      imageSlotDataUrls: {
+        ...(imageSlotDataUrls ?? {}),
+        ...(input.sourceImageSlotsByFormat?.[format] ?? {}),
+      },
       subheadline: copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -779,8 +794,26 @@ function buildCreative(input: {
   format: AdStudioFormat;
   template: AdStudioTemplate | null;
   sourceImageDataUrl?: string;
+  sourceImageDataUrls?: string[];
+  imageSlotDataUrls?: Record<string, string>;
   subheadline?: string;
 }): AdStudioCreative {
+  const standalone = getStandaloneRenderer(input.template);
+  if (standalone) {
+    return standalone({
+      format: input.format,
+      brandKit: input.brandKit,
+      headline: input.variant.headline,
+      subheadline: input.subheadline,
+      offer: input.variant.offer,
+      cta: input.variant.cta,
+      photoDataUrl: input.sourceImageDataUrl,
+      creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:standalone`),
+      campaignId: input.campaign.campaignId,
+      variantId: input.variant.variantId,
+    });
+  }
+
   const design = resolveTemplateDesignForFormat(input.template, input.format);
   if (design) {
     const content: BoundTemplateContent = {
@@ -793,7 +826,11 @@ function buildCreative(input: {
         phone: input.brandKit.contact.phone ?? "",
         handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
       },
-      images: imageBindingsForDesign(design, input.sourceImageDataUrl),
+      images: imageBindingsForDesign(design, {
+        primary: input.sourceImageDataUrl,
+        imageDataUrls: input.sourceImageDataUrls,
+        imageSlotDataUrls: input.imageSlotDataUrls,
+      }),
     };
 
     return renderDesign(design, content, input.brandKit, {
@@ -819,22 +856,33 @@ function buildCreative(input: {
 
 function imageBindingsForDesign(
   design: TemplateDesign,
-  sourceImageDataUrl: string | undefined,
+  input: ImageBindingInput,
 ): BoundTemplateContent["images"] {
-  if (!sourceImageDataUrl) return undefined;
+  const primary = input.primary ?? input.imageDataUrls?.[0] ?? firstImageSlotUrl(input.imageSlotDataUrls);
+  if (!primary) return undefined;
 
   const bindings: NonNullable<BoundTemplateContent["images"]> = {
-    primary: sourceImageDataUrl,
-    primary_photo: sourceImageDataUrl,
+    primary,
+    primary_photo: primary,
   };
 
+  let imageSlotIndex = 0;
   for (const layer of design.layers) {
     if (layer.type !== "image_slot") continue;
-    bindings[layer.id] = sourceImageDataUrl;
-    bindings[layer.role] = sourceImageDataUrl;
+    const slotImage =
+      input.imageSlotDataUrls?.[layer.id] ??
+      input.imageDataUrls?.[imageSlotIndex] ??
+      primary;
+    bindings[layer.id] = slotImage;
+    if (!bindings[layer.role] || layer.role !== "primary") bindings[layer.role] = slotImage;
+    imageSlotIndex += 1;
   }
 
   return bindings;
+}
+
+function firstImageSlotUrl(imageSlotDataUrls: Record<string, string> | undefined): string | undefined {
+  return Object.values(imageSlotDataUrls ?? {}).find((value) => value.trim().length > 0);
 }
 
 function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unknown> {

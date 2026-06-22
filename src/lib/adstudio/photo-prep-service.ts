@@ -63,7 +63,12 @@ type PhotoPrepAssetRow = {
   provider_name?: string | null;
 };
 
-export type PreparedPhotoAssetsByFormat = Partial<Record<AdStudioFormat, PreparedPhotoAsset>>;
+export type PreparedPhotoAssetsByFormat = Partial<Record<AdStudioFormat, Record<string, PreparedPhotoAsset>>>;
+
+export type TemplatePhotoPrepSourceImage = {
+  sourceImageRef: string;
+  sourceImageForModel: string;
+};
 
 export type TemplatePhotoPrepInput = {
   workspaceId: string;
@@ -73,6 +78,7 @@ export type TemplatePhotoPrepInput = {
   formats: AdStudioFormat[];
   sourceImageRef: string;
   sourceImageForModel: string;
+  sourceImagesBySlot?: Record<string, TemplatePhotoPrepSourceImage>;
   campaign: {
     goal?: AdStudioGoal | string;
     offerId?: string;
@@ -89,7 +95,7 @@ type PhotoPrepWork = {
   supabase: SupabaseLike;
   bundle: Awaited<ReturnType<typeof getActivePromptBundle>>;
   promptVersionId: string | null;
-  entries: Array<{ format: AdStudioFormat; context: PhotoPrepContext }>;
+  entries: Array<{ format: AdStudioFormat; slotId: string; context: PhotoPrepContext; sourceImageForModel: string }>;
 };
 
 export async function preparePhotoAssetsForTemplate(input: TemplatePhotoPrepInput): Promise<PreparedPhotoAssetsByFormat> {
@@ -99,11 +105,11 @@ export async function preparePhotoAssetsForTemplate(input: TemplatePhotoPrepInpu
 
   const work = await buildPhotoPrepWork(input);
   const prepared = await Promise.all(
-    work.entries.map(async ({ format, context }) => {
+    work.entries.map(async ({ format, slotId, context, sourceImageForModel }) => {
       const asset = await prepareOnePhotoAsset({
         supabase: work.supabase,
         context,
-        sourceImageForModel: input.sourceImageForModel,
+        sourceImageForModel,
         userId: input.userId,
         brandKitId: input.brandKit.brandKitId,
         bundle: work.bundle,
@@ -112,11 +118,11 @@ export async function preparePhotoAssetsForTemplate(input: TemplatePhotoPrepInpu
         timeoutMs: input.timeoutMs ?? DEFAULT_PHOTO_PREP_TIMEOUT_MS,
       });
 
-      return [format, asset] as const;
+      return { format, slotId, asset };
     }),
   );
 
-  return Object.fromEntries(prepared);
+  return groupPreparedPhotoAssets(prepared);
 }
 
 export async function loadCachedPhotoAssetsForTemplate(input: TemplatePhotoPrepInput): Promise<PreparedPhotoAssetsByFormat> {
@@ -124,35 +130,89 @@ export async function loadCachedPhotoAssetsForTemplate(input: TemplatePhotoPrepI
 
   const work = await buildPhotoPrepWork(input);
   const cached = await Promise.all(
-    work.entries.map(async ({ format, context }) => {
+    work.entries.map(async ({ format, slotId, context }) => {
       const cacheKey = buildPhotoPrepCacheKey(context);
       const asset = await loadCachedPhotoPrepAsset(work.supabase, context.workspaceId, cacheKey);
-      return [format, asset] as const;
+      return { format, slotId, asset };
     }),
   );
 
-  return Object.fromEntries(cached.filter((entry): entry is [AdStudioFormat, PreparedPhotoAsset] => Boolean(entry[1])));
+  return groupPreparedPhotoAssets(cached.filter((entry): entry is { format: AdStudioFormat; slotId: string; asset: PreparedPhotoAsset } => Boolean(entry.asset)));
 }
 
 export function fallbackPhotoAssetsForTemplate(input: TemplatePhotoPrepInput): PreparedPhotoAssetsByFormat {
   if (!input.sourceImageForModel) return {};
 
-  return Object.fromEntries(
-    buildPhotoPrepContextEntries(input).map(({ format, context }) => [
+  return groupPreparedPhotoAssets(
+    buildPhotoPrepContextEntries(input).map(({ format, slotId, context, sourceImageForModel }) => ({
       format,
-      deterministicPreparedPhotoAsset({
+      slotId,
+      asset: deterministicPreparedPhotoAsset({
         context,
-        assetUrl: input.sourceImageForModel,
+        assetUrl: sourceImageForModel,
         method: "fallback_smart_crop",
       }),
-    ]),
+    })),
   );
 }
 
 export function preparedPhotoUrlsByFormat(assets: PreparedPhotoAssetsByFormat): Partial<Record<AdStudioFormat, string>> {
   return Object.fromEntries(
-    Object.entries(assets).map(([format, asset]) => [format, asset?.assetUrl]).filter((entry): entry is [string, string] => Boolean(entry[1])),
+    Object.entries(assets)
+      .map(([format, slotAssets]) => [format, primaryPreparedPhotoAsset(slotAssets)?.assetUrl])
+      .filter((entry): entry is [string, string] => Boolean(entry[1])),
   ) as Partial<Record<AdStudioFormat, string>>;
+}
+
+export function preparedPhotoUrlsByFormatAndSlot(
+  assets: PreparedPhotoAssetsByFormat,
+): Partial<Record<AdStudioFormat, Record<string, string>>> {
+  return Object.fromEntries(
+    Object.entries(assets)
+      .map(([format, slotAssets]) => [
+        format,
+        Object.fromEntries(Object.entries(slotAssets ?? {}).map(([slotId, asset]) => [slotId, asset.assetUrl])),
+      ])
+      .filter((entry): entry is [AdStudioFormat, Record<string, string>] => Object.keys(entry[1]).length > 0),
+  ) as Partial<Record<AdStudioFormat, Record<string, string>>>;
+}
+
+function groupPreparedPhotoAssets(
+  entries: Array<{ format: AdStudioFormat; slotId: string; asset: PreparedPhotoAsset }>,
+): PreparedPhotoAssetsByFormat {
+  const grouped: PreparedPhotoAssetsByFormat = {};
+  for (const entry of entries) {
+    grouped[entry.format] = {
+      ...(grouped[entry.format] ?? {}),
+      [entry.slotId]: entry.asset,
+    };
+  }
+  return grouped;
+}
+
+function primaryPreparedPhotoAsset(slotAssets: Record<string, PreparedPhotoAsset> | undefined): PreparedPhotoAsset | undefined {
+  if (!slotAssets) return undefined;
+  return slotAssets.primary_photo ?? slotAssets.primary ?? Object.values(slotAssets)[0];
+}
+
+function sourceImageForSlot(
+  input: TemplatePhotoPrepInput,
+  slotId: string,
+  role: string,
+): TemplatePhotoPrepSourceImage | null {
+  const slotSource = input.sourceImagesBySlot?.[slotId] ?? input.sourceImagesBySlot?.[role];
+  if (slotSource?.sourceImageForModel) return slotSource;
+
+  if (role === "agent_headshot") {
+    const headshot = input.brandKit.assets.headshots[0];
+    if (headshot) return { sourceImageRef: headshot, sourceImageForModel: headshot };
+  }
+
+  if (!input.sourceImageForModel) return null;
+  return {
+    sourceImageRef: input.sourceImageRef,
+    sourceImageForModel: input.sourceImageForModel,
+  };
 }
 
 async function buildPhotoPrepWork(input: TemplatePhotoPrepInput): Promise<PhotoPrepWork> {
@@ -170,46 +230,53 @@ async function buildPhotoPrepWork(input: TemplatePhotoPrepInput): Promise<PhotoP
 function buildPhotoPrepContextEntries(
   input: TemplatePhotoPrepInput,
   promptVersion?: number,
-): Array<{ format: AdStudioFormat; context: PhotoPrepContext }> {
-  const sourceImageHash = hashSourceImage(input.sourceImageForModel);
+): Array<{ format: AdStudioFormat; slotId: string; context: PhotoPrepContext; sourceImageForModel: string }> {
   const formats = Array.from(new Set(input.formats));
-  // Header-only dimension parse (no codec dep) so the chokepoint can choose
-  // deterministic crop vs model reframe/extend. Null for non-data refs.
-  const sourceDimensions = imageDimensionsFromDataUrl(input.sourceImageForModel);
 
-  return formats.map((format) => ({
-    format,
-    context: {
-      workspaceId: input.workspaceId,
-      imageHash: sourceImageHash,
-      sourceImageRef: input.sourceImageRef,
-      sourceImage: sourceDimensions
-        ? { naturalWidth: sourceDimensions.width, naturalHeight: sourceDimensions.height }
-        : undefined,
-      template: {
-        key: input.template.templateKey ?? input.template.id,
-        version: input.template.creativeSkeleton?.version ?? 1,
-        name: input.template.name,
-        archetype: input.template.creativeSkeleton?.archetype,
-      },
-      frame: buildTemplateRenderFrame({ template: input.template, format }),
-      imageSlotId: "primary_photo",
-      campaign: input.campaign,
-      brand: {
-        palette: [
-          input.brandKit.colours.primary,
-          input.brandKit.colours.secondary,
-          input.brandKit.colours.accent,
-          input.brandKit.colours.background,
-          input.brandKit.colours.text,
-        ].filter(Boolean),
-        imageTreatment: input.brandKit.visualStyle.imageTreatment,
-        voice: input.brandKit.tone.voice,
-      },
-      brief: input.brief,
-      promptVersion,
-    },
-  }));
+  return formats.flatMap((format) => {
+    const frame = buildTemplateRenderFrame({ template: input.template, format });
+    return frame.imageSlots.flatMap((slot) => {
+      const source = sourceImageForSlot(input, slot.id, slot.role);
+      if (!source?.sourceImageForModel) return [];
+      const sourceDimensions = imageDimensionsFromDataUrl(source.sourceImageForModel);
+
+      return [{
+        format,
+        slotId: slot.id,
+        sourceImageForModel: source.sourceImageForModel,
+        context: {
+          workspaceId: input.workspaceId,
+          imageHash: hashSourceImage(source.sourceImageForModel),
+          sourceImageRef: source.sourceImageRef,
+          sourceImage: sourceDimensions
+            ? { naturalWidth: sourceDimensions.width, naturalHeight: sourceDimensions.height }
+            : undefined,
+          template: {
+            key: input.template.templateKey ?? input.template.id,
+            version: input.template.creativeSkeleton?.version ?? 1,
+            name: input.template.name,
+            archetype: input.template.creativeSkeleton?.archetype,
+          },
+          frame,
+          imageSlotId: slot.id,
+          campaign: input.campaign,
+          brand: {
+            palette: [
+              input.brandKit.colours.primary,
+              input.brandKit.colours.secondary,
+              input.brandKit.colours.accent,
+              input.brandKit.colours.background,
+              input.brandKit.colours.text,
+            ].filter(Boolean),
+            imageTreatment: input.brandKit.visualStyle.imageTreatment,
+            voice: input.brandKit.tone.voice,
+          },
+          brief: input.brief,
+          promptVersion,
+        },
+      }];
+    });
+  });
 }
 
 async function prepareOnePhotoAsset(input: {

@@ -371,6 +371,61 @@ test("template first-ad generation uses prepared photo assets per creative forma
   assert.notEqual(imageByFormat["9:16"], imageByFormat["4:5"]);
 });
 
+test("template first-ad generation binds uploaded images to distinct template slots", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const template = resolveAdStudioTemplate("gold_interior_design_collage");
+  const slotImages = {
+    primary_photo: "data:image/png;base64,PRIMARY",
+    secondary_top: "data:image/png;base64,TOP",
+    secondary_mid: "data:image/png;base64,MID",
+    secondary_low: "data:image/png;base64,LOW",
+  };
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Mount Lawley",
+    city: "Perth",
+    state: "WA",
+    offerId: "download_guide",
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateId: template.id,
+      templateKey: template.templateKey ?? template.id,
+      description: "Interior design collage for a family home.",
+      imageDataUrl: slotImages.primary_photo,
+      imageDataUrls: Object.values(slotImages),
+      imageSlotDataUrls: slotImages,
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: template,
+  });
+
+  const feed = pack.creatives.find((creative) => creative.format === "4:5");
+  assert.ok(feed);
+
+  const imagesBySlot = Object.fromEntries(
+    feed.canvas.objects
+      .filter((object) => object.type === "image")
+      .map((object) => [object.sourceLayerId, object.content]),
+  );
+  assert.equal(imagesBySlot.primary_photo, slotImages.primary_photo);
+  assert.equal(imagesBySlot.secondary_top, slotImages.secondary_top);
+  assert.equal(imagesBySlot.secondary_mid, slotImages.secondary_mid);
+  assert.equal(imagesBySlot.secondary_low, slotImages.secondary_low);
+});
+
 test("template generation treats observed ads as evidence, not the campaign source", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",

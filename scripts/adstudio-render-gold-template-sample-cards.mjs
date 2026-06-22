@@ -73,11 +73,13 @@ function sampleBrandKit() {
 }
 
 async function imageBindings(templateId, design, samplePhotoDir) {
-  const fileName = GOLD_TEMPLATE_RENDER_SAMPLES[templateId]?.photoFile;
+  const sample = GOLD_TEMPLATE_RENDER_SAMPLES[templateId];
+  const fileName = sample?.photoFile;
   if (!fileName) throw new Error(`No gold sample photo configured for ${templateId}`);
-  const photo = await fileDataUrl(path.join(samplePhotoDir, fileName));
   const bindings = {};
   for (const slot of design.layers.filter((layer) => layer.type === "image_slot")) {
+    const slotFile = sample.photoFiles?.[slot.id] ?? sample.photoFiles?.[slot.role] ?? fileName;
+    const photo = await fileDataUrl(path.join(samplePhotoDir, slotFile));
     bindings[slot.id] = photo;
     bindings[slot.role] = photo;
   }

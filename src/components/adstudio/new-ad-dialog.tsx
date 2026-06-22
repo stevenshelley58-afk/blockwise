@@ -14,6 +14,13 @@ type StartStep = "source" | "template" | "reuse" | "radar";
 type Step = "source" | "brief";
 type ExploreTab = "templates" | "myads" | "research";
 type TemplateFilter = "all" | "new" | "listings" | "appraisals" | "market" | "sold";
+type TemplateImageUploadSlot = {
+  id: string;
+  label: string;
+  role: "primary" | "secondary" | "agent_headshot";
+  required: boolean;
+  defaultUrl?: string;
+};
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -120,8 +127,8 @@ export function NewAdDialog({
   // undefined = nothing chosen yet; "" = blank (create your own)
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState("");
-  const [imageName, setImageName] = useState("");
+  const [imageSlotDataUrls, setImageSlotDataUrls] = useState<Record<string, string>>({});
+  const [imageSlotNames, setImageSlotNames] = useState<Record<string, string>>({});
   const [sourceNote, setSourceNote] = useState("");
   const [radarInspiration, setRadarInspiration] = useState<RadarInspiration | null>(null);
   const [error, setError] = useState("");
@@ -136,6 +143,12 @@ export function NewAdDialog({
   const preloadKeyRef = useRef("");
   const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
+  const uploadSlots = imageUploadSlotsForTemplate(selectedTemplate, brandKit);
+  const resolvedImageSlotDataUrls = resolvedSlotDataUrls(uploadSlots, imageSlotDataUrls);
+  const primarySlotId = uploadSlots[0]?.id ?? "primary_photo";
+  const imageDataUrl = resolvedImageSlotDataUrls[primarySlotId] ?? firstRecordValue(resolvedImageSlotDataUrls) ?? "";
+  const imageDataUrls = uploadSlots.map((slot) => resolvedImageSlotDataUrls[slot.id]).filter((src): src is string => Boolean(src));
+  const missingRequiredImageSlots = uploadSlots.filter((slot) => slot.required && !resolvedImageSlotDataUrls[slot.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,8 +165,8 @@ export function NewAdDialog({
     setDescription("");
     // The customer supplies their own listing photo; the template drives the
     // layout, copy and brand — never a pre-baked image.
-    setImageDataUrl("");
-    setImageName("");
+    setImageSlotDataUrls({});
+    setImageSlotNames({});
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
@@ -252,7 +265,7 @@ export function NewAdDialog({
       step !== "brief" ||
       isBlank ||
       !selectedTemplate ||
-      !imageDataUrl ||
+      missingRequiredImageSlots.length > 0 ||
       uploadingImage ||
       trimmed.length < 8
     ) {
@@ -261,7 +274,7 @@ export function NewAdDialog({
 
     const preloadKey = [
       selectedTemplate.templateKey ?? selectedTemplate.id,
-      imageDataUrl,
+      imageDataUrls.join("|"),
       trimmed,
     ].join("|");
     if (preloadKeyRef.current === preloadKey) return;
@@ -285,6 +298,8 @@ export function NewAdDialog({
             imageBriefId: selectedTemplate.imageBriefId,
             description: trimmed,
             imageDataUrl,
+            imageDataUrls,
+            imageSlotDataUrls: resolvedImageSlotDataUrls,
             formats: ["9:16", "4:5", "1:1"],
           },
         }),
@@ -295,7 +310,7 @@ export function NewAdDialog({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [brandKit, description, imageDataUrl, isBlank, open, selectedTemplate, step, uploadingImage]);
+  }, [brandKit, description, imageDataUrl, imageDataUrls, resolvedImageSlotDataUrls, isBlank, missingRequiredImageSlots.length, open, selectedTemplate, step, uploadingImage]);
 
   if (!open) return null;
 
@@ -327,8 +342,8 @@ export function NewAdDialog({
     setRadarInspiration(null);
     setError("");
     // The customer adds their own listing photo; the template only drives layout/copy.
-    setImageDataUrl("");
-    setImageName("");
+    setImageSlotDataUrls({});
+    setImageSlotNames({});
     setStep("brief");
   }
 
@@ -357,7 +372,7 @@ export function NewAdDialog({
     setStep("source");
   }
 
-  async function selectImage(file: File) {
+  async function selectImage(slotId: string, file: File) {
     setError("");
     setUploadingImage(true);
     try {
@@ -366,12 +381,20 @@ export function NewAdDialog({
         workspaceId,
         brandKitId: brandKit.brandKitId,
       });
-      setImageDataUrl(uploaded.src);
-      setImageName(file.name);
+      setImageSlotDataUrls((current) => ({ ...current, [slotId]: uploaded.src }));
+      setImageSlotNames((current) => ({ ...current, [slotId]: file.name }));
       setError("");
     } catch (caught) {
-      setImageDataUrl("");
-      setImageName("");
+      setImageSlotDataUrls((current) => {
+        const next = { ...current };
+        delete next[slotId];
+        return next;
+      });
+      setImageSlotNames((current) => {
+        const next = { ...current };
+        delete next[slotId];
+        return next;
+      });
       setError(caught instanceof Error ? caught.message : "Could not upload that image.");
     } finally {
       setUploadingImage(false);
@@ -384,8 +407,8 @@ export function NewAdDialog({
       setError("Wait for the image upload to finish.");
       return;
     }
-    if (!imageDataUrl) {
-      setError("Upload one image to generate the ad.");
+    if (missingRequiredImageSlots.length > 0) {
+      setError(missingRequiredImageSlots.length === 1 ? `Upload ${missingRequiredImageSlots[0]?.label.toLowerCase() ?? "one image"} to generate the ad.` : `Upload all ${missingRequiredImageSlots.length} required images to generate the ad.`);
       return;
     }
     if (!trimmed) {
@@ -415,6 +438,8 @@ export function NewAdDialog({
         referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
         imageDataUrl,
+        imageDataUrls,
+        imageSlotDataUrls: resolvedImageSlotDataUrls,
         formats: ["9:16", "4:5", "1:1"],
       });
       onClose();
@@ -596,28 +621,39 @@ export function NewAdDialog({
           {step === "brief" && (
             <div className="studio-newad-own">
               {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{trialCreditNote}</p>}
-              <AssetUploadDropzone
-                className="studio-newad-upload"
-                label="Upload one image"
-                actionText="Upload one image"
-                helperText="JPG, PNG, or WebP / up to 8 MB"
-                previewUrl={imageDataUrl}
-                previewAlt=""
-                fileName={imageName}
-                acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                maxBytes={AD_IMAGE_MAX_BYTES}
-                typeError="Use a JPG, PNG, or WebP image."
-                sizeError="Use an image under 8 MB."
-                capturePagePaste
-                onFileAccepted={selectImage}
-                onFileRejected={setError}
-                onClear={() => {
-                  setImageDataUrl("");
-                  setImageName("");
-                  setError("");
-                  setUploadingImage(false);
-                }}
-              />
+              {uploadSlots.map((slot, index) => (
+                <AssetUploadDropzone
+                  key={slot.id}
+                  className="studio-newad-upload"
+                  label={uploadSlots.length === 1 ? "Upload one image" : slot.label}
+                  actionText={uploadSlots.length === 1 ? "Upload one image" : "Upload image"}
+                  helperText={index === 0 ? "JPG, PNG, or WebP / up to 8 MB" : "Use a different property photo for this template slot."}
+                  previewUrl={imageSlotDataUrls[slot.id] ?? slot.defaultUrl ?? ""}
+                  previewAlt=""
+                  fileName={imageSlotNames[slot.id] ?? ""}
+                  acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+                  maxBytes={AD_IMAGE_MAX_BYTES}
+                  typeError="Use a JPG, PNG, or WebP image."
+                  sizeError="Use an image under 8 MB."
+                  capturePagePaste={index === 0}
+                  onFileAccepted={(file) => selectImage(slot.id, file)}
+                  onFileRejected={setError}
+                  onClear={() => {
+                    setImageSlotDataUrls((current) => {
+                      const next = { ...current };
+                      delete next[slot.id];
+                      return next;
+                    });
+                    setImageSlotNames((current) => {
+                      const next = { ...current };
+                      delete next[slot.id];
+                      return next;
+                    });
+                    setError("");
+                    setUploadingImage(false);
+                  }}
+                />
+              ))}
               <label className="studio-newad-field">
                 <span>Short description</span>
                 <textarea
@@ -733,6 +769,60 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
   }
 
   return "Uses one ad pack. No Meta account is needed until publish.";
+}
+
+function imageUploadSlotsForTemplate(
+  template: AdStudioTemplate | undefined,
+  brandKit: AdStudioBrandKit,
+): TemplateImageUploadSlot[] {
+  const layers = Object.values(template?.designs ?? {})
+    .flatMap((design) => design?.layers ?? [])
+    .filter((layer) => layer.type === "image_slot");
+  const byId = new Map<string, TemplateImageUploadSlot>();
+
+  for (const layer of layers) {
+    if (byId.has(layer.id)) continue;
+    byId.set(layer.id, {
+      id: layer.id,
+      role: layer.role,
+      label: imageSlotLabel(layer.id, layer.role, byId.size),
+      required: layer.role !== "agent_headshot",
+      defaultUrl: layer.role === "agent_headshot" ? brandKit.assets.headshots[0] : undefined,
+    });
+  }
+
+  if (byId.size === 0) {
+    byId.set("primary_photo", {
+      id: "primary_photo",
+      role: "primary",
+      label: "Property image",
+      required: true,
+    });
+  }
+
+  return [...byId.values()];
+}
+
+function imageSlotLabel(id: string, role: TemplateImageUploadSlot["role"], index: number): string {
+  if (role === "agent_headshot") return "Agent headshot";
+  if (role === "primary") return "Main property image";
+  const normalised = id.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return normalised || `Property image ${index + 1}`;
+}
+
+function resolvedSlotDataUrls(
+  slots: TemplateImageUploadSlot[],
+  uploaded: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    slots
+      .map((slot) => [slot.id, uploaded[slot.id] ?? slot.defaultUrl ?? ""] as const)
+      .filter((entry): entry is [string, string] => entry[1].length > 0),
+  );
+}
+
+function firstRecordValue(record: Record<string, string>): string | undefined {
+  return Object.values(record).find((value) => value.length > 0);
 }
 
 const EXPLORE_STYLES = `

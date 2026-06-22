@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  buildTemplateRenderFrame,
   loadCachedPhotoAssetsForTemplate,
   preparedPhotoUrlsByFormat,
+  preparedPhotoUrlsByFormatAndSlot,
   type AdStudioBrandKit,
   type AdStudioFormat,
   type AdStudioGoal,
@@ -32,9 +34,10 @@ type TemplatePhotoPrepBody = {
 
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
-    value?.startsWith("data:image/") ||
+      value?.startsWith("data:image/") ||
       value?.startsWith("/api/adstudio/media?") ||
-      value?.startsWith("/ads/"),
+      value?.startsWith("/ads/") ||
+      /^https?:\/\//i.test(value ?? ""),
   );
 }
 
@@ -85,6 +88,33 @@ async function loadCachedTemplatePhotos(input: TemplatePhotoPrepInput): Promise<
   }
 }
 
+function cachedTemplatePhotoFormatReady(
+  input: TemplatePhotoPrepInput,
+  assets: PreparedPhotoAssetsByFormat,
+  format: AdStudioFormat,
+): boolean {
+  const frame = buildTemplateRenderFrame({ template: input.template, format });
+  return frame.imageSlots.every((slot) => Boolean(assets[format]?.[slot.id]?.assetUrl));
+}
+
+async function resolveFirstAdSlotImagesForModel(
+  request: NextRequest,
+  supabase: Parameters<typeof resolveAdStudioImageForModel>[0],
+  workspaceId: string,
+  firstAd: FirstAdInput,
+): Promise<TemplatePhotoPrepInput["sourceImagesBySlot"]> {
+  const entries = Object.entries(firstAd.imageSlotDataUrls ?? {});
+  if (entries.length === 0) return undefined;
+
+  const resolved = await Promise.all(entries.map(async ([slotId, ref]) => {
+    const sourceImageUrl = await resolveAdStudioImageForModel(supabase, workspaceId, ref);
+    const sourceImageForModel = providerReadableSourceImage(request, ref, sourceImageUrl);
+    return sourceImageForModel ? [slotId, { sourceImageRef: ref, sourceImageForModel }] as const : null;
+  }));
+
+  return Object.fromEntries(resolved.filter((entry): entry is [string, { sourceImageRef: string; sourceImageForModel: string }] => entry !== null));
+}
+
 export async function POST(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
 
@@ -101,6 +131,12 @@ export async function POST(request: NextRequest) {
     }
     if (!isAdStudioImageSrc(firstAd.imageDataUrl)) {
       return NextResponse.json({ error: "An uploaded image is required." }, { status: 400 });
+    }
+    if (firstAd.imageDataUrls?.some((src) => !isAdStudioImageSrc(src))) {
+      return NextResponse.json({ error: "Every uploaded image must be a valid Ad Studio image." }, { status: 400 });
+    }
+    if (firstAd.imageSlotDataUrls && Object.values(firstAd.imageSlotDataUrls).some((src) => !isAdStudioImageSrc(src))) {
+      return NextResponse.json({ error: "Every uploaded image must be a valid Ad Studio image." }, { status: 400 });
     }
     if (!(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
       return NextResponse.json({ error: "Selected template was not found." }, { status: 400 });
@@ -136,6 +172,12 @@ export async function POST(request: NextRequest) {
       firstAd.imageDataUrl,
     );
     const sourceImageForModel = providerReadableSourceImage(request, firstAd.imageDataUrl, sourceImageUrl);
+    const sourceImagesBySlot = await resolveFirstAdSlotImagesForModel(
+      request,
+      context.supabase,
+      context.access.workspaceId,
+      firstAd,
+    );
     const prepInput: TemplatePhotoPrepInput = {
       workspaceId: context.access.workspaceId,
       userId: context.access.userId,
@@ -144,6 +186,7 @@ export async function POST(request: NextRequest) {
       formats: firstAd.formats,
       sourceImageRef: firstAd.imageDataUrl,
       sourceImageForModel: sourceImageForModel ?? "",
+      sourceImagesBySlot,
       campaign: {
         goal: body.goal ?? resolvedTemplate.goal,
         offerId: body.offerId ?? resolvedTemplate.offerId,
@@ -156,12 +199,13 @@ export async function POST(request: NextRequest) {
       brief: firstAd.description,
     };
     const cachedAssets = await loadCachedTemplatePhotos(prepInput);
-    const pendingFormats = firstAd.formats.filter((format) => !cachedAssets[format]);
+    const pendingFormats = firstAd.formats.filter((format) => !cachedTemplatePhotoFormatReady(prepInput, cachedAssets, format));
     const queue = await queueAdStudioTemplatePhotoPrep(prepInput, pendingFormats);
 
     return NextResponse.json({
       photoPrep: responseForPhotoPrep({ cachedAssets, queue }),
       sourceImagesByFormat: preparedPhotoUrlsByFormat(cachedAssets),
+      sourceImageSlotsByFormat: preparedPhotoUrlsByFormatAndSlot(cachedAssets),
     });
   } catch (error) {
     return errorResponse(error, 400);

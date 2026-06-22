@@ -2,10 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   buildAdStudioLiveResult,
+  buildTemplateRenderFrame,
   fallbackPhotoAssetsForTemplate,
   generateAdStudioCampaignPack,
   loadCachedPhotoAssetsForTemplate,
   preparedPhotoUrlsByFormat,
+  preparedPhotoUrlsByFormatAndSlot,
   type PreparedPhotoAssetsByFormat,
   type TemplatePhotoPrepInput,
 } from "@/lib/adstudio";
@@ -54,9 +56,10 @@ const GENERATION_DEDUP_TTL_MS = 30_000;
 
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
-    value?.startsWith("data:image/") ||
+      value?.startsWith("data:image/") ||
       value?.startsWith("/api/adstudio/media?") ||
-      value?.startsWith("/ads/"),
+      value?.startsWith("/ads/") ||
+      /^https?:\/\//i.test(value ?? ""),
   );
 }
 
@@ -66,6 +69,10 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (!firstAd.description?.trim()) return "A short description is required.";
   if (firstAd.description.length > 500) return "Description must be 500 characters or less.";
   if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "An uploaded image is required.";
+  if (firstAd.imageDataUrls?.some((src) => !isAdStudioImageSrc(src))) return "Every uploaded image must be a valid Ad Studio image.";
+  if (firstAd.imageSlotDataUrls && Object.values(firstAd.imageSlotDataUrls).some((src) => !isAdStudioImageSrc(src))) {
+    return "Every uploaded image must be a valid Ad Studio image.";
+  }
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story, Feed, and Square.";
   }
@@ -133,6 +140,33 @@ async function loadCachedTemplatePhotos(input: TemplatePhotoPrepInput): Promise<
     }));
     return {};
   }
+}
+
+function cachedTemplatePhotoFormatReady(
+  input: TemplatePhotoPrepInput,
+  assets: PreparedPhotoAssetsByFormat,
+  format: AdStudioFormat,
+): boolean {
+  const frame = buildTemplateRenderFrame({ template: input.template, format });
+  return frame.imageSlots.every((slot) => Boolean(assets[format]?.[slot.id]?.assetUrl));
+}
+
+async function resolveFirstAdSlotImagesForModel(
+  request: NextRequest,
+  supabase: Parameters<typeof resolveAdStudioImageForModel>[0],
+  workspaceId: string,
+  firstAd: FirstAdInput | undefined,
+): Promise<TemplatePhotoPrepInput["sourceImagesBySlot"]> {
+  const entries = Object.entries(firstAd?.imageSlotDataUrls ?? {});
+  if (entries.length === 0) return undefined;
+
+  const resolved = await Promise.all(entries.map(async ([slotId, ref]) => {
+    const sourceImageUrl = await resolveAdStudioImageForModel(supabase, workspaceId, ref);
+    const sourceImageForModel = providerReadableSourceImage(request, ref, sourceImageUrl);
+    return sourceImageForModel ? [slotId, { sourceImageRef: ref, sourceImageForModel }] as const : null;
+  }));
+
+  return Object.fromEntries(resolved.filter((entry): entry is [string, { sourceImageRef: string; sourceImageForModel: string }] => entry !== null));
 }
 
 export async function GET(request: NextRequest) {
@@ -219,6 +253,12 @@ export async function POST(request: NextRequest) {
       context.access.workspaceId,
       sourceImageRef,
     );
+    const sourceImagesBySlot = await resolveFirstAdSlotImagesForModel(
+      request,
+      context.supabase,
+      context.access.workspaceId,
+      body.firstAd,
+    );
     const templatePrepSourceImage = providerReadableSourceImage(request, sourceImageRef, sourceImageUrl);
     const templatePhotoPrepInput = resolvedTemplate && body.firstAd?.mode === "template"
       ? {
@@ -229,6 +269,7 @@ export async function POST(request: NextRequest) {
           formats: body.firstAd.formats,
           sourceImageRef: body.firstAd.imageDataUrl,
           sourceImageForModel: templatePrepSourceImage ?? "",
+          sourceImagesBySlot,
           campaign: {
             goal: body.goal ?? resolvedTemplate.goal,
             offerId: body.offerId ?? resolvedTemplate.offerId,
@@ -249,7 +290,7 @@ export async function POST(request: NextRequest) {
         }
       : {};
     const pendingPhotoPrepFormats = templatePhotoPrepInput
-      ? templatePhotoPrepInput.formats.filter((format) => !cachedTemplatePhotos[format])
+      ? templatePhotoPrepInput.formats.filter((format) => !cachedTemplatePhotoFormatReady(templatePhotoPrepInput, cachedTemplatePhotos, format))
       : [];
 
     let pack = generateAdStudioCampaignPack({
@@ -267,6 +308,7 @@ export async function POST(request: NextRequest) {
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
       sourceImagesByFormat: preparedPhotoUrlsByFormat(immediateTemplatePhotos),
+      sourceImageSlotsByFormat: preparedPhotoUrlsByFormatAndSlot(immediateTemplatePhotos),
       resolvedTemplate,
     });
     const photoPrepQueuePromise = templatePhotoPrepInput

@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
-import { syncCreativeWithCopyAndImage } from "./creative-design-json.ts";
 import {
   loadAdStudioCampaignPack,
   persistAdStudioCampaignPack,
@@ -13,6 +12,7 @@ import {
   type PreparedPhotoAssetsByFormat,
   type TemplatePhotoPrepInput,
 } from "./photo-prep-service.ts";
+import { renderCreativeSvg } from "./renderer.ts";
 import type { AdStudioCampaignPack, AdStudioCreative, AdStudioFormat } from "./types.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -43,6 +43,15 @@ export function buildTemplatePhotoPrepTaskKeys(input: AdStudioTemplatePhotoPrepP
       templateKey: input.template.templateKey ?? input.template.id,
       templateVersion: input.template.creativeSkeleton?.version ?? 1,
       formats: [...new Set(input.formats)].sort(),
+      sourceImagesBySlot: Object.fromEntries(
+        Object.entries(input.sourceImagesBySlot ?? {}).map(([slotId, source]) => [
+          slotId,
+          {
+            sourceImageRef: source.sourceImageRef,
+            sourceImageHash: hashShort(source.sourceImageForModel),
+          },
+        ]),
+      ),
     }),
   );
   const campaignKey = input.campaignId?.trim() || "cache";
@@ -101,11 +110,12 @@ export function applyPreparedPhotoAssetsToCampaignPack(
 ): { pack: AdStudioCampaignPack; changed: boolean } {
   let changed = false;
   const creatives = pack.creatives.map((creative) => {
-    const asset = assets[creative.format];
-    if (!asset?.assetUrl || primaryImageSource(creative) === asset.assetUrl) return creative;
+    const slotAssets = assets[creative.format];
+    if (!slotAssets || Object.keys(slotAssets).length === 0) return creative;
 
-    changed = true;
-    return syncCreativeWithCopyAndImage(creative, copyForCreative(pack, creative), asset.assetUrl);
+    const updated = applyPreparedPhotoAssetsToCreative(creative, slotAssets);
+    if (updated !== creative) changed = true;
+    return updated;
   });
 
   return changed ? { pack: { ...pack, creatives }, changed } : { pack, changed: false };
@@ -125,23 +135,41 @@ async function loadCampaignPackWithRetry(
   return null;
 }
 
-function copyForCreative(
-  pack: AdStudioCampaignPack,
+function applyPreparedPhotoAssetsToCreative(
   creative: AdStudioCreative,
-): { headline: string; description: string; cta: string } {
-  const variant = pack.variants.find((candidate) => candidate.variantId === creative.variantId);
-  const copyPack = pack.copyPacks.find((candidate) => candidate.variantId === creative.variantId);
+  slotAssets: NonNullable<PreparedPhotoAssetsByFormat[AdStudioFormat]>,
+): AdStudioCreative {
+  let changed = false;
+  const objects = creative.canvas.objects.map((object) => {
+    if (object.type !== "image") return object;
+    const asset = slotAssets[object.sourceLayerId ?? ""] ?? (object.role === "primary_image" ? primaryPreparedAsset(slotAssets) : undefined);
+    if (!asset?.assetUrl || object.content === asset.assetUrl) return object;
+    changed = true;
+    return {
+      ...object,
+      content: asset.assetUrl,
+      assetId: undefined,
+    };
+  });
 
+  if (!changed) return creative;
+  const next = {
+    ...creative,
+    canvas: {
+      ...creative.canvas,
+      objects,
+    },
+  };
   return {
-    headline: copyPack?.meta.headlines[0] ?? copyPack?.landingPage.headline ?? variant?.headline ?? "",
-    description: copyPack?.meta.descriptions[0] ?? copyPack?.landingPage.subheadline ?? "",
-    cta: variant?.cta ?? copyPack?.landingPage.cta ?? "Learn more",
+    ...next,
+    previewSvg: renderCreativeSvg(next),
   };
 }
 
-function primaryImageSource(creative: AdStudioCreative): string | undefined {
-  const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-  return image?.content || image?.assetId;
+function primaryPreparedAsset(
+  slotAssets: NonNullable<PreparedPhotoAssetsByFormat[AdStudioFormat]>,
+) {
+  return slotAssets.primary_photo ?? slotAssets.primary ?? Object.values(slotAssets)[0];
 }
 
 function sleep(ms: number): Promise<void> {
