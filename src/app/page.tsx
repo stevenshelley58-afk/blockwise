@@ -810,14 +810,63 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="reporting" className="lp-section">
-          <div className="lp-shell lp-center-head">
-            <p className="lp-eyebrow">Reporting</p>
-            <h2 className="lp-h2">See status, spend, clicks, and leads in Blockwise.</h2>
-            <p className="lp-lead">
-              The dashboard brings performance back into the same workspace your team uses
-              to review and approve.
-            </p>
+        <section id="reporting" className="lp-section lp-reporting-section">
+          <div className="lp-shell">
+            <div className="lp-center-head lp-reporting-head">
+              <h2 className="lp-h2">Updates where agents actually check.</h2>
+              <p className="lp-lead">Open Blockwise for the detail. Get the short version by email.</p>
+            </div>
+
+            <div className="lp-reporting-grid" aria-label="Blockwise reporting preview">
+              <article className="lp-reporting-card">
+                <div className="lp-reporting-card-head">
+                  <h3>Daily email</h3>
+                  <span className="lp-reporting-badge lp-reporting-badge-blue">Optional</span>
+                </div>
+                <div className="lp-reporting-card-body">
+                  <h4>Your ads yesterday</h4>
+                  <div className="lp-reporting-metrics" aria-label="Email summary metrics">
+                    <div><strong>6</strong><span>New leads</span></div>
+                    <div><strong>$41</strong><span>Spend</span></div>
+                    <div><strong>118</strong><span>Clicks</span></div>
+                  </div>
+                  <ul className="lp-reporting-email-list">
+                    <li>Free appraisal ad is live.</li>
+                    <li>Market update ad needs approval.</li>
+                    <li>No Ads Manager login needed.</li>
+                  </ul>
+                </div>
+              </article>
+
+              <article className="lp-reporting-card">
+                <div className="lp-reporting-card-head">
+                  <h3>Blockwise dashboard</h3>
+                  <span className="lp-reporting-badge lp-reporting-badge-green">Live</span>
+                </div>
+                <div className="lp-reporting-card-body lp-reporting-status-list">
+                  <div className="lp-reporting-row">
+                    <span className="lp-reporting-icon" aria-hidden>✓</span>
+                    <div><h4>Status</h4><p>See what is live, paused or waiting.</p></div>
+                    <span className="lp-reporting-badge lp-reporting-badge-green">Live</span>
+                  </div>
+                  <div className="lp-reporting-row">
+                    <span className="lp-reporting-icon" aria-hidden>$</span>
+                    <div><h4>Spend</h4><p>Know what has been spent.</p></div>
+                    <span className="lp-reporting-badge lp-reporting-badge-blue">$186</span>
+                  </div>
+                  <div className="lp-reporting-row">
+                    <span className="lp-reporting-icon" aria-hidden>↗</span>
+                    <div><h4>Results</h4><p>Track clicks and leads in one place.</p></div>
+                    <span className="lp-reporting-badge lp-reporting-badge-blue">17 leads</span>
+                  </div>
+                  <div className="lp-reporting-row">
+                    <span className="lp-reporting-icon" aria-hidden>!</span>
+                    <div><h4>Next step</h4><p>Know when something needs approval.</p></div>
+                    <span className="lp-reporting-badge lp-reporting-badge-amber">Review</span>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
         </section>
 
