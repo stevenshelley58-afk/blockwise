@@ -480,10 +480,10 @@ const DFY_CSS = `
 `;
 
 const TABLE_ROWS = [
-  { name: "Mt Lawley Appraisal", status: "Active", clicks: "247", leads: "18", spend: "$324" },
-  { name: "Subiaco Just Listed", status: "Active", clicks: "182", leads: "11", spend: "$210" },
-  { name: "Cottesloe Open Home", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
-  { name: "South Perth Auction", status: "Active", clicks: "145", leads: "9", spend: "$176" },
+  { name: "Mt Lawley appraisal", description: "Seller lead angle", status: "Active", clicks: "247", leads: "18", spend: "$324" },
+  { name: "Subiaco just listed", description: "Listing attention", status: "Active", clicks: "182", leads: "11", spend: "$210" },
+  { name: "Cottesloe open home", description: "Open home traffic", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
+  { name: "South Perth market update", description: "Seller proof", status: "Draft", clicks: "--", leads: "--", spend: "--" },
 ] as const;
 
 export default function HomePage() {
@@ -756,31 +756,33 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="approval" className="lp-section lp-section-surface" aria-labelledby="control-title">
-          <div className="lp-shell lp-split lp-split-swap">
-            <div>
+        <section id="approval" className="lp-section lp-section-surface lp-control-section" aria-labelledby="control-title">
+          <div className="lp-shell lp-control-grid">
+            <div className="lp-control-copy">
               <p className="lp-eyebrow">Approval and control</p>
-              <h2 className="lp-h2" id="control-title">You stay in control before anything leaves draft.</h2>
+              <h2 className="lp-h2" id="control-title">You stay in control before and after approval.</h2>
               <p className="lp-lead">
-                Every ad is drafted inside Blockwise, reviewed by your team and exported for
-                final platform setup only after approval.
+                Review what goes live, then track spend, leads and status from one clean dashboard.
               </p>
               <ul className="lp-control-list" aria-label="Control points">
-                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before export</li>
+                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before it goes live</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Use your own Meta ad account</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Control the budget and schedule</li>
                 <li><span className="lp-check" aria-hidden>✓</span>See every result in one dashboard</li>
               </ul>
             </div>
-            <div className="lp-table-card" aria-label="Ad performance table preview">
-              <div className="lp-table-bar">
+            <div className="lp-control-dashboard" aria-label="Campaign reporting table preview">
+              <div className="lp-control-dashboard-head">
                 <div>
-                  <strong>Your ads</strong>
-                  <span className="lp-badge lp-badge-neutral">Example data</span>
+                  <span className="lp-table-label">Control dashboard</span>
+                  <strong>Every ad in one place</strong>
                 </div>
-                <CtaLink location="control-table" href="/signup" className="lp-btn lp-btn-primary lp-btn-sm">
-                  Get started
-                </CtaLink>
+                <div className="lp-table-actions">
+                  <span className="lp-table-pill">Example data</span>
+                  <CtaLink location="control-table" href="/signup" className="lp-control-create">
+                    Create ad
+                  </CtaLink>
+                </div>
               </div>
               <div className="lp-table-scroll">
                 <table className="lp-table">
@@ -790,9 +792,9 @@ export default function HomePage() {
                   <tbody>
                     {TABLE_ROWS.map((row) => (
                       <tr key={row.name}>
-                        <td>{row.name}</td>
+                        <td><strong>{row.name}</strong><span>{row.description}</span></td>
                         <td>
-                          <span className={row.status === "Active" ? "lp-badge lp-badge-active" : "lp-badge lp-badge-neutral"}>
+                          <span className={`lp-table-status lp-table-status-${row.status.toLowerCase()}`}>
                             {row.status}
                           </span>
                         </td>
