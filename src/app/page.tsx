@@ -1033,6 +1033,10 @@ const FLOW_CSS = `
   font-weight: 850;
   letter-spacing: 0;
 }
+.lp-flow .flow-email-preview .flow-small {
+  font-size: 18px;
+  line-height: 1.25;
+}
 .lp-flow .flow-email-line {
   height: 13px;
   margin-top: 14px;
@@ -1045,8 +1049,8 @@ const FLOW_CSS = `
   margin: auto 0 0;
   padding-top: 22px;
   color: var(--flow-muted);
-  font-size: 20px;
-  line-height: 1.35;
+  font-size: 18px;
+  line-height: 1.32;
 }
 @media (max-width: 1280px) {
   .lp-flow .flow-shell { width: min(1180px, calc(100% - 48px)); }
@@ -1085,6 +1089,7 @@ const FLOW_CSS = `
   .lp-flow .flow-field strong,
   .lp-flow .flow-summary strong { font-size: 17px; }
   .lp-flow .flow-small { font-size: 13px; }
+  .lp-flow .flow-email-preview .flow-small { font-size: 13px; }
   .lp-flow .flow-approve { min-height: 52px; font-size: 16px; }
   .lp-flow .flow-daily-head { margin-bottom: 20px; }
   .lp-flow .flow-daily-head h3 { font-size: 21px; }
