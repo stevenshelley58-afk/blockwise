@@ -67,4 +67,6 @@ agencies are context only.
 - `--fetch-existing-pages` fetches known public profile/agency pages, stores
   source documents for pages with accepted social evidence, and merges scoped
   social links into `agents.metadata.cold_email_enrichment.v1`.
+- `--fetch-official-sites` expands that pass by fetching official outbound
+  sites and relevant team/agent pages discovered from current public evidence.
 - Full Exa discovery still requires `EXA_API_KEY`.

@@ -14,6 +14,8 @@ import {
   candidateFromFetchedPage,
   classifySocialUrl,
   csvFromRows,
+  extractOfficialSiteLinksFromHtml,
+  extractRelevantSitePageLinksFromHtml,
   extractSocialLinksFromHtml,
   isAgentProspectCandidate,
   isBlockedEvidence,
@@ -104,6 +106,8 @@ test("social URL classification and normalization keep public professional profi
   assert.equal(normalizeSocialUrl("https://linkedin.com/public-profile/settings"), null);
   assert.equal(normalizeSocialUrl("https://youtube.com/@SellingPerthRealEstate/videos"), "https://youtube.com/@SellingPerthRealEstate");
   assert.equal(normalizeSocialUrl("https://youtube.com/user/REIWAvideochannel"), null);
+  assert.equal(normalizeSocialUrl("https://youtube.com/user/googleplay"), null);
+  assert.equal(normalizeSocialUrl("https://facebook.com/GooglePlay"), null);
   assert.equal(normalizeSocialUrl("https://youtu.be/PBQmbTewf3A"), null);
   assert.equal(normalizeSocialUrl("https://youtube.com/results?search_query=perth+real+estate"), null);
   assert.equal(normalizeSocialUrl("https://twitter.com/janesmithre"), "https://x.com/janesmithre");
@@ -263,6 +267,52 @@ test("public page social extraction normalizes social URLs and filters non-profi
   ]);
 });
 
+test("official site discovery keeps outbound agency sites and relevant team pages", () => {
+  const official = extractOfficialSiteLinksFromHtml(
+    `
+      <a href="https://www.google.com/maps/place/test">Map</a>
+      <a href="https://www.facebook.com/northstarrealty">Facebook</a>
+      <a href="https://www.facebook.com.au/northstarrealty">Typo Facebook</a>
+      <a href="http://www.twitter.com.au/northstarrealty">Typo X</a>
+      <a href="https://play.google.com/about/giftcards">Google Play</a>
+      <a href="https://www.9now.com.au">9Now</a>
+      <a href="https://ajitabey">Broken profile handle</a>
+      <a href="https://www.belleproperty/cottesloe">Broken agency link</a>
+      <a href="https://northstarrealty.com.au">Website</a>
+      <a href="https://reiwa.com.au/the-wa-market/">REIWA</a>
+    `,
+    "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+  );
+  assert.deepEqual(official.map((link) => link.url), ["https://northstarrealty.com.au"]);
+
+  const relevant = extractRelevantSitePageLinksFromHtml(
+    `
+      <a href="/team/jane-smith">Jane Smith</a>
+      <a href="/properties/for-sale">Properties</a>
+      <a href="/about/team">Our team</a>
+    `,
+    "https://northstarrealty.com.au",
+    agent,
+    3,
+  );
+  assert.deepEqual(relevant.map((link) => link.url), [
+    "https://northstarrealty.com.au/team/jane-smith",
+    "https://northstarrealty.com.au/about/team",
+  ]);
+});
+
+test("official site discovery keeps legitimate non-au real estate domains", () => {
+  const official = extractOfficialSiteLinksFromHtml(
+    `
+      <a href="https://yuliia.manko">Broken handle</a>
+      <a href="https://tonymullen.realestate">View website</a>
+    `,
+    "https://reiwa.com.au/real-estate-agent/tony-mullen-12345/",
+  );
+
+  assert.deepEqual(official.map((link) => link.url), ["https://tonymullen.realestate"]);
+});
+
 test("fetched page enrichment merges scoped social evidence without overwriting existing links", () => {
   const fetched = {
     ...candidateFromFetchedPage(
@@ -336,6 +386,79 @@ test("fetched page enrichment merges scoped social evidence without overwriting 
   ]);
   assert.equal(enrichment.social_link_evidence.instagram[0].source_document_id, "44444444-4444-4444-4444-444444444444");
   assert.ok(enrichment.segment_tags.includes("has_social"));
+});
+
+test("fetched official agent pages can promote high-confidence missing contact fields", () => {
+  const fetched = {
+    ...candidateFromFetchedPage(
+      agent,
+      {
+        url: "https://northstarrealty.com.au/team/jane-smith",
+        label: "official_agent_page",
+        scope: "official_agent_page_context",
+      },
+      `
+        <title>Jane Smith | Northstar Realty</title>
+        <body>
+          <h1>Jane Smith</h1>
+          <p>Jane Smith is a sales representative with Northstar Realty in Subiaco WA.</p>
+          <a href="mailto:jane.smith@northstarrealty.com.au">Email Jane</a>
+          <a href="mailto:bad%ZZaddress">Malformed email href</a>
+          <a href="tel:0412345678">0412 345 678</a>
+        </body>
+      `,
+      "2026-06-22T00:00:00.000Z",
+      200,
+    ),
+    sourceDocumentId: "55555555-5555-5555-5555-555555555555",
+  };
+  const enrichment = buildFetchedPageEnrichment(
+    agent,
+    { ...buildExistingRosterEnrichment(agent, [], "2026-06-22T00:00:00.000Z"), email: null, phone: null },
+    [fetched],
+    "2026-06-22T00:00:00.000Z",
+  );
+
+  assert.equal(enrichment.email, "jane.smith@northstarrealty.com.au");
+  assert.equal(enrichment.phone, "0412345678");
+  assert.equal(enrichment.contact_evidence.email[0].source_document_id, "55555555-5555-5555-5555-555555555555");
+  assert.equal(enrichment.sendability_status, "ready");
+});
+
+test("fetched generic team pages do not promote non-agent contact fields", () => {
+  const fetched = {
+    ...candidateFromFetchedPage(
+      agent,
+      {
+        url: "https://northstarrealty.com.au/team",
+        label: "official_team_page",
+        scope: "official_team_page_context",
+      },
+      `
+        <title>Northstar Realty Team</title>
+        <body>
+          <h1>Jane Smith</h1>
+          <p>Our sales team includes Jane Smith.</p>
+          <a href="mailto:reception@northstarrealty.com.au">Email reception</a>
+          <a href="tel:0899991111">08 9999 1111</a>
+        </body>
+      `,
+      "2026-06-22T00:00:00.000Z",
+      200,
+    ),
+    sourceDocumentId: "66666666-6666-6666-6666-666666666666",
+  };
+  const enrichment = buildFetchedPageEnrichment(
+    agent,
+    { ...buildExistingRosterEnrichment(agent, [], "2026-06-22T00:00:00.000Z"), email: null, phone: null },
+    [fetched],
+    "2026-06-22T00:00:00.000Z",
+  );
+
+  assert.equal(enrichment.email, null);
+  assert.equal(enrichment.phone, null);
+  assert.equal(enrichment.contact_evidence?.email, undefined);
+  assert.equal(enrichment.sendability_status, "missing_email");
 });
 
 test("export rows are agent-recipient only and include social fields", () => {
