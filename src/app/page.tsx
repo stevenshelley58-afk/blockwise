@@ -754,7 +754,7 @@ const FLOW_CSS = `
   --flow-shadow: 0 24px 76px rgba(15, 32, 64, 0.10);
   --flow-shadow-sm: 0 12px 34px rgba(15, 32, 64, 0.08);
   background: linear-gradient(120deg, #f5fbfd 0%, #ffffff 48%, #f4f8fb 100%);
-  padding: 56px 0 72px;
+  padding: 56px 0 52px;
   overflow: hidden;
 }
 .lp-flow .flow-shell {
@@ -780,13 +780,13 @@ const FLOW_CSS = `
 }
 .lp-flow .flow-col {
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-rows: 28px 778px;
+  gap: 25px;
   min-width: 0;
-  min-height: 760px;
+  min-height: 0;
 }
 .lp-flow .flow-zone-title {
-  height: 44px;
+  height: 28px;
   margin: 0;
   display: flex;
   align-items: center;
@@ -939,7 +939,7 @@ const FLOW_CSS = `
 .lp-flow .flow-fields {
   display: grid;
   gap: 0;
-  margin: 0 0 26px;
+  margin: 0 0 20px;
 }
 .lp-flow .flow-field {
   display: flex;
@@ -947,7 +947,7 @@ const FLOW_CSS = `
   justify-content: space-between;
   gap: 24px;
   border-top: 1px solid #edf1f7;
-  padding: 24px 0;
+  padding: 19px 0;
 }
 .lp-flow .flow-small {
   color: var(--flow-muted);
@@ -1019,8 +1019,8 @@ const FLOW_CSS = `
   margin: 24px 0 0;
 }
 .lp-flow .flow-email-preview {
-  margin-top: 46px;
-  padding: 28px 24px;
+  margin-top: 34px;
+  padding: 24px;
   border: 1px solid #e4ebf5;
   border-radius: 28px;
   background: #f6f9fd;
@@ -1043,7 +1043,7 @@ const FLOW_CSS = `
 .lp-flow .flow-email-line:nth-child(4) { width: 58%; }
 .lp-flow .flow-update-note {
   margin: auto 0 0;
-  padding-top: 28px;
+  padding-top: 22px;
   color: var(--flow-muted);
   font-size: 20px;
   line-height: 1.35;
@@ -1054,7 +1054,11 @@ const FLOW_CSS = `
     grid-template-columns: minmax(0, 1fr) minmax(330px, 420px) minmax(0, 1fr);
     gap: 24px;
   }
-  .lp-flow .flow-col { min-height: 548px; }
+  .lp-flow .flow-col {
+    grid-template-rows: 32px minmax(0, 1fr);
+    gap: 18px;
+    min-height: 548px;
+  }
   .lp-flow .flow-task-card {
     width: 260px;
     min-height: 92px;
