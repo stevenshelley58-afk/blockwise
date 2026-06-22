@@ -59,6 +59,7 @@ export const sourceProviderSchema = z.enum([
   "structured_meta_page_provider",
   "metapi",
   "demirs_register",
+  "demirs_wa_licence_register",
   "exa_roster_search",
   "exa_prospect_enrichment",
   "reiwa",

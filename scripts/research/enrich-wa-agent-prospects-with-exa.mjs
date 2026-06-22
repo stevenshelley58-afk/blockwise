@@ -89,6 +89,7 @@ export function parseArgs(argv) {
     numResults: DEFAULT_NUM_RESULTS,
     output: null,
     jsonOutput: null,
+    existingOnly: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -110,6 +111,9 @@ export function parseArgs(argv) {
         break;
       case "--missing-only":
         args.missingOnly = true;
+        break;
+      case "--existing-only":
+        args.existingOnly = true;
         break;
       case "--concurrency":
         args.concurrency = Number.parseInt(next(), 10);
@@ -383,6 +387,7 @@ export function candidateFromResult(agent, querySpec, response, result, rank) {
   if (confidence < 45) return null;
 
   return {
+    source: SOURCE,
     agent_id: agent.id,
     source_url: url,
     source_external_id: `exa-prospect:${hash(`${agent.id}:${url}`).slice(0, 40)}`,
@@ -408,6 +413,10 @@ export function candidateFromResult(agent, querySpec, response, result, rank) {
     },
     sourceDocumentId: null,
   };
+}
+
+function documentKey(candidate) {
+  return `${candidate.source || SOURCE}|${candidate.source_external_id}`;
 }
 
 export function dedupeCandidates(candidates) {
@@ -603,16 +612,175 @@ function buildPersonalizationHook(agent, enrichment) {
   const agency = clean(enrichment.agency_name);
   const suburb = clean(enrichment.office_suburb || agent.primary_suburb || agent.primarySuburb);
   const profileUrl = clean(enrichment.profile_url);
+  const hasDemirsEvidence = (enrichment.evidence_urls || []).some((url) => String(url).includes("ols.demirs.wa.gov.au"));
   if (profileUrl.includes("reiwa.com.au") && agency && suburb) {
     return `Saw your REIWA profile lists you with ${agency} around ${suburb}.`;
   }
   if (profileUrl.includes("reiwa.com.au") && agency) {
     return `Saw your REIWA profile lists you with ${agency}.`;
   }
+  if (!profileUrl && hasDemirsEvidence && agency && suburb) {
+    return `Saw your public WA licence register entry connects you with ${agency} around ${suburb}.`;
+  }
+  if (!profileUrl && hasDemirsEvidence && suburb) {
+    return `Saw your public WA licence register entry around ${suburb}.`;
+  }
   if (agency && suburb) return `Saw your public agent profile connects you with ${agency} around ${suburb}.`;
   if (suburb) return `Saw your public agent profile highlights work around ${suburb}.`;
   if (agency) return `Saw your public agent profile with ${agency}.`;
   return null;
+}
+
+function sourceForUrl(url) {
+  const domain = normalizeDomain(url);
+  if (domain === "reiwa.com.au") return "reiwa";
+  if (domain === "ols.demirs.wa.gov.au") return "demirs_wa_licence_register";
+  return "operator_upload";
+}
+
+function buildExistingEvidenceCandidates(agent, now = new Date().toISOString()) {
+  const metadata = agent.metadata && typeof agent.metadata === "object" ? agent.metadata : {};
+  const demirs = metadata.demirs_wa_licence_register && typeof metadata.demirs_wa_licence_register === "object"
+    ? metadata.demirs_wa_licence_register
+    : null;
+  const agency = agent.agency || {};
+  const rawSources = [
+    {
+      url: clean(agent.website_url),
+      sourceKind: clean(agent.website_url).includes("reiwa.com.au/real-estate-agent/") ? "reiwa_profile" : "website",
+      confidence: 82,
+      label: "agent_website_url",
+    },
+    {
+      url: clean(metadata.evidence_url),
+      sourceKind: "reiwa",
+      confidence: 68,
+      label: "agent_roster_evidence_url",
+    },
+    {
+      url: clean(demirs?.evidence_url),
+      sourceKind: "demirs_register",
+      confidence: 74,
+      label: "demirs_register_evidence_url",
+    },
+    {
+      url: clean(agency.website_url || agent.agency_website_url),
+      sourceKind: clean(agency.website_url || agent.agency_website_url).includes("reiwa.com.au/real-estate-agency/")
+        ? "reiwa"
+        : "website",
+      confidence: 48,
+      label: "agency_context_url",
+    },
+  ].filter((entry) => entry.url && /^https:\/\//i.test(entry.url));
+
+  const seen = new Set();
+  return rawSources
+    .filter((entry) => {
+      const key = entry.url.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((entry) => {
+      const evidenceText = [
+        clean(agent.full_name),
+        clean(agent.agency_name || agency.name),
+        clean(agent.agency_role),
+        clean(agent.primary_suburb),
+        clean(agent.primary_postcode),
+        clean(agent.email),
+        clean(agent.phone),
+        clean(agent.website_url),
+        clean(demirs?.licence_type_description),
+        clean(demirs?.register_address?.location),
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const snapshot = {
+        agent_id: agent.id,
+        full_name: agent.full_name,
+        agency_name: agent.agency_name || agency.name || null,
+        email_present: Boolean(clean(agent.email)),
+        phone_present: Boolean(clean(agent.phone)),
+        website_url: agent.website_url || null,
+        evidence_url: entry.url,
+        label: entry.label,
+        captured_from: "research.agents",
+      };
+      return {
+        source: sourceForUrl(entry.url),
+        agent_id: agent.id,
+        source_url: entry.url,
+        source_external_id: `existing-roster:${agent.id}:${hash(entry.url).slice(0, 24)}`,
+        content_hash: hash(JSON.stringify(snapshot)),
+        fetched_at: now,
+        byte_size: Buffer.byteLength(JSON.stringify(snapshot), "utf8"),
+        title: `${clean(agent.full_name)} existing roster evidence`,
+        domain: normalizeDomain(entry.url),
+        sourceKind: entry.sourceKind,
+        socialPlatform: null,
+        evidenceText,
+        highlights: [],
+        querySpec: { kind: "existing_roster", query: entry.label },
+        rank: 1,
+        confidence: entry.confidence,
+        nameScore: 55,
+        agencyScore: clean(agent.agency_name || agency.name) ? 15 : 0,
+        areaScore: clean(agent.primary_suburb || agent.primary_postcode) ? 10 : 0,
+        responseMeta: {
+          request_id: null,
+          search_type: "existing_roster",
+          cost_dollars: null,
+        },
+        matchedQueries: [entry.label],
+        sourceClasses: [entry.label],
+        sourceDocumentId: null,
+        existingSnapshot: snapshot,
+      };
+    });
+}
+
+export function buildExistingRosterEnrichment(agent, candidates, now = new Date().toISOString()) {
+  const sourceDocumentIds = unique(candidates.map((candidate) => candidate.sourceDocumentId));
+  const evidenceUrls = unique(candidates.map((candidate) => candidate.source_url)).slice(0, 12);
+  const profileCandidate =
+    candidates.find((candidate) => candidate.source_url === agent.website_url) ||
+    candidates.find((candidate) => candidate.sourceKind === "reiwa_profile") ||
+    null;
+  const existingEmail = clean(agent.email) || null;
+  const existingPhone = clean(agent.phone) || null;
+  const profileUrl = clean(agent.website_url || profileCandidate?.source_url) || null;
+  const confidence = Math.max(
+    0,
+    existingEmail ? 72 : 0,
+    existingPhone ? 66 : 0,
+    profileUrl ? 68 : 0,
+    ...candidates.map((candidate) => candidate.confidence),
+  );
+  const enrichment = {
+    email: existingEmail,
+    phone: existingPhone,
+    website_url: profileUrl,
+    profile_url: profileUrl,
+    agency_name: clean(agent.agency_name || agent.agencyName || agent.agency?.name) || null,
+    role: clean(agent.agency_role || agent.role) || null,
+    office_suburb: clean(agent.primary_suburb || agent.primarySuburb || agent.agency?.primary_suburb) || null,
+    service_areas: serviceAreasFromAgent(agent),
+    social_links: { facebook: null, instagram: null, linkedin: null, youtube: null, tiktok: null, x: null, other: [] },
+    positioning: extractPositioning(candidates),
+    awards_or_stats: extractAwardsOrStats(candidates),
+    personalization_hook: null,
+    segment_tags: [],
+    sendability_status: existingEmail ? "ready" : profileUrl || existingPhone ? "needs_review" : "missing_email",
+    confidence,
+    evidence_urls: evidenceUrls,
+    source_document_ids: sourceDocumentIds,
+    skipped_reason: candidates.length === 0 ? "missing_existing_public_evidence_and_exa_key" : "exa_key_missing_social_discovery_not_run",
+    enriched_at: now,
+  };
+  enrichment.personalization_hook = buildPersonalizationHook(agent, enrichment);
+  enrichment.segment_tags = buildSegmentTags(agent, enrichment);
+  return enrichment;
 }
 
 function sendabilityStatus(enrichment) {
@@ -880,20 +1048,30 @@ async function searchAgent(apiKey, agent, args) {
 async function persistSourceDocuments(research, candidates, dryRun) {
   const idsByExternalId = new Map();
   if (dryRun || candidates.length === 0) return idsByExternalId;
-  const externalIds = candidates.map((candidate) => candidate.source_external_id);
-  for (let index = 0; index < externalIds.length; index += 200) {
-    const batch = externalIds.slice(index, index + 200);
-    const existing = await fetchAll(() =>
-      research.from("source_documents").select("id,source_external_id").eq("source", SOURCE).in("source_external_id", batch),
-    );
-    for (const row of existing) idsByExternalId.set(row.source_external_id, row.id);
+  const bySource = new Map();
+  for (const candidate of candidates) {
+    const source = candidate.source || SOURCE;
+    const list = bySource.get(source) ?? [];
+    list.push(candidate);
+    bySource.set(source, list);
   }
 
-  const toInsert = candidates.filter((candidate) => !idsByExternalId.has(candidate.source_external_id));
+  for (const [source, group] of bySource) {
+    const externalIds = group.map((candidate) => candidate.source_external_id);
+    for (let index = 0; index < externalIds.length; index += 200) {
+      const batch = externalIds.slice(index, index + 200);
+      const existing = await fetchAll(() =>
+        research.from("source_documents").select("id,source,source_external_id").eq("source", source).in("source_external_id", batch),
+      );
+      for (const row of existing) idsByExternalId.set(`${row.source}|${row.source_external_id}`, row.id);
+    }
+  }
+
+  const toInsert = candidates.filter((candidate) => !idsByExternalId.has(documentKey(candidate)));
   for (let index = 0; index < toInsert.length; index += 200) {
     const batch = toInsert.slice(index, index + 200);
     const rows = batch.map((candidate) => ({
-      source: SOURCE,
+      source: candidate.source || SOURCE,
       source_url: candidate.source_url,
       source_external_id: candidate.source_external_id,
       fetched_at: candidate.fetched_at,
@@ -919,22 +1097,51 @@ async function persistSourceDocuments(research, candidates, dryRun) {
         highlights: candidate.highlights,
         evidence_text: candidate.evidenceText,
         response: candidate.responseMeta,
+        existing_snapshot: candidate.existingSnapshot ?? null,
         discovered_by: "scripts/research/enrich-wa-agent-prospects-with-exa.mjs",
       },
     }));
     const { data, error } = await research.from("source_documents").insert(rows).select("id,source_external_id");
     if (error) throw new Error(error.message);
-    for (const row of data ?? []) idsByExternalId.set(row.source_external_id, row.id);
+    for (let offset = 0; offset < (data ?? []).length; offset += 1) {
+      const row = data[offset];
+      const candidate = batch[offset];
+      idsByExternalId.set(`${candidate.source || SOURCE}|${row.source_external_id}`, row.id);
+    }
   }
   return idsByExternalId;
 }
 
 async function processAgent(research, apiKey, agent, args) {
+  if (args.existingOnly) {
+    const existingCandidates = buildExistingEvidenceCandidates(agent);
+    const idsByExternalId = await persistSourceDocuments(research, existingCandidates, args.dryRun);
+    const candidates = existingCandidates.map((candidate) => ({
+      ...candidate,
+      sourceDocumentId: idsByExternalId.get(documentKey(candidate)) ?? null,
+    }));
+    const enrichment = buildExistingRosterEnrichment(agent, candidates);
+    if (!args.dryRun) {
+      const patch = buildAgentUpdatePatch(agent, enrichment);
+      const { error } = await research.from("agents").update(patch).eq("id", agent.id);
+      if (error) throw new Error(error.message);
+    }
+    return {
+      agent_id: agent.id,
+      ok: true,
+      mode: "existing_only",
+      candidate_count: candidates.length,
+      failed_queries: [],
+      rejected_result_count: 0,
+      export_row: buildExportRow(agent, enrichment),
+    };
+  }
+
   const search = await searchAgent(apiKey, agent, args);
   const idsByExternalId = await persistSourceDocuments(research, search.candidates, args.dryRun);
   const candidates = search.candidates.map((candidate) => ({
     ...candidate,
-    sourceDocumentId: idsByExternalId.get(candidate.source_external_id) ?? null,
+    sourceDocumentId: idsByExternalId.get(documentKey(candidate)) ?? null,
   }));
   const enrichment = candidates.length > 0
     ? buildAgentEnrichment(agent, candidates)
@@ -969,7 +1176,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = { ...process.env, ...loadEnv(".env.local") };
   const apiKey = clean(env.EXA_API_KEY);
-  if (!apiKey) throw new Error("Set EXA_API_KEY for Exa prospect enrichment");
+  if (!apiKey && !args.existingOnly) throw new Error("Set EXA_API_KEY for Exa prospect enrichment, or use --existing-only to backfill current roster evidence");
   const supabaseUrl = clean(env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL);
   const serviceKey = clean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY || env.SERVICE_ROLE_KEY);
   if (!supabaseUrl || !serviceKey) throw new Error("Missing Supabase service credentials");
@@ -1005,6 +1212,7 @@ Options:
   --limit N              Limit selected agents after filtering
   --agent-id UUID        Enrich one existing research.agents row
   --missing-only         Only select agents missing contact/profile/social enrichment
+  --existing-only        Do not call Exa; backfill from current agent roster evidence
   --concurrency N        Concurrent agents. Default: ${DEFAULT_CONCURRENCY}
   --num-results N        Exa results per query, 1..100. Default: ${DEFAULT_NUM_RESULTS}
   --output PATH          CSV export path

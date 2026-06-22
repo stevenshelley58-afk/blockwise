@@ -6,6 +6,7 @@ import {
   buildAgentEnrichment,
   buildAgentQueries,
   buildAgentUpdatePatch,
+  buildExistingRosterEnrichment,
   buildExportRow,
   candidateFromResult,
   classifySocialUrl,
@@ -161,6 +162,54 @@ test("agent updates persist metadata without overwriting existing canonical cont
   assert.equal(patch.metadata.cold_email_enrichment.v1.email, "jane.smith@northstarrealty.com.au");
 });
 
+test("existing roster enrichment records current agent evidence without inventing social links", () => {
+  const enrichment = buildExistingRosterEnrichment(
+    {
+      ...agent,
+      email: "jane.smith@northstarrealty.com.au",
+      phone: "0412345678",
+      website_url: "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+    },
+    [
+      {
+        source_url: "https://reiwa.com.au/real-estate-agent/jane-smith-12345/",
+        sourceKind: "reiwa_profile",
+        confidence: 82,
+        evidenceText: "Jane Smith Northstar Realty Subiaco jane.smith@northstarrealty.com.au 0412 345 678",
+        sourceDocumentId: "11111111-1111-1111-1111-111111111111",
+      },
+    ],
+    "2026-06-22T00:00:00.000Z",
+  );
+
+  assert.equal(enrichment.email, "jane.smith@northstarrealty.com.au");
+  assert.equal(enrichment.phone, "0412345678");
+  assert.equal(enrichment.profile_url, "https://reiwa.com.au/real-estate-agent/jane-smith-12345/");
+  assert.equal(enrichment.social_links.facebook, null);
+  assert.equal(enrichment.sendability_status, "ready");
+  assert.equal(enrichment.skipped_reason, "exa_key_missing_social_discovery_not_run");
+  assert.deepEqual(enrichment.source_document_ids, ["11111111-1111-1111-1111-111111111111"]);
+});
+
+test("existing roster personalization uses licence-register wording for DEMIRS-only evidence", () => {
+  const enrichment = buildExistingRosterEnrichment(
+    { ...agent, email: null, phone: null, website_url: null },
+    [
+      {
+        source_url: "https://ols.demirs.wa.gov.au/api/Search/details/1/2/RR/I/GNT",
+        sourceKind: "demirs_register",
+        confidence: 74,
+        evidenceText: "Jane Smith Northstar Realty Subiaco",
+        sourceDocumentId: "33333333-3333-3333-3333-333333333333",
+      },
+    ],
+    "2026-06-22T00:00:00.000Z",
+  );
+
+  assert.match(enrichment.personalization_hook, /public WA licence register entry/);
+  assert.doesNotMatch(enrichment.personalization_hook ?? "", /public agent profile/);
+});
+
 test("export rows are agent-recipient only and include social fields", () => {
   const enrichment = buildAgentEnrichment(
     agent,
@@ -192,4 +241,5 @@ test("research source provider schema includes Exa roster and prospect enrichmen
   const schema = readFileSync("src/lib/research/schemas/common.ts", "utf8");
   assert.match(schema, /"exa_roster_search"/);
   assert.match(schema, /"exa_prospect_enrichment"/);
+  assert.match(schema, /"demirs_wa_licence_register"/);
 });

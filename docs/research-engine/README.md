@@ -51,5 +51,7 @@ Not active:
 The app-side `sourceProviderSchema` must include every source string written to
 `research.source_documents`. Exa-backed evidence currently uses:
 
-1. `exa_roster_search` for source-surface discovery that supports the WA roster.
-2. `exa_prospect_enrichment` for agent-only cold-email enrichment evidence.
+1. `demirs_wa_licence_register` for WA licence-register evidence already stored
+   by the DEMIRS sync.
+2. `exa_roster_search` for source-surface discovery that supports the WA roster.
+3. `exa_prospect_enrichment` for agent-only cold-email enrichment evidence.
