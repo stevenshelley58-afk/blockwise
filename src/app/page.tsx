@@ -742,6 +742,396 @@ const FLOW_CSS = `
   .lp-flow .flow-results-card { width: 100%; max-width: 240px; }
   .lp-flow .flow-step h3 { font-size: 22px; }
 }
+/* Attached workload board replacement. */
+.lp-flow {
+  --flow-ink: #071329;
+  --flow-muted: #647187;
+  --flow-line: #dfe7f2;
+  --flow-blue: #1677ff;
+  --flow-teal: #20b8b0;
+  --flow-green: #17aa6b;
+  --flow-gold: #d9a21b;
+  --flow-shadow: 0 24px 76px rgba(15, 32, 64, 0.10);
+  --flow-shadow-sm: 0 12px 34px rgba(15, 32, 64, 0.08);
+  background: linear-gradient(120deg, #f5fbfd 0%, #ffffff 48%, #f4f8fb 100%);
+  padding: 56px 0 72px;
+  overflow: hidden;
+}
+.lp-flow .flow-shell {
+  width: min(1680px, calc(100% - 76px));
+  margin: 0 auto;
+}
+.lp-flow .flow-panel {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.lp-flow .flow-workflow {
+  display: grid;
+  grid-template-columns: minmax(430px, 1fr) minmax(540px, 630px) minmax(420px, 480px);
+  gap: 36px;
+  align-items: stretch;
+  padding: 0;
+}
+.lp-flow .flow-col {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  gap: 24px;
+  min-width: 0;
+  min-height: 760px;
+}
+.lp-flow .flow-zone-title {
+  height: 44px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #728096;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.lp-flow .flow-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(206, 217, 234, 0.96);
+  border-radius: 30px;
+  box-shadow: var(--flow-shadow-sm);
+}
+.lp-flow .flow-task-stack {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+}
+.lp-flow .flow-task-card {
+  position: absolute;
+  width: 388px;
+  min-height: 136px;
+  display: grid;
+  gap: 12px;
+  padding: 28px 26px;
+  border: 1px solid #dfe7f3;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(18, 34, 64, 0.08);
+  animation: none;
+}
+.lp-flow .flow-task-card strong {
+  color: var(--flow-ink);
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+.lp-flow .flow-task-card span {
+  color: #8a96a9;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.lp-flow .flow-task-card .flow-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  border-radius: 999px;
+  background: #fff7e5;
+  color: #8a4a10;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1;
+  padding: 11px 14px;
+}
+.lp-flow .flow-task-card .flow-warn::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--flow-gold);
+}
+.lp-flow .flow-task-card:nth-child(1) { left: 0; top: 0; rotate: -1deg; }
+.lp-flow .flow-task-card:nth-child(2) { left: 108px; top: 126px; rotate: 1deg; }
+.lp-flow .flow-task-card:nth-child(3) { left: 22px; top: 250px; rotate: -0.7deg; }
+.lp-flow .flow-task-card:nth-child(4) { left: 128px; top: 376px; rotate: 1deg; }
+.lp-flow .flow-task-card:nth-child(5) { left: 38px; top: 500px; rotate: -0.8deg; }
+.lp-flow .flow-arrow {
+  position: absolute;
+  right: -14px;
+  top: 384px;
+  width: 72px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--flow-teal));
+}
+.lp-flow .flow-arrow::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -6px;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid var(--flow-teal);
+  border-right: 2px solid var(--flow-teal);
+  transform: rotate(45deg);
+}
+.lp-flow .flow-review,
+.lp-flow .flow-daily {
+  min-height: 0;
+  height: 100%;
+  padding: 34px;
+  display: flex;
+  flex-direction: column;
+}
+.lp-flow .flow-review-head,
+.lp-flow .flow-daily-head,
+.lp-flow .flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.lp-flow .flow-review-head { margin-bottom: 28px; }
+.lp-flow .flow-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 17px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+.lp-flow .flow-pill.green { background: #eafaf3; color: #2e7d55; }
+.lp-flow .flow-pill.teal { background: #e9fbfa; color: #246c69; }
+.lp-flow .flow-preview-box {
+  height: 124px;
+  margin-bottom: 36px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.95), rgba(32, 184, 176, 0.95));
+}
+.lp-flow .flow-preview-box::before {
+  content: "Free appraisal";
+  position: absolute;
+  left: 28px;
+  bottom: 31px;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+.lp-flow .flow-preview-box::after {
+  content: "";
+  position: absolute;
+  inset: auto -24px -52px 46%;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.23);
+}
+.lp-flow .flow-fields {
+  display: grid;
+  gap: 0;
+  margin: 0 0 26px;
+}
+.lp-flow .flow-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid #edf1f7;
+  padding: 24px 0;
+}
+.lp-flow .flow-small {
+  color: var(--flow-muted);
+  font-size: 20px;
+  line-height: 1.35;
+}
+.lp-flow .flow-field strong,
+.lp-flow .flow-summary strong {
+  color: var(--flow-ink);
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+.lp-flow .flow-primary-btn {
+  border: 0;
+  border-radius: 18px;
+  cursor: pointer;
+  font-weight: 900;
+}
+.lp-flow .flow-approve {
+  width: 100%;
+  min-height: 78px;
+  margin-top: auto;
+  background: #4da66b;
+  color: #ffffff;
+  font-size: 24px;
+  animation: none;
+}
+.lp-flow .flow-daily-head {
+  margin-bottom: 36px;
+}
+.lp-flow .flow-daily-head h3 {
+  margin: 0;
+  color: var(--flow-ink);
+  font-size: 30px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+.lp-flow .flow-metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.lp-flow .flow-metric {
+  min-height: 158px;
+  padding: 34px 26px;
+  border: 1px solid #e4ebf5;
+  border-radius: 28px;
+  background: #f5f8fd;
+}
+.lp-flow .flow-metric b {
+  display: block;
+  margin-top: 20px;
+  color: var(--flow-ink);
+  font-size: 48px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.lp-flow .flow-summary {
+  border-top: 1px solid #edf1f7;
+  margin-top: 0;
+  padding-top: 28px;
+}
+.lp-flow .flow-summary p {
+  margin: 24px 0 0;
+}
+.lp-flow .flow-email-preview {
+  margin-top: 46px;
+  padding: 28px 24px;
+  border: 1px solid #e4ebf5;
+  border-radius: 28px;
+  background: #f6f9fd;
+}
+.lp-flow .flow-email-preview strong {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--flow-ink);
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+.lp-flow .flow-email-line {
+  height: 13px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: #dfe7f2;
+}
+.lp-flow .flow-email-line:nth-child(3) { width: 82%; }
+.lp-flow .flow-email-line:nth-child(4) { width: 58%; }
+.lp-flow .flow-update-note {
+  margin: auto 0 0;
+  padding-top: 28px;
+  color: var(--flow-muted);
+  font-size: 20px;
+  line-height: 1.35;
+}
+@media (max-width: 1280px) {
+  .lp-flow .flow-shell { width: min(1180px, calc(100% - 48px)); }
+  .lp-flow .flow-workflow {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 420px) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .lp-flow .flow-col { min-height: 548px; }
+  .lp-flow .flow-task-card {
+    width: 260px;
+    min-height: 92px;
+    gap: 7px;
+    padding: 16px 17px;
+    border-radius: 19px;
+  }
+  .lp-flow .flow-task-card strong { font-size: 16px; }
+  .lp-flow .flow-task-card span { font-size: 13px; }
+  .lp-flow .flow-task-card .flow-warn { gap: 7px; font-size: 11px; padding: 6px 8px; }
+  .lp-flow .flow-task-card .flow-warn::before { width: 7px; height: 7px; }
+  .lp-flow .flow-task-card:nth-child(1) { left: 0; top: 0; }
+  .lp-flow .flow-task-card:nth-child(2) { left: 72px; top: 86px; }
+  .lp-flow .flow-task-card:nth-child(3) { left: 14px; top: 172px; }
+  .lp-flow .flow-task-card:nth-child(4) { left: 84px; top: 258px; }
+  .lp-flow .flow-task-card:nth-child(5) { left: 25px; top: 344px; }
+  .lp-flow .flow-arrow { right: -10px; top: 252px; }
+  .lp-flow .flow-review,
+  .lp-flow .flow-daily { padding: 22px; }
+  .lp-flow .flow-pill { padding: 7px 10px; font-size: 12px; }
+  .lp-flow .flow-preview-box { height: 82px; margin-bottom: 16px; border-radius: 18px; }
+  .lp-flow .flow-preview-box::before { left: 18px; bottom: 17px; font-size: 21px; }
+  .lp-flow .flow-field { padding: 13px 0; }
+  .lp-flow .flow-field strong,
+  .lp-flow .flow-summary strong { font-size: 17px; }
+  .lp-flow .flow-small { font-size: 13px; }
+  .lp-flow .flow-approve { min-height: 52px; font-size: 16px; }
+  .lp-flow .flow-daily-head { margin-bottom: 20px; }
+  .lp-flow .flow-daily-head h3 { font-size: 21px; }
+  .lp-flow .flow-metric { min-height: 105px; padding: 16px; border-radius: 18px; }
+  .lp-flow .flow-metric b { margin-top: 8px; font-size: 31px; }
+  .lp-flow .flow-email-preview { margin-top: 18px; padding: 15px; border-radius: 18px; }
+  .lp-flow .flow-email-preview strong { margin-bottom: 6px; font-size: 16px; }
+  .lp-flow .flow-email-line { height: 8px; margin-top: 9px; }
+  .lp-flow .flow-update-note { padding-top: 16px; font-size: 13px; }
+}
+@media (max-width: 1080px) {
+  .lp-flow .flow-workflow { grid-template-columns: 1fr; }
+  .lp-flow .flow-col {
+    grid-template-rows: auto 1fr;
+    min-height: auto;
+  }
+  .lp-flow .flow-zone-title {
+    height: auto;
+    justify-content: flex-start;
+    text-align: left;
+    white-space: normal;
+  }
+  .lp-flow .flow-task-stack {
+    display: grid;
+    gap: 10px;
+    min-height: auto;
+  }
+  .lp-flow .flow-task-card {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    width: auto;
+    min-height: auto;
+    rotate: 0deg !important;
+  }
+  .lp-flow .flow-arrow { display: none; }
+}
+@media (max-width: 720px) {
+  .lp-flow {
+    padding: 46px 0 58px;
+  }
+  .lp-flow .flow-shell {
+    width: min(100% - 32px, 680px);
+  }
+  .lp-flow .flow-zone-title {
+    font-size: 13px;
+  }
+  .lp-flow .flow-metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
 `;
 
 const TABLE_ROWS = [
@@ -802,94 +1192,88 @@ export default function HomePage() {
             local-ad-radar API. The hero suburb audit handles search. */}
         <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
 
-        <section id="workflow" className="lp-section lp-flow" aria-labelledby="flow-title">
+        <section id="workflow" className="lp-section lp-flow" aria-label="Blockwise ad workflow">
           <style dangerouslySetInnerHTML={{ __html: FLOW_CSS }} />
           <div className="flow-shell">
-            <div className="flow-intro">
-              <h2 id="flow-title" className="flow-h2">
-                <span>Too much time is wasted on ads.</span>
-                <span>Not enough time is spent doing</span>
-                <span>the work that actually matters.</span>
-              </h2>
-              <p className="flow-sub">
-                Blockwise handles the ad work for you. Approve what goes live,
-                receive updates, and focus on your clients.
-              </p>
-            </div>
-
-            <div className="flow-panel" aria-hidden="true">
-              <div className="flow-track">
-                <svg className="flow-path" viewBox="0 0 900 132" preserveAspectRatio="none" focusable="false">
-                  <defs>
-                    <linearGradient id="workflow-line-gradient" x1="0" x2="1" y1="0" y2="0">
-                      <stop offset="0%" stopColor="#5a9eea" />
-                      <stop offset="52%" stopColor="#5bbdb5" />
-                      <stop offset="100%" stopColor="#6c95e7" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M0 66H900" fill="none" stroke="#d9e1ee" strokeDasharray="2 12" strokeLinecap="round" strokeWidth="2" />
-                  <path d="M12 66C210 -4 314 19 450 66C585 113 684 129 888 66" fill="none" stroke="url(#workflow-line-gradient)" strokeLinecap="round" strokeWidth="8" />
-                </svg>
-
-                <div className="flow-radar">
-                  <span className="flow-radar-sweep" />
-                  <span className="flow-radar-ring" />
-                  <span className="flow-radar-dot flow-radar-dot-one" />
-                  <span className="flow-radar-dot flow-radar-dot-two" />
-                  <span className="flow-radar-core" />
-                </div>
-
-                <div className="flow-prepared-card">
-                  <div className="flow-prepared-creative" />
-                  <div className="flow-prepared-line" />
-                  <div className="flow-prepared-line flow-prepared-line-short" />
-                  <span className="flow-ready-pill">Ready</span>
-                </div>
-
-                <span className="flow-node-dot" />
-
-                <div className="flow-results-card">
-                  <div className="flow-results-head">
-                    <span className="flow-results-label">Last 7 days</span>
-                    <span className="flow-live">Live</span>
+            <div className="flow-panel">
+              <div className="flow-workflow">
+                <div className="flow-col">
+                  <h2 className="flow-zone-title">Ad work agents get stuck doing</h2>
+                  <div className="flow-task-stack" aria-label="Manual ad tasks">
+                    <article className="flow-task-card">
+                      <strong>Pick suburb audience</strong>
+                      <span>Meta targeting choices</span>
+                      <span className="flow-warn">Needs review</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Write seller lead copy</strong>
+                      <span>Hooks, headline, CTA</span>
+                      <span className="flow-warn">Draft again</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Resize listing image</strong>
+                      <span>Feed, story, reels</span>
+                      <span className="flow-warn">Wrong size</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Set lead form questions</strong>
+                      <span>Contact, suburb, intent</span>
+                      <span className="flow-warn">Not ready</span>
+                    </article>
+                    <article className="flow-task-card">
+                      <strong>Send vendor update</strong>
+                      <span>Spend, leads, result</span>
+                      <span className="flow-warn">Still pending</span>
+                    </article>
+                    <span className="flow-arrow" aria-hidden="true" />
                   </div>
-                  <div className="flow-results-body">
-                    <div className="flow-result">
-                      <span className="flow-result-number">47</span>
-                      <span className="flow-result-label">leads</span>
-                    </div>
-                    <div className="flow-result">
-                      <span className="flow-result-number">$13</span>
-                      <span className="flow-result-label">cost / lead</span>
-                    </div>
-                  </div>
-                  <svg className="flow-sparkline" viewBox="0 0 154 24" focusable="false">
-                    <path d="M1 18L23 14L42 17L63 8L84 11L108 3L130 4L153 4" fill="none" stroke="#5bbdb5" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-                  </svg>
                 </div>
-              </div>
-            </div>
 
-            <div className="flow-steps" aria-label="How this works">
-              <div className="flow-step">
-                <span className="flow-num flow-num-blue">1</span>
-                <div>
-                  <h3>Scan</h3>
-                  <p>See local lead angles.</p>
+                <div className="flow-col">
+                  <h2 className="flow-zone-title">Blockwise prepares it</h2>
+                  <article className="flow-card flow-review">
+                    <div className="flow-review-head">
+                      <span className="flow-pill green">Ready for review</span>
+                      <span className="flow-pill teal">Seller leads</span>
+                    </div>
+                    <div className="flow-preview-box" aria-hidden="true" />
+                    <div className="flow-fields">
+                      <div className="flow-field"><span className="flow-small">Angle</span><strong>Free appraisal</strong></div>
+                      <div className="flow-field"><span className="flow-small">Creative</span><strong>Prepared</strong></div>
+                      <div className="flow-field"><span className="flow-small">Lead form</span><strong>Ready</strong></div>
+                      <div className="flow-field"><span className="flow-small">Budget</span><strong>$25/day</strong></div>
+                      <div className="flow-field"><span className="flow-small">Updates</span><strong>Daily email</strong></div>
+                    </div>
+                    <button type="button" className="flow-primary-btn flow-approve">Approve</button>
+                  </article>
                 </div>
-              </div>
-              <div className="flow-step">
-                <span className="flow-num flow-num-teal">2</span>
-                <div>
-                  <h3>Prepared</h3>
-                  <p>Blockwise prepares the ads.</p>
-                </div>
-              </div>
-              <div className="flow-step">
-                <span className="flow-num flow-num-purple">3</span>
-                <div>
-                  <h3>Leads</h3>
-                  <p>Approve, run, and track results.</p>
+
+                <div className="flow-col">
+                  <h2 className="flow-zone-title">Then updates are sent</h2>
+                  <article className="flow-card flow-daily">
+                    <div className="flow-daily-head">
+                      <h3>Daily update</h3>
+                      <span className="flow-pill green">Example</span>
+                    </div>
+                    <div className="flow-metric-grid">
+                      <div className="flow-metric"><span className="flow-small">Leads</span><b>12</b></div>
+                      <div className="flow-metric"><span className="flow-small">Spend</span><b>$86</b></div>
+                    </div>
+                    <div className="flow-summary">
+                      <div className="flow-row"><span className="flow-small">Best angle</span><strong>Free appraisal</strong></div>
+                      <p className="flow-small">Summary ready without logging into Ads Manager.</p>
+                    </div>
+                    <div className="flow-email-preview" aria-label="Daily update email preview">
+                      <strong>Daily email sent</strong>
+                      <span className="flow-small">Leads, spend and best angle summarized.</span>
+                      <div className="flow-email-line" />
+                      <div className="flow-email-line" />
+                      <div className="flow-email-line" />
+                    </div>
+                    <p className="flow-update-note">
+                      The agent gets the summary without checking dashboards or sending manual updates.
+                    </p>
+                  </article>
                 </div>
               </div>
             </div>
