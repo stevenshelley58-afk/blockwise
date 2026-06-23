@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
+import { getOfflineAuthSession } from "@/lib/auth/offline";
+import { getOfflineAuthDisabledReason, isOfflineAuthEnabled } from "@/lib/auth/offline-config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +19,21 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await Promise.resolve(searchParams) : {};
   const error = firstParam(params.error);
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const offlineAuthEnabled = isOfflineAuthEnabled();
+  const offlineAuthDisabledReason =
+    process.env.BLOCKWISE_OFFLINE_AUTH_ENABLED === "true" ? getOfflineAuthDisabledReason() : null;
+  const offlineSession = await getOfflineAuthSession();
+
+  if (offlineSession) {
+    redirect("/home");
+  }
+
+  const user = offlineAuthEnabled
+    ? null
+    : await createSupabaseServerClient()
+        .then((supabase) => supabase.auth.getUser())
+        .then(({ data }) => data.user)
+        .catch(() => null);
 
   if (user) {
     redirect("/home");
@@ -44,6 +57,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
         <LoginForm
+          offlineAuthEnabled={offlineAuthEnabled}
+          offlineAuthDisabledReason={offlineAuthDisabledReason}
           showTestProfiles={process.env.NODE_ENV !== "production"}
           testProfilePassword={process.env.NODE_ENV !== "production" ? process.env.BLOCKWISE_DEV_PASSWORD : undefined}
         />

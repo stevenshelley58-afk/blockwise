@@ -8,6 +8,7 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { TrialStatusPill, type TrialStatus } from "@/components/trial-status-pill";
+import { getOfflineAuthSession } from "@/lib/auth/offline";
 import { hasOperatorAccessFromRows } from "@/lib/auth/workspace-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -126,6 +127,7 @@ async function loadInitialTrialStatus(
 }
 
 export async function AppShell({ children, requiredAccess = "authenticated" }: AppShellProps) {
+  const offlineSession = await getOfflineAuthSession();
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -193,6 +195,11 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
             <AccountMenu email={user.email ?? ""} name={accountName} role={roleLabel} />
           </div>
         </header>
+        {offlineSession ? (
+          <div className="offline-auth-banner" role="status">
+            Offline mode is active. Live Supabase data and writes are unavailable.
+          </div>
+        ) : null}
         {children}
       </div>
       <MobileBottomNav

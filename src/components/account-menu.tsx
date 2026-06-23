@@ -2,7 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -14,12 +14,22 @@ type AccountMenuProps = {
 
 export function AccountMenu({ email, name, role }: AccountMenuProps) {
   const router = useRouter();
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function signOut() {
     setIsSigningOut(true);
-    await supabase.auth.signOut();
+    const supabaseSignOut = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        await supabase.auth.signOut();
+      } catch {
+        // Offline auth can run without Supabase browser env.
+      }
+    };
+    await Promise.all([
+      supabaseSignOut(),
+      fetch("/api/auth/offline-logout", { method: "POST" }).catch(() => null),
+    ]);
     router.replace("/login");
     router.refresh();
   }

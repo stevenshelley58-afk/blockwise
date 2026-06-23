@@ -7,6 +7,9 @@ const signupPagePath = "src/app/signup/page.tsx";
 const confirmRoutePath = "src/app/auth/confirm/route.ts";
 const loginPagePath = "src/app/login/page.tsx";
 const loginFormPath = "src/components/login-form.tsx";
+const offlineConfigPath = "src/lib/auth/offline-config.ts";
+const offlineLoginRoutePath = "src/app/api/auth/offline-login/route.ts";
+const middlewarePath = "src/middleware.ts";
 const forgotPasswordPagePath = "src/app/forgot-password/page.tsx";
 const resetPasswordPagePath = "src/app/reset-password/page.tsx";
 const pageGuardsPath = "src/lib/auth/page-guards.ts";
@@ -87,6 +90,24 @@ test("login and password reset pass Turnstile captcha tokens to Supabase auth", 
   assert.match(forgotPassword, /hasTurnstileSiteKey\(\) && !turnstileToken/);
   assert.match(forgotPassword, /resetPasswordForEmail\(email,\s*\{[\s\S]*captchaToken:\s*turnstileToken/i);
   assert.match(forgotPassword, /setTurnstileResetSignal\(\(signal\) => signal \+ 1\)/);
+});
+
+test("offline login is explicitly enabled, password-backed, and middleware-gated", () => {
+  const config = readFileSync(offlineConfigPath, "utf8");
+  const loginPage = readFileSync(loginPagePath, "utf8");
+  const loginForm = readFileSync(loginFormPath, "utf8");
+  const loginRoute = readFileSync(offlineLoginRoutePath, "utf8");
+  const middleware = readFileSync(middlewarePath, "utf8");
+
+  assert.match(config, /BLOCKWISE_OFFLINE_AUTH_ENABLED/);
+  assert.match(config, /getOfflineAuthPassword\(\)\.length >= 16/);
+  assert.match(config, /timingSafeEqual/);
+  assert.match(loginPage, /isOfflineAuthEnabled\(\)/);
+  assert.match(loginForm, /\/api\/auth\/offline-login/);
+  assert.match(loginRoute, /verifyOfflineAuthPassword\(password\)/);
+  assert.match(loginRoute, /httpOnly:\s*true/);
+  assert.match(middleware, /hasValidOfflineCookie/);
+  assert.match(middleware, /crypto\.subtle\.digest\("SHA-256"/);
 });
 
 test("reset and denied access flows avoid dead-end redirects", () => {

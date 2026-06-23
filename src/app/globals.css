@@ -281,6 +281,15 @@ textarea {
   font-weight: 700;
 }
 
+.offline-auth-banner {
+  border-bottom: 1px solid color-mix(in srgb, var(--amber) 28%, var(--line));
+  background: color-mix(in srgb, var(--amber) 10%, var(--surface));
+  color: var(--amber);
+  padding: 10px 28px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .sidebar-footer {
   display: grid;
   gap: 8px;

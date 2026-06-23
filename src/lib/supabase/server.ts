@@ -2,7 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { getOfflineAuthSession } from "../auth/offline.ts";
 import { cleanSupabaseEnv } from "./env.ts";
+import { createOfflineSupabaseClient } from "./offline.ts";
+import type { BlockwiseSupabaseClient } from "./types.ts";
 
 type CookieToSet = {
   name: string;
@@ -10,7 +13,12 @@ type CookieToSet = {
   options: CookieOptions;
 };
 
-export async function createSupabaseServerClient() {
+export async function createSupabaseServerClient(): Promise<BlockwiseSupabaseClient> {
+  const offlineSession = await getOfflineAuthSession();
+  if (offlineSession) {
+    return createOfflineSupabaseClient(offlineSession) as unknown as BlockwiseSupabaseClient;
+  }
+
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -32,5 +40,5 @@ export async function createSupabaseServerClient() {
         },
       },
     },
-  );
+  ) as BlockwiseSupabaseClient;
 }

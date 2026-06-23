@@ -71,8 +71,18 @@ export function MobileBottomNav({ variant, showApprovals = true, account }: Mobi
 
   async function signOut() {
     setIsSigningOut(true);
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    const supabaseSignOut = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        await supabase.auth.signOut();
+      } catch {
+        // Offline auth can run without Supabase browser env.
+      }
+    };
+    await Promise.all([
+      supabaseSignOut(),
+      fetch("/api/auth/offline-logout", { method: "POST" }).catch(() => null),
+    ]);
     router.replace("/login");
     router.refresh();
   }
