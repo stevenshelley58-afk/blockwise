@@ -21,6 +21,10 @@
 - Product positioning: Blockwise prepares real estate ads for agents. The goal
   is more leads and listings, not helping agents "sell houses" or implying
   Blockwise sells property for them.
+- Public marketing design rule: less is more. Keep the first viewport focused
+  on one message, one primary action, and one restrained proof visual. Avoid
+  dashboard collages, dense panels, excessive cards, and feature pile-ups that
+  make the page feel complex.
 
 ## Safety rules (always hold)
 
