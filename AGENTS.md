@@ -18,6 +18,9 @@
   campaign/campaigns language in marketing or product copy unless an external
   platform term absolutely requires it; prefer plain words like ads, draft ads,
   live ads, approvals, and results.
+- Product positioning: Blockwise prepares real estate ads for agents. The goal
+  is more leads and listings, not helping agents "sell houses" or implying
+  Blockwise sells property for them.
 
 ## Safety rules (always hold)
 

@@ -1146,10 +1146,10 @@ const FLOW_CSS = `
 `;
 
 const TABLE_ROWS = [
-  { name: "Mt Lawley appraisal", description: "Seller lead angle", status: "Active", clicks: "247", leads: "18", spend: "$324" },
+  { name: "Mt Lawley appraisal", description: "Listing lead angle", status: "Active", clicks: "247", leads: "18", spend: "$324" },
   { name: "Subiaco just listed", description: "Listing attention", status: "Active", clicks: "182", leads: "11", spend: "$210" },
   { name: "Cottesloe open home", description: "Open home traffic", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
-  { name: "South Perth market update", description: "Seller proof", status: "Draft", clicks: "--", leads: "--", spend: "--" },
+  { name: "South Perth market update", description: "Listing proof", status: "Draft", clicks: "--", leads: "--", spend: "--" },
 ] as const;
 
 export default function HomePage() {
@@ -1184,9 +1184,10 @@ export default function HomePage() {
               <span className="lp-hero-pill-dot" aria-hidden />
               Meta ads for real estate agents
             </span>
-            <h1 id="hero-title">Your competitors are advertising. Are you?</h1>
+            <h1 id="hero-title">See what competitors are running. Get your first ad prepared today.</h1>
             <p className="lp-hero-sub">
-              Ads built from what&rsquo;s actually working in your area. Start getting leads today.
+              Blockwise prepares real estate ads from what&rsquo;s working in your area, so you can get more
+              leads and listings without building ads yourself.
             </p>
             <div className="lp-hero-scan">
               <LandingAdRadarScan
@@ -1215,7 +1216,7 @@ export default function HomePage() {
                       <span className="flow-warn">Needs review</span>
                     </article>
                     <article className="flow-task-card">
-                      <strong>Write seller lead copy</strong>
+                      <strong>Write listing lead copy</strong>
                       <span>Hooks, headline, CTA</span>
                       <span className="flow-warn">Draft again</span>
                     </article>
@@ -1243,7 +1244,7 @@ export default function HomePage() {
                   <article className="flow-card flow-review">
                     <div className="flow-review-head">
                       <span className="flow-pill green">Ready for review</span>
-                      <span className="flow-pill teal">Seller leads</span>
+                      <span className="flow-pill teal">Listing leads</span>
                     </div>
                     <div className="flow-preview-box" aria-hidden="true" />
                     <div className="flow-fields">
@@ -1351,12 +1352,12 @@ export default function HomePage() {
               <h2 className="lp-h2">Know the property before the call</h2>
               <p className="lp-lead">
                 Check zoning, overlays, subdivision potential, renovation limits, and planning red flags before
-                speaking to a seller, buyer, or investor.
+                speaking to a prospect, buyer, or investor.
               </p>
             </div>
             <div className="lp-features">
               <Feature
-                title="Seller appraisal prep"
+                title="Listing appraisal prep"
                 copy="Walk in with useful property signals, not guesses."
                 icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-8h6v8" /></svg>}
               />
