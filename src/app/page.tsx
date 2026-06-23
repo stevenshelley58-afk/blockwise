@@ -382,10 +382,10 @@ const FLOW_CSS = `
   text-decoration: none;
   white-space: nowrap;
   box-shadow: 0 12px 26px rgba(22, 119, 255, 0.22);
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, scale 0.12s ease;
 }
 .lp-flow .flow-btn:hover { background: #0f63e6; }
-.lp-flow .flow-btn:active { transform: translateY(1px); }
+.lp-flow .flow-btn:active { scale: 0.96; }
 @media (max-width: 1080px) {
   .lp-flow .flow-workflow { grid-template-columns: 1fr; padding: 22px; }
   .lp-flow .flow-col { grid-template-rows: auto 1fr; min-height: auto; }
