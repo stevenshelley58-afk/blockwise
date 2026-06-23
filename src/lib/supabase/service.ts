@@ -1,8 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim() ?? "";
-}
+import { cleanSupabaseEnv } from "./env.ts";
 
 export function createSupabaseServiceClient() {
   const supabaseUrl = cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);

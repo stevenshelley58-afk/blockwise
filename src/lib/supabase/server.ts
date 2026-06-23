@@ -2,15 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { cleanSupabaseEnv } from "./env.ts";
+
 type CookieToSet = {
   name: string;
   value: string;
   options: CookieOptions;
 };
-
-function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim() ?? "";
-}
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();

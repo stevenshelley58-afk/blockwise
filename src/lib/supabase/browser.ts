@@ -1,8 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim();
-}
+import { cleanSupabaseEnv } from "./env.ts";
 
 export function createSupabaseBrowserClient() {
   const supabaseUrl = cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
