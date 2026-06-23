@@ -8,16 +8,15 @@ import { SignInLink } from "@/components/landing/sign-in-link";
 export const metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
-  description:
-    "Simple pricing for real estate teams. Start with a free 7-day trial — 10 free ad packs included.",
+  description: "Simple pricing for real estate teams. Start with a free 7-day trial and 10 free ads.",
 };
 
 const INCLUDED = [
-  "Up to 10 ad packs per month",
-  "Campaign builder (Just Listed, Open Home, Just Sold, Free Appraisal, Buyer Demand, Market Update)",
+  "10 free ads during the trial",
+  "Ads prepared from local competitor research",
   "Meta ad account connection",
-  "Team approval workflow",
-  "Live performance reporting",
+  "Approval before anything runs",
+  "Lead and spend results",
   "Email support",
 ] as const;
 
@@ -30,10 +29,6 @@ export default function PricingPage() {
             <BlockwiseLogo />
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
-            <a href="/#radar">Ad Radar</a>
-            <a href="/#campaign-types">Campaigns</a>
-            <a href="/#workflow">How it works</a>
-            <a href="/#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
@@ -134,7 +129,7 @@ export default function PricingPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Start with a 7-day free trial — 10 free ad packs included. No card required.
+                  Start with a 7-day free trial and 10 free ads. No card required.
                 </div>
               </div>
 
@@ -170,19 +165,6 @@ export default function PricingPage() {
                   >
                     Start free trial
                   </CtaLink>
-                  <a
-                    href="/#managed-setup"
-                    style={{
-                      textAlign: "center",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: "var(--lp-muted)",
-                      textDecoration: "none",
-                      padding: "6px 0",
-                    }}
-                  >
-                    Book a walkthrough
-                  </a>
                 </div>
               </div>
             </div>
@@ -195,8 +177,7 @@ export default function PricingPage() {
           <div>
             <BlockwiseLogo />
             <p>
-              The ad platform for real estate teams. Create, approve, export and track property
-              campaigns from one place.
+              The ad platform for real estate teams. Prepare, approve and track property ads from one place.
             </p>
             <p className="lp-footer-contact">
               <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
@@ -204,9 +185,7 @@ export default function PricingPage() {
           </div>
           <div>
             <h4>Product</h4>
-            <a href="/#radar">Ad Radar</a>
-            <a href="/#campaign-types">Campaigns</a>
-            <a href="/#workflow">How it works</a>
+            <a href="/#how-it-works">How it works</a>
             <a href="/#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </div>

@@ -41,7 +41,7 @@ test("onboarding logo upload previews flexible file input", () => {
   assert.match(wizard, /capturePagePaste/);
 });
 
-test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only for managed setup", () => {
+test("landing CTA tracking fires cta_click and the simplified homepage keeps signup primary", () => {
   const ctaLink = readFileSync("src/components/landing/cta-link.tsx", "utf8");
   const pixel = readFileSync("src/lib/analytics/pixel.ts", "utf8");
   const homepage = readFileSync("src/app/page.tsx", "utf8");
@@ -49,14 +49,14 @@ test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only 
   // Every CTA fires a cta_click with the location label.
   assert.match(ctaLink, /trackCtaClick\(location/);
   assert.match(pixel, /trackCustom", "cta_click"/);
-  // Managed setup links also fire BookDemoClick for analytics continuity.
+  // Managed setup tracking remains for any legacy/deep-linked managed setup CTA.
   assert.match(ctaLink, /if \(href === "#managed-setup"\)/);
   assert.match(ctaLink, /trackDemoCtaClick\(location\)/);
   // The hook is not a single arrow-onClick that fires only for managed setup.
   assert.doesNotMatch(ctaLink, /onClick=\{\(\) => trackDemoCtaClick\(location\)\}/);
-  // The page still has both kinds of links.
+  // The public page now keeps signup as the only CTA path.
   assert.match(homepage, /href="\/signup"/);
-  assert.match(homepage, /href="#managed-setup"/);
+  assert.doesNotMatch(homepage, /href="#managed-setup"/);
 });
 
 test("trial pill refreshes from the first-ad generation event", () => {
