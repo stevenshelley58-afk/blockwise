@@ -101,6 +101,8 @@ test("offline login is explicitly enabled, password-backed, and middleware-gated
 
   assert.match(config, /BLOCKWISE_OFFLINE_AUTH_ENABLED/);
   assert.match(config, /getOfflineAuthPassword\(\)\.length >= 16/);
+  assert.match(config, /is_operator:\s*true/);
+  assert.match(config, /role:\s*"operator"/);
   assert.match(config, /timingSafeEqual/);
   assert.match(loginPage, /isOfflineAuthEnabled\(\)/);
   assert.match(loginForm, /\/api\/auth\/offline-login/);

@@ -52,14 +52,14 @@ export function getOfflineAuthSessionTemplate(): OfflineAuthSession {
     },
     profile: {
       full_name: process.env.BLOCKWISE_OFFLINE_NAME?.trim() || "Steven",
-      is_operator: false,
+      is_operator: true,
     },
     membership: {
-      role: "owner",
+      role: "operator",
       workspaces: {
         id: process.env.BLOCKWISE_OFFLINE_WORKSPACE_ID?.trim() || "00000000-0000-4000-8000-000000000101",
-        name: process.env.BLOCKWISE_OFFLINE_WORKSPACE_NAME?.trim() || "Offline Workspace",
-        mode: "self_serve",
+        name: process.env.BLOCKWISE_OFFLINE_WORKSPACE_NAME?.trim() || "Operator Console",
+        mode: "monitor",
         region: process.env.BLOCKWISE_OFFLINE_REGION?.trim() || "WA",
       },
     },
