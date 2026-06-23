@@ -359,8 +359,8 @@ textarea {
 
 .icon-button {
   display: inline-grid;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: var(--r-ctl);
@@ -715,6 +715,7 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
+  text-wrap: balance;
 }
 
 h1 {
@@ -746,6 +747,7 @@ h3 {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.6;
+  text-wrap: pretty;
 }
 
 .actions {
@@ -769,12 +771,16 @@ h3 {
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, scale 0.12s ease;
 }
 
 .button:hover {
   background: var(--accent-press);
   border-color: var(--accent-press);
+}
+
+.button:active:not(:disabled) {
+  scale: 0.96;
 }
 
 .button:focus-visible {
@@ -7071,10 +7077,11 @@ a.operator-file-row {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid transparent; border-radius: var(--r-card);
   padding: 10px 18px; font-size: 14px; font-weight: 650;
-  text-decoration: none; cursor: pointer; transition: background .15s ease, border-color .15s ease;
+  text-decoration: none; cursor: pointer; transition: background .15s ease, border-color .15s ease, scale .12s ease;
 }
 .lp-btn-primary { background: var(--lp-primary); color: #fff; }
 .lp-btn-primary:hover { background: var(--lp-primary-light); }
+.lp-btn:active:not(:disabled) { scale: .96; }
 .lp-btn-ghost { background: var(--surface); color: var(--lp-ink); border-color: var(--line-heavy); }
 .lp-btn-ghost:hover { background: var(--lp-surface); }
 .lp-btn-light { background: var(--surface); color: var(--lp-primary); }
@@ -7211,8 +7218,8 @@ a.operator-file-row {
 
 /* features */
 .lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 28px; }
-.lp-feature { padding: 22px 20px; border-radius: var(--r-panel); transition: background .15s ease; }
-.lp-feature:hover { background: var(--lp-surface); }
+.lp-feature { padding: 22px 20px; border-radius: var(--r-panel); transition: background .15s ease, box-shadow .15s ease; }
+.lp-feature:hover { background: var(--lp-surface); box-shadow: 0 0 0 1px var(--lp-border); }
 .lp-feature-icon {
   width: 40px; height: 40px; border-radius: var(--r-card);
   display: grid; place-items: center;
@@ -7220,7 +7227,7 @@ a.operator-file-row {
   margin-bottom: 16px;
 }
 .lp-feature h3 { margin: 0 0 7px; font-size: 16.5px; font-weight: 750; }
-.lp-feature p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--lp-muted); }
+.lp-feature p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--lp-muted); text-wrap: pretty; }
 
 /* control / table */
 .lp-control-list { display: grid; gap: 16px; margin: 32px 0 0; padding: 0; }
