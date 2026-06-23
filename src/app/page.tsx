@@ -1162,7 +1162,7 @@ export default function HomePage() {
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
             <a href="#radar">Ad Radar</a>
-            <a href="#campaign-types">Done for you</a>
+            <a href="#done-for-you">Done for you</a>
             <a href="#property-check">Property Check</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
@@ -1197,7 +1197,7 @@ export default function HomePage() {
                 useBestGuess
               />
             </div>
-            <p className="lp-hero-microcopy">7-day trial · 10 ad packs · No card required</p>
+            <p className="lp-hero-microcopy">7-day trial · 10 ads · No card required</p>
           </div>
         </section>
 
@@ -1289,7 +1289,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="campaign-types" className="lp-section lp-dfy" aria-labelledby="dfy-title">
+        <section id="done-for-you" className="lp-section lp-dfy" aria-labelledby="dfy-title">
           <div className="lp-shell">
             <div className="lp-dfy-card">
               <div className="lp-dfy-pad">
@@ -1394,7 +1394,7 @@ export default function HomePage() {
                 <li><span className="lp-check" aria-hidden>✓</span>See every result in one dashboard</li>
               </ul>
             </div>
-            <div className="lp-control-dashboard" aria-label="Campaign reporting table preview">
+            <div className="lp-control-dashboard" aria-label="Ad reporting table preview">
               <div className="lp-control-dashboard-head">
                 <div>
                   <span className="lp-table-label">Control dashboard</span>
@@ -1497,9 +1497,9 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
-              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
+              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ads.</h2>
               <p className="lp-lead lp-lead-light">
-                No card required. Create draft campaigns, review the ads and connect your ad account
+                No card required. Create draft ads, review them and connect your ad account
                 when you are ready for final setup.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
@@ -1507,8 +1507,8 @@ export default function HomePage() {
               </CtaLink>
             </div>
             <div className="lp-trial-grid">
-              <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the campaign builder from the minute you confirm your email.</span></div>
-              <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
+              <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the ad builder from the minute you confirm your email.</span></div>
+              <div className="lp-trial-item"><strong>10 free ads</strong><span>Create up to 10 free ads during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
@@ -1519,9 +1519,9 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow">Managed setup</p>
-              <h2 className="lp-h2" id="demo-title">Want help preparing your first campaign?</h2>
+              <h2 className="lp-h2" id="demo-title">Want help preparing your first ad?</h2>
               <p className="lp-lead">
-                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
+                Book a 15-minute walkthrough. We&rsquo;ll help you create your first ad, connect
                 your ad account and review everything before handoff.
               </p>
             </div>
@@ -1538,16 +1538,16 @@ export default function HomePage() {
                 <details open>
                   <summary>Who pays for ad spend?</summary>
                   <p>
-                    You do. Campaigns run through your connected ad account and your ad spend is paid to
+                    You do. Ads run through your connected ad account and your ad spend is paid to
                     the platform directly. Blockwise is the software used to create, approve, export and
-                    track the campaign.
+                    track the ad.
                   </p>
                 </details>
                 <details>
                   <summary>Do I need a Meta ad account?</summary>
                   <p>
-                    You can create and review campaigns before connecting Meta. To move from draft to a
-                    live campaign, connect your Meta ad account for final setup.
+                    You can create and review ads before connecting Meta. To move from draft to a
+                    live ad, connect your Meta ad account for final setup.
                   </p>
                 </details>
                 <details>
@@ -1560,7 +1560,7 @@ export default function HomePage() {
                 <details>
                   <summary>Can I see results inside Blockwise?</summary>
                   <p>
-                    Yes. Once your campaign is connected, Blockwise shows status, spend, clicks, leads and
+                    Yes. Once your ad account is connected, Blockwise shows status, spend, clicks, leads and
                     performance metrics inside the app.
                   </p>
                 </details>
@@ -1575,7 +1575,7 @@ export default function HomePage() {
                 <details>
                   <summary>What happens after the 7 days?</summary>
                   <p>
-                    Creating campaigns pauses and we ask you to pick a plan. We never took a card, so
+                    Creating ads pauses and we ask you to pick a plan. We never took a card, so
                     there is no surprise charge. Your drafts stay put.
                   </p>
                 </details>
@@ -1584,7 +1584,7 @@ export default function HomePage() {
             <aside className="lp-setup-card">
               <h3>Need a hand getting started?</h3>
               <p>
-                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
+                Book a 15-minute walkthrough. We&rsquo;ll help you create your first ad, connect
                 your ad account and get everything ready for final setup.
               </p>
               <CtaLink location="faq-walkthrough" href="#managed-setup" className="lp-btn lp-btn-hero">
@@ -1625,7 +1625,7 @@ export default function HomePage() {
             <BlockwiseLogo />
             <p>
               The ad platform for real estate teams. Create, approve, export and track property
-              campaigns from one place.
+              ads from one place.
             </p>
             <p className="lp-footer-contact">
               <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
@@ -1634,7 +1634,7 @@ export default function HomePage() {
           <div>
             <h4>Product</h4>
             <a href="#radar">Ad Radar</a>
-            <a href="#campaign-types">Done for you</a>
+            <a href="#done-for-you">Done for you</a>
             <a href="#property-check">Property Check</a>
             <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>

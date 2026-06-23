@@ -14,6 +14,10 @@
 - Fix forward. Quarantine genuinely ambiguous failures and note them in the
   report instead of stalling.
 - Do not replace one messy file with five new messy files.
+- User-facing product language must remove complexity. Do not use "ad packs" or
+  campaign/campaigns language in marketing or product copy unless an external
+  platform term absolutely requires it; prefer plain words like ads, draft ads,
+  live ads, approvals, and results.
 
 ## Safety rules (always hold)
 
