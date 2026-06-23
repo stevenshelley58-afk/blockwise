@@ -23,6 +23,7 @@ test("homepage suburb scan opens the public audit report instead of the protecte
 
   assert.match(source, /LandingAdRadarScan/);
   assert.match(source, /LandingRadarCards/);
+  assert.doesNotMatch(source, /LandingEvidenceSlabAds/);
   assert.doesNotMatch(source, /Coastline Property|Hillview Agents|Northstar Realty|\/ads\/ad-/);
   assert.match(scan, /router\.push\(`\/audit\?location=\$\{encodeURIComponent\(searchTerm\)\}`\)/);
   assert.match(landingCards, /\/api\/research\/locations\/guess/);
