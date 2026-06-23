@@ -4,9 +4,9 @@ import Link from "next/link";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
 import { DemoForm } from "@/components/landing/demo-form";
-import { LandingEvidenceSlabAds } from "@/components/landing/landing-evidence-slab-ads";
 import { SignInLink } from "@/components/landing/sign-in-link";
 import { LandingAdRadarScan } from "@/components/research/landing-ad-radar-scan";
+import { LandingRadarCards } from "@/components/research/landing-radar-cards";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -420,6 +420,7 @@ const FLOW_CSS = `
     transition-duration: 0.001ms !important;
   }
 }
+
 /* Attached compact workflow replacement. */
 .lp-flow {
   --flow-ink: #051126;
@@ -742,6 +743,7 @@ const FLOW_CSS = `
   .lp-flow .flow-results-card { width: 100%; max-width: 240px; }
   .lp-flow .flow-step h3 { font-size: 22px; }
 }
+
 /* Attached workload board replacement. */
 .lp-flow {
   --flow-ink: #071329;
@@ -1144,10 +1146,10 @@ const FLOW_CSS = `
 `;
 
 const TABLE_ROWS = [
-  { name: "Mt Lawley Appraisal", status: "Active", clicks: "247", leads: "18", spend: "$324" },
-  { name: "Subiaco Just Listed", status: "Active", clicks: "182", leads: "11", spend: "$210" },
-  { name: "Cottesloe Open Home", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
-  { name: "South Perth Auction", status: "Active", clicks: "145", leads: "9", spend: "$176" },
+  { name: "Mt Lawley appraisal", description: "Seller lead angle", status: "Active", clicks: "247", leads: "18", spend: "$324" },
+  { name: "Subiaco just listed", description: "Listing attention", status: "Active", clicks: "182", leads: "11", spend: "$210" },
+  { name: "Cottesloe open home", description: "Open home traffic", status: "Paused", clicks: "93", leads: "7", spend: "$98" },
+  { name: "South Perth market update", description: "Seller proof", status: "Draft", clicks: "--", leads: "--", spend: "--" },
 ] as const;
 
 export default function HomePage() {
@@ -1159,8 +1161,11 @@ export default function HomePage() {
             <BlockwiseLogo />
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
-            <a href="#workflow">How it works</a>
+            <a href="#radar">Ad Radar</a>
+            <a href="#campaign-types">Done for you</a>
             <a href="#property-check">Property Check</a>
+            <a href="#workflow">How it works</a>
+            <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </nav>
           <div className="lp-nav-actions">
@@ -1185,21 +1190,16 @@ export default function HomePage() {
             </p>
             <div className="lp-hero-scan">
               <LandingAdRadarScan
-                buttonLabel="Free suburb audit"
+                buttonLabel="Scan my suburb"
                 initialNote="Start with Perth, WA or choose your suburb."
                 initialValue="Perth, WA"
                 placeholder="Enter city, agent, or brokerage"
                 useBestGuess
               />
             </div>
-            <p className="lp-hero-microcopy">7-day free trial · No credit card required</p>
+            <p className="lp-hero-microcopy">7-day trial · 10 ad packs · No card required</p>
           </div>
         </section>
-
-        {/* Evidence slab: real Meta Ad Library creative as a layered 3D object,
-            with a readout explaining one ad at a time. Reads the existing
-            local-ad-radar API. The hero suburb audit handles search. */}
-        <LandingEvidenceSlabAds initialLocation="Perth, WA" limit={7} />
 
         <section id="workflow" className="lp-section lp-flow" aria-label="Blockwise ad workflow">
           <style dangerouslySetInnerHTML={{ __html: FLOW_CSS }} />
@@ -1289,47 +1289,57 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="campaign-types" className="lp-section">
+        <section id="campaign-types" className="lp-section lp-dfy" aria-labelledby="dfy-title">
           <div className="lp-shell">
-            <div className="lp-center-head">
-              <p className="lp-eyebrow">Done for you</p>
-              <h2 className="lp-h2">We build your real estate ads for you.</h2>
-              <p className="lp-lead">
-                Blockwise writes the ads, builds the lead form and sets everything up. You just
-                approve what goes live, then export the package for final setup in your own ad account.
-              </p>
-            </div>
-            <div className="lp-features">
-              <Feature
-                title="Facebook and Instagram ads"
-                copy="Headlines, primary text, descriptions and creative variants — written for you, ready to run."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z" /></svg>}
-              />
-              <Feature
-                title="Lead forms"
-                copy="Questions, privacy details and thank-you screen, built and matched to your goal."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h10M7 16h6" /></svg>}
-              />
-              <Feature
-                title="Proven local angles"
-                copy="Just Listed, Open Home, Just Sold, Free Appraisal, Buyer Demand and Market Update."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>}
-              />
-              <Feature
-                title="Budget and schedule"
-                copy="We set the spend and timing. Ad spend runs through your own ad account."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg>}
-              />
-              <Feature
-                title="Approval checks"
-                copy="We flag common review issues around claims, pricing language and brand fit before sign off."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></svg>}
-              />
-              <Feature
-                title="Live reporting"
-                copy="Track impressions, clicks, leads, spend and status inside Blockwise."
-                icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><rect x="7" y="12" width="3" height="5" /><rect x="12" y="8" width="3" height="9" /><rect x="17" y="5" width="3" height="12" /></svg>}
-              />
+            <div className="lp-dfy-card">
+              <div className="lp-dfy-pad">
+                <div className="lp-center-head lp-dfy-head">
+                  <p className="lp-eyebrow">Done for you</p>
+                  <h2 className="lp-h2" id="dfy-title">Approve the ad. Skip the setup work.</h2>
+                  <p className="lp-lead">
+                    Blockwise prepares the copy, creative, lead form, budget and reporting. You check
+                    what goes live before anything spends.
+                  </p>
+                </div>
+
+                <div className="lp-dfy-compare-shell">
+                  <div className="lp-dfy-panel lp-dfy-before">
+                    <div className="lp-dfy-panel-head">
+                      <h3>Doing it yourself</h3>
+                      <span className="lp-dfy-status lp-dfy-status-muted">Manual</span>
+                    </div>
+                    <ul className="lp-dfy-task-list">
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Write the ad from scratch</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Make the image fit each placement</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Build the lead form</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Set the budget and timing</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Check claims, details and brand fit</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Dig through Ads Manager for results</span></li>
+                    </ul>
+                  </div>
+
+                  <div className="lp-dfy-panel lp-dfy-after">
+                    <div className="lp-dfy-panel-head">
+                      <h3>With Blockwise</h3>
+                      <span className="lp-dfy-status lp-dfy-status-blue">Ready to approve</span>
+                    </div>
+                    <ul className="lp-dfy-task-list lp-dfy-after-list">
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Ad copy prepared</strong> for the lead goal</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Creative fitted</strong> to Facebook and Instagram</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Lead form built</strong> with the right next step</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Budget and timing set</strong> before approval</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Review issues flagged</strong> before sign-off</span></li>
+                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Results shown</strong> in Blockwise</span></li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="lp-dfy-cta-row">
+                  <CtaLink location="done-for-you" href="/signup" className="lp-btn lp-btn-primary">
+                    Get your first ad prepared
+                  </CtaLink>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1369,31 +1379,33 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="approval" className="lp-section lp-section-surface" aria-labelledby="control-title">
-          <div className="lp-shell lp-split lp-split-swap">
-            <div>
+        <section id="approval" className="lp-section lp-section-surface lp-control-section" aria-labelledby="control-title">
+          <div className="lp-shell lp-control-grid">
+            <div className="lp-control-copy">
               <p className="lp-eyebrow">Approval and control</p>
-              <h2 className="lp-h2" id="control-title">You stay in control before anything leaves draft.</h2>
+              <h2 className="lp-h2" id="control-title">You stay in control before and after approval.</h2>
               <p className="lp-lead">
-                Every ad is drafted inside Blockwise, reviewed by your team and exported for
-                final platform setup only after approval.
+                Review what goes live, then track spend, leads and status from one clean dashboard.
               </p>
               <ul className="lp-control-list" aria-label="Control points">
-                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before export</li>
+                <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before it goes live</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Use your own Meta ad account</li>
                 <li><span className="lp-check" aria-hidden>✓</span>Control the budget and schedule</li>
                 <li><span className="lp-check" aria-hidden>✓</span>See every result in one dashboard</li>
               </ul>
             </div>
-            <div className="lp-table-card" aria-label="Ad performance table preview">
-              <div className="lp-table-bar">
+            <div className="lp-control-dashboard" aria-label="Campaign reporting table preview">
+              <div className="lp-control-dashboard-head">
                 <div>
-                  <strong>Your ads</strong>
-                  <span className="lp-badge lp-badge-neutral">Example data</span>
+                  <span className="lp-table-label">Control dashboard</span>
+                  <strong>Every ad in one place</strong>
                 </div>
-                <CtaLink location="control-table" href="/signup" className="lp-btn lp-btn-primary lp-btn-sm">
-                  Get started
-                </CtaLink>
+                <div className="lp-table-actions">
+                  <span className="lp-table-pill">Example data</span>
+                  <CtaLink location="control-table" href="/signup" className="lp-control-create">
+                    Create ad
+                  </CtaLink>
+                </div>
               </div>
               <div className="lp-table-scroll">
                 <table className="lp-table">
@@ -1403,9 +1415,9 @@ export default function HomePage() {
                   <tbody>
                     {TABLE_ROWS.map((row) => (
                       <tr key={row.name}>
-                        <td>{row.name}</td>
+                        <td><strong>{row.name}</strong><span>{row.description}</span></td>
                         <td>
-                          <span className={row.status === "Active" ? "lp-badge lp-badge-active" : "lp-badge lp-badge-neutral"}>
+                          <span className={`lp-table-status lp-table-status-${row.status.toLowerCase()}`}>
                             {row.status}
                           </span>
                         </td>
@@ -1485,9 +1497,9 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow lp-eyebrow-green">Free trial</p>
-              <h2 className="lp-h2 lp-h2-light">Try Blockwise free for 7 days.</h2>
+              <h2 className="lp-h2 lp-h2-light">Try Blockwise with 10 free ad packs.</h2>
               <p className="lp-lead lp-lead-light">
-                No card required. Review your ads and connect your ad account
+                No card required. Create draft campaigns, review the ads and connect your ad account
                 when you are ready for final setup.
               </p>
               <CtaLink location="trial" href="/signup" className="lp-btn lp-btn-light lp-btn-big">
@@ -1495,7 +1507,8 @@ export default function HomePage() {
               </CtaLink>
             </div>
             <div className="lp-trial-grid">
-              <div className="lp-trial-item"><strong>7 days</strong><span>Full access from the minute you confirm your email.</span></div>
+              <div className="lp-trial-item"><strong>7 days</strong><span>Full access to the campaign builder from the minute you confirm your email.</span></div>
+              <div className="lp-trial-item"><strong>10 free ad packs</strong><span>Create up to 10 free ad packs during the trial.</span></div>
               <div className="lp-trial-item"><strong>No card</strong><span>Nothing charges when the trial ends. Your drafts stay put.</span></div>
               <div className="lp-trial-item"><strong>Connect anytime</strong><span>Connect your Meta ad account when you are ready.</span></div>
             </div>
@@ -1506,9 +1519,9 @@ export default function HomePage() {
           <div className="lp-shell lp-split">
             <div>
               <p className="lp-eyebrow">Managed setup</p>
-              <h2 className="lp-h2" id="demo-title">Want help getting started?</h2>
+              <h2 className="lp-h2" id="demo-title">Want help preparing your first campaign?</h2>
               <p className="lp-lead">
-                Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect
+                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
                 your ad account and review everything before handoff.
               </p>
             </div>
@@ -1525,16 +1538,16 @@ export default function HomePage() {
                 <details open>
                   <summary>Who pays for ad spend?</summary>
                   <p>
-                    You do. Your ads run through your connected ad account and your ad spend is paid to
-                    the platform directly. Blockwise is the software used to build, approve, export and
-                    track your ads.
+                    You do. Campaigns run through your connected ad account and your ad spend is paid to
+                    the platform directly. Blockwise is the software used to create, approve, export and
+                    track the campaign.
                   </p>
                 </details>
                 <details>
                   <summary>Do I need a Meta ad account?</summary>
                   <p>
-                    You can review your ads before connecting Meta. To move from draft to live,
-                    connect your Meta ad account for final setup.
+                    You can create and review campaigns before connecting Meta. To move from draft to a
+                    live campaign, connect your Meta ad account for final setup.
                   </p>
                 </details>
                 <details>
@@ -1547,7 +1560,7 @@ export default function HomePage() {
                 <details>
                   <summary>Can I see results inside Blockwise?</summary>
                   <p>
-                    Yes. Once your ads are connected, Blockwise shows status, spend, clicks, leads and
+                    Yes. Once your campaign is connected, Blockwise shows status, spend, clicks, leads and
                     performance metrics inside the app.
                   </p>
                 </details>
@@ -1562,7 +1575,7 @@ export default function HomePage() {
                 <details>
                   <summary>What happens after the 7 days?</summary>
                   <p>
-                    Your free access pauses and we ask you to pick a plan. We never took a card, so
+                    Creating campaigns pauses and we ask you to pick a plan. We never took a card, so
                     there is no surprise charge. Your drafts stay put.
                   </p>
                 </details>
@@ -1571,13 +1584,37 @@ export default function HomePage() {
             <aside className="lp-setup-card">
               <h3>Need a hand getting started?</h3>
               <p>
-                Book a 15-minute walkthrough. We&rsquo;ll set up your first ads, connect
+                Book a 15-minute walkthrough. We&rsquo;ll help you create your first campaign, connect
                 your ad account and get everything ready for final setup.
               </p>
               <CtaLink location="faq-walkthrough" href="#managed-setup" className="lp-btn lp-btn-hero">
                 Book a walkthrough
               </CtaLink>
             </aside>
+          </div>
+        </section>
+
+        <section id="radar" className="lp-section lp-section-surface">
+          <div className="lp-shell">
+            <div className="lp-radar-top">
+              <div>
+                <p className="lp-eyebrow">Local Ad Radar</p>
+                <h2 className="lp-h2">What are your competitors running?</h2>
+                <p className="lp-lead">
+                  Search any market and see active real estate ads.
+                </p>
+              </div>
+              <div className="lp-radar-box">
+                <LandingAdRadarScan
+                  buttonLabel="Scan my market"
+                  initialNote="Start with Perth, WA or choose your suburb."
+                  initialValue="Perth, WA"
+                  placeholder="Enter city, agent, or brokerage"
+                  useBestGuess
+                />
+              </div>
+            </div>
+            <LandingRadarCards />
           </div>
         </section>
       </main>
@@ -1588,7 +1625,7 @@ export default function HomePage() {
             <BlockwiseLogo />
             <p>
               The ad platform for real estate teams. Create, approve, export and track property
-              ads from one place.
+              campaigns from one place.
             </p>
             <p className="lp-footer-contact">
               <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
@@ -1596,8 +1633,10 @@ export default function HomePage() {
           </div>
           <div>
             <h4>Product</h4>
-            <a href="#workflow">How it works</a>
+            <a href="#radar">Ad Radar</a>
+            <a href="#campaign-types">Done for you</a>
             <a href="#property-check">Property Check</a>
+            <a href="#workflow">How it works</a>
             <a href="#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </div>

@@ -19,13 +19,14 @@ test("homepage suburb scan opens the public audit report instead of the protecte
   const scan = readFileSync("src/components/research/landing-ad-radar-scan.tsx", "utf8");
   const form = readFileSync("src/components/research/ad-radar-location-form.tsx", "utf8");
   const route = readFileSync("src/app/api/research/local-ad-radar/route.ts", "utf8");
-  const slab = readFileSync("src/components/landing/landing-evidence-slab-ads.tsx", "utf8");
+  const landingCards = readFileSync("src/components/research/landing-radar-cards.tsx", "utf8");
 
   assert.match(source, /LandingAdRadarScan/);
-  assert.match(source, /LandingEvidenceSlabAds/);
+  assert.match(source, /LandingRadarCards/);
   assert.doesNotMatch(source, /Coastline Property|Hillview Agents|Northstar Realty|\/ads\/ad-/);
   assert.match(scan, /router\.push\(`\/audit\?location=\$\{encodeURIComponent\(searchTerm\)\}`\)/);
-  assert.match(slab, /\/api\/research\/local-ad-radar/);
+  assert.match(landingCards, /\/api\/research\/locations\/guess/);
+  assert.match(landingCards, /\/api\/research\/local-ad-radar/);
   assert.match(scan, /onSearch=\{openScan\}/);
   assert.match(form, /event\.preventDefault\(\)/);
   assert.doesNotMatch(source, /AdRadarLocationForm/);
@@ -62,6 +63,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(source, forbiddenClaims);
 
   const expectedSections = [
+    "radar",
     "workflow",
     "campaign-types",
     "property-check",
@@ -86,6 +88,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
     'id="free-trial"',
     'id="managed-setup"',
     'id="faq"',
+    'id="radar"',
   ];
   let previousIndex = -1;
   for (const marker of sectionOrder) {
@@ -142,8 +145,9 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /export the package for final setup/i);
-  assert.match(home, /final platform setup only after approval/i);
+  assert.match(home, /before anything spends/i);
+  assert.match(home, /before and after approval/i);
+  assert.match(home, /Approve every ad before it goes live/i);
   assert.match(pricing, /Create, approve, export and track property/);
   assert.match(pricing, /\$799/);
   assert.doesNotMatch(pricing, /\$500/);

@@ -30,6 +30,7 @@ export default function PricingPage() {
             <BlockwiseLogo />
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
+            <a href="/#radar">Ad Radar</a>
             <a href="/#campaign-types">Campaigns</a>
             <a href="/#workflow">How it works</a>
             <a href="/#free-trial">Free trial</a>
@@ -203,6 +204,7 @@ export default function PricingPage() {
           </div>
           <div>
             <h4>Product</h4>
+            <a href="/#radar">Ad Radar</a>
             <a href="/#campaign-types">Campaigns</a>
             <a href="/#workflow">How it works</a>
             <a href="/#free-trial">Free trial</a>
