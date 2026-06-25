@@ -184,6 +184,9 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
       </aside>
       <div className="main">
         <header className="topbar">
+          <Link className="topbar-brand" href={homeHref} aria-label="Blockwise">
+            <BlockwiseLogo showWordmark={false} />
+          </Link>
           <span className="workspace-chip" aria-label={`Workspace: ${workspaceName}`}>
             {workspaceName} - {workspace?.region ?? "AU"}
           </span>

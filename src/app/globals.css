@@ -261,6 +261,12 @@ textarea {
   padding: 0 28px;
 }
 
+.topbar-brand {
+  display: none;
+  align-items: center;
+  color: var(--ink);
+}
+
 .topbar-actions {
   display: inline-flex;
   align-items: center;
@@ -5056,6 +5062,10 @@ a.operator-file-row {
 
   .sidebar {
     display: none;
+  }
+
+  .topbar-brand {
+    display: inline-flex;
   }
 
   .main {
