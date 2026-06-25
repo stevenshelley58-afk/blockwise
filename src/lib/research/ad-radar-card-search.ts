@@ -187,7 +187,7 @@ function buildStructuredLocationLoaders(
 
   if (postcodes.length > 0) {
     loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.in("postcode", postcodes), filters));
-    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.overlaps("ad_area_postcodes", postcodes), filters));
+    loaders.push(() => fetchSearchRows(supabase, sort, rowLimit, (query) => query.filter("ad_area_postcodes", "ov", postgresTextArray(postcodes)), filters));
   }
 
   for (const term of locationTextTerms(guess).filter((term) => !/^\d{4}$/u.test(term))) {
@@ -395,4 +395,9 @@ function normaliseTerm(value: string): string {
 
 function escapeLikeTerm(value: string): string {
   return value.replace(/[%_]/g, "");
+}
+
+function postgresTextArray(values: string[]): string {
+  const escaped = values.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${escaped.join(",")}}`;
 }

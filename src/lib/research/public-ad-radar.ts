@@ -377,7 +377,7 @@ function structuredLocationCandidateQueries(
 
   if (postcodes.length > 0) {
     exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.in("postcode", postcodes)));
-    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.overlaps("ad_area_postcodes", postcodes)));
+    exact.push((offset, limit) => fetchRows(supabase, offset, limit, (query) => query.filter("ad_area_postcodes", "ov", postgresTextArray(postcodes))));
   }
 
   for (const suburb of suburbTerms) {
@@ -581,4 +581,9 @@ function textIncludesNormalisedTerm(text: string, term: string): boolean {
 
 function escapeLikeTerm(value: string): string {
   return value.replace(/[%_]/g, "");
+}
+
+function postgresTextArray(values: string[]): string {
+  const escaped = values.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${escaped.join(",")}}`;
 }

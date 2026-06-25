@@ -250,7 +250,7 @@ test("public Ad Radar loader asks for postcode arrays and national postcode subu
     "postcode searches should query direct ad_area_matches postcode rows",
   );
   assert.ok(
-    fake.queries.some((query) => query.callArgs("overlaps").some((args) => args[0] === "ad_area_postcodes" && sameArray(args[1], ["6166"]))),
+    fake.queries.some((query) => query.callArgs("filter").some((args) => args[0] === "ad_area_postcodes" && args[1] === "ov" && args[2] === '{"6166"}')),
     "postcode searches should query rows where the safe view exposes explicit ad-area postcode evidence",
   );
   assert.ok(
@@ -451,6 +451,7 @@ class FakeQuery {
   ilike(...args: unknown[]) { return this.record("ilike", args); }
   in(...args: unknown[]) { return this.record("in", args); }
   overlaps(...args: unknown[]) { return this.record("overlaps", args); }
+  filter(...args: unknown[]) { return this.record("filter", args); }
   contains(...args: unknown[]) { return this.record("contains", args); }
   eq(...args: unknown[]) { return this.record("eq", args); }
   not(...args: unknown[]) { return this.record("not", args); }

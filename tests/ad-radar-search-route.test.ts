@@ -237,7 +237,7 @@ test("ad card search expands postcode searches when surrounding suburbs are incl
     "postcode searches should query direct area-match postcode rows",
   );
   assert.ok(
-    fake.queries.some((query) => query.callArgs("overlaps").some((args) => args[0] === "ad_area_postcodes" && sameArray(args[1], ["6166"]))),
+    fake.queries.some((query) => query.callArgs("filter").some((args) => args[0] === "ad_area_postcodes" && args[1] === "ov" && args[2] === '{"6166"}')),
     "postcode searches should query explicit ad-area postcode evidence",
   );
   assert.ok(
@@ -262,7 +262,7 @@ test("ad card search keeps long numeric Library ID searches on fallback filters"
 
   assert.equal(fake.rpcCalls.length, 0);
   assert.equal(fake.queries.some((query) => query.callArgs("in").length > 0), false);
-  assert.equal(fake.queries.some((query) => query.callArgs("overlaps").length > 0), false);
+  assert.equal(fake.queries.some((query) => query.callArgs("filter").some((args) => args[0] === "ad_area_postcodes" && args[1] === "ov")), false);
   assert.ok(
     fake.queries.some((query) => query.callArgs("or").some((args) => String(args[0]).includes("library_id.ilike.1880510209300916%"))),
     "long numeric searches should still support Library ID prefix lookup",
@@ -365,6 +365,7 @@ class FakeQuery {
   eq(...args: unknown[]) { return this.record("eq", args); }
   in(...args: unknown[]) { return this.record("in", args); }
   overlaps(...args: unknown[]) { return this.record("overlaps", args); }
+  filter(...args: unknown[]) { return this.record("filter", args); }
 
   callArgs(method: string): unknown[][] {
     return this.calls.filter((call) => call.method === method).map((call) => call.args);
@@ -388,9 +389,9 @@ class FakeQuery {
         rows = rows.filter((row) => Boolean(row.postcode && values.has(row.postcode)));
       }
 
-      if (call.method === "overlaps" && typeof call.args[0] === "string" && Array.isArray(call.args[1])) {
+      if (call.method === "filter" && typeof call.args[0] === "string" && call.args[1] === "ov" && typeof call.args[2] === "string") {
         const column = call.args[0] as keyof CustomerMetaAdLibraryCardRow;
-        const values = new Set(call.args[1].map(String));
+        const values = new Set(parsePostgresTextArray(call.args[2]));
         rows = rows.filter((row) => {
           const value = row[column];
           return Array.isArray(value) && value.some((postcode) => values.has(String(postcode)));
@@ -422,4 +423,8 @@ function sameArray(value: unknown, expected: string[]): boolean {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parsePostgresTextArray(value: string): string[] {
+  return value.replace(/^\{|\}$/g, "").split(",").map((item) => item.replace(/^"|"$/g, ""));
 }

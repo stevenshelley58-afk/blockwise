@@ -98,7 +98,7 @@ type AreaFilter = { postcodes: string[]; suburbs: string[]; state: string | null
 
 type AreaQuery = {
   in(column: string, values: string[]): AreaQuery;
-  overlaps(column: string, values: string[]): AreaQuery;
+  filter(column: string, operator: string, value: string): AreaQuery;
   ilike(column: string, pattern: string): AreaQuery;
   eq(column: string, value: string): AreaQuery;
   order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): AreaQuery;
@@ -339,7 +339,7 @@ async function fetchAreaRows(
 
   if (filter.postcodes.length > 0) {
     runners.push((query) => query.in("postcode", filter.postcodes));
-    runners.push((query) => query.overlaps("ad_area_postcodes", filter.postcodes));
+    runners.push((query) => query.filter("ad_area_postcodes", "ov", postgresTextArray(filter.postcodes)));
   }
 
   for (const suburb of filter.suburbs) {
@@ -469,6 +469,11 @@ function titleCase(value: string): string {
 
 function escapeLikeTerm(value: string): string {
   return value.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function postgresTextArray(values: string[]): string {
+  const escaped = values.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${escaped.join(",")}}`;
 }
 
 function rowKey(row: CustomerMetaAdLibraryCardRow): string | null {
