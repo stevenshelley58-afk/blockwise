@@ -19,12 +19,15 @@ test("homepage suburb scan opens the public audit report instead of the protecte
   const scan = readFileSync("src/components/research/landing-ad-radar-scan.tsx", "utf8");
   const form = readFileSync("src/components/research/ad-radar-location-form.tsx", "utf8");
   const route = readFileSync("src/app/api/research/local-ad-radar/route.ts", "utf8");
+  const landingCards = readFileSync("src/components/research/landing-radar-cards.tsx", "utf8");
 
   assert.match(source, /LandingAdRadarScan/);
-  assert.doesNotMatch(source, /LandingRadarCards/);
+  assert.match(source, /LandingRadarCards/);
   assert.doesNotMatch(source, /LandingEvidenceSlabAds/);
   assert.doesNotMatch(source, /Coastline Property|Hillview Agents|Northstar Realty|\/ads\/ad-/);
   assert.match(scan, /router\.push\(`\/audit\?location=\$\{encodeURIComponent\(searchTerm\)\}`\)/);
+  assert.match(landingCards, /\/api\/research\/locations\/guess/);
+  assert.match(landingCards, /\/api\/research\/local-ad-radar/);
   assert.match(scan, /onSearch=\{openScan\}/);
   assert.match(form, /event\.preventDefault\(\)/);
   assert.doesNotMatch(source, /AdRadarLocationForm/);
@@ -34,6 +37,8 @@ test("homepage suburb scan opens the public audit report instead of the protecte
 
 test("landing page anchors, sections, and claims stay connected", () => {
   const source = readFileSync("src/app/page.tsx", "utf8");
+  const demoForm = readFileSync("src/components/landing/demo-form.tsx", "utf8");
+  const combined = `${source}\n${demoForm}`;
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
   const staleSignupAnchor = "#sig" + "nup";
@@ -59,8 +64,14 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(source, forbiddenClaims);
 
   const expectedSections = [
-    "how-it-works",
+    "radar",
+    "workflow",
+    "done-for-you",
+    "property-check",
+    "approval",
+    "reporting",
     "free-trial",
+    "managed-setup",
     "faq",
   ];
 
@@ -69,10 +80,16 @@ test("landing page anchors, sections, and claims stay connected", () => {
   }
 
   const sectionOrder = [
-    'className="lp-hero lp-simple-hero"',
-    'id="how-it-works"',
+    'className="lp-hero"',
+    'id="workflow"',
+    'id="done-for-you"',
+    'id="property-check"',
+    'id="approval"',
+    'id="reporting"',
     'id="free-trial"',
+    'id="managed-setup"',
     'id="faq"',
+    'id="radar"',
   ];
   let previousIndex = -1;
   for (const marker of sectionOrder) {
@@ -83,10 +100,10 @@ test("landing page anchors, sections, and claims stay connected", () => {
 
   assert.match(source, /See what competitors are running\. Get your first ad prepared today\./);
   assert.match(source, /leads and listings without building ads yourself/);
-  assert.match(source, /From local proof to ready ads/);
-  assert.match(source, /You approve what goes live/);
+  assert.match(source, /Know the property before the call/);
+  assert.match(source, /Run a property check/);
 
-  const ids = [...source.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
+  const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
 
   const localAnchors = [...source.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map((match) => match[1]);
@@ -95,7 +112,7 @@ test("landing page anchors, sections, and claims stay connected", () => {
   }
 
   assert.match(source, /href="#free-trial"/);
-  assert.doesNotMatch(source, /href="#managed-setup"/);
+  assert.match(source, /href="#managed-setup"/);
 });
 
 test("landing page local image assets resolve from public/", () => {
@@ -114,8 +131,8 @@ test("landing page metadata matches Blockwise positioning", () => {
   const home = readFileSync("src/app/page.tsx", "utf8");
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
 
-  assert.match(layout, /Blockwise \| Real Estate Ads for More Leads/);
-  assert.match(layout, /get your first real estate ad prepared today/);
+  assert.match(layout, /Blockwise \| Real Estate Meta Ads Workflow/);
+  assert.match(layout, /create, approve, export, and track Meta ad campaigns through their own ad account/);
   assert.match(layout, /type:\s*"website"/);
   assert.match(layout, /card:\s*"summary_large_image"/);
   assert.doesNotMatch(layout, /alternates:\s*\{\s*canonical:\s*"\/"\s*\}/);
@@ -129,17 +146,16 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /before anything\s+runs/i);
-  assert.match(home, /You approve what goes live/i);
-  assert.match(home, /Review the ad before anything goes live/i);
-  assert.match(pricing, /Prepare, approve and track property ads/);
+  assert.match(home, /before anything spends/i);
+  assert.match(home, /before and after approval/i);
+  assert.match(home, /Approve every ad before it goes live/i);
+  assert.match(pricing, /Create, approve, export and track property/);
   assert.match(pricing, /\$799/);
   assert.doesNotMatch(pricing, /\$500/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
   assert.doesNotMatch(combined, /publish the campaign/i);
   assert.doesNotMatch(combined, /create, approve, launch/i);
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
-  assert.doesNotMatch(combined, /ad packs/i);
 });
 
 test("legal pages rely on root title template and define page canonicals", () => {
