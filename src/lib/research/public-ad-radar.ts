@@ -324,11 +324,13 @@ async function fetchLongestRunningRows(
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .not("ad_delivery_started_at", "is", null)
-    .order("ad_delivery_started_at", { ascending: true })
-    .limit(limit);
+    .not("ad_delivery_started_at", "is", null);
 
   if (activeOnly) query = query.ilike("active_status", "active");
+
+  query = query
+    .order("ad_delivery_started_at", { ascending: true })
+    .limit(limit);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -460,11 +462,13 @@ async function fetchRows(
   let query = supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
-    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT);
+
+  query = applyFilter(query);
+  query = query
     .order("last_seen_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
-  query = applyFilter(query);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];

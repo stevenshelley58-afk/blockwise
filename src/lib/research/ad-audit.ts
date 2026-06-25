@@ -101,6 +101,8 @@ type AreaQuery = {
   overlaps(column: string, values: string[]): AreaQuery;
   ilike(column: string, pattern: string): AreaQuery;
   eq(column: string, value: string): AreaQuery;
+  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): AreaQuery;
+  limit(count: number): AreaQuery;
 };
 
 /** Build the full audit for a location string; falls back to Perth, WA. */
@@ -365,12 +367,12 @@ async function fetchAreaRows(
     const baseQuery = supabase
       .schema(RESEARCH_SCHEMA)
       .from(CARD_VIEW)
-      .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
+      .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT);
+    const query = applyFilter(baseQuery as unknown as AreaQuery)
       .order("last_seen_at", { ascending: false, nullsFirst: false })
       .order("card_id", { ascending: true })
       .limit(PER_FILTER_LIMIT);
 
-    const query = applyFilter(baseQuery as unknown as AreaQuery);
     const { data, error } = await (query as unknown as PromiseLike<{
       data: CustomerMetaAdLibraryCardRow[] | null;
       error: { message: string } | null;
