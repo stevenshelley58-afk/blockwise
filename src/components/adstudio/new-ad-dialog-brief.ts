@@ -17,17 +17,16 @@ const BLANK_BRIEF_GUIDANCE: TemplateBriefGuidance = {
 };
 
 export function briefGuidanceForTemplate(
-  template: Pick<AdStudioTemplate, "goal" | "name" | "offerId" | "promptHint" | "sampleCopy" | "sampleStyle"> | undefined,
+  template: Pick<AdStudioTemplate, "goal" | "name" | "offerId" | "promptHint" | "sampleCopy"> | undefined,
   isBlank: boolean,
 ): TemplateBriefGuidance {
   if (isBlank || !template) return BLANK_BRIEF_GUIDANCE;
 
   const category = briefCategoryForTemplate(template);
-  const style = template.sampleStyle;
-  const suburb = [style?.sampleSuburb, style?.sampleState].filter(Boolean).join(", ") || "Scarborough, WA";
-  const address = style?.address || "18 Tallow Lane";
-  const property = style?.propertyDetail || "3 bed family home";
-  const result = style?.resultDetail || "Saturday 10:30am";
+  const suburb = "Scarborough, WA";
+  const address = "18 Tallow Lane";
+  const property = "3 bed family home";
+  const result = "Saturday 10:30am";
 
   const guidance = guidanceByCategory(category, { address, property, result, suburb });
   const note = `${template.name} selected. Add the real details for this campaign; sample details stay as examples only.`;

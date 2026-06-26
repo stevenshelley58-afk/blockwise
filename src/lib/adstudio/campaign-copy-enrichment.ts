@@ -1,5 +1,5 @@
 import { generateAdStudioCopy, type AdStudioCopyFields } from "./copy-generation.ts";
-import { renderCreativeSvg } from "./renderer.ts";
+import { renderCreativeSvg } from "./creative-svg.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { syncCreativeWithCopyAndImage } from "./creative-design-json.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";

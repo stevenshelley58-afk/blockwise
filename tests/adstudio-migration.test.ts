@@ -19,7 +19,6 @@ const workspaceTables = [
   "adstudio_exports",
   "adstudio_compliance_reports",
   "adstudio_provider_runs",
-  "adstudio_template_versions",
   "adstudio_job_runs",
   "adstudio_performance_imports",
 ];
@@ -53,6 +52,14 @@ test("adstudio migration makes provider and job run writes server-owned", () => 
     assert.match(sql, new RegExp(`drop policy if exists adstudio_workspace_insert on public\\.${tableName}`, "i"));
     assert.match(sql, new RegExp(`create policy ${tableName}_server_owned_no_client_insert`, "i"));
   }
+});
+
+test("adstudio migrations do not reinstall the removed template registry table", () => {
+  const migrationSql = readFileSync(migrationPath, "utf8");
+  const alignmentSql = readFileSync(alignmentMigrationPath, "utf8");
+  const removedRegistryTable = ["adstudio", "template", "versions"].join("_");
+
+  assert.equal(`${migrationSql}\n${alignmentSql}`.toLowerCase().includes(removedRegistryTable), false);
 });
 
 test("adstudio live alignment guards legacy column alters for fresh preview databases", () => {

@@ -206,7 +206,6 @@ function getJoinedProfileKey(value: ModelProfileVersionRow["model_profiles"]): M
     case "high_quality_strategy":
     case "structured_json":
     case "vision_classification":
-    case "vision_extract":
     case "image_draft":
     case "image_final":
     case "image_generative":

@@ -36,6 +36,8 @@ export {
 } from "./layout-qa.ts";
 export {
   AD_STUDIO_TEMPLATES,
+  ADSTUDIO_TEMPLATE_RESET_MESSAGE,
+  RESOLVABLE_AD_STUDIO_TEMPLATES,
   builtInAdStudioTemplates,
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
@@ -44,12 +46,6 @@ export {
   type AdStudioLibraryTemplate,
   type AdStudioTemplate,
 } from "./templates.ts";
-export {
-  creativeSkeletonArchetypeSchema,
-  creativeSkeletonSchema,
-  type CreativeSkeleton,
-  type CreativeSkeletonArchetype,
-} from "../ad-template-library/skeleton.ts";
 export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,
@@ -73,42 +69,6 @@ export {
   validateMetaLeadAdPack,
 } from "./platform-rules.ts";
 export {
-  buildPhotoPrepCacheKey,
-  buildPreparePhotoForTemplateFramePrompt,
-  buildTemplateRenderFrame,
-  deterministicPreparedPhotoAsset,
-  selectPhotoPrepMethod,
-  selectedImageSlot,
-  templateRenderFrameSchema,
-  type PhotoPrepDecisionMethod,
-  type PreparedPhotoAsset,
-  type PhotoPrepContext,
-  type PhotoPrepMethod,
-  type TemplateImageSlot,
-  type TemplateRenderFrame,
-} from "./photo-prep.ts";
-export {
-  fallbackPhotoAssetsForTemplate,
-  loadCachedPhotoAssetsForTemplate,
-  preparePhotoAssetsForTemplate,
-  preparedPhotoUrlsByFormat,
-  type PreparedPhotoAssetsByFormat,
-  type TemplatePhotoPrepInput,
-} from "./photo-prep-service.ts";
-export {
-  designLayerSignature,
-  resolveTemplateDesignForFormat,
-  templateDesignSchema,
-  templateLayerSchema,
-  type BoundTemplateContent,
-  type TemplateDesign,
-  type TemplateDesignSet,
-  type TemplateLayer,
-  type TemplateRect,
-  type TextFill,
-  type TextSlot,
-} from "./template-design.ts";
-export {
   createDeterministicImageProvider,
   createDeterministicTextProvider,
   createDeterministicVisionProvider,
@@ -117,10 +77,8 @@ export {
   type TextProviderAdapter,
   type VisionProviderAdapter,
 } from "./providers.ts";
-export { renderCreativeSvg, renderDesign, renderDesignSvg, type RenderDesignOptions } from "./renderer.ts";
 export { scoreAdStudioVariant, type VariantScoreInput } from "./scoring.ts";
 export {
-  isMissingTemplateLibrary,
   resolveApprovedAdStudioTemplate,
   templatePromptHint,
 } from "./template-resolver.ts";

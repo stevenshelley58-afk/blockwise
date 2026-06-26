@@ -263,13 +263,6 @@ end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_template_versions_workspace_id_idx on public.adstudio_template_versions (workspace_id)';
-exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_template_versions_workspace_id_idx: %', sqlerrm;
-end
-$$;
-do $$
-begin
   execute 'create index if not exists agent_artifacts_agent_run_id_idx on public.agent_artifacts (agent_run_id)';
 exception when undefined_column or undefined_table then
   raise notice 'skipping agent_artifacts_agent_run_id_idx: %', sqlerrm;

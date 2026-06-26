@@ -29,7 +29,6 @@ export type FirstAdInput = {
   savedAdId?: string;
   observedAdId?: string;
   templateKey?: string;
-  imageBriefId?: string;
   hooks?: string[];
   referenceCta?: string;
   referenceAdType?: string;
@@ -194,20 +193,15 @@ export type AdStudioCanvasObject = {
   radius?: number;
   opacity?: number;
   fill?: string;
-  sourceLayerId?: string;
-  templateRole?: string;
-  templateSlot?: string;
   locked: boolean;
 };
 
 /**
- * How a creative tile was produced. "template_composite" is the default Create
- * path: the photo is prepared by the chokepoint and the template/copy/brand are
- * composited as layers. "generative" is the opt-in "More options" path that
- * returns a fully model-generated image (additive; never replaces a composite).
- * Absent => legacy composite (treat as template_composite).
+ * How a creative tile was produced. "custom_composite" is the default Create
+ * path. "generative" is the opt-in "More options" path that returns a fully
+ * model-generated image.
  */
-export type AdStudioCreativeSource = "template_composite" | "generative";
+export type AdStudioCreativeSource = "custom_composite" | "generative";
 
 export type AdStudioCreative = {
   creativeId: string;

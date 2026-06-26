@@ -35,13 +35,10 @@ export function TemplateCard({ template, brandKit, active, onSelect }: TemplateC
         <strong>{template.name}</strong>
         <span className="studio-tpl-tags">
           <span>{template.templateKey ?? template.id}</span>
-          <span>{template.creativeSkeleton ? "Template pattern" : template.source === "radar" ? "Template library" : "Built-in"}</span>
+          <span>{template.source === "radar" ? "Template library" : "Built-in"}</span>
         </span>
         <span>{sampleHeadline ?? template.promptHint}</span>
         {sampleBody ? <span>{sampleBody}</span> : null}
-        {template.creativeSkeleton ? (
-          <span>{template.creativeSkeleton.archetype.replace(/_/g, " ")}</span>
-        ) : null}
       </span>
     </button>
   );
@@ -72,11 +69,15 @@ type TemplatesPanelProps = {
 export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank, showHeader = true }: TemplatesPanelProps) {
   return (
     <>
-      {showHeader && <PanelHeader title="Templates" detail="Choose a proven layout, then add your listing photo and brand." />}
+      {showHeader && <PanelHeader title="Templates" detail="Template library reset. Fresh self-contained templates have not been installed yet." />}
       <div className="studio-tpl-grid">
-        {templates.map((template) => (
-          <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />
-        ))}
+        {templates.length === 0 ? (
+          <p className="studio-empty">No templates installed.</p>
+        ) : (
+          templates.map((template) => (
+            <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />
+          ))
+        )}
         <BlankTemplateCard onSelect={onStartBlank} />
       </div>
     </>

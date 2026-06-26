@@ -69,7 +69,7 @@ test("createAzureOpenAiTextProvider posts structured multimodal prompts to the d
     system: "Return JSON",
     messages: [{ role: "user", content: "Extract this ad" }],
     imageUrl: "data:image/png;base64,aW1hZ2U=",
-    schemaName: "creativeSkeleton",
+    schemaName: "metaLeadAdPack",
   });
 
   assert.equal(

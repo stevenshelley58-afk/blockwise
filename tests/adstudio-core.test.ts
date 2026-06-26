@@ -13,6 +13,7 @@ import {
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
   resolveAdStudioTemplate,
+  ADSTUDIO_TEMPLATE_RESET_MESSAGE,
 } from "../src/lib/adstudio/index.ts";
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
 import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
@@ -321,7 +322,7 @@ test("first-ad generation uses the uploaded image as the full creative visual", 
   assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
 });
 
-test("template first-ad generation uses prepared photo assets per creative format", () => {
+test("template first-ad generation fails closed while the registry is reset", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",
     websiteUrl: "https://northstar.example",
@@ -330,234 +331,31 @@ test("template first-ad generation uses prepared photo assets per creative forma
       "https://northstar.example": sampleHtml,
     },
   });
-  const template = resolveAdStudioTemplate("meta_002");
 
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Bicton",
-    city: "Perth",
-    state: "WA",
-    offerId: "prelisting_timeline",
-    platforms: ["meta"],
-    variantCount: 1,
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey ?? template.id,
-      description: "Agent-led property planning for local owners.",
-      imageDataUrl: "data:image/png;base64,original",
-      formats: ["9:16", "4:5", "1:1"],
-    },
-    resolvedTemplate: template,
-    sourceImagesByFormat: {
-      "9:16": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fstory.png",
-      "4:5": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png",
-      "1:1": "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png",
-    },
-  });
-
-  const imageByFormat = Object.fromEntries(
-    pack.creatives.map((creative) => [
-      creative.format,
-      creative.canvas.objects.find((object) => object.role === "primary_image")?.content,
-    ]),
+  assert.equal(resolveAdStudioTemplate("meta_002"), null);
+  assert.throws(
+    () =>
+      generateAdStudioCampaignPack({
+        workspaceId: "workspace_demo",
+        brandKit: { ...brandKit, reviewStatus: "approved" as const },
+        goal: "seller_leads",
+        suburb: "Bicton",
+        city: "Perth",
+        state: "WA",
+        offerId: "seller_prep_checklist",
+        platforms: ["meta"],
+        variantCount: 1,
+        firstAd: {
+          mode: "template",
+          source: "template_library",
+          templateKey: "meta_002",
+          description: "Agent-led property planning for local owners.",
+          imageDataUrl: "data:image/png;base64,original",
+          formats: ["9:16", "4:5", "1:1"],
+        },
+      }),
+    new RegExp(ADSTUDIO_TEMPLATE_RESET_MESSAGE),
   );
-
-  assert.equal(imageByFormat["9:16"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fstory.png");
-  assert.equal(imageByFormat["4:5"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png");
-  assert.equal(imageByFormat["1:1"], "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png");
-  assert.notEqual(imageByFormat["9:16"], imageByFormat["4:5"]);
-});
-
-test("template first-ad generation binds uploaded images to matching template slots", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-  const template = resolveAdStudioTemplate("meta_004");
-  const primaryImage = "data:image/png;base64,primary";
-  const secondaryImage = "data:image/png;base64,secondary";
-  const preparedFeedImage = "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png";
-  const preparedSquareImage = "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png";
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "appraisal_bookings",
-    suburb: "North Perth",
-    city: "Perth",
-    state: "WA",
-    offerId: "home_value_update",
-    platforms: ["meta"],
-    variantCount: 1,
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey ?? template.id,
-      description: "Free appraisal card with a hero exterior and detail photo.",
-      imageDataUrl: primaryImage,
-      imageDataUrls: {
-        primary_photo: primaryImage,
-        secondary_photo: secondaryImage,
-      },
-      formats: ["9:16", "4:5", "1:1"],
-    },
-    resolvedTemplate: template,
-    sourceImagesByFormat: {
-      "4:5": preparedFeedImage,
-      "1:1": preparedSquareImage,
-    },
-  });
-
-  const feed = pack.creatives.find((creative) => creative.format === "4:5");
-  const square = pack.creatives.find((creative) => creative.format === "1:1");
-  const story = pack.creatives.find((creative) => creative.format === "9:16");
-  assert.ok(feed);
-  assert.ok(square);
-  assert.ok(story);
-
-  assert.equal(feed.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, preparedFeedImage);
-  assert.equal(feed.canvas.objects.find((object) => object.objectId === "secondary_photo")?.content, secondaryImage);
-  assert.equal(square.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, preparedSquareImage);
-  assert.equal(square.canvas.objects.find((object) => object.objectId === "secondary_photo")?.content, secondaryImage);
-  assert.equal(story.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, primaryImage);
-  assert.equal(story.canvas.objects.some((object) => object.objectId === "secondary_photo"), false);
-});
-
-test("template first-ad generation derives offer fields from the selected template", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-  const promptHint = "Smart tips for buyers using a template-native buyer list offer.";
-  const template = {
-    ...resolveAdStudioTemplate("meta_002"),
-    id: "template_native_buyer_tips",
-    templateKey: "template_native_buyer_tips",
-    name: "Smart Tips For Buyers",
-    goal: "buyer_leads" as const,
-    offerId: "buyer_list",
-    promptHint,
-    sampleCopy: {
-      headline: "Smart buyer tips before you inspect",
-      primaryText: "Use local buyer context before your next property conversation.",
-      description: "Buyer tips from the selected template.",
-      cta: "Get buyer tips",
-    },
-  };
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Bicton",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 1,
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey,
-      description: "Buyer tips ad from a template-native offer.",
-      imageDataUrl: "data:image/png;base64,original",
-      formats: ["9:16", "4:5", "1:1"],
-    },
-    resolvedTemplate: template,
-  });
-
-  assert.equal(pack.campaign.offerId, "buyer_list");
-  assert.equal(pack.campaign.goal, "buyer_leads");
-  assert.equal(pack.campaign.audienceIntent, promptHint);
-  assert.equal(pack.variants[0]?.offer, "Smart Tips For Buyers");
-  assert.equal(pack.variants[0]?.cta, "Get buyer tips");
-  assert.equal(pack.variants[0]?.headline, "Smart buyer tips before you inspect");
-  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Smart Tips For Buyers");
-  assert.equal(pack.copyPacks[0]?.landingPage.cta, "Get buyer tips");
-  assert.equal(pack.copyPacks[0]?.meta.leadForm.headline, "Get buyer tips");
-  assert.doesNotMatch(pack.copyPacks[0]?.landingPage.subheadline ?? "", /seller checklist/i);
-  assert.notEqual(pack.variants[0]?.offer, "Buyer inquiry list");
-  assert.notEqual(pack.variants[0]?.cta, "Join buyer list");
-
-  const unknownOfferPack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Bicton",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 1,
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: "template_native_buyer_tips_unknown",
-      description: "Buyer tips ad from an unregistered template-native offer.",
-      imageDataUrl: "data:image/png;base64,original",
-      formats: ["9:16", "4:5", "1:1"],
-    },
-    resolvedTemplate: {
-      ...template,
-      id: "template_native_buyer_tips_unknown",
-      templateKey: "template_native_buyer_tips_unknown",
-      offerId: "template_native_buyer_list",
-    },
-  });
-
-  assert.equal(unknownOfferPack.campaign.offerId, "template_native_buyer_list");
-  assert.equal(unknownOfferPack.variants[0]?.offer, "Smart Tips For Buyers");
-});
-
-test("template generation treats observed ads as evidence, not the campaign source", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-  const template = resolveAdStudioTemplate("meta_040");
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "North Perth",
-    city: "Perth",
-    state: "WA",
-    offerId: "recent_sales_report",
-    platforms: ["meta"],
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey ?? template.id,
-      description: "Recent sale context for North Perth owners.",
-      imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
-      formats: ["9:16", "4:5", "1:1"],
-    },
-    resolvedTemplate: {
-      ...template,
-      source: "radar",
-      exemplars: ["observed-ad-evidence-1"],
-    },
-  });
-
-  assert.equal(pack.campaign.templateKey, "meta_040");
-  assert.equal(pack.campaign.sourceObservedAdId, null);
-  assert.deepEqual(pack.campaign.templateSnapshot?.exemplars, ["observed-ad-evidence-1"]);
 });
 
 test("ad radar inspiration keeps the explicitly copied observed ad id", () => {

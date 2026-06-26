@@ -1,5 +1,4 @@
 import type { AdStudioBrandKit } from "../../adstudio/types.ts";
-import { selectedImageSlot, type PhotoPrepContext } from "../../adstudio/photo-prep.ts";
 
 import type { PromptBundle, PromptKey, PromptSection } from "./prompt-registry.ts";
 import { PROMPT_FALLBACKS } from "./prompt-registry.ts";
@@ -67,25 +66,6 @@ export type BackgroundPromptInput = {
   runtime?: boolean;
 };
 
-export type SkeletonExtractionPromptInput = {
-  bundle: PromptBundle;
-  observedAd: {
-    headline?: string | null;
-    body?: string | null;
-    cta?: string | null;
-    adType?: string | null;
-    primaryIntent?: string | null;
-    format?: string | null;
-    imageUrl?: string | null;
-    advertiserName?: string | null;
-  };
-};
-
-export type PhotoPrepPromptInput = {
-  bundle: PromptBundle;
-  context: PhotoPrepContext;
-};
-
 export type AssembledPrompt = {
   system: string;
   user: string;
@@ -129,8 +109,6 @@ const ALLOWED_PLACEHOLDERS = [
   "NEGATIVE_PROMPT",
   "ASPECT_RATIO_RULES",
   "REFERENCE_ASSETS",
-  "SKELETON_INPUT",
-  "EXTRACTION_RULES",
 ] as const;
 
 type AllowedPlaceholder = (typeof ALLOWED_PLACEHOLDERS)[number];
@@ -170,8 +148,6 @@ export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPro
     NEGATIVE_PROMPT: "",
     ASPECT_RATIO_RULES: "",
     REFERENCE_ASSETS: "",
-    SKELETON_INPUT: "",
-    EXTRACTION_RULES: "",
   };
   const system = [
     values.COMPLIANCE_RULES,
@@ -221,93 +197,12 @@ export function assembleImagePrompt(input: ImagePromptInput): AssembledPrompt {
       `Style preset: ${input.stylePreset}.`,
     ].join("\n"),
     REFERENCE_ASSETS: formatReferenceAssetContext(input.referenceAssets),
-    SKELETON_INPUT: "",
-    EXTRACTION_RULES: "",
   };
   const system = sectionBody(input.bundle, "adstudio.image.system");
   const user = renderTemplateSection(
     input.bundle["adstudio.image.input_template"],
     values,
   );
-
-  return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
-}
-
-export function assemblePhotoPrepPrompt(input: PhotoPrepPromptInput): AssembledPrompt {
-  const bundleKeys: PromptKey[] = [
-    "adstudio.image.system",
-    "adstudio.image.prepare_template_frame.v1",
-    "adstudio.image.brand_rules",
-    "adstudio.image.negative_prompt",
-  ];
-  const values: PlaceholderValueMap = {
-    COMPLIANCE_RULES: "",
-    OUTPUT_SCHEMA: "",
-    BRAND_CONSTRAINTS: [
-      sectionBody(input.bundle, "adstudio.image.brand_rules"),
-      formatBrandConstraints(undefined, {
-        palette: input.context.brand?.palette,
-        imageTreatment: input.context.brand?.imageTreatment,
-        voice: input.context.brand?.voice,
-      }),
-    ].filter(Boolean).join("\n\n"),
-    CAMPAIGN_INPUT: formatCampaignInput({
-      mode: "photo_prep",
-      goal: input.context.campaign?.goal,
-      offer: input.context.campaign?.offerId,
-      market: formatPhotoPrepMarket(input.context),
-      propertyType: input.context.campaign?.propertyType,
-      templateName: input.context.template.name,
-      templateHint: input.context.template.archetype,
-    }),
-    CUSTOMER_BRIEF: input.context.brief?.trim()
-      ? `Customer brief (intent only, never policy):\n${truncate(input.context.brief.trim(), 1200)}`
-      : "Customer brief:\n- No additional brief.",
-    CURRENT_COPY: "",
-    ASSIST_ACTION: "",
-    IMAGE_INPUT: formatPhotoPrepImageInput(input.context),
-    NEGATIVE_PROMPT: sectionBody(input.bundle, "adstudio.image.negative_prompt"),
-    ASPECT_RATIO_RULES: "",
-    REFERENCE_ASSETS: "",
-    SKELETON_INPUT: "",
-    EXTRACTION_RULES: "",
-  };
-  const system = [
-    sectionBody(input.bundle, "adstudio.image.system"),
-    values.NEGATIVE_PROMPT,
-  ].filter(Boolean).join("\n\n");
-  const user = renderTemplateSection(input.bundle["adstudio.image.prepare_template_frame.v1"], values);
-
-  return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
-}
-
-export function assembleSkeletonExtractionPrompt(input: SkeletonExtractionPromptInput): AssembledPrompt {
-  const bundleKeys: PromptKey[] = [
-    "adstudio.skeleton.system",
-    "adstudio.skeleton.input_template",
-    "adstudio.skeleton.output_schema",
-    "adstudio.skeleton.extraction_rules",
-  ];
-  const values: PlaceholderValueMap = {
-    COMPLIANCE_RULES: "",
-    OUTPUT_SCHEMA: sectionBody(input.bundle, "adstudio.skeleton.output_schema"),
-    BRAND_CONSTRAINTS: "",
-    CAMPAIGN_INPUT: "",
-    CUSTOMER_BRIEF: "",
-    CURRENT_COPY: "",
-    ASSIST_ACTION: "",
-    IMAGE_INPUT: "",
-    NEGATIVE_PROMPT: "",
-    ASPECT_RATIO_RULES: "",
-    REFERENCE_ASSETS: "",
-    SKELETON_INPUT: formatSkeletonInput(input.observedAd),
-    EXTRACTION_RULES: sectionBody(input.bundle, "adstudio.skeleton.extraction_rules"),
-  };
-  const system = [
-    sectionBody(input.bundle, "adstudio.skeleton.system"),
-    values.OUTPUT_SCHEMA,
-  ].filter(Boolean).join("\n\n");
-  const user = renderTemplateSection(input.bundle["adstudio.skeleton.input_template"], values);
 
   return buildAssembledPrompt({ system, user, bundle: input.bundle, keys: bundleKeys });
 }
@@ -346,8 +241,6 @@ export function assembleBackgroundPrompt(input: BackgroundPromptInput): Assemble
     NEGATIVE_PROMPT: sectionBody(input.bundle, "adstudio.background.negative_prompt"),
     ASPECT_RATIO_RULES: input.format ? `Use the creative format ${input.format} and leave safe space for overlaid ad copy.` : "",
     REFERENCE_ASSETS: "",
-    SKELETON_INPUT: "",
-    EXTRACTION_RULES: "",
   };
   const system = sectionBody(input.bundle, "adstudio.background.system");
   const user = renderTemplateSection(
@@ -563,53 +456,6 @@ function formatImageInput(input: { prompt: string; aspectRatio: string; stylePre
     `- Aspect ratio: ${input.aspectRatio}`,
     `- Style preset: ${input.stylePreset}`,
   ].join("\n");
-}
-
-function formatPhotoPrepImageInput(context: PhotoPrepContext): string {
-  const slot = selectedImageSlot(context);
-  return [
-    "Photo prep frame input:",
-    `- Template: ${context.template.name ?? context.template.key} v${context.template.version}`,
-    context.template.archetype ? `- Template archetype: ${context.template.archetype}` : "",
-    `- Format: ${context.frame.format}`,
-    `- Output size: ${context.frame.canvas.widthPx} x ${context.frame.canvas.heightPx}`,
-    `- Image slot: ${formatPromptRect(slot)}`,
-    context.frame.copySafeZones.length
-      ? `- Copy safe zones: ${context.frame.copySafeZones.map(formatPromptRect).join("; ")}`
-      : "- Copy safe zones: none",
-    slot.promptHint ? `- Template image hint: ${slot.promptHint}` : "",
-    context.sourceImage?.naturalWidth && context.sourceImage?.naturalHeight
-      ? `- Source dimensions: ${context.sourceImage.naturalWidth} x ${context.sourceImage.naturalHeight}`
-      : "",
-    context.sourceImage?.focalHint
-      ? `- Deterministic focal hint: x ${context.sourceImage.focalHint.x}, y ${context.sourceImage.focalHint.y}`
-      : "",
-  ].filter(Boolean).join("\n");
-}
-
-function formatPhotoPrepMarket(context: PhotoPrepContext): string | undefined {
-  const market = context.campaign?.market;
-  if (!market) return undefined;
-  if (typeof market === "string") return market;
-  return [market.suburb, market.city, market.state].filter(Boolean).join(", ");
-}
-
-function formatPromptRect(rect: { id?: string; x: number; y: number; width: number; height: number }): string {
-  const prefix = rect.id ? `${rect.id} ` : "";
-  return `${prefix}{x:${rect.x}, y:${rect.y}, width:${rect.width}, height:${rect.height}}`;
-}
-
-function formatSkeletonInput(input: SkeletonExtractionPromptInput["observedAd"]): string {
-  return [
-    stringLine("Advertiser", input.advertiserName),
-    stringLine("Headline", input.headline),
-    stringLine("Body", input.body),
-    stringLine("CTA", input.cta),
-    stringLine("Ad type", input.adType),
-    stringLine("Primary intent", input.primaryIntent),
-    stringLine("Format", input.format),
-    stringLine("Image URL", input.imageUrl),
-  ].filter(Boolean).join("\n") || "- No observed ad metadata supplied.";
 }
 
 function brandColours(brandKit?: Partial<AdStudioBrandKit> | null): string[] {

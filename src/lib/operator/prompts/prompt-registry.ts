@@ -17,20 +17,9 @@ export const PROMPT_GROUPS = [
     promptKeys: [
       "adstudio.image.system",
       "adstudio.image.input_template",
-      "adstudio.image.prepare_template_frame.v1",
       "adstudio.image.brand_rules",
       "adstudio.image.negative_prompt",
       "adstudio.image.aspect_ratio_rules",
-    ],
-  },
-  {
-    key: "skeleton",
-    label: "Creative Skeleton",
-    promptKeys: [
-      "adstudio.skeleton.system",
-      "adstudio.skeleton.input_template",
-      "adstudio.skeleton.output_schema",
-      "adstudio.skeleton.extraction_rules",
     ],
   },
   {
@@ -64,7 +53,6 @@ export type PromptSectionType =
   | "input_template"
   | "output_schema"
   | "compliance_rules"
-  | "extraction_rules"
   | "brand_rules"
   | "negative_prompt"
   | "aspect_ratio_rules";
@@ -76,14 +64,9 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.copy.compliance_rules": "compliance_rules",
   "adstudio.image.system": "system",
   "adstudio.image.input_template": "input_template",
-  "adstudio.image.prepare_template_frame.v1": "input_template",
   "adstudio.image.brand_rules": "brand_rules",
   "adstudio.image.negative_prompt": "negative_prompt",
   "adstudio.image.aspect_ratio_rules": "aspect_ratio_rules",
-  "adstudio.skeleton.system": "system",
-  "adstudio.skeleton.input_template": "input_template",
-  "adstudio.skeleton.output_schema": "output_schema",
-  "adstudio.skeleton.extraction_rules": "extraction_rules",
   "adstudio.background.system": "system",
   "adstudio.background.input_template": "input_template",
   "adstudio.background.negative_prompt": "negative_prompt",
@@ -193,43 +176,6 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 {{ASPECT_RATIO_RULES}}
 
 {{NEGATIVE_PROMPT}}`,
-  "adstudio.image.prepare_template_frame.v1": `Prepare this real-estate photo for a locked ad template frame.
-
-You are editing only the photo asset that will sit inside the template image slot.
-Do not create a finished advertisement.
-Do not add text.
-Do not add logos.
-Do not add badges.
-Do not add borders.
-Do not add buttons.
-Do not add icons.
-Do not add graphic overlays.
-Do not change the template layout.
-
-The final template, typography, logo, CTA, and copy will be composited after this step.
-
-Goal:
-Create the strongest premium real-estate photo asset for this exact frame.
-
-You may crop tighter, reframe, or extend the image edges when that produces the best result.
-Preserve the truth of the property.
-Do not invent rooms, pools, views, landscaping, architectural features, fixtures, furniture, or property condition.
-When extending, continue only plausible visual content from the existing image edges.
-
-{{IMAGE_INPUT}}
-
-{{BRAND_CONSTRAINTS}}
-
-{{CAMPAIGN_INPUT}}
-
-{{CUSTOMER_BRIEF}}
-
-Composition guidance:
-Keep the most commercially useful real-estate visual subject strong.
-Avoid awkward empty areas, accidental letterboxing, distorted geometry, warped walls, stretched windows, broken rooflines, fake reflections, or unnatural skies.
-Where copy safe zones overlap the image, keep those areas visually calm and lower contrast when possible.
-
-Return only the edited photo asset.`,
   "adstudio.image.brand_rules": `Brand image rules:
 - Use the approved palette and visual treatment as constraints.
 - Keep the image suitable for real-estate lead generation.
@@ -241,26 +187,6 @@ Return only the edited photo asset.`,
 - 4:5 should frame a portrait feed ad with copy-safe space near the top third.
 - 9:16 should frame a Story/Reel ad with safe space away from top and bottom UI.
 - 1.91:1 should frame a landscape ad with strong horizontal composition.`,
-  "adstudio.skeleton.system": `You are a creative director extracting reusable visual structure from Australian real-estate ads. Return only strict JSON matching the CreativeSkeleton schema. Do not describe the ad in prose.`,
-  "adstudio.skeleton.input_template": `{{EXTRACTION_RULES}}
-
-Observed ad:
-{{SKELETON_INPUT}}
-
-{{OUTPUT_SCHEMA}}`,
-  "adstudio.skeleton.output_schema": `Return one JSON object:
-{"version":1,"archetype":"listing_hero|coming_soon|open_home|just_sold|market_stat|appraisal|seller_guide|social_proof|agent_profile|brand","shot":{"type":string,"lighting":string,"mood":string},"composition":{"focal_point":string,"horizon":"low|middle|high|none","image_frames":[{"id":string,"role":"primary|secondary|agent_headshot","x":number,"y":number,"width":number,"height":number,"formats":["1:1|4:5|9:16|1.91:1"],"prompt_hint":string}],"copy_safe_zones":[{"id":string,"x":number,"y":number,"width":number,"height":number,"priority":"primary|secondary|cta"}]},"color":{"palette":[string],"overlay":string,"contrast":"low|medium|high"},"text_system":{"headline_zone":string,"badge":string,"cta_style":string},"copy":{"hook_style":string,"headline_pattern":string,"cta":string},"variables":[string],"confidence":number}`,
-  "adstudio.skeleton.extraction_rules": `Extraction rules:
-- Infer reusable structure, not one-off content.
-- Coordinates are normalized 0..1 relative to the ad canvas.
-- image_frames are the rectangular spots where the listing photo(s) sit; always return at least one frame.
-- Assign each frame a role: the largest/dominant photo is "primary"; a person or cut-out portrait is "agent_headshot"; smaller repeated photos are "secondary".
-- If the creative is a single full-bleed photo, return one primary frame at {x:0,y:0,width:1,height:1}.
-- copy_safe_zones are areas where overlaid text can sit without covering the main subject.
-- Pick the closest existing Ad Studio archetype; do not invent archetype names.
-- Use Australian residential real-estate context.
-- confidence is 0..100 based on visual clarity and certainty.
-- Reject hallucinated metrics, prices, or guarantees; encode patterns and placement only.`,
   "adstudio.background.system": `Generate a premium real-estate background image prompt for an ad creative. The background must support overlaid copy and brand elements. Do not render final ad text inside the image.`,
   "adstudio.background.input_template": `{{BRAND_CONSTRAINTS}}
 

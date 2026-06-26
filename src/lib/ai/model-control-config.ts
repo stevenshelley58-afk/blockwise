@@ -207,37 +207,6 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
       supportsVisionInput: true,
     }),
   ],
-  vision_extract: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      imageUsdPerUnit: 0.01,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "qwen/qwen3-vl-32b-instruct",
-      label: "Qwen Qwen3 VL 32B Instruct",
-      inputUsdPerMillionTokens: 0.104,
-      outputUsdPerMillionTokens: 0.416,
-      maxContextTokens: 262_144,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
   image_draft: [
     createOpenRouterOption({
       model: "google/gemini-2.5-flash-image",
@@ -382,7 +351,7 @@ const PROFILE_SECTION_MAP: Array<{
     key: "research",
     label: "Research",
     description: "Competitor research, pattern classification, and public evidence processing.",
-    profileKeys: ["cheap_draft_text", "vision_classification", "vision_extract", "structured_json"],
+    profileKeys: ["cheap_draft_text", "vision_classification", "structured_json"],
   },
   {
     key: "campaigns",

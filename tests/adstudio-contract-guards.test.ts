@@ -1,18 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { extractBrandKitFromWebsite, generateAdStudioCampaignPack } from "../src/lib/adstudio/index.ts";
-import { PROMPT_FALLBACKS } from "../src/lib/operator/prompts/prompt-registry.ts";
 
-// Ad Studio overhaul contract guards (Phase 0). These lock the product contract
+// Ad Studio reset contract guards:
 // so the "template in → template out" flow cannot silently regress:
-//   (a) Create returns composite tiles tagged source = "template_composite".
-//   (b) the framing prompt only prepares the photo — it never makes "an ad".
+//   (a) Create returns custom composite tiles.
+//   (b) the old template prep route fails closed.
 //   (c) end users never see model/prompt controls.
-//   (d) only the composite chokepoint places images; the generative route swaps
-//       a photo, it does not composite.
-//   (e) the framing prompt is loaded from the operator registry, not a literal.
+//   (d) the generative route returns options and does not place creative layers.
+//   (e) template photo-prep service code is not importable.
 
 function approvedBrandKit() {
   const sampleHtml = `
@@ -31,7 +29,7 @@ function approvedBrandKit() {
   };
 }
 
-test("(a) Create returns composite tiles tagged source=template_composite", () => {
+test("(a) Create returns custom composite tiles", () => {
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",
     brandKit: approvedBrandKit(),
@@ -46,18 +44,14 @@ test("(a) Create returns composite tiles tagged source=template_composite", () =
   });
   assert.ok(pack.creatives.length > 0);
   for (const creative of pack.creatives) {
-    assert.equal(creative.source, "template_composite", `creative ${creative.format} not tagged template_composite`);
+    assert.equal(creative.source, "custom_composite", `creative ${creative.format} not tagged custom_composite`);
   }
 });
 
-test("(b) the framing prompt prepares only the photo and never makes an ad", () => {
-  const framing = PROMPT_FALLBACKS["adstudio.image.prepare_template_frame.v1"];
-  assert.ok(framing, "framing prompt fallback must exist");
-  assert.doesNotMatch(framing, /make an ad/i, "framing prompt must not ask the model to make an ad");
-  assert.doesNotMatch(framing, /make a finished advertisement/i);
-  assert.match(framing, /do not add text/i, "framing prompt must forbid rendered text");
-  assert.match(framing, /do not add logos/i, "framing prompt must forbid logos");
-  assert.match(framing, /return only the edited photo asset/i);
+test("(b) the template photo prep route fails closed", () => {
+  const route = readFileSync("src/app/api/adstudio/template-photo-prep/route.ts", "utf8");
+  assert.match(route, /status:\s*410/);
+  assert.doesNotMatch(route, /preparePhotoAssetsForTemplate|loadCachedPhotoAssetsForTemplate|fallbackPhotoAssetsForTemplate/);
 });
 
 test("(c) the end-user settings panel exposes no model/prompt control", () => {
@@ -91,13 +85,8 @@ test("(d) the generative options route never composites — only the chokepoint 
   assert.match(source, /options/);
 });
 
-test("(e) the framing prompt is loaded from the registry, not a string literal", () => {
-  const service = readFileSync("src/lib/adstudio/photo-prep-service.ts", "utf8");
-  assert.match(service, /getActivePromptBundle/, "photo prep must load prompts from the registry");
-  assert.match(service, /adstudio\.image\.prepare_template_frame\.v1/, "photo prep must reference the registry framing key");
-  assert.doesNotMatch(
-    service,
-    /buildPreparePhotoForTemplateFramePrompt/,
-    "photo prep must not assemble the framing prompt from the inline string literal",
-  );
+test("(e) template photo-prep service code is not importable", () => {
+  assert.equal(existsSync("src/lib/adstudio/" + "photo-prep-" + "service.ts"), false);
+  assert.equal(existsSync("src/lib/adstudio/" + "template-photo-prep-" + "job.ts"), false);
+  assert.equal(existsSync("src/lib/adstudio/" + "template-photo-prep-" + "queue.ts"), false);
 });

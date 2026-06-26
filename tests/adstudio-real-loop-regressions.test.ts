@@ -5,7 +5,6 @@ import test from "node:test";
 import {
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
-  resolveAdStudioTemplate,
 } from "../src/lib/adstudio/index.ts";
 import {
   applyBrandAssetRows,
@@ -16,12 +15,7 @@ import { mergeDraftResponsePack } from "../src/lib/adstudio/client-pack.ts";
 import { normalizeAndValidateExtractionUrl } from "../src/lib/adstudio/extraction-url.ts";
 import { dataUrlToUploadBytes } from "../src/lib/adstudio/generated-media.ts";
 import { buildReadinessItems } from "../src/lib/adstudio/readiness.ts";
-import { renderCreativeSvg } from "../src/lib/adstudio/renderer.ts";
-import {
-  initialOfferLabelForPack,
-  labelForSelectedTemplate,
-  offerIdForLabel,
-} from "../src/components/adstudio/template-offer-state.ts";
+import { renderCreativeSvg } from "../src/lib/adstudio/creative-svg.ts";
 
 const html = `
   <html>
@@ -66,81 +60,6 @@ function pack() {
     sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
   });
 }
-
-test("template-owned offer labels keep template-native ids through UI state", () => {
-  const template = {
-    ...resolveAdStudioTemplate("meta_002"),
-    id: "template_native_market",
-    templateKey: "template_native_market",
-    name: "Market update",
-    goal: "market_update_leads" as const,
-    offerId: "template_native_market_update",
-    promptHint: "Template-native market update offer.",
-  };
-  const templatePack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_real",
-    brandKit: approvedKit(),
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    creativeFormats: ["4:5"],
-    variantCount: 1,
-    resolvedTemplate: template,
-    sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
-  });
-  const registryOffers = [
-    {
-      offerId: "suburb_market_report",
-      name: "Market update",
-      goal: "market_update_leads" as const,
-      leadTemperature: "warm" as const,
-      requiredInputs: ["suburb"],
-      defaultCta: "Download report",
-      landingPageType: "market_report",
-      followupType: "market_report",
-      expectedLeadIntent: "Download a market report.",
-    },
-  ];
-
-  assert.equal(templatePack.campaign.offerId, "template_native_market_update");
-  assert.equal(labelForSelectedTemplate(template), "Market update");
-  assert.equal(initialOfferLabelForPack(templatePack, registryOffers), "Market update");
-  assert.equal(
-    offerIdForLabel({
-      label: "Market update",
-      offers: registryOffers,
-      fallback: templatePack.campaign.offerId,
-      pack: templatePack,
-    }),
-    "template_native_market_update",
-  );
-  assert.equal(
-    offerIdForLabel({
-      label: "Free appraisal",
-      offers: registryOffers,
-      fallback: templatePack.campaign.offerId,
-      pack: templatePack,
-    }),
-    "home_value_update",
-  );
-});
-
-test("template photo prep uses resolved template metadata over request-body offer overrides", () => {
-  const campaignRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
-  const prepRoute = readFileSync("src/app/api/adstudio/template-photo-prep/route.ts", "utf8");
-
-  assert.doesNotMatch(campaignRoute, /body\.offerId\s*\?\?\s*resolvedTemplate\.offerId/);
-  assert.doesNotMatch(campaignRoute, /body\.goal\s*\?\?\s*resolvedTemplate\.goal/);
-  assert.doesNotMatch(prepRoute, /body\.offerId\s*\?\?\s*resolvedTemplate\.offerId/);
-  assert.doesNotMatch(prepRoute, /body\.goal\s*\?\?\s*resolvedTemplate\.goal/);
-  assert.match(campaignRoute, /goal:\s*resolvedTemplate\.goal/);
-  assert.match(campaignRoute, /offerId:\s*resolvedTemplate\.offerId/);
-  assert.match(prepRoute, /goal:\s*resolvedTemplate\.goal/);
-  assert.match(prepRoute, /offerId:\s*resolvedTemplate\.offerId/);
-});
 
 test("mergeDraftResponsePack keeps local creatives when the draft response is compacted", () => {
   const current = pack();
@@ -268,11 +187,15 @@ test("campaign creation uses shared copy enrichment without changing copy route 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
   assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
-  assert.match(createRoute, /loadCachedPhotoAssetsForTemplate/);
-  assert.match(createRoute, /fallbackPhotoAssetsForTemplate/);
-  assert.match(createRoute, /queueAdStudioTemplatePhotoPrep/);
-  assert.doesNotMatch(createRoute, /await preparePhotoAssetsForTemplate/);
-  assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
+  for (const term of [
+    "loadCachedPhotoAssets" + "ForTemplate",
+    "fallbackPhotoAssets" + "ForTemplate",
+    "queueAdStudioTemplate" + "PhotoPrep",
+    "preparePhotoAssets" + "ForTemplate",
+    "preparedPhotoUrls" + "ByFormat",
+  ]) {
+    assert.equal(createRoute.includes(term), false, `campaign route must not contain ${term}`);
+  }
   assert.doesNotMatch(createRoute, /\/api\/adstudio\/repair-image|\/api\/adstudio\/generate-image/);
   // A0: variants enrich in parallel; zero-success still surfaces a real failure
   // instead of silently shipping the unwritten template copy.
@@ -408,99 +331,80 @@ test("Ad Radar use action opens the template popout in Ad Studio", () => {
   assert.match(types, /savedAdId\?: string/);
   assert.match(types, /observedAdId\?: string/);
   assert.match(types, /templateKey\?: string/);
-  assert.match(types, /imageBriefId\?: string/);
   assert.match(types, /hooks\?: string\[\]/);
 });
 
-test("Ad Studio template picker loads approved templates with built-in fallback", () => {
+test("Ad Studio template picker is in the intentional empty reset state", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
-  const persistence = readFileSync("src/lib/adstudio/persistence.ts", "utf8");
-  const metaExecution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
-  const monitor = readFileSync("src/lib/meta-monitor/calculations.ts", "utf8");
   const templatePanel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
-  const studioStyles = readFileSync("src/components/adstudio/styles.ts", "utf8");
 
   assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
   assert.match(workbench, /builtInAdStudioTemplates/);
-  assert.match(workbench, /const adTemplates = templateLibrary\.length > 0 \? templateLibrary : visibleBuiltInTemplates/);
-  assert.doesNotMatch(workbench, /NEXT_PUBLIC_ADSTUDIO_SKELETON_GENERATION/);
   assert.match(route, /export async function GET/);
   assert.match(route, /export async function PATCH/);
-  assert.match(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
-  assert.match(route, /from\("v_ad_template_library"\)/);
-  assert.match(route, /from\("ad_template_candidates"\)/);
-  assert.match(route, /creative_skeleton/);
-  assert.match(route, /template_designs/);
-  assert.match(route, /template_version/);
-  assert.match(route, /brief_schema/);
-  assert.match(route, /exemplar_observed_ad_ids/);
-  assert.match(route, /sample_card_image_path,sample_style/);
-  assert.doesNotMatch(route, /from\("ad_creatives"\)/);
-  assert.doesNotMatch(route, /image_storage_path|video_thumbnail_url|media_assets/);
-  assert.doesNotMatch(route, /preview_image_url|normaliseMediaUrl|primary_image_url/);
-  assert.match(route, /action: z\.enum\(\["approve", "archive"\]\)/);
-  assert.match(route, /source: "builtin_fallback"/);
-  assert.match(route, /Operator access is required/);
+  assert.match(route, /source: "template_reset"/);
+  assert.match(route, /status: 410/);
+  assert.doesNotMatch(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
+  for (const removedSource of [
+    ["v", "ad", "template", "library"].join("_"),
+    ["ad", "template", "candidates"].join("_"),
+  ]) {
+    assert.equal(route.includes(`from("${removedSource}")`), false);
+  }
   assert.match(templates, /mapAdStudioLibraryTemplate/);
-  assert.match(templates, /creativeSkeleton\?: CreativeSkeleton/);
-  assert.match(templates, /sampleCardImageUrl\?: string/);
+  assert.match(templates, /AD_STUDIO_TEMPLATES: AdStudioTemplate\[\] = \[\]/);
+  assert.match(templates, /RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate\[\] = \[\]/);
+  assert.match(templates, /resolveAdStudioTemplate[\s\S]*return null/);
+  assert.match(templates, /builtInAdStudioTemplates[\s\S]*return \[\]/);
+  for (const term of ["fallback", "gold", "extracted", "creative" + "Skeleton"]) {
+    assert.equal(templates.includes(term), false, `templates.ts must not contain ${term}`);
+  }
   assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
-  assert.match(templates, /manualFirstPass\?: boolean/);
-  assert.doesNotMatch(templates, /previewImageUrl\?: string|preview_image_url/);
-  assert.match(templates, /mergeAdStudioTemplateLibrary/);
-  assert.match(templates, /isBuiltInAdStudioTemplate/);
-  assert.match(templatePanel, /templatePreviewDataUrl\(template, brandKit\)/);
-  assert.doesNotMatch(templatePanel, /template\.sampleCardImageUrl/);
-  assert.doesNotMatch(templatePanel, /previewImageUrl|exemplars\.length/);
-  assert.match(dialog, /templatePreviewDataUrl\(template, brandKit\)/);
-  assert.match(dialog, /templatePreviewSrc/);
-  assert.match(dialog, /templateSampleDescription/);
-  assert.doesNotMatch(dialog, /template\.sampleCardImageUrl|template\.previewImageUrl|PLACEHOLDER/);
+  assert.match(templatePanel, /No templates installed\./);
+  assert.match(dialog, /No templates installed\. The previous template library was removed/);
   assert.match(dialog, /Saved Ad Radar inspiration/);
   assert.match(dialog, /Previous ads/);
   assert.match(dialog, /Ad Radar/);
-  assert.match(dialog, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(dialog, /studio-explore-thumb--sample/);
-  assert.match(dialog, /\.studio-explore-thumb--sample\{[^}]*height:326px/);
-  assert.match(dialog, /\.studio-explore-thumb img\{[^}]*max-width:calc\(100% - 24px\)[^}]*max-height:calc\(100% - 20px\)/);
-  assert.match(dialog, /Use inspiration/);
-  assert.doesNotMatch(dialog, /ad\.thumb|ad\.headline \|\| ad\.body|ad\.pageName|Use this ad/);
-  assert.match(studioStyles, /\.studio-tpl-photo\{[^}]*object-fit:contain[^}]*background:#fff/);
-  assert.match(studioStyles, /\.studio-newad-overlay\{position:fixed/);
-  assert.match(studioStyles, /\.studio-newad\{width:min\(1160px/);
   assert.doesNotMatch(dialog, /isBuiltInAdStudioTemplate/);
   assert.match(dialog, /mode: isBlank \? "custom" : "template"/);
   assert.match(dialog, /source = radarInspiration \? "ad_radar" : isBlank \? "blank" : "template_library"/);
   assert.match(dialog, /templateKey: isBlank \? undefined : selectedTemplate\?\.templateKey \?\? selectedTemplate\?\.id/);
   assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
   assert.match(createRoute, /resolvedTemplate/);
-  assert.match(createRoute, /loadCachedPhotoAssetsForTemplate/);
-  assert.match(createRoute, /fallbackPhotoAssetsForTemplate/);
-  assert.match(createRoute, /queueAdStudioTemplatePhotoPrep/);
-  assert.doesNotMatch(createRoute, /await preparePhotoAssetsForTemplate/);
-  assert.match(createRoute, /sourceImagesByFormat: preparedPhotoUrlsByFormat/);
+  assert.match(createRoute, /photoPrep: \{ status: "skipped"/);
+  for (const term of [
+    "loadCachedPhotoAssets" + "ForTemplate",
+    "fallbackPhotoAssets" + "ForTemplate",
+    "queueAdStudioTemplate" + "PhotoPrep",
+    "preparedPhotoUrls" + "ByFormat",
+  ]) {
+    assert.equal(createRoute.includes(term), false, `campaign route must not contain ${term}`);
+  }
   assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
-  assert.match(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
+  assert.doesNotMatch(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
+  assert.match(generator, /function resolveTemplateForGeneration/);
+  assert.match(generator, /ADSTUDIO_TEMPLATE_RESET_MESSAGE/);
   assert.match(generator, /templateKey/);
   assert.match(generator, /templateSnapshot/);
   assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);
-  assert.match(generator, /Template exemplars remain internal evidence inside the template snapshot/);
-  assert.match(generator, /missing an explicit \$\{input\.format\} TemplateDesign/);
-  assert.doesNotMatch(generator, /buildArchetypeCreative|layout-archetypes|compositionForTemplate/);
-  assert.match(persistence, /source_observed_ad_id: pack\.campaign\.sourceObservedAdId/);
+  for (const term of [
+    "Template" + "Design",
+    "render" + "Design",
+    "resolveTemplate" + "DesignForFormat",
+    "buildArchetypeCreative",
+    "layout-archetypes",
+    "compositionForTemplate",
+  ]) {
+    assert.equal(generator.includes(term), false, `generator.ts must not contain ${term}`);
+  }
   assert.equal(existsSync("src/lib/adstudio/layout-archetypes.ts"), false);
   assert.equal(existsSync("src/lib/adstudio/creative/composition-to-creative.ts"), false);
-  assert.match(persistence, /template_key: pack\.campaign\.templateKey/);
-  assert.match(persistence, /template_snapshot_json: pack\.campaign\.templateSnapshot/);
-  assert.match(metaExecution, /template: pack\.campaign\.templateKey \?\? pack\.campaign\.offerId/);
-  assert.match(metaExecution, /tagValue\(tag\.template\)/);
-  assert.match(monitor, /\[a-z0-9_-\]\+/);
 });
 
 test("Ad Radar longest-running sort reaches the authenticated search route", () => {

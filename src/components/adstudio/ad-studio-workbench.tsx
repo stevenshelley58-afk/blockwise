@@ -428,7 +428,6 @@ export function AdStudioWorkbench({
           source: template ? "template_library" : "blank",
           templateId: template?.id,
           templateKey: template?.templateKey ?? template?.id,
-          imageBriefId: template?.imageBriefId,
           description: descriptionForTemplate(template),
           imageDataUrl: uploaded.src,
           formats: ["9:16", "4:5", "1:1"],

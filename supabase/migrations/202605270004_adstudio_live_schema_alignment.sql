@@ -111,12 +111,6 @@ alter table public.adstudio_provider_runs add column if not exists usage_json js
 alter table public.adstudio_provider_runs add column if not exists cost_estimate numeric(10, 4) not null default 0;
 alter table public.adstudio_provider_runs add column if not exists error_json jsonb;
 
-alter table public.adstudio_template_versions add column if not exists template_id text not null default '';
-alter table public.adstudio_template_versions add column if not exists vertical text not null default 'real_estate';
-alter table public.adstudio_template_versions add column if not exists goal text not null default 'seller_leads';
-alter table public.adstudio_template_versions add column if not exists offer_type text not null default 'seller_checklist';
-alter table public.adstudio_template_versions add column if not exists active boolean not null default true;
-
 alter table public.adstudio_job_runs add column if not exists input_hash text not null default '';
 alter table public.adstudio_job_runs add column if not exists output_refs_json jsonb not null default '[]';
 alter table public.adstudio_job_runs add column if not exists error_json jsonb;
@@ -142,7 +136,6 @@ declare
     'adstudio_exports',
     'adstudio_compliance_reports',
     'adstudio_provider_runs',
-    'adstudio_template_versions',
     'adstudio_job_runs',
     'adstudio_performance_imports'
   ];

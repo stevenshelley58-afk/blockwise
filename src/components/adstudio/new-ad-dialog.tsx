@@ -115,7 +115,7 @@ function templateCategory(goal: string | null | undefined): "listings" | "apprai
 }
 
 function isNewTemplate(template: AdStudioTemplate): boolean {
-  return template.source === "operator" || template.source === "radar" || typeof template.evidenceScore === "number";
+  return template.source === "operator" || template.source === "radar";
 }
 
 function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
@@ -182,7 +182,6 @@ export function NewAdDialog({
   const [reuseError, setReuseError] = useState("");
   const [radarAds, setRadarAds] = useState<RadarAd[] | null>(null);
   const [radarError, setRadarError] = useState("");
-  const preloadKeyRef = useRef("");
   const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
   const imageRequirements = useMemo(
@@ -354,59 +353,6 @@ export function NewAdDialog({
       previousFocus.current?.focus();
     };
   }, [closeCurrentView, open]);
-
-  useEffect(() => {
-    const trimmed = description.trim();
-    if (
-      !open ||
-      step !== "brief" ||
-      isBlank ||
-      !selectedTemplate ||
-      !imageDataUrl ||
-      uploadingImage ||
-      trimmed.length < 8
-    ) {
-      return;
-    }
-
-    const preloadKey = [
-      selectedTemplate.templateKey ?? selectedTemplate.id,
-      imageDataUrl,
-      trimmed,
-    ].join("|");
-    if (preloadKeyRef.current === preloadKey) return;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      preloadKeyRef.current = preloadKey;
-      void fetch("/api/adstudio/template-photo-prep", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          brandKit,
-          goal: selectedTemplate.goal,
-          offerId: selectedTemplate.offerId,
-          firstAd: {
-            mode: "template",
-            source: "template_library",
-            templateId: selectedTemplate.id,
-            templateKey: selectedTemplate.templateKey ?? selectedTemplate.id,
-            imageBriefId: selectedTemplate.imageBriefId,
-            description: trimmed,
-            imageDataUrl,
-            imageDataUrls,
-            formats: FIRST_AD_FORMATS,
-          },
-        }),
-      }).catch(() => {});
-    }, 800);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [brandKit, description, imageDataUrl, imageDataUrls, isBlank, open, selectedTemplate, step, uploadingImage]);
 
   if (!open) return null;
 
@@ -650,7 +596,6 @@ export function NewAdDialog({
         source,
         templateId: isBlank ? undefined : selectedTemplate?.id,
         templateKey: isBlank ? undefined : selectedTemplate?.templateKey ?? selectedTemplate?.id,
-        imageBriefId: isBlank ? undefined : selectedTemplate?.imageBriefId,
         savedAdId: radarInspiration?.savedId,
         observedAdId: radarInspiration?.observedAdId,
         hooks: radarInspiration?.hooks,
@@ -713,7 +658,7 @@ export function NewAdDialog({
             <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
             {step === "source" ? (
-              <p>Pick a starting layout, then edit the media and text on the canvas.</p>
+              <p>Templates are reset. Start blank until fresh self-contained templates are installed.</p>
             ) : mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
               <p>{activeImageSlot.label}</p>
             ) : null}
@@ -749,6 +694,11 @@ export function NewAdDialog({
                     <span className="studio-explore-count">{visibleTemplates.length} templates</span>
                   </div>
                   <div className="studio-explore-grid">
+                    {visibleTemplates.length === 0 ? (
+                      <p className="studio-explore-msg">
+                        No templates installed. The previous template library was removed; fresh self-contained templates have not been added yet.
+                      </p>
+                    ) : null}
                     {visibleTemplates.map((template) => (
                       <article key={template.id} className="studio-explore-card">
                         <div className={`studio-explore-thumb${templateHasGalleryPreview(template, brandKit) ? " studio-explore-thumb--sample" : ""}`}>
@@ -1029,32 +979,7 @@ function imageRequirementsForTemplate(
   template: AdStudioTemplate | undefined,
   isBlank: boolean,
 ): TemplateImageRequirement[] {
-  if (isBlank || !template) return [DEFAULT_IMAGE_SLOT];
-
-  const byId = new Map<string, TemplateImageRequirement>();
-  for (const format of FIRST_AD_FORMATS) {
-    const design = template.designs?.[format];
-    for (const layer of design?.layers ?? []) {
-      if (layer.type !== "image_slot") continue;
-      if (byId.has(layer.id)) continue;
-      byId.set(layer.id, {
-        id: layer.id,
-        label: layer.editorLabel?.trim() || imageSlotLabel(layer.id, layer.role),
-        guidance: layer.guidance,
-        role: layer.role,
-        required: layer.required !== false,
-      });
-    }
-  }
-
-  return byId.size > 0 ? Array.from(byId.values()) : [DEFAULT_IMAGE_SLOT];
-}
-
-function imageSlotLabel(id: string, role: TemplateImageRequirement["role"]): string {
-  if (role === "primary") return "Primary property image";
-  if (role === "agent_headshot") return "Agent headshot";
-  if (id.includes("secondary")) return "Secondary property image";
-  return "Supporting property image";
+  return [DEFAULT_IMAGE_SLOT];
 }
 
 function uploadActionText(slot: TemplateImageRequirement, slotCount: number): string {

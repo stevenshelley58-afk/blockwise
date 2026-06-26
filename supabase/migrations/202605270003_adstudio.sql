@@ -176,20 +176,6 @@ create table if not exists public.adstudio_provider_runs (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.adstudio_template_versions (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces (id) on delete cascade,
-  template_id text not null,
-  vertical text not null default 'real_estate',
-  goal text not null,
-  offer_type text not null,
-  version integer not null default 1,
-  template_json jsonb not null default '{}',
-  active boolean not null default true,
-  created_at timestamptz not null default now(),
-  unique (workspace_id, template_id, version)
-);
-
 create table if not exists public.adstudio_job_runs (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
@@ -227,7 +213,6 @@ alter table public.adstudio_platform_copy enable row level security;
 alter table public.adstudio_exports enable row level security;
 alter table public.adstudio_compliance_reports enable row level security;
 alter table public.adstudio_provider_runs enable row level security;
-alter table public.adstudio_template_versions enable row level security;
 alter table public.adstudio_job_runs enable row level security;
 alter table public.adstudio_performance_imports enable row level security;
 
@@ -246,7 +231,6 @@ declare
     'adstudio_exports',
     'adstudio_compliance_reports',
     'adstudio_provider_runs',
-    'adstudio_template_versions',
     'adstudio_job_runs',
     'adstudio_performance_imports'
   ];

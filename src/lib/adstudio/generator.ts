@@ -2,15 +2,14 @@ import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { findOfferTemplate, getOfferTemplate } from "./offers.ts";
-import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
-import { resolveTemplateDesignForFormat, type BoundTemplateContent, type TemplateDesign } from "./template-design.ts";
-import { resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
+import { ADSTUDIO_TEMPLATE_RESET_MESSAGE, resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
   AdStudioCampaignPack,
   AdStudioCampaignVariant,
+  AdStudioCanvasObject,
   AdStudioCreative,
   AdStudioFormat,
   AdStudioGoal,
@@ -38,7 +37,6 @@ export type GenerateCampaignPackInput = {
   sourceImageDataUrl?: string;
   sourceImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   sourceImagesBySlot?: Partial<Record<string, string>>;
-  resolvedTemplate?: AdStudioTemplate | null;
 };
 
 type DefaultCreativeMessage = {
@@ -71,17 +69,28 @@ type OfferCopySeed = {
 
 const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
 const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
-const BLANK_CANVAS: Record<AdStudioFormat, TemplateDesign["canvas"]> = {
-  "1:1": { w: 1080, h: 1080 },
-  "4:5": { w: 1080, h: 1350 },
-  "9:16": { w: 1080, h: 1920 },
-  "1.91:1": { w: 1200, h: 628 },
+const CANVAS_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
+  "1:1": { width: 1080, height: 1080 },
+  "4:5": { width: 1080, height: 1350 },
+  "9:16": { width: 1080, height: 1920 },
+  "1.91:1": { width: 1200, height: 628 },
 };
+
+function resolveTemplateForGeneration(input: GenerateCampaignPackInput): AdStudioTemplate | null {
+  if (input.firstAd?.mode !== "template") return null;
+
+  const templateKey = input.firstAd.templateId ?? input.firstAd.templateKey;
+  const resolved = resolveAdStudioTemplate(templateKey);
+  if (!resolved) {
+    throw new Error(ADSTUDIO_TEMPLATE_RESET_MESSAGE);
+  }
+  return resolved;
+}
 
 export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): AdStudioCampaignPack {
   // B2 (simplification): draft/unapproved brand kits may generate; brand-kit
   // approval is enforced at publish (readiness checks), not at generation.
-  const template = input.resolvedTemplate ?? (input.firstAd?.mode === "template" ? resolveAdStudioTemplate(input.firstAd.templateId ?? input.firstAd.templateKey) : null);
+  const template = resolveTemplateForGeneration(input);
   const templateKey = template?.templateKey ?? template?.id ?? input.firstAd?.templateKey ?? input.firstAd?.templateId ?? null;
   const requestedOfferId = template?.offerId ?? inferOfferIdFromFirstAd(input.firstAd?.description, input.offerId);
   const offer = resolveCampaignOffer({
@@ -108,7 +117,6 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     templateKey,
     templateSource: template?.source ?? (input.firstAd?.source === "ad_radar" ? "ad_radar" : null),
     // Only explicit Ad Radar copy starts are sourced from a real observed ad.
-    // Template exemplars remain internal evidence inside the template snapshot.
     sourceObservedAdId: input.firstAd?.source === "ad_radar" ? input.firstAd.observedAdId ?? null : null,
     templateSnapshot: template ? buildTemplateSnapshot(template) : null,
     platforms: input.platforms,
@@ -479,8 +487,6 @@ function buildFirstAdMessages(
 }
 
 function templateHeroHeadline(template: AdStudioTemplate): string {
-  const skeletonPattern = template.creativeSkeleton?.copy.headline_pattern;
-  if (skeletonPattern) return normalizeTemplatePatternHeadline(skeletonPattern, template.name);
   const templateName = template.name;
   if (/appraisal|price/i.test(templateName)) return "What could your home be worth?";
   if (/open home/i.test(templateName)) return "See this home this weekend";
@@ -490,27 +496,6 @@ function templateHeroHeadline(template: AdStudioTemplate): string {
   if (/checklist/i.test(templateName)) return "Avoid costly seller prep gaps";
   if (/buyer demand/i.test(templateName)) return "Get a clearer local view";
   return "A fresh local listing to watch";
-}
-
-function normalizeTemplatePatternHeadline(pattern: string, fallbackName: string): string {
-  const headline = pattern
-    .replace(/\{suburb\}/gi, "your suburb")
-    .replace(/\{property_type\}/gi, "home")
-    .replace(/\{bedrooms\}/gi, "")
-    .replace(/\{street\}/gi, "")
-    .replace(/\{launch_timing\}/gi, "soon")
-    .replace(/\{day\}/gi, "this weekend")
-    .replace(/\{time\}/gi, "")
-    .replace(/\{address\}/gi, "")
-    .replace(/\{sale_result\}/gi, "")
-    .replace(/\{period\}/gi, "now")
-    .replace(/\{metric\}/gi, "market")
-    .replace(/\{buyer_type\}/gi, "buyers")
-    .replace(/\{timeline\}/gi, "soon")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\s+([?!.,])/g, "$1");
-  return headline || fallbackName;
 }
 
 function localTemplateHeadline(templateName: string): string {
@@ -949,163 +934,251 @@ function buildCreative(input: {
   sourceImagesBySlot?: Partial<Record<string, string>>;
   subheadline?: string;
 }): AdStudioCreative {
-  const design = input.template ? resolveTemplateDesignForFormat(input.template, input.format) : blankCreativeDesign(input.format);
-  if (!design) {
-    throw new Error(`Template ${input.template?.id ?? "unknown"} is missing an explicit ${input.format} TemplateDesign.`);
+  if (input.template) {
+    throw new Error(ADSTUDIO_TEMPLATE_RESET_MESSAGE);
   }
 
-  const content: BoundTemplateContent = {
-    text: {
-      eyebrow: input.template?.name ?? input.campaign.offerId,
-      headline: input.variant.headline,
-      subhead: input.subheadline ?? input.variant.offer,
-      body: input.subheadline ?? input.variant.offer,
-      cta: input.variant.cta,
-      phone: input.brandKit.contact.phone ?? "",
-      handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
-    },
-    images: imageBindingsForDesign(design, input.sourceImageDataUrl, input.sourceImagesBySlot),
-  };
-
-  return renderDesign(design, content, input.brandKit, {
-    creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${design.templateId}`),
+  return buildCustomCreative({
+    creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:custom`),
     campaignId: input.campaign.campaignId,
     variantId: input.variant.variantId,
+    format: input.format,
+    brandKit: input.brandKit,
+    headline: input.variant.headline,
+    subheadline: input.subheadline ?? input.variant.offer,
+    cta: input.variant.cta,
+    imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl,
   });
 }
 
-function blankCreativeDesign(format: AdStudioFormat): TemplateDesign {
-  const isLandscape = format === "1.91:1";
-  const isStory = format === "9:16";
+function buildCustomCreative(input: {
+  creativeId: string;
+  campaignId: string;
+  variantId: string;
+  format: AdStudioFormat;
+  brandKit: AdStudioBrandKit;
+  headline: string;
+  subheadline: string;
+  cta: string;
+  imageUrl?: string;
+}): AdStudioCreative {
+  const size = CANVAS_SIZE[input.format];
+  const isLandscape = input.format === "1.91:1";
+  const isStory = input.format === "9:16";
+  const brandName = input.brandKit.identity.tradingName || input.brandKit.identity.businessName;
+  const objects: AdStudioCanvasObject[] = [
+    {
+      objectId: "background",
+      type: "shape",
+      role: "background",
+      x: 0,
+      y: 0,
+      width: size.width,
+      height: size.height,
+      fill: input.brandKit.colours.primary || "#0F172A",
+      locked: true,
+    },
+	    ...(input.imageUrl
+	      ? [{
+	          objectId: "primary_photo",
+	          type: "image" as const,
+	          role: "primary_image",
+	          content: input.imageUrl,
+	          assetId: input.imageUrl,
+	          x: 0,
+	          y: 0,
+          width: size.width,
+          height: size.height,
+          imageAnchor: "center" as const,
+          locked: true,
+        }]
+      : []),
+	    {
+	      objectId: "image_scrim",
+	      type: "shape",
+	      role: "image_scrim",
+      x: 0,
+      y: 0,
+      width: size.width,
+      height: size.height,
+      fill: "#0F172A",
+      opacity: 0.34,
+      locked: true,
+    },
+	    ...(input.brandKit.logos.primaryLogoUrl
+	      ? [{
+	          objectId: "brand_logo",
+	          type: "logo" as const,
+	          role: "brand_logo",
+          assetId: input.brandKit.logos.primaryLogoUrl,
+          x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+          y: Math.round(size.height * (isStory ? 0.05 : 0.06)),
+          width: Math.round(size.width * (isLandscape ? 0.22 : 0.34)),
+          height: Math.round(size.height * (isLandscape ? 0.09 : 0.055)),
+          locked: true,
+        }]
+	      : [{
+	          objectId: "brand_name",
+	          type: "text" as const,
+	          role: "brand_logo",
+          content: brandName,
+          x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+          y: Math.round(size.height * (isStory ? 0.05 : 0.06)),
+          width: Math.round(size.width * 0.5),
+          height: Math.round(size.height * 0.06),
+          font: "brand_heading" as const,
+          fontFamily: input.brandKit.typography.headingFont,
+          size: isLandscape ? 30 : 34,
+          lineHeight: 1.1,
+          weight: 800,
+          fill: "#FFFFFF",
+          align: "left" as const,
+          locked: true,
+        }]),
+    {
+      objectId: "headline",
+      type: "text",
+      role: "headline",
+      content: input.headline,
+      x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+      y: Math.round(size.height * (isLandscape ? 0.35 : isStory ? 0.58 : 0.55)),
+      width: Math.round(size.width * (isLandscape ? 0.56 : 0.84)),
+      height: Math.round(size.height * (isLandscape ? 0.18 : isStory ? 0.13 : 0.16)),
+      font: "brand_heading",
+      fontFamily: input.brandKit.typography.headingFont,
+      size: isLandscape ? 54 : isStory ? 78 : 68,
+      lineHeight: 1.05,
+      weight: 900,
+      fill: "#FFFFFF",
+      align: "left",
+      locked: false,
+    },
+	    {
+	      objectId: "subhead",
+	      type: "text",
+	      role: "subheadline",
+      content: input.subheadline,
+      x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+      y: Math.round(size.height * (isLandscape ? 0.57 : isStory ? 0.73 : 0.73)),
+      width: Math.round(size.width * (isLandscape ? 0.5 : 0.78)),
+      height: Math.round(size.height * (isLandscape ? 0.11 : 0.08)),
+      font: "brand_body",
+      fontFamily: input.brandKit.typography.bodyFont,
+      size: isLandscape ? 26 : isStory ? 38 : 34,
+      lineHeight: 1.18,
+      weight: 650,
+      fill: "#FFFFFF",
+      align: "left",
+      locked: false,
+    },
+	    {
+	      objectId: "cta_shape",
+	      type: "shape",
+	      role: "cta_button",
+      x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+      y: Math.round(size.height * (isLandscape ? 0.74 : isStory ? 0.84 : 0.86)),
+      width: Math.round(size.width * (isLandscape ? 0.24 : 0.34)),
+      height: Math.round(size.height * (isLandscape ? 0.11 : isStory ? 0.06 : 0.07)),
+      radius: 999,
+      fill: input.brandKit.colours.accent || "#123E75",
+      locked: true,
+    },
+	    {
+	      objectId: "cta_text",
+	      type: "text",
+	      role: "cta_text",
+      content: input.cta,
+      x: Math.round(size.width * (isLandscape ? 0.07 : 0.08)),
+      y: Math.round(size.height * (isLandscape ? 0.74 : isStory ? 0.84 : 0.86)),
+      width: Math.round(size.width * (isLandscape ? 0.24 : 0.34)),
+      height: Math.round(size.height * (isLandscape ? 0.11 : isStory ? 0.06 : 0.07)),
+      font: "brand_body",
+      fontFamily: input.brandKit.typography.bodyFont,
+      size: isLandscape ? 24 : 30,
+      lineHeight: 1,
+      weight: 800,
+      fill: "#FFFFFF",
+      align: "center",
+      locked: false,
+    },
+  ];
+  const creative: Omit<AdStudioCreative, "previewSvg"> = {
+    creativeId: input.creativeId,
+    campaignId: input.campaignId,
+    variantId: input.variantId,
+    format: input.format,
+    source: "custom_composite",
+    canvas: {
+      width: size.width,
+      height: size.height,
+      backgroundAssetId: null,
+      objects,
+    },
+    safeZones: {
+      metaStory: input.format === "9:16",
+      googleDemandGen: true,
+    },
+  };
+
   return {
-    templateId: "blank_custom",
-    version: 1,
-    format,
-    canvas: BLANK_CANVAS[format],
-    palette: ["#0F172A", "#FFFFFF", "#F8FAFC", "#123E75"],
-    fonts: ["Inter", "Inter"],
-    layers: [
-      {
-        id: "background",
-        type: "shape",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        fill: "#0F172A",
-        role: "background",
-        locked: true,
-      },
-      {
-        id: "primary_photo",
-        type: "image_slot",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        role: "primary",
-        fit: "cover",
-        anchor: "center",
-        mask: "none",
-        editorLabel: "Primary image",
-        guidance: "Use the uploaded property or inspiration image.",
-        required: true,
-      },
-      {
-        id: "image_scrim",
-        type: "shape",
-        rect: { x: 0, y: 0, w: 1, h: 1 },
-        fill: "#0F172A",
-        opacity: 0.32,
-        role: "scrim",
-        locked: true,
-      },
-      {
-        id: "brand_logo",
-        type: "logo",
-        rect: { x: isLandscape ? 0.07 : 0.08, y: isStory ? 0.05 : 0.06, w: isLandscape ? 0.22 : 0.34, h: isLandscape ? 0.09 : 0.055 },
-        source: "brand_kit",
-      },
-      {
-        id: "headline",
-        type: "text",
-        rect: {
-          x: isLandscape ? 0.07 : 0.08,
-          y: isLandscape ? 0.35 : isStory ? 0.58 : 0.55,
-          w: isLandscape ? 0.56 : 0.84,
-          h: isLandscape ? 0.18 : isStory ? 0.13 : 0.16,
-        },
-        slot: "headline",
-        align: "left",
-        font: "Inter",
-        size: isLandscape ? 54 : isStory ? 78 : 68,
-        lineHeight: 1.05,
-        weight: 900,
-        color: "#FFFFFF",
-        maxChars: 72,
-        fill: "ai_copy",
-      },
-      {
-        id: "subhead",
-        type: "text",
-        rect: {
-          x: isLandscape ? 0.07 : 0.08,
-          y: isLandscape ? 0.57 : isStory ? 0.73 : 0.73,
-          w: isLandscape ? 0.5 : 0.78,
-          h: isLandscape ? 0.11 : 0.08,
-        },
-        slot: "subhead",
-        align: "left",
-        font: "Inter",
-        size: isLandscape ? 26 : isStory ? 38 : 34,
-        lineHeight: 1.18,
-        weight: 650,
-        color: "#FFFFFF",
-        maxChars: 140,
-        fill: "ai_copy",
-      },
-      {
-        id: "cta",
-        type: "cta_button",
-        rect: {
-          x: isLandscape ? 0.07 : 0.08,
-          y: isLandscape ? 0.74 : isStory ? 0.84 : 0.86,
-          w: isLandscape ? 0.24 : 0.34,
-          h: isLandscape ? 0.11 : isStory ? 0.06 : 0.07,
-        },
-        fill: "#123E75",
-        radius: 999,
-        label: "cta",
-        textColor: "#FFFFFF",
-        font: "Inter",
-        size: isLandscape ? 24 : 30,
-      },
-    ],
+    ...creative,
+    previewSvg: renderGeneratedCreativeSvg(creative),
   };
 }
 
-function imageBindingsForDesign(
-  design: TemplateDesign,
-  sourceImageDataUrl: string | undefined,
-  sourceImagesBySlot: Partial<Record<string, string>> | undefined,
-): BoundTemplateContent["images"] {
-  if (!sourceImageDataUrl && !sourceImagesBySlot) return undefined;
+function renderGeneratedCreativeSvg(creative: Omit<AdStudioCreative, "previewSvg">): string {
+  const width = creative.canvas.width;
+  const height = creative.canvas.height;
+  const body = creative.canvas.objects.map((object) => renderCanvasObjectSvg(object)).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+}
 
-  const bindings: NonNullable<BoundTemplateContent["images"]> = {
-    ...(sourceImageDataUrl
-      ? {
-          primary: sourceImageDataUrl,
-          primary_photo: sourceImageDataUrl,
-        }
-      : {}),
-  };
-
-  for (const layer of design.layers) {
-    if (layer.type !== "image_slot") continue;
-    const slotImage =
-      layer.role === "primary"
-        ? sourceImageDataUrl ?? sourceImagesBySlot?.[layer.id] ?? sourceImagesBySlot?.[layer.role]
-        : sourceImagesBySlot?.[layer.id] ?? sourceImagesBySlot?.[layer.role] ?? sourceImageDataUrl;
-    if (!slotImage) continue;
-    bindings[layer.id] = slotImage;
-    bindings[layer.role] = slotImage;
+function renderCanvasObjectSvg(object: AdStudioCanvasObject): string {
+  const opacity = object.opacity === undefined ? "" : ` opacity="${object.opacity}"`;
+  if (object.type === "image" || object.type === "logo") {
+    if (!object.assetId) return "";
+    const preserveAspectRatio = object.imageAnchor === "top" ? "xMidYMin slice" : object.imageAnchor === "bottom" ? "xMidYMax slice" : "xMidYMid slice";
+    return `<image href="${escapeSvg(object.assetId)}" x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" preserveAspectRatio="${preserveAspectRatio}"${opacity}/>`;
   }
+  if (object.type === "shape") {
+    return `<rect x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? object.width}" rx="${object.radius ?? 0}" fill="${escapeSvg(object.fill ?? "#000000")}"${opacity}/>`;
+  }
+  if (object.type === "text") {
+    const lines = wrapSvgText(object.content ?? "", object.width, object.size ?? 32);
+    const lineHeight = (object.size ?? 32) * (object.lineHeight ?? 1.15);
+    const anchor = object.align === "center" ? "middle" : object.align === "right" ? "end" : "start";
+    const x = object.align === "center" ? object.x + object.width / 2 : object.align === "right" ? object.x + object.width : object.x;
+    const y = object.y + (object.role === "cta_text" ? ((object.height ?? lineHeight) + (object.size ?? 32) * 0.72) / 2 : object.size ?? 32);
+    const tspans = lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeSvg(line)}</tspan>`).join("");
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${escapeSvg(object.fontFamily ?? "Inter")}" font-size="${object.size ?? 32}" font-weight="${object.weight ?? 600}" fill="${escapeSvg(object.fill ?? "#FFFFFF")}">${tspans}</text>`;
+  }
+  return "";
+}
 
-  return bindings;
+function wrapSvgText(value: string, boxWidth: number, fontSize: number): string[] {
+  const words = value.trim().split(/\s+/u).filter(Boolean);
+  const maxChars = Math.max(8, Math.floor(boxWidth / Math.max(1, fontSize * 0.54)));
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 4);
+}
+
+function escapeSvg(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unknown> {
@@ -1118,14 +1191,6 @@ function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unkno
     source: template.source ?? null,
     status: template.status ?? null,
     promptHint: template.promptHint,
-    imageBriefId: template.imageBriefId ?? null,
-    designs: template.designs ?? null,
-    evidenceScore: template.evidenceScore ?? null,
-    winnerRationale: template.winnerRationale ?? null,
-    complianceNote: template.complianceNote ?? null,
-    manualFirstPass: template.manualFirstPass ?? false,
-    exemplars: template.exemplars ?? [],
-    creativeSkeleton: template.creativeSkeleton ?? null,
   };
 }
 

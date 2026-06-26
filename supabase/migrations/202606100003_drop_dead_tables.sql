@@ -24,7 +24,6 @@ alter table if exists public.agent_permissions set schema legacy_archive;
 alter table if exists public.adstudio_creative_objects set schema legacy_archive;
 alter table if exists public.adstudio_exports set schema legacy_archive;
 alter table if exists public.adstudio_offer_templates set schema legacy_archive;
-alter table if exists public.adstudio_template_versions set schema legacy_archive;
 alter table if exists public.agent_reviews set schema legacy_archive;
 alter table if exists public.agent_schedules set schema legacy_archive;
 alter table if exists public.ai_cost_policies set schema legacy_archive;

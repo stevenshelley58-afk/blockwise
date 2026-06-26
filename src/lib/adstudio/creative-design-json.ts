@@ -1,4 +1,4 @@
-import { renderCreativeSvg } from "./renderer.ts";
+import { renderCreativeSvg } from "./creative-svg.ts";
 import type { AdStudioCanvasObject, AdStudioCreative } from "./types.ts";
 
 export const BLOCKWISE_FABRIC_META_KEY = "blockwise";

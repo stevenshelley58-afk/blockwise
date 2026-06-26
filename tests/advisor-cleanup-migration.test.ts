@@ -16,12 +16,12 @@ const createIndexLines = lines.filter((line) => line.trim().startsWith("execute 
 const body = lines.filter((line) => !line.trim().startsWith("--")).join("\n");
 
 test("advisor cleanup migration is additive and idempotent", () => {
-  assert.equal(createIndexLines.length, 138);
+  assert.equal(createIndexLines.length, 137);
   const guarded = createIndexLines.filter((line) => line.trim().startsWith("execute 'create index if not exists "));
-  assert.equal(guarded.length, 138);
+  assert.equal(guarded.length, 137);
   // Every wrapped index skips drift (missing column/table) instead of failing.
   const skipGuards = lines.filter((line) => line.includes("exception when undefined_column or undefined_table"));
-  assert.equal(skipGuards.length, 138);
+  assert.equal(skipGuards.length, 137);
 });
 
 test("advisor cleanup migration only indexes app-owned schemas", () => {
@@ -31,7 +31,7 @@ test("advisor cleanup migration only indexes app-owned schemas", () => {
     const target = line.slice(line.indexOf(" on ") + 4);
     return target.startsWith("public.") || target.startsWith("private.") || target.startsWith("research.");
   });
-  assert.equal(included.length, 138);
+  assert.equal(included.length, 137);
 
   const excluded = createIndexLines.filter((line) => {
     const target = line.slice(line.indexOf(" on ") + 4);

@@ -38,30 +38,13 @@ test("selected templates ask for goal-specific campaign details", () => {
       goal: "appraisal_bookings",
       offerId: "home_value_update",
       promptHint: "Ask homeowners to request a current value update.",
-      sampleStyle: {
-        version: "template-samples-v1",
-        propertyAge: "renovated_character",
-        priceFeel: "mid_market_family",
-        visualStyle: "property_photo_first",
-        people: "none",
-        copyDensity: "headline_overlay",
-        tone: "practical_local",
-        sampleSuburb: "Bicton",
-        sampleState: "WA",
-        agencyName: "Harbour Lane Property",
-        agentName: "Mia Hart",
-        address: "42 Beach Street",
-        propertyDetail: "renovated family home",
-        resultDetail: "recent nearby sales",
-        sampleCardImagePath: "adstudio-samples/v1/free-appraisal.png",
-      },
     },
     false,
   );
 
   assert.equal(appraisal.fieldLabel, "Appraisal offer details");
   assert.match(appraisal.helperText, /suburb or street/);
-  assert.match(appraisal.placeholder, /Bicton, WA homeowners/);
+  assert.match(appraisal.placeholder, /Scarborough, WA homeowners/);
   assert.match(appraisal.note, /sample details stay as examples only/);
 
   const market = briefGuidanceForTemplate(

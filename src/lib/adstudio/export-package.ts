@@ -6,7 +6,7 @@ import {
   type CreativeExportRender,
 } from "./creative-export.ts";
 import { deterministicUuid } from "./id.ts";
-import { svgToBytes } from "./renderer.ts";
+import { svgToBytes } from "./creative-svg.ts";
 
 type FileInput = {
   path: string;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = process.cwd();
@@ -22,6 +22,7 @@ const ignoredSegments = new Set([
 checkLegacyAdFirstReferences();
 checkCustomerInternalFieldReferences();
 checkCustomerDataSourceBoundaries();
+checkAdStudioTemplateReset();
 checkHermesQueueWorkerContract();
 
 if (failures.length > 0) {
@@ -97,6 +98,77 @@ function checkCustomerDataSourceBoundaries() {
     );
     if (hits.length > 0) {
       failures.push(`${display(file)} queries internal research tables directly: ${hits.join(", ")}`);
+    }
+  }
+}
+
+function checkAdStudioTemplateReset() {
+  const oldPaths = [
+    ["src", "lib", "adstudio", ["gold", "templates"].join("-")],
+    ["src", "lib", "adstudio", ["gold", "adstudio", "templates.ts"].join("-")],
+    ["src", "lib", "adstudio", "extracted-" + "meta-" + "template-builder.ts"],
+    ["src", "lib", "adstudio", "extracted-" + "meta-" + "templates.generated.ts"],
+    ["src", "lib", "adstudio", "template-" + "design.ts"],
+    ["src", "lib", "adstudio", "render" + "er.ts"],
+    ["src", "lib", "adstudio", "photo-prep.ts"],
+    ["src", "lib", "adstudio", "photo-prep-" + "service.ts"],
+    ["src", "lib", "ad-" + "template-" + "library"],
+	    ["public", ["adstudio", "samples"].join("-"), "gold"],
+	    ["public", ["adstudio", "samples"].join("-"), ["extracted", "meta"].join("-")],
+	    ["public", ["adstudio", "samples"].join("-"), "generated-au-properties"],
+	    ["ad-" + "template-" + "library"],
+	    ["supabase", "migrations", "20260613163000_" + ["template", "library", "schema.sql"].join("_")],
+	    ["supabase", "migrations", "20260614051500_" + ["template", "card", "images.sql"].join("_")],
+	    ["supabase", "migrations", "202606150006_adstudio_" + ["template", "engine", "foundation.sql"].join("_")],
+	    ["supabase", "migrations", "202606150007_first_pass_adstudio_" + ["template", "launch.sql"].join("_")],
+	    ["supabase", "migrations", "202606150009_" + ["template", "sample", "cards.sql"].join("_")],
+	    ["supabase", "migrations", "202606150010_fix_" + ["sample", "card", "path", "check.sql"].join("_")],
+	    ["supabase", "migrations", "202606200005_adstudio_" + ["photo", "prep", "assets.sql"].join("_")],
+	    ["supabase", "migrations", "202606200009_" + ["template", "sample", "imports.sql"].join("_")],
+	    ["supabase", "migrations", "202606210001_adstudio_" + ["template", "design", "persistence.sql"].join("_")],
+	  ];
+  for (const parts of oldPaths) {
+    const path = join(root, ...parts);
+    if (existsSync(path)) {
+      failures.push(`AdStudio reset path still exists: ${display(path)}`);
+    }
+  }
+
+  const forbiddenTerms = [
+    ["gold", "adstudio", "templates"].join("-"),
+    ["gold", "templates"].join("-"),
+    ["extracted", "meta", "template"].join("-"),
+    ["template", "design"].join("-"),
+    "render" + "Design",
+    "Template" + "Design",
+    "resolveTemplate" + "DesignForFormat",
+    ["public", ["adstudio", "samples"].join("-"), "gold"].join("/"),
+    ["public", ["adstudio", "samples"].join("-"), ["extracted", "meta"].join("-")].join("/"),
+    "Creative" + "Skeleton",
+    "creative" + "Skeleton",
+    ["creative", "skeleton"].join("_"),
+    ["vision", "extract"].join("_"),
+    "adstudio." + "skeleton",
+    ["template", "samples"].join("-"),
+    ["ad", "template", "library"].join("-"),
+    ["sample", "cards"].join("-"),
+	    ["template", "composite"].join("_"),
+	    ["prepare", "template", "frame"].join("_"),
+	    ["adstudio", "template", "versions"].join("_"),
+	    ["ad", "template", "candidates"].join("_"),
+	    ["ad", "template", "image", "briefs"].join("_"),
+	    ["v", "ad", "template", "library"].join("_"),
+	    ["template", "sample", "imports"].join("_"),
+	    ["adstudio", "photo", "prep", "assets"].join("_"),
+	  ];
+	  const scanRoots = ["src", "tests", "docs", "scripts", "public", "trigger", "supabase", "package.json"];
+  for (const file of filesUnder(scanRoots)) {
+    if (!/\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|mdx|css|html|py)$/i.test(file)) continue;
+    const text = stripComments(readFileSync(file, "utf8"));
+    const normalized = text.replace(/\\/g, "/");
+    const hits = forbiddenTerms.filter((term) => normalized.includes(term));
+    if (hits.length > 0) {
+      failures.push(`${display(file)} contains removed AdStudio template references: ${hits.join(", ")}`);
     }
   }
 }
