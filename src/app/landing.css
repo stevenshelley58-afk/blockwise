@@ -1799,9 +1799,25 @@
 
 @media (max-width: 720px) {
   .lp-shell { width: calc(100% - 40px); }
-  .lp-nav { gap: 16px; }
-  .lp-nav-links,
-  .lp-nav-actions { display: none; }
+  .lp-nav { gap: 12px; justify-content: space-between; }
+  .lp-nav-links { display: none; }
+  .lp-nav-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 12px;
+    margin-left: 0;
+  }
+  .lp-nav-actions > a:first-child {
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .lp-nav-actions .lp-btn {
+    min-height: 40px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
   .lp-section { padding: 64px 0; }
   .lp-features,
   .lp-radar-list,
@@ -1915,6 +1931,15 @@
   #free-trial { order: 8; }
   #managed-setup { order: 9; }
   #faq { order: 10; }
+}
+
+@media (max-width: 380px) {
+  .lp-shell { width: calc(100% - 32px); }
+  .lp-nav .blockwise-logo { gap: 8px; }
+  .lp-nav .blockwise-symbol { width: 24px; height: 24px; }
+  .lp-nav .blockwise-wordmark { font-size: 17px; }
+  .lp-nav-actions { gap: 8px; }
+  .lp-nav-actions .lp-btn { padding-inline: 12px; }
 }
 
 /* responsive — centered hero + live-ads ticker */
