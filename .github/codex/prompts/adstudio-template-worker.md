@@ -11,8 +11,8 @@ You are creating exactly one Blockwise Ad Studio template module in this isolate
 
 ## Context To Use
 
-- `src/lib/adstudio/extracted-meta-templates.generated.ts` is expanded to all 330 candidates inside this temporary runner. Use the matching descriptor as factual source data.
-- Use the candidate source image path from the descriptor and the CSV under `meta_ad_candidates/`.
+- `src/lib/adstudio/extracted-meta-templates.generated.ts` is committed with all 330 candidate descriptors. Use the matching descriptor as factual source data.
+- The raw `meta_ad_candidates/` source folder is intentionally ignored and may not exist in cloud jobs. Do not depend on it being present.
 - Inspect existing files under `src/lib/adstudio/gold-templates/` only as examples of the expected contract. Do not import from them.
 
 ## Required Output Contract

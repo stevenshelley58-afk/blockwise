@@ -115,6 +115,7 @@ const COPY_OVERRIDES = {
     address: "317 Scarborough Road",
   },
 };
+const COMMITTED_EXTRACTED_META_SAMPLE_IDS = new Set(Object.keys(COPY_OVERRIDES));
 
 function parseArgs(argv) {
   const args = { outDir: OUT_DIR, samplePhotoDir: SAMPLE_PHOTO_DIR, verifyOnly: false };
@@ -165,7 +166,7 @@ function sampleBrandKit() {
 
 function extractedMetaTemplates() {
   return resolvableAdStudioTemplates().filter((template) =>
-    template.sampleStyle?.sampleCardImagePath?.startsWith("adstudio-samples/extracted-meta/"),
+    COMMITTED_EXTRACTED_META_SAMPLE_IDS.has(template.id),
   );
 }
 

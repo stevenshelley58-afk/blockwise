@@ -120,16 +120,21 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install descriptor tooling
-        run: python -m pip install --disable-pip-version-check pillow
-
-      - name: Expand extracted candidate descriptors for cloud context
-        run: python scripts/adstudio-build-extracted-meta-templates.py --limit 330
+      - name: Verify committed descriptor coverage
+        env:
+          CANDIDATE_ID: ${{ matrix.candidate_id }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const source = fs.readFileSync("src/lib/adstudio/extracted-meta-templates.generated.ts", "utf8");
+          const candidateId = process.env.CANDIDATE_ID;
+          if (!source.includes('EXTRACTED_META_TEMPLATE_SLICE_SIZE = 330')) {
+            throw new Error("Cloud workers require the committed 330-candidate descriptor slice.");
+          }
+          if (!source.includes(`"id": "${candidateId}"`)) {
+            throw new Error(`Missing descriptor for ${candidateId}.`);
+          }
+          NODE
 
       - name: Require OpenAI API key
         env:

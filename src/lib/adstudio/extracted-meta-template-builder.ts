@@ -7,6 +7,18 @@ import type { AdStudioFormat } from "./types.ts";
 const META_TEMPLATE_FORMATS = ["9:16", "4:5", "1:1"] as const satisfies readonly AdStudioFormat[];
 type MetaTemplateFormat = (typeof META_TEMPLATE_FORMATS)[number];
 export const EXTRACTED_META_SAMPLE_CARD_VERSION = "template-render-v1";
+const COMMITTED_EXTRACTED_META_SAMPLE_IDS = new Set([
+  "meta_002",
+  "meta_021",
+  "meta_040",
+  "meta_044",
+  "meta_055",
+  "meta_094",
+  "meta_142",
+  "meta_245",
+  "meta_259",
+  "meta_317",
+]);
 
 const CANVAS_BY_FORMAT = {
   "9:16": { w: 1080, h: 1920 },
@@ -37,7 +49,9 @@ function templateFromDescriptor(descriptor: ExtractedMetaDescriptor): AdStudioTe
       cta: descriptor.sampleCopy.cta,
     },
     sampleStyle: sampleStyleFromDescriptor(descriptor),
-    sampleCardImageUrl: `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
+    ...(COMMITTED_EXTRACTED_META_SAMPLE_IDS.has(descriptor.id)
+      ? { sampleCardImageUrl: `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}` }
+      : {}),
     designs: designSetFromDescriptor(descriptor),
     evidenceScore: descriptor.evidenceScore,
     winnerRationale:

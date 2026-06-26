@@ -25,6 +25,11 @@ const PROMOTED_META_TEMPLATE_IDS = new Set(
     .map((template) => template.id)
     .filter((id) => id.startsWith("meta_")),
 );
+const COMMITTED_EXTRACTED_META_SAMPLE_IDS = new Set(
+  readdirSync("public/adstudio-samples/extracted-meta")
+    .filter((file) => /^meta_\d{3}\.png$/u.test(file))
+    .map((file) => file.replace(/\.png$/u, "")),
+);
 
 function brandKit() {
   return buildTrialFallbackBrandKit({
@@ -51,8 +56,8 @@ test("template gallery exposes quality-gated standalone templates", () => {
     .filter((id) => id.startsWith("meta_"));
 
   assert.equal(EXTRACTED_META_TEMPLATE_TOTAL, 330);
-  assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, 10);
-  assert.equal(EXTRACTED_META_TEMPLATE_DESCRIPTORS.length, 10);
+  assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, 330);
+  assert.equal(EXTRACTED_META_TEMPLATE_DESCRIPTORS.length, 330);
   assert.deepEqual(visible.map((template) => template.id), goldIds);
   assert.equal(new Set(visible.map((template) => template.id)).size, GOLD_AD_STUDIO_TEMPLATES.length);
   assert.ok(visible.every((template) => template.source === "operator"));
@@ -252,12 +257,24 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     }
 
     assert.equal(resolveTemplateDesignForFormat(template, "1.91:1"), null, `${descriptor.id} should not expose landscape`);
-    const promoted = PROMOTED_META_TEMPLATE_IDS.has(descriptor.id);
-    const cardVersion = promoted ? GOLD_SAMPLE_CARD_VERSION : EXTRACTED_META_SAMPLE_CARD_VERSION;
-    const cardFolder = promoted ? "gold" : "extracted-meta";
-    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
-    assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/${cardFolder}/${descriptor.id}.png`);
-    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
+    if (PROMOTED_META_TEMPLATE_IDS.has(descriptor.id)) {
+      assert.equal(template.sampleCardImageUrl, `/adstudio-samples/gold/${descriptor.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
+      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/gold/${descriptor.id}.png`);
+      assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/${descriptor.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
+    } else if (COMMITTED_EXTRACTED_META_SAMPLE_IDS.has(descriptor.id)) {
+      assert.equal(
+        template.sampleCardImageUrl,
+        `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
+      );
+      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
+      assert.equal(
+        templatePreviewDataUrl(template, kit),
+        `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
+      );
+    } else {
+      assert.equal(template.sampleCardImageUrl, undefined);
+      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    }
   }
 });
 
@@ -268,12 +285,12 @@ test("extracted Meta gallery sample cards are rendered from TemplateDesign outpu
   assert.match(renderer, /sharp\(Buffer\.from\(creative\.previewSvg\)\)/);
   assert.doesNotMatch(renderer, /meta_ad_candidates|sourceFile|SOURCE_ROOT/);
 
-  for (const descriptor of EXTRACTED_META_TEMPLATE_DESCRIPTORS) {
-    const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+  for (const id of COMMITTED_EXTRACTED_META_SAMPLE_IDS) {
+    const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${id}.png`);
     assert.deepEqual(
       imageDimensionsFromBytes(bytes),
       { width: 1080, height: 1350 },
-      `${descriptor.id} sample card should be a Feed 4:5 TemplateDesign render`,
+      `${id} sample card should be a Feed 4:5 TemplateDesign render`,
     );
   }
 });
