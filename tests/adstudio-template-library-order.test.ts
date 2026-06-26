@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { creativeSkeletonSchema } from "../src/lib/ad-template-library/skeleton.ts";
+import { getOfferTemplate } from "../src/lib/adstudio/offers.ts";
 import {
   mapAdStudioLibraryTemplate,
   mergeAdStudioTemplateLibrary,
@@ -23,8 +24,8 @@ function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
     status: "approved",
     category: input.category ?? "appraisal",
     adstudio_template_id: input.adstudio_template_id ?? "meta_002",
-    offer_id: "home_value_update",
-    goal: "appraisal_bookings",
+    offer_id: input.offer_id ?? "home_value_update",
+    goal: input.goal ?? "appraisal_bookings",
     headline: input.headline ?? "Find out what your home is worth",
     primary_text: input.primary_text ?? "Book a local appraisal with a practical market read.",
     cta: "Book appraisal",
@@ -101,6 +102,30 @@ test("template library exposes only generated sample-card URLs, not observed med
     } else {
       process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
     }
+  }
+});
+
+test("dynamic template library offer ids resolve to executable offer templates", () => {
+  const dynamicOffers = [
+    { offerId: "listing_inquiries", goal: "buyer_leads" },
+    { offerId: "buyer_list", goal: "buyer_leads" },
+    { offerId: "download_guide", goal: "seller_leads" },
+    { offerId: "market_report", goal: "market_update_leads" },
+  ] as const;
+
+  for (const { offerId, goal } of dynamicOffers) {
+    const template = mapAdStudioLibraryTemplate(
+      row({
+        template_key: `dynamic-${offerId}`,
+        adstudio_template_id: null,
+        offer_id: offerId,
+        goal,
+      }),
+    );
+
+    assert.ok(template);
+    assert.equal(template.offerId, offerId);
+    assert.equal(getOfferTemplate(template.offerId).offerId, offerId);
   }
 });
 
