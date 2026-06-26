@@ -4,7 +4,6 @@ import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/te
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import { EXTRACTED_META_AD_STUDIO_TEMPLATES } from "./extracted-meta-template-builder.ts";
 import { GOLD_AD_STUDIO_TEMPLATES } from "./gold-adstudio-templates.ts";
-import { STANDALONE_AD_STUDIO_TEMPLATES } from "./standalone-templates/index.ts";
 import {
   deriveTemplateSampleStyle,
   sampleCopyForTemplate,
@@ -71,12 +70,9 @@ export type AdStudioTemplateVersion = {
   active: boolean;
 };
 
-export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
-  ...GOLD_AD_STUDIO_TEMPLATES,
-  ...STANDALONE_AD_STUDIO_TEMPLATES,
-];
+export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = GOLD_AD_STUDIO_TEMPLATES;
 
-export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = uniqueTemplates([
+export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = uniqueAdStudioTemplates([
   ...AD_STUDIO_TEMPLATES,
   ...EXTRACTED_META_AD_STUDIO_TEMPLATES,
 ]);
@@ -90,7 +86,7 @@ export function isBuiltInAdStudioTemplate(templateId: string | undefined): boole
 }
 
 export function builtInAdStudioTemplates(): AdStudioTemplate[] {
-  return GOLD_AD_STUDIO_TEMPLATES.map(withTemplateDefaults);
+  return AD_STUDIO_TEMPLATES.map(withTemplateDefaults);
 }
 
 export function resolvableAdStudioTemplates(): AdStudioTemplate[] {
@@ -106,12 +102,11 @@ function withTemplateDefaults(template: AdStudioTemplate): AdStudioTemplate {
   };
 }
 
-function uniqueTemplates(templates: AdStudioTemplate[]): AdStudioTemplate[] {
+function uniqueAdStudioTemplates(templates: AdStudioTemplate[]): AdStudioTemplate[] {
   const seen = new Set<string>();
   return templates.filter((template) => {
-    const key = template.id || template.templateKey;
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
+    if (seen.has(template.id)) return false;
+    seen.add(template.id);
     return true;
   });
 }

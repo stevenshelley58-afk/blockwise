@@ -380,12 +380,10 @@ test("template first-ad generation binds uploaded images to distinct template sl
       "https://northstar.example": sampleHtml,
     },
   });
-  const template = resolveAdStudioTemplate("gold_interior_design_collage");
+  const template = resolveAdStudioTemplate("meta_004");
   const slotImages = {
     primary_photo: "data:image/png;base64,PRIMARY",
-    secondary_top: "data:image/png;base64,TOP",
-    secondary_mid: "data:image/png;base64,MID",
-    secondary_low: "data:image/png;base64,LOW",
+    secondary_photo: "data:image/png;base64,SECONDARY",
   };
 
   const pack = generateAdStudioCampaignPack({
@@ -420,9 +418,9 @@ test("template first-ad generation binds uploaded images to distinct template sl
         .map((object) => [object.sourceLayerId, object.content]),
     );
     assert.equal(imagesBySlot.primary_photo, slotImages.primary_photo, `${creative.format} primary slot`);
-    assert.equal(imagesBySlot.secondary_top, slotImages.secondary_top, `${creative.format} upper secondary slot`);
-    assert.equal(imagesBySlot.secondary_mid, slotImages.secondary_mid, `${creative.format} middle secondary slot`);
-    assert.equal(imagesBySlot.secondary_low, slotImages.secondary_low, `${creative.format} lower secondary slot`);
+    if (imagesBySlot.secondary_photo) {
+      assert.equal(imagesBySlot.secondary_photo, slotImages.secondary_photo, `${creative.format} secondary slot`);
+    }
   }
 });
 

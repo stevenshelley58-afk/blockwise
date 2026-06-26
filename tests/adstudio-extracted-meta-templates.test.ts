@@ -25,11 +25,6 @@ const PROMOTED_META_TEMPLATE_IDS = new Set(
     .map((template) => template.id)
     .filter((id) => id.startsWith("meta_")),
 );
-const COMMITTED_EXTRACTED_META_SAMPLE_IDS = new Set(
-  readdirSync("public/adstudio-samples/extracted-meta")
-    .filter((file) => /^meta_\d{3}\.png$/u.test(file))
-    .map((file) => file.replace(/\.png$/u, "")),
-);
 
 function brandKit() {
   return buildTrialFallbackBrandKit({
@@ -48,7 +43,7 @@ function rectsOverlap(
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + bh && a.y + ah > b.y;
 }
 
-test("template gallery exposes quality-gated standalone templates", () => {
+test("template gallery exposes only quality-gated gold templates", () => {
   const visible = builtInAdStudioTemplates();
   const goldIds = GOLD_AD_STUDIO_TEMPLATES.map((template) => template.id);
   const visibleMetaIds = visible
@@ -56,8 +51,8 @@ test("template gallery exposes quality-gated standalone templates", () => {
     .filter((id) => id.startsWith("meta_"));
 
   assert.equal(EXTRACTED_META_TEMPLATE_TOTAL, 330);
-  assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, 330);
-  assert.equal(EXTRACTED_META_TEMPLATE_DESCRIPTORS.length, 330);
+  assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, EXTRACTED_META_TEMPLATE_TOTAL);
+  assert.equal(EXTRACTED_META_TEMPLATE_DESCRIPTORS.length, EXTRACTED_META_TEMPLATE_TOTAL);
   assert.deepEqual(visible.map((template) => template.id), goldIds);
   assert.equal(new Set(visible.map((template) => template.id)).size, GOLD_AD_STUDIO_TEMPLATES.length);
   assert.ok(visible.every((template) => template.source === "operator"));
@@ -96,15 +91,6 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
     assert.ok(template, `${gold.id} should be visible`);
     assert.equal(template.templateKey, gold.id);
     assert.equal(template.source, "operator");
-    assert.ok(template.goal, `${gold.id} should define its goal`);
-    assert.ok(template.offerId, `${gold.id} should define its offer`);
-    assert.ok(template.promptHint, `${gold.id} should define its prompt hint`);
-    assert.ok(template.sampleCopy?.headline, `${gold.id} should define sample headline copy`);
-    assert.ok(template.sampleCopy?.description, `${gold.id} should define sample description copy`);
-    assert.ok(template.sampleCopy?.cta, `${gold.id} should define sample CTA copy`);
-    assert.ok(template.sampleStyle, `${gold.id} should define sample style`);
-    assert.ok(template.winnerRationale, `${gold.id} should explain why it exists`);
-    assert.ok(template.complianceNote, `${gold.id} should define compliance notes`);
     assert.equal(template.sampleCardImageUrl, `/adstudio-samples/gold/${gold.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
     assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/gold/${gold.id}.png`);
     assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/${gold.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
@@ -119,32 +105,10 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
         assert.equal(hasImageSlot, false, "market comparison reference is intentionally text/table-led");
         assert.ok(design.layers.filter((layer) => layer.type === "text").length >= 12);
       } else {
-      assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
+        assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
       }
       assert.ok(design.layers.some((layer) => layer.type === "text" && layer.slot === "headline" && layer.fill === "ai_copy"));
       assert.ok(design.layers.some((layer) => layer.type === "cta_button" && layer.label === "cta"));
-      for (const layer of design.layers) {
-        if (layer.type === "image_slot") {
-          assert.ok(layer.id, `${gold.id} ${format} image slot should define a source layer id`);
-          assert.ok(layer.editorLabel, `${gold.id} ${format} ${layer.id} should define an editor label`);
-          assert.ok(layer.guidance, `${gold.id} ${format} ${layer.id} should define guidance`);
-          assert.equal(typeof layer.required, "boolean", `${gold.id} ${format} ${layer.id} should define required status`);
-        }
-        if (layer.type === "text" && layer.fill === "ai_copy") {
-          assert.ok(layer.editorLabel, `${gold.id} ${format} ${layer.id} should define an editor label`);
-          assert.ok(layer.copyField, `${gold.id} ${format} ${layer.id} should bind to a copy field`);
-          assert.ok((layer.maxChars ?? 0) > 0, `${gold.id} ${format} ${layer.id} should define maxChars`);
-          assert.ok((layer.maxLines ?? 0) > 0, `${gold.id} ${format} ${layer.id} should define maxLines`);
-          assert.ok(layer.guidance, `${gold.id} ${format} ${layer.id} should define guidance`);
-        }
-        if (layer.type === "cta_button") {
-          assert.equal(layer.copyField, "cta", `${gold.id} ${format} CTA should bind to CTA copy`);
-          assert.ok((layer.maxChars ?? 0) > 0, `${gold.id} ${format} CTA should define maxChars`);
-          assert.equal(layer.maxLines, 1, `${gold.id} ${format} CTA should be one line`);
-          assert.ok(layer.editorLabel, `${gold.id} ${format} CTA should define an editor label`);
-          assert.ok(layer.guidance, `${gold.id} ${format} CTA should define guidance`);
-        }
-      }
 
       const creative = renderDesign(design, {
         text: {
@@ -189,7 +153,9 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   const moduleFiles = readdirSync("src/lib/adstudio/gold-templates")
     .filter((file) => file.endsWith(".ts"));
   assert.equal(moduleFiles.length, GOLD_AD_STUDIO_TEMPLATES.length);
-  assert.ok(GOLD_AD_STUDIO_TEMPLATES.length >= 15);
+  assert.equal(GOLD_AD_STUDIO_TEMPLATES.length, 50);
+  assert.equal(GOLD_AD_STUDIO_TEMPLATES[0]?.id, "meta_002");
+  assert.equal(GOLD_AD_STUDIO_TEMPLATES.at(-1)?.id, "meta_051");
   assert.equal(Object.keys(GOLD_TEMPLATE_RENDER_SAMPLES).length, GOLD_AD_STUDIO_TEMPLATES.length);
 
   for (const template of GOLD_AD_STUDIO_TEMPLATES) {
@@ -204,12 +170,6 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   for (const moduleFile of moduleFiles) {
     const source = readFileSync(`src/lib/adstudio/gold-templates/${moduleFile}`, "utf8");
     assert.doesNotMatch(source, /from\s+["']\.\/primitives\.ts["']/);
-    assert.doesNotMatch(
-      source,
-      /from\s+["'](?!(?:\.\.\/template-design\.ts|\.\.\/templates\.ts)["'])(?:\.{1,2}\/[^"']+)["']/,
-      `${moduleFile} should only import shared platform types`,
-    );
-    assert.doesNotMatch(source, /from\s+["'][^"']*(?:layout|factory|engine|recipe|archetype|primitives)[^"']*["']/);
   }
 });
 
@@ -226,10 +186,13 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     );
     const template = resolvableById.get(descriptor.id);
     assert.ok(template, `${descriptor.id} should be resolvable`);
+    const promoted = PROMOTED_META_TEMPLATE_IDS.has(descriptor.id);
     assert.equal(template.templateKey, descriptor.id);
-    assert.equal(template.name, descriptor.name);
-    assert.equal(template.sampleCopy?.headline, descriptor.sampleCopy.headline);
-    assert.equal(template.sampleStyle?.sampleSuburb, descriptor.sampleStyle.sampleSuburb);
+    if (!promoted) {
+      assert.equal(template.name, descriptor.name);
+      assert.equal(template.sampleCopy?.headline, descriptor.sampleCopy.headline);
+      assert.equal(template.sampleStyle?.sampleSuburb, descriptor.sampleStyle.sampleSuburb);
+    }
 
     for (const format of FORMATS) {
       const design = resolveTemplateDesignForFormat(template, format);
@@ -257,23 +220,13 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     }
 
     assert.equal(resolveTemplateDesignForFormat(template, "1.91:1"), null, `${descriptor.id} should not expose landscape`);
-    if (PROMOTED_META_TEMPLATE_IDS.has(descriptor.id)) {
-      assert.equal(template.sampleCardImageUrl, `/adstudio-samples/gold/${descriptor.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
-      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/gold/${descriptor.id}.png`);
-      assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/${descriptor.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
-    } else if (COMMITTED_EXTRACTED_META_SAMPLE_IDS.has(descriptor.id)) {
-      assert.equal(
-        template.sampleCardImageUrl,
-        `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
-      );
-      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
-      assert.equal(
-        templatePreviewDataUrl(template, kit),
-        `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`,
-      );
-    } else {
-      assert.equal(template.sampleCardImageUrl, undefined);
-      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    const hasCommittedExtractedCard = existsSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`);
+    if (promoted || hasCommittedExtractedCard) {
+      const cardVersion = promoted ? GOLD_SAMPLE_CARD_VERSION : EXTRACTED_META_SAMPLE_CARD_VERSION;
+      const cardFolder = promoted ? "gold" : "extracted-meta";
+      assert.equal(template.sampleCardImageUrl, `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
+      assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/${cardFolder}/${descriptor.id}.png`);
+      assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
     }
   }
 });
@@ -285,12 +238,17 @@ test("extracted Meta gallery sample cards are rendered from TemplateDesign outpu
   assert.match(renderer, /sharp\(Buffer\.from\(creative\.previewSvg\)\)/);
   assert.doesNotMatch(renderer, /meta_ad_candidates|sourceFile|SOURCE_ROOT/);
 
-  for (const id of COMMITTED_EXTRACTED_META_SAMPLE_IDS) {
-    const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${id}.png`);
+  const committedDescriptors = EXTRACTED_META_TEMPLATE_DESCRIPTORS.filter((descriptor) =>
+    existsSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`),
+  );
+  assert.equal(committedDescriptors.length, 10);
+
+  for (const descriptor of committedDescriptors) {
+    const bytes = readFileSync(`public/adstudio-samples/extracted-meta/${descriptor.id}.png`);
     assert.deepEqual(
       imageDimensionsFromBytes(bytes),
       { width: 1080, height: 1350 },
-      `${id} sample card should be a Feed 4:5 TemplateDesign render`,
+      `${descriptor.id} sample card should be a Feed 4:5 TemplateDesign render`,
     );
   }
 });

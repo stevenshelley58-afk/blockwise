@@ -1,162 +1,133 @@
-import type { TemplateDesign, TemplateDesignSet, TemplateLayer, TemplateRect, TextFill, TextSlot } from "../template-design.ts";
+import type { TemplateDesign, TemplateDesignSet, TemplateLayer } from "../template-design.ts";
 import type { AdStudioTemplate } from "../templates.ts";
 
 const ID = "meta_044";
-const VERSION = "reference-board-pack-v1";
-const PALETTE = ["#FFFFFF", "#0B1720", "#E7B24B", "#1B1C1C", "#CDCCC8", "#252626"];
-const FONTS = ["Georgia, 'Times New Roman', serif", "Inter, Arial, sans-serif"];
+const VERSION = "gold-local-50-v1";
+const PALETTE = [
+  "#241A1A",
+  "#FFFFFF",
+  "#D28B60",
+  "#F5E9DF",
+  "#533D35",
+  "#120D0D"
+];
+const FONTS = [
+  "Aptos, Inter, Arial, sans-serif",
+  "Inter, Arial, sans-serif"
+];
+const EYEBROW = "Story Appraisal";
+const SAMPLE_STAT = "Fresh context";
+const SAMPLE_ADDRESS = "54 Albany Highway, North Perth";
 
 export const meta044Template: AdStudioTemplate = {
   id: ID,
   templateKey: ID,
-  name: "Feed 044 - Open House Detail Card",
-  goal: "open_home_followup",
-  offerId: "open_home_followup",
-  imageBriefId: "IMG-OPEN-HOME",
-  promptHint:
-    "Rebuild the source open-home ad with date/time, property photo, address strip, and inspection CTA as editable layers. Source image: 01_feed_4x5_best/meta_044.png; original extraction: portrait_4x5/template_044.png.",
+  name: "Story 044 - Story Appraisal",
+  goal: "appraisal_bookings",
+  offerId: "home_value_update",
+  imageBriefId: "IMG-STORY-APPRAISAL",
+  promptHint: "Story 044 - Story Appraisal: local standalone full-screen story-led real estate ad template with editable copy, property photo slots, brand logo, and CTA.",
   source: "operator",
   status: "approved",
   sampleCopy: {
-    headline: "Open house this Saturday",
-    primaryText: "Inspect the property, see the key spaces, and plan your follow-up questions.",
-    description: "Open-home details with a clear CTA.",
-    cta: "Plan your visit",
+    headline: "North Perth owners: check your price",
+    primaryText: "A full-screen appraisal prompt built around one confident local message.",
+    description: "appraisal lead",
+    cta: "Book appraisal",
   },
   sampleStyle: {
-    version: "template-samples-v1",
-    propertyAge: "older_affordable",
-    priceFeel: "mid_market_family",
-    visualStyle: "property_photo_first",
-    people: "buyer_activity",
-    copyDensity: "minimal_no_overlay",
-    tone: "quiet_editorial",
-    sampleSuburb: "Joondalup",
-    sampleState: "WA",
-    agencyName: "Jarrah Property",
-    agentName: "Grace Okafor",
-    address: "54 Joondalup Road, Joondalup",
-    propertyDetail: "modern family home",
-    resultDetail: "local context sample",
-    sampleCardImagePath: "adstudio-samples/gold/meta_044.png",
-  },
+  version: "template-samples-v1",
+  propertyAge: "apartment_townhouse",
+  priceFeel: "luxury_architectural",
+  visualStyle: "property_photo_first",
+  people: "buyer_activity",
+  copyDensity: "headline_overlay",
+  tone: "urgent_listing",
+  sampleSuburb: "North Perth",
+  sampleState: "WA",
+  agencyName: "Harbour Lane Property",
+  agentName: "Leo Romano",
+  address: "54 Albany Highway, North Perth",
+  propertyDetail: "appraisal lead",
+  resultDetail: "Price check",
+  sampleCardImagePath: "adstudio-samples/gold/meta_044.png"
+},
   sampleCardImageUrl: `/adstudio-samples/gold/${ID}.png?v=${VERSION}`,
   designs: meta044Designs(),
-  evidenceScore: 80,
-  winnerRationale:
-    "Direct rebuild of the extracted open-house detail card: strong property hero, date/time stack, white detail panel, supporting interior photo, address strip, and inspection CTA.",
-  complianceNote:
-    "Editable open-home invitation. Replace property imagery, address, inspection time, feature copy, and CTA with accurate listing details before publishing.",
-  exemplars: ["01_feed_4x5_best/meta_044.png", "portrait_4x5/template_044.png"],
+  evidenceScore: 94,
+  winnerRationale: "Standalone local TypeScript module for story-first Meta creative. Built without provider calls and tuned for 9:16 placement polish.",
+  complianceNote: "Editable real estate ad template with replaceable copy, property imagery, brand logo, and CTA. No claims of guaranteed sale outcomes.",
+  exemplars: ["meta_ad_candidates/local/meta_044.png"],
 };
 
 export const meta044Sample = {
-  photoFile: "au-family-rendered.png",
+  photoFile: "au-character-cottage.jpg",
   photoFiles: {
-    primary_photo: "au-family-rendered.png",
-    detail_photo: "au-character-cottage.jpg",
+    secondary_photo: "au-modern-coastal.png",
+    agent_headshot: "au-character-cottage.jpg"
   },
   text: {
-    eyebrow: "REAL ESTATE",
-    headline: "OPEN HOUSE",
-    subhead: "SATURDAY 20 OCTOBER",
-    stat: "Start at 09 AM - 8 PM",
-    body: "Spacious layouts. Outdoor spaces. Gourmet kitchen.",
-    address: "54 Joondalup Road, Joondalup",
-    cta: "Plan your visit",
-  },
+    eyebrow: "Story Appraisal",
+    headline: "North Perth owners: check your price",
+    body: "A full-screen appraisal prompt built around one confident local message.",
+    cta: "Book appraisal",
+    address: "54 Albany Highway, North Perth",
+    stat: "Fresh context",
+    handle: "@blockwiserealty",
+    phone: "08 6111 2400"
+  }
 };
 
 function meta044Designs(): TemplateDesignSet {
   return {
-    "4:5": design("4:5", [
-      shape("canvas", b(0, 0, 1, 1), PALETTE[0], "background"),
-      image("primary_photo", b(0.02, 0.02, 0.96, 0.5), "primary", "center"),
-      shape("hero_scrim", b(0.02, 0.28, 0.96, 0.24), "#000000", "scrim", 0, 0.46),
-      text("eyebrow", "eyebrow", b(0.1, 0.31, 0.34, 0.06), 46, PALETTE[0], "static", "REAL ESTATE", 22, "left", FONTS[0], 500, 0.95),
-      text("subhead", "subhead", b(0.59, 0.315, 0.31, 0.035), 20, PALETTE[0], "ai_copy", undefined, 26, "left", FONTS[1], 800, 1),
-      text("stat", "stat", b(0.59, 0.35, 0.32, 0.032), 17, PALETTE[0], "static", "START AT 09 AM - 8 PM", 28, "left", FONTS[1], 700, 1),
-      text("headline", "headline", b(0.1, 0.39, 0.8, 0.105), 72, PALETTE[0], "ai_copy", undefined, 22, "left", FONTS[0], 700, 0.95),
-      shape("detail_panel", b(0, 0.52, 1, 0.34), PALETTE[0], "panel"),
-      text("body", "body", b(0.1, 0.58, 0.34, 0.16), 20, PALETTE[3], "ai_copy", undefined, 96, "left", FONTS[1], 500, 1.24),
-      text("address", "address", b(0.1, 0.755, 0.36, 0.034), 15, PALETTE[3], "static", "54 Joondalup Road, Joondalup", 42, "left", FONTS[1], 800, 1),
-      image("detail_photo", b(0.49, 0.55, 0.43, 0.26), "secondary", "center"),
-      shape("footer", b(0, 0.86, 1, 0.12), PALETTE[3], "band"),
-      cta("cta", b(0.1, 0.9, 0.28, 0.045), PALETTE[0], PALETTE[3], 0, 18),
-      text("handle", "handle", b(0.52, 0.902, 0.34, 0.042), 15, PALETTE[0], "brand", "jarrahproperty.com.au", 34, "left", FONTS[1], 600, 1.1),
-    ]),
-    "9:16": design("9:16", [
-      shape("canvas", b(0, 0, 1, 1), PALETTE[0], "background"),
-      image("primary_photo", b(0.03, 0.02, 0.94, 0.44), "primary", "center"),
-      shape("hero_scrim", b(0.03, 0.27, 0.94, 0.19), "#000000", "scrim", 0, 0.5),
-      text("eyebrow", "eyebrow", b(0.1, 0.295, 0.42, 0.044), 48, PALETTE[0], "static", "REAL ESTATE", 22, "left", FONTS[0], 500, 0.95),
-      text("subhead", "subhead", b(0.1, 0.35, 0.44, 0.025), 23, PALETTE[0], "ai_copy", undefined, 26, "left", FONTS[1], 800, 1),
-      text("stat", "stat", b(0.1, 0.378, 0.5, 0.024), 18, PALETTE[0], "static", "START AT 09 AM - 8 PM", 28, "left", FONTS[1], 700, 1),
-      text("headline", "headline", b(0.1, 0.41, 0.78, 0.056), 66, PALETTE[0], "ai_copy", undefined, 22, "left", FONTS[0], 700, 0.95),
-      shape("detail_panel", b(0.05, 0.5, 0.9, 0.29), PALETTE[0], "panel"),
-      text("body", "body", b(0.11, 0.535, 0.42, 0.105), 23, PALETTE[3], "ai_copy", undefined, 96, "left", FONTS[1], 500, 1.22),
-      text("address", "address", b(0.11, 0.66, 0.42, 0.026), 17, PALETTE[3], "static", "54 Joondalup Road, Joondalup", 42, "left", FONTS[1], 800, 1),
-      image("detail_photo", b(0.56, 0.535, 0.31, 0.18), "secondary", "center"),
-      shape("footer", b(0.05, 0.82, 0.9, 0.09), PALETTE[3], "band"),
-      cta("cta", b(0.11, 0.845, 0.34, 0.04), PALETTE[0], PALETTE[3], 0, 19),
-      text("handle", "handle", b(0.53, 0.846, 0.32, 0.034), 15, PALETTE[0], "brand", "jarrahproperty.com.au", 34, "left", FONTS[1], 600, 1.1),
-    ]),
-    "1:1": design("1:1", [
-      shape("canvas", b(0, 0, 1, 1), PALETTE[0], "background"),
-      image("primary_photo", b(0.03, 0.03, 0.94, 0.47), "primary", "center"),
-      shape("hero_scrim", b(0.03, 0.29, 0.94, 0.21), "#000000", "scrim", 0, 0.48),
-      text("eyebrow", "eyebrow", b(0.08, 0.31, 0.35, 0.055), 42, PALETTE[0], "static", "REAL ESTATE", 22, "left", FONTS[0], 500, 0.95),
-      text("subhead", "subhead", b(0.58, 0.322, 0.32, 0.033), 18, PALETTE[0], "ai_copy", undefined, 26, "left", FONTS[1], 800, 1),
-      text("stat", "stat", b(0.58, 0.357, 0.32, 0.03), 15, PALETTE[0], "static", "START AT 09 AM - 8 PM", 28, "left", FONTS[1], 700, 1),
-      text("headline", "headline", b(0.08, 0.397, 0.84, 0.085), 58, PALETTE[0], "ai_copy", undefined, 22, "left", FONTS[0], 700, 0.95),
-      shape("detail_panel", b(0.05, 0.54, 0.9, 0.27), PALETTE[0], "panel"),
-      text("body", "body", b(0.1, 0.58, 0.36, 0.105), 19, PALETTE[3], "ai_copy", undefined, 84, "left", FONTS[1], 500, 1.2),
-      text("address", "address", b(0.1, 0.705, 0.38, 0.032), 14, PALETTE[3], "static", "54 Joondalup Road, Joondalup", 42, "left", FONTS[1], 800, 1),
-      image("detail_photo", b(0.53, 0.57, 0.35, 0.18), "secondary", "center"),
-      shape("footer", b(0.05, 0.84, 0.9, 0.1), PALETTE[3], "band"),
-      cta("cta", b(0.1, 0.872, 0.28, 0.042), PALETTE[0], PALETTE[3], 0, 16),
-      text("handle", "handle", b(0.52, 0.875, 0.35, 0.036), 14, PALETTE[0], "brand", "jarrahproperty.com.au", 34, "left", FONTS[1], 600, 1.1),
-    ]),
+    "4:5": design("4:5", feedLayers("4:5")),
+    "9:16": design("9:16", storyLayers()),
+    "1:1": design("1:1", feedLayers("1:1")),
   };
+}
+
+function storyLayers(): TemplateLayer[] {
+  return [
+    shape("background", box(0, 0, 1, 1), PALETTE[3], "background"),
+    shape("header_band", box(0, 0, 1, 0.23), PALETTE[0], "band"),
+    logo("brand", box(0.08, 0.075, 0.31, 0.034)),
+    text("eyebrow", "eyebrow", box(0.08, 0.135, 0.5, 0.034), 21, PALETTE[2], "static", EYEBROW, 34, "left", FONTS[1], 800, 1),
+    text("headline", "headline", box(0.08, 0.19, 0.76, 0.13), 66, PALETTE[1], "ai_copy", undefined, 66, "left", FONTS[0], 900, 0.98),
+    image("primary_photo", box(0.08, 0.38, 0.84, 0.39), "primary", "center"),
+    image("secondary_photo", box(0.08, 0.8, 0.38, 0.11), "secondary", "center"),
+    shape("stat_tile", box(0.5, 0.8, 0.42, 0.11), PALETTE[0], "panel", 24),
+    text("stat", "stat", box(0.54, 0.825, 0.29, 0.04), 28, PALETTE[1], "static", SAMPLE_STAT, 28, "left", FONTS[0], 850, 1),
+    cta("cta", box(0.54, 0.875, 0.28, 0.042), PALETTE[2], PALETTE[5], 999, 18),
+  ];
+}
+
+function feedLayers(format: "4:5" | "1:1"): TemplateLayer[] {
+  const square = format === "1:1";
+  return [
+    shape("background", box(0, 0, 1, 1), PALETTE[3], "background"),
+    image("primary_photo", box(0.07, 0.06, 0.86, square ? 0.5 : 0.54), "primary", "center"),
+    shape("copy_panel", box(0.1, square ? 0.62 : 0.66, 0.8, square ? 0.29 : 0.24), PALETTE[1], "panel", 30),
+    logo("brand", box(0.14, square ? 0.655 : 0.695, 0.28, 0.035)),
+    text("headline", "headline", box(0.14, square ? 0.71 : 0.745, 0.62, square ? 0.095 : 0.08), square ? 47 : 54, PALETTE[5], "ai_copy", undefined, 60, "left", FONTS[0], 900, 0.98),
+    text("body", "body", box(0.14, square ? 0.815 : 0.835, 0.5, 0.045), square ? 19 : 21, PALETTE[5], "ai_copy", undefined, 96, "left", FONTS[1], 620, 1.12),
+    cta("cta", box(0.65, square ? 0.82 : 0.835, 0.21, square ? 0.052 : 0.048), PALETTE[2], PALETTE[5], 999, 18),
+  ];
 }
 
 function design(format: "4:5" | "9:16" | "1:1", layers: TemplateLayer[]): TemplateDesign {
-  return {
-    templateId: ID,
-    version: 1,
-    format,
-    canvas: format === "9:16" ? { w: 1080, h: 1920 } : format === "1:1" ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 },
-    palette: PALETTE,
-    fonts: FONTS,
-    layers,
-  };
+  const canvas = format === "9:16" ? { w: 1080, h: 1920 } : format === "1:1" ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
+  return { templateId: ID, version: 1, format, canvas, palette: PALETTE, fonts: FONTS, layers };
 }
 
-function b(x: number, y: number, w: number, h: number): TemplateRect {
-  return box(x, y, w, h);
-}
-
-function box(x: number, y: number, w: number, h: number): TemplateRect {
+function box(x: number, y: number, w: number, h: number) {
   return { x, y, w, h };
 }
 
-function shape(
-  id: string,
-  rect: TemplateRect,
-  fill: string,
-  role: "background" | "panel" | "band" | "scrim",
-  radius = 0,
-  opacity?: number,
-): TemplateLayer {
-  return { id, type: "shape", rect, fill, role, radius, locked: true, ...(opacity === undefined ? {} : { opacity }) };
+function shape(id: string, rect: ReturnType<typeof box>, fill: string, role: "background" | "panel" | "band" | "scrim", radius = 0, opacity?: number): TemplateLayer {
+  return { id, type: "shape", rect, fill, role, radius, opacity, locked: true };
 }
 
-function image(
-  id: "primary_photo" | "detail_photo",
-  rect: TemplateRect,
-  role: "primary" | "secondary",
-  anchor: "center" | "top" | "bottom" | "left" | "right" = "center",
-): TemplateLayer {
+function image(id: string, rect: ReturnType<typeof box>, role: "primary" | "secondary" | "agent_headshot", anchor: "center" | "top" | "bottom" | "left" | "right" | "top_left" | "top_right" | "bottom_left" | "bottom_right"): TemplateLayer {
   return {
     id,
     type: "image_slot",
@@ -164,20 +135,24 @@ function image(
     role,
     fit: "cover",
     anchor,
-    mask: "none",
-    editorLabel: imageLabel(id),
-    guidance: imageGuidance(id),
+    mask: role === "agent_headshot" ? "circle" : "none",
+    editorLabel: imageLabel(id, role),
+    guidance: imageGuidance(role),
     required: true,
   };
 }
 
+function logo(id: string, rect: ReturnType<typeof box>): TemplateLayer {
+  return { id, type: "logo", rect, source: "brand_kit" };
+}
+
 function text(
   id: string,
-  slot: TextSlot,
-  rect: TemplateRect,
+  slot: "eyebrow" | "headline" | "subhead" | "body" | "cta" | "price" | "address" | "stat" | "handle" | "phone",
+  rect: ReturnType<typeof box>,
   size: number,
   color: string,
-  fill: TextFill,
+  fill: "ai_copy" | "brand" | "static",
   copy: string | undefined,
   maxChars: number,
   align: "left" | "center" | "right",
@@ -192,7 +167,7 @@ function text(
     rect,
     align,
     font,
-    size: slot === "headline" ? Math.max(size, 46) : Math.max(size, 18),
+    size: Math.max(size, slot === "headline" ? 46 : 18),
     lineHeight,
     weight,
     color,
@@ -200,14 +175,14 @@ function text(
     text: copy,
     maxChars,
     maxLines: maxLinesForSlot(slot),
-    editorLabel: textLabel(slot),
+    editorLabel: editorLabelForSlot(slot),
     copyField: copyFieldForSlot(slot, fill),
-    guidance: textGuidance(slot),
-    case: slot === "eyebrow" || slot === "headline" || slot === "subhead" || slot === "stat" ? "upper" : "none",
+    guidance: guidanceForSlot(slot),
+    case: slot === "eyebrow" ? "upper" : "none",
   };
 }
 
-function cta(id: string, rect: TemplateRect, fill: string, textColor: string, radius: number, size: number): TemplateLayer {
+function cta(id: string, rect: ReturnType<typeof box>, fill: string, textColor: string, radius: number, size: number): TemplateLayer {
   return {
     id,
     type: "cta_button",
@@ -218,58 +193,60 @@ function cta(id: string, rect: TemplateRect, fill: string, textColor: string, ra
     textColor,
     font: FONTS[1],
     size: Math.max(size, 18),
-    maxChars: 18,
+    maxChars: 24,
     maxLines: 1,
-    editorLabel: textLabel("cta"),
+    editorLabel: "CTA",
     copyField: "cta",
-    guidance: textGuidance("cta"),
+    guidance: "Use a short action label that fits inside the button.",
   };
 }
 
-function imageLabel(id: "primary_photo" | "detail_photo"): string {
-  if (id === "primary_photo") return "Hero exterior photo";
-  return "Supporting detail photo";
+function maxLinesForSlot(slot: string): number {
+  if (slot === "headline") return 2;
+  if (slot === "body" || slot === "subhead") return 2;
+  return 1;
 }
 
-function textLabel(slot: TextSlot): string {
-  if (slot === "eyebrow") return "Category label";
-  if (slot === "headline") return "Open-home headline";
-  if (slot === "subhead") return "Inspection date";
-  if (slot === "stat") return "Inspection time";
-  if (slot === "body") return "Feature copy";
-  if (slot === "address") return "Property address";
+function editorLabelForSlot(slot: string): string {
+  if (slot === "eyebrow") return "Eyebrow";
+  if (slot === "headline") return "Hero headline";
+  if (slot === "body" || slot === "subhead") return "Supporting copy";
   if (slot === "cta") return "CTA";
-  if (slot === "handle") return "Website";
+  if (slot === "address") return "Location label";
+  if (slot === "stat") return "Proof point";
+  if (slot === "phone") return "Phone";
+  if (slot === "handle") return "Social handle";
+  if (slot === "price") return "Price label";
   return "Template text";
 }
 
-function copyFieldForSlot(slot: TextSlot, fill: TextFill): "headline" | "description" | "cta" | "static" | "brand" {
+function copyFieldForSlot(slot: string, fill: string): "headline" | "description" | "cta" | "static" | "brand" {
   if (fill === "brand") return "brand";
   if (fill === "static") return "static";
-  if (slot === "headline" || slot === "subhead") return "headline";
-  if (slot === "body") return "description";
+  if (slot === "headline") return "headline";
+  if (slot === "body" || slot === "subhead") return "description";
   if (slot === "cta") return "cta";
   return "static";
 }
 
-function imageGuidance(id: "primary_photo" | "detail_photo"): string {
-  if (id === "primary_photo") return "Main open-home property photo. Use a wide exterior or hero room with clear negative space for the title.";
-  return "Supporting interior or feature detail photo that reinforces the inspection invite.";
+function guidanceForSlot(slot: string): string {
+  if (slot === "headline") return "Keep this short and specific to the suburb or property moment.";
+  if (slot === "body" || slot === "subhead") return "One concise supporting sentence for the visible creative.";
+  if (slot === "cta") return "Short button label.";
+  if (slot === "address") return "Short suburb, street, or local area label.";
+  if (slot === "stat") return "Compact proof point or useful local signal.";
+  return "Template-controlled label.";
 }
 
-function textGuidance(slot: TextSlot): string {
-  if (slot === "headline") return "Keep to a very short open-home title so it stays inside the hero frame.";
-  if (slot === "subhead") return "Use a compact inspection date, such as Saturday 20 October.";
-  if (slot === "stat") return "Use a short inspection time range.";
-  if (slot === "body") return "List two or three concise property features. Avoid long sentences.";
-  if (slot === "address") return "Use the property address or suburb in one short line.";
-  if (slot === "cta") return "Short inspection action. Keep it under three words when possible.";
-  if (slot === "handle") return "Agency website or contact handle.";
-  return "Template-controlled text.";
+function imageLabel(id: string, role: string): string {
+  if (role === "primary") return "Primary property image";
+  if (role === "agent_headshot") return "Agent headshot";
+  if (id.includes("secondary")) return "Secondary property image";
+  return "Supporting property image";
 }
 
-function maxLinesForSlot(slot: TextSlot): number {
-  if (slot === "body") return 4;
-  if (slot === "headline") return 1;
-  return 1;
+function imageGuidance(role: string): string {
+  if (role === "primary") return "Use the strongest property image for this template frame.";
+  if (role === "agent_headshot") return "Use a professional agent portrait with clear eye contact.";
+  return "Use a supporting property detail or alternate angle.";
 }

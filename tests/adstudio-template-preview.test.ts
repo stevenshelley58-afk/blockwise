@@ -22,20 +22,20 @@ function brandKit() {
 
 test("templatePreviewSvg renders a promoted Meta template preview", () => {
   const kit = brandKit();
-  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_040");
   assert.ok(template);
   const svg = templatePreviewSvg(template, kit);
   assert.match(svg, /^<svg[\s>]/u);
   assert.match(svg, /viewBox="0 0 \d+ \d+"/u);
-  assert.match(svg, /Just sold in[\s\S]*North Perth/iu);
-  assert.match(svg, /Get local context/iu);
+  assert.match(svg, /Bassendean rental check/iu);
+  assert.match(svg, /Get check/iu);
 });
 
 test("templatePreviewDataUrl prefers promoted Meta gold sample cards in the gallery", () => {
   const kit = brandKit();
-  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_040");
   assert.ok(template);
-  assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/meta_055.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
+  assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/meta_040.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
 });
 
 test("every template (built-in + a radar-shaped one) produces a preview", () => {

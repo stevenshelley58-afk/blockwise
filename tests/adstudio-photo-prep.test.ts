@@ -122,7 +122,7 @@ test("template render frame uses generated TemplateDesign geometry for extracted
       width: frame.imageSlots[0]?.width,
       height: frame.imageSlots[0]?.height,
     },
-    { x: 0.052, y: 0.266, width: 0.896, height: 0.392 },
+    { x: 0.05, y: 0.27, width: 0.9, height: 0.39 },
   );
   assert.ok(frame.copySafeZones.some((zone) => zone.id === "headline"));
   assert.match(frame.imageSlots[0]?.promptHint ?? "", /Feed 055 - Editorial Just Sold primary image slot/i);

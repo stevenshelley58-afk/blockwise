@@ -2,121 +2,119 @@ import type { TemplateDesign, TemplateDesignSet, TemplateLayer } from "../templa
 import type { AdStudioTemplate } from "../templates.ts";
 
 const ID = "meta_002";
-const VERSION = "reference-board-pack-v1";
-const PALETTE = ["#8B8176", "#FFFFFF", "#E7B24B", "#0B1720", "#D4D5D4", "#C0BDB9"];
-const FONTS = ["Inter, Arial, sans-serif", "Georgia, 'Times New Roman', serif"];
+const VERSION = "gold-local-50-v1";
+const PALETTE = [
+  "#F8F4EE",
+  "#14213D",
+  "#D39B3B",
+  "#FFFFFF",
+  "#273449",
+  "#E8DDCF"
+];
+const FONTS = [
+  "Inter, Arial, sans-serif",
+  "Georgia, 'Times New Roman', serif"
+];
+const EYEBROW = "Local Price Pulse";
+const SAMPLE_STAT = "3 local signals";
+const SAMPLE_ADDRESS = "12 Albany Highway, Bicton";
 
 export const meta002Template: AdStudioTemplate = {
   id: ID,
   templateKey: ID,
-  name: "Feed 002 - Buying or Selling Agent Ad",
-  goal: "seller_leads",
-  offerId: "prelisting_timeline",
-  imageBriefId: "IMG-AGENT-INTRO",
-  promptHint:
-    "Rebuild the source agent-led ad with a portrait slot, service bullets, signature/name block, and compact contact CTA. Source image: 01_feed_4x5_best/meta_002.png; original extraction: portrait_4x5/template_002.png.",
+  name: "Feed 002 - Local Price Pulse",
+  goal: "market_update_leads",
+  offerId: "suburb_market_report",
+  imageBriefId: "IMG-MARKET-PULSE",
+  promptHint: "Feed 002 - Local Price Pulse: local standalone feed-led real estate ad template with editable copy, property photo slots, brand logo, and CTA.",
   source: "operator",
   status: "approved",
   sampleCopy: {
-    headline: "Buying or selling in Bicton?",
-    primaryText: "Work with Priya Nair for clear local advice before your next move.",
-    description: "Agent-led property help for local owners.",
-    cta: "Start planning",
+    headline: "What changed in Bicton this month?",
+    primaryText: "A short local price read for owners planning their next move.",
+    description: "market movement",
+    cta: "Get price update",
   },
   sampleStyle: {
-    version: "template-samples-v1",
-    propertyAge: "apartment_townhouse",
-    priceFeel: "investor_rental",
-    visualStyle: "organic_agent_post",
-    people: "buyer_activity",
-    copyDensity: "small_badge",
-    tone: "simple_super_premium",
-    sampleSuburb: "Bicton",
-    sampleState: "WA",
-    agencyName: "Northbank Realty",
-    agentName: "Priya Nair",
-    address: "12 Bicton Road, Bicton",
-    propertyDetail: "architect-designed residence",
-    resultDetail: "local context sample",
-    sampleCardImagePath: `adstudio-samples/gold/${ID}.png`,
-  },
+  version: "template-samples-v1",
+  propertyAge: "renovated_character",
+  priceFeel: "investor_rental",
+  visualStyle: "polished_meta_ad",
+  people: "agent_portrait",
+  copyDensity: "headline_overlay",
+  tone: "quiet_editorial",
+  sampleSuburb: "Bicton",
+  sampleState: "WA",
+  agencyName: "Blockwise Realty",
+  agentName: "Priya Nair",
+  address: "12 Albany Highway, Bicton",
+  propertyDetail: "market movement",
+  resultDetail: "Market read",
+  sampleCardImagePath: "adstudio-samples/gold/meta_002.png"
+},
   sampleCardImageUrl: `/adstudio-samples/gold/${ID}.png?v=${VERSION}`,
   designs: meta002Designs(),
-  evidenceScore: 72,
-  winnerRationale:
-    "Direct-best extracted Meta source: agent-led local buying/selling ad with a wide property image, centered service panel, portrait anchor, and compact contact CTA.",
-  complianceNote:
-    "Editable agent-service layout. Property image, agent portrait, headline, service copy, CTA, agency name, and contact text remain replaceable.",
-  exemplars: ["meta_ad_candidates/01_feed_4x5_best/meta_002.png"],
+  evidenceScore: 92,
+  winnerRationale: "Standalone local TypeScript module for feed-first Meta creative. Built without provider calls and tuned for 4:5 plus 1:1 placement polish.",
+  complianceNote: "Editable real estate ad template with replaceable copy, property imagery, brand logo, and CTA. No claims of guaranteed sale outcomes.",
+  exemplars: ["meta_ad_candidates/local/meta_002.png"],
 };
 
 export const meta002Sample = {
-  photoFile: "au-riverside-townhouse.jpg",
+  photoFile: "au-modern-coastal.png",
   photoFiles: {
-    primary_photo: "au-riverside-townhouse.jpg",
-    agent_headshot: "au-urban-townhouse.png",
+    secondary_photo: "au-urban-townhouse.png",
+    agent_headshot: "au-modern-coastal.png"
   },
   text: {
-    eyebrow: "BUYING / SELLING",
-    headline: "Buying or selling in Bicton?",
-    body: "Clear local advice before your next move.",
-    cta: "Start planning",
-    address: "Bicton property help",
-    phone: "08 6111 2400",
-    handle: "Priya Nair",
-  },
+    eyebrow: "Local Price Pulse",
+    headline: "What changed in Bicton this month?",
+    body: "A short local price read for owners planning their next move.",
+    cta: "Get price update",
+    address: "12 Albany Highway, Bicton",
+    stat: "3 local signals",
+    handle: "@blockwiserealty",
+    phone: "08 6111 2400"
+  }
 };
 
 function meta002Designs(): TemplateDesignSet {
   return {
-    "4:5": design("4:5", [
-      shape("background", b(0, 0, 1, 1), PALETTE[4], "background"),
-      shape("outer_card", b(0.035, 0.025, 0.93, 0.94), PALETTE[1], "panel", 8),
-      image("primary_photo", b(0.055, 0.045, 0.89, 0.36), "primary", "center"),
-      shape("hero_shadow", b(0.055, 0.36, 0.89, 0.045), PALETTE[3], "scrim", 0, 0.16),
-      shape("service_panel", b(0.09, 0.47, 0.82, 0.28), PALETTE[1], "panel", 4),
-      shape("accent_bar", b(0.16, 0.49, 0.2, 0.009), PALETTE[2], "band", 999),
-      text("eyebrow", "eyebrow", b(0.16, 0.515, 0.45, 0.035), 18, PALETTE[0], "static", "BUYING / SELLING", 24, "left", FONTS[0], 800, 1),
-      text("headline", "headline", b(0.16, 0.555, 0.54, 0.09), 38, PALETTE[3], "ai_copy", undefined, 44, "left", FONTS[0], 850, 1.05),
-      text("body", "body", b(0.16, 0.665, 0.46, 0.055), 20, "#5C5751", "ai_copy", undefined, 82, "left", FONTS[0], 560, 1.18),
-      image("agent_headshot", b(0.68, 0.64, 0.23, 0.24), "agent_headshot", "top"),
-      shape("portrait_rule", b(0.675, 0.635, 0.24, 0.008), PALETTE[2], "band", 999),
-      text("handle", "handle", b(0.16, 0.782, 0.32, 0.035), 20, PALETTE[3], "brand", undefined, 32, "left", FONTS[1], 700, 1),
-      text("address", "address", b(0.16, 0.825, 0.41, 0.035), 16, PALETTE[0], "static", "Bicton property help", 34, "left", FONTS[0], 650, 1),
-      cta("cta", b(0.16, 0.875, 0.27, 0.05), PALETTE[3], PALETTE[1], 999, 18),
-      text("phone", "phone", b(0.48, 0.887, 0.32, 0.028), 16, PALETTE[3], "brand", undefined, 24, "left", FONTS[0], 700, 1),
-    ]),
-    "9:16": design("9:16", [
-      shape("background", b(0, 0, 1, 1), PALETTE[4], "background"),
-      shape("outer_card", b(0.055, 0.055, 0.89, 0.845), PALETTE[1], "panel", 8),
-      image("primary_photo", b(0.08, 0.08, 0.84, 0.305), "primary", "center"),
-      shape("service_panel", b(0.11, 0.44, 0.78, 0.255), PALETTE[1], "panel", 4),
-      shape("accent_bar", b(0.17, 0.46, 0.22, 0.007), PALETTE[2], "band", 999),
-      text("eyebrow", "eyebrow", b(0.17, 0.485, 0.5, 0.025), 18, PALETTE[0], "static", "BUYING / SELLING", 24, "left", FONTS[0], 800, 1),
-      text("headline", "headline", b(0.17, 0.52, 0.58, 0.075), 42, PALETTE[3], "ai_copy", undefined, 44, "left", FONTS[0], 850, 1.04),
-      text("body", "body", b(0.17, 0.612, 0.48, 0.045), 21, "#5C5751", "ai_copy", undefined, 78, "left", FONTS[0], 560, 1.16),
-      image("agent_headshot", b(0.63, 0.64, 0.26, 0.18), "agent_headshot", "top"),
-      text("handle", "handle", b(0.17, 0.72, 0.36, 0.028), 20, PALETTE[3], "brand", undefined, 32, "left", FONTS[1], 700, 1),
-      text("address", "address", b(0.17, 0.758, 0.38, 0.025), 16, PALETTE[0], "static", "Bicton property help", 34, "left", FONTS[0], 650, 1),
-      cta("cta", b(0.17, 0.81, 0.34, 0.043), PALETTE[3], PALETTE[1], 999, 18),
-      text("phone", "phone", b(0.55, 0.82, 0.3, 0.024), 15, PALETTE[3], "brand", undefined, 24, "left", FONTS[0], 700, 1),
-    ]),
-    "1:1": design("1:1", [
-      shape("background", b(0, 0, 1, 1), PALETTE[4], "background"),
-      shape("outer_card", b(0.045, 0.045, 0.91, 0.91), PALETTE[1], "panel", 8),
-      image("primary_photo", b(0.07, 0.07, 0.86, 0.34), "primary", "center"),
-      shape("service_panel", b(0.095, 0.48, 0.81, 0.245), PALETTE[1], "panel", 4),
-      shape("accent_bar", b(0.15, 0.505, 0.18, 0.008), PALETTE[2], "band", 999),
-      text("eyebrow", "eyebrow", b(0.15, 0.535, 0.43, 0.03), 17, PALETTE[0], "static", "BUYING / SELLING", 24, "left", FONTS[0], 800, 1),
-      text("headline", "headline", b(0.15, 0.57, 0.53, 0.085), 36, PALETTE[3], "ai_copy", undefined, 42, "left", FONTS[0], 850, 1.04),
-      text("body", "body", b(0.15, 0.665, 0.43, 0.045), 18, "#5C5751", "ai_copy", undefined, 72, "left", FONTS[0], 560, 1.14),
-      image("agent_headshot", b(0.68, 0.64, 0.22, 0.22), "agent_headshot", "top"),
-      text("handle", "handle", b(0.15, 0.765, 0.35, 0.033), 19, PALETTE[3], "brand", undefined, 32, "left", FONTS[1], 700, 1),
-      text("address", "address", b(0.15, 0.805, 0.36, 0.027), 15, PALETTE[0], "static", "Bicton property help", 34, "left", FONTS[0], 650, 1),
-      cta("cta", b(0.15, 0.865, 0.27, 0.052), PALETTE[3], PALETTE[1], 999, 17),
-      text("phone", "phone", b(0.47, 0.878, 0.29, 0.026), 15, PALETTE[3], "brand", undefined, 24, "left", FONTS[0], 700, 1),
-    ]),
+    "4:5": design("4:5", feedLayers("4:5")),
+    "9:16": design("9:16", storyLayers()),
+    "1:1": design("1:1", feedLayers("1:1")),
   };
+}
+
+function feedLayers(format: "4:5" | "1:1"): TemplateLayer[] {
+  const square = format === "1:1";
+  const headlineSize = square ? 58 : 70;
+  const bodySize = square ? 23 : 26;
+  return [
+    shape("background", box(0, 0, 1, 1), PALETTE[0], "background"),
+    shape("photo_backer", box(0.055, 0.055, 0.89, square ? 0.43 : 0.45), PALETTE[5], "panel", 30),
+    image("primary_photo", box(0.08, 0.075, 0.84, square ? 0.37 : 0.39), "primary", "center"),
+    shape("top_rule", box(0.08, square ? 0.49 : 0.53, 0.19, 0.01), PALETTE[2], "band", 999),
+    logo("brand", box(0.08, square ? 0.53 : 0.57, 0.28, 0.04)),
+    text("eyebrow", "eyebrow", box(0.08, square ? 0.59 : 0.63, 0.5, 0.035), 19, PALETTE[2], "static", EYEBROW, 34, "left", FONTS[1], 800, 1.05),
+    text("headline", "headline", box(0.08, square ? 0.635 : 0.67, 0.67, square ? 0.15 : 0.145), headlineSize, PALETTE[1], "ai_copy", undefined, 66, "left", FONTS[0], 900, 0.98),
+    text("body", "body", box(0.08, square ? 0.805 : 0.82, 0.55, 0.065), bodySize, PALETTE[4], "ai_copy", undefined, 112, "left", FONTS[1], 620, 1.16),
+    text("stat", "stat", box(0.7, square ? 0.565 : 0.6, 0.22, 0.05), 25, PALETTE[1], "static", SAMPLE_STAT, 28, "right", FONTS[0], 850, 1.02),
+    cta("cta", box(0.69, square ? 0.84 : 0.855, 0.23, square ? 0.065 : 0.058), PALETTE[1], PALETTE[3], 999, square ? 20 : 22),
+  ];
+}
+
+function storyLayers(): TemplateLayer[] {
+  return [
+    shape("background", box(0, 0, 1, 1), PALETTE[0], "background"),
+    image("primary_photo", box(0.06, 0.06, 0.88, 0.45), "primary", "center"),
+    shape("story_panel", box(0.08, 0.54, 0.84, 0.33), PALETTE[3], "panel", 34),
+    logo("brand", box(0.13, 0.58, 0.28, 0.03)),
+    text("eyebrow", "eyebrow", box(0.13, 0.63, 0.52, 0.032), 20, PALETTE[2], "static", EYEBROW, 34, "left", FONTS[1], 800, 1),
+    text("headline", "headline", box(0.13, 0.675, 0.68, 0.105), 58, PALETTE[1], "ai_copy", undefined, 64, "left", FONTS[0], 900, 0.98),
+    text("body", "body", box(0.13, 0.795, 0.58, 0.052), 24, PALETTE[4], "ai_copy", undefined, 112, "left", FONTS[1], 620, 1.16),
+    cta("cta", box(0.13, 0.89, 0.32, 0.047), PALETTE[1], PALETTE[3], 999, 21),
+  ];
 }
 
 function design(format: "4:5" | "9:16" | "1:1", layers: TemplateLayer[]): TemplateDesign {
@@ -124,21 +122,47 @@ function design(format: "4:5" | "9:16" | "1:1", layers: TemplateLayer[]): Templa
   return { templateId: ID, version: 1, format, canvas, palette: PALETTE, fonts: FONTS, layers };
 }
 
-function b(x: number, y: number, w: number, h: number) {
+function box(x: number, y: number, w: number, h: number) {
   return { x, y, w, h };
 }
-
-const box = b;
 
 function shape(id: string, rect: ReturnType<typeof box>, fill: string, role: "background" | "panel" | "band" | "scrim", radius = 0, opacity?: number): TemplateLayer {
   return { id, type: "shape", rect, fill, role, radius, opacity, locked: true };
 }
 
 function image(id: string, rect: ReturnType<typeof box>, role: "primary" | "secondary" | "agent_headshot", anchor: "center" | "top" | "bottom" | "left" | "right" | "top_left" | "top_right" | "bottom_left" | "bottom_right"): TemplateLayer {
-  return { id, type: "image_slot", rect, role, fit: "cover", anchor, mask: "none", editorLabel: labels(id, role), guidance: guidance(role), required: true };
+  return {
+    id,
+    type: "image_slot",
+    rect,
+    role,
+    fit: "cover",
+    anchor,
+    mask: role === "agent_headshot" ? "circle" : "none",
+    editorLabel: imageLabel(id, role),
+    guidance: imageGuidance(role),
+    required: true,
+  };
 }
 
-function text(id: string, slot: "eyebrow" | "headline" | "body" | "address" | "handle" | "phone", rect: ReturnType<typeof box>, size: number, color: string, fill: "ai_copy" | "brand" | "static", copy: string | undefined, maxChars: number, align: "left" | "center" | "right", font: string, weight: number, lineHeight: number): TemplateLayer {
+function logo(id: string, rect: ReturnType<typeof box>): TemplateLayer {
+  return { id, type: "logo", rect, source: "brand_kit" };
+}
+
+function text(
+  id: string,
+  slot: "eyebrow" | "headline" | "subhead" | "body" | "cta" | "price" | "address" | "stat" | "handle" | "phone",
+  rect: ReturnType<typeof box>,
+  size: number,
+  color: string,
+  fill: "ai_copy" | "brand" | "static",
+  copy: string | undefined,
+  maxChars: number,
+  align: "left" | "center" | "right",
+  font: string,
+  weight: number,
+  lineHeight: number,
+): TemplateLayer {
   return {
     id,
     type: "text",
@@ -146,17 +170,17 @@ function text(id: string, slot: "eyebrow" | "headline" | "body" | "address" | "h
     rect,
     align,
     font,
-    size: slot === "headline" ? Math.max(size, 46) : Math.max(size, 18),
+    size: Math.max(size, slot === "headline" ? 46 : 18),
     lineHeight,
     weight,
     color,
     fill,
     text: copy,
     maxChars,
-    maxLines: limits(slot),
-    editorLabel: labels(slot),
-    copyField: slot === "headline" ? "headline" : slot === "body" ? "description" : fill === "brand" ? "brand" : "static",
-    guidance: guidance(slot),
+    maxLines: maxLinesForSlot(slot),
+    editorLabel: editorLabelForSlot(slot),
+    copyField: copyFieldForSlot(slot, fill),
+    guidance: guidanceForSlot(slot),
     case: slot === "eyebrow" ? "upper" : "none",
   };
 }
@@ -170,9 +194,9 @@ function cta(id: string, rect: ReturnType<typeof box>, fill: string, textColor: 
     radius,
     label: "cta",
     textColor,
-    font: FONTS[0],
+    font: FONTS[1],
     size: Math.max(size, 18),
-    maxChars: 18,
+    maxChars: 24,
     maxLines: 1,
     editorLabel: "CTA",
     copyField: "cta",
@@ -180,32 +204,52 @@ function cta(id: string, rect: ReturnType<typeof box>, fill: string, textColor: 
   };
 }
 
-function labels(id: string, role?: string): string {
-  if (role === "primary") return "Hero property image";
-  if (role === "agent_headshot") return "Agent headshot";
-  if (id === "headline") return "Hero headline";
-  if (id === "body") return "Service copy";
-  if (id === "eyebrow") return "Service label";
-  if (id === "handle") return "Agent name";
-  if (id === "address") return "Local context";
-  if (id === "phone") return "Contact line";
-  return "Template field";
-}
-
-function guidance(id: string): string {
-  if (id === "primary") return "Wide property or suburb image used as the ad's opening visual.";
-  if (id === "agent_headshot") return "Agent portrait for the lower-right portrait slot.";
-  if (id === "headline") return "One short local buying-or-selling question; keep it to two lines.";
-  if (id === "body") return "Brief service promise for local owners, capped to avoid crowding the portrait.";
-  if (id === "eyebrow") return "Short category label for the service panel.";
-  if (id === "handle") return "Agent name or concise agency signature.";
-  if (id === "address") return "Short suburb or local service context.";
-  if (id === "phone") return "Compact phone or contact detail.";
-  return "Replaceable template content.";
-}
-
-function limits(slot: string): number {
+function maxLinesForSlot(slot: string): number {
   if (slot === "headline") return 2;
-  if (slot === "body") return 2;
+  if (slot === "body" || slot === "subhead") return 2;
   return 1;
+}
+
+function editorLabelForSlot(slot: string): string {
+  if (slot === "eyebrow") return "Eyebrow";
+  if (slot === "headline") return "Hero headline";
+  if (slot === "body" || slot === "subhead") return "Supporting copy";
+  if (slot === "cta") return "CTA";
+  if (slot === "address") return "Location label";
+  if (slot === "stat") return "Proof point";
+  if (slot === "phone") return "Phone";
+  if (slot === "handle") return "Social handle";
+  if (slot === "price") return "Price label";
+  return "Template text";
+}
+
+function copyFieldForSlot(slot: string, fill: string): "headline" | "description" | "cta" | "static" | "brand" {
+  if (fill === "brand") return "brand";
+  if (fill === "static") return "static";
+  if (slot === "headline") return "headline";
+  if (slot === "body" || slot === "subhead") return "description";
+  if (slot === "cta") return "cta";
+  return "static";
+}
+
+function guidanceForSlot(slot: string): string {
+  if (slot === "headline") return "Keep this short and specific to the suburb or property moment.";
+  if (slot === "body" || slot === "subhead") return "One concise supporting sentence for the visible creative.";
+  if (slot === "cta") return "Short button label.";
+  if (slot === "address") return "Short suburb, street, or local area label.";
+  if (slot === "stat") return "Compact proof point or useful local signal.";
+  return "Template-controlled label.";
+}
+
+function imageLabel(id: string, role: string): string {
+  if (role === "primary") return "Primary property image";
+  if (role === "agent_headshot") return "Agent headshot";
+  if (id.includes("secondary")) return "Secondary property image";
+  return "Supporting property image";
+}
+
+function imageGuidance(role: string): string {
+  if (role === "primary") return "Use the strongest property image for this template frame.";
+  if (role === "agent_headshot") return "Use a professional agent portrait with clear eye contact.";
+  return "Use a supporting property detail or alternate angle.";
 }
