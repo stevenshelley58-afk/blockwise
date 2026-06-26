@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite, resolvableAdStudioTemplates } from "../src/lib/adstudio/index.ts";
-import { EXTRACTED_META_SAMPLE_CARD_VERSION } from "../src/lib/adstudio/extracted-meta-template-builder.ts";
+import { GOLD_SAMPLE_CARD_VERSION } from "../src/lib/adstudio/gold-adstudio-templates.ts";
 import { templatePreviewDataUrl, templatePreviewSvg } from "../src/lib/adstudio/template-preview.ts";
 
 const html = `
@@ -20,22 +20,22 @@ function brandKit() {
   });
 }
 
-test("templatePreviewSvg renders an extracted Meta template preview", () => {
+test("templatePreviewSvg renders a promoted Meta template preview", () => {
   const kit = brandKit();
-  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_040");
   assert.ok(template);
   const svg = templatePreviewSvg(template, kit);
   assert.match(svg, /^<svg[\s>]/u);
   assert.match(svg, /viewBox="0 0 \d+ \d+"/u);
-  assert.match(svg, /Just sold in North Perth/iu);
-  assert.match(svg, /href="https:\/\/realtyplus\.example\.com\/logo\.svg"/u);
+  assert.match(svg, /Bassendean rental check/iu);
+  assert.match(svg, /Get check/iu);
 });
 
-test("templatePreviewDataUrl prefers extracted Meta sample cards in the gallery", () => {
+test("templatePreviewDataUrl prefers promoted Meta gold sample cards in the gallery", () => {
   const kit = brandKit();
-  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_055");
+  const template = resolvableAdStudioTemplates().find((t) => t.id === "meta_040");
   assert.ok(template);
-  assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/meta_055.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
+  assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/meta_040.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
 });
 
 test("every template (built-in + a radar-shaped one) produces a preview", () => {

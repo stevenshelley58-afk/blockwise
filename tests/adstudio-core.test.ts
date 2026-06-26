@@ -380,7 +380,7 @@ test("template generation treats observed ads as evidence, not the campaign sour
       "https://northstar.example": sampleHtml,
     },
   });
-  const template = resolveAdStudioTemplate("meta_055");
+  const template = resolveAdStudioTemplate("meta_040");
 
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_demo",
@@ -406,7 +406,7 @@ test("template generation treats observed ads as evidence, not the campaign sour
     },
   });
 
-  assert.equal(pack.campaign.templateKey, "meta_055");
+  assert.equal(pack.campaign.templateKey, "meta_040");
   assert.equal(pack.campaign.sourceObservedAdId, null);
   assert.deepEqual(pack.campaign.templateSnapshot?.exemplars, ["observed-ad-evidence-1"]);
 });
