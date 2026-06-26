@@ -43,7 +43,7 @@ export type SkeletonTemplateDesignSetInput = Omit<SkeletonTemplateDesignInput, "
 export function templateDesignFromCreativeSkeleton(input: SkeletonTemplateDesignInput): TemplateDesign {
   const palette = normalisePalette(input.palette ?? input.skeleton.color.palette);
   const fonts = normaliseFonts(input.fonts);
-  const imageSlot = primaryImageSlot(input.skeleton, input.format);
+  const imageSlots = templateImageSlots(input.skeleton, input.format);
   const primaryZone = primaryCopyZone(input.skeleton);
   const panel = inflateRect(primaryZone, 0.026, 0.026);
   const cta = ctaRect(input.skeleton, panel);
@@ -63,14 +63,17 @@ export function templateDesignFromCreativeSkeleton(input: SkeletonTemplateDesign
       role: "background",
       locked: true,
     },
-    {
-      id: imageSlot.id || "primary_photo",
+    ...imageSlots.map((slot): TemplateLayer => ({
+      id: slot.id || "primary_photo",
       type: "image_slot",
-      rect: toTemplateRect(imageSlot),
-      role: imageSlot.role ?? "primary",
+      rect: toTemplateRect(slot),
+      role: slot.role ?? "primary",
       fit: "smart",
-      mask: "none",
-    },
+      mask: slot.role === "agent_headshot" ? "circle" : "none",
+      editorLabel: imageLabel(slot.id, slot.role),
+      guidance: slot.prompt_hint ?? imageGuidance(slot.role),
+      required: true,
+    })),
     {
       id: "photo_scrim",
       type: "shape",
@@ -166,17 +169,34 @@ export function templateDesignSetFromCreativeSkeleton(input: SkeletonTemplateDes
   return designs;
 }
 
-function primaryImageSlot(skeleton: CreativeSkeleton, format: AdStudioFormat): SkeletonRect & { role: "primary" | "secondary" | "agent_headshot" } {
-  const frame = skeleton.composition.image_frames?.find((candidate) => !candidate.formats || candidate.formats.includes(format));
-  if (!frame) return { id: "primary_photo", role: "primary", x: 0, y: 0, width: 1, height: 1 };
-  return {
+function templateImageSlots(
+  skeleton: CreativeSkeleton,
+  format: AdStudioFormat,
+): Array<SkeletonRect & { role: "primary" | "secondary" | "agent_headshot"; prompt_hint?: string }> {
+  const frames = (skeleton.composition.image_frames ?? []).filter((candidate) => !candidate.formats || candidate.formats.includes(format));
+  if (frames.length === 0) return [{ id: "primary_photo", role: "primary", x: 0, y: 0, width: 1, height: 1 }];
+  return frames.map((frame) => ({
     id: frame.id,
     role: frame.role,
     x: frame.x,
     y: frame.y,
     width: frame.width,
     height: frame.height,
-  };
+    prompt_hint: frame.prompt_hint,
+  }));
+}
+
+function imageLabel(id: string | undefined, role: "primary" | "secondary" | "agent_headshot"): string {
+  if (role === "primary") return "Primary property image";
+  if (role === "agent_headshot") return "Agent headshot";
+  if (id?.includes("secondary")) return "Secondary property image";
+  return "Supporting property image";
+}
+
+function imageGuidance(role: "primary" | "secondary" | "agent_headshot"): string {
+  if (role === "primary") return "Use the strongest property image for this template frame.";
+  if (role === "agent_headshot") return "Use a professional agent portrait with clear eye contact.";
+  return "Use a supporting property detail or alternate angle.";
 }
 
 function primaryCopyZone(skeleton: CreativeSkeleton): SkeletonRect {

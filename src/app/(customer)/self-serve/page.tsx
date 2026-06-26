@@ -73,7 +73,7 @@ export default async function SelfServePage() {
 
       <h1 className="bwh-title">{greeting}</h1>
       <p className="bwh-lede">
-        You&rsquo;re a few short steps from your first live ad. Bring one image and a few words — Blockwise handles the
+        You&rsquo;re a few short steps from your first live ad. Bring your property images and a few words — Blockwise handles the
         targeting, sizing and formats.
       </p>
       <div className="bwh-actions">

@@ -58,6 +58,34 @@ test("CreativeSkeleton converts into a strict TemplateDesign for each proof form
   }
 });
 
+test("CreativeSkeleton converts every matching image frame into an editable image slot", () => {
+  const multiFrameSkeleton: CreativeSkeleton = {
+    ...skeleton,
+    composition: {
+      ...skeleton.composition,
+      image_frames: [
+        { id: "primary_photo", role: "primary", x: 0.05, y: 0.05, width: 0.55, height: 0.5 },
+        { id: "secondary_photo", role: "secondary", x: 0.64, y: 0.1, width: 0.28, height: 0.24, prompt_hint: "Use a detail angle." },
+        { id: "agent_headshot", role: "agent_headshot", x: 0.68, y: 0.38, width: 0.2, height: 0.2 },
+        { id: "story_only_photo", role: "secondary", x: 0.1, y: 0.72, width: 0.8, height: 0.2, formats: ["9:16"] },
+      ],
+    },
+  };
+
+  const design = templateDesignFromCreativeSkeleton({
+    templateId: "imported-multi-frame",
+    skeleton: multiFrameSkeleton,
+    format: "4:5",
+  });
+  const imageSlots = design.layers.filter((layer) => layer.type === "image_slot");
+
+  assert.deepEqual(imageSlots.map((slot) => slot.id), ["primary_photo", "secondary_photo", "agent_headshot"]);
+  assert.deepEqual(imageSlots.map((slot) => slot.role), ["primary", "secondary", "agent_headshot"]);
+  assert.equal(imageSlots.find((slot) => slot.id === "secondary_photo")?.guidance, "Use a detail angle.");
+  assert.equal(imageSlots.find((slot) => slot.id === "agent_headshot")?.mask, "circle");
+  assert.ok(imageSlots.every((slot) => slot.required === true));
+});
+
 test("skeleton-derived designs render as editable TemplateDesign scenes", () => {
   const design = templateDesignFromCreativeSkeleton({
     templateId: "imported-appraisal",
