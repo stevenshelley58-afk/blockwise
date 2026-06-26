@@ -1,4 +1,3 @@
-import { estimateLayoutWrappedLineCount } from "./layout-archetypes.ts";
 import type { AdStudioCanvasObject, AdStudioCreative } from "./types.ts";
 
 export type LayoutQACheckName = "overlap" | "readability" | "cta" | "logo" | "safeZone";
@@ -273,4 +272,31 @@ function minimumFontSizeForRole(role: string): number {
   if (role === "headline") return 42;
   if (role === "cta_text") return 22;
   return 24;
+}
+
+function estimateLayoutWrappedLineCount(text: string, maxWidth: number, fontSize: number, widthFactor = 0.52): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 1;
+
+  const spaceWidth = fontSize * 0.3;
+  let lines = 1;
+  let currentWidth = 0;
+
+  for (const word of words) {
+    const wordWidth = Math.max(fontSize, word.length * fontSize * widthFactor);
+    if (currentWidth === 0) {
+      currentWidth = wordWidth;
+      continue;
+    }
+
+    const nextWidth = currentWidth + spaceWidth + wordWidth;
+    if (nextWidth <= maxWidth) {
+      currentWidth = nextWidth;
+    } else {
+      lines += 1;
+      currentWidth = wordWidth;
+    }
+  }
+
+  return lines;
 }

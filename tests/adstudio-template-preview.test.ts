@@ -38,31 +38,30 @@ test("templatePreviewDataUrl prefers promoted Meta gold sample cards in the gall
   assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/meta_040.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
 });
 
-test("every template (built-in + a radar-shaped one) produces a preview", () => {
+test("every built-in template produces a preview from its own TemplateDesign", () => {
   const kit = brandKit();
   for (const template of AD_STUDIO_TEMPLATES) {
     assert.ok(templatePreviewSvg(template, kit).startsWith("<svg"), `${template.id} preview failed`);
   }
-  // A radar template (non-built-in id) still renders via goal-driven archetype selection.
-  const radar = { id: "market_update_report_data", name: "Market Update / Report", goal: "market_update_leads", offerId: "suburb_market_report", promptHint: "x" } as const;
-  assert.ok(templatePreviewSvg(radar, kit).startsWith("<svg"));
 });
 
-test("template preview data URL does not throw on malformed mined template text", () => {
+test("template preview data URL does not throw on malformed text when a template owns a design", () => {
   const kit = brandKit();
+  const base = AD_STUDIO_TEMPLATES[0];
+  assert.ok(base);
   const template = {
+    ...base,
     id: "bad_unicode_template",
     name: "Broken \uD800 template",
-    goal: "seller_leads",
-    offerId: "home_value_update",
     promptHint: "A scraped ad left a lone surrogate here \uD800 and should not crash.",
-  } as const;
+    sampleCardImageUrl: undefined,
+  };
 
   assert.doesNotThrow(() => templatePreviewDataUrl(template, kit));
   assert.match(templatePreviewDataUrl(template, kit), /^data:image\/svg\+xml;utf8,/);
 });
 
-test("template preview data URL falls back instead of crashing on incomplete runtime rows", () => {
+test("template preview fails loudly on incomplete runtime rows", () => {
   const kit = {
     colours: {},
     typography: {},
@@ -79,6 +78,5 @@ test("template preview data URL falls back instead of crashing on incomplete run
     },
   } as unknown as (typeof AD_STUDIO_TEMPLATES)[number];
 
-  assert.doesNotThrow(() => templatePreviewDataUrl(template, kit));
-  assert.match(templatePreviewDataUrl(template, kit), /^data:image\/svg\+xml;utf8,/);
+  assert.throws(() => templatePreviewDataUrl(template, kit), /missing an explicit 4:5 TemplateDesign preview/);
 });

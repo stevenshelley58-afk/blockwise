@@ -1,7 +1,4 @@
-import { buildComposition } from "./creative/compositions.ts";
-import { buildPalette, fontStacks, renderScene } from "./creative/preview-engine.ts";
 import { svgDataUrl, toWellFormedText } from "./creative/svg-data-url.ts";
-import { compositionForTemplate, sampleCopyForTemplate } from "./creative/template-composition.ts";
 import { renderDesignSvg } from "./renderer.ts";
 import { resolveTemplateDesignForFormat } from "./template-design.ts";
 import type { AdStudioTemplate } from "./templates.ts";
@@ -41,46 +38,36 @@ function safeString(value: unknown, fallback: string): string {
 }
 
 /**
- * A clean, on-brand SVG preview of a template, rendered through the shared
- * creative engine — the same composition the real ad uses. Customer colours,
- * fonts and business name, a "your listing photo" area, sample copy and a brand
- * CTA. Never bakes in observed-ad pixels.
+ * Render a template preview from the template's own committed TemplateDesign.
+ * Templates are standalone mini-projects: missing design data is a product
+ * defect, not a reason to fall back to a generic layout.
  */
 export function templatePreviewSvg(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
-  const palette = buildPalette(brandKit.colours?.primary, brandKit.colours?.accent);
-  const stacks = fontStacks(brandKit.typography?.headingFont, brandKit.typography?.bodyFont);
   const brandName = safeString(brandKit.identity?.tradingName || brandKit.identity?.businessName, "Your agency");
-
-  const raw = sampleCopyForTemplate(template, brandName);
+  const raw = template.sampleCopy;
   const copy = {
     brand: brandName,
-    eyebrow: sanitise(raw.eyebrow),
-    headline: sanitise(raw.headline),
-    subhead: sanitise(raw.subhead),
-    cta: sanitise(raw.cta),
-    stat: raw.stat,
-    statLabel: raw.statLabel,
-    features: raw.features ? raw.features.map((f) => sanitise(f)) : undefined,
+    eyebrow: sanitise(template.name),
+    headline: safeString(raw?.headline, template.name),
+    subhead: safeString(raw?.primaryText ?? raw?.description, template.promptHint),
+    cta: safeString(raw?.cta, "Learn more"),
   };
 
   const design = resolveTemplateDesignForFormat(template, "4:5");
-  if (design) {
-    return renderDesignSvg(design, {
-      text: {
-        eyebrow: copy.eyebrow,
-        headline: copy.headline,
-        subhead: copy.subhead,
-        body: copy.subhead,
-        cta: copy.cta,
-        phone: brandKit.contact.phone ?? "",
-        handle: brandName,
-      },
-    }, brandKit);
+  if (!design) {
+    throw new Error(`Template ${template.id} is missing an explicit 4:5 TemplateDesign preview.`);
   }
-
-  const compositionId = compositionForTemplate(template);
-  const scene = buildComposition(compositionId, { width: 1080, height: 1350, palette, stacks, copy, photo: null });
-  return renderScene(scene, stacks);
+  return renderDesignSvg(design, {
+    text: {
+      eyebrow: copy.eyebrow,
+      headline: copy.headline,
+      subhead: copy.subhead,
+      body: copy.subhead,
+      cta: copy.cta,
+      phone: brandKit.contact.phone ?? "",
+      handle: brandName,
+    },
+  }, brandKit);
 }
 
 export function templatePreviewDataUrl(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
@@ -91,14 +78,5 @@ export function templatePreviewDataUrl(template: AdStudioTemplate, brandKit: AdS
   if (typeof sampleCard === "string" && (sampleCard.startsWith("/") || /^https:\/\//u.test(sampleCard))) {
     return sampleCard;
   }
-  try {
-    return svgDataUrl(templatePreviewSvg(template, brandKit));
-  } catch {
-    return fallbackTemplatePreviewDataUrl();
-  }
-}
-
-function fallbackTemplatePreviewDataUrl(): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350"><rect width="1080" height="1350" fill="#14314f"/><rect x="90" y="260" width="900" height="520" rx="22" fill="#ffffff" fill-opacity="0.12" stroke="#ffffff" stroke-opacity="0.3" stroke-dasharray="14 14"/><text x="540" y="540" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff" text-anchor="middle">Your listing photo</text><rect x="90" y="880" width="720" height="250" rx="18" fill="#06111f" fill-opacity="0.58"/><text x="132" y="990" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="#ffffff">Template preview</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  return svgDataUrl(templatePreviewSvg(template, brandKit));
 }

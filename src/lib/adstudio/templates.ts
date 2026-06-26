@@ -1,6 +1,5 @@
 import { templateDesignSchema, type TemplateDesignSet } from "./template-design.ts";
 import type { AdStudioGoal } from "./types.ts";
-import { templateDesignSetFromCreativeSkeleton } from "../ad-template-library/template-design-from-skeleton.ts";
 import { creativeSkeletonSchema, type CreativeSkeleton } from "../ad-template-library/skeleton.ts";
 import { EXTRACTED_META_AD_STUDIO_TEMPLATES } from "./extracted-meta-template-builder.ts";
 import { GOLD_AD_STUDIO_TEMPLATES } from "./gold-adstudio-templates.ts";
@@ -135,16 +134,7 @@ export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStud
   });
 
   const creativeSkeleton = parseCreativeSkeleton(row.creative_skeleton);
-  const templateVersion = numberValue(row.template_version) ?? 1;
-  const designs =
-    parseTemplateDesigns(row.template_designs ?? row.template_design) ??
-    (creativeSkeleton
-      ? templateDesignSetFromCreativeSkeleton({
-          templateId: templateKey,
-          version: templateVersion,
-          skeleton: creativeSkeleton,
-        })
-      : undefined);
+  const designs = parseTemplateDesigns(row.template_designs ?? row.template_design);
   const sampleStyle = parseSampleStyle(row.sample_style) ?? deriveTemplateSampleStyle({ ...row, template_key: templateKey });
   const sampleCopy = sampleCopyForTemplate({ ...row, template_key: templateKey }, sampleStyle);
   const sampleCardImageUrl =

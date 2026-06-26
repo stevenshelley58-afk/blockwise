@@ -23,14 +23,6 @@ export {
 export { buildAdStudioExportPackage } from "./export-package.ts";
 export { generateAdStudioCampaignPack, type GenerateCampaignPackInput } from "./generator.ts";
 export {
-  buildArchetypeCreative,
-  estimateLayoutWrappedLineCount,
-  selectLayoutArchetype,
-  type BuildArchetypeCreativeInput,
-  type LayoutArchetypeId,
-  type LayoutArchetypeSelectionInput,
-} from "./layout-archetypes.ts";
-export {
   checkLayoutCta,
   checkLayoutLogo,
   checkLayoutOverlap,
@@ -58,12 +50,6 @@ export {
   type CreativeSkeleton,
   type CreativeSkeletonArchetype,
 } from "../ad-template-library/skeleton.ts";
-export {
-  templateDesignFromCreativeSkeleton,
-  templateDesignSetFromCreativeSkeleton,
-  type SkeletonTemplateDesignInput,
-  type SkeletonTemplateDesignSetInput,
-} from "../ad-template-library/template-design-from-skeleton.ts";
 export {
   createOpenAiImageProvider,
   createOpenAiTextProvider,

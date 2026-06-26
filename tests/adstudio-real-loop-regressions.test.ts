@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   extractBrandKitFromWebsite,
   generateAdStudioCampaignPack,
+  resolveAdStudioTemplate,
 } from "../src/lib/adstudio/index.ts";
 import {
   applyBrandAssetRows,
@@ -68,6 +69,7 @@ function pack() {
 
 test("template-owned offer labels keep template-native ids through UI state", () => {
   const template = {
+    ...resolveAdStudioTemplate("meta_002"),
     id: "template_native_market",
     templateKey: "template_native_market",
     name: "Market update",
@@ -84,6 +86,7 @@ test("template-owned offer labels keep template-native ids through UI state", ()
     state: "WA",
     offerId: "seller_prep_checklist",
     platforms: ["meta"],
+    creativeFormats: ["4:5"],
     variantCount: 1,
     resolvedTemplate: template,
     sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
@@ -416,7 +419,6 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
-  const layout = readFileSync("src/lib/adstudio/layout-archetypes.ts", "utf8");
   const persistence = readFileSync("src/lib/adstudio/persistence.ts", "utf8");
   const metaExecution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
   const monitor = readFileSync("src/lib/meta-monitor/calculations.ts", "utf8");
@@ -489,10 +491,11 @@ test("Ad Studio template picker loads approved templates with built-in fallback"
   assert.match(generator, /templateSnapshot/);
   assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);
   assert.match(generator, /Template exemplars remain internal evidence inside the template snapshot/);
-  assert.match(generator, /creativeSkeleton: input\.template\?\.creativeSkeleton/);
+  assert.match(generator, /missing an explicit \$\{input\.format\} TemplateDesign/);
+  assert.doesNotMatch(generator, /buildArchetypeCreative|layout-archetypes|compositionForTemplate/);
   assert.match(persistence, /source_observed_ad_id: pack\.campaign\.sourceObservedAdId/);
-  assert.match(layout, /geometryForSkeleton/);
-  assert.match(layout, /copy_safe_zones/);
+  assert.equal(existsSync("src/lib/adstudio/layout-archetypes.ts"), false);
+  assert.equal(existsSync("src/lib/adstudio/creative/composition-to-creative.ts"), false);
   assert.match(persistence, /template_key: pack\.campaign\.templateKey/);
   assert.match(persistence, /template_snapshot_json: pack\.campaign\.templateSnapshot/);
   assert.match(metaExecution, /template: pack\.campaign\.templateKey \?\? pack\.campaign\.offerId/);

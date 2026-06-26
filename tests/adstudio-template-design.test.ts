@@ -154,7 +154,7 @@ test("selected extracted template generation returns template_design creatives",
   assert.equal(pack.creatives.length, 3);
   assert.ok(pack.campaign.templateSnapshot?.designs);
   for (const creative of pack.creatives) {
-    assert.equal(creative.canvas.composition?.id, "template_design:meta_002:v1");
+    assert.equal((creative.canvas as Record<string, unknown>).composition, undefined);
     assert.ok(creative.canvas.objects.some((object) => object.sourceLayerId === "primary_photo"));
     assert.ok(creative.previewSvg.includes("<svg"));
   }

@@ -1,24 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
   mapAdStudioLibraryTemplate,
   renderDesign,
   resolveTemplateDesignForFormat,
-  templateDesignFromCreativeSkeleton,
   templateDesignSchema,
-  templateDesignSetFromCreativeSkeleton,
   type AdStudioLibraryTemplate,
+  type TemplateDesign,
 } from "../src/lib/adstudio/index.ts";
-import { creativeSkeletonSchema, type CreativeSkeleton } from "../src/lib/ad-template-library/skeleton.ts";
 import { buildTrialFallbackBrandKit } from "../src/lib/adstudio/trial-brand-kit.ts";
-
-const fixture = JSON.parse(readFileSync("tests/fixtures/adstudio-template-engine-foundation.json", "utf8")) as {
-  creativeSkeletons: unknown[];
-};
-
-const skeleton = creativeSkeletonSchema.parse(fixture.creativeSkeletons[2]);
 
 function row(input: Partial<AdStudioLibraryTemplate> = {}): AdStudioLibraryTemplate {
   return {
@@ -39,61 +30,114 @@ function row(input: Partial<AdStudioLibraryTemplate> = {}): AdStudioLibraryTempl
   };
 }
 
-test("CreativeSkeleton converts into a strict TemplateDesign for each proof format", () => {
-  const designs = templateDesignSetFromCreativeSkeleton({
-    templateId: "imported-appraisal",
-    skeleton,
-    formats: ["9:16", "4:5", "1:1"],
+function explicitDesign(templateId: string, version = 7): TemplateDesign {
+  return templateDesignSchema.parse({
+    templateId,
+    version,
+    format: "4:5",
+    canvas: { w: 1080, h: 1350 },
+    palette: ["#102A43", "#F8FAFC", "#E7B24B"],
+    fonts: ["Inter", "Inter"],
+    layers: [
+      {
+        id: "background",
+        type: "shape",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        fill: "#102A43",
+        role: "background",
+        locked: true,
+      },
+      {
+        id: "primary_photo",
+        type: "image_slot",
+        rect: { x: 0.08, y: 0.08, w: 0.84, h: 0.38 },
+        role: "primary",
+        fit: "cover",
+        anchor: "center",
+        mask: "none",
+        required: true,
+      },
+      {
+        id: "headline",
+        type: "text",
+        rect: { x: 0.08, y: 0.54, w: 0.76, h: 0.14 },
+        slot: "headline",
+        align: "left",
+        font: "Inter",
+        size: 66,
+        lineHeight: 1.06,
+        weight: 900,
+        color: "#FFFFFF",
+        fill: "ai_copy",
+      },
+      {
+        id: "subhead",
+        type: "text",
+        rect: { x: 0.08, y: 0.7, w: 0.76, h: 0.08 },
+        slot: "subhead",
+        align: "left",
+        font: "Inter",
+        size: 34,
+        lineHeight: 1.18,
+        weight: 650,
+        color: "#FFFFFF",
+        fill: "ai_copy",
+      },
+      {
+        id: "cta",
+        type: "cta_button",
+        rect: { x: 0.08, y: 0.84, w: 0.32, h: 0.07 },
+        fill: "#E7B24B",
+        radius: 999,
+        label: "cta",
+        textColor: "#102A43",
+        font: "Inter",
+        size: 28,
+      },
+    ],
   });
+}
 
-  for (const format of ["9:16", "4:5", "1:1"] as const) {
-    const design = designs[format];
-    assert.ok(design, `${format} design should exist`);
-    assert.deepEqual(templateDesignSchema.parse(design), design);
-    assert.equal(design.templateId, "imported-appraisal");
-    assert.equal(design.format, format);
-    assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
-    assert.ok(design.layers.some((layer) => layer.type === "text" && layer.slot === "headline" && layer.fill === "ai_copy"));
-    assert.ok(design.layers.some((layer) => layer.type === "cta_button" && layer.label === "cta"));
-  }
-});
-
-test("CreativeSkeleton converts every matching image frame into an editable image slot", () => {
-  const multiFrameSkeleton: CreativeSkeleton = {
-    ...skeleton,
-    composition: {
-      ...skeleton.composition,
-      image_frames: [
-        { id: "primary_photo", role: "primary", x: 0.05, y: 0.05, width: 0.55, height: 0.5 },
-        { id: "secondary_photo", role: "secondary", x: 0.64, y: 0.1, width: 0.28, height: 0.24, prompt_hint: "Use a detail angle." },
-        { id: "agent_headshot", role: "agent_headshot", x: 0.68, y: 0.38, width: 0.2, height: 0.2 },
-        { id: "story_only_photo", role: "secondary", x: 0.1, y: 0.72, width: 0.8, height: 0.2, formats: ["9:16"] },
-      ],
+test("approved skeleton-backed library rows do not derive renderable TemplateDesigns", () => {
+  const template = mapAdStudioLibraryTemplate(row({
+    creative_skeleton: {
+      version: 1,
+      archetype: "appraisal",
+      shot: { type: "exterior", lighting: "daylight", mood: "premium" },
+      composition: {
+        focal_point: "front elevation",
+        horizon: "low",
+        image_frames: [{ id: "primary_photo", role: "primary", x: 0, y: 0, width: 1, height: 1 }],
+        copy_safe_zones: [{ id: "copy", x: 0.08, y: 0.54, width: 0.76, height: 0.28 }],
+      },
+      color: { palette: ["#102A43"], overlay: "scrim", contrast: "medium" },
+      text_system: { headline_zone: "bottom", badge: "free appraisal", cta_style: "pill" },
+      copy: { hook_style: "question", headline_pattern: "{{suburb}} appraisal", cta: "Book appraisal" },
+      variables: [],
+      confidence: 90,
     },
-  };
+  }));
 
-  const design = templateDesignFromCreativeSkeleton({
-    templateId: "imported-multi-frame",
-    skeleton: multiFrameSkeleton,
-    format: "4:5",
-  });
-  const imageSlots = design.layers.filter((layer) => layer.type === "image_slot");
-
-  assert.deepEqual(imageSlots.map((slot) => slot.id), ["primary_photo", "secondary_photo", "agent_headshot"]);
-  assert.deepEqual(imageSlots.map((slot) => slot.role), ["primary", "secondary", "agent_headshot"]);
-  assert.equal(imageSlots.find((slot) => slot.id === "secondary_photo")?.guidance, "Use a detail angle.");
-  assert.equal(imageSlots.find((slot) => slot.id === "agent_headshot")?.mask, "circle");
-  assert.ok(imageSlots.every((slot) => slot.required === true));
+  assert.ok(template);
+  assert.equal(template.creativeSkeleton?.archetype, "appraisal");
+  assert.equal(resolveTemplateDesignForFormat(template, "4:5"), null);
 });
 
-test("skeleton-derived designs render as editable TemplateDesign scenes", () => {
-  const design = templateDesignFromCreativeSkeleton({
-    templateId: "imported-appraisal",
-    skeleton,
-    format: "4:5",
-  });
-  const brandKit = buildTrialFallbackBrandKit({ workspaceId: "workspace_import", workspaceName: "Import Realty", region: "WA" });
-  const creative = renderDesign(design, {
+test("explicit template_designs JSON is the only renderable imported template path", () => {
+  const design = explicitDesign("explicit-template");
+  const template = mapAdStudioLibraryTemplate(row({
+    template_key: "explicit-template",
+    template_designs: { "4:5": design },
+    template_version: 7,
+  }));
+
+  assert.ok(template);
+  const resolved = resolveTemplateDesignForFormat(template, "4:5");
+  assert.ok(resolved);
+  assert.equal(resolved.version, 7);
+  assert.equal(resolved.templateId, "explicit-template");
+
+  const creative = renderDesign(resolved, {
     text: {
       headline: "Free appraisal for Maylands owners",
       subhead: "Get a practical local price update.",
@@ -102,43 +146,10 @@ test("skeleton-derived designs render as editable TemplateDesign scenes", () => 
     images: {
       primary_photo: "data:image/png;base64,AAAA",
     },
-  }, brandKit);
+  }, buildTrialFallbackBrandKit({ workspaceId: "workspace_import", workspaceName: "Import Realty", region: "WA" }));
 
-  assert.equal(creative.canvas.composition?.id, "template_design:imported-appraisal:v1");
+  assert.equal((creative.canvas as Record<string, unknown>).composition, undefined);
   assert.ok(creative.canvas.objects.every((object) => object.sourceLayerId));
   assert.ok(creative.canvas.objects.some((object) => object.templateSlot === "headline" && object.locked === false));
   assert.ok(creative.previewSvg.includes("<svg"));
-});
-
-test("approved skeleton-backed library rows derive TemplateDesign sets", () => {
-  const template = mapAdStudioLibraryTemplate(row({ creative_skeleton: skeleton }));
-
-  assert.ok(template);
-  assert.equal(template.id, "imported-appraisal");
-  assert.equal(template.creativeSkeleton?.archetype, "appraisal");
-  const design = resolveTemplateDesignForFormat(template, "4:5");
-  assert.ok(design);
-  assert.equal(design.templateId, "imported-appraisal");
-  assert.ok(design.layers.some((layer) => layer.type === "image_slot"));
-});
-
-test("explicit template_designs JSON wins over skeleton-derived designs", () => {
-  const explicit = templateDesignFromCreativeSkeleton({
-    templateId: "explicit-template",
-    skeleton: skeleton as CreativeSkeleton,
-    format: "4:5",
-    version: 7,
-  });
-  const template = mapAdStudioLibraryTemplate(row({
-    template_key: "explicit-template",
-    creative_skeleton: skeleton,
-    template_designs: { "4:5": explicit },
-    template_version: 7,
-  }));
-
-  assert.ok(template);
-  const design = resolveTemplateDesignForFormat(template, "4:5");
-  assert.ok(design);
-  assert.equal(design.version, 7);
-  assert.equal(design.templateId, "explicit-template");
 });

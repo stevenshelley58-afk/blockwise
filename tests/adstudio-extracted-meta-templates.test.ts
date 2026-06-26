@@ -149,6 +149,17 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   assert.doesNotMatch(indexSource, /switch\s*\(/);
   assert.doesNotMatch(indexSource, /\blayout\s*:/);
   assert.equal(existsSync("src/lib/adstudio/gold-templates/primitives.ts"), false);
+  for (const deletedSharedEnginePath of [
+    "src/lib/adstudio/layout-archetypes.ts",
+    "src/lib/adstudio/creative/compositions.ts",
+    "src/lib/adstudio/creative/composition-to-creative.ts",
+    "src/lib/adstudio/creative/composition-sync.ts",
+    "src/lib/adstudio/creative/preview-engine.ts",
+    "src/lib/adstudio/creative/template-composition.ts",
+    "src/lib/ad-template-library/template-design-from-skeleton.ts",
+  ]) {
+    assert.equal(existsSync(deletedSharedEnginePath), false, deletedSharedEnginePath);
+  }
 
   const moduleFiles = readdirSync("src/lib/adstudio/gold-templates")
     .filter((file) => file.endsWith(".ts"));

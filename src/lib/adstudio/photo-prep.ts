@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { AdStudioTemplate } from "./templates.ts";
 import { resolveTemplateDesignForFormat } from "./template-design.ts";
 import type { AdStudioFormat, AdStudioGoal } from "./types.ts";
-import { getCanvasSize } from "./renderer.ts";
 
 const normalizedNumberSchema = z.number().min(0).max(1);
 
@@ -109,10 +108,9 @@ export type PreparedPhotoAsset = {
 };
 
 export function buildTemplateRenderFrame(input: {
-  template: Pick<AdStudioTemplate, "creativeSkeleton" | "designs" | "id" | "templateKey" | "name">;
+  template: Pick<AdStudioTemplate, "designs" | "id" | "templateKey" | "name">;
   format: AdStudioFormat;
 }): TemplateRenderFrame {
-  const canvas = getCanvasSize(input.format);
   const design = resolveTemplateDesignForFormat(input.template, input.format);
   if (design) {
     const imageSlots = design.layers
@@ -148,35 +146,7 @@ export function buildTemplateRenderFrame(input: {
     });
   }
 
-  const skeleton = input.template.creativeSkeleton;
-  const explicitSlots = (skeleton?.composition.image_frames ?? [])
-    .filter((frame) => !frame.formats || frame.formats.includes(input.format))
-    .map((frame) => ({
-      id: frame.id,
-      role: frame.role,
-      x: frame.x,
-      y: frame.y,
-      width: frame.width,
-      height: frame.height,
-      promptHint: frame.prompt_hint,
-    }));
-
-  return templateRenderFrameSchema.parse({
-    format: input.format,
-    canvas: {
-      widthPx: canvas.width,
-      heightPx: canvas.height,
-    },
-    imageSlots: explicitSlots.length > 0 ? explicitSlots : [fallbackImageSlot(input.template)],
-    copySafeZones: (skeleton?.composition.copy_safe_zones ?? []).map((zone) => ({
-      id: zone.id,
-      x: zone.x,
-      y: zone.y,
-      width: zone.width,
-      height: zone.height,
-    })),
-    lockedLayout: true,
-  });
+  throw new Error(`Template ${input.template.templateKey ?? input.template.id} is missing an explicit ${input.format} TemplateDesign frame.`);
 }
 
 export function buildPhotoPrepCacheKey(context: PhotoPrepContext): string {
@@ -317,28 +287,6 @@ export function deterministicPreparedPhotoAsset(input: {
     modelProfileVersion: input.context.modelProfileVersion,
     qaStatus: "pending",
   };
-}
-
-function fallbackImageSlot(template: Pick<AdStudioTemplate, "creativeSkeleton" | "name">): TemplateImageSlot {
-  const skeleton = template.creativeSkeleton;
-  const promptHint = skeleton
-    ? [
-        skeleton.shot.type,
-        `focal point: ${skeleton.composition.focal_point}`,
-        "full-bleed template photo",
-        "keep copy-safe areas calm",
-      ].join("; ")
-    : `${template.name ?? "Template"} full-bleed customer photo.`;
-
-  return templateImageSlotSchema.parse({
-    id: "primary_photo",
-    role: "primary",
-    x: 0,
-    y: 0,
-    width: 1,
-    height: 1,
-    promptHint,
-  });
 }
 
 function formatRect(rect: AdStudioRect & { id?: string }): string {

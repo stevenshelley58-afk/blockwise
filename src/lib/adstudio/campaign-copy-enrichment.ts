@@ -167,7 +167,6 @@ function updateCreativeCopy(
   const primaryImage = creative.canvas.objects.find((object) => object.role === "primary_image");
   const imageSrc = primaryImage?.content ?? primaryImage?.assetId ?? "";
   const updated = syncCreativeWithCopyAndImage(creative, copy, imageSrc);
-  if (updated.canvas.composition) return updated;
   return {
     ...updated,
     previewSvg: renderCreativeSvg(updated, pack.brandKit),

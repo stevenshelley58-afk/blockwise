@@ -221,27 +221,6 @@ export type AdStudioCreative = {
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
     fabricJson?: Record<string, unknown> | null;
-    composition?: {
-      id: string;
-      copy: {
-        brand: string;
-        eyebrow: string;
-        headline: string;
-        subhead: string;
-        cta: string;
-        stat?: string;
-        statLabel?: string;
-        features?: string[];
-      };
-      paletteSeed: {
-        primary: string;
-        accent: string;
-      };
-      fontSeed?: {
-        headingFont?: string | null;
-        bodyFont?: string | null;
-      };
-    };
   };
   safeZones: {
     metaStory: boolean;

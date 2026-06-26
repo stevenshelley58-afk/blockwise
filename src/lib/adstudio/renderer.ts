@@ -35,30 +35,12 @@ export function renderDesign(
     campaignId: options.campaignId ?? design.templateId,
     variantId: options.variantId ?? "template_design",
     format: design.format,
+    source: "template_composite",
     canvas: {
       width: design.canvas.w,
       height: design.canvas.h,
       backgroundAssetId: null,
       objects,
-      composition: {
-        id: `template_design:${design.templateId}:v${design.version}`,
-        copy: {
-          brand: brandKit.identity.tradingName || brandKit.identity.businessName,
-          eyebrow: content.text?.eyebrow ?? "",
-          headline: content.text?.headline ?? "",
-          subhead: content.text?.subhead ?? content.text?.body ?? "",
-          cta: content.text?.cta ?? "",
-          stat: content.text?.stat,
-        },
-        paletteSeed: {
-          primary: design.palette[0] ?? brandKit.colours.primary,
-          accent: design.palette[1] ?? brandKit.colours.accent,
-        },
-        fontSeed: {
-          headingFont: design.fonts[0] ?? brandKit.typography.headingFont,
-          bodyFont: design.fonts[1] ?? brandKit.typography.bodyFont,
-        },
-      },
     },
     safeZones: {
       metaStory: design.format === "9:16",
@@ -193,7 +175,7 @@ function layerToCanvasObjects(
     return [{
       objectId: layer.id,
       type: "text",
-      role: layer.slot,
+      role: canvasRoleForTextSlot(layer.slot),
       content: resolveLayerText(layer, content, brandKit),
       x: rect.x,
       y: rect.y,
@@ -262,7 +244,7 @@ function layerToCanvasObjects(
   const label: AdStudioCanvasObject = {
     objectId: `${layer.id}_label`,
     type: "text",
-    role: layer.label,
+    role: canvasRoleForTextSlot(layer.label),
     content: resolveTextSlot(layer.label, content, brandKit),
     x: rect.x,
     y: rect.y,
@@ -317,6 +299,12 @@ function resolveBrandText(slot: TextSlot, brandKit: AdStudioBrandKit): string {
 
 function isHeadingSlot(slot: TextSlot): boolean {
   return slot === "headline" || slot === "eyebrow" || slot === "stat";
+}
+
+function canvasRoleForTextSlot(slot: TextSlot): string {
+  if (slot === "subhead") return "subheadline";
+  if (slot === "cta") return "cta_text";
+  return slot;
 }
 
 function shortenText(value: string, maxChars: number): string {

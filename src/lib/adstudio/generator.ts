@@ -1,7 +1,6 @@
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
-import { buildArchetypeCreative } from "./layout-archetypes.ts";
 import { findOfferTemplate, getOfferTemplate } from "./offers.ts";
 import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
@@ -72,6 +71,12 @@ type OfferCopySeed = {
 
 const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
 const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
+const BLANK_CANVAS: Record<AdStudioFormat, TemplateDesign["canvas"]> = {
+  "1:1": { w: 1080, h: 1080 },
+  "4:5": { w: 1080, h: 1350 },
+  "9:16": { w: 1080, h: 1920 },
+  "1.91:1": { w: 1200, h: 628 },
+};
 
 export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): AdStudioCampaignPack {
   // B2 (simplification): draft/unapproved brand kits may generate; brand-kit
@@ -944,40 +949,133 @@ function buildCreative(input: {
   sourceImagesBySlot?: Partial<Record<string, string>>;
   subheadline?: string;
 }): AdStudioCreative {
-  const design = resolveTemplateDesignForFormat(input.template, input.format);
-  if (design) {
-    const content: BoundTemplateContent = {
-      text: {
-        eyebrow: input.template?.name ?? input.campaign.offerId,
-        headline: input.variant.headline,
-        subhead: input.subheadline ?? input.variant.offer,
-        body: input.subheadline ?? input.variant.offer,
-        cta: input.variant.cta,
-        phone: input.brandKit.contact.phone ?? "",
-        handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
-      },
-      images: imageBindingsForDesign(design, input.sourceImageDataUrl, input.sourceImagesBySlot),
-    };
-
-    return renderDesign(design, content, input.brandKit, {
-      creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:template_design`),
-      campaignId: input.campaign.campaignId,
-      variantId: input.variant.variantId,
-    });
+  const design = input.template ? resolveTemplateDesignForFormat(input.template, input.format) : blankCreativeDesign(input.format);
+  if (!design) {
+    throw new Error(`Template ${input.template?.id ?? "unknown"} is missing an explicit ${input.format} TemplateDesign.`);
   }
 
-  return buildArchetypeCreative({
-    campaign: input.campaign,
-    variant: input.variant,
-    brandKit: input.brandKit,
-    format: input.format,
-    sourceImageDataUrl: input.sourceImageDataUrl,
-    subheadline: input.subheadline,
-    templateId: input.template?.id,
-    templateKey: input.template?.templateKey,
-    templateName: input.template?.name,
-    creativeSkeleton: input.template?.creativeSkeleton,
+  const content: BoundTemplateContent = {
+    text: {
+      eyebrow: input.template?.name ?? input.campaign.offerId,
+      headline: input.variant.headline,
+      subhead: input.subheadline ?? input.variant.offer,
+      body: input.subheadline ?? input.variant.offer,
+      cta: input.variant.cta,
+      phone: input.brandKit.contact.phone ?? "",
+      handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
+    },
+    images: imageBindingsForDesign(design, input.sourceImageDataUrl, input.sourceImagesBySlot),
+  };
+
+  return renderDesign(design, content, input.brandKit, {
+    creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${design.templateId}`),
+    campaignId: input.campaign.campaignId,
+    variantId: input.variant.variantId,
   });
+}
+
+function blankCreativeDesign(format: AdStudioFormat): TemplateDesign {
+  const isLandscape = format === "1.91:1";
+  const isStory = format === "9:16";
+  return {
+    templateId: "blank_custom",
+    version: 1,
+    format,
+    canvas: BLANK_CANVAS[format],
+    palette: ["#0F172A", "#FFFFFF", "#F8FAFC", "#123E75"],
+    fonts: ["Inter", "Inter"],
+    layers: [
+      {
+        id: "background",
+        type: "shape",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        fill: "#0F172A",
+        role: "background",
+        locked: true,
+      },
+      {
+        id: "primary_photo",
+        type: "image_slot",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        role: "primary",
+        fit: "cover",
+        anchor: "center",
+        mask: "none",
+        editorLabel: "Primary image",
+        guidance: "Use the uploaded property or inspiration image.",
+        required: true,
+      },
+      {
+        id: "image_scrim",
+        type: "shape",
+        rect: { x: 0, y: 0, w: 1, h: 1 },
+        fill: "#0F172A",
+        opacity: 0.32,
+        role: "scrim",
+        locked: true,
+      },
+      {
+        id: "brand_logo",
+        type: "logo",
+        rect: { x: isLandscape ? 0.07 : 0.08, y: isStory ? 0.05 : 0.06, w: isLandscape ? 0.22 : 0.34, h: isLandscape ? 0.09 : 0.055 },
+        source: "brand_kit",
+      },
+      {
+        id: "headline",
+        type: "text",
+        rect: {
+          x: isLandscape ? 0.07 : 0.08,
+          y: isLandscape ? 0.35 : isStory ? 0.58 : 0.55,
+          w: isLandscape ? 0.56 : 0.84,
+          h: isLandscape ? 0.18 : isStory ? 0.13 : 0.16,
+        },
+        slot: "headline",
+        align: "left",
+        font: "Inter",
+        size: isLandscape ? 54 : isStory ? 78 : 68,
+        lineHeight: 1.05,
+        weight: 900,
+        color: "#FFFFFF",
+        maxChars: 72,
+        fill: "ai_copy",
+      },
+      {
+        id: "subhead",
+        type: "text",
+        rect: {
+          x: isLandscape ? 0.07 : 0.08,
+          y: isLandscape ? 0.57 : isStory ? 0.73 : 0.73,
+          w: isLandscape ? 0.5 : 0.78,
+          h: isLandscape ? 0.11 : 0.08,
+        },
+        slot: "subhead",
+        align: "left",
+        font: "Inter",
+        size: isLandscape ? 26 : isStory ? 38 : 34,
+        lineHeight: 1.18,
+        weight: 650,
+        color: "#FFFFFF",
+        maxChars: 140,
+        fill: "ai_copy",
+      },
+      {
+        id: "cta",
+        type: "cta_button",
+        rect: {
+          x: isLandscape ? 0.07 : 0.08,
+          y: isLandscape ? 0.74 : isStory ? 0.84 : 0.86,
+          w: isLandscape ? 0.24 : 0.34,
+          h: isLandscape ? 0.11 : isStory ? 0.06 : 0.07,
+        },
+        fill: "#123E75",
+        radius: 999,
+        label: "cta",
+        textColor: "#FFFFFF",
+        font: "Inter",
+        size: isLandscape ? 24 : 30,
+      },
+    ],
+  };
 }
 
 function imageBindingsForDesign(
