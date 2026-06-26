@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
+  AdStudioCanvasObject,
   AdStudioCreative,
   AdStudioFormat,
   AdStudioOfferTemplate,
@@ -236,6 +237,35 @@ function copyFieldForSelectedElement(element: SelectedElement): "primaryText" | 
   if (element === "headline") return "headline";
   if (element === "description") return "description";
   if (element === "cta") return "cta";
+  return null;
+}
+
+function textContractForCopyField(
+  creative: AdStudioCreative,
+  field: "primaryText" | "headline" | "description" | "cta",
+): { label: string; maxChars: number } | null {
+  if (field === "primaryText") return null;
+  const object = creative.canvas.objects.find((candidate) => copyFieldForCanvasObject(candidate) === field);
+  if (!object) return null;
+  return {
+    label: object.editorLabel ?? (field === "cta" ? "CTA" : field === "headline" ? "Hero headline" : "Supporting copy"),
+    maxChars: object.templateMaxChars ?? COPY_LIMITS[field],
+  };
+}
+
+function copyFieldForCanvasObject(object: AdStudioCanvasObject): "headline" | "description" | "cta" | null {
+  if (object.templateCopyField === "headline" || object.role === "headline") return "headline";
+  if (
+    object.templateCopyField === "description" ||
+    object.role === "subheadline" ||
+    object.role === "body" ||
+    object.role === "subhead"
+  ) {
+    return "description";
+  }
+  if (object.templateCopyField === "cta" || object.role === "cta" || object.role === "cta_text" || object.role === "cta_button") {
+    return "cta";
+  }
   return null;
 }
 
@@ -786,8 +816,10 @@ export function AdStudioWorkbench({
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {
-    const label = field === "primaryText" ? "Primary text" : field === "cta" ? "CTA" : field[0].toUpperCase() + field.slice(1);
-    const overLimit = copy[field].length > COPY_LIMITS[field];
+    const contract = currentCreative ? textContractForCopyField(currentCreative, field) : null;
+    const label = contract?.label ?? (field === "primaryText" ? "Primary text" : field === "cta" ? "CTA" : field[0].toUpperCase() + field.slice(1));
+    const limit = contract?.maxChars ?? COPY_LIMITS[field];
+    const overLimit = copy[field].length > limit;
     const actions = field === "cta" ? ["Sharper", "More direct"] : ["Sharper", "More local", "More premium", "Less hype"];
     return (
       <>
@@ -795,13 +827,13 @@ export function AdStudioWorkbench({
         <label className="studio-selected-text-field">
           <span>
             {label}
-            <small data-over={overLimit || undefined}>{copy[field].length} / {COPY_LIMITS[field]}</small>
+            <small data-over={overLimit || undefined}>{copy[field].length} / {limit}</small>
           </span>
           <textarea
             rows={field === "primaryText" ? 4 : 3}
-            maxLength={COPY_LIMITS[field]}
+            maxLength={limit}
             value={copy[field]}
-            onChange={(event) => updateCopy(field, event.target.value.slice(0, COPY_LIMITS[field]))}
+            onChange={(event) => updateCopy(field, event.target.value.slice(0, limit))}
           />
           {overLimit && <small className="studio-field-error">Over the Meta limit - shorten this.</small>}
         </label>
