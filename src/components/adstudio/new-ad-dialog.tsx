@@ -9,6 +9,7 @@ import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
+import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
 
 type StartStep = "source" | "template" | "reuse" | "radar";
 type Step = "source" | "brief";
@@ -213,6 +214,7 @@ export function NewAdDialog({
   const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
   const hasDescriptionRequirement = visibleRequirementBlockers.some((blocker) => blocker.target === "description");
   const detailsErrorMessage = step === "brief" && mediaSourceMode === "details" ? error : "";
+  const briefGuidance = briefGuidanceForTemplate(selectedTemplate, isBlank);
   const footerAlertItems = visibleRequirementBlockers.length > 0
     ? [
         ...visibleRequirementBlockers,
@@ -850,7 +852,7 @@ export function NewAdDialog({
 
           {step === "brief" && mediaSourceMode === "details" && (
             <div className="studio-newad-own">
-              {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{trialCreditNote}</p>}
+              {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{isBlank ? trialCreditNote : briefGuidance.note}</p>}
               <div className="studio-newad-upload-group">
                 {imageRequirements.map((slot) => (
                   <div className="studio-newad-image-slot" key={slot.id}>
@@ -898,7 +900,7 @@ export function NewAdDialog({
                 ))}
               </div>
               <label className="studio-newad-field">
-                <span>Short description</span>
+                <span>{briefGuidance.fieldLabel}</span>
                 <textarea
                   ref={descriptionRef}
                   value={description}
@@ -907,12 +909,9 @@ export function NewAdDialog({
                   aria-invalid={hasDescriptionRequirement ? true : undefined}
                   aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder={
-                    selectedTemplate
-                      ? `Example: ${selectedTemplate.promptHint}`
-                      : "Example: Open home this Saturday, 3 bed family home in Scarborough with renovated kitchen."
-                  }
+                  placeholder={briefGuidance.placeholder}
                 />
+                <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
                 <small>{description.length}/500</small>
               </label>
             </div>

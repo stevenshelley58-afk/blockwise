@@ -399,6 +399,7 @@
 .studio-newad-field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
 .studio-newad-field textarea[aria-invalid="true"]{border-color:#ba1a1a;box-shadow:0 0 0 2px #ffdad6}
 .studio-newad-field small{justify-self:end;color:var(--muted);font-size:12px}
+.studio-newad-field .studio-newad-field-help{justify-self:start;line-height:1.45}
 .studio-newad-foot{display:flex;align-items:center;gap:12px;padding:15px 26px;background:#fff;border-top:1px solid var(--line-soft)}
 .studio-newad-foot.has-alert{align-items:flex-end}
 .studio-newad-foot.has-alert .studio-btn{align-self:flex-end}
