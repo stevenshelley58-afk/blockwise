@@ -1345,6 +1345,7 @@ export function AdStudioWorkbench({
         brandKit={brandKit}
         workspaceId={workspaceId}
         templates={adTemplates}
+        mediaAssets={mediaAssets}
         onGenerate={handleGenerateFirstAd}
         initialStep={templatePickerInitialStep}
       />
