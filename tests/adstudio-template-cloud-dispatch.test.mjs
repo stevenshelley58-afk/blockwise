@@ -49,6 +49,7 @@ test("cloud template dispatcher builds workflow_dispatch arguments for each batc
         repo: "stevenshelley58-afk/blockwise",
         workflow: "adstudio-template-cloud-build.yml",
         targetRef: "feat/audit-intel-report",
+        codexModel: "gpt-5.4-mini",
       },
       batch,
     ),
@@ -68,6 +69,8 @@ test("cloud template dispatcher builds workflow_dispatch arguments for each batc
       "output_branch=codex/adstudio-template-cloud-batch-094-098",
       "-f",
       "max_parallel=3",
+      "-f",
+      "codex_model=gpt-5.4-mini",
     ],
   );
 });
@@ -119,6 +122,8 @@ test("cloud template dispatcher parses CLI options", () => {
       "codex/batch",
       "--max-parallel",
       "4",
+      "--codex-model",
+      "gpt-5.4-mini",
       "--dry-run",
     ]),
     {
@@ -130,6 +135,7 @@ test("cloud template dispatcher parses CLI options", () => {
       batchSize: "10",
       outputPrefix: "codex/batch",
       maxParallel: "4",
+      codexModel: "gpt-5.4-mini",
       dryRun: true,
     },
   );

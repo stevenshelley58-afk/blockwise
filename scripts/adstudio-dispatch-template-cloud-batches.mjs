@@ -67,12 +67,13 @@ export function buildWorkflowRunArgs(options, batch) {
   const workflow = String(options.workflow ?? DEFAULT_WORKFLOW).trim();
   const targetRef = String(options.targetRef ?? "").trim();
   const repo = String(options.repo ?? "").trim();
+  const codexModel = String(options.codexModel ?? "").trim();
 
   if (!workflow) throw new Error("workflow is required");
   if (!targetRef) throw new Error("targetRef is required");
   if (!repo) throw new Error("repo is required");
 
-  return [
+  const args = [
     "workflow",
     "run",
     workflow,
@@ -89,6 +90,11 @@ export function buildWorkflowRunArgs(options, batch) {
     "-f",
     `max_parallel=${batch.maxParallel}`,
   ];
+  if (codexModel) {
+    args.push("-f", `codex_model=${codexModel}`);
+  }
+
+  return args;
 }
 
 export function parseCliArgs(argv) {
@@ -101,6 +107,7 @@ export function parseCliArgs(argv) {
     batchSize: process.env.BATCH_SIZE ?? 50,
     outputPrefix: process.env.OUTPUT_PREFIX ?? DEFAULT_OUTPUT_PREFIX,
     maxParallel: process.env.MAX_PARALLEL ?? 5,
+    codexModel: process.env.CODEX_MODEL ?? "",
     dryRun: process.env.DRY_RUN === "true",
   };
 
@@ -139,6 +146,9 @@ export function parseCliArgs(argv) {
         break;
       case "--max-parallel":
         options.maxParallel = readValue();
+        break;
+      case "--codex-model":
+        options.codexModel = readValue();
         break;
       case "--dry-run":
         options.dryRun = true;
