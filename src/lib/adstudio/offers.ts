@@ -180,13 +180,17 @@ export const ADSTUDIO_OFFER_TEMPLATES: AdStudioOfferTemplate[] = [
 ];
 
 export function getOfferTemplate(offerId: string): AdStudioOfferTemplate {
-  const offer = ADSTUDIO_OFFER_TEMPLATES.find((candidate) => candidate.offerId === offerId);
+  const offer = findOfferTemplate(offerId);
 
   if (!offer) {
     throw new Error(`Unknown AdStudio offer template: ${offerId}`);
   }
 
   return offer;
+}
+
+export function findOfferTemplate(offerId: string): AdStudioOfferTemplate | undefined {
+  return ADSTUDIO_OFFER_TEMPLATES.find((candidate) => candidate.offerId === offerId);
 }
 
 export function listOfferTemplates(goal?: AdStudioGoal): AdStudioOfferTemplate[] {

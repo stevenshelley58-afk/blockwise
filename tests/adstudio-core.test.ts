@@ -371,6 +371,96 @@ test("template first-ad generation uses prepared photo assets per creative forma
   assert.notEqual(imageByFormat["9:16"], imageByFormat["4:5"]);
 });
 
+test("template first-ad generation derives offer fields from the selected template", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const promptHint = "Smart tips for buyers using a template-native buyer list offer.";
+  const template = {
+    ...resolveAdStudioTemplate("meta_002"),
+    id: "template_native_buyer_tips",
+    templateKey: "template_native_buyer_tips",
+    name: "Smart Tips For Buyers",
+    goal: "buyer_leads" as const,
+    offerId: "buyer_list",
+    promptHint,
+    sampleCopy: {
+      headline: "Smart buyer tips before you inspect",
+      primaryText: "Use local buyer context before your next property conversation.",
+      description: "Buyer tips from the selected template.",
+      cta: "Get buyer tips",
+    },
+  };
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Bicton",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: template.templateKey,
+      description: "Buyer tips ad from a template-native offer.",
+      imageDataUrl: "data:image/png;base64,original",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: template,
+  });
+
+  assert.equal(pack.campaign.offerId, "buyer_list");
+  assert.equal(pack.campaign.goal, "buyer_leads");
+  assert.equal(pack.campaign.audienceIntent, promptHint);
+  assert.equal(pack.variants[0]?.offer, "Smart Tips For Buyers");
+  assert.equal(pack.variants[0]?.cta, "Get buyer tips");
+  assert.equal(pack.variants[0]?.headline, "Smart buyer tips before you inspect");
+  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Smart Tips For Buyers");
+  assert.equal(pack.copyPacks[0]?.landingPage.cta, "Get buyer tips");
+  assert.equal(pack.copyPacks[0]?.meta.leadForm.headline, "Get buyer tips");
+  assert.doesNotMatch(pack.copyPacks[0]?.landingPage.subheadline ?? "", /seller checklist/i);
+  assert.notEqual(pack.variants[0]?.offer, "Buyer inquiry list");
+  assert.notEqual(pack.variants[0]?.cta, "Join buyer list");
+
+  const unknownOfferPack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Bicton",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: "template_native_buyer_tips_unknown",
+      description: "Buyer tips ad from an unregistered template-native offer.",
+      imageDataUrl: "data:image/png;base64,original",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: {
+      ...template,
+      id: "template_native_buyer_tips_unknown",
+      templateKey: "template_native_buyer_tips_unknown",
+      offerId: "template_native_buyer_list",
+    },
+  });
+
+  assert.equal(unknownOfferPack.campaign.offerId, "template_native_buyer_list");
+  assert.equal(unknownOfferPack.variants[0]?.offer, "Smart Tips For Buyers");
+});
+
 test("template generation treats observed ads as evidence, not the campaign source", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",

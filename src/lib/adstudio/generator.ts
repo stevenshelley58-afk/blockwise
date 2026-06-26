@@ -2,7 +2,7 @@ import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { buildArchetypeCreative } from "./layout-archetypes.ts";
-import { getOfferTemplate } from "./offers.ts";
+import { findOfferTemplate, getOfferTemplate } from "./offers.ts";
 import { renderDesign } from "./renderer.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
 import { resolveTemplateDesignForFormat, type BoundTemplateContent, type TemplateDesign } from "./template-design.ts";
@@ -15,6 +15,7 @@ import type {
   AdStudioCreative,
   AdStudioFormat,
   AdStudioGoal,
+  AdStudioOfferTemplate,
   AdStudioPlatform,
   AdStudioPlatformCopyPack,
   FirstAdInput,
@@ -77,7 +78,11 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
   const template = input.resolvedTemplate ?? (input.firstAd?.mode === "template" ? resolveAdStudioTemplate(input.firstAd.templateId ?? input.firstAd.templateKey) : null);
   const templateKey = template?.templateKey ?? template?.id ?? input.firstAd?.templateKey ?? input.firstAd?.templateId ?? null;
   const requestedOfferId = template?.offerId ?? inferOfferIdFromFirstAd(input.firstAd?.description, input.offerId);
-  const offer = getOfferTemplate(requestedOfferId);
+  const offer = resolveCampaignOffer({
+    offerId: requestedOfferId,
+    template,
+    fallbackGoal: input.goal,
+  });
   const formats = input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
   const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${templateKey ?? "blank"}:${input.suburb}:${input.firstAd?.description ?? ""}`);
   const campaign: AdStudioCampaign = {
@@ -168,6 +173,87 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     compliance,
     similarityWarnings: similarityWarnings.length ? similarityWarnings : undefined,
   };
+}
+
+function resolveCampaignOffer(input: {
+  offerId: string;
+  template: AdStudioTemplate | null;
+  fallbackGoal: AdStudioGoal;
+}): AdStudioOfferTemplate {
+  const registered = findOfferTemplate(input.offerId);
+  if (input.template) return offerFromTemplate(input.template, input.offerId, input.fallbackGoal, registered);
+  if (registered) return registered;
+  return getOfferTemplate(input.offerId);
+}
+
+function offerFromTemplate(
+  template: AdStudioTemplate,
+  offerId: string,
+  fallbackGoal: AdStudioGoal,
+  registered?: AdStudioOfferTemplate,
+): AdStudioOfferTemplate {
+  return {
+    offerId,
+    name: template.name,
+    goal: template.goal ?? fallbackGoal,
+    leadTemperature: registered?.leadTemperature ?? leadTemperatureForTemplateOffer(template, offerId),
+    requiredInputs: registered?.requiredInputs ?? ["suburb", "brand_kit"],
+    defaultCta: template.sampleCopy?.cta?.trim() || registered?.defaultCta || defaultCtaForTemplateOffer(template, offerId),
+    landingPageType: registered?.landingPageType ?? landingPageTypeForTemplateOffer(offerId),
+    followupType: registered?.followupType ?? followupTypeForTemplateOffer(template, offerId),
+    expectedLeadIntent:
+      template.promptHint ||
+      registered?.expectedLeadIntent ||
+      `People responding to the ${template.name} template before their next property decision.`,
+  };
+}
+
+function leadTemperatureForTemplateOffer(
+  template: AdStudioTemplate,
+  offerId: string,
+): AdStudioOfferTemplate["leadTemperature"] {
+  if (/listing|open|inspection|enquir/i.test(offerId) || /open home|detail card|listing/i.test(template.name)) {
+    return "high_intent";
+  }
+  if (/market|report|snapshot|guide|tips|buyer/i.test(offerId) || /market|guide|tips|buyer/i.test(template.name)) {
+    return "warm";
+  }
+  if (/seller|checklist|download/i.test(offerId) || /seller|checklist/i.test(template.name)) {
+    return "cold_to_warm";
+  }
+  return "warm";
+}
+
+function defaultCtaForTemplateOffer(template: AdStudioTemplate, offerId: string): string {
+  if (/listing|open|inspection|enquir/i.test(offerId) || /open home|detail card|listing/i.test(template.name)) {
+    return "Enquire now";
+  }
+  if (/buyer/i.test(offerId) || /buyer/i.test(template.name)) return "Get buyer tips";
+  if (/market|report|snapshot/i.test(offerId) || /market|report/i.test(template.name)) return "Get market update";
+  if (/guide|download|checklist|tips/i.test(offerId) || /guide|checklist|tips/i.test(template.name)) return "Get the guide";
+  return "Learn more";
+}
+
+function landingPageTypeForTemplateOffer(offerId: string): string {
+  if (/listing|enquir/i.test(offerId)) return "listing_enquiry";
+  if (/buyer/i.test(offerId)) return "buyer_enquiry";
+  if (/market|report|snapshot/i.test(offerId)) return "market_report";
+  if (/appraisal|value|price/i.test(offerId)) return "appraisal_booking";
+  return "template_lead";
+}
+
+function followupTypeForTemplateOffer(
+  template: AdStudioTemplate,
+  offerId: string,
+): string {
+  if (/buyer|listing|open|inspection|enquir/i.test(offerId) || /buyer|open home|listing/i.test(template.name)) {
+    return "buyer_nurture";
+  }
+  if (/market|report|snapshot/i.test(offerId) || /market|report/i.test(template.name)) {
+    return "market_update_nurture";
+  }
+  if (/downsizer/i.test(offerId)) return "downsizer_nurture";
+  return "seller_nurture";
 }
 
 function inferOfferIdFromFirstAd(description: string | undefined, fallbackOfferId: string): string {
@@ -363,9 +449,9 @@ function buildFirstAdMessages(
   return [
     {
       label: template.name,
-      headline: templateHeroHeadline(template),
-      primaryText: templatePrimaryText(template, suburb),
-      description: templateDescription(template.name),
+      headline: template.sampleCopy?.headline || templateHeroHeadline(template),
+      primaryText: template.sampleCopy?.primaryText || templatePrimaryText(template, suburb),
+      description: template.sampleCopy?.description || templateDescription(template.name),
       notes: ["Template selected", "Uses uploaded image", "No blocking compliance issues"],
     },
     {
@@ -560,6 +646,7 @@ function buildOfferCopySeed(input: {
   const finalUrl = appendPath(input.brandKit.source.url, landingPathForOffer(offerId));
   const headline = input.variant.headline;
   const description = input.message.description;
+  const templateName = templateSnapshotText(input.campaign.templateSnapshot, "name");
 
   if (/home_value_update|appraisal/.test(offerId)) {
     return {
@@ -703,6 +790,18 @@ function buildOfferCopySeed(input: {
     };
   }
 
+  if (templateName) {
+    return buildTemplateOfferCopySeed({
+      finalUrl,
+      templateName,
+      suburb,
+      businessName,
+      headline,
+      description,
+      cta: input.variant.cta,
+    });
+  }
+
   return {
     finalUrl,
     urlPath: "sell",
@@ -745,6 +844,67 @@ function buildOfferCopySeed(input: {
     ],
     assetLongHeadline: `Download the ${suburb} seller preparation checklist`,
   };
+}
+
+function buildTemplateOfferCopySeed(input: {
+  finalUrl: string;
+  templateName: string;
+  suburb: string;
+  businessName: string;
+  headline: string;
+  description: string;
+  cta: string;
+}): OfferCopySeed {
+  const templateLabel = input.templateName;
+  const localContext = `${input.suburb} property context`;
+
+  return {
+    finalUrl: input.finalUrl,
+    urlPath: slugPath(templateLabel),
+    metaHeadlines: uniqueShort([input.headline, templateLabel, localContext], 40, 3),
+    metaDescriptions: uniqueShort([input.description, `A practical next step for ${input.suburb}.`], 90, 2),
+    googleHeadlines: uniqueShort([
+      templateLabel,
+      localContext,
+      "Property Next Steps",
+      "Local Property Help",
+      "Plan With Context",
+      "Start Here",
+    ], 30, 6),
+    googleDescriptions: uniqueShort([
+      input.description,
+      `Use practical ${input.suburb} context before your next property decision.`,
+      "Plain-English property guidance from a local agency.",
+    ], 90, 3),
+    keywords: [`real estate ${input.suburb}`, `property ${input.suburb}`, `${input.suburb} property guide`],
+    leadFormHeadline: input.cta,
+    leadFormQuestions: ["Which suburb are you interested in?", "What type of property is it?", "What would you like help with?"],
+    thankYouTitle: "Your request is in",
+    thankYouBody: `${input.businessName} may follow up with practical local property context.`,
+    landingHeadline: templateLabel,
+    landingSubheadline: input.description,
+    landingCta: input.cta,
+    followUpSms: [
+      `Thanks for your interest in ${templateLabel}. I can send the next steps if useful.`,
+      `A useful next step is comparing your plans with current ${input.suburb} property context.`,
+    ],
+    followUpEmail: [
+      {
+        subject: templateLabel,
+        body: "Thanks for getting in touch. I will share practical local context and the next steps for your property question.",
+      },
+      {
+        subject: "Planning your next step",
+        body: "Before making plans, compare recent local activity with your property condition, timing, and goals.",
+      },
+    ],
+    assetLongHeadline: `${templateLabel} for ${input.suburb}`,
+  };
+}
+
+function templateSnapshotText(snapshot: Record<string, unknown> | null | undefined, key: string): string | null {
+  const value = snapshot?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function buildGoogleAssetPack(
