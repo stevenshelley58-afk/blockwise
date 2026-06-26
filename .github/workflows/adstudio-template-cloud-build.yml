@@ -212,7 +212,7 @@ jobs:
     needs:
       - prepare
       - template
-    if: needs.template.result == 'success'
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.candidate_count != '0' }}
     steps:
       - name: Checkout source branch
         uses: actions/checkout@v6
@@ -234,6 +234,7 @@ jobs:
 
       - name: Download template patches
         uses: actions/download-artifact@v5
+        continue-on-error: true
         with:
           pattern: template-patch-*
           path: patches
@@ -243,7 +244,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for patch in $(find patches -name '*.patch' | sort); do
+          mkdir -p patches
+          mapfile -t patch_files < <(find patches -name '*.patch' | sort)
+          if [ "${#patch_files[@]}" -eq 0 ]; then
+            echo "No successful template patches were uploaded."
+            exit 0
+          fi
+          for patch in "${patch_files[@]}"; do
             git apply --whitespace=fix "$patch"
           done
 

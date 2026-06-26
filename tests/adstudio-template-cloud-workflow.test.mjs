@@ -45,3 +45,9 @@ test("template cloud build does not fail after pushing when GitHub blocks action
   assert.match(buildWorkflow, /Template branch pushed without PR/u);
   assert.match(buildWorkflow, /Create PR manually: https:\/\/github\.com\/\$\{GITHUB_REPOSITORY\}\/pull\/new\/\$\{OUTPUT_BRANCH\}/u);
 });
+
+test("template cloud build still merges successful patches when one worker fails", () => {
+  assert.match(buildWorkflow, /if:\s+\$\{\{ always\(\) && needs\.prepare\.result == 'success' && needs\.prepare\.outputs\.candidate_count != '0' \}\}/u);
+  assert.match(buildWorkflow, /continue-on-error:\s+true/u);
+  assert.match(buildWorkflow, /No successful template patches were uploaded\./u);
+});

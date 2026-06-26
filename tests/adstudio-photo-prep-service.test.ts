@@ -129,6 +129,7 @@ test("template photo prep can return immediate fallback assets without provider 
 
 test("template photo prep falls back quickly when provider work exceeds the request budget", async () => {
   const template = resolveAdStudioTemplate("meta_040");
+  const formats = ["9:16", "4:5", "1:1"] as const;
   const seenSignals: AbortSignal[] = [];
   const slowProvider: ImageProviderAdapter = {
     providerName: "slow-test-provider",
@@ -153,7 +154,7 @@ test("template photo prep falls back quickly when provider work exceeds the requ
     userId: "user_1",
     brandKit,
     template,
-    formats: ["9:16", "4:5", "1:1"],
+    formats,
     sourceImageRef: "/api/adstudio/media?path=workspace_1%2Flisting.png",
     sourceImageForModel: "https://cdn.example.com/listing.png",
     campaign: {
@@ -168,9 +169,14 @@ test("template photo prep falls back quickly when provider work exceeds the requ
   });
 
   assert.ok(Date.now() - startedAt < 10_000, "fallback should not wait for Vercel's function timeout");
-  assert.equal(seenSignals.length, 4);
+  const expectedProviderCalls = formats.reduce(
+    (total, format) =>
+      total + (template.designs?.[format]?.layers.filter((layer) => layer.type === "image_slot").length ?? 0),
+    0,
+  );
+  assert.equal(seenSignals.length, expectedProviderCalls);
   assert.ok(seenSignals.every((signal) => signal.aborted), "slow provider calls must be aborted");
-  for (const format of ["9:16", "4:5", "1:1"] as const) {
+  for (const format of formats) {
     const asset = assets[format]?.primary_photo;
     assert.equal(asset?.assetUrl, "https://cdn.example.com/listing.png");
     assert.equal(asset?.method, "fallback_smart_crop");
