@@ -28,6 +28,11 @@ const visibleGoldTemplateIds = [
   "gold_dream_home_brand",
   "gold_house_for_rent_blue",
   "gold_first_buyer_notes",
+  "meta_002",
+  "meta_021",
+  "meta_040",
+  "meta_044",
+  "meta_055",
 ];
 
 function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
@@ -72,7 +77,7 @@ test("template library ignores old approved rows and only exposes quality-gated 
   const merged = mergeAdStudioTemplateLibrary(approved);
 
   assert.deepEqual(merged.map((template) => template.id), visibleGoldTemplateIds);
-  assert.ok(merged.every((template) => template.id.startsWith("gold_")));
+  assert.ok(merged.every((template) => visibleGoldTemplateIds.includes(template.id)));
   assert.ok(!merged.some((template) => template.id === "DNA-70" || template.id === "OLD-99"));
 
   assert.equal(resolveAdStudioTemplate("meta_317").id, "meta_317");

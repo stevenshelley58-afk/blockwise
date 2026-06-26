@@ -128,12 +128,15 @@ export function buildTemplateRenderFrame(input: {
       }));
     const copySafeZones = design.layers
       .filter((layer) => layer.type === "text" || layer.type === "cta_button")
+      .map((layer, index) => ({ layer, index, priority: copySafeZonePriority(layer) }))
+      .sort((a, b) => a.priority - b.priority || a.index - b.index)
+      .slice(0, 8)
       .map((layer) => ({
-        id: layer.id,
-        x: layer.rect.x,
-        y: layer.rect.y,
-        width: layer.rect.w,
-        height: layer.rect.h,
+        id: layer.layer.id,
+        x: layer.layer.rect.x,
+        y: layer.layer.rect.y,
+        width: layer.layer.rect.w,
+        height: layer.layer.rect.h,
       }));
 
     return templateRenderFrameSchema.parse({
@@ -177,6 +180,13 @@ export function buildTemplateRenderFrame(input: {
     })),
     lockedLayout: true,
   });
+}
+
+function copySafeZonePriority(layer: { type: string; fill?: string; label?: string; slot?: string }): number {
+  if (layer.type === "cta_button") return 0;
+  if (layer.fill === "ai_copy") return 1;
+  if (layer.fill === "brand") return 2;
+  return 3;
 }
 
 export function buildPhotoPrepCacheKey(context: PhotoPrepContext): string {

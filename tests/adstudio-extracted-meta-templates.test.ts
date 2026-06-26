@@ -20,6 +20,7 @@ import { imageDimensionsFromBytes } from "../src/lib/adstudio/image-dimensions.t
 import type { AdStudioFormat } from "../src/lib/adstudio/types.ts";
 
 const FORMATS = ["9:16", "4:5", "1:1"] as const satisfies readonly AdStudioFormat[];
+const PROMOTED_META_TEMPLATE_IDS = new Set(["meta_002", "meta_021", "meta_040", "meta_044", "meta_055"]);
 
 function brandKit() {
   return buildTrialFallbackBrandKit({
@@ -38,10 +39,12 @@ function rectsOverlap(
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + bh && a.y + ah > b.y;
 }
 
-test("template gallery exposes only quality-gated gold templates", () => {
+test("template gallery exposes quality-gated standalone templates", () => {
   const visible = builtInAdStudioTemplates();
   const goldIds = GOLD_AD_STUDIO_TEMPLATES.map((template) => template.id);
-  const expectedIds = new Set<string>(EXTRACTED_META_TEMPLATE_DESCRIPTORS.map((descriptor) => descriptor.id));
+  const visibleMetaIds = visible
+    .map((template) => template.id)
+    .filter((id) => id.startsWith("meta_"));
 
   assert.equal(EXTRACTED_META_TEMPLATE_TOTAL, 330);
   assert.equal(EXTRACTED_META_TEMPLATE_SLICE_SIZE, 10);
@@ -52,17 +55,17 @@ test("template gallery exposes only quality-gated gold templates", () => {
   assert.ok(visible.every((template) => template.status === "approved"));
   assert.ok(visible.every((template) => !template.manualFirstPass));
   assert.ok(!visible.some((template) => template.id === "free_appraisal"));
-  assert.ok(!visible.some((template) => expectedIds.has(template.id)), "extracted first-pass templates stay hidden");
+  assert.deepEqual(visibleMetaIds, [...PROMOTED_META_TEMPLATE_IDS]);
 });
 
-test("hidden extracted Meta slice remains resolvable for existing drafts", () => {
+test("extracted Meta slice remains resolvable and promoted candidates use operator modules", () => {
   const resolvable = resolvableAdStudioTemplates();
   const resolvableById = new Map(resolvable.map((template) => [template.id, template]));
 
   for (const descriptor of EXTRACTED_META_TEMPLATE_DESCRIPTORS) {
     const template = resolvableById.get(descriptor.id);
     assert.ok(template, `${descriptor.id} should remain resolvable`);
-    assert.equal(template.source, "radar");
+    assert.equal(template.source, PROMOTED_META_TEMPLATE_IDS.has(descriptor.id) ? "operator" : "radar");
     assert.equal(template.status, "approved");
     assert.equal(resolveAdStudioTemplate(descriptor.id).id, descriptor.id);
   }
@@ -177,12 +180,16 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   const moduleFiles = readdirSync("src/lib/adstudio/gold-templates")
     .filter((file) => file.endsWith(".ts"));
   assert.equal(moduleFiles.length, GOLD_AD_STUDIO_TEMPLATES.length);
-  assert.equal(GOLD_AD_STUDIO_TEMPLATES.length, 10);
+  assert.ok(GOLD_AD_STUDIO_TEMPLATES.length >= 15);
   assert.equal(Object.keys(GOLD_TEMPLATE_RENDER_SAMPLES).length, GOLD_AD_STUDIO_TEMPLATES.length);
 
   for (const template of GOLD_AD_STUDIO_TEMPLATES) {
     assert.ok(GOLD_TEMPLATE_RENDER_SAMPLES[template.id], `${template.id} should own its sample render data`);
-    assert.match(template.exemplars?.[0] ?? "", /Reference sample \d{2} from the uploaded board/);
+    if (template.id.startsWith("meta_")) {
+      assert.match(template.exemplars?.[0] ?? "", /meta_ad_candidates|meta_\d{3}\.png/);
+    } else {
+      assert.match(template.exemplars?.[0] ?? "", /Reference sample \d{2} from the uploaded board/);
+    }
   }
 
   for (const moduleFile of moduleFiles) {
@@ -203,7 +210,11 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
   const resolvableById = new Map(resolvableAdStudioTemplates().map((template) => [template.id, template]));
 
   for (const descriptor of EXTRACTED_META_TEMPLATE_DESCRIPTORS) {
-    assert.equal(visibleIds.has(descriptor.id), false, `${descriptor.id} should be hidden from the gallery`);
+    assert.equal(
+      visibleIds.has(descriptor.id),
+      PROMOTED_META_TEMPLATE_IDS.has(descriptor.id),
+      `${descriptor.id} gallery visibility should match promotion status`,
+    );
     const template = resolvableById.get(descriptor.id);
     assert.ok(template, `${descriptor.id} should be resolvable`);
     assert.equal(template.templateKey, descriptor.id);
@@ -237,9 +248,12 @@ test("each extracted template has strict renderable TemplateDesign variants", ()
     }
 
     assert.equal(resolveTemplateDesignForFormat(template, "1.91:1"), null, `${descriptor.id} should not expose landscape`);
-    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
-    assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/extracted-meta/${descriptor.id}.png`);
-    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/extracted-meta/${descriptor.id}.png?v=${EXTRACTED_META_SAMPLE_CARD_VERSION}`);
+    const promoted = PROMOTED_META_TEMPLATE_IDS.has(descriptor.id);
+    const cardVersion = promoted ? GOLD_SAMPLE_CARD_VERSION : EXTRACTED_META_SAMPLE_CARD_VERSION;
+    const cardFolder = promoted ? "gold" : "extracted-meta";
+    assert.equal(template.sampleCardImageUrl, `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
+    assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/${cardFolder}/${descriptor.id}.png`);
+    assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/${cardFolder}/${descriptor.id}.png?v=${cardVersion}`);
   }
 });
 

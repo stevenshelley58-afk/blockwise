@@ -121,7 +121,7 @@ test("photo prep frame uses TemplateDesign image slots and safe zones", () => {
       width: frame.imageSlots[0]?.width,
       height: frame.imageSlots[0]?.height,
     },
-    { x: 0.02, y: 0.02, width: 0.96, height: 0.39 },
+    { x: 0.055, y: 0.045, width: 0.89, height: 0.36 },
   );
   assert.ok(frame.copySafeZones.some((zone) => zone.id === "headline"));
   assert.ok(frame.copySafeZones.some((zone) => zone.id === "cta"));

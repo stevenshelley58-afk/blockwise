@@ -2,7 +2,7 @@ import type { TemplateDesign, TemplateDesignSet, TemplateLayer } from "../templa
 import type { AdStudioTemplate } from "../templates.ts";
 
 const ID = "meta_040";
-const VERSION = "operator-meta-040-v1";
+const VERSION = "reference-board-pack-v1";
 const PALETTE = ["#593D34", "#FFFFFF", "#0B1720", "#F0F5F8", "#FDFDFD", "#63443A"];
 const FONTS = ["Georgia, 'Times New Roman', serif", "Inter, Arial, sans-serif"];
 
@@ -38,9 +38,9 @@ export const meta040Template: AdStudioTemplate = {
     address: "50 North Perth Road, North Perth",
     propertyDetail: "boutique apartment release",
     resultDetail: "premium development enquiry",
-    sampleCardImagePath: "adstudio-samples/extracted-meta/meta_040.png",
+    sampleCardImagePath: "adstudio-samples/gold/meta_040.png",
   },
-  sampleCardImageUrl: `/adstudio-samples/extracted-meta/meta_040.png?v=${VERSION}`,
+  sampleCardImageUrl: `/adstudio-samples/gold/meta_040.png?v=${VERSION}`,
   designs: meta040Designs(),
   evidenceScore: 76,
   winnerRationale:
@@ -53,8 +53,8 @@ export const meta040Template: AdStudioTemplate = {
 export const meta040Sample = {
   photoFile: "au-coastal-luxury.jpg",
   photoFiles: {
-    source_photo_0: "au-coastal-luxury.jpg",
-    source_photo_1: "au-urban-townhouse.png",
+    primary_photo: "au-coastal-luxury.jpg",
+    secondary_photo: "au-urban-townhouse.png",
   },
   text: {
     eyebrow: "NEW RELEASE",
@@ -81,7 +81,7 @@ function meta040Designs(): TemplateDesignSet {
       text("feature_two", "stat", b(0.35, 0.334, 0.17, 0.036), 15, PALETTE[1], "static", "MASTER SUITE", 18, "center", FONTS[1], 850, 1.05),
       text("feature_three", "stat", b(0.55, 0.334, 0.17, 0.036), 15, PALETTE[1], "static", "GRAND LIVING", 20, "center", FONTS[1], 850, 1.05),
       text("feature_four", "stat", b(0.75, 0.334, 0.12, 0.036), 15, PALETTE[1], "static", "POOL", 12, "center", FONTS[1], 850, 1.05),
-      image("source_photo_0", b(0.08, 0.39, 0.84, 0.37), "primary", "center"),
+      image("primary_photo", b(0.08, 0.39, 0.84, 0.37), "primary", "center"),
       shape("footer_panel", b(0.08, 0.755, 0.84, 0.1), PALETTE[4], "panel", 2),
       text("phone", "phone", b(0.12, 0.785, 0.25, 0.035), 15, PALETTE[2], "static", "+123-456-7890", 18, "left", FONTS[1], 650, 1),
       cta("cta", b(0.41, 0.782, 0.22, 0.046), PALETTE[0], PALETTE[1], 999, 17),
@@ -97,8 +97,8 @@ function meta040Designs(): TemplateDesignSet {
       text("feature_one", "stat", b(0.17, 0.317, 0.2, 0.03), 15, PALETTE[1], "static", "MASTER BATHS", 18, "center", FONTS[1], 850, 1.05),
       text("feature_two", "stat", b(0.4, 0.317, 0.2, 0.03), 15, PALETTE[1], "static", "MASTER SUITE", 18, "center", FONTS[1], 850, 1.05),
       text("feature_three", "stat", b(0.63, 0.317, 0.2, 0.03), 15, PALETTE[1], "static", "GRAND LIVING", 20, "center", FONTS[1], 850, 1.05),
-      image("source_photo_0", b(0.08, 0.36, 0.84, 0.34), "primary", "center"),
-      image("source_photo_1", b(0.56, 0.675, 0.28, 0.135), "secondary", "center"),
+      image("primary_photo", b(0.08, 0.36, 0.84, 0.34), "primary", "center"),
+      image("secondary_photo", b(0.56, 0.675, 0.28, 0.135), "secondary", "center"),
       shape("footer_panel", b(0.1, 0.735, 0.8, 0.105), PALETTE[4], "panel", 2),
       text("address", "address", b(0.15, 0.758, 0.32, 0.028), 16, PALETTE[2], "static", "North Perth", 24, "left", FONTS[1], 720, 1),
       text("phone", "phone", b(0.15, 0.792, 0.32, 0.026), 14, PALETTE[2], "static", "+123-456-7890", 18, "left", FONTS[1], 620, 1),
@@ -114,7 +114,7 @@ function meta040Designs(): TemplateDesignSet {
       text("feature_two", "stat", b(0.38, 0.38, 0.15, 0.045), 14, PALETTE[1], "static", "MASTER SUITE", 18, "center", FONTS[1], 850, 1.05),
       text("feature_three", "stat", b(0.58, 0.38, 0.16, 0.045), 14, PALETTE[1], "static", "GRAND LIVING", 20, "center", FONTS[1], 850, 1.05),
       text("feature_four", "stat", b(0.78, 0.38, 0.08, 0.045), 14, PALETTE[1], "static", "POOL", 12, "center", FONTS[1], 850, 1.05),
-      image("source_photo_0", b(0.08, 0.44, 0.84, 0.35), "primary", "center"),
+      image("primary_photo", b(0.08, 0.44, 0.84, 0.35), "primary", "center"),
       shape("footer_panel", b(0.08, 0.8, 0.84, 0.105), PALETTE[4], "panel", 2),
       text("phone", "phone", b(0.12, 0.836, 0.25, 0.03), 13, PALETTE[2], "static", "+123-456-7890", 18, "left", FONTS[1], 650, 1),
       cta("cta", b(0.39, 0.828, 0.22, 0.05), PALETTE[0], PALETTE[1], 999, 16),
@@ -163,7 +163,7 @@ function image(
     mask: "none",
     editorLabel: labels(id, role),
     guidance: guidance(role),
-    required: role === "primary",
+    required: true,
   };
 }
 
@@ -188,7 +188,7 @@ function text(
     rect,
     align,
     font,
-    size,
+    size: slot === "headline" ? Math.max(size, 46) : Math.max(size, 18),
     lineHeight,
     weight,
     color,
@@ -213,7 +213,7 @@ function cta(id: string, rect: ReturnType<typeof box>, fill: string, textColor: 
     label: "cta",
     textColor,
     font: FONTS[1],
-    size,
+    size: Math.max(size, 18),
     maxChars: 18,
     maxLines: 1,
     editorLabel: labels("cta"),

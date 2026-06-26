@@ -10,6 +10,11 @@ import { interiorDesignCollageSample, interiorDesignCollageTemplate } from "./go
 import { luxuryApartmentShowcaseSample, luxuryApartmentShowcaseTemplate } from "./gold-templates/luxury-apartment-showcase.ts";
 import { luxuryVillaNightSample, luxuryVillaNightTemplate } from "./gold-templates/luxury-villa-night.ts";
 import { marketTypesTableSample, marketTypesTableTemplate } from "./gold-templates/market-types-table.ts";
+import { meta002Sample, meta002Template } from "./gold-templates/meta-002.ts";
+import { meta021Sample, meta021Template } from "./gold-templates/meta-021.ts";
+import { meta040Sample, meta040Template } from "./gold-templates/meta-040.ts";
+import { meta044Sample, meta044Template } from "./gold-templates/meta-044.ts";
+import { meta055Sample, meta055Template } from "./gold-templates/meta-055.ts";
 
 export const GOLD_SAMPLE_CARD_VERSION = "reference-board-pack-v1";
 
@@ -30,6 +35,11 @@ export const GOLD_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   dreamHomeBrandTemplate,
   houseForRentBlueTemplate,
   firstBuyerNotesTemplate,
+  meta002Template,
+  meta021Template,
+  meta040Template,
+  meta044Template,
+  meta055Template,
 ];
 
 export const GOLD_TEMPLATE_RENDER_SAMPLES: Record<string, GoldTemplateRenderSample> = {
@@ -43,4 +53,9 @@ export const GOLD_TEMPLATE_RENDER_SAMPLES: Record<string, GoldTemplateRenderSamp
   [dreamHomeBrandTemplate.id]: dreamHomeBrandSample,
   [houseForRentBlueTemplate.id]: houseForRentBlueSample,
   [firstBuyerNotesTemplate.id]: firstBuyerNotesSample,
+  [meta002Template.id]: meta002Sample,
+  [meta021Template.id]: meta021Sample,
+  [meta040Template.id]: meta040Sample,
+  [meta044Template.id]: meta044Sample,
+  [meta055Template.id]: meta055Sample,
 };

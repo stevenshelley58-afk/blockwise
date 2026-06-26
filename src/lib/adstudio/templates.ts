@@ -76,10 +76,10 @@ export const AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   ...STANDALONE_AD_STUDIO_TEMPLATES,
 ];
 
-export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
+export const RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = uniqueTemplates([
   ...AD_STUDIO_TEMPLATES,
   ...EXTRACTED_META_AD_STUDIO_TEMPLATES,
-];
+]);
 
 export function resolveAdStudioTemplate(templateId: string | undefined): AdStudioTemplate {
   return RESOLVABLE_AD_STUDIO_TEMPLATES.find((template) => template.id === templateId) ?? AD_STUDIO_TEMPLATES[0];
@@ -104,6 +104,16 @@ function withTemplateDefaults(template: AdStudioTemplate): AdStudioTemplate {
     source: template.source ?? "builtin",
     status: template.status ?? "approved",
   };
+}
+
+function uniqueTemplates(templates: AdStudioTemplate[]): AdStudioTemplate[] {
+  const seen = new Set<string>();
+  return templates.filter((template) => {
+    const key = template.id || template.templateKey;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function mapAdStudioLibraryTemplate(row: AdStudioLibraryTemplate): AdStudioTemplate | null {
