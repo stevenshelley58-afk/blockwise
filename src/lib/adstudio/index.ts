@@ -120,6 +120,7 @@ export {
   type TemplateDesignSet,
   type TemplateLayer,
   type TemplateRect,
+  type TextCopyField,
   type TextFill,
   type TextSlot,
 } from "./template-design.ts";
@@ -128,6 +129,16 @@ export {
   type TemplateMediaSlot,
   type TemplateMediaSlotRole,
 } from "./template-media-slots.ts";
+export {
+  resolveTemplateTextSlots,
+  type TemplateTextSlot,
+} from "./template-text-slots.ts";
+export {
+  clampTemplateText,
+  fitTemplateText,
+  type TemplateTextFitInput,
+  type TemplateTextFitResult,
+} from "./template-text-fit.ts";
 export {
   createDeterministicImageProvider,
   createDeterministicTextProvider,

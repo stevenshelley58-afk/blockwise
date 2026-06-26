@@ -69,6 +69,9 @@ function slotsFromDesigns(
         previewFormat: design.format,
         source: "design",
         headshotUrl,
+        label: layer.editorLabel,
+        description: layer.guidance,
+        required: layer.required,
       }));
     }
   }
@@ -121,14 +124,17 @@ function buildSlot(input: {
   previewFormat: AdStudioFormat;
   source: TemplateMediaSlot["source"];
   headshotUrl: string | undefined;
+  label?: string;
+  description?: string;
+  required?: boolean;
 }): TemplateMediaSlot {
   const defaultUrl = input.role === "agent_headshot" ? input.headshotUrl : undefined;
   return {
     id: input.id,
     role: input.role,
-    label: slotLabel(input.id, input.role, input.rect, input.index),
-    description: slotDescription(input.role, input.rect, Boolean(defaultUrl)),
-    required: input.role === "agent_headshot" ? !defaultUrl : true,
+    label: input.label ?? slotLabel(input.id, input.role, input.rect, input.index),
+    description: input.description ?? slotDescription(input.role, input.rect, Boolean(defaultUrl)),
+    required: input.required ?? (input.role === "agent_headshot" ? !defaultUrl : true),
     ...(defaultUrl ? { defaultUrl } : {}),
     rect: input.rect,
     previewFormat: input.previewFormat,

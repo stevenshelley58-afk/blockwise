@@ -84,6 +84,15 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
     assert.ok(template, `${gold.id} should be visible`);
     assert.equal(template.templateKey, gold.id);
     assert.equal(template.source, "operator");
+    assert.ok(template.goal, `${gold.id} should define its goal`);
+    assert.ok(template.offerId, `${gold.id} should define its offer`);
+    assert.ok(template.promptHint, `${gold.id} should define its prompt hint`);
+    assert.ok(template.sampleCopy?.headline, `${gold.id} should define sample headline copy`);
+    assert.ok(template.sampleCopy?.description, `${gold.id} should define sample description copy`);
+    assert.ok(template.sampleCopy?.cta, `${gold.id} should define sample CTA copy`);
+    assert.ok(template.sampleStyle, `${gold.id} should define sample style`);
+    assert.ok(template.winnerRationale, `${gold.id} should explain why it exists`);
+    assert.ok(template.complianceNote, `${gold.id} should define compliance notes`);
     assert.equal(template.sampleCardImageUrl, `/adstudio-samples/gold/${gold.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
     assert.equal(template.sampleStyle?.sampleCardImagePath, `adstudio-samples/gold/${gold.id}.png`);
     assert.equal(templatePreviewDataUrl(template, kit), `/adstudio-samples/gold/${gold.id}.png?v=${GOLD_SAMPLE_CARD_VERSION}`);
@@ -98,10 +107,32 @@ test("gold templates have strict renderable TemplateDesign variants and real gal
         assert.equal(hasImageSlot, false, "market comparison reference is intentionally text/table-led");
         assert.ok(design.layers.filter((layer) => layer.type === "text").length >= 12);
       } else {
-        assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
+      assert.ok(design.layers.some((layer) => layer.type === "image_slot" && layer.id === "primary_photo"));
       }
       assert.ok(design.layers.some((layer) => layer.type === "text" && layer.slot === "headline" && layer.fill === "ai_copy"));
       assert.ok(design.layers.some((layer) => layer.type === "cta_button" && layer.label === "cta"));
+      for (const layer of design.layers) {
+        if (layer.type === "image_slot") {
+          assert.ok(layer.id, `${gold.id} ${format} image slot should define a source layer id`);
+          assert.ok(layer.editorLabel, `${gold.id} ${format} ${layer.id} should define an editor label`);
+          assert.ok(layer.guidance, `${gold.id} ${format} ${layer.id} should define guidance`);
+          assert.equal(typeof layer.required, "boolean", `${gold.id} ${format} ${layer.id} should define required status`);
+        }
+        if (layer.type === "text" && layer.fill === "ai_copy") {
+          assert.ok(layer.editorLabel, `${gold.id} ${format} ${layer.id} should define an editor label`);
+          assert.ok(layer.copyField, `${gold.id} ${format} ${layer.id} should bind to a copy field`);
+          assert.ok((layer.maxChars ?? 0) > 0, `${gold.id} ${format} ${layer.id} should define maxChars`);
+          assert.ok((layer.maxLines ?? 0) > 0, `${gold.id} ${format} ${layer.id} should define maxLines`);
+          assert.ok(layer.guidance, `${gold.id} ${format} ${layer.id} should define guidance`);
+        }
+        if (layer.type === "cta_button") {
+          assert.equal(layer.copyField, "cta", `${gold.id} ${format} CTA should bind to CTA copy`);
+          assert.ok((layer.maxChars ?? 0) > 0, `${gold.id} ${format} CTA should define maxChars`);
+          assert.equal(layer.maxLines, 1, `${gold.id} ${format} CTA should be one line`);
+          assert.ok(layer.editorLabel, `${gold.id} ${format} CTA should define an editor label`);
+          assert.ok(layer.guidance, `${gold.id} ${format} CTA should define guidance`);
+        }
+      }
 
       const creative = renderDesign(design, {
         text: {
@@ -157,6 +188,12 @@ test("gold templates are standalone mini-project modules, not one shared layout 
   for (const moduleFile of moduleFiles) {
     const source = readFileSync(`src/lib/adstudio/gold-templates/${moduleFile}`, "utf8");
     assert.doesNotMatch(source, /from\s+["']\.\/primitives\.ts["']/);
+    assert.doesNotMatch(
+      source,
+      /from\s+["'](?!(?:\.\.\/template-design\.ts|\.\.\/templates\.ts)["'])(?:\.{1,2}\/[^"']+)["']/,
+      `${moduleFile} should only import shared platform types`,
+    );
+    assert.doesNotMatch(source, /from\s+["'][^"']*(?:layout|factory|engine|recipe|archetype|primitives)[^"']*["']/);
   }
 });
 

@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  fitTemplateText,
   resolveAdStudioTemplate,
   resolveTemplateMediaSlots,
+  resolveTemplateTextSlots,
   type AdStudioTemplate,
   type TemplateDesign,
 } from "../src/lib/adstudio/index.ts";
@@ -61,6 +63,70 @@ test("template media slots resolve all collage image slots in visual order", () 
       { id: "secondary_low", role: "secondary", label: "Lower inset image", required: true, previewFormat: "4:5" },
     ],
   );
+});
+
+test("template text slots expose editor labels, bindings, and template limits", () => {
+  const template = resolveAdStudioTemplate("gold_interior_design_collage");
+
+  const slots = resolveTemplateTextSlots({ template }).filter((slot) => slot.editable);
+
+  assert.deepEqual(
+    slots.map((slot) => ({
+      id: slot.sourceLayerId,
+      slot: slot.slot,
+      label: slot.label,
+      copyField: slot.copyField,
+      maxChars: slot.maxChars,
+      maxLines: slot.maxLines,
+      previewFormat: slot.previewFormat,
+    })),
+    [
+      {
+        id: "headline",
+        slot: "headline",
+        label: "Hero headline",
+        copyField: "headline",
+        maxChars: 60,
+        maxLines: 2,
+        previewFormat: "4:5",
+      },
+      {
+        id: "cta",
+        slot: "cta",
+        label: "CTA",
+        copyField: "cta",
+        maxChars: 24,
+        maxLines: 1,
+        previewFormat: "4:5",
+      },
+      {
+        id: "body",
+        slot: "body",
+        label: "Supporting copy",
+        copyField: "description",
+        maxChars: 95,
+        maxLines: 2,
+        previewFormat: "4:5",
+      },
+    ],
+  );
+});
+
+test("template text fitting clamps generated and pasted text before canvas render", () => {
+  const input = "A fresh local listing to WA agents with a long extra phrase that should never run across image panels";
+
+  const fitted = fitTemplateText({
+    text: input,
+    maxChars: 38,
+    maxLines: 2,
+    width: 310,
+    fontSize: 36,
+  });
+
+  assert.equal(fitted.text.length <= 38, true);
+  assert.equal(fitted.lines.length <= 2, true);
+  assert.equal(fitted.truncated, true);
+  assert.match(fitted.text, /\.\.\.$/);
 });
 
 test("template media slots fall back to creative skeleton image frames", () => {

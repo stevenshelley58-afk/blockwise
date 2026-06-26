@@ -1,6 +1,7 @@
 import { renderCompositionCreativeSvg } from "./creative/composition-to-creative.ts";
 import { reRenderCompositionCreative } from "./creative/composition-sync.ts";
 import { renderCreativeSvg } from "./renderer.ts";
+import { clampTemplateText } from "./template-text-fit.ts";
 import type { AdStudioCanvasObject, AdStudioCreative } from "./types.ts";
 
 export const BLOCKWISE_FABRIC_META_KEY = "blockwise";
@@ -18,6 +19,11 @@ export const FABRIC_JSON_EXTRA_KEYS = [
   "hasControls",
   "excludeFromExport",
   "clip",
+  "templateCopyField",
+  "templateMaxChars",
+  "templateMaxLines",
+  "editorLabel",
+  "guidance",
 ] as const;
 
 export type CreativeLayerEditableKind = "template" | "headline" | "description" | "cta" | "image" | "logo";
@@ -28,6 +34,11 @@ export type CreativeLayerMeta = {
   type: AdStudioCanvasObject["type"];
   locked: boolean;
   editableKind: CreativeLayerEditableKind;
+  templateCopyField?: AdStudioCanvasObject["templateCopyField"];
+  templateMaxChars?: number;
+  templateMaxLines?: number;
+  editorLabel?: string;
+  guidance?: string;
 };
 
 export type CreativeDesignObjectJson = Record<string, unknown> & {
@@ -43,6 +54,11 @@ export type CreativeDesignObjectJson = Record<string, unknown> & {
   fill?: string;
   fontSize?: number;
   clip?: AdStudioCanvasObject["clip"];
+  templateCopyField?: AdStudioCanvasObject["templateCopyField"];
+  templateMaxChars?: number;
+  templateMaxLines?: number;
+  editorLabel?: string;
+  guidance?: string;
   [BLOCKWISE_FABRIC_META_KEY]?: CreativeLayerMeta;
 };
 
@@ -79,10 +95,13 @@ export function getCreativeDesignJson(creative: AdStudioCreative): CreativeDesig
   return value as CreativeDesignJson;
 }
 
-export function editableKindForObject(object: Pick<AdStudioCanvasObject, "role" | "type">): CreativeLayerEditableKind {
+export function editableKindForObject(object: Pick<AdStudioCanvasObject, "role" | "type" | "templateCopyField">): CreativeLayerEditableKind {
+  if (object.templateCopyField === "headline") return "headline";
+  if (object.templateCopyField === "description") return "description";
+  if (object.templateCopyField === "cta") return "cta";
   if (object.role === "headline") return "headline";
-  if (object.role === "subheadline") return "description";
-  if (object.role === "cta_text" || object.role === "cta_button") return "cta";
+  if (object.role === "subheadline" || object.role === "body" || object.role === "subhead") return "description";
+  if (object.role === "cta" || object.role === "cta_text" || object.role === "cta_button") return "cta";
   if (object.type === "image" || object.role === "primary_image") return "image";
   if (object.type === "logo") return "logo";
   return "template";
@@ -95,6 +114,11 @@ export function metadataForObject(object: AdStudioCanvasObject): CreativeLayerMe
     type: object.type,
     locked: object.locked,
     editableKind: editableKindForObject(object),
+    templateCopyField: object.templateCopyField,
+    templateMaxChars: object.templateMaxChars,
+    templateMaxLines: object.templateMaxLines,
+    editorLabel: object.editorLabel,
+    guidance: object.guidance,
   };
 }
 
@@ -159,9 +183,8 @@ function syncDesignJsonWithCopyAndImage(
     objects: designJson.objects.map((object) => {
       const meta = object[BLOCKWISE_FABRIC_META_KEY];
       if (!meta) return object;
-      if (meta.role === "headline") return { ...object, text: copy.headline };
-      if (meta.role === "subheadline") return { ...object, text: copy.description };
-      if (meta.role === "cta_text" || meta.role === "cta_button") return { ...object, text: copy.cta };
+      const copyValue = copyValueForMeta(meta, copy);
+      if (copyValue !== null) return { ...object, text: fitDesignObjectText(object, meta, copyValue) };
       if (meta.role === "primary_image") return { ...object, src: imageSrc };
       return object;
     }),
@@ -235,14 +258,9 @@ function syncObjectWithCopyAndImage(
   copy: CreativeCopyFields,
   imageSrc: string,
 ): AdStudioCanvasObject {
-  if (object.role === "headline") {
-    return { ...object, content: copy.headline };
-  }
-  if (object.role === "subheadline") {
-    return { ...object, content: copy.description };
-  }
-  if (object.role === "cta_text" || object.role === "cta_button") {
-    return { ...object, content: copy.cta };
+  const copyValue = copyValueForObject(object, copy);
+  if (copyValue !== null) {
+    return { ...object, content: fitCanvasObjectText(object, copyValue) };
   }
   if (object.role === "primary_image") {
     return { ...object, content: imageSrc, assetId: undefined };
@@ -293,11 +311,16 @@ function objectFromDesignObject(
     width,
     height,
     fill: typeof object.fill === "string" ? object.fill : fallback.fill,
+    templateCopyField: meta.templateCopyField ?? fallback.templateCopyField,
+    templateMaxChars: meta.templateMaxChars ?? fallback.templateMaxChars,
+    templateMaxLines: meta.templateMaxLines ?? fallback.templateMaxLines,
+    editorLabel: meta.editorLabel ?? fallback.editorLabel,
+    guidance: meta.guidance ?? fallback.guidance,
     locked: meta.locked,
   };
 
   if (next.type === "text") {
-    next.content = typeof object.text === "string" ? object.text : fallback.content;
+    next.content = typeof object.text === "string" ? fitCanvasObjectText(next, object.text) : fallback.content;
     next.size = Math.round(numberOr(object.fontSize, fallback.size ?? 32));
   } else if (next.type === "image") {
     next.content = typeof object.src === "string" ? object.src : fallback.content;
@@ -312,9 +335,10 @@ function objectFromDesignObject(
 }
 
 function patchCanvasObject(object: AdStudioCanvasObject, patch: CreativeLayerPatch): AdStudioCanvasObject {
+  const nextContent = patch.content ?? patch.imageSrc ?? object.content;
   return {
     ...object,
-    content: patch.content ?? patch.imageSrc ?? object.content,
+    content: object.type === "text" && typeof nextContent === "string" ? fitCanvasObjectText(object, nextContent) : nextContent,
     assetId: patch.assetId ?? object.assetId,
     x: patch.x ?? object.x,
     y: patch.y ?? object.y,
@@ -326,9 +350,11 @@ function patchCanvasObject(object: AdStudioCanvasObject, patch: CreativeLayerPat
 }
 
 function patchDesignObject(object: CreativeDesignObjectJson, patch: CreativeLayerPatch): CreativeDesignObjectJson {
+  const meta = object[BLOCKWISE_FABRIC_META_KEY];
+  const nextText = patch.content ?? object.text;
   return {
     ...object,
-    text: patch.content ?? object.text,
+    text: typeof nextText === "string" ? fitDesignObjectText(object, meta, nextText) : nextText,
     src: patch.imageSrc ?? object.src,
     left: patch.x ?? object.left,
     top: patch.y ?? object.top,
@@ -343,6 +369,44 @@ function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function copyValueForObject(object: AdStudioCanvasObject, copy: CreativeCopyFields): string | null {
+  if (object.templateCopyField === "headline" || object.role === "headline") return copy.headline;
+  if (object.templateCopyField === "description" || object.role === "subheadline" || object.role === "body" || object.role === "subhead") return copy.description;
+  if (object.templateCopyField === "cta" || object.role === "cta" || object.role === "cta_text" || object.role === "cta_button") return copy.cta;
+  return null;
+}
+
+function copyValueForMeta(meta: CreativeLayerMeta, copy: CreativeCopyFields): string | null {
+  if (meta.templateCopyField === "headline" || meta.role === "headline") return copy.headline;
+  if (meta.templateCopyField === "description" || meta.role === "subheadline" || meta.role === "body" || meta.role === "subhead") return copy.description;
+  if (meta.templateCopyField === "cta" || meta.role === "cta" || meta.role === "cta_text" || meta.role === "cta_button") return copy.cta;
+  return null;
+}
+
+function fitCanvasObjectText(object: AdStudioCanvasObject, text: string): string {
+  return clampTemplateText({
+    text,
+    maxChars: object.templateMaxChars,
+    maxLines: object.templateMaxLines,
+    width: object.width,
+    fontSize: object.size,
+  });
+}
+
+function fitDesignObjectText(
+  object: CreativeDesignObjectJson,
+  meta: CreativeLayerMeta | undefined,
+  text: string,
+): string {
+  return clampTemplateText({
+    text,
+    maxChars: meta?.templateMaxChars ?? object.templateMaxChars,
+    maxLines: meta?.templateMaxLines ?? object.templateMaxLines,
+    width: object.width,
+    fontSize: object.fontSize,
+  });
+}
+
 function compositionCopyFromObjects(
   copy: NonNullable<AdStudioCreative["canvas"]["composition"]>["copy"],
   objects: AdStudioCanvasObject[],
@@ -351,8 +415,8 @@ function compositionCopyFromObjects(
   return {
     ...copy,
     headline: byRole.get("headline")?.content ?? copy.headline,
-    subhead: byRole.get("subheadline")?.content ?? copy.subhead,
-    cta: byRole.get("cta_text")?.content ?? byRole.get("cta_button")?.content ?? copy.cta,
+    subhead: byRole.get("subheadline")?.content ?? byRole.get("body")?.content ?? byRole.get("subhead")?.content ?? copy.subhead,
+    cta: byRole.get("cta_text")?.content ?? byRole.get("cta")?.content ?? byRole.get("cta_button")?.content ?? copy.cta,
     brand: byRole.get("brand_logo")?.content ?? copy.brand,
   };
 }

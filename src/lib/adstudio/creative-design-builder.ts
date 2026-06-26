@@ -5,6 +5,7 @@ import {
   type CreativeDesignObjectJson,
   metadataForObject,
 } from "./creative-design-json.ts";
+import { clampTemplateText } from "./template-text-fit.ts";
 import type { AdStudioBrandKit, AdStudioCanvasObject, AdStudioCreative } from "./types.ts";
 
 export function buildCreativeDesignJson(input: {
@@ -39,6 +40,11 @@ export function objectToDesignJson(
     height: object.height ?? defaultObjectHeight(object),
     fill: object.fill,
     clip: object.clip,
+    templateCopyField: object.templateCopyField,
+    templateMaxChars: object.templateMaxChars,
+    templateMaxLines: object.templateMaxLines,
+    editorLabel: object.editorLabel,
+    guidance: object.guidance,
     selectable: !object.locked,
     evented: !object.locked,
     hasControls: !object.locked,
@@ -94,10 +100,21 @@ export function objectToDesignJson(
 }
 
 function textForRole(object: AdStudioCanvasObject, copy: CreativeCopyFields): string {
-  if (object.role === "headline") return copy.headline;
-  if (object.role === "subheadline") return copy.description;
-  if (object.role === "cta_text") return copy.cta;
-  return object.content ?? "";
+  const text =
+    object.templateCopyField === "headline" || object.role === "headline"
+      ? copy.headline
+      : object.templateCopyField === "description" || object.role === "subheadline" || object.role === "body" || object.role === "subhead"
+        ? copy.description
+        : object.templateCopyField === "cta" || object.role === "cta_text" || object.role === "cta"
+          ? copy.cta
+          : object.content ?? "";
+  return clampTemplateText({
+    text,
+    maxChars: object.templateMaxChars,
+    maxLines: object.templateMaxLines,
+    width: object.width,
+    fontSize: object.size,
+  });
 }
 
 function fontFamilyForObject(object: AdStudioCanvasObject, brandKit: AdStudioBrandKit): string {

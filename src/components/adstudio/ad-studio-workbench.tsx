@@ -799,8 +799,9 @@ export function AdStudioWorkbench({
           </span>
           <textarea
             rows={field === "primaryText" ? 4 : 3}
+            maxLength={COPY_LIMITS[field]}
             value={copy[field]}
-            onChange={(event) => updateCopy(field, event.target.value)}
+            onChange={(event) => updateCopy(field, event.target.value.slice(0, COPY_LIMITS[field]))}
           />
           {overLimit && <small className="studio-field-error">Over the Meta limit - shorten this.</small>}
         </label>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/adstudio/creative-design-json.ts";
 import { buildCreativeDesignJson } from "@/lib/adstudio/creative-design-builder.ts";
 import { runRenderedTileQA, type RenderedTileQAResult } from "@/lib/adstudio/creative-qa.ts";
+import { clampTemplateText } from "@/lib/adstudio/template-text-fit.ts";
 import {
   CENTER_FOCAL,
   computeFocalPointFromImageSource,
@@ -31,6 +32,10 @@ type BlockwiseFabricObject = FabricObject & {
   [BLOCKWISE_FABRIC_META_KEY]?: CreativeLayerMeta;
   text?: string;
   clip?: CreativeDesignObjectJson["clip"];
+  width?: number;
+  fontSize?: number;
+  templateMaxChars?: number;
+  templateMaxLines?: number;
 };
 
 export type FabricAdEditorProps = {
@@ -152,7 +157,10 @@ export function FabricAdEditor({
       canvas.on("selection:updated", () => syncSelection(canvas, selectElement)),
       canvas.on("selection:cleared", () => selectElement("canvas")),
       canvas.on("object:modified", () => commitCanvas()),
-      canvas.on("text:changed", () => commitCanvas()),
+      canvas.on("text:changed", (event) => {
+        enforceTextObjectLimit(event.target as BlockwiseFabricObject | undefined);
+        commitCanvas();
+      }),
       canvas.on("text:editing:exited", () => commitCanvas()),
       canvas.on("mouse:down", (opt) => {
         pressXY = pointerFromEvent(opt.e);
@@ -180,9 +188,9 @@ export function FabricAdEditor({
       addSafeAreaOverlay(canvas, creativeRef.current);
       // Apply state that changed while the design was loading (e.g. an upload or
       // copy edit in flight), so nothing is swallowed by the suppress window.
-      updateTextRole(canvas, "headline", copyRef.current.headline);
-      updateTextRole(canvas, "subheadline", copyRef.current.description);
-      updateTextRole(canvas, "cta_text", copyRef.current.cta);
+      updateTextCopyField(canvas, "headline", copyRef.current.headline);
+      updateTextCopyField(canvas, "description", copyRef.current.description);
+      updateTextCopyField(canvas, "cta", copyRef.current.cta);
       await replaceImageLayerIfNeeded(canvas, imageSrcRef.current, { select: false });
       if (disposed || mountedKeyRef.current !== key) return;
       canvas.requestRenderAll();
@@ -203,9 +211,9 @@ export function FabricAdEditor({
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas || suppressCommitRef.current) return;
-    updateTextRole(canvas, "headline", copy.headline);
-    updateTextRole(canvas, "subheadline", copy.description);
-    updateTextRole(canvas, "cta_text", copy.cta);
+    updateTextCopyField(canvas, "headline", copy.headline);
+    updateTextCopyField(canvas, "description", copy.description);
+    updateTextCopyField(canvas, "cta", copy.cta);
     canvas.requestRenderAll();
     commitCanvas({ pushHistory: false });
   }, [commitCanvas, copy.cta, copy.description, copy.headline]);
@@ -441,7 +449,7 @@ async function loadDesign(canvas: Canvas, designJson: CreativeDesignJson, brandK
 }
 
 function addTextObject(canvas: Canvas, object: CreativeDesignObjectJson, meta: CreativeLayerMeta) {
-  const text = new Textbox(typeof object.text === "string" ? object.text : "", {
+  const text = new Textbox(fitTextObjectValue(object, meta, typeof object.text === "string" ? object.text : ""), {
     ...interactiveOptions(meta),
     left: numberOr(object.left, 0),
     top: numberOr(object.top, 0),
@@ -454,6 +462,14 @@ function addTextObject(canvas: Canvas, object: CreativeDesignObjectJson, meta: C
     fontSize: numberOr(object.fontSize, 36),
     fontWeight: typeof object.fontWeight === "number" || typeof object.fontWeight === "string" ? object.fontWeight : 600,
     lineHeight: numberOr(object.lineHeight, 1.18),
+    clipPath: textClipPath(object),
+  });
+  text.set({
+    templateCopyField: meta.templateCopyField,
+    templateMaxChars: meta.templateMaxChars,
+    templateMaxLines: meta.templateMaxLines,
+    editorLabel: meta.editorLabel,
+    guidance: meta.guidance,
   });
   attachMeta(text, meta);
   canvas.add(text);
@@ -796,9 +812,9 @@ function syncCopyFromCanvasJson(designJson: CreativeDesignJson, onCopyChange: Fa
   for (const object of designJson.objects) {
     const meta = object[BLOCKWISE_FABRIC_META_KEY];
     if (!meta || typeof object.text !== "string") continue;
-    if (meta.role === "headline") onCopyChange("headline", object.text);
-    if (meta.role === "subheadline") onCopyChange("description", object.text);
-    if (meta.role === "cta_text") onCopyChange("cta", object.text);
+    if (meta.templateCopyField === "headline" || meta.role === "headline") onCopyChange("headline", object.text);
+    if (meta.templateCopyField === "description" || meta.role === "subheadline" || meta.role === "body" || meta.role === "subhead") onCopyChange("description", object.text);
+    if (meta.templateCopyField === "cta" || meta.role === "cta" || meta.role === "cta_text") onCopyChange("cta", object.text);
   }
 }
 
@@ -807,11 +823,77 @@ function syncImageFromCanvasJson(designJson: CreativeDesignJson, onImageChange: 
   if (typeof image?.src === "string" && image.src) onImageChange(image.src);
 }
 
-function updateTextRole(canvas: Canvas, role: string, text: string) {
-  const object = canvas.getObjects().find((candidate) => getMeta(candidate)?.role === role) as BlockwiseFabricObject | undefined;
-  if (object && typeof object.set === "function" && object.text !== text) {
-    object.set("text", text);
+function updateTextCopyField(canvas: Canvas, copyField: "headline" | "description" | "cta", text: string) {
+  for (const object of canvas.getObjects() as BlockwiseFabricObject[]) {
+    const meta = getMeta(object);
+    if (!meta || meta.type !== "text") continue;
+    const field = copyFieldForMeta(meta);
+    if (field !== copyField) continue;
+    const nextText = fitFabricTextValue(object, meta, text);
+    if (typeof object.set === "function" && object.text !== nextText) {
+      object.set("text", nextText);
+    }
   }
+}
+
+function copyFieldForMeta(meta: CreativeLayerMeta): "headline" | "description" | "cta" | null {
+  if (meta.templateCopyField === "headline" || meta.role === "headline") return "headline";
+  if (
+    meta.templateCopyField === "description" ||
+    meta.role === "subheadline" ||
+    meta.role === "body" ||
+    meta.role === "subhead"
+  ) {
+    return "description";
+  }
+  if (meta.templateCopyField === "cta" || meta.role === "cta" || meta.role === "cta_text" || meta.role === "cta_button") {
+    return "cta";
+  }
+  return null;
+}
+
+function enforceTextObjectLimit(object: BlockwiseFabricObject | undefined) {
+  if (!object) return;
+  const meta = getMeta(object);
+  if (!meta || meta.type !== "text") return;
+  const currentText = typeof object.text === "string" ? object.text : "";
+  const nextText = fitFabricTextValue(object, meta, currentText);
+  if (nextText !== currentText && typeof object.set === "function") object.set("text", nextText);
+}
+
+function fitTextObjectValue(object: CreativeDesignObjectJson, meta: CreativeLayerMeta, text: string): string {
+  return clampTemplateText({
+    text,
+    maxChars: meta.templateMaxChars ?? object.templateMaxChars,
+    maxLines: meta.templateMaxLines ?? object.templateMaxLines,
+    width: numberOr(object.width, undefined),
+    fontSize: numberOr(object.fontSize, undefined),
+  });
+}
+
+function fitFabricTextValue(object: BlockwiseFabricObject, meta: CreativeLayerMeta, text: string): string {
+  return clampTemplateText({
+    text,
+    maxChars: meta.templateMaxChars ?? object.templateMaxChars,
+    maxLines: meta.templateMaxLines ?? object.templateMaxLines,
+    width: numberOr(object.width, undefined),
+    fontSize: numberOr(object.fontSize, undefined),
+  });
+}
+
+function textClipPath(object: CreativeDesignObjectJson): Rect | undefined {
+  const width = numberOr(object.width, 0);
+  const height = numberOr(object.height, 0);
+  if (width <= 0 || height <= 0) return undefined;
+  return new Rect({
+    left: numberOr(object.left, 0),
+    top: numberOr(object.top, 0),
+    width,
+    height,
+    originX: "left",
+    originY: "top",
+    absolutePositioned: true,
+  });
 }
 
 function syncSelection(canvas: Canvas, onSelectedElementChange: FabricAdEditorProps["onSelectedElementChange"]) {

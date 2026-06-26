@@ -198,6 +198,11 @@ export type AdStudioCanvasObject = {
   sourceLayerId?: string;
   templateRole?: string;
   templateSlot?: string;
+  templateCopyField?: "headline" | "description" | "cta" | "static" | "brand";
+  templateMaxChars?: number;
+  templateMaxLines?: number;
+  editorLabel?: string;
+  guidance?: string;
   locked: boolean;
 };
 

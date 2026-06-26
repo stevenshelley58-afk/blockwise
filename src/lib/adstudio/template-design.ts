@@ -29,6 +29,7 @@ const textSlotSchema = z.enum([
 ]);
 
 const textFillSchema = z.enum(["ai_copy", "brand", "static"]);
+const textCopyFieldSchema = z.enum(["headline", "description", "cta", "static", "brand"]);
 
 const baseLayerShape = {
   id: z.string().trim().min(1).max(80),
@@ -61,6 +62,10 @@ const textLayerSchema = z
     letterSpacing: z.number().min(-20).max(40).optional(),
     case: z.enum(["none", "upper"]).optional(),
     maxChars: z.number().int().positive().max(500).optional(),
+    maxLines: z.number().int().positive().max(8).optional(),
+    editorLabel: z.string().trim().min(1).max(80).optional(),
+    copyField: textCopyFieldSchema.optional(),
+    guidance: z.string().trim().min(1).max(180).optional(),
     fill: textFillSchema,
     text: z.string().max(500).optional(),
   })
@@ -75,6 +80,9 @@ const imageSlotLayerSchema = z
     anchor: z.enum(["center", "top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"]).optional(),
     mask: z.enum(["none", "feather", "circle", "shape"]).optional(),
     clipShape: rectSchema.optional(),
+    editorLabel: z.string().trim().min(1).max(80).optional(),
+    guidance: z.string().trim().min(1).max(180).optional(),
+    required: z.boolean().optional(),
   })
   .strict();
 
@@ -96,6 +104,11 @@ const ctaButtonLayerSchema = z
     textColor: z.string().trim().min(1).max(80),
     font: z.string().trim().min(1).max(80),
     size: z.number().positive().max(160),
+    maxChars: z.number().int().positive().max(80).optional(),
+    maxLines: z.number().int().positive().max(3).optional(),
+    editorLabel: z.string().trim().min(1).max(80).optional(),
+    copyField: textCopyFieldSchema.optional(),
+    guidance: z.string().trim().min(1).max(180).optional(),
   })
   .strict();
 
@@ -122,6 +135,7 @@ export const templateDesignSchema = z
 export type TemplateRect = z.infer<typeof rectSchema>;
 export type TextSlot = z.infer<typeof textSlotSchema>;
 export type TextFill = z.infer<typeof textFillSchema>;
+export type TextCopyField = z.infer<typeof textCopyFieldSchema>;
 export type TemplateLayer = z.infer<typeof templateLayerSchema>;
 export type TemplateDesign = z.infer<typeof templateDesignSchema>;
 
@@ -158,6 +172,11 @@ export function designLayerSignature(design: TemplateDesign) {
     font: "font" in layer ? layer.font : undefined,
     size: "size" in layer ? layer.size : undefined,
     lineHeight: "lineHeight" in layer ? layer.lineHeight : undefined,
+    maxChars: "maxChars" in layer ? layer.maxChars : undefined,
+    maxLines: "maxLines" in layer ? layer.maxLines : undefined,
+    editorLabel: "editorLabel" in layer ? layer.editorLabel : undefined,
+    copyField: "copyField" in layer ? layer.copyField : undefined,
+    guidance: "guidance" in layer ? layer.guidance : undefined,
     weight: "weight" in layer ? layer.weight : undefined,
     color: "color" in layer ? layer.color : undefined,
     align: "align" in layer ? layer.align : undefined,

@@ -32,6 +32,10 @@ type CopyFieldsProps = {
 };
 
 export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
+  function updateLimitedCopy(key: keyof CopyState, value: string) {
+    updateCopy(key, value.slice(0, COPY_LIMITS[key]));
+  }
+
   return (
     <div className="studio-copy-fields">
       {([
@@ -49,7 +53,12 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
                 {copy[key].length} / {COPY_LIMITS[key]}
               </small>
             </span>
-            <textarea rows={key === "primaryText" ? 3 : 2} value={copy[key]} onChange={(event) => updateCopy(key, event.target.value)} />
+            <textarea
+              rows={key === "primaryText" ? 3 : 2}
+              maxLength={COPY_LIMITS[key]}
+              value={copy[key]}
+              onChange={(event) => updateLimitedCopy(key, event.target.value)}
+            />
             {overLimit && (
               <small style={{ color: "var(--rose, #ba1a1a)" }}>
                 Over the Meta limit - shorten this.

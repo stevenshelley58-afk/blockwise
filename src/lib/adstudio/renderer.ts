@@ -4,6 +4,7 @@ import type {
   TemplateLayer,
   TextSlot,
 } from "./template-design.ts";
+import { fitTemplateText } from "./template-text-fit.ts";
 import type { AdStudioBrandKit, AdStudioCanvasObject, AdStudioCreative, AdStudioFormat } from "./types.ts";
 
 const FORMAT_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
@@ -209,6 +210,11 @@ function layerToCanvasObjects(
       locked: false,
       sourceLayerId: layer.id,
       templateSlot: layer.slot,
+      templateCopyField: layer.copyField ?? copyFieldForTextLayer(layer.slot, layer.fill),
+      templateMaxChars: layer.maxChars,
+      templateMaxLines: layer.maxLines,
+      editorLabel: layer.editorLabel ?? labelForTextSlot(layer.slot),
+      guidance: layer.guidance ?? guidanceForTextSlot(layer.slot),
     }];
   }
 
@@ -278,6 +284,11 @@ function layerToCanvasObjects(
     locked: false,
     sourceLayerId: layer.id,
     templateSlot: layer.label,
+    templateCopyField: layer.copyField ?? "cta",
+    templateMaxChars: layer.maxChars ?? 24,
+    templateMaxLines: layer.maxLines ?? 1,
+    editorLabel: layer.editorLabel ?? "CTA",
+    guidance: layer.guidance ?? "Short button label that fits inside the CTA button.",
   };
   return [shape, label];
 }
@@ -302,7 +313,13 @@ function resolveLayerText(
       ? layer.text ?? resolveTextSlot(layer.slot, content, brandKit)
       : resolveTextSlot(layer.slot, content, brandKit) || layer.text || "";
   const cased = layer.case === "upper" ? text.toUpperCase() : text;
-  return layer.maxChars ? shortenText(cased, layer.maxChars) : cased;
+  return fitTemplateText({
+    text: cased,
+    maxChars: layer.maxChars,
+    maxLines: layer.maxLines,
+    width: rectWidth(layer),
+    fontSize: layer.size,
+  }).text;
 }
 
 function resolveTextSlot(slot: TextSlot, content: BoundTemplateContent, brandKit: AdStudioBrandKit): string {
@@ -319,8 +336,37 @@ function isHeadingSlot(slot: TextSlot): boolean {
   return slot === "headline" || slot === "eyebrow" || slot === "stat";
 }
 
-function shortenText(value: string, maxChars: number): string {
-  return value.length <= maxChars ? value : value.slice(0, maxChars - 1).trimEnd();
+function copyFieldForTextLayer(slot: TextSlot, fill: "ai_copy" | "brand" | "static"): AdStudioCanvasObject["templateCopyField"] {
+  if (fill === "brand") return "brand";
+  if (fill === "static") return "static";
+  if (slot === "headline") return "headline";
+  if (slot === "cta") return "cta";
+  if (slot === "body" || slot === "subhead") return "description";
+  return "static";
+}
+
+function labelForTextSlot(slot: TextSlot): string {
+  if (slot === "headline") return "Hero headline";
+  if (slot === "body" || slot === "subhead") return "Supporting copy";
+  if (slot === "cta") return "CTA";
+  if (slot === "eyebrow") return "Eyebrow";
+  if (slot === "address") return "Location label";
+  if (slot === "stat") return "Stat";
+  if (slot === "phone") return "Phone";
+  if (slot === "handle") return "Social handle";
+  if (slot === "price") return "Price";
+  return "Text";
+}
+
+function guidanceForTextSlot(slot: TextSlot): string {
+  if (slot === "headline") return "Keep this short enough to stay inside the hero text frame.";
+  if (slot === "body" || slot === "subhead") return "Short supporting message for the visible creative.";
+  if (slot === "cta") return "Short button label.";
+  return "Template-controlled text.";
+}
+
+function rectWidth(layer: Extract<TemplateLayer, { type: "text" }>): number {
+  return Math.max(1, layer.rect.w * 1080);
 }
 
 function renderTemplateCreativeSvg(
@@ -340,7 +386,7 @@ function renderTemplateObjectSvg(
   defs: string[] = [],
 ): string {
   const height = object.height ?? object.width;
-  if (object.type === "text") return renderTextObjectSvg(object, brandKit);
+  if (object.type === "text") return renderTextObjectSvg(object, brandKit, defs);
 
   if (object.type === "logo") {
     const src = object.assetId;
@@ -368,37 +414,27 @@ function renderTemplateObjectSvg(
 function renderTextObjectSvg(
   object: AdStudioCanvasObject,
   brandKit?: Pick<AdStudioBrandKit, "typography">,
+  defs: string[] = [],
 ): string {
   const size = object.size ?? 48;
   const lineHeight = Math.round(size * (object.lineHeight ?? 1.16));
   const anchor = object.align === "center" ? "middle" : object.align === "right" ? "end" : "start";
   const x = object.align === "center" ? object.x + object.width / 2 : object.align === "right" ? object.x + object.width : object.x;
-  const lines = wrapText(object.content ?? "", object.width, size);
+  const fit = fitTemplateText({
+    text: object.content ?? "",
+    maxChars: object.templateMaxChars,
+    maxLines: object.templateMaxLines,
+    width: object.width,
+    fontSize: size,
+  });
+  const lines = fit.lines;
   const tspans = lines
     .map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`)
     .join("");
+  const clipId = `text_clip_${object.objectId.replace(/[^a-z0-9_-]/gi, "_")}_${defs.length}`;
+  defs.push(`<clipPath id="${clipId}"><rect x="${object.x}" y="${object.y}" width="${object.width}" height="${object.height ?? lineHeight * Math.max(1, object.templateMaxLines ?? lines.length)}"/></clipPath>`);
 
-  return `<text x="${x}" y="${object.y + size}" font-family="${escapeXml(svgFontFamily(object, brandKit))}" font-size="${size}" font-weight="${object.weight ?? (object.role === "headline" ? 850 : 650)}" fill="${escapeXml(object.fill ?? "#131B2E")}" text-anchor="${anchor}">${tspans}</text>`;
-}
-
-function wrapText(value: string, width: number, size: number): string[] {
-  const words = value.split(/\s+/u).filter(Boolean);
-  const maxChars = Math.max(8, Math.floor(width / Math.max(1, size * 0.52)));
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= maxChars) {
-      current = next;
-      continue;
-    }
-    if (current) lines.push(current);
-    current = word;
-  }
-
-  if (current) lines.push(current);
-  return lines.length ? lines : [""];
+  return `<text x="${x}" y="${object.y + size}" clip-path="url(#${clipId})" font-family="${escapeXml(svgFontFamily(object, brandKit))}" font-size="${size}" font-weight="${object.weight ?? (object.role === "headline" ? 850 : 650)}" fill="${escapeXml(object.fill ?? "#131B2E")}" text-anchor="${anchor}">${tspans}</text>`;
 }
 
 export function svgToBytes(svg: string): Uint8Array {

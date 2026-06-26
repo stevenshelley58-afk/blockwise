@@ -103,12 +103,62 @@ function shape(id: string, rect: ReturnType<typeof box>, fill: string, role: "ba
   return { id, type: "shape", rect, fill, role, radius, opacity, locked: true };
 }
 function image(id: string, rect: ReturnType<typeof box>, role: "primary" | "secondary" | "agent_headshot", anchor: "center" | "top" | "bottom" | "left" | "right" | "top_left" | "top_right" | "bottom_left" | "bottom_right"): TemplateLayer {
-  return { id, type: "image_slot", rect, role, fit: "cover", anchor, mask: "none" };
+  return { id, type: "image_slot", rect, role, fit: "cover", anchor, mask: "none", editorLabel: imageLabel(id, role), guidance: imageGuidance(role), required: true };
 }
 function logo(id: string, rect: ReturnType<typeof box>): TemplateLayer { return { id, type: "logo", rect, source: "brand_kit" }; }
 function text(id: string, slot: "eyebrow" | "headline" | "body" | "cta" | "address" | "stat" | "handle", rect: ReturnType<typeof box>, size: number, color: string, fill: "ai_copy" | "brand" | "static", copy: string | undefined, maxChars: number, align: "left" | "center" | "right", font: string, weight: number, lineHeight: number): TemplateLayer {
-  return { id, type: "text", slot, rect, align, font, size: Math.max(size, slot === "headline" ? 46 : 18), lineHeight, weight, color, fill, text: copy, maxChars, case: slot === "eyebrow" ? "upper" : "none" };
+  return { id, type: "text", slot, rect, align, font, size: Math.max(size, slot === "headline" ? 46 : 18), lineHeight, weight, color, fill, text: copy, maxChars, maxLines: maxLinesForSlot(slot), editorLabel: editorLabelForSlot(slot), copyField: copyFieldForSlot(slot, fill), guidance: guidanceForSlot(slot), case: slot === "eyebrow" ? "upper" : "none" };
 }
 function cta(id: string, rect: ReturnType<typeof box>, fill: string, textColor: string, radius: number, size: number): TemplateLayer {
-  return { id, type: "cta_button", rect, fill, radius, label: "cta", textColor, font: FONTS[1], size: Math.max(size, 18) };
+  return { id, type: "cta_button", rect, fill, radius, label: "cta", textColor, font: FONTS[1], size: Math.max(size, 18), maxChars: 24, maxLines: 1, editorLabel: "CTA", copyField: "cta", guidance: "Short button label that fits inside the CTA button." };
+}
+function maxLinesForSlot(slot: string): number {
+  if (slot === "headline") return 2;
+  if (slot === "body" || slot === "subhead") return 2;
+  return 1;
+}
+
+function editorLabelForSlot(slot: string): string {
+  if (slot === "headline") return "Hero headline";
+  if (slot === "body" || slot === "subhead") return "Supporting copy";
+  if (slot === "cta") return "CTA";
+  if (slot === "eyebrow") return "Eyebrow";
+  if (slot === "address") return "Location label";
+  if (slot === "stat") return "Stat";
+  if (slot === "phone") return "Phone";
+  if (slot === "handle") return "Social handle";
+  return "Template text";
+}
+
+function copyFieldForSlot(slot: string, fill: string): "headline" | "description" | "cta" | "static" | "brand" {
+  if (fill === "brand") return "brand";
+  if (fill === "static") return "static";
+  if (slot === "headline") return "headline";
+  if (slot === "body" || slot === "subhead") return "description";
+  if (slot === "cta") return "cta";
+  return "static";
+}
+
+function guidanceForSlot(slot: string): string {
+  if (slot === "headline") return "Keep this short enough to stay inside the designed headline frame.";
+  if (slot === "body" || slot === "subhead") return "Short supporting message for the visible creative.";
+  if (slot === "cta") return "Short button label.";
+  if (slot === "address") return "Short suburb or location label.";
+  if (slot === "stat") return "Compact proof point or number.";
+  return "Template-controlled text.";
+}
+
+function imageLabel(id: string, role: string): string {
+  if (role === "primary") return "Hero image";
+  if (role === "agent_headshot") return "Agent headshot";
+  if (id.includes("top")) return "Upper inset image";
+  if (id.includes("mid")) return "Middle inset image";
+  if (id.includes("low") || id.includes("bottom")) return "Lower inset image";
+  return "Supporting image";
+}
+
+function imageGuidance(role: string): string {
+  if (role === "primary") return "Main property photo for the strongest visual position in this template.";
+  if (role === "agent_headshot") return "Agent portrait used where this template shows a person.";
+  return "Supporting property photo for this template position.";
 }
