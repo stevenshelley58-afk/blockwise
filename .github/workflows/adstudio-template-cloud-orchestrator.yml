@@ -1,0 +1,89 @@
+name: Ad Studio Template Cloud Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch/ref whose template build workflow should run."
+        required: false
+        default: "feat/audit-intel-report"
+      start_index:
+        description: "First candidate number to dispatch."
+        required: false
+        default: "1"
+      total_count:
+        description: "How many candidate templates to dispatch."
+        required: false
+        default: "330"
+      batch_size:
+        description: "Candidates per cloud build workflow run. Max 50."
+        required: false
+        default: "50"
+      output_prefix:
+        description: "Output branch prefix for generated template batch PRs."
+        required: false
+        default: "codex/adstudio-template-cloud-batch"
+      max_parallel:
+        description: "Maximum isolated Codex jobs inside each batch workflow."
+        required: false
+        default: "5"
+      dry_run:
+        description: "Print the dispatch commands without starting template jobs."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: adstudio-template-cloud-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch template cloud batches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Check Codex runner secret
+        id: codex_secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning title=OPENAI_API_KEY missing::Add the repository secret before dispatching Codex template workers."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch cloud template batches
+        if: steps.codex_secret.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(
+            --repo "${{ github.repository }}"
+            --workflow adstudio-template-cloud-build.yml
+            --target-ref "${{ inputs.target_ref }}"
+            --start-index "${{ inputs.start_index }}"
+            --total-count "${{ inputs.total_count }}"
+            --batch-size "${{ inputs.batch_size }}"
+            --output-prefix "${{ inputs.output_prefix }}"
+            --max-parallel "${{ inputs.max_parallel }}"
+          )
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          node scripts/adstudio-dispatch-template-cloud-batches.mjs "${args[@]}"
