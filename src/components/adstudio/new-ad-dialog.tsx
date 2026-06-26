@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
@@ -175,6 +175,15 @@ export function NewAdDialog({
   const previewSlots = uploadSlots.filter((slot) => slot.previewFormat === slotPreviewFormat);
   const slotRequirementNote = slotRequirementSummary(uploadSlots, isBlank);
 
+  const closeCurrentView = useCallback(() => {
+    if (step === "brief" && mediaSourceMode !== "details") {
+      setMediaSourceMode("details");
+      setError("");
+      return;
+    }
+    onClose();
+  }, [mediaSourceMode, onClose, step]);
+
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -280,7 +289,7 @@ export function NewAdDialog({
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        closeCurrentView();
       }
       if (event.key === "Tab") trapFocus(event);
     }
@@ -289,7 +298,7 @@ export function NewAdDialog({
       document.removeEventListener("keydown", handleKey);
       previousFocus.current?.focus();
     };
-  }, [open, onClose]);
+  }, [closeCurrentView, open]);
 
   useEffect(() => {
     const trimmed = description.trim();
@@ -647,7 +656,7 @@ export function NewAdDialog({
           : "Pick a starting point. You can change everything later.";
 
   return (
-    <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && closeCurrentView()}>
       <style>{EXPLORE_STYLES}</style>
       <div
         ref={dialogRef}
@@ -674,7 +683,7 @@ export function NewAdDialog({
               <p>{activeUploadSlot.label}</p>
             ) : null}
           </div>
-          <button className="studio-newad-x" type="button" aria-label="Close" onClick={onClose}>
+          <button className="studio-newad-x" type="button" aria-label="Close" onClick={closeCurrentView}>
             <X aria-hidden size={18} />
           </button>
         </div>
@@ -1011,7 +1020,7 @@ export function NewAdDialog({
 
         <div className="studio-newad-foot">
           <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
-          <button className="studio-btn secondary" type="button" onClick={onClose}>Close</button>
+          <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
           {step === "brief" && mediaSourceMode === "details" && (
             <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting || uploadingImage}>
               {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}

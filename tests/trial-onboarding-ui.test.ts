@@ -33,6 +33,46 @@ test("new ad dialog explains trial credit use without requiring Meta", () => {
   assert.match(dialog, /capturePagePaste/);
 });
 
+test("new ad dialog closes media sub-screens before closing the popup", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const closeHandlerStart = dialog.indexOf("const closeCurrentView = useCallback(() => {");
+  const closeHandlerEnd = dialog.indexOf("useEffect(() => {", closeHandlerStart);
+  const closeHandler = dialog.slice(closeHandlerStart, closeHandlerEnd);
+  const escapeHandlerStart = dialog.indexOf('event.key === "Escape"');
+  const escapeHandlerEnd = dialog.indexOf('if (event.key === "Tab")', escapeHandlerStart);
+  const escapeHandler = dialog.slice(escapeHandlerStart, escapeHandlerEnd);
+  const submitStart = dialog.indexOf("async function submit()");
+  const submitEnd = dialog.indexOf("const stepTitle =", submitStart);
+  const submitBody = dialog.slice(submitStart, submitEnd);
+
+  assert.notEqual(closeHandlerStart, -1);
+  assert.notEqual(closeHandlerEnd, -1);
+  assert.notEqual(escapeHandlerStart, -1);
+  assert.notEqual(escapeHandlerEnd, -1);
+  assert.notEqual(submitStart, -1);
+  assert.notEqual(submitEnd, -1);
+  assert.ok(closeHandler.includes('if (step === "brief" && mediaSourceMode !== "details") {'));
+  assert.ok(closeHandler.includes('setMediaSourceMode("details");'));
+  assert.ok(closeHandler.includes('setError("");'));
+  assert.ok(closeHandler.includes("return;"));
+  assert.ok(closeHandler.includes("onClose();"));
+  assert.ok(closeHandler.includes("}, [mediaSourceMode, onClose, step]);"));
+  assert.ok(escapeHandler.includes("closeCurrentView();"));
+  assert.ok(
+    dialog.includes(
+      '<div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && closeCurrentView()}>',
+    ),
+  );
+  assert.match(dialog, /aria-label="Close" onClick=\{closeCurrentView\}/);
+  assert.match(dialog, /className="studio-btn secondary" type="button" onClick=\{closeCurrentView\}>Close<\/button>/);
+  assert.ok(submitBody.includes("await onGenerate({"));
+  assert.ok(submitBody.includes("imageSlotDataUrls: resolvedImageSlotDataUrls,"));
+  assert.ok(submitBody.includes("onClose();"));
+
+  assert.doesNotMatch(dialog, /aria-label="Close" onClick=\{onClose\}/);
+  assert.doesNotMatch(dialog, /className="studio-btn secondary" type="button" onClick=\{onClose\}>Close<\/button>/);
+});
+
 test("onboarding logo upload previews flexible file input", () => {
   const wizard = readFileSync("src/components/onboarding/onboarding-wizard.tsx", "utf8");
 
