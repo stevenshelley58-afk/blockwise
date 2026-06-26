@@ -63,9 +63,9 @@ function isAdStudioImageSrc(value: string | undefined): boolean {
 function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (!firstAd) return null;
   if (firstAd.mode !== "template" && firstAd.mode !== "custom") return "Invalid first ad start mode.";
-  if (!firstAd.description?.trim()) return "A short description is required.";
-  if (firstAd.description.length > 500) return "Description must be 500 characters or less.";
-  if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "An uploaded image is required.";
+  if (!firstAd.description?.trim()) return "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.";
+  if (firstAd.description.length > 500) return "Keep the short description to 500 characters or less.";
+  if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.";
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story, Feed, and Square.";
   }
