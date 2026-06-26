@@ -16,6 +16,11 @@ import { normalizeAndValidateExtractionUrl } from "../src/lib/adstudio/extractio
 import { dataUrlToUploadBytes } from "../src/lib/adstudio/generated-media.ts";
 import { buildReadinessItems } from "../src/lib/adstudio/readiness.ts";
 import { renderCreativeSvg } from "../src/lib/adstudio/renderer.ts";
+import {
+  initialOfferLabelForPack,
+  labelForSelectedTemplate,
+  offerIdForLabel,
+} from "../src/components/adstudio/template-offer-state.ts";
 
 const html = `
   <html>
@@ -60,6 +65,79 @@ function pack() {
     sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
   });
 }
+
+test("template-owned offer labels keep template-native ids through UI state", () => {
+  const template = {
+    id: "template_native_market",
+    templateKey: "template_native_market",
+    name: "Market update",
+    goal: "market_update_leads" as const,
+    offerId: "template_native_market_update",
+    promptHint: "Template-native market update offer.",
+  };
+  const templatePack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_real",
+    brandKit: approvedKit(),
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+    resolvedTemplate: template,
+    sourceImageDataUrl: "/api/adstudio/media?path=workspace_real%2Fadstudio%2Fkit%2Flisting.jpg",
+  });
+  const registryOffers = [
+    {
+      offerId: "suburb_market_report",
+      name: "Market update",
+      goal: "market_update_leads" as const,
+      leadTemperature: "warm" as const,
+      requiredInputs: ["suburb"],
+      defaultCta: "Download report",
+      landingPageType: "market_report",
+      followupType: "market_report",
+      expectedLeadIntent: "Download a market report.",
+    },
+  ];
+
+  assert.equal(templatePack.campaign.offerId, "template_native_market_update");
+  assert.equal(labelForSelectedTemplate(template), "Market update");
+  assert.equal(initialOfferLabelForPack(templatePack, registryOffers), "Market update");
+  assert.equal(
+    offerIdForLabel({
+      label: "Market update",
+      offers: registryOffers,
+      fallback: templatePack.campaign.offerId,
+      pack: templatePack,
+    }),
+    "template_native_market_update",
+  );
+  assert.equal(
+    offerIdForLabel({
+      label: "Free appraisal",
+      offers: registryOffers,
+      fallback: templatePack.campaign.offerId,
+      pack: templatePack,
+    }),
+    "home_value_update",
+  );
+});
+
+test("template photo prep uses resolved template metadata over request-body offer overrides", () => {
+  const campaignRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const prepRoute = readFileSync("src/app/api/adstudio/template-photo-prep/route.ts", "utf8");
+
+  assert.doesNotMatch(campaignRoute, /body\.offerId\s*\?\?\s*resolvedTemplate\.offerId/);
+  assert.doesNotMatch(campaignRoute, /body\.goal\s*\?\?\s*resolvedTemplate\.goal/);
+  assert.doesNotMatch(prepRoute, /body\.offerId\s*\?\?\s*resolvedTemplate\.offerId/);
+  assert.doesNotMatch(prepRoute, /body\.goal\s*\?\?\s*resolvedTemplate\.goal/);
+  assert.match(campaignRoute, /goal:\s*resolvedTemplate\.goal/);
+  assert.match(campaignRoute, /offerId:\s*resolvedTemplate\.offerId/);
+  assert.match(prepRoute, /goal:\s*resolvedTemplate\.goal/);
+  assert.match(prepRoute, /offerId:\s*resolvedTemplate\.offerId/);
+});
 
 test("mergeDraftResponsePack keeps local creatives when the draft response is compacted", () => {
   const current = pack();

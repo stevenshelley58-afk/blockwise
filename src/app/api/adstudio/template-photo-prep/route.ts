@@ -145,8 +145,8 @@ export async function POST(request: NextRequest) {
       sourceImageRef: firstAd.imageDataUrl,
       sourceImageForModel: sourceImageForModel ?? "",
       campaign: {
-        goal: body.goal ?? resolvedTemplate.goal,
-        offerId: body.offerId ?? resolvedTemplate.offerId,
+        goal: resolvedTemplate.goal,
+        offerId: resolvedTemplate.offerId,
         market: {
           suburb: body.suburb ?? "Scarborough",
           city: body.city ?? "Perth",

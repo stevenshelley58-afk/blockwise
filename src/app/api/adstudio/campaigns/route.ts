@@ -230,8 +230,8 @@ export async function POST(request: NextRequest) {
           sourceImageRef: body.firstAd.imageDataUrl,
           sourceImageForModel: templatePrepSourceImage ?? "",
           campaign: {
-            goal: body.goal ?? resolvedTemplate.goal,
-            offerId: body.offerId ?? resolvedTemplate.offerId,
+            goal: resolvedTemplate.goal,
+            offerId: resolvedTemplate.offerId,
             market: {
               suburb: body.suburb ?? "Scarborough",
               city: body.city ?? "Perth",
@@ -255,11 +255,11 @@ export async function POST(request: NextRequest) {
     let pack = generateAdStudioCampaignPack({
       workspaceId: context.access.workspaceId,
       brandKit: brandKitResult.brandKit,
-      goal: body.goal ?? "seller_leads",
+      goal: resolvedTemplate?.goal ?? body.goal ?? "seller_leads",
       suburb: body.suburb ?? "Scarborough",
       city: body.city ?? "Perth",
       state: body.state ?? "WA",
-      offerId: body.offerId ?? "seller_prep_checklist",
+      offerId: resolvedTemplate?.offerId ?? body.offerId ?? "seller_prep_checklist",
       // Google Ads parked for Meta-only v1 (see src/lib/config/feature-flags.ts). Was: ["meta", "google_search", "google_pmax", "google_demand_gen"]
       platforms: body.platforms ?? ["meta"],
       creativeFormats: body.creativeFormats,

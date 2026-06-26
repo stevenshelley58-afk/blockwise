@@ -8,6 +8,7 @@ import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-jso
 
 import type { AngleCard } from "./angles";
 import { renderCreativeExports } from "./canvas/browser-creative-renderer";
+import { offerIdForLabel } from "./template-offer-state";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
 import type { StudioSection } from "./use-ad-studio";
@@ -169,7 +170,12 @@ export function useCampaignActions(s: CampaignActionsState) {
           city: market.city,
           state: market.state,
         },
-        offerId: offerIdFromLabel(offerLabel, s.offers, sourcePack.campaign.offerId),
+        offerId: offerIdForLabel({
+          label: offerLabel,
+          offers: s.offers,
+          fallback: sourcePack.campaign.offerId,
+          pack: sourcePack,
+        }),
       },
       variants: sourcePack.variants.map((v) =>
         v.variantId === variantId ? { ...v, headline: copy.headline, offer: offerLabel, cta: copy.cta } : v,
@@ -257,7 +263,12 @@ export function useCampaignActions(s: CampaignActionsState) {
       const payload = await postJson<GenerateCampaignResponse>("/api/adstudio/campaigns", {
         firstAd: input,
         goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
-        offerId: offerIdFromLabel(s.offerLabel, s.offers, s.pack.campaign.offerId),
+        offerId: offerIdForLabel({
+          label: s.offerLabel,
+          offers: s.offers,
+          fallback: s.pack.campaign.offerId,
+          pack: s.pack,
+        }),
         suburb: m.suburb,
         city: m.city,
         state: m.state,
@@ -559,19 +570,6 @@ function goalFromLabel(label: string, fallback: AdStudioGoal): AdStudioGoal {
   if (normalised.includes("retarget")) return "listing_nurture";
   if (normalised.includes("vendor") || normalised.includes("seller")) return "seller_leads";
   return fallback;
-}
-
-function offerIdFromLabel(label: string, offers: AdStudioOfferTemplate[], fallback: string): string {
-  const normalised = label.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    "free appraisal": "home_value_update",
-    "home value estimate": "home_value_update",
-    "market update": "suburb_market_report",
-    "buyer demand check": "buyer_inspection_checklist",
-    "buyer inspection checklist": "buyer_inspection_checklist",
-  };
-  if (aliases[normalised]) return aliases[normalised];
-  return offers.find((offer) => offer.name.toLowerCase() === normalised || offer.defaultCta.toLowerCase() === normalised)?.offerId ?? fallback;
 }
 
 function normaliseDestinationUrl(value: string): string {
