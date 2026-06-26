@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, Globe2, MoreHorizontal, ThumbsUp } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { CtaLink } from "@/components/landing/cta-link";
@@ -1145,6 +1146,490 @@ const FLOW_CSS = `
 }
 `;
 
+const READY_MADE_ADS = [
+  {
+    id: "just-listed",
+    title: "Just Listed",
+    description: "Promote a new property.",
+    postText: "Just listed in Subiaco: a light-filled townhouse close to cafes, parks and the train line.",
+    badge: "JUST LISTED",
+    creativeHeadline: "Subiaco townhouse",
+    creativeSubline: "3 bed - 2 bath - inspect this week",
+    location: "Subiaco",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "Fresh listing ready for buyers",
+    linkDescription: "View inspection times and property details.",
+    cta: "Learn more",
+    reactions: "142",
+    image: "/adstudio-samples/generated-au-properties/au-urban-townhouse.png",
+  },
+  {
+    id: "open-home",
+    title: "Open Home",
+    description: "Drive inspection traffic.",
+    postText: "Open this Saturday in Cottesloe. Save the inspection time and send through any questions before you arrive.",
+    badge: "OPEN HOME",
+    creativeHeadline: "Saturday 11:00am",
+    creativeSubline: "4 bed coastal home - register interest",
+    location: "Cottesloe",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "Open home times for Cottesloe",
+    linkDescription: "See the address, photos and inspection window.",
+    cta: "Book inspection",
+    reactions: "98",
+    image: "/adstudio-samples/generated-au-properties/au-coastal-luxury.jpg",
+  },
+  {
+    id: "just-sold",
+    title: "Just Sold",
+    description: "Show local proof.",
+    postText: "Another Mount Hawthorn sale is wrapped. See the recent local results before you plan your next move.",
+    badge: "JUST SOLD",
+    creativeHeadline: "Sold in Mount Hawthorn",
+    creativeSubline: "Recent result report now available",
+    location: "Mount Hawthorn",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "Recent sales near your home",
+    linkDescription: "Compare nearby results before you list.",
+    cta: "View results",
+    reactions: "211",
+    image: "/adstudio-samples/generated-au-properties/au-character-cottage.jpg",
+  },
+  {
+    id: "free-appraisal",
+    title: "Free Appraisal",
+    description: "Find seller leads.",
+    postText: "Thinking of selling in Mount Lawley? Get a local appraisal before your next move.",
+    badge: "FREE APPRAISAL",
+    creativeHeadline: "What could your home sell for?",
+    creativeSubline: "A suburb-specific view before you decide",
+    location: "Mount Lawley",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "What could your home sell for?",
+    linkDescription: "Get a suburb-specific view before you decide.",
+    cta: "Book now",
+    reactions: "126",
+    image: "/adstudio-samples/generated-au-properties/au-modern-coastal.png",
+  },
+  {
+    id: "buyer-demand",
+    title: "Buyer Demand",
+    description: "Turn demand into vendor interest.",
+    postText: "Owners in Leederville are asking what buyer demand looks like right now. Start with a local demand check.",
+    badge: "BUYER DEMAND",
+    creativeHeadline: "Are buyers watching your street?",
+    creativeSubline: "Local enquiry signals for owners",
+    location: "Leederville",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "Check buyer demand in your area",
+    linkDescription: "See whether your suburb is attracting active interest.",
+    cta: "Check demand",
+    reactions: "174",
+    image: "/adstudio-samples/generated-au-properties/au-brick-family-home.jpg",
+  },
+  {
+    id: "market-update",
+    title: "Market Update",
+    description: "Stay visible in your area.",
+    postText: "The Fremantle market is moving. Get the latest local update on recent sales, demand and listing activity.",
+    badge: "MARKET UPDATE",
+    creativeHeadline: "Fremantle property update",
+    creativeSubline: "Recent sales - demand - listing signals",
+    location: "Fremantle",
+    domain: "BLOCKWISE.SALE",
+    linkHeadline: "Get the local market update",
+    linkDescription: "A clear suburb snapshot for owners.",
+    cta: "Get update",
+    reactions: "156",
+    image: "/adstudio-samples/generated-au-properties/au-riverside-townhouse.jpg",
+  },
+] as const;
+
+const READY_MADE_ADS_CSS = `
+.lp-ad-showcase {
+  background: #f7f9fc;
+  border-top: 1px solid #e8edf4;
+  border-bottom: 1px solid #e8edf4;
+  padding: 78px 0 86px;
+}
+.lp-ad-showcase * { box-sizing: border-box; }
+.lp-ad-switcher {
+  display: grid;
+  grid-template-columns: minmax(320px, 560px) minmax(330px, 460px);
+  gap: 92px;
+  align-items: center;
+  justify-content: center;
+}
+.lp-ad-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.lp-ad-options {
+  display: grid;
+  gap: 16px;
+}
+.lp-ad-option {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border: 1px solid #e1e7f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #071329;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(15, 32, 64, 0.035);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.lp-ad-option:hover {
+  border-color: #b9c8da;
+  box-shadow: 0 12px 28px rgba(15, 32, 64, 0.07);
+  transform: translateY(-1px);
+}
+.lp-ad-option strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.lp-ad-option small {
+  display: block;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.lp-ad-option-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  border-radius: 8px;
+  color: #475569;
+}
+.lp-ad-stage {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+.lp-meta-card {
+  display: none;
+  width: min(100%, 448px);
+  overflow: hidden;
+  border: 1px solid #dfe6f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 54px rgba(15, 32, 64, 0.12);
+}
+.lp-meta-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px 10px;
+}
+.lp-meta-page {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+.lp-meta-avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 8px;
+  background: #071329;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.lp-meta-page strong {
+  display: block;
+  color: #071329;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.lp-meta-sponsored {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+}
+.lp-meta-more {
+  flex: none;
+  color: #475569;
+}
+.lp-meta-copy {
+  margin: 0;
+  padding: 0 16px 14px;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.lp-ad-creative {
+  position: relative;
+  min-height: 284px;
+  overflow: hidden;
+  background: #e8edf4;
+}
+.lp-ad-creative img {
+  width: 100%;
+  height: 100%;
+  min-height: 284px;
+  display: block;
+  object-fit: cover;
+}
+.lp-ad-creative::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 19, 41, 0.06), rgba(7, 19, 41, 0.38));
+}
+.lp-creative-badge,
+.lp-creative-location,
+.lp-creative-panel {
+  position: absolute;
+  z-index: 1;
+}
+.lp-creative-badge {
+  top: 16px;
+  left: 16px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #071329;
+  padding: 8px 11px;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+.lp-creative-location {
+  right: 16px;
+  bottom: 16px;
+  border-radius: 4px;
+  background: rgba(7, 19, 41, 0.92);
+  color: #ffffff;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.lp-creative-panel {
+  left: 16px;
+  right: 86px;
+  bottom: 16px;
+  display: grid;
+  gap: 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #071329;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+.lp-creative-panel span {
+  color: #1677ff;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.lp-creative-panel strong {
+  color: inherit;
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+.lp-creative-panel small {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.lp-ad-creative-open-home .lp-creative-panel,
+.lp-ad-creative-just-sold .lp-creative-panel {
+  background: rgba(7, 19, 41, 0.9);
+  color: #ffffff;
+}
+.lp-ad-creative-open-home .lp-creative-panel small,
+.lp-ad-creative-just-sold .lp-creative-panel small {
+  color: rgba(255, 255, 255, 0.78);
+}
+.lp-ad-creative-open-home .lp-creative-panel span,
+.lp-ad-creative-just-sold .lp-creative-panel span {
+  color: #ffffff;
+}
+.lp-ad-creative-free-appraisal .lp-creative-panel {
+  background: rgba(7, 19, 41, 0.92);
+  color: #ffffff;
+}
+.lp-ad-creative-free-appraisal .lp-creative-panel span { color: #afc6ff; }
+.lp-ad-creative-free-appraisal .lp-creative-panel small { color: rgba(255, 255, 255, 0.78); }
+.lp-ad-creative-buyer-demand .lp-creative-panel { border-left: 5px solid #20b8b0; }
+.lp-ad-creative-market-update .lp-creative-panel { border-top: 5px solid #1677ff; }
+.lp-meta-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5edf6;
+}
+.lp-meta-link-copy {
+  min-width: 0;
+}
+.lp-meta-domain {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+.lp-meta-link-copy strong {
+  display: block;
+  margin-top: 4px;
+  color: #071329;
+  font-size: 15px;
+  line-height: 1.18;
+}
+.lp-meta-link-copy span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lp-meta-cta {
+  flex: none;
+  border-radius: 4px;
+  background: #e3e8ef;
+  color: #071329;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.lp-meta-engagement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  color: #64748b;
+  font-size: 12px;
+}
+.lp-meta-reactions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lp-meta-reaction-icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1677ff;
+  color: #ffffff;
+}
+.lp-meta-actions {
+  display: flex;
+  gap: 18px;
+  font-weight: 650;
+}
+#ready-ad-just-listed:checked ~ .lp-ad-options label[for="ready-ad-just-listed"],
+#ready-ad-open-home:checked ~ .lp-ad-options label[for="ready-ad-open-home"],
+#ready-ad-just-sold:checked ~ .lp-ad-options label[for="ready-ad-just-sold"],
+#ready-ad-free-appraisal:checked ~ .lp-ad-options label[for="ready-ad-free-appraisal"],
+#ready-ad-buyer-demand:checked ~ .lp-ad-options label[for="ready-ad-buyer-demand"],
+#ready-ad-market-update:checked ~ .lp-ad-options label[for="ready-ad-market-update"] {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 1px #1677ff, 0 16px 34px rgba(22, 119, 255, 0.12);
+}
+#ready-ad-just-listed:checked ~ .lp-ad-options label[for="ready-ad-just-listed"] .lp-ad-option-icon,
+#ready-ad-open-home:checked ~ .lp-ad-options label[for="ready-ad-open-home"] .lp-ad-option-icon,
+#ready-ad-just-sold:checked ~ .lp-ad-options label[for="ready-ad-just-sold"] .lp-ad-option-icon,
+#ready-ad-free-appraisal:checked ~ .lp-ad-options label[for="ready-ad-free-appraisal"] .lp-ad-option-icon,
+#ready-ad-buyer-demand:checked ~ .lp-ad-options label[for="ready-ad-buyer-demand"] .lp-ad-option-icon,
+#ready-ad-market-update:checked ~ .lp-ad-options label[for="ready-ad-market-update"] .lp-ad-option-icon {
+  background: #1677ff;
+  color: #ffffff;
+}
+#ready-ad-just-listed:focus-visible ~ .lp-ad-options label[for="ready-ad-just-listed"],
+#ready-ad-open-home:focus-visible ~ .lp-ad-options label[for="ready-ad-open-home"],
+#ready-ad-just-sold:focus-visible ~ .lp-ad-options label[for="ready-ad-just-sold"],
+#ready-ad-free-appraisal:focus-visible ~ .lp-ad-options label[for="ready-ad-free-appraisal"],
+#ready-ad-buyer-demand:focus-visible ~ .lp-ad-options label[for="ready-ad-buyer-demand"],
+#ready-ad-market-update:focus-visible ~ .lp-ad-options label[for="ready-ad-market-update"] {
+  outline: 3px solid rgba(22, 119, 255, 0.25);
+  outline-offset: 3px;
+}
+#ready-ad-just-listed:checked ~ .lp-ad-stage [data-ad="just-listed"],
+#ready-ad-open-home:checked ~ .lp-ad-stage [data-ad="open-home"],
+#ready-ad-just-sold:checked ~ .lp-ad-stage [data-ad="just-sold"],
+#ready-ad-free-appraisal:checked ~ .lp-ad-stage [data-ad="free-appraisal"],
+#ready-ad-buyer-demand:checked ~ .lp-ad-stage [data-ad="buyer-demand"],
+#ready-ad-market-update:checked ~ .lp-ad-stage [data-ad="market-update"] {
+  display: block;
+}
+@media (max-width: 980px) {
+  .lp-ad-switcher {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+  .lp-ad-options {
+    max-width: 620px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 620px) {
+  .lp-ad-showcase { padding: 58px 0 64px; }
+  .lp-ad-option {
+    min-height: 76px;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    padding: 15px 16px;
+  }
+  .lp-ad-option strong { font-size: 16px; }
+  .lp-ad-option small { font-size: 12px; }
+  .lp-ad-option-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .lp-meta-card { width: 100%; }
+  .lp-ad-creative,
+  .lp-ad-creative img { min-height: 248px; }
+  .lp-creative-panel {
+    right: 16px;
+    padding: 14px;
+  }
+  .lp-creative-panel strong { font-size: 19px; }
+  .lp-creative-location { display: none; }
+  .lp-meta-link {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .lp-meta-cta { width: 100%; text-align: center; }
+  .lp-meta-actions { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-ad-option { transition: none; }
+  .lp-ad-option:hover { transform: none; }
+}
+`;
+
 const TABLE_ROWS = [
   { name: "Mt Lawley appraisal", description: "Listing lead angle", status: "Active", clicks: "247", leads: "18", spend: "$324" },
   { name: "Subiaco just listed", description: "Listing attention", status: "Active", clicks: "182", leads: "11", spend: "$210" },
@@ -1290,56 +1775,89 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="done-for-you" className="lp-section lp-dfy" aria-labelledby="dfy-title">
+        <section id="done-for-you" className="lp-section lp-ad-showcase" aria-labelledby="dfy-title">
+          <style dangerouslySetInnerHTML={{ __html: READY_MADE_ADS_CSS }} />
           <div className="lp-shell">
-            <div className="lp-dfy-card">
-              <div className="lp-dfy-pad">
-                <div className="lp-center-head lp-dfy-head">
-                  <p className="lp-eyebrow">Done for you</p>
-                  <h2 className="lp-h2" id="dfy-title">Approve the ad. Skip the setup work.</h2>
-                  <p className="lp-lead">
-                    Blockwise prepares the copy, creative, lead form, budget and reporting. You check
-                    what goes live before anything spends.
-                  </p>
-                </div>
+            <h2 className="sr-only" id="dfy-title">Pick the ad you need.</h2>
+            <div className="lp-ad-switcher">
+              {READY_MADE_ADS.map((ad) => (
+                <input
+                  className="lp-ad-radio"
+                  defaultChecked={ad.id === "free-appraisal"}
+                  id={`ready-ad-${ad.id}`}
+                  key={`input-${ad.id}`}
+                  name="ready-made-ad"
+                  type="radio"
+                />
+              ))}
 
-                <div className="lp-dfy-compare-shell">
-                  <div className="lp-dfy-panel lp-dfy-before">
-                    <div className="lp-dfy-panel-head">
-                      <h3>Doing it yourself</h3>
-                      <span className="lp-dfy-status lp-dfy-status-muted">Manual</span>
+              <div className="lp-ad-options" aria-label="Ready-made ad examples">
+                {READY_MADE_ADS.map((ad) => (
+                  <label className="lp-ad-option" htmlFor={`ready-ad-${ad.id}`} key={ad.id}>
+                    <span>
+                      <strong>{ad.title}</strong>
+                      <small>{ad.description}</small>
+                    </span>
+                    <span className="lp-ad-option-icon" aria-hidden>
+                      <ArrowRight size={20} strokeWidth={2.4} />
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="lp-ad-stage" aria-live="polite">
+                {READY_MADE_ADS.map((ad) => (
+                  <article className="lp-meta-card" data-ad={ad.id} key={`preview-${ad.id}`}>
+                    <div className="lp-meta-head">
+                      <div className="lp-meta-page">
+                        <span className="lp-meta-avatar" aria-hidden>BW</span>
+                        <div>
+                          <strong>Blockwise Realty</strong>
+                          <span className="lp-meta-sponsored">
+                            Sponsored
+                            <Globe2 size={12} strokeWidth={2.2} aria-hidden />
+                          </span>
+                        </div>
+                      </div>
+                      <MoreHorizontal className="lp-meta-more" size={20} strokeWidth={2.4} aria-hidden />
                     </div>
-                    <ul className="lp-dfy-task-list">
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Write the ad from scratch</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Make the image fit each placement</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Build the lead form</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Set the budget and timing</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Check claims, details and brand fit</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-negative" aria-hidden /><span>Dig through Ads Manager for results</span></li>
-                    </ul>
-                  </div>
+                    <p className="lp-meta-copy">{ad.postText}</p>
 
-                  <div className="lp-dfy-panel lp-dfy-after">
-                    <div className="lp-dfy-panel-head">
-                      <h3>With Blockwise</h3>
-                      <span className="lp-dfy-status lp-dfy-status-blue">Ready to approve</span>
+                    <div className={`lp-ad-creative lp-ad-creative-${ad.id}`}>
+                      <img src={ad.image} alt="" loading={ad.id === "free-appraisal" ? "eager" : "lazy"} />
+                      <span className="lp-creative-badge">{ad.badge}</span>
+                      <div className="lp-creative-panel">
+                        <span>{ad.title}</span>
+                        <strong>{ad.creativeHeadline}</strong>
+                        <small>{ad.creativeSubline}</small>
+                      </div>
+                      <span className="lp-creative-location">{ad.location}</span>
                     </div>
-                    <ul className="lp-dfy-task-list lp-dfy-after-list">
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Ad copy prepared</strong> for the lead goal</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Creative fitted</strong> to Facebook and Instagram</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Lead form built</strong> with the right next step</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Budget and timing set</strong> before approval</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Review issues flagged</strong> before sign-off</span></li>
-                      <li><span className="lp-dfy-dot lp-dfy-dot-positive" aria-hidden /><span><strong>Results shown</strong> in Blockwise</span></li>
-                    </ul>
-                  </div>
-                </div>
 
-                <div className="lp-dfy-cta-row">
-                  <CtaLink location="done-for-you" href="/signup" className="lp-btn lp-btn-primary">
-                    Get your first ad prepared
-                  </CtaLink>
-                </div>
+                    <div className="lp-meta-link">
+                      <div className="lp-meta-link-copy">
+                        <span className="lp-meta-domain">{ad.domain}</span>
+                        <strong>{ad.linkHeadline}</strong>
+                        <span>{ad.linkDescription}</span>
+                      </div>
+                      <span className="lp-meta-cta">{ad.cta}</span>
+                    </div>
+
+                    <div className="lp-meta-engagement" aria-label={`${ad.reactions} reactions`}>
+                      <span className="lp-meta-reactions">
+                        <span className="lp-meta-reaction-icon" aria-hidden>
+                          <ThumbsUp size={11} strokeWidth={3} />
+                        </span>
+                        {ad.reactions}
+                      </span>
+                      <span className="lp-meta-actions" aria-hidden>
+                        <span>Like</span>
+                        <span>Comment</span>
+                        <span>Share</span>
+                      </span>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
           </div>
@@ -1386,7 +1904,7 @@ export default function HomePage() {
               <p className="lp-eyebrow">Approval and control</p>
               <h2 className="lp-h2" id="control-title">You stay in control before and after approval.</h2>
               <p className="lp-lead">
-                Review what goes live, then track spend, leads and status from one clean dashboard.
+                Review what goes live before anything spends, then track spend, leads and status from one clean dashboard.
               </p>
               <ul className="lp-control-list" aria-label="Control points">
                 <li><span className="lp-check" aria-hidden>✓</span>Approve every ad before it goes live</li>
