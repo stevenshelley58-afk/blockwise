@@ -37,6 +37,7 @@ import { ANGLES } from "./angles";
 import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
+import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
 import { TopBar } from "./topbar";
 import { useAdStudio } from "./use-ad-studio";
 import { useBrandKit } from "./use-brand-kit";
@@ -121,9 +122,7 @@ function initialCampaignGoal(pack: AdStudioCampaignPack): string {
 }
 
 function initialOfferLabel(pack: AdStudioCampaignPack, offers: AdStudioOfferTemplate[]): string {
-  const variant = pack.variants[0];
-  if (variant?.offer) return variant.offer;
-  return offers.find((offer) => offer.offerId === pack.campaign.offerId)?.name ?? "Free appraisal";
+  return initialOfferLabelForPack(pack, offers);
 }
 
 function initialMarket(pack: AdStudioCampaignPack): string {
@@ -326,8 +325,7 @@ export function AdStudioWorkbench({
     setActiveTemplateKey(key);
     if (template) {
       setCampaignGoal(GOAL_LABELS[template.goal] ?? campaignGoal);
-      const offer = offers.find((item) => item.offerId === template.offerId);
-      if (offer) setOfferLabel(offer.name);
+      setOfferLabel(labelForSelectedTemplate(template));
     }
     setTemplatePickerOpen(false);
     setSelectedElement("image");
