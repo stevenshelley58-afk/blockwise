@@ -66,6 +66,9 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (!firstAd.description?.trim()) return "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.";
   if (firstAd.description.length > 500) return "Keep the short description to 500 characters or less.";
   if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.";
+  for (const slotImage of Object.values(firstAd.imageDataUrls ?? {})) {
+    if (slotImage && !isAdStudioImageSrc(slotImage)) return "One of the selected template images is invalid. Replace it and try again.";
+  }
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story, Feed, and Square.";
   }
@@ -267,6 +270,7 @@ export async function POST(request: NextRequest) {
       firstAd: body.firstAd,
       sourceImageDataUrl: body.sourceImageDataUrl,
       sourceImagesByFormat: preparedPhotoUrlsByFormat(immediateTemplatePhotos),
+      sourceImagesBySlot: body.firstAd?.imageDataUrls,
       resolvedTemplate,
     });
     const photoPrepQueuePromise = templatePhotoPrepInput

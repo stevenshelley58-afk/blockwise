@@ -15,12 +15,12 @@ test("new ad dialog shows combined missing-requirements guidance before generati
   assert.match(dialog, /role="alert" aria-live="assertive"/);
   assert.match(dialog, /Add the missing details before generating/);
   assert.match(dialog, /Add a short description so Blockwise knows what to write/);
-  assert.match(dialog, /Add a required image before generating the ad/);
+  assert.match(dialog, /missingImageLabels/);
   assert.match(dialog, /Upload a file, choose from library, or generate an image/);
   assert.match(dialog, /Image upload is still running\. Wait for it to finish, then generate the ad\./);
   assert.match(dialog, /aria-invalid=\{hasDescriptionRequirement \? true : undefined\}/);
   assert.match(dialog, /aria-describedby=\{hasDescriptionRequirement \? requirementsAlertId : undefined\}/);
-  assert.match(submitBody, /buildRequirementBlockers\(\{ description, hasImage: Boolean\(imageDataUrl\), uploadingImage \}\)/);
+  assert.match(submitBody, /buildRequirementBlockers\(\{ description, missingImageLabels, uploadingImage \}\)/);
   assert.match(submitBody, /descriptionRef\.current\?\.focus\(\)/);
   assert.match(submitBody, /setShowRequirementsAlert\(true\)/);
   assert.doesNotMatch(submitBody, /setError\("Add a short description\."\)/);

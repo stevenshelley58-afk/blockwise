@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
@@ -28,11 +28,26 @@ type GeneratedImageOption = {
   provider?: string;
   index?: number;
 };
+type TemplateImageRequirement = {
+  id: string;
+  label: string;
+  guidance?: string;
+  role: "primary" | "secondary" | "agent_headshot";
+  required: boolean;
+};
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
   id: string;
   message: string;
   target?: RequirementBlockerTarget;
+};
+
+const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5", "1:1"];
+const DEFAULT_IMAGE_SLOT: TemplateImageRequirement = {
+  id: "primary_photo",
+  label: "Property image",
+  role: "primary",
+  required: true,
 };
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
@@ -144,8 +159,9 @@ export function NewAdDialog({
   // undefined = nothing chosen yet; "" = blank (create your own)
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState("");
-  const [imageName, setImageName] = useState("");
+  const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
+  const [imageNamesBySlot, setImageNamesBySlot] = useState<Record<string, string>>({});
+  const [activeImageSlotId, setActiveImageSlotId] = useState(DEFAULT_IMAGE_SLOT.id);
   const [mediaSourceMode, setMediaSourceMode] = useState<MediaSourceMode>("details");
   const [dialogMediaAssets, setDialogMediaAssets] = useState<ImageLibraryAsset[]>([]);
   const [generatorPrompt, setGeneratorPrompt] = useState("");
@@ -168,9 +184,30 @@ export function NewAdDialog({
   const preloadKeyRef = useRef("");
   const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
+  const imageRequirements = useMemo(
+    () => imageRequirementsForTemplate(selectedTemplate, isBlank),
+    [isBlank, selectedTemplate],
+  );
+  const primaryImageSlot = imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
+  const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
+  const imageDataUrl = imageDataUrlsBySlot[primaryImageSlot.id] ?? "";
+  const missingImageLabels = useMemo(
+    () => imageRequirements
+      .filter((slot) => slot.required && !imageDataUrlsBySlot[slot.id])
+      .map((slot) => slot.label),
+    [imageDataUrlsBySlot, imageRequirements],
+  );
+  const imageDataUrls = useMemo(
+    () => imageRequirements.reduce<Record<string, string>>((values, slot) => {
+      const src = imageDataUrlsBySlot[slot.id];
+      if (src) values[slot.id] = src;
+      return values;
+    }, {}),
+    [imageDataUrlsBySlot, imageRequirements],
+  );
   const requirementBlockers = buildRequirementBlockers({
     description,
-    hasImage: Boolean(imageDataUrl),
+    missingImageLabels,
     uploadingImage,
   });
   const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
@@ -214,8 +251,9 @@ export function NewAdDialog({
     setDescription("");
     // The customer supplies their own listing photo; the template drives the
     // layout, copy and brand — never a pre-baked image.
-    setImageDataUrl("");
-    setImageName("");
+    setImageDataUrlsBySlot({});
+    setImageNamesBySlot({});
+    setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
     setMediaSourceMode("details");
     setGeneratorPrompt("");
@@ -355,7 +393,8 @@ export function NewAdDialog({
             imageBriefId: selectedTemplate.imageBriefId,
             description: trimmed,
             imageDataUrl,
-            formats: ["9:16", "4:5", "1:1"],
+            imageDataUrls,
+            formats: FIRST_AD_FORMATS,
           },
         }),
       }).catch(() => {});
@@ -365,7 +404,7 @@ export function NewAdDialog({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [brandKit, description, imageDataUrl, isBlank, open, selectedTemplate, step, uploadingImage]);
+  }, [brandKit, description, imageDataUrl, imageDataUrls, isBlank, open, selectedTemplate, step, uploadingImage]);
 
   if (!open) return null;
 
@@ -398,8 +437,9 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     // The customer adds their own listing photo; the template only drives layout/copy.
-    setImageDataUrl("");
-    setImageName("");
+    setImageDataUrlsBySlot({});
+    setImageNamesBySlot({});
+    setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
   }
@@ -413,6 +453,9 @@ export function NewAdDialog({
     setTemplateId("");
     setDescription("Use this saved Ad Radar pattern as structure only. Write original Blockwise copy for this campaign.");
     setSourceNote("Ad Radar structure selected. Add your own photo and Blockwise will write an original version.");
+    setImageDataUrlsBySlot({});
+    setImageNamesBySlot({});
+    setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setRadarInspiration({
       savedId: ad.savedId,
       observedAdId: ad.observedAdId,
@@ -440,7 +483,25 @@ export function NewAdDialog({
     setDialogMediaAssets((current) => dedupeImageLibraryAssets([asset, ...current]));
   }
 
-  async function selectImage(file: File) {
+  function setSlotImage(slotId: string, src: string, label: string) {
+    setImageDataUrlsBySlot((current) => ({ ...current, [slotId]: src }));
+    setImageNamesBySlot((current) => ({ ...current, [slotId]: label }));
+  }
+
+  function clearSlotImage(slotId: string) {
+    setImageDataUrlsBySlot((current) => {
+      const next = { ...current };
+      delete next[slotId];
+      return next;
+    });
+    setImageNamesBySlot((current) => {
+      const next = { ...current };
+      delete next[slotId];
+      return next;
+    });
+  }
+
+  async function selectImage(file: File, slotId: string) {
     setError("");
     setUploadingImage(true);
     try {
@@ -449,25 +510,25 @@ export function NewAdDialog({
         workspaceId,
         brandKitId: brandKit.brandKitId,
       });
-      setImageDataUrl(uploaded.src);
-      setImageName(file.name);
+      setSlotImage(slotId, uploaded.src, file.name);
       rememberLibraryAsset({ src: uploaded.src, label: file.name, type: "Uploaded", ratio: "Just now", role: "property" });
       setError("");
     } catch (caught) {
-      setImageDataUrl("");
-      setImageName("");
+      clearSlotImage(slotId);
       setError(caught instanceof Error ? caught.message : "Could not upload that image.");
     } finally {
       setUploadingImage(false);
     }
   }
 
-  function openLibrary() {
+  function openLibrary(slotId: string) {
+    setActiveImageSlotId(slotId);
     setMediaSourceMode("library");
     setError("");
   }
 
-  function openGenerator() {
+  function openGenerator(slotId: string) {
+    setActiveImageSlotId(slotId);
     setMediaSourceMode("generate");
     setGeneratorPrompt("");
     setGeneratorReference(null);
@@ -476,8 +537,7 @@ export function NewAdDialog({
   }
 
   function selectLibraryImage(asset: ImageLibraryAsset) {
-    setImageDataUrl(asset.src);
-    setImageName(asset.label);
+    setSlotImage(activeImageSlot.id, asset.src, asset.label);
     setMediaSourceMode("details");
     setError("");
   }
@@ -559,8 +619,7 @@ export function NewAdDialog({
 
   function useGeneratedImage(option: GeneratedImageOption) {
     const label = option.index === undefined ? "Generated image" : `Generated image ${option.index + 1}`;
-    setImageDataUrl(option.image);
-    setImageName(label);
+    setSlotImage(activeImageSlot.id, option.image, label);
     rememberLibraryAsset({ src: option.image, label, type: "AI generated", ratio: "Image", role: "background" });
     void registerGeneratedImageAsAsset(brandKit.brandKitId, option.image);
     setMediaSourceMode("details");
@@ -569,7 +628,7 @@ export function NewAdDialog({
 
   async function submit() {
     const trimmed = description.trim();
-    const blockers = buildRequirementBlockers({ description, hasImage: Boolean(imageDataUrl), uploadingImage });
+    const blockers = buildRequirementBlockers({ description, missingImageLabels, uploadingImage });
     if (blockers.length > 0) {
       setShowRequirementsAlert(true);
       setError("");
@@ -598,7 +657,8 @@ export function NewAdDialog({
         referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
         imageDataUrl,
-        formats: ["9:16", "4:5", "1:1"],
+        imageDataUrls,
+        formats: FIRST_AD_FORMATS,
       });
       onClose();
     } catch (caught) {
@@ -625,9 +685,9 @@ export function NewAdDialog({
     step !== "brief"
       ? "Pick a starting point. You can change everything later."
       : mediaSourceMode === "library"
-        ? "Select an image for this ad."
+        ? `Select an image for ${activeImageSlot.label}.`
         : mediaSourceMode === "generate"
-          ? "Generate an image, then use it in this ad."
+          ? `Generate an image for ${activeImageSlot.label}.`
           : "Blockwise will generate Story, Feed, and Square.";
 
   return (
@@ -653,7 +713,7 @@ export function NewAdDialog({
             {step === "source" ? (
               <p>Pick a starting layout, then edit the media and text on the canvas.</p>
             ) : mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
-              <p>Ad image</p>
+              <p>{activeImageSlot.label}</p>
             ) : null}
           </div>
           <button className="studio-newad-x" type="button" aria-label="Close" onClick={closeCurrentView}>
@@ -792,38 +852,50 @@ export function NewAdDialog({
             <div className="studio-newad-own">
               {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{trialCreditNote}</p>}
               <div className="studio-newad-upload-group">
-                <AssetUploadDropzone
-                  className="studio-newad-upload"
-                  label="Upload one image"
-                  actionText="Upload one image"
-                  helperText="JPG, PNG, or WebP / up to 8 MB"
-                  previewUrl={imageDataUrl}
-                  previewAlt=""
-                  fileName={imageName}
-                  acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                  maxBytes={AD_IMAGE_MAX_BYTES}
-                  typeError="Use a JPG, PNG, or WebP image."
-                  sizeError="Use an image under 8 MB."
-                  capturePagePaste
-                  onFileAccepted={selectImage}
-                  onFileRejected={setError}
-                  onClear={() => {
-                    setImageDataUrl("");
-                    setImageName("");
-                    setError("");
-                    setUploadingImage(false);
-                  }}
-                />
-                <div className="studio-newad-media-actions" aria-label="Image source options">
-                  <button type="button" onClick={openLibrary}>
-                    <ImageIcon aria-hidden size={16} />
-                    Choose from library
-                  </button>
-                  <button type="button" onClick={openGenerator}>
-                    <Sparkles aria-hidden size={16} />
-                    Generate image
-                  </button>
-                </div>
+                {imageRequirements.map((slot) => (
+                  <div className="studio-newad-image-slot" key={slot.id}>
+                    {imageRequirements.length > 1 && (
+                      <div className="studio-newad-image-slot-head">
+                        <span>
+                          <strong>{slot.label}</strong>
+                          {slot.guidance ? <small>{slot.guidance}</small> : null}
+                        </span>
+                        {slot.required ? <em>Required</em> : null}
+                      </div>
+                    )}
+                    <AssetUploadDropzone
+                      className="studio-newad-upload"
+                      label={imageRequirements.length > 1 ? slot.label : "Upload one image"}
+                      actionText={uploadActionText(slot, imageRequirements.length)}
+                      helperText="JPG, PNG, or WebP / up to 8 MB"
+                      previewUrl={imageDataUrlsBySlot[slot.id] ?? ""}
+                      previewAlt=""
+                      fileName={imageNamesBySlot[slot.id] ?? ""}
+                      acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+                      maxBytes={AD_IMAGE_MAX_BYTES}
+                      typeError="Use a JPG, PNG, or WebP image."
+                      sizeError="Use an image under 8 MB."
+                      capturePagePaste
+                      onFileAccepted={(file) => selectImage(file, slot.id)}
+                      onFileRejected={setError}
+                      onClear={() => {
+                        clearSlotImage(slot.id);
+                        setError("");
+                        setUploadingImage(false);
+                      }}
+                    />
+                    <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
+                      <button type="button" onClick={() => openLibrary(slot.id)}>
+                        <ImageIcon aria-hidden size={16} />
+                        Choose from library
+                      </button>
+                      <button type="button" onClick={() => openGenerator(slot.id)}>
+                        <Sparkles aria-hidden size={16} />
+                        Generate image
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
               <label className="studio-newad-field">
                 <span>Short description</span>
@@ -954,6 +1026,45 @@ export function NewAdDialog({
   );
 }
 
+function imageRequirementsForTemplate(
+  template: AdStudioTemplate | undefined,
+  isBlank: boolean,
+): TemplateImageRequirement[] {
+  if (isBlank || !template) return [DEFAULT_IMAGE_SLOT];
+
+  const byId = new Map<string, TemplateImageRequirement>();
+  for (const format of FIRST_AD_FORMATS) {
+    const design = template.designs?.[format];
+    for (const layer of design?.layers ?? []) {
+      if (layer.type !== "image_slot") continue;
+      if (byId.has(layer.id)) continue;
+      byId.set(layer.id, {
+        id: layer.id,
+        label: layer.editorLabel?.trim() || imageSlotLabel(layer.id, layer.role),
+        guidance: layer.guidance,
+        role: layer.role,
+        required: layer.required !== false,
+      });
+    }
+  }
+
+  return byId.size > 0 ? Array.from(byId.values()) : [DEFAULT_IMAGE_SLOT];
+}
+
+function imageSlotLabel(id: string, role: TemplateImageRequirement["role"]): string {
+  if (role === "primary") return "Primary property image";
+  if (role === "agent_headshot") return "Agent headshot";
+  if (id.includes("secondary")) return "Secondary property image";
+  return "Supporting property image";
+}
+
+function uploadActionText(slot: TemplateImageRequirement, slotCount: number): string {
+  if (slotCount <= 1) return "Upload one image";
+  if (slot.role === "primary") return "Upload primary image";
+  if (slot.role === "agent_headshot") return "Upload headshot";
+  return "Upload supporting image";
+}
+
 function toReuseAd(row: Record<string, unknown>): ReuseAd | null {
   const id = String(row.id ?? row.campaign_id ?? "");
   if (!id) return null;
@@ -1039,7 +1150,7 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
 
 function buildRequirementBlockers(input: {
   description: string;
-  hasImage: boolean;
+  missingImageLabels: string[];
   uploadingImage: boolean;
 }): RequirementBlocker[] {
   const blockers: RequirementBlocker[] = [];
@@ -1053,11 +1164,14 @@ function buildRequirementBlockers(input: {
     });
   }
 
-  if (!input.hasImage) {
+  if (input.missingImageLabels.length > 0) {
     blockers.push({
       id: "missing_image",
       target: "images",
-      message: "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.",
+      message:
+        input.missingImageLabels.length === 1
+          ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file, choose from library, or generate an image.`
+          : `Add the required images before generating the ad: ${input.missingImageLabels.join(", ")}.`,
     });
   }
 
@@ -1147,7 +1261,13 @@ const EXPLORE_STYLES = `
 .studio-explore-use.ghost:hover{background:var(--accent-tint)}
 .studio-explore-msg{grid-column:1/-1;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:18px;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-explore-msg a{color:var(--accent);font-weight:650}
-.studio-newad-upload-group{display:grid;gap:8px}
+.studio-newad-upload-group{display:grid;gap:14px}
+.studio-newad-image-slot{display:grid;gap:8px}
+.studio-newad-image-slot-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.studio-newad-image-slot-head span{display:grid;gap:3px;min-width:0}
+.studio-newad-image-slot-head strong{font-size:13px;font-weight:750;color:var(--ink);line-height:1.25}
+.studio-newad-image-slot-head small{font-size:12px;color:var(--muted);line-height:1.35}
+.studio-newad-image-slot-head em{font-style:normal;font-size:11px;font-weight:750;color:#47627d;background:#eef4fb;border-radius:999px;padding:3px 8px;white-space:nowrap}
 .studio-newad-media-actions{display:flex;gap:8px;flex-wrap:wrap}
 .studio-newad-media-actions button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-media-actions button:hover{background:var(--accent-tint);border-color:#cfe0f3;color:var(--accent)}

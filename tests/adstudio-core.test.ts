@@ -371,6 +371,65 @@ test("template first-ad generation uses prepared photo assets per creative forma
   assert.notEqual(imageByFormat["9:16"], imageByFormat["4:5"]);
 });
 
+test("template first-ad generation binds uploaded images to matching template slots", () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: {
+      "https://northstar.example": sampleHtml,
+    },
+  });
+  const template = resolveAdStudioTemplate("meta_004");
+  const primaryImage = "data:image/png;base64,primary";
+  const secondaryImage = "data:image/png;base64,secondary";
+  const preparedFeedImage = "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Ffeed.png";
+  const preparedSquareImage = "/api/adstudio/media?path=workspace_demo%2Fadstudio%2Fphoto-prep%2Fsquare.png";
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "appraisal_bookings",
+    suburb: "North Perth",
+    city: "Perth",
+    state: "WA",
+    offerId: "home_value_update",
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: template.templateKey ?? template.id,
+      description: "Free appraisal card with a hero exterior and detail photo.",
+      imageDataUrl: primaryImage,
+      imageDataUrls: {
+        primary_photo: primaryImage,
+        secondary_photo: secondaryImage,
+      },
+      formats: ["9:16", "4:5", "1:1"],
+    },
+    resolvedTemplate: template,
+    sourceImagesByFormat: {
+      "4:5": preparedFeedImage,
+      "1:1": preparedSquareImage,
+    },
+  });
+
+  const feed = pack.creatives.find((creative) => creative.format === "4:5");
+  const square = pack.creatives.find((creative) => creative.format === "1:1");
+  const story = pack.creatives.find((creative) => creative.format === "9:16");
+  assert.ok(feed);
+  assert.ok(square);
+  assert.ok(story);
+
+  assert.equal(feed.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, preparedFeedImage);
+  assert.equal(feed.canvas.objects.find((object) => object.objectId === "secondary_photo")?.content, secondaryImage);
+  assert.equal(square.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, preparedSquareImage);
+  assert.equal(square.canvas.objects.find((object) => object.objectId === "secondary_photo")?.content, secondaryImage);
+  assert.equal(story.canvas.objects.find((object) => object.objectId === "primary_photo")?.content, primaryImage);
+  assert.equal(story.canvas.objects.some((object) => object.objectId === "secondary_photo"), false);
+});
+
 test("template first-ad generation derives offer fields from the selected template", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",

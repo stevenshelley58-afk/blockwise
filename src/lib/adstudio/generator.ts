@@ -38,6 +38,7 @@ export type GenerateCampaignPackInput = {
   firstAd?: FirstAdInput;
   sourceImageDataUrl?: string;
   sourceImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
+  sourceImagesBySlot?: Partial<Record<string, string>>;
   resolvedTemplate?: AdStudioTemplate | null;
 };
 
@@ -155,6 +156,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       format,
       template,
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
+      sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
       subheadline: copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -939,6 +941,7 @@ function buildCreative(input: {
   format: AdStudioFormat;
   template: AdStudioTemplate | null;
   sourceImageDataUrl?: string;
+  sourceImagesBySlot?: Partial<Record<string, string>>;
   subheadline?: string;
 }): AdStudioCreative {
   const design = resolveTemplateDesignForFormat(input.template, input.format);
@@ -953,7 +956,7 @@ function buildCreative(input: {
         phone: input.brandKit.contact.phone ?? "",
         handle: input.brandKit.identity.tradingName || input.brandKit.identity.businessName,
       },
-      images: imageBindingsForDesign(design, input.sourceImageDataUrl),
+      images: imageBindingsForDesign(design, input.sourceImageDataUrl, input.sourceImagesBySlot),
     };
 
     return renderDesign(design, content, input.brandKit, {
@@ -980,18 +983,28 @@ function buildCreative(input: {
 function imageBindingsForDesign(
   design: TemplateDesign,
   sourceImageDataUrl: string | undefined,
+  sourceImagesBySlot: Partial<Record<string, string>> | undefined,
 ): BoundTemplateContent["images"] {
-  if (!sourceImageDataUrl) return undefined;
+  if (!sourceImageDataUrl && !sourceImagesBySlot) return undefined;
 
   const bindings: NonNullable<BoundTemplateContent["images"]> = {
-    primary: sourceImageDataUrl,
-    primary_photo: sourceImageDataUrl,
+    ...(sourceImageDataUrl
+      ? {
+          primary: sourceImageDataUrl,
+          primary_photo: sourceImageDataUrl,
+        }
+      : {}),
   };
 
   for (const layer of design.layers) {
     if (layer.type !== "image_slot") continue;
-    bindings[layer.id] = sourceImageDataUrl;
-    bindings[layer.role] = sourceImageDataUrl;
+    const slotImage =
+      layer.role === "primary"
+        ? sourceImageDataUrl ?? sourceImagesBySlot?.[layer.id] ?? sourceImagesBySlot?.[layer.role]
+        : sourceImagesBySlot?.[layer.id] ?? sourceImagesBySlot?.[layer.role] ?? sourceImageDataUrl;
+    if (!slotImage) continue;
+    bindings[layer.id] = slotImage;
+    bindings[layer.role] = slotImage;
   }
 
   return bindings;

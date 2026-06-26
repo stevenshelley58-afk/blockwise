@@ -102,6 +102,11 @@ export async function POST(request: NextRequest) {
     if (!isAdStudioImageSrc(firstAd.imageDataUrl)) {
       return NextResponse.json({ error: "An uploaded image is required." }, { status: 400 });
     }
+    for (const slotImage of Object.values(firstAd.imageDataUrls ?? {})) {
+      if (slotImage && !isAdStudioImageSrc(slotImage)) {
+        return NextResponse.json({ error: "One of the selected template images is invalid." }, { status: 400 });
+      }
+    }
     if (!(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
       return NextResponse.json({ error: "Selected template was not found." }, { status: 400 });
     }
