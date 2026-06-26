@@ -23,6 +23,10 @@ on:
         description: "Maximum isolated Codex template jobs to run at once."
         required: false
         default: "5"
+      codex_model:
+        description: "Codex model for isolated template workers and batch integrator."
+        required: false
+        default: "gpt-5.5"
 
 permissions:
   contents: write
@@ -145,6 +149,7 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-${{ matrix.candidate_id }}.md
           prompt: |
@@ -241,6 +246,7 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-integrator.md
           prompt-file: .github/codex/prompts/adstudio-template-integrator.md

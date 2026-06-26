@@ -27,6 +27,10 @@ on:
         description: "Maximum isolated Codex jobs inside each batch workflow."
         required: false
         default: "5"
+      codex_model:
+        description: "Codex model for canary, workers, and integrator."
+        required: false
+        default: "gpt-5.5"
       dry_run:
         description: "Print the dispatch commands without starting template jobs."
         required: false
@@ -72,6 +76,7 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: ${{ inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-quota-canary.md
           prompt: |
@@ -93,6 +98,7 @@ jobs:
             --batch-size "${{ inputs.batch_size }}"
             --output-prefix "${{ inputs.output_prefix }}"
             --max-parallel "${{ inputs.max_parallel }}"
+            --codex-model "${{ inputs.codex_model }}"
           )
           if [ "$DRY_RUN" = "true" ]; then
             args+=(--dry-run)
