@@ -13,6 +13,10 @@ test("template cloud orchestrator runs one Codex canary before dispatching batch
   assert.ok(dispatchIndex > canaryIndex, "batch dispatch should happen after the quota canary");
   assert.match(orchestrator, /uses:\s+openai\/codex-action@v1/u);
   assert.match(orchestrator, /CODEX_TEMPLATE_BATCH_CANARY_READY/u);
+  assert.match(orchestrator, /codex_provider:/u);
+  assert.match(orchestrator, /OPENROUTER_API_KEY/u);
+  assert.match(orchestrator, /responses-api-endpoint:\s+\$\{\{ inputs\.codex_provider == 'openrouter' && 'https:\/\/openrouter\.ai\/api\/v1\/responses' \|\| '' \}\}/u);
+  assert.match(orchestrator, /--codex-provider "\$\{\{ inputs\.codex_provider \}\}"/u);
   assert.match(orchestrator, /codex_model:/u);
   assert.match(orchestrator, /model:\s+\$\{\{ inputs\.codex_model \}\}/u);
   assert.match(orchestrator, /--codex-model "\$\{\{ inputs\.codex_model \}\}"/u);
@@ -26,6 +30,9 @@ test("template cloud orchestrator still allows dry-run dispatch without consumin
 });
 
 test("template cloud build pins worker and integrator Codex runs to the requested model", () => {
+  assert.match(buildWorkflow, /codex_provider:/u);
+  assert.match(buildWorkflow, /OPENROUTER_API_KEY/u);
+  assert.match(buildWorkflow, /responses-api-endpoint:\s+\$\{\{ github\.event\.inputs\.codex_provider == 'openrouter' && 'https:\/\/openrouter\.ai\/api\/v1\/responses' \|\| '' \}\}/u);
   assert.match(buildWorkflow, /codex_model:/u);
   assert.match(buildWorkflow, /model:\s+\$\{\{ github\.event\.inputs\.codex_model \}\}/u);
 });

@@ -49,6 +49,7 @@ test("cloud template dispatcher builds workflow_dispatch arguments for each batc
         repo: "stevenshelley58-afk/blockwise",
         workflow: "adstudio-template-cloud-build.yml",
         targetRef: "feat/audit-intel-report",
+        codexProvider: "openrouter",
         codexModel: "gpt-5.4-mini",
       },
       batch,
@@ -70,6 +71,8 @@ test("cloud template dispatcher builds workflow_dispatch arguments for each batc
       "-f",
       "max_parallel=3",
       "-f",
+      "codex_provider=openrouter",
+      "-f",
       "codex_model=gpt-5.4-mini",
     ],
   );
@@ -82,6 +85,18 @@ test("cloud template dispatcher validates candidate and parallelism bounds", () 
   );
   assert.throws(() => buildTemplateCloudBatches({ batchSize: 51 }), /batchSize must be between 1 and 50/u);
   assert.throws(() => buildTemplateCloudBatches({ maxParallel: 21 }), /maxParallel must be between 1 and 20/u);
+  assert.throws(
+    () => buildWorkflowRunArgs(
+      {
+        repo: "stevenshelley58-afk/blockwise",
+        workflow: "adstudio-template-cloud-build.yml",
+        targetRef: "feat/audit-intel-report",
+        codexProvider: "other",
+      },
+      buildTemplateCloudBatches({ totalCount: 1 })[0],
+    ),
+    /codexProvider must be openai or openrouter/u,
+  );
 });
 
 test("cloud template dispatcher dry-runs without calling gh", () => {
@@ -122,6 +137,8 @@ test("cloud template dispatcher parses CLI options", () => {
       "codex/batch",
       "--max-parallel",
       "4",
+      "--codex-provider",
+      "openrouter",
       "--codex-model",
       "gpt-5.4-mini",
       "--dry-run",
@@ -135,6 +152,7 @@ test("cloud template dispatcher parses CLI options", () => {
       batchSize: "10",
       outputPrefix: "codex/batch",
       maxParallel: "4",
+      codexProvider: "openrouter",
       codexModel: "gpt-5.4-mini",
       dryRun: true,
     },

@@ -27,6 +27,14 @@ on:
         description: "Maximum isolated Codex jobs inside each batch workflow."
         required: false
         default: "5"
+      codex_provider:
+        description: "Provider for Codex runs."
+        required: false
+        type: choice
+        options:
+          - openai
+          - openrouter
+        default: "openai"
       codex_model:
         description: "Codex model for canary, workers, and integrator."
         required: false
@@ -62,20 +70,39 @@ jobs:
       - name: Check Codex runner secret
         id: codex_secret
         env:
+          CODEX_PROVIDER: ${{ inputs.codex_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "::warning title=OPENAI_API_KEY missing::Add the repository secret before dispatching Codex template workers."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
+          case "$CODEX_PROVIDER" in
+            openai)
+              if [ -z "$OPENAI_API_KEY" ]; then
+                echo "::warning title=OPENAI_API_KEY missing::Add the repository secret before dispatching Codex template workers."
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+              else
+                echo "ready=true" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            openrouter)
+              if [ -z "$OPENROUTER_API_KEY" ]; then
+                echo "::warning title=OPENROUTER_API_KEY missing::Add the repository secret before dispatching OpenRouter Codex template workers."
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+              else
+                echo "ready=true" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            *)
+              echo "::error title=Unsupported Codex provider::Use openai or openrouter."
+              exit 1
+              ;;
+          esac
 
       - name: Run Codex quota canary
         if: steps.codex_secret.outputs.ready == 'true' && inputs.dry_run == false
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ inputs.codex_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ inputs.codex_provider == 'openrouter' && 'https://openrouter.ai/api/v1/responses' || '' }}
           model: ${{ inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-quota-canary.md
@@ -98,6 +125,7 @@ jobs:
             --batch-size "${{ inputs.batch_size }}"
             --output-prefix "${{ inputs.output_prefix }}"
             --max-parallel "${{ inputs.max_parallel }}"
+            --codex-provider "${{ inputs.codex_provider }}"
             --codex-model "${{ inputs.codex_model }}"
           )
           if [ "$DRY_RUN" = "true" ]; then

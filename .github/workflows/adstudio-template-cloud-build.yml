@@ -23,6 +23,14 @@ on:
         description: "Maximum isolated Codex template jobs to run at once."
         required: false
         default: "5"
+      codex_provider:
+        description: "Provider for isolated Codex template workers and batch integrator."
+        required: false
+        type: choice
+        options:
+          - openai
+          - openrouter
+        default: "openai"
       codex_model:
         description: "Codex model for isolated template workers and batch integrator."
         required: false
@@ -140,15 +148,23 @@ jobs:
           }
           NODE
 
-      - name: Require OpenAI API key
+      - name: Require Codex API key
         env:
+          CODEX_PROVIDER: ${{ github.event.inputs.codex_provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: test -n "$OPENAI_API_KEY"
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          case "$CODEX_PROVIDER" in
+            openai) test -n "$OPENAI_API_KEY" ;;
+            openrouter) test -n "$OPENROUTER_API_KEY" ;;
+            *) echo "Unsupported Codex provider: $CODEX_PROVIDER" >&2; exit 1 ;;
+          esac
 
       - name: Run isolated Codex template worker
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ github.event.inputs.codex_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ github.event.inputs.codex_provider == 'openrouter' && 'https://openrouter.ai/api/v1/responses' || '' }}
           model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-${{ matrix.candidate_id }}.md
@@ -245,7 +261,8 @@ jobs:
       - name: Let Codex repair batch contract issues
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ github.event.inputs.codex_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ github.event.inputs.codex_provider == 'openrouter' && 'https://openrouter.ai/api/v1/responses' || '' }}
           model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
           output-file: codex-integrator.md
