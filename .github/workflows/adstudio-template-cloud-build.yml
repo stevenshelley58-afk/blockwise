@@ -307,11 +307,20 @@ jobs:
           set -euo pipefail
           existing="$(gh pr list --head "$OUTPUT_BRANCH" --json number --jq '.[0].number // empty')"
           if [ -n "$existing" ]; then
-            gh pr comment "$existing" --body "Updated with cloud-generated standalone Ad Studio templates from run $GITHUB_RUN_ID."
+            if ! gh pr comment "$existing" --body "Updated with cloud-generated standalone Ad Studio templates from run $GITHUB_RUN_ID."; then
+              echo "::warning title=Unable to update template PR::The generated branch was pushed, but GitHub Actions could not comment on PR #$existing."
+            fi
           else
-            gh pr create \
+            pr_url="$(gh pr create \
               --head "$OUTPUT_BRANCH" \
               --base "${GITHUB_REF_NAME}" \
               --title "Promote cloud-generated Ad Studio templates" \
-              --body "Cloud Codex workflow generated standalone template modules in isolated per-template jobs, synced the registry, rendered sample cards, and ran focused template checks."
+              --body "Cloud Codex workflow generated standalone template modules in isolated per-template jobs, synced the registry, rendered sample cards, and ran focused template checks." 2>pr-create-error.log || true)"
+            if [ -n "$pr_url" ]; then
+              echo "$pr_url"
+            else
+              error="$(cat pr-create-error.log)"
+              echo "::warning title=Template branch pushed without PR::$error"
+              echo "Create PR manually: https://github.com/${GITHUB_REPOSITORY}/pull/new/${OUTPUT_BRANCH}"
+            fi
           fi

@@ -40,3 +40,8 @@ test("template cloud build pins worker and integrator Codex runs to the requeste
 test("template cloud build allows orchestrator-dispatched Codex workers to run as the actions bot", () => {
   assert.equal((buildWorkflow.match(/allow-bots:\s+true/gu) ?? []).length, 2);
 });
+
+test("template cloud build does not fail after pushing when GitHub blocks actions-created PRs", () => {
+  assert.match(buildWorkflow, /Template branch pushed without PR/u);
+  assert.match(buildWorkflow, /Create PR manually: https:\/\/github\.com\/\$\{GITHUB_REPOSITORY\}\/pull\/new\/\$\{OUTPUT_BRANCH\}/u);
+});
