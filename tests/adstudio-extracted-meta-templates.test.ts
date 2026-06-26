@@ -20,7 +20,11 @@ import { imageDimensionsFromBytes } from "../src/lib/adstudio/image-dimensions.t
 import type { AdStudioFormat } from "../src/lib/adstudio/types.ts";
 
 const FORMATS = ["9:16", "4:5", "1:1"] as const satisfies readonly AdStudioFormat[];
-const PROMOTED_META_TEMPLATE_IDS = new Set(["meta_002", "meta_021", "meta_040", "meta_044", "meta_055"]);
+const PROMOTED_META_TEMPLATE_IDS = new Set(
+  GOLD_AD_STUDIO_TEMPLATES
+    .map((template) => template.id)
+    .filter((id) => id.startsWith("meta_")),
+);
 
 function brandKit() {
   return buildTrialFallbackBrandKit({

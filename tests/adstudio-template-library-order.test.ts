@@ -12,28 +12,13 @@ import {
   resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
 } from "../src/lib/adstudio/templates.ts";
+import { GOLD_AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/gold-adstudio-templates.ts";
 
 const fixture = JSON.parse(readFileSync("tests/fixtures/adstudio-template-engine-foundation.json", "utf8")) as {
   creativeSkeletons: unknown[];
 };
 const skeleton = creativeSkeletonSchema.parse(fixture.creativeSkeletons[0]);
-const visibleGoldTemplateIds = [
-  "gold_home_buyer_tips",
-  "gold_interior_design_collage",
-  "gold_market_types_table",
-  "gold_elevate_residences",
-  "gold_luxury_apartment_showcase",
-  "gold_luxury_villa_night",
-  "gold_elevated_living_editorial",
-  "gold_dream_home_brand",
-  "gold_house_for_rent_blue",
-  "gold_first_buyer_notes",
-  "meta_002",
-  "meta_021",
-  "meta_040",
-  "meta_044",
-  "meta_055",
-];
+const visibleGoldTemplateIds = GOLD_AD_STUDIO_TEMPLATES.map((template) => template.id);
 
 function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
   return {
