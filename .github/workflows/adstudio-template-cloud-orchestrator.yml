@@ -67,6 +67,17 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Run Codex quota canary
+        if: steps.codex_secret.outputs.ready == 'true' && inputs.dry_run == false
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          output-file: codex-quota-canary.md
+          prompt: |
+            Return exactly this text and do not edit files:
+            CODEX_TEMPLATE_BATCH_CANARY_READY
+
       - name: Dispatch cloud template batches
         if: steps.codex_secret.outputs.ready == 'true'
         env:
