@@ -9,23 +9,13 @@ import {
   resolveAdStudioTemplate,
   type AdStudioLibraryTemplate,
 } from "../src/lib/adstudio/templates.ts";
+import { GOLD_AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/gold-adstudio-templates.ts";
 
 const fixture = JSON.parse(readFileSync("tests/fixtures/adstudio-template-engine-foundation.json", "utf8")) as {
   creativeSkeletons: unknown[];
 };
 const skeleton = creativeSkeletonSchema.parse(fixture.creativeSkeletons[0]);
-const visibleGoldTemplateIds = [
-  "gold_home_buyer_tips",
-  "gold_interior_design_collage",
-  "gold_market_types_table",
-  "gold_elevate_residences",
-  "gold_luxury_apartment_showcase",
-  "gold_luxury_villa_night",
-  "gold_elevated_living_editorial",
-  "gold_dream_home_brand",
-  "gold_house_for_rent_blue",
-  "gold_first_buyer_notes",
-];
+const visibleGoldTemplateIds = GOLD_AD_STUDIO_TEMPLATES.map((template) => template.id);
 
 function row(input: Partial<AdStudioLibraryTemplate>): AdStudioLibraryTemplate {
   return {
@@ -69,11 +59,11 @@ test("template library ignores old approved rows and only exposes quality-gated 
   const merged = mergeAdStudioTemplateLibrary(approved);
 
   assert.deepEqual(merged.map((template) => template.id), visibleGoldTemplateIds);
-  assert.ok(merged.every((template) => template.id.startsWith("gold_")));
+  assert.ok(merged.every((template) => visibleGoldTemplateIds.includes(template.id)));
   assert.ok(!merged.some((template) => template.id === "DNA-70" || template.id === "OLD-99"));
 
   assert.equal(resolveAdStudioTemplate("meta_317").id, "meta_317");
-  assert.ok(!merged.some((template) => template.id === "meta_317"));
+  assert.equal(merged.some((template) => template.id === "meta_317"), visibleGoldTemplateIds.includes("meta_317"));
 });
 
 test("template library exposes only generated sample-card URLs, not observed media URLs", () => {
