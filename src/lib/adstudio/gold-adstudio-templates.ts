@@ -10,6 +10,7 @@ import { elevatedLivingEditorialSample, elevatedLivingEditorialTemplate } from "
 import { dreamHomeBrandSample, dreamHomeBrandTemplate } from "./gold-templates/dream-home-brand.ts";
 import { houseForRentBlueSample, houseForRentBlueTemplate } from "./gold-templates/house-for-rent-blue.ts";
 import { firstBuyerNotesSample, firstBuyerNotesTemplate } from "./gold-templates/first-buyer-notes.ts";
+import { meta001Sample, meta001Template } from "./gold-templates/meta-001.ts";
 import { meta002Sample, meta002Template } from "./gold-templates/meta-002.ts";
 import { meta021Sample, meta021Template } from "./gold-templates/meta-021.ts";
 import { meta040Sample, meta040Template } from "./gold-templates/meta-040.ts";
@@ -35,6 +36,7 @@ export const GOLD_AD_STUDIO_TEMPLATES: AdStudioTemplate[] = [
   dreamHomeBrandTemplate,
   houseForRentBlueTemplate,
   firstBuyerNotesTemplate,
+  meta001Template,
   meta002Template,
   meta021Template,
   meta040Template,
@@ -53,6 +55,7 @@ export const GOLD_TEMPLATE_RENDER_SAMPLES: Record<string, GoldTemplateRenderSamp
   [dreamHomeBrandTemplate.id]: dreamHomeBrandSample,
   [houseForRentBlueTemplate.id]: houseForRentBlueSample,
   [firstBuyerNotesTemplate.id]: firstBuyerNotesSample,
+  [meta001Template.id]: meta001Sample,
   [meta002Template.id]: meta002Sample,
   [meta021Template.id]: meta021Sample,
   [meta040Template.id]: meta040Sample,

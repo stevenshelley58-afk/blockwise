@@ -82,6 +82,7 @@ function meta040Designs(): TemplateDesignSet {
       text("feature_three", "stat", b(0.55, 0.334, 0.17, 0.036), 15, PALETTE[1], "static", "GRAND LIVING", 20, "center", FONTS[1], 850, 1.05),
       text("feature_four", "stat", b(0.75, 0.334, 0.12, 0.036), 15, PALETTE[1], "static", "POOL", 12, "center", FONTS[1], 850, 1.05),
       image("primary_photo", b(0.08, 0.39, 0.84, 0.37), "primary", "center"),
+      image("secondary_photo", b(0.58, 0.615, 0.28, 0.13), "secondary", "center"),
       shape("footer_panel", b(0.08, 0.755, 0.84, 0.1), PALETTE[4], "panel", 2),
       text("phone", "phone", b(0.12, 0.785, 0.25, 0.035), 15, PALETTE[2], "static", "+123-456-7890", 18, "left", FONTS[1], 650, 1),
       cta("cta", b(0.41, 0.782, 0.22, 0.046), PALETTE[0], PALETTE[1], 999, 17),
@@ -107,6 +108,7 @@ function meta040Designs(): TemplateDesignSet {
     "1:1": design("1:1", [
       shape("background", b(0.02, 0.02, 0.96, 0.94), PALETTE[3], "background", 34),
       shape("header_curve", b(0.02, 0.02, 0.96, 0.42), PALETTE[0], "panel", 34),
+      text("eyebrow", "eyebrow", b(0.22, 0.065, 0.56, 0.038), 18, PALETTE[1], "static", "NEW RELEASE", 26, "center", FONTS[1], 800, 1),
       text("headline", "headline", b(0.22, 0.085, 0.56, 0.145), 58, PALETTE[1], "ai_copy", undefined, 54, "center", FONTS[0], 760, 1.02),
       shape("rule", b(0.44, 0.268, 0.12, 0.004), PALETTE[1], "band", 999),
       text("body", "body", b(0.18, 0.292, 0.64, 0.052), 19, PALETTE[1], "ai_copy", undefined, 82, "center", FONTS[1], 520, 1.18),
@@ -115,6 +117,7 @@ function meta040Designs(): TemplateDesignSet {
       text("feature_three", "stat", b(0.58, 0.38, 0.16, 0.045), 14, PALETTE[1], "static", "GRAND LIVING", 20, "center", FONTS[1], 850, 1.05),
       text("feature_four", "stat", b(0.78, 0.38, 0.08, 0.045), 14, PALETTE[1], "static", "POOL", 12, "center", FONTS[1], 850, 1.05),
       image("primary_photo", b(0.08, 0.44, 0.84, 0.35), "primary", "center"),
+      image("secondary_photo", b(0.56, 0.62, 0.28, 0.135), "secondary", "center"),
       shape("footer_panel", b(0.08, 0.8, 0.84, 0.105), PALETTE[4], "panel", 2),
       text("phone", "phone", b(0.12, 0.836, 0.25, 0.03), 13, PALETTE[2], "static", "+123-456-7890", 18, "left", FONTS[1], 650, 1),
       cta("cta", b(0.39, 0.828, 0.22, 0.05), PALETTE[0], PALETTE[1], 999, 16),
