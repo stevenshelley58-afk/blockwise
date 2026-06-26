@@ -124,6 +124,11 @@ export {
   type TextSlot,
 } from "./template-design.ts";
 export {
+  resolveTemplateMediaSlots,
+  type TemplateMediaSlot,
+  type TemplateMediaSlotRole,
+} from "./template-media-slots.ts";
+export {
   createDeterministicImageProvider,
   createDeterministicTextProvider,
   createDeterministicVisionProvider,

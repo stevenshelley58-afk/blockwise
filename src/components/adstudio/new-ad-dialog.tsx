@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
-import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { resolveTemplateMediaSlots, type AdStudioBrandKit, type AdStudioTemplate, type FirstAdInput, type TemplateMediaSlot } from "@/lib/adstudio";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
@@ -15,13 +15,6 @@ type Step = "source" | "brief";
 type ExploreTab = "templates" | "myads" | "research";
 type TemplateFilter = "all" | "new" | "listings" | "appraisals" | "market" | "sold";
 type MediaSourceMode = "details" | "library" | "generate";
-type TemplateImageUploadSlot = {
-  id: string;
-  label: string;
-  role: "primary" | "secondary" | "agent_headshot";
-  required: boolean;
-  defaultUrl?: string;
-};
 type ImageLibraryAsset = {
   src: string;
   label: string;
@@ -167,13 +160,20 @@ export function NewAdDialog({
   const preloadKeyRef = useRef("");
   const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
-  const uploadSlots = imageUploadSlotsForTemplate(selectedTemplate, brandKit);
+  const uploadSlots = resolveTemplateMediaSlots({ template: selectedTemplate, brandKit });
   const resolvedImageSlotDataUrls = resolvedSlotDataUrls(uploadSlots, imageSlotDataUrls);
   const primarySlotId = uploadSlots[0]?.id ?? "primary_photo";
   const activeUploadSlot = uploadSlots.find((slot) => slot.id === activeMediaSlotId) ?? uploadSlots[0];
+  const activeSlotIndex = Math.max(0, uploadSlots.findIndex((slot) => slot.id === activeUploadSlot?.id));
+  const libraryAssetsForActiveSlot = imageLibraryAssetsForSlot(dialogMediaAssets, activeUploadSlot);
   const imageDataUrl = resolvedImageSlotDataUrls[primarySlotId] ?? firstRecordValue(resolvedImageSlotDataUrls) ?? "";
   const imageDataUrls = uploadSlots.map((slot) => resolvedImageSlotDataUrls[slot.id]).filter((src): src is string => Boolean(src));
   const missingRequiredImageSlots = uploadSlots.filter((slot) => slot.required && !resolvedImageSlotDataUrls[slot.id]);
+  const requiredImageSlotCount = uploadSlots.filter((slot) => slot.required).length;
+  const filledRequiredImageSlotCount = requiredImageSlotCount - missingRequiredImageSlots.length;
+  const slotPreviewFormat = uploadSlots[0]?.previewFormat ?? "4:5";
+  const previewSlots = uploadSlots.filter((slot) => slot.previewFormat === slotPreviewFormat);
+  const slotRequirementNote = slotRequirementSummary(uploadSlots, isBlank);
 
   useEffect(() => {
     if (!open) return;
@@ -188,8 +188,8 @@ export function NewAdDialog({
     setTab(tabForStep(initialStep));
     setFilter("all");
     setDescription("");
-    // The customer supplies their own listing photo; the template drives the
-    // layout, copy and brand — never a pre-baked image.
+    // The customer supplies their own listing photo; the template drives layout,
+    // copy, and brand rather than using a pre-baked image.
     setImageSlotDataUrls({});
     setImageSlotNames({});
     setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
@@ -429,7 +429,14 @@ export function NewAdDialog({
       });
       setImageSlotDataUrls((current) => ({ ...current, [slotId]: uploaded.src }));
       setImageSlotNames((current) => ({ ...current, [slotId]: file.name }));
-      rememberLibraryAsset({ src: uploaded.src, label: file.name, type: "Uploaded", ratio: "Just now", role: "property" });
+      rememberLibraryAsset({
+        src: uploaded.src,
+        label: file.name,
+        type: "Uploaded",
+        ratio: "Just now",
+        role: mediaAssetRoleForSlot(uploadSlots.find((slot) => slot.id === slotId)),
+      });
+      setActiveMediaSlotId(nextEmptyRequiredSlotId(uploadSlots, { ...resolvedImageSlotDataUrls, [slotId]: uploaded.src }, slotId) ?? slotId);
       setError("");
     } catch (caught) {
       setImageSlotDataUrls((current) => {
@@ -465,9 +472,12 @@ export function NewAdDialog({
 
   function selectLibraryImage(asset: ImageLibraryAsset) {
     if (!activeUploadSlot) return;
+    const nextSlotDataUrls = { ...resolvedImageSlotDataUrls, [activeUploadSlot.id]: asset.src };
+    const nextSlotId = nextEmptyRequiredSlotId(uploadSlots, nextSlotDataUrls, activeUploadSlot.id);
     setImageSlotDataUrls((current) => ({ ...current, [activeUploadSlot.id]: asset.src }));
     setImageSlotNames((current) => ({ ...current, [activeUploadSlot.id]: asset.label }));
-    setMediaSourceMode("details");
+    setActiveMediaSlotId(nextSlotId ?? activeUploadSlot.id);
+    setMediaSourceMode(nextSlotId ? "library" : "details");
     setError("");
   }
 
@@ -552,8 +562,9 @@ export function NewAdDialog({
     const label = option.index === undefined ? "Generated image" : `Generated image ${option.index + 1}`;
     setImageSlotDataUrls((current) => ({ ...current, [activeUploadSlot.id]: option.image }));
     setImageSlotNames((current) => ({ ...current, [activeUploadSlot.id]: label }));
-    rememberLibraryAsset({ src: option.image, label, type: "AI generated", ratio: "Image", role: "background" });
+    rememberLibraryAsset({ src: option.image, label, type: "AI generated", ratio: "Image", role: mediaAssetRoleForSlot(activeUploadSlot) });
     void registerGeneratedImageAsAsset(brandKit.brandKitId, option.image);
+    setActiveMediaSlotId(nextEmptyRequiredSlotId(uploadSlots, { ...resolvedImageSlotDataUrls, [activeUploadSlot.id]: option.image }, activeUploadSlot.id) ?? activeUploadSlot.id);
     setMediaSourceMode("details");
     setError("");
   }
@@ -622,11 +633,17 @@ export function NewAdDialog({
 
   const footHint =
     step === "brief" && mediaSourceMode === "library"
-      ? "Select an image for this ad."
+      ? activeUploadSlot
+        ? `Select an image for ${activeUploadSlot.label.toLowerCase()}.`
+        : "Select an image for this ad."
       : step === "brief" && mediaSourceMode === "generate"
-        ? "Generate an image, then use it in this ad."
+        ? activeUploadSlot
+          ? `Generate an image for ${activeUploadSlot.label.toLowerCase()}, then use it in this ad.`
+          : "Generate an image, then use it in this ad."
         : step === "brief"
-          ? "Blockwise will generate Story, Feed, and Square."
+          ? missingRequiredImageSlots.length > 0
+            ? `${filledRequiredImageSlotCount}/${requiredImageSlotCount} required images selected.`
+            : "Blockwise will generate Story, Feed, and Square."
           : "Pick a starting point. You can change everything later.";
 
   return (
@@ -792,50 +809,101 @@ export function NewAdDialog({
           {step === "brief" && mediaSourceMode === "details" && (
             <div className="studio-newad-own">
               {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{trialCreditNote}</p>}
-              {uploadSlots.map((slot, index) => (
-                <div key={slot.id} className="studio-newad-upload-group">
-                  <AssetUploadDropzone
-                    className="studio-newad-upload"
-                    label={uploadSlots.length === 1 ? "Upload one image" : slot.label}
-                    actionText={uploadSlots.length === 1 ? "Upload one image" : "Upload image"}
-                    helperText={index === 0 ? "JPG, PNG, or WebP / up to 8 MB" : "Use a different property photo for this template slot."}
-                    previewUrl={imageSlotDataUrls[slot.id] ?? slot.defaultUrl ?? ""}
-                    previewAlt=""
-                    fileName={imageSlotNames[slot.id] ?? ""}
-                    acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                    maxBytes={AD_IMAGE_MAX_BYTES}
-                    typeError="Use a JPG, PNG, or WebP image."
-                    sizeError="Use an image under 8 MB."
-                    capturePagePaste={index === 0}
-                    onFileAccepted={(file) => selectImage(slot.id, file)}
-                    onFileRejected={setError}
-                    onClear={() => {
-                      setImageSlotDataUrls((current) => {
-                        const next = { ...current };
-                        delete next[slot.id];
-                        return next;
-                      });
-                      setImageSlotNames((current) => {
-                        const next = { ...current };
-                        delete next[slot.id];
-                        return next;
-                      });
-                      setError("");
-                      setUploadingImage(false);
-                    }}
-                  />
-                  <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
-                    <button type="button" onClick={() => openLibrary(slot.id)}>
-                      <ImageIcon aria-hidden size={16} />
-                      Choose from library
-                    </button>
-                    <button type="button" onClick={() => openGenerator(slot.id)}>
-                      <Sparkles aria-hidden size={16} />
-                      Generate image
-                    </button>
-                  </div>
+              <div className="studio-newad-media-plan">
+                {!isBlank && selectedTemplate ? (
+                  <aside className="studio-newad-template-map-card">
+                    <div className={`studio-newad-template-map format-${slotPreviewFormat.replace(/[.:]/g, "-")}`} aria-label="Template image slot map">
+                      <img src={templatePreviewSrc(selectedTemplate, brandKit)} alt="" loading="lazy" decoding="async" />
+                      {previewSlots.map((slot, index) => {
+                        const filled = Boolean(resolvedImageSlotDataUrls[slot.id]);
+                        const active = slot.id === activeUploadSlot?.id;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            className={`studio-newad-slot-pin${filled ? " filled" : ""}${active ? " active" : ""}`}
+                            style={{
+                              left: `${slot.rect.x * 100}%`,
+                              top: `${slot.rect.y * 100}%`,
+                              width: `${slot.rect.w * 100}%`,
+                              height: `${slot.rect.h * 100}%`,
+                            }}
+                            aria-label={`Select ${slot.label}`}
+                            onClick={() => setActiveMediaSlotId(slot.id)}
+                          >
+                            <span>{index + 1}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p>{slotRequirementNote}</p>
+                  </aside>
+                ) : null}
+
+                <div className="studio-newad-slot-list">
+                  {uploadSlots.map((slot, index) => {
+                    const filled = Boolean(resolvedImageSlotDataUrls[slot.id]);
+                    const uploaded = Boolean(imageSlotDataUrls[slot.id]);
+                    const active = slot.id === activeUploadSlot?.id;
+                    return (
+                      <section key={slot.id} className={`studio-newad-slot-card${active ? " active" : ""}`}>
+                        <button className="studio-newad-slot-card-head" type="button" onClick={() => setActiveMediaSlotId(slot.id)}>
+                          <span className="studio-newad-slot-number">{index + 1}</span>
+                          <span className="studio-newad-slot-title">
+                            <strong>{slot.label}</strong>
+                            <small>{slot.description}</small>
+                          </span>
+                          <span className={`studio-newad-slot-status${filled ? " filled" : ""}${slot.required ? "" : " optional"}`}>
+                            {filled ? (slot.defaultUrl && !uploaded ? "Brand kit" : "Filled") : slot.required ? "Required" : "Optional"}
+                          </span>
+                        </button>
+                        <AssetUploadDropzone
+                          className="studio-newad-upload"
+                          label={`${slot.label} upload`}
+                          actionText={filled ? "Replace image" : "Upload image"}
+                          helperText="JPG, PNG, or WebP / up to 8 MB"
+                          previewUrl={resolvedImageSlotDataUrls[slot.id] ?? ""}
+                          previewAlt=""
+                          fileName={imageSlotNames[slot.id] ?? defaultSlotFileName(slot, filled)}
+                          fileType={slot.role === "agent_headshot" ? "Headshot" : "Property image"}
+                          acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+                          maxBytes={AD_IMAGE_MAX_BYTES}
+                          typeError="Use a JPG, PNG, or WebP image."
+                          sizeError="Use an image under 8 MB."
+                          capturePagePaste={index === 0}
+                          onFileAccepted={(file) => selectImage(slot.id, file)}
+                          onFileRejected={setError}
+                          onClear={uploaded ? () => {
+                            setImageSlotDataUrls((current) => {
+                              const next = { ...current };
+                              delete next[slot.id];
+                              return next;
+                            });
+                            setImageSlotNames((current) => {
+                              const next = { ...current };
+                              delete next[slot.id];
+                              return next;
+                            });
+                            setActiveMediaSlotId(slot.id);
+                            setError("");
+                            setUploadingImage(false);
+                          } : undefined}
+                        />
+                        <div className="studio-newad-media-actions" aria-label={`${slot.label} source options`}>
+                          <button type="button" onClick={() => openLibrary(slot.id)}>
+                            <ImageIcon aria-hidden size={16} />
+                            Choose from library
+                          </button>
+                          <button type="button" onClick={() => openGenerator(slot.id)}>
+                            <Sparkles aria-hidden size={16} />
+                            Generate image
+                          </button>
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
               <label className="studio-newad-field">
                 <span>Short description</span>
                 <textarea
@@ -856,12 +924,22 @@ export function NewAdDialog({
 
           {step === "brief" && mediaSourceMode === "library" && (
             <div className="studio-newad-library">
+              {activeUploadSlot ? (
+                <p className="studio-newad-library-note">
+                  Filling slot {activeSlotIndex + 1}: <strong>{activeUploadSlot.label}</strong>
+                </p>
+              ) : null}
               {dialogMediaAssets.length === 0 ? (
                 <p className="studio-newad-listmsg">No library images yet.</p>
               ) : (
                 <div className="studio-newad-library-grid">
-                  {dialogMediaAssets.map((asset) => (
-                    <button key={asset.src} type="button" onClick={() => selectLibraryImage(asset)}>
+                  {libraryAssetsForActiveSlot.map((asset) => (
+                    <button
+                      key={asset.src}
+                      type="button"
+                      className={activeUploadSlot && resolvedImageSlotDataUrls[activeUploadSlot.id] === asset.src ? "active" : ""}
+                      onClick={() => selectLibraryImage(asset)}
+                    >
                       <img src={asset.src} alt="" />
                       <span>
                         <strong>{asset.label}</strong>
@@ -902,7 +980,9 @@ export function NewAdDialog({
                   maxLength={500}
                   rows={4}
                   onChange={(event) => setGeneratorPrompt(event.target.value)}
-                  placeholder="Example: Bright editorial real estate background with warm natural light, clean living room styling, space for ad text."
+                  placeholder={activeUploadSlot.role === "agent_headshot"
+                    ? "Example: Professional real estate agent portrait, warm natural light, clean neutral background."
+                    : "Example: Bright editorial real estate photo with warm natural light, clean styling, and room for ad text."}
                 />
                 <small>{generatorPrompt.length}/500</small>
               </label>
@@ -1027,47 +1107,27 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
   return "Uses one ad pack. No Meta account is needed until publish.";
 }
 
-function imageUploadSlotsForTemplate(
-  template: AdStudioTemplate | undefined,
-  brandKit: AdStudioBrandKit,
-): TemplateImageUploadSlot[] {
-  const layers = Object.values(template?.designs ?? {})
-    .flatMap((design) => design?.layers ?? [])
-    .filter((layer) => layer.type === "image_slot");
-  const byId = new Map<string, TemplateImageUploadSlot>();
-
-  for (const layer of layers) {
-    if (byId.has(layer.id)) continue;
-    byId.set(layer.id, {
-      id: layer.id,
-      role: layer.role,
-      label: imageSlotLabel(layer.id, layer.role, byId.size),
-      required: layer.role !== "agent_headshot",
-      defaultUrl: layer.role === "agent_headshot" ? brandKit.assets.headshots[0] : undefined,
-    });
-  }
-
-  if (byId.size === 0) {
-    byId.set("primary_photo", {
-      id: "primary_photo",
-      role: "primary",
-      label: "Property image",
-      required: true,
-    });
-  }
-
-  return [...byId.values()];
+function slotRequirementSummary(slots: TemplateMediaSlot[], isBlank: boolean): string {
+  const required = slots.filter((slot) => slot.required);
+  const headshot = slots.find((slot) => slot.role === "agent_headshot");
+  if (isBlank || slots.length === 1) return "Add one strong property image. You can replace it on the canvas later.";
+  const propertyCount = required.filter((slot) => slot.role !== "agent_headshot").length;
+  const headshotText = headshot
+    ? headshot.required
+      ? " and an agent headshot"
+      : " plus the brand-kit headshot"
+    : "";
+  return `This template needs ${propertyCount} property ${propertyCount === 1 ? "image" : "images"}${headshotText}. Numbers match the image positions in the template.`;
 }
 
-function imageSlotLabel(id: string, role: TemplateImageUploadSlot["role"], index: number): string {
-  if (role === "agent_headshot") return "Agent headshot";
-  if (role === "primary") return "Main property image";
-  const normalised = id.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-  return normalised || `Property image ${index + 1}`;
+function defaultSlotFileName(slot: TemplateMediaSlot, filled: boolean): string {
+  if (!filled) return "";
+  if (slot.defaultUrl) return "Brand kit headshot";
+  return "";
 }
 
 function resolvedSlotDataUrls(
-  slots: TemplateImageUploadSlot[],
+  slots: TemplateMediaSlot[],
   uploaded: Record<string, string>,
 ): Record<string, string> {
   return Object.fromEntries(
@@ -1081,6 +1141,16 @@ function firstRecordValue(record: Record<string, string>): string | undefined {
   return Object.values(record).find((value) => value.length > 0);
 }
 
+function nextEmptyRequiredSlotId(
+  slots: TemplateMediaSlot[],
+  dataUrls: Record<string, string>,
+  currentSlotId: string,
+): string | null {
+  const startIndex = Math.max(0, slots.findIndex((slot) => slot.id === currentSlotId));
+  const ordered = [...slots.slice(startIndex + 1), ...slots.slice(0, startIndex + 1)];
+  return ordered.find((slot) => slot.required && !dataUrls[slot.id])?.id ?? null;
+}
+
 function dedupeImageLibraryAssets(assets: ImageLibraryAsset[]): ImageLibraryAsset[] {
   const seen = new Set<string>();
   return assets.filter((asset) => {
@@ -1088,6 +1158,32 @@ function dedupeImageLibraryAssets(assets: ImageLibraryAsset[]): ImageLibraryAsse
     seen.add(asset.src);
     return true;
   });
+}
+
+function imageLibraryAssetsForSlot(assets: ImageLibraryAsset[], slot: TemplateMediaSlot | undefined): ImageLibraryAsset[] {
+  if (!slot) return assets;
+  const preferred = assets.filter((asset) => libraryAssetMatchesSlot(asset, slot));
+  return preferred.length > 0 ? preferred : assets;
+}
+
+function libraryAssetMatchesSlot(asset: ImageLibraryAsset, slot: TemplateMediaSlot): boolean {
+  const role = resolveLibraryAssetRole(asset);
+  if (slot.role === "agent_headshot") return role === "person";
+  return role === "property" || role === "background";
+}
+
+function mediaAssetRoleForSlot(slot: TemplateMediaSlot | undefined): string {
+  if (slot?.role === "agent_headshot") return "person";
+  return "property";
+}
+
+function resolveLibraryAssetRole(asset: ImageLibraryAsset): "property" | "person" | "logo" | "background" {
+  if (asset.role === "person" || asset.role === "property" || asset.role === "logo" || asset.role === "background") return asset.role;
+  const haystack = `${asset.label} ${asset.type ?? ""}`.toLowerCase();
+  if (/agent|headshot|portrait|profile|person|team/.test(haystack)) return "person";
+  if (/logo|wordmark|brandmark/.test(haystack)) return "logo";
+  if (/office|skyline|interior|living|backdrop|background|market view/.test(haystack)) return "background";
+  return "property";
 }
 
 async function registerGeneratedImageAsAsset(brandKitId: string, src: string) {
@@ -1148,14 +1244,39 @@ const EXPLORE_STYLES = `
 .studio-explore-use.ghost:hover{background:var(--accent-tint)}
 .studio-explore-msg{grid-column:1/-1;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:18px;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-explore-msg a{color:var(--accent);font-weight:650}
-.studio-newad-upload-group{display:grid;gap:8px}
+.studio-newad-media-plan{display:grid;grid-template-columns:minmax(220px,0.82fr) minmax(0,1.18fr);gap:16px;align-items:start}
+.studio-newad-template-map-card{display:grid;gap:10px;align-content:start;position:sticky;top:0}
+.studio-newad-template-map-card p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
+.studio-newad-template-map{position:relative;overflow:hidden;border:1px solid var(--line-soft);border-radius:10px;background:#f4f0e8;box-shadow:var(--st-sh-1)}
+.studio-newad-template-map.format-4-5{aspect-ratio:4/5}
+.studio-newad-template-map.format-9-16{aspect-ratio:9/16}
+.studio-newad-template-map.format-1-1{aspect-ratio:1/1}
+.studio-newad-template-map.format-1-91-1{aspect-ratio:1.91/1}
+.studio-newad-template-map img{width:100%;height:100%;object-fit:contain;display:block;background:#f8fafc}
+.studio-newad-slot-pin{position:absolute;display:block;border:2px solid rgba(255,255,255,.95);border-radius:8px;background:rgba(0,27,61,.12);box-shadow:0 10px 24px rgba(15,23,42,.16);cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.studio-newad-slot-pin span{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:999px;background:#c9f24a;color:#1c2b08;display:grid;place-items:center;font-size:12px;font-weight:900;box-shadow:0 8px 18px rgba(15,23,42,.22)}
+.studio-newad-slot-pin.filled{background:rgba(18,113,91,.18);border-color:#12715b}
+.studio-newad-slot-pin.active{background:rgba(0,27,61,.2);border-color:#001b3d;box-shadow:0 0 0 3px rgba(0,27,61,.16),0 10px 24px rgba(15,23,42,.16)}
+.studio-newad-slot-list{display:grid;gap:12px}
+.studio-newad-slot-card{display:grid;gap:10px;border:1px solid var(--line-soft);border-radius:12px;background:#fff;padding:12px;box-shadow:var(--st-sh-1);transition:border-color .15s,box-shadow .15s}
+.studio-newad-slot-card.active{border-color:#001b3d;box-shadow:0 0 0 3px rgba(0,27,61,.08),var(--st-sh-1)}
+.studio-newad-slot-card-head{width:100%;min-height:0;border:0;border-radius:0;background:transparent;color:var(--ink);display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:start;gap:10px;padding:0;text-align:left;box-shadow:none;cursor:pointer}
+.studio-newad-slot-number{width:30px;height:30px;border-radius:999px;background:#001b3d;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:850;line-height:1}
+.studio-newad-slot-title{display:grid;gap:3px;min-width:0}
+.studio-newad-slot-title strong{font-size:14px;font-weight:760;line-height:1.2}
+.studio-newad-slot-title small{font-size:12.3px;line-height:1.35;color:var(--muted)}
+.studio-newad-slot-status{justify-self:end;border-radius:999px;background:#fff7ed;color:#b54708;padding:4px 8px;font-size:10.5px;font-weight:850;letter-spacing:.01em}
+.studio-newad-slot-status.filled{background:#ecfdf3;color:#12715b}
+.studio-newad-slot-status.optional{background:#eef2f7;color:#475569}
 .studio-newad-media-actions{display:flex;gap:8px;flex-wrap:wrap}
 .studio-newad-media-actions button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-media-actions button:hover{background:var(--accent-tint);border-color:#cfe0f3;color:var(--accent)}
 .studio-newad-library,.studio-newad-generator{display:grid;gap:14px}
+.studio-newad-library-note{margin:0;border:1px solid #cfe0f3;border-radius:10px;background:#f4f8fc;color:#21415f;padding:11px 13px;font-size:13px;line-height:1.4}
 .studio-newad-library-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.studio-newad-library-grid button{min-width:0;border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;text-align:left;display:grid;gap:8px;box-shadow:var(--st-sh-1);cursor:pointer}
+.studio-newad-library-grid button{min-width:0;border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;text-align:left;display:grid;gap:8px;box-shadow:var(--st-sh-1);cursor:pointer;color:var(--ink)}
 .studio-newad-library-grid button:hover{box-shadow:var(--st-sh-lift)}
+.studio-newad-library-grid button.active{border-color:#001b3d;box-shadow:0 0 0 3px rgba(0,27,61,.08),var(--st-sh-1)}
 .studio-newad-library-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
 .studio-newad-library-grid span,.studio-newad-generated-grid span{display:grid;gap:2px;min-width:0}
 .studio-newad-library-grid strong{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1170,12 +1291,16 @@ const EXPLORE_STYLES = `
   .studio-explore-tabs button{font-size:12.5px;padding:8px 13px}
   .studio-explore-thumb{height:210px}
   .studio-explore-thumb--sample{height:286px}
+  .studio-newad-media-plan{grid-template-columns:1fr}
+  .studio-newad-template-map-card{position:static}
   .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
   .studio-explore-grid{grid-template-columns:1fr}
   .studio-explore-thumb{height:220px}
   .studio-explore-thumb--sample{height:320px}
+  .studio-newad-slot-card-head{grid-template-columns:30px minmax(0,1fr)}
+  .studio-newad-slot-status{grid-column:2;justify-self:start}
   .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:1fr}
 }
 `;

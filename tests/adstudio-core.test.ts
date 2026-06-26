@@ -412,18 +412,18 @@ test("template first-ad generation binds uploaded images to distinct template sl
     resolvedTemplate: template,
   });
 
-  const feed = pack.creatives.find((creative) => creative.format === "4:5");
-  assert.ok(feed);
-
-  const imagesBySlot = Object.fromEntries(
-    feed.canvas.objects
-      .filter((object) => object.type === "image")
-      .map((object) => [object.sourceLayerId, object.content]),
-  );
-  assert.equal(imagesBySlot.primary_photo, slotImages.primary_photo);
-  assert.equal(imagesBySlot.secondary_top, slotImages.secondary_top);
-  assert.equal(imagesBySlot.secondary_mid, slotImages.secondary_mid);
-  assert.equal(imagesBySlot.secondary_low, slotImages.secondary_low);
+  assert.equal(pack.creatives.length, 3);
+  for (const creative of pack.creatives) {
+    const imagesBySlot = Object.fromEntries(
+      creative.canvas.objects
+        .filter((object) => object.type === "image")
+        .map((object) => [object.sourceLayerId, object.content]),
+    );
+    assert.equal(imagesBySlot.primary_photo, slotImages.primary_photo, `${creative.format} primary slot`);
+    assert.equal(imagesBySlot.secondary_top, slotImages.secondary_top, `${creative.format} upper secondary slot`);
+    assert.equal(imagesBySlot.secondary_mid, slotImages.secondary_mid, `${creative.format} middle secondary slot`);
+    assert.equal(imagesBySlot.secondary_low, slotImages.secondary_low, `${creative.format} lower secondary slot`);
+  }
 });
 
 test("template generation treats observed ads as evidence, not the campaign source", () => {
