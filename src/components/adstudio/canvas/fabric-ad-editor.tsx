@@ -875,8 +875,10 @@ function applyDisplaySize(canvas: Canvas, creative: AdStudioCreative) {
   };
   const viewportHeight = typeof window === "undefined" ? 900 : window.innerHeight;
   const maxWidth = maxWidthByFormat[creative.format] ?? 520;
+  const parentWidth = canvas.getElement().parentElement?.clientWidth ?? maxWidth;
+  const availableWidth = parentWidth > 0 ? Math.min(maxWidth, parentWidth) : maxWidth;
   const maxHeight = Math.max(360, viewportHeight - 250);
-  const scale = Math.min(maxWidth / creative.canvas.width, maxHeight / creative.canvas.height, 1);
+  const scale = Math.min(availableWidth / creative.canvas.width, maxHeight / creative.canvas.height, 1);
   canvas.setDimensions(
     {
       width: `${Math.round(creative.canvas.width * scale)}px`,

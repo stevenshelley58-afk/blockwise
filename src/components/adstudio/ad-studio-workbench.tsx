@@ -101,6 +101,8 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   landscape: "1.91:1",
 };
 
+const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
+
 const FabricAdEditor = dynamic(
   () => import("./canvas/fabric-ad-editor").then((mod) => mod.FabricAdEditor),
   { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
@@ -283,6 +285,7 @@ export function AdStudioWorkbench({
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
   const radarPromptedRef = useRef(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const studio = useAdStudio();
   const { brand, initials, domain } = useBrandKit(brandKit);
@@ -318,6 +321,14 @@ export function AdStudioWorkbench({
     neverSay: brandKit.tone.avoid,
   };
   const adTemplates = templateLibrary.length > 0 ? templateLibrary : visibleBuiltInTemplates;
+
+  useEffect(() => {
+    const query = window.matchMedia(MOBILE_WORKBENCH_QUERY);
+    const syncViewport = () => setIsMobileViewport(query.matches);
+    syncViewport();
+    query.addEventListener("change", syncViewport);
+    return () => query.removeEventListener("change", syncViewport);
+  }, []);
 
   function selectTemplate(templateId?: string) {
     const template = templateId ? adTemplates.find((item) => item.id === templateId) : undefined;
@@ -736,16 +747,20 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
-  const { setSection } = studio;
+  const { setSection, setMobileTab } = studio;
   const handleCanvasElementSelect = useCallback((element: SelectedElement) => {
     setSelectedElement(element);
     if (element === "image") {
       setSection("media");
+      setMobileTab("media");
       return;
     }
     const textField = copyFieldForSelectedElement(element);
-    if (textField) setSection("text");
-  }, [setSection]);
+    if (textField) {
+      setSection("text");
+      setMobileTab("text");
+    }
+  }, [setMobileTab, setSection]);
 
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
@@ -853,6 +868,42 @@ export function AdStudioWorkbench({
         onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
         onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
         onApplyAlternate={applyAlternate}
+      />
+    );
+  }
+
+  function renderFallbackPreview() {
+    return (
+      <AdPreview
+        brand={brand}
+        domain={domain}
+        initials={initials}
+        copy={copy}
+        image={primaryImage}
+        format={previewFormat}
+        zoom={zoom}
+        selectedElement={selectedElement}
+        setSelectedElement={handleCanvasElementSelect}
+      />
+    );
+  }
+
+  function renderCreativeEditor() {
+    if (!currentCreative) return renderFallbackPreview();
+
+    return (
+      <FabricAdEditor
+        brandKit={brandKit}
+        copy={copy}
+        creative={currentCreative}
+        imageSrc={primaryImage}
+        selectedElement={selectedElement}
+        onCopyChange={updateCopy}
+        onCreativeChange={updateCreative}
+        onImageChange={setPrimaryImage}
+        onPatchSelectedLayer={patchSelectedLayer}
+        onRequestImageReplace={openFilePicker}
+        onSelectedElementChange={handleCanvasElementSelect}
       />
     );
   }
@@ -1126,37 +1177,7 @@ export function AdStudioWorkbench({
               />
 
               <div className="studio-stage">
-                {currentCreative ? (
-                  <FabricAdEditor
-                    brandKit={brandKit}
-                    copy={copy}
-                    creative={currentCreative}
-                    imageSrc={primaryImage}
-                    selectedElement={selectedElement}
-                    onCopyChange={updateCopy}
-                    onCreativeChange={updateCreative}
-                    onImageChange={setPrimaryImage}
-                    onPatchSelectedLayer={patchSelectedLayer}
-                    onRequestImageReplace={openFilePicker}
-                    onSelectedElementChange={handleCanvasElementSelect}
-                  />
-                ) : (
-                  <AdPreview
-                    brand={brand}
-                    domain={domain}
-                    initials={initials}
-                    copy={copy}
-                    image={primaryImage}
-                    format={previewFormat}
-                    zoom={zoom}
-                    selectedElement={selectedElement}
-                    setSelectedElement={(element) => {
-                      setSelectedElement(element);
-                      const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "text" : null;
-                      if (nextSection) studio.setSection(nextSection);
-                    }}
-                  />
-                )}
+                {!isMobileViewport ? renderCreativeEditor() : null}
                 {studio.busy && (
                   <div className="studio-busy">
                     <div className="studio-busy-card">
@@ -1224,24 +1245,7 @@ export function AdStudioWorkbench({
         {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
           <>
             <div className="studio-mobile-preview-wrap">
-              <AdPreview
-                brand={brand}
-                domain={domain}
-                initials={initials}
-                copy={copy}
-                image={primaryImage}
-                format={previewFormat}
-                zoom={100}
-                selectedElement={selectedElement}
-                setSelectedElement={(element) => {
-                  setSelectedElement(element);
-                  const nextSection = element === "image" ? "media" : copyFieldForSelectedElement(element) ? "text" : null;
-                  if (nextSection) {
-                    studio.setSection(nextSection);
-                    studio.setMobileTab(nextSection);
-                  }
-                }}
-              />
+              {isMobileViewport ? renderCreativeEditor() : renderFallbackPreview()}
             </div>
             <div className="studio-mobile-panel">{renderPanel()}</div>
           </>

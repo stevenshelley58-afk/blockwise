@@ -59,6 +59,18 @@ test("mobile flow no longer exposes a separate ad details sheet", () => {
   assert.match(styles, /grid-template-columns:repeat\(6,1fr\)/);
 });
 
+test("mobile preview uses the same creative editor surface as desktop", () => {
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const styles = read("src/components/adstudio/styles.ts");
+
+  assert.match(workbench, /const MOBILE_WORKBENCH_QUERY = "\(max-width: 900px\)";/);
+  assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<FabricAdEditor/);
+  assert.match(workbench, /!isMobileViewport \? renderCreativeEditor\(\) : null/);
+  assert.match(workbench, /isMobileViewport \? renderCreativeEditor\(\) : renderFallbackPreview\(\)/);
+  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-editor/);
+  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-shell\[data-format="4:5"\]\{width:min\(475px,100%\)\}/);
+});
+
 test("mobile overflow exposes save draft", () => {
   const topbar = read("src/components/adstudio/topbar.tsx");
   const styles = read("src/components/adstudio/styles.ts");
