@@ -17,6 +17,6 @@ test("template cloud orchestrator runs one Codex canary before dispatching batch
 
 test("template cloud orchestrator still allows dry-run dispatch without consuming Codex quota", () => {
   assert.match(orchestrator, /dry_run:/u);
-  assert.match(orchestrator, /if:\s+steps\.codex_secret\.outputs\.ready == 'true'/u);
+  assert.match(orchestrator, /if:\s+steps\.codex_secret\.outputs\.ready == 'true' \|\| inputs\.dry_run == true/u);
   assert.match(orchestrator, /args\+=\(--dry-run\)/u);
 });
