@@ -154,7 +154,7 @@ test("template photo prep falls back quickly when provider work exceeds the requ
     userId: "user_1",
     brandKit,
     template,
-    formats,
+    formats: [...formats],
     sourceImageRef: "/api/adstudio/media?path=workspace_1%2Flisting.png",
     sourceImageForModel: "https://cdn.example.com/listing.png",
     campaign: {

@@ -399,10 +399,19 @@
 .studio-newad-field span{font-size:12.5px;font-weight:600;color:var(--ink)}
 .studio-newad-field textarea{width:100%;resize:vertical;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.5;padding:12px}
 .studio-newad-field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
+.studio-newad-field textarea[aria-invalid="true"]{border-color:#ba1a1a;box-shadow:0 0 0 2px #ffdad6}
 .studio-newad-field small{justify-self:end;color:var(--muted);font-size:12px}
 .studio-newad-foot{display:flex;align-items:center;gap:12px;padding:15px 26px;background:#fff;border-top:1px solid var(--line-soft)}
+.studio-newad-foot.has-alert{align-items:flex-end}
+.studio-newad-foot.has-alert .studio-btn{align-self:flex-end}
 .studio-newad-sel{flex:1;font-size:13px;color:var(--muted)}
 .studio-newad-error{flex:1;font-size:13px;color:#ba1a1a;font-weight:600}
+.studio-newad-requirements{flex:1;min-width:0;display:grid;gap:8px;border:1px solid #f4b4a5;border-radius:10px;background:#fff7f2;color:#7f1d1d;box-shadow:0 8px 24px rgba(127,29,29,.08);padding:12px 14px}
+.studio-newad-requirements-head{display:flex;align-items:center;gap:8px}
+.studio-newad-requirements-head svg{flex:0 0 auto;color:#ba1a1a}
+.studio-newad-requirements strong{font-size:13.5px;font-weight:760;line-height:1.25}
+.studio-newad-requirements p,.studio-newad-requirements ul{margin:0;color:#7f1d1d;font-size:12.8px;line-height:1.45}
+.studio-newad-requirements ul{display:grid;gap:5px;padding-left:18px}
 
 @media(max-width:1180px){
   .studio-desktop-body{grid-template-columns:182px 286px minmax(360px,1fr)}
@@ -475,6 +484,8 @@
   .studio-newad-sources{grid-template-columns:1fr}
   .studio-newad-source{min-height:112px}
   .studio-tpl-grid{grid-template-columns:repeat(2,1fr)}
+  .studio-newad-foot.has-alert{flex-wrap:wrap}
+  .studio-newad-foot.has-alert .studio-newad-requirements{flex-basis:100%}
 }
 @media(max-width:380px){
   .studio-story-headline{font-size:31px}

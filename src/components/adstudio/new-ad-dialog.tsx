@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import { resolveTemplateMediaSlots, type AdStudioBrandKit, type AdStudioTemplate, type FirstAdInput, type TemplateMediaSlot } from "@/lib/adstudio";
@@ -27,6 +27,12 @@ type GeneratedImageOption = {
   model?: string;
   provider?: string;
   index?: number;
+};
+type RequirementBlockerTarget = "description" | "images" | "upload";
+type RequirementBlocker = {
+  id: string;
+  message: string;
+  target?: RequirementBlockerTarget;
 };
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
@@ -128,7 +134,9 @@ export function NewAdDialog({
   initialStep = "source",
 }: NewAdDialogProps) {
   const titleId = useId();
+  const requirementsAlertId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const [step, setStep] = useState<Step>("source");
   const [tab, setTab] = useState<ExploreTab>("templates");
@@ -147,6 +155,7 @@ export function NewAdDialog({
   const [sourceNote, setSourceNote] = useState("");
   const [radarInspiration, setRadarInspiration] = useState<RadarInspiration | null>(null);
   const [error, setError] = useState("");
+  const [showRequirementsAlert, setShowRequirementsAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingReference, setUploadingReference] = useState(false);
@@ -174,6 +183,22 @@ export function NewAdDialog({
   const slotPreviewFormat = uploadSlots[0]?.previewFormat ?? "4:5";
   const previewSlots = uploadSlots.filter((slot) => slot.previewFormat === slotPreviewFormat);
   const slotRequirementNote = slotRequirementSummary(uploadSlots, isBlank);
+  const requirementBlockers = buildRequirementBlockers({ description, missingRequiredImageSlots, uploadingImage });
+  const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
+  const hasDescriptionRequirement = visibleRequirementBlockers.some((blocker) => blocker.target === "description");
+  const detailsErrorMessage = step === "brief" && mediaSourceMode === "details" ? error : "";
+  const footerAlertItems = visibleRequirementBlockers.length > 0
+    ? [
+        ...visibleRequirementBlockers,
+        ...(detailsErrorMessage ? [{ id: "details_error", message: detailsErrorMessage }] : []),
+      ]
+    : detailsErrorMessage
+      ? [{ id: "details_error", message: detailsErrorMessage }]
+      : [];
+  const showFooterAlert = step === "brief" && mediaSourceMode === "details" && footerAlertItems.length > 0;
+  const footerAlertTitle = visibleRequirementBlockers.length > 0
+    ? "Add the missing details before generating"
+    : "Fix this before generating";
 
   const closeCurrentView = useCallback(() => {
     if (step === "brief" && mediaSourceMode !== "details") {
@@ -210,6 +235,7 @@ export function NewAdDialog({
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
+    setShowRequirementsAlert(false);
     setUploadingImage(false);
     setUploadingReference(false);
     setGeneratingImage(false);
@@ -383,6 +409,7 @@ export function NewAdDialog({
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
+    setShowRequirementsAlert(false);
     // The customer adds their own listing photo; the template only drives layout/copy.
     setImageSlotDataUrls({});
     setImageSlotNames({});
@@ -409,6 +436,7 @@ export function NewAdDialog({
       hooks: ad.hooks,
     });
     setError("");
+    setShowRequirementsAlert(false);
     setMediaSourceMode("details");
     setActiveMediaSlotId(null);
     setStep("brief");
@@ -580,25 +608,21 @@ export function NewAdDialog({
 
   async function submit() {
     const trimmed = description.trim();
-    if (uploadingImage) {
-      setError("Wait for the image upload to finish.");
-      return;
-    }
-    if (missingRequiredImageSlots.length > 0) {
-      setError(missingRequiredImageSlots.length === 1 ? `Upload ${missingRequiredImageSlots[0]?.label.toLowerCase() ?? "one image"} to generate the ad.` : `Upload all ${missingRequiredImageSlots.length} required images to generate the ad.`);
-      return;
-    }
-    if (!trimmed) {
-      setError("Add a short description.");
-      return;
-    }
-    if (trimmed.length > 500) {
-      setError("Keep the description under 500 characters.");
+    const blockers = buildRequirementBlockers({ description, missingRequiredImageSlots, uploadingImage });
+    if (blockers.length > 0) {
+      const firstMissingSlot = missingRequiredImageSlots[0];
+      setShowRequirementsAlert(true);
+      setError("");
+      if (firstMissingSlot) setActiveMediaSlotId(firstMissingSlot.id);
+      if (blockers.some((blocker) => blocker.target === "description")) {
+        window.setTimeout(() => descriptionRef.current?.focus(), 0);
+      }
       return;
     }
 
     setSubmitting(true);
     setError("");
+    setShowRequirementsAlert(false);
     try {
       const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
       await onGenerate({
@@ -916,9 +940,12 @@ export function NewAdDialog({
               <label className="studio-newad-field">
                 <span>Short description</span>
                 <textarea
+                  ref={descriptionRef}
                   value={description}
                   maxLength={500}
                   rows={5}
+                  aria-invalid={hasDescriptionRequirement ? true : undefined}
+                  aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
                   onChange={(event) => setDescription(event.target.value)}
                   placeholder={
                     selectedTemplate
@@ -1018,11 +1045,29 @@ export function NewAdDialog({
           )}
         </div>
 
-        <div className="studio-newad-foot">
-          <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
+        <div className={`studio-newad-foot${showFooterAlert ? " has-alert" : ""}`}>
+          {showFooterAlert ? (
+            <div className="studio-newad-requirements" id={requirementsAlertId} role="alert" aria-live="assertive">
+              <div className="studio-newad-requirements-head">
+                <AlertTriangle aria-hidden size={18} />
+                <strong>{footerAlertTitle}</strong>
+              </div>
+              {footerAlertItems.length === 1 ? (
+                <p>{footerAlertItems[0]?.message}</p>
+              ) : (
+                <ul>
+                  {footerAlertItems.map((item) => (
+                    <li key={item.id}>{item.message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
+          )}
           <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
           {step === "brief" && mediaSourceMode === "details" && (
-            <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting || uploadingImage}>
+            <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
               {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}
               <ArrowUpRight aria-hidden size={16} />
             </button>
@@ -1127,6 +1172,57 @@ function slotRequirementSummary(slots: TemplateMediaSlot[], isBlank: boolean): s
       : " plus the brand-kit headshot"
     : "";
   return `This template needs ${propertyCount} property ${propertyCount === 1 ? "image" : "images"}${headshotText}. Numbers match the image positions in the template.`;
+}
+
+function buildRequirementBlockers(input: {
+  description: string;
+  missingRequiredImageSlots: TemplateMediaSlot[];
+  uploadingImage: boolean;
+}): RequirementBlocker[] {
+  const blockers: RequirementBlocker[] = [];
+  const trimmed = input.description.trim();
+
+  if (!trimmed) {
+    blockers.push({
+      id: "missing_description",
+      target: "description",
+      message: "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.",
+    });
+  }
+
+  if (input.missingRequiredImageSlots.length > 0) {
+    blockers.push({
+      id: "missing_images",
+      target: "images",
+      message: `Add required images: ${formatSlotLabelList(input.missingRequiredImageSlots)}. Upload files, choose from library, or generate images for the missing slots.`,
+    });
+  }
+
+  if (input.uploadingImage) {
+    blockers.push({
+      id: "uploading_image",
+      target: "upload",
+      message: "Image upload is still running. Wait for it to finish, then generate the ad.",
+    });
+  }
+
+  if (input.description.length > 500) {
+    blockers.push({
+      id: "description_too_long",
+      target: "description",
+      message: "Keep the short description to 500 characters or less.",
+    });
+  }
+
+  return blockers;
+}
+
+function formatSlotLabelList(slots: TemplateMediaSlot[]): string {
+  const labels = slots.map((slot) => slot.label).filter(Boolean);
+  if (labels.length === 0) return "required images";
+  if (labels.length === 1) return labels[0] ?? "required image";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
 function defaultSlotFileName(slot: TemplateMediaSlot, filled: boolean): string {
