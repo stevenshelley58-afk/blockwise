@@ -167,6 +167,7 @@ jobs:
           responses-api-endpoint: ${{ github.event.inputs.codex_provider == 'openrouter' && 'https://openrouter.ai/api/v1/responses' || '' }}
           model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
+          allow-bots: true
           output-file: codex-${{ matrix.candidate_id }}.md
           prompt: |
             Follow .github/codex/prompts/adstudio-template-worker.md.
@@ -265,6 +266,7 @@ jobs:
           responses-api-endpoint: ${{ github.event.inputs.codex_provider == 'openrouter' && 'https://openrouter.ai/api/v1/responses' || '' }}
           model: ${{ github.event.inputs.codex_model }}
           sandbox: workspace-write
+          allow-bots: true
           output-file: codex-integrator.md
           prompt-file: .github/codex/prompts/adstudio-template-integrator.md
 

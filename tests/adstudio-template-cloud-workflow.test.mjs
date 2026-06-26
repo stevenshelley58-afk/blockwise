@@ -36,3 +36,7 @@ test("template cloud build pins worker and integrator Codex runs to the requeste
   assert.match(buildWorkflow, /codex_model:/u);
   assert.match(buildWorkflow, /model:\s+\$\{\{ github\.event\.inputs\.codex_model \}\}/u);
 });
+
+test("template cloud build allows orchestrator-dispatched Codex workers to run as the actions bot", () => {
+  assert.equal((buildWorkflow.match(/allow-bots:\s+true/gu) ?? []).length, 2);
+});
