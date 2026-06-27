@@ -4,20 +4,35 @@
   "name": "Prestige Listing with Price Guide Badge",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "seller_leads",
   "offerId": "prestige-listing",
   "audienceIntent": "Prestige property buyers looking for a quality home near lifestyle amenities and the river.",
   "category": "listing",
-  "tags": ["listing", "prestige", "price-guide", "river", "meta-feed"],
+  "tags": [
+    "listing",
+    "prestige",
+    "price-guide",
+    "river",
+    "meta-feed"
+  ],
   "promptHint": "Prestige listing with price guide overlay badge and elegant lifestyle descriptor.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "d74a1a0a-5750-4b28-8696-212b850bec96" },
-  "classification": { "ad_type": "listing", "primary_intent": "listing", "property_or_agent_focus": "property" },
+  "sourceAd": {
+    "creativeId": "d74a1a0a-5750-4b28-8696-212b850bec96"
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
   "sampleCopy": {
     "headline": "Classy 2-Level Home Near the River!",
-    "primaryText": "19/146-148 Joel Terrace, Mount Lawley · Price Guide $1.3m–$1.5m · Between Swan River and Beaufort Street lifestyle precinct.",
+    "primaryText": "19/146-148 Joel Terrace, Mount Lawley \u00b7 Price Guide $1.3m\u2013$1.5m \u00b7 Between Swan River and Beaufort Street lifestyle precinct.",
     "cta": "Learn More"
   },
   "gallery": {
@@ -34,7 +49,10 @@
         "objectId": "meta-feed-008-bg",
         "type": "shape",
         "role": "background",
-        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
         "fill": "#f8f5f0",
         "locked": true
       },
@@ -42,16 +60,24 @@
         "objectId": "meta-feed-008-photo",
         "type": "image",
         "role": "property_photo",
-        "x": 0, "y": 0, "width": 1080, "height": 840,
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 840,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg"
       },
       {
         "objectId": "meta-feed-008-photo-scrim",
         "type": "shape",
         "role": "photo_scrim",
-        "x": 0, "y": 660, "width": 1080, "height": 180,
+        "x": 0,
+        "y": 660,
+        "width": 1080,
+        "height": 180,
         "fill": "rgba(20,14,8,0.55)",
         "locked": true
       },
@@ -59,7 +85,10 @@
         "objectId": "meta-feed-008-price-badge-bg",
         "type": "shape",
         "role": "price_guide_badge",
-        "x": 60, "y": 776, "width": 500, "height": 68,
+        "x": 60,
+        "y": 776,
+        "width": 500,
+        "height": 68,
         "fill": "#b8913c",
         "locked": true,
         "radius": 34
@@ -68,8 +97,11 @@
         "objectId": "meta-feed-008-price-badge-text",
         "type": "text",
         "role": "price_guide_label",
-        "content": "$1.3m – $1.5m  ·  PRICE GUIDE",
-        "x": 80, "y": 793, "width": 460, "height": 34,
+        "content": "$1.3m \u2013 $1.5m  \u00b7  PRICE GUIDE",
+        "x": 80,
+        "y": 793,
+        "width": 460,
+        "height": 34,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -83,7 +115,10 @@
         "type": "text",
         "role": "address",
         "content": "19/146-148 Joel Terrace, Mount Lawley",
-        "x": 60, "y": 874, "width": 960, "height": 40,
+        "x": 60,
+        "y": 874,
+        "width": 960,
+        "height": 40,
         "fill": "#7a6040",
         "locked": false,
         "fontFamily": "Inter",
@@ -97,7 +132,10 @@
         "type": "text",
         "role": "headline",
         "content": "Classy 2-Level Home\nNear the River!",
-        "x": 60, "y": 926, "width": 960, "height": 180,
+        "x": 60,
+        "y": 926,
+        "width": 960,
+        "height": 180,
         "fill": "#1c1208",
         "locked": false,
         "fontFamily": "Inter",
@@ -111,7 +149,10 @@
         "type": "text",
         "role": "lifestyle_descriptor",
         "content": "Perfectly positioned between the peaceful Swan River foreshore and the vibrant Beaufort Street lifestyle precinct.",
-        "x": 60, "y": 1122, "width": 960, "height": 100,
+        "x": 60,
+        "y": 1122,
+        "width": 960,
+        "height": 100,
         "fill": "#5a4630",
         "locked": false,
         "fontFamily": "Inter",
@@ -124,7 +165,10 @@
         "objectId": "meta-feed-008-cta-button",
         "type": "shape",
         "role": "cta_button",
-        "x": 60, "y": 1254, "width": 320, "height": 72,
+        "x": 60,
+        "y": 1254,
+        "width": 320,
+        "height": 72,
         "fill": "#b8913c",
         "locked": false,
         "radius": 36
@@ -134,7 +178,10 @@
         "type": "text",
         "role": "cta_text",
         "content": "Learn More",
-        "x": 80, "y": 1272, "width": 280, "height": 36,
+        "x": 80,
+        "y": 1272,
+        "width": 280,
+        "height": 36,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -151,48 +198,95 @@
       "objects": [
         {
           "type": "rect",
-          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
           "fill": "#f8f5f0",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-008-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-008-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
-          "left": 0, "top": 0, "width": 1080, "height": 840,
-          "src": "",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 840,
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-008-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-feed-008-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
-          "left": 0, "top": 660, "width": 1080, "height": 180,
+          "left": 0,
+          "top": 660,
+          "width": 1080,
+          "height": 180,
           "fill": "rgba(20,14,8,0.55)",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-008-photo-scrim", "role": "photo_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-008-photo-scrim",
+            "role": "photo_scrim",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "rect",
-          "left": 60, "top": 776, "width": 500, "height": 68,
-          "rx": 34, "ry": 34,
+          "left": 60,
+          "top": 776,
+          "width": 500,
+          "height": 68,
+          "rx": 34,
+          "ry": 34,
           "fill": "#b8913c",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-008-price-badge-bg", "role": "price_guide_badge", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-008-price-badge-bg",
+            "role": "price_guide_badge",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 80, "top": 793, "width": 460,
-          "text": "$1.3m – $1.5m  ·  PRICE GUIDE",
+          "left": 80,
+          "top": 793,
+          "width": 460,
+          "text": "$1.3m \u2013 $1.5m  \u00b7  PRICE GUIDE",
           "fontFamily": "Inter",
           "fontSize": 22,
           "fontWeight": 700,
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-008-price-badge-text", "role": "price_guide_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-008-price-badge-text",
+            "role": "price_guide_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 60, "top": 874, "width": 960,
+          "left": 60,
+          "top": 874,
+          "width": 960,
           "text": "19/146-148 Joel Terrace, Mount Lawley",
           "fontFamily": "Inter",
           "fontSize": 24,
@@ -200,11 +294,19 @@
           "fill": "#7a6040",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-008-address", "role": "address", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-008-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 60, "top": 926, "width": 960,
+          "left": 60,
+          "top": 926,
+          "width": 960,
           "text": "Classy 2-Level Home\nNear the River!",
           "fontFamily": "Inter",
           "fontSize": 72,
@@ -212,11 +314,19 @@
           "fill": "#1c1208",
           "textAlign": "left",
           "lineHeight": 1.05,
-          "blockwise": { "objectId": "meta-feed-008-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-008-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "textbox",
-          "left": 60, "top": 1122, "width": 960,
+          "left": 60,
+          "top": 1122,
+          "width": 960,
           "text": "Perfectly positioned between the peaceful Swan River foreshore and the vibrant Beaufort Street lifestyle precinct.",
           "fontFamily": "Inter",
           "fontSize": 26,
@@ -224,18 +334,36 @@
           "fill": "#5a4630",
           "textAlign": "left",
           "lineHeight": 1.35,
-          "blockwise": { "objectId": "meta-feed-008-lifestyle", "role": "lifestyle_descriptor", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-008-lifestyle",
+            "role": "lifestyle_descriptor",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 60, "top": 1254, "width": 320, "height": 72,
-          "rx": 36, "ry": 36,
+          "left": 60,
+          "top": 1254,
+          "width": 320,
+          "height": 72,
+          "rx": 36,
+          "ry": 36,
           "fill": "#b8913c",
-          "blockwise": { "objectId": "meta-feed-008-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-008-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
-          "left": 80, "top": 1272, "width": 280,
+          "left": 80,
+          "top": 1272,
+          "width": 280,
           "text": "Learn More",
           "fontFamily": "Inter",
           "fontSize": 24,
@@ -243,7 +371,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-008-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-008-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         }
       ]
     }
@@ -252,12 +386,25 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["Classy 2-level home at 19/146-148 Joel Terrace, Mount Lawley. Price guide $1.3m–$1.5m. Between the Swan River and vibrant Beaufort Street."],
-    "headlines": ["Classy 2-Level Home Near the River!"],
-    "descriptions": ["Price Guide: $1.3m–$1.5m · Mount Lawley"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Classy 2-level home at 19/146-148 Joel Terrace, Mount Lawley. Price guide $1.3m\u2013$1.5m. Between the Swan River and vibrant Beaufort Street."
+    ],
+    "headlines": [
+      "Classy 2-Level Home Near the River!"
+    ],
+    "descriptions": [
+      "Price Guide: $1.3m\u2013$1.5m \u00b7 Mount Lawley"
+    ],
     "cta": "LEARN_MORE",
     "leadForm": {
       "headline": "Find out more about this property",

@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-012",
   "templateKey": "meta-feed-012",
-  "name": "New Development — Somerset Burswood Point",
+  "name": "New Development \u2014 Somerset Burswood Point",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -35,9 +35,9 @@
     "development_name": "Somerset at Burswood Point",
     "location_tag": "3.5km from Perth CBD",
     "hours_label": "DISPLAY SUITE HOURS",
-    "hours_lines": "Wed 10am–2pm & 4–6pm\nThur–Sun 10am–2pm",
+    "hours_lines": "Wed 10am\u20132pm & 4\u20136pm\nThur\u2013Sun 10am\u20132pm",
     "address_line": "1 Saintly Entrance, Burswood",
-    "primary_text": "Somerset at Burswood Point — UNDER CONSTRUCTION. 3.5km from Perth CBD. Panoramic Swan River & Optus Stadium views. Display Suite: 1 Saintly Entrance, Burswood. Wed 10am-2pm & 4-6pm | Thur-Sun 10am-2pm.",
+    "primary_text": "Somerset at Burswood Point \u2014 UNDER CONSTRUCTION. 3.5km from Perth CBD. Panoramic Swan River & Optus Stadium views. Display Suite: 1 Saintly Entrance, Burswood. Wed 10am-2pm & 4-6pm | Thur-Sun 10am-2pm.",
     "headline": "Luxury Residences from $1.375m"
   },
   "gallery": {
@@ -72,7 +72,9 @@
         "height": 720,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg"
       },
       {
         "objectId": "meta-feed-012-image-overlay",
@@ -199,7 +201,7 @@
         "objectId": "meta-feed-012-hours-lines",
         "type": "text",
         "role": "hours_lines",
-        "content": "Wed 10am–2pm & 4–6pm  |  Thur–Sun 10am–2pm",
+        "content": "Wed 10am\u20132pm & 4\u20136pm  |  Thur\u2013Sun 10am\u20132pm",
         "x": 60,
         "y": 1108,
         "width": 960,
@@ -287,7 +289,7 @@
           "top": 0,
           "width": 1080,
           "height": 720,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-012-river-image",
@@ -450,7 +452,7 @@
           "left": 60,
           "top": 1108,
           "width": 960,
-          "text": "Wed 10am–2pm & 4–6pm  |  Thur–Sun 10am–2pm",
+          "text": "Wed 10am\u20132pm & 4\u20136pm  |  Thur\u2013Sun 10am\u20132pm",
           "fontFamily": "Georgia",
           "fontSize": 24,
           "fontWeight": 400,
@@ -541,7 +543,7 @@
     ],
     "cta": "LEARN_MORE",
     "primaryText": [
-      "Somerset at Burswood Point — UNDER CONSTRUCTION. 3.5km from Perth CBD. Panoramic Swan River & Optus Stadium views. Display Suite: 1 Saintly Entrance, Burswood. Wed 10am-2pm & 4-6pm | Thur-Sun 10am-2pm."
+      "Somerset at Burswood Point \u2014 UNDER CONSTRUCTION. 3.5km from Perth CBD. Panoramic Swan River & Optus Stadium views. Display Suite: 1 Saintly Entrance, Burswood. Wed 10am-2pm & 4-6pm | Thur-Sun 10am-2pm."
     ],
     "headlines": [
       "Luxury Residences from $1.375m"
@@ -561,7 +563,7 @@
       }
     },
     "descriptions": [
-      "Luxury residences from $1.375m — riverfront views, 3.5km from Perth CBD"
+      "Luxury residences from $1.375m \u2014 riverfront views, 3.5km from Perth CBD"
     ]
   }
 }

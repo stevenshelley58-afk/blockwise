@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-013",
   "templateKey": "meta-feed-013",
-  "name": "Lifestyle Property — The Ponderosa Warnbro",
+  "name": "Lifestyle Property \u2014 The Ponderosa Warnbro",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -10,7 +10,7 @@
   },
   "goal": "open_home_followup",
   "offerId": "open-home-lifestyle",
-  "audienceIntent": "Aspirational buyers seeking a distinctive lifestyle property with land and space — drawn to prestige rural/coastal fringe homes and private inspection campaigns.",
+  "audienceIntent": "Aspirational buyers seeking a distinctive lifestyle property with land and space \u2014 drawn to prestige rural/coastal fringe homes and private inspection campaigns.",
   "category": "open_home",
   "tags": [
     "open_home",
@@ -31,7 +31,7 @@
   },
   "sampleCopy": {
     "headline": "The Property That Has It All",
-    "primaryText": "The Ponderosa — space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692.",
+    "primaryText": "The Ponderosa \u2014 space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692.",
     "cta": "Contact Agent"
   },
   "gallery": {
@@ -66,7 +66,9 @@
         "height": 900,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/hero-wide.jpg",
+        "assetId": "/adstudio-samples/photos/hero-wide.jpg"
       },
       {
         "objectId": "meta-feed-013-photo-gradient",
@@ -294,7 +296,7 @@
           "top": 0,
           "width": 1080,
           "height": 900,
-          "src": "",
+          "src": "/adstudio-samples/photos/hero-wide.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-013-hero-photo",
@@ -566,7 +568,7 @@
     ],
     "cta": "CONTACT_US",
     "primaryText": [
-      "The Ponderosa — space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692."
+      "The Ponderosa \u2014 space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692."
     ],
     "headlines": [
       "The Property That Has It All"
@@ -585,7 +587,7 @@
       }
     },
     "descriptions": [
-      "The Ponderosa — space, lifestyle, and endless possibilities. Private inspections only."
+      "The Ponderosa \u2014 space, lifestyle, and endless possibilities. Private inspections only."
     ]
   }
 }

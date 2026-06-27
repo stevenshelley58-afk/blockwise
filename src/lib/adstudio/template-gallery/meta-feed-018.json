@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-018",
   "templateKey": "meta-feed-018",
-  "name": "Co-Living Investment — INVIDA Custom Build",
+  "name": "Co-Living Investment \u2014 INVIDA Custom Build",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -30,7 +30,7 @@
     "property_or_agent_focus": "property"
   },
   "sampleCopy": {
-    "headline": "Co-Living Done Properly — By Design.",
+    "headline": "Co-Living Done Properly \u2014 By Design.",
     "primaryText": "INVIDA custom-built co-living homes: strong cash flow, tenant diversity, long-term resilience. Every layout, finish, and shared space planned with strategy and compliance in mind.",
     "kicker": "INVIDA CO-LIVING",
     "prop1": "Cash Flow",
@@ -81,7 +81,7 @@
         "objectId": "meta-feed-018-headline",
         "type": "text",
         "role": "headline",
-        "content": "Co-Living Done Properly — By Design.",
+        "content": "Co-Living Done Properly \u2014 By Design.",
         "x": 60,
         "y": 108,
         "width": 960,
@@ -104,7 +104,9 @@
         "height": 620,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-hillco.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillco.jpg"
       },
       {
         "objectId": "meta-feed-018-props-bg",
@@ -254,7 +256,7 @@
         "objectId": "meta-feed-018-cta-arrow",
         "type": "text",
         "role": "cta_arrow",
-        "content": "→",
+        "content": "\u2192",
         "x": 960,
         "y": 1215,
         "width": 60,
@@ -331,7 +333,7 @@
           "left": 60,
           "top": 108,
           "width": 960,
-          "text": "Co-Living Done Properly — By Design.",
+          "text": "Co-Living Done Properly \u2014 By Design.",
           "fontFamily": "Inter",
           "fontSize": 66,
           "fontWeight": 800,
@@ -352,7 +354,7 @@
           "top": 310,
           "width": 960,
           "height": 620,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-hillco.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-018-property-image",
@@ -541,7 +543,7 @@
           "left": 960,
           "top": 1215,
           "width": 60,
-          "text": "→",
+          "text": "\u2192",
           "fontFamily": "Inter",
           "fontSize": 36,
           "fontWeight": 700,
@@ -598,7 +600,7 @@
       "INVIDA custom-built co-living homes: strong cash flow, tenant diversity, long-term resilience. Every layout, finish, and shared space planned with strategy and compliance in mind."
     ],
     "headlines": [
-      "Co-Living Done Properly — By Design."
+      "Co-Living Done Properly \u2014 By Design."
     ],
     "leadForm": {
       "headline": "Explore INVIDA Co-Living Investment",

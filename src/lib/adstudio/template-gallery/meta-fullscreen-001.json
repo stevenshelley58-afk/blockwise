@@ -1,7 +1,7 @@
 {
   "id": "meta-fullscreen-001",
   "templateKey": "meta-fullscreen-001",
-  "name": "PM Switch Offer — Johnson 90-Day Free Management",
+  "name": "PM Switch Offer \u2014 Johnson 90-Day Free Management",
   "placement": "meta_fullscreen",
   "format": "9:16",
   "dimensions": {
@@ -99,7 +99,9 @@
         "height": 720,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/hero-wide.jpg",
+        "assetId": "/adstudio-samples/photos/hero-wide.jpg"
       },
       {
         "objectId": "meta-fullscreen-001-overlay",
@@ -337,7 +339,7 @@
           "top": 140,
           "width": 1080,
           "height": 720,
-          "src": "",
+          "src": "/adstudio-samples/photos/hero-wide.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-fullscreen-001-property-image",

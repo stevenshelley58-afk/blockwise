@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-019",
   "templateKey": "meta-feed-019",
-  "name": "Property Management — Belle Cottesloe Performance Check",
+  "name": "Property Management \u2014 Belle Cottesloe Performance Check",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -68,7 +68,9 @@
         "height": 780,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/hero-tall.jpg",
+        "assetId": "/adstudio-samples/photos/hero-tall.jpg"
       },
       {
         "objectId": "meta-feed-019-image-overlay",
@@ -237,7 +239,7 @@
           "top": 0,
           "width": 1080,
           "height": 780,
-          "src": "",
+          "src": "/adstudio-samples/photos/hero-tall.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-019-property-image",
@@ -446,7 +448,7 @@
         "What suburb is your investment property in?",
         "How long have you owned this investment property?",
         "Are you currently using a property manager?",
-        "What is your primary concern — vacancy, rent yield, or maintenance?"
+        "What is your primary concern \u2014 vacancy, rent yield, or maintenance?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {

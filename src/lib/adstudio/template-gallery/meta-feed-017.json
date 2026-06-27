@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-017",
   "templateKey": "meta-feed-017",
-  "name": "Just Sold — Edgewater Buyer Transfer Hook",
+  "name": "Just Sold \u2014 Edgewater Buyer Transfer Hook",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -10,7 +10,7 @@
   },
   "goal": "seller_leads",
   "offerId": "just-sold-buyer-demand",
-  "audienceIntent": "Homeowners in the same suburb or street who see a nearby recent sale and wonder if now is the right time to sell — this ad catches them with the scarcity of active buyers and converts curiosity into a free appraisal request.",
+  "audienceIntent": "Homeowners in the same suburb or street who see a nearby recent sale and wonder if now is the right time to sell \u2014 this ad catches them with the scarcity of active buyers and converts curiosity into a free appraisal request.",
   "category": "just_sold",
   "tags": [
     "just_sold",
@@ -35,7 +35,7 @@
     "buyerDemandNote": "We still have buyers looking in your area.",
     "bodyText": "21 Apalie Trail, Edgewater has sold for a great price. Free property appraisal and area report available.",
     "cta": "Free Appraisal",
-    "primaryText": "21 Apalie Trail, Edgewater has sold for a great price. We still have buyers looking in your area — free property appraisal and area report available.",
+    "primaryText": "21 Apalie Trail, Edgewater has sold for a great price. We still have buyers looking in your area \u2014 free property appraisal and area report available.",
     "metaHeadline": "Thinking of selling your property?"
   },
   "gallery": {
@@ -70,7 +70,9 @@
         "height": 660,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg"
       },
       {
         "objectId": "meta-feed-017-photo-gradient",
@@ -209,7 +211,7 @@
         "objectId": "meta-feed-017-offer-subtext",
         "type": "text",
         "role": "offer_subtext",
-        "content": "Understand your home's value in today's market — no obligation.",
+        "content": "Understand your home's value in today's market \u2014 no obligation.",
         "x": 52,
         "y": 968,
         "width": 976,
@@ -256,7 +258,7 @@
         "objectId": "meta-feed-017-trust-note",
         "type": "text",
         "role": "trust_note",
-        "content": "Complimentary • No commitment required",
+        "content": "Complimentary \u2022 No commitment required",
         "x": 52,
         "y": 1168,
         "width": 976,
@@ -314,7 +316,7 @@
           "top": 0,
           "width": 1080,
           "height": 660,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-017-property-photo",
@@ -494,7 +496,7 @@
           "left": 52,
           "top": 968,
           "width": 976,
-          "text": "Understand your home's value in today's market — no obligation.",
+          "text": "Understand your home's value in today's market \u2014 no obligation.",
           "fontFamily": "Inter",
           "fontSize": 22,
           "fontWeight": 400,
@@ -551,7 +553,7 @@
           "left": 52,
           "top": 1168,
           "width": 976,
-          "text": "Complimentary • No commitment required",
+          "text": "Complimentary \u2022 No commitment required",
           "fontFamily": "Inter",
           "fontSize": 20,
           "fontWeight": 400,
@@ -604,7 +606,7 @@
       "stream"
     ],
     "primaryText": [
-      "21 Apalie Trail, Edgewater has sold for a great price. We still have buyers looking in your area — free property appraisal and area report available."
+      "21 Apalie Trail, Edgewater has sold for a great price. We still have buyers looking in your area \u2014 free property appraisal and area report available."
     ],
     "headlines": [
       "Thinking of selling your property?"
@@ -614,17 +616,17 @@
       "headline": "Get your free property appraisal",
       "questions": [
         "What is your property address?",
-        "Are you thinking of selling in the next 6–12 months?",
+        "Are you thinking of selling in the next 6\u201312 months?",
         "What is the best time to contact you?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
-        "title": "Thanks — we will be in touch",
+        "title": "Thanks \u2014 we will be in touch",
         "body": "One of our local agents will contact you shortly to arrange your free property appraisal and area report."
       }
     },
     "descriptions": [
-      "We have buyers looking in your area — get a free appraisal today."
+      "We have buyers looking in your area \u2014 get a free appraisal today."
     ]
   }
 }

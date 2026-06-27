@@ -1,7 +1,7 @@
 {
   "id": "meta-fullscreen-002",
   "templateKey": "meta-fullscreen-002",
-  "name": "Local Agent — Park Ridge South Expert",
+  "name": "Local Agent \u2014 Park Ridge South Expert",
   "placement": "meta_fullscreen",
   "format": "9:16",
   "dimensions": {
@@ -68,7 +68,9 @@
         "height": 1280,
         "imageAnchor": "top-center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/agent-1.jpg",
+        "assetId": "/adstudio-samples/photos/agent-1.jpg"
       },
       {
         "objectId": "meta-fullscreen-002-gradient-overlay",
@@ -203,7 +205,7 @@
           "top": 0,
           "width": 1080,
           "height": 1280,
-          "src": "",
+          "src": "/adstudio-samples/photos/agent-1.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-fullscreen-002-hero-image",
@@ -367,7 +369,7 @@
       "Your Local Park Ridge South Expert"
     ],
     "descriptions": [
-      "Your local Park Ridge South expert — local knowledge, exceptional results."
+      "Your local Park Ridge South expert \u2014 local knowledge, exceptional results."
     ],
     "cta": "LEARN_MORE",
     "leadForm": {

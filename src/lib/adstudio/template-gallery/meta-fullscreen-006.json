@@ -1,7 +1,7 @@
 {
   "id": "meta-fullscreen-006",
   "templateKey": "meta-fullscreen-006",
-  "name": "Market Update — Mount Lawley Winter 2026",
+  "name": "Market Update \u2014 Mount Lawley Winter 2026",
   "placement": "meta_fullscreen",
   "format": "9:16",
   "dimensions": {
@@ -35,7 +35,7 @@
     "median_price": "$1,690,000",
     "growth_badge": "+11.8%",
     "growth_label": "12-Month Growth",
-    "descriptor": "Inner suburb · Leafy streets · 4km to CBD",
+    "descriptor": "Inner suburb \u00b7 Leafy streets \u00b7 4km to CBD",
     "cta_text": "Get Your Free Property Update"
   },
   "gallery": {
@@ -58,7 +58,9 @@
         "height": 1920,
         "imageAnchor": "center",
         "fill": null,
-        "locked": true
+        "locked": true,
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg"
       },
       {
         "objectId": "meta-fullscreen-006-overlay",
@@ -134,7 +136,7 @@
         "objectId": "meta-fullscreen-006-descriptor",
         "type": "text",
         "role": "suburb_descriptor",
-        "content": "Inner suburb · Leafy streets · 4km to CBD",
+        "content": "Inner suburb \u00b7 Leafy streets \u00b7 4km to CBD",
         "x": 80,
         "y": 448,
         "width": 920,
@@ -300,7 +302,7 @@
           "top": 0,
           "width": 1080,
           "height": 1920,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-fullscreen-006-bg-image",
@@ -403,7 +405,7 @@
           "left": 80,
           "top": 448,
           "width": 920,
-          "text": "Inner suburb · Leafy streets · 4km to CBD",
+          "text": "Inner suburb \u00b7 Leafy streets \u00b7 4km to CBD",
           "fontFamily": "Inter",
           "fontSize": 28,
           "fontWeight": 400,

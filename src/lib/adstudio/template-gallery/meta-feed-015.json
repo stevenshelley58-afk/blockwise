@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-015",
   "templateKey": "meta-feed-015",
-  "name": "Just Sold — Alexandra Hills Market Snapshot",
+  "name": "Just Sold \u2014 Alexandra Hills Market Snapshot",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -10,7 +10,7 @@
   },
   "goal": "seller_leads",
   "offerId": "just-sold-appraisal",
-  "audienceIntent": "Homeowners in Alexandra Hills and nearby suburbs who are quietly watching the local market and want to know if a nearby sale signals it's time to find out what their own property is worth. The consultative tone meets them where they are — curious, not yet committed.",
+  "audienceIntent": "Homeowners in Alexandra Hills and nearby suburbs who are quietly watching the local market and want to know if a nearby sale signals it's time to find out what their own property is worth. The consultative tone meets them where they are \u2014 curious, not yet committed.",
   "category": "just_sold",
   "tags": [
     "just_sold",
@@ -35,10 +35,10 @@
     "salePrice": "$1,350,000",
     "suburbName": "Alexandra Hills",
     "address": "44 Snowdon Street",
-    "specs": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
-    "marketNote": "A recent local sale — see where today's market is heading.",
+    "specs": "4 Bed  |  2 Bath  |  2 Car  |  711m\u00b2",
+    "marketNote": "A recent local sale \u2014 see where today's market is heading.",
     "ctaText": "Get My Property Update",
-    "primaryText": "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale — see where today's market is heading.",
+    "primaryText": "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale \u2014 see where today's market is heading.",
     "headline": "Curious where your property sits today?"
   },
   "gallery": {
@@ -166,7 +166,9 @@
         "height": 560,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg"
       },
       {
         "objectId": "meta-feed-015-sold-badge-bg",
@@ -219,7 +221,7 @@
         "objectId": "meta-feed-015-specs-row",
         "type": "text",
         "role": "property_specs",
-        "content": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
+        "content": "4 Bed  |  2 Bath  |  2 Car  |  711m\u00b2",
         "x": 60,
         "y": 1016,
         "width": 960,
@@ -248,7 +250,7 @@
         "objectId": "meta-feed-015-market-note",
         "type": "text",
         "role": "market_note",
-        "content": "A recent local sale — see where today's market is heading.",
+        "content": "A recent local sale \u2014 see where today's market is heading.",
         "x": 60,
         "y": 1088,
         "width": 960,
@@ -450,7 +452,7 @@
           "top": 380,
           "width": 1080,
           "height": 560,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-015-photo-frame",
@@ -521,7 +523,7 @@
           "left": 60,
           "top": 1016,
           "width": 960,
-          "text": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
+          "text": "4 Bed  |  2 Bath  |  2 Car  |  711m\u00b2",
           "fontFamily": "Inter",
           "fontSize": 22,
           "fontWeight": 500,
@@ -557,7 +559,7 @@
           "left": 60,
           "top": 1088,
           "width": 960,
-          "text": "A recent local sale — see where today's market is heading.",
+          "text": "A recent local sale \u2014 see where today's market is heading.",
           "fontFamily": "Inter",
           "fontSize": 24,
           "fontWeight": 400,
@@ -647,7 +649,7 @@
       "stream"
     ],
     "primaryText": [
-      "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale — see where today's market is heading."
+      "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale \u2014 see where today's market is heading."
     ],
     "headlines": [
       "Curious where your property sits today?"

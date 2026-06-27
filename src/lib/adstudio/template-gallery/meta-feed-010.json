@@ -1,26 +1,40 @@
 {
   "id": "meta-feed-010",
   "templateKey": "meta-feed-010",
-  "name": "Open Home Invite — Ridgewood Urban Sanctuary",
+  "name": "Open Home Invite \u2014 Ridgewood Urban Sanctuary",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "open_home_followup",
   "offerId": "open-home-single",
-  "audienceIntent": "Local families and upgraders actively considering a move who respond to a specific open home time and address — buyers ready to attend this weekend rather than passive browsers.",
+  "audienceIntent": "Local families and upgraders actively considering a move who respond to a specific open home time and address \u2014 buyers ready to attend this weekend rather than passive browsers.",
   "category": "open_home",
-  "tags": ["open_home", "property", "home-open", "meta-feed"],
+  "tags": [
+    "open_home",
+    "property",
+    "home-open",
+    "meta-feed"
+  ],
   "promptHint": "Hero property photo with a HOME OPEN time badge overlay, bold address and price below, warm earth tones, CTA button bottom-centre.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "d8d1d9e0-6f23-404a-9cf1-80a2186c2b50" },
-  "classification": { "ad_type": "open_home", "primary_intent": "open_home", "property_or_agent_focus": "property" },
+  "sourceAd": {
+    "creativeId": "d8d1d9e0-6f23-404a-9cf1-80a2186c2b50"
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
   "sampleCopy": {
     "homeOpenBadge": "HOME OPEN",
-    "homeOpenTime": "Sat 6 Jun · 10:00–10:30am",
+    "homeOpenTime": "Sat 6 Jun \u00b7 10:00\u201310:30am",
     "address": "28 Ardglass Gardens, Ridgewood",
     "price": "Offers from $995,000",
-    "propertyDetail": "4–5 bed · 2 bath · entertainment room · ducted A/C",
+    "propertyDetail": "4\u20135 bed \u00b7 2 bath \u00b7 entertainment room \u00b7 ducted A/C",
     "cta": "Find Out More"
   },
   "gallery": {
@@ -55,7 +69,9 @@
         "height": 700,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg"
       },
       {
         "objectId": "meta-feed-010-badge-bg",
@@ -91,7 +107,7 @@
         "objectId": "meta-feed-010-badge-time",
         "type": "text",
         "role": "home_open_time",
-        "content": "Sat 6 Jun · 10:00–10:30am",
+        "content": "Sat 6 Jun \u00b7 10:00\u201310:30am",
         "x": 60,
         "y": 634,
         "width": 360,
@@ -154,7 +170,7 @@
         "objectId": "meta-feed-010-property-detail",
         "type": "text",
         "role": "property_features",
-        "content": "4–5 bed · 2 bath · entertainment room · ducted A/C",
+        "content": "4\u20135 bed \u00b7 2 bath \u00b7 entertainment room \u00b7 ducted A/C",
         "x": 60,
         "y": 916,
         "width": 960,
@@ -211,7 +227,13 @@
           "height": 1350,
           "fill": "#f5ede0",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-010-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-010-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
@@ -219,9 +241,15 @@
           "top": 0,
           "width": 1080,
           "height": 700,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-010-hero-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-feed-010-hero-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
@@ -233,7 +261,13 @@
           "ry": 6,
           "fill": "#c8622a",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-010-badge-bg", "role": "home_open_badge_bg", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-010-badge-bg",
+            "role": "home_open_badge_bg",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -247,21 +281,33 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-010-badge-label", "role": "home_open_badge_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-010-badge-label",
+            "role": "home_open_badge_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
           "left": 60,
           "top": 634,
           "width": 360,
-          "text": "Sat 6 Jun · 10:00–10:30am",
+          "text": "Sat 6 Jun \u00b7 10:00\u201310:30am",
           "fontFamily": "Inter",
           "fontSize": 22,
           "fontWeight": 600,
           "fill": "#fde8d8",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-010-badge-time", "role": "home_open_time", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-010-badge-time",
+            "role": "home_open_time",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -275,7 +321,13 @@
           "fill": "#2b1f12",
           "textAlign": "left",
           "lineHeight": 1.05,
-          "blockwise": { "objectId": "meta-feed-010-address", "role": "property_address", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-010-address",
+            "role": "property_address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "textbox",
@@ -289,7 +341,13 @@
           "fill": "#c8622a",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-010-price", "role": "price_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-010-price",
+            "role": "price_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -299,21 +357,33 @@
           "height": 3,
           "fill": "#d9c4ae",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-010-divider", "role": "divider", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-010-divider",
+            "role": "divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
           "left": 60,
           "top": 916,
           "width": 960,
-          "text": "4–5 bed · 2 bath · entertainment room · ducted A/C",
+          "text": "4\u20135 bed \u00b7 2 bath \u00b7 entertainment room \u00b7 ducted A/C",
           "fontFamily": "Inter",
           "fontSize": 26,
           "fontWeight": 500,
           "fill": "#5c3d20",
           "textAlign": "left",
           "lineHeight": 1.2,
-          "blockwise": { "objectId": "meta-feed-010-property-detail", "role": "property_features", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-010-property-detail",
+            "role": "property_features",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -324,7 +394,13 @@
           "rx": 8,
           "ry": 8,
           "fill": "#c8622a",
-          "blockwise": { "objectId": "meta-feed-010-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-010-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
@@ -338,7 +414,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-010-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-010-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         }
       ]
     }
@@ -347,13 +429,26 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
     "cta": "LEARN_MORE",
-    "primaryText": ["HOME OPEN: Saturday 6th June 10:00-10:30am | 28 Ardglass Gardens, Ridgewood | Offers from $995,000 | 4-5 bed, 2 bath, entertainment room, ducted A/C, kid & pet-friendly backyard."],
-    "headlines": ["WOW! Your Own Urban Sanctuary with Space for the Whole Family."],
-    "descriptions": ["28 Ardglass Gardens, Ridgewood — Offers from $995,000"],
+    "primaryText": [
+      "HOME OPEN: Saturday 6th June 10:00-10:30am | 28 Ardglass Gardens, Ridgewood | Offers from $995,000 | 4-5 bed, 2 bath, entertainment room, ducted A/C, kid & pet-friendly backyard."
+    ],
+    "headlines": [
+      "WOW! Your Own Urban Sanctuary with Space for the Whole Family."
+    ],
+    "descriptions": [
+      "28 Ardglass Gardens, Ridgewood \u2014 Offers from $995,000"
+    ],
     "leadForm": {
       "headline": "Register for the Home Open",
       "questions": [
@@ -364,7 +459,7 @@
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "You're registered!",
-        "body": "We'll see you at 28 Ardglass Gardens on Saturday 6 June between 10:00–10:30am."
+        "body": "We'll see you at 28 Ardglass Gardens on Saturday 6 June between 10:00\u201310:30am."
       }
     }
   }

@@ -4,20 +4,34 @@
   "name": "Family Home Spec-Strip Listing",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "seller_leads",
   "offerId": "property-listing-family",
   "audienceIntent": "Families looking for a spacious home in a quiet suburban area.",
   "category": "listing",
-  "tags": ["listing", "family-home", "specs", "meta-feed"],
+  "tags": [
+    "listing",
+    "family-home",
+    "specs",
+    "meta-feed"
+  ],
   "promptHint": "Family home listing with address, bedroom/bath/car/land spec strip, and agent branding.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "31d1755a-185f-499c-95e8-b173545b18a1" },
-  "classification": { "ad_type": "listing", "primary_intent": "listing", "property_or_agent_focus": "property" },
+  "sourceAd": {
+    "creativeId": "31d1755a-185f-499c-95e8-b173545b18a1"
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
   "sampleCopy": {
     "headline": "For Sale | 13 Jaydee Court, Thornlands",
-    "primaryText": "4 Bed | 2 Bath | 2 Car | 700m² — A beautifully presented family home in a quiet cul-de-sac. Team Renouf Real Estate.",
+    "primaryText": "4 Bed | 2 Bath | 2 Car | 700m\u00b2 \u2014 A beautifully presented family home in a quiet cul-de-sac. Team Renouf Real Estate.",
     "cta": "View Property"
   },
   "gallery": {
@@ -34,7 +48,10 @@
         "objectId": "meta-feed-007-bg",
         "type": "shape",
         "role": "background",
-        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
         "fill": "#ffffff",
         "locked": true
       },
@@ -42,16 +59,24 @@
         "objectId": "meta-feed-007-photo",
         "type": "image",
         "role": "property_photo",
-        "x": 0, "y": 0, "width": 1080, "height": 740,
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 740,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg"
       },
       {
         "objectId": "meta-feed-007-agency-badge-bg",
         "type": "shape",
         "role": "agency_badge_background",
-        "x": 0, "y": 0, "width": 1080, "height": 72,
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 72,
         "fill": "rgba(10,10,10,0.68)",
         "locked": true
       },
@@ -60,7 +85,10 @@
         "type": "text",
         "role": "agency_name",
         "content": "TEAM RENOUF REAL ESTATE",
-        "x": 40, "y": 18, "width": 820, "height": 36,
+        "x": 40,
+        "y": 18,
+        "width": 820,
+        "height": 36,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -73,7 +101,10 @@
         "objectId": "meta-feed-007-for-sale-pill-bg",
         "type": "shape",
         "role": "for_sale_badge_background",
-        "x": 40, "y": 660, "width": 192, "height": 52,
+        "x": 40,
+        "y": 660,
+        "width": 192,
+        "height": 52,
         "fill": "#1a4f8a",
         "locked": true,
         "radius": 4
@@ -83,7 +114,10 @@
         "type": "text",
         "role": "for_sale_label",
         "content": "FOR SALE",
-        "x": 56, "y": 675, "width": 160, "height": 24,
+        "x": 56,
+        "y": 675,
+        "width": 160,
+        "height": 24,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -96,7 +130,10 @@
         "objectId": "meta-feed-007-lower-panel",
         "type": "shape",
         "role": "lower_panel",
-        "x": 0, "y": 740, "width": 1080, "height": 610,
+        "x": 0,
+        "y": 740,
+        "width": 1080,
+        "height": 610,
         "fill": "#f6f4f0",
         "locked": true
       },
@@ -105,7 +142,10 @@
         "type": "text",
         "role": "address",
         "content": "13 Jaydee Court, Thornlands",
-        "x": 40, "y": 762, "width": 1000, "height": 90,
+        "x": 40,
+        "y": 762,
+        "width": 1000,
+        "height": 90,
         "fill": "#1a1a1a",
         "locked": false,
         "fontFamily": "Inter",
@@ -118,7 +158,10 @@
         "objectId": "meta-feed-007-spec-strip-bg",
         "type": "shape",
         "role": "spec_strip_background",
-        "x": 40, "y": 872, "width": 1000, "height": 112,
+        "x": 40,
+        "y": 872,
+        "width": 1000,
+        "height": 112,
         "fill": "#1a4f8a",
         "locked": true,
         "radius": 8
@@ -128,7 +171,10 @@
         "type": "text",
         "role": "spec_bed_value",
         "content": "4",
-        "x": 72, "y": 886, "width": 160, "height": 44,
+        "x": 72,
+        "y": 886,
+        "width": 160,
+        "height": 44,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -142,7 +188,10 @@
         "type": "text",
         "role": "spec_bed_label",
         "content": "BED",
-        "x": 72, "y": 930, "width": 160, "height": 36,
+        "x": 72,
+        "y": 930,
+        "width": 160,
+        "height": 36,
         "fill": "#a8c8f0",
         "locked": false,
         "fontFamily": "Inter",
@@ -155,7 +204,10 @@
         "objectId": "meta-feed-007-spec-div1",
         "type": "shape",
         "role": "spec_divider_1",
-        "x": 270, "y": 896, "width": 2, "height": 72,
+        "x": 270,
+        "y": 896,
+        "width": 2,
+        "height": 72,
         "fill": "rgba(255,255,255,0.3)",
         "locked": true
       },
@@ -164,7 +216,10 @@
         "type": "text",
         "role": "spec_bath_value",
         "content": "2",
-        "x": 302, "y": 886, "width": 160, "height": 44,
+        "x": 302,
+        "y": 886,
+        "width": 160,
+        "height": 44,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -178,7 +233,10 @@
         "type": "text",
         "role": "spec_bath_label",
         "content": "BATH",
-        "x": 302, "y": 930, "width": 160, "height": 36,
+        "x": 302,
+        "y": 930,
+        "width": 160,
+        "height": 36,
         "fill": "#a8c8f0",
         "locked": false,
         "fontFamily": "Inter",
@@ -191,7 +249,10 @@
         "objectId": "meta-feed-007-spec-div2",
         "type": "shape",
         "role": "spec_divider_2",
-        "x": 500, "y": 896, "width": 2, "height": 72,
+        "x": 500,
+        "y": 896,
+        "width": 2,
+        "height": 72,
         "fill": "rgba(255,255,255,0.3)",
         "locked": true
       },
@@ -200,7 +261,10 @@
         "type": "text",
         "role": "spec_car_value",
         "content": "2",
-        "x": 532, "y": 886, "width": 160, "height": 44,
+        "x": 532,
+        "y": 886,
+        "width": 160,
+        "height": 44,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -214,7 +278,10 @@
         "type": "text",
         "role": "spec_car_label",
         "content": "CAR",
-        "x": 532, "y": 930, "width": 160, "height": 36,
+        "x": 532,
+        "y": 930,
+        "width": 160,
+        "height": 36,
         "fill": "#a8c8f0",
         "locked": false,
         "fontFamily": "Inter",
@@ -227,7 +294,10 @@
         "objectId": "meta-feed-007-spec-div3",
         "type": "shape",
         "role": "spec_divider_3",
-        "x": 730, "y": 896, "width": 2, "height": 72,
+        "x": 730,
+        "y": 896,
+        "width": 2,
+        "height": 72,
         "fill": "rgba(255,255,255,0.3)",
         "locked": true
       },
@@ -235,8 +305,11 @@
         "objectId": "meta-feed-007-spec-land-value",
         "type": "text",
         "role": "spec_land_value",
-        "content": "700m²",
-        "x": 762, "y": 886, "width": 240, "height": 44,
+        "content": "700m\u00b2",
+        "x": 762,
+        "y": 886,
+        "width": 240,
+        "height": 44,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -250,7 +323,10 @@
         "type": "text",
         "role": "spec_land_label",
         "content": "LAND",
-        "x": 762, "y": 930, "width": 240, "height": 36,
+        "x": 762,
+        "y": 930,
+        "width": 240,
+        "height": 36,
         "fill": "#a8c8f0",
         "locked": false,
         "fontFamily": "Inter",
@@ -264,7 +340,10 @@
         "type": "text",
         "role": "description",
         "content": "Positioned in a quiet family friendly cul-de-sac, this beautifully presented home offers privacy, space and quality living.",
-        "x": 40, "y": 1008, "width": 1000, "height": 110,
+        "x": 40,
+        "y": 1008,
+        "width": 1000,
+        "height": 110,
         "fill": "#3d3d3d",
         "locked": false,
         "fontFamily": "Inter",
@@ -277,7 +356,10 @@
         "objectId": "meta-feed-007-cta-button",
         "type": "shape",
         "role": "cta_button",
-        "x": 40, "y": 1148, "width": 380, "height": 88,
+        "x": 40,
+        "y": 1148,
+        "width": 380,
+        "height": 88,
         "fill": "#1a4f8a",
         "locked": false,
         "radius": 6
@@ -287,7 +369,10 @@
         "type": "text",
         "role": "cta_text",
         "content": "View Property",
-        "x": 60, "y": 1172, "width": 340, "height": 40,
+        "x": 60,
+        "y": 1172,
+        "width": 340,
+        "height": 40,
         "fill": "#ffffff",
         "locked": false,
         "fontFamily": "Inter",
@@ -301,7 +386,10 @@
         "type": "text",
         "role": "footer_agency_name",
         "content": "Team Renouf Real Estate",
-        "x": 460, "y": 1270, "width": 580, "height": 36,
+        "x": 460,
+        "y": 1270,
+        "width": 580,
+        "height": 36,
         "fill": "#888888",
         "locked": false,
         "fontFamily": "Inter",
@@ -318,28 +406,57 @@
       "objects": [
         {
           "type": "rect",
-          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
           "fill": "#ffffff",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
-          "left": 0, "top": 0, "width": 1080, "height": 740,
-          "src": "",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 740,
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-007-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-feed-007-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
-          "left": 0, "top": 0, "width": 1080, "height": 72,
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 72,
           "fill": "rgba(10,10,10,0.68)",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-agency-badge-bg", "role": "agency_badge_background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-agency-badge-bg",
+            "role": "agency_badge_background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 40, "top": 18, "width": 820,
+          "left": 40,
+          "top": 18,
+          "width": 820,
           "text": "TEAM RENOUF REAL ESTATE",
           "fontFamily": "Inter",
           "fontSize": 22,
@@ -347,19 +464,37 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-007-agency-name", "role": "agency_name", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-agency-name",
+            "role": "agency_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 40, "top": 660, "width": 192, "height": 52,
-          "rx": 4, "ry": 4,
+          "left": 40,
+          "top": 660,
+          "width": 192,
+          "height": 52,
+          "rx": 4,
+          "ry": 4,
           "fill": "#1a4f8a",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-for-sale-pill-bg", "role": "for_sale_badge_background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-for-sale-pill-bg",
+            "role": "for_sale_badge_background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 56, "top": 675, "width": 160,
+          "left": 56,
+          "top": 675,
+          "width": 160,
           "text": "FOR SALE",
           "fontFamily": "Inter",
           "fontSize": 18,
@@ -367,18 +502,35 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-007-for-sale-label", "role": "for_sale_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-for-sale-label",
+            "role": "for_sale_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 0, "top": 740, "width": 1080, "height": 610,
+          "left": 0,
+          "top": 740,
+          "width": 1080,
+          "height": 610,
           "fill": "#f6f4f0",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-lower-panel", "role": "lower_panel", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-lower-panel",
+            "role": "lower_panel",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 40, "top": 762, "width": 1000,
+          "left": 40,
+          "top": 762,
+          "width": 1000,
           "text": "13 Jaydee Court, Thornlands",
           "fontFamily": "Inter",
           "fontSize": 52,
@@ -386,19 +538,37 @@
           "fill": "#1a1a1a",
           "textAlign": "left",
           "lineHeight": 1.05,
-          "blockwise": { "objectId": "meta-feed-007-address", "role": "address", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-007-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "rect",
-          "left": 40, "top": 872, "width": 1000, "height": 112,
-          "rx": 8, "ry": 8,
+          "left": 40,
+          "top": 872,
+          "width": 1000,
+          "height": 112,
+          "rx": 8,
+          "ry": 8,
           "fill": "#1a4f8a",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-spec-strip-bg", "role": "spec_strip_background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-strip-bg",
+            "role": "spec_strip_background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 72, "top": 886, "width": 160,
+          "left": 72,
+          "top": 886,
+          "width": 160,
           "text": "4",
           "fontFamily": "Inter",
           "fontSize": 36,
@@ -406,11 +576,19 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-bed-value", "role": "spec_bed_value", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-bed-value",
+            "role": "spec_bed_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 72, "top": 930, "width": 160,
+          "left": 72,
+          "top": 930,
+          "width": 160,
           "text": "BED",
           "fontFamily": "Inter",
           "fontSize": 18,
@@ -418,18 +596,35 @@
           "fill": "#a8c8f0",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-bed-label", "role": "spec_bed_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-bed-label",
+            "role": "spec_bed_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 270, "top": 896, "width": 2, "height": 72,
+          "left": 270,
+          "top": 896,
+          "width": 2,
+          "height": 72,
           "fill": "rgba(255,255,255,0.3)",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-spec-div1", "role": "spec_divider_1", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-div1",
+            "role": "spec_divider_1",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 302, "top": 886, "width": 160,
+          "left": 302,
+          "top": 886,
+          "width": 160,
           "text": "2",
           "fontFamily": "Inter",
           "fontSize": 36,
@@ -437,11 +632,19 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-bath-value", "role": "spec_bath_value", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-bath-value",
+            "role": "spec_bath_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 302, "top": 930, "width": 160,
+          "left": 302,
+          "top": 930,
+          "width": 160,
           "text": "BATH",
           "fontFamily": "Inter",
           "fontSize": 18,
@@ -449,18 +652,35 @@
           "fill": "#a8c8f0",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-bath-label", "role": "spec_bath_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-bath-label",
+            "role": "spec_bath_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 500, "top": 896, "width": 2, "height": 72,
+          "left": 500,
+          "top": 896,
+          "width": 2,
+          "height": 72,
           "fill": "rgba(255,255,255,0.3)",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-spec-div2", "role": "spec_divider_2", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-div2",
+            "role": "spec_divider_2",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 532, "top": 886, "width": 160,
+          "left": 532,
+          "top": 886,
+          "width": 160,
           "text": "2",
           "fontFamily": "Inter",
           "fontSize": 36,
@@ -468,11 +688,19 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-car-value", "role": "spec_car_value", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-car-value",
+            "role": "spec_car_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 532, "top": 930, "width": 160,
+          "left": 532,
+          "top": 930,
+          "width": 160,
           "text": "CAR",
           "fontFamily": "Inter",
           "fontSize": 18,
@@ -480,30 +708,55 @@
           "fill": "#a8c8f0",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-car-label", "role": "spec_car_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-car-label",
+            "role": "spec_car_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 730, "top": 896, "width": 2, "height": 72,
+          "left": 730,
+          "top": 896,
+          "width": 2,
+          "height": 72,
           "fill": "rgba(255,255,255,0.3)",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-007-spec-div3", "role": "spec_divider_3", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-div3",
+            "role": "spec_divider_3",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
-          "left": 762, "top": 886, "width": 240,
-          "text": "700m²",
+          "left": 762,
+          "top": 886,
+          "width": 240,
+          "text": "700m\u00b2",
           "fontFamily": "Inter",
           "fontSize": 36,
           "fontWeight": 900,
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-land-value", "role": "spec_land_value", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-land-value",
+            "role": "spec_land_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 762, "top": 930, "width": 240,
+          "left": 762,
+          "top": 930,
+          "width": 240,
           "text": "LAND",
           "fontFamily": "Inter",
           "fontSize": 18,
@@ -511,11 +764,19 @@
           "fill": "#a8c8f0",
           "textAlign": "center",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-007-spec-land-label", "role": "spec_land_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-spec-land-label",
+            "role": "spec_land_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
-          "left": 40, "top": 1008, "width": 1000,
+          "left": 40,
+          "top": 1008,
+          "width": 1000,
           "text": "Positioned in a quiet family friendly cul-de-sac, this beautifully presented home offers privacy, space and quality living.",
           "fontFamily": "Inter",
           "fontSize": 28,
@@ -523,18 +784,36 @@
           "fill": "#3d3d3d",
           "textAlign": "left",
           "lineHeight": 1.4,
-          "blockwise": { "objectId": "meta-feed-007-description", "role": "description", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-description",
+            "role": "description",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
-          "left": 40, "top": 1148, "width": 380, "height": 88,
-          "rx": 6, "ry": 6,
+          "left": 40,
+          "top": 1148,
+          "width": 380,
+          "height": 88,
+          "rx": 6,
+          "ry": 6,
           "fill": "#1a4f8a",
-          "blockwise": { "objectId": "meta-feed-007-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-007-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
-          "left": 60, "top": 1172, "width": 340,
+          "left": 60,
+          "top": 1172,
+          "width": 340,
           "text": "View Property",
           "fontFamily": "Inter",
           "fontSize": 26,
@@ -542,11 +821,19 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-007-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-007-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
-          "left": 460, "top": 1270, "width": 580,
+          "left": 460,
+          "top": 1270,
+          "width": 580,
           "text": "Team Renouf Real Estate",
           "fontFamily": "Inter",
           "fontSize": 20,
@@ -554,7 +841,13 @@
           "fill": "#888888",
           "textAlign": "right",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-007-footer-agency", "role": "footer_agency_name", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-007-footer-agency",
+            "role": "footer_agency_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         }
       ]
     }
@@ -563,12 +856,25 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["For Sale — 13 Jaydee Court, Thornlands. 4 Bed | 2 Bath | 2 Car | 700m². Quiet family-friendly cul-de-sac. Presented by Team Renouf Real Estate."],
-    "headlines": ["Team Renouf Real Estate | 13 Jaydee Court, Thornlands"],
-    "descriptions": ["4 Bed · 2 Bath · 2 Car · 700m²"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "For Sale \u2014 13 Jaydee Court, Thornlands. 4 Bed | 2 Bath | 2 Car | 700m\u00b2. Quiet family-friendly cul-de-sac. Presented by Team Renouf Real Estate."
+    ],
+    "headlines": [
+      "Team Renouf Real Estate | 13 Jaydee Court, Thornlands"
+    ],
+    "descriptions": [
+      "4 Bed \u00b7 2 Bath \u00b7 2 Car \u00b7 700m\u00b2"
+    ],
     "cta": "LEARN_MORE",
     "leadForm": {
       "headline": "Find out more about this property",

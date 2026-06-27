@@ -1,20 +1,34 @@
 {
   "id": "meta-fullscreen-003",
   "templateKey": "meta-fullscreen-003",
-  "name": "Agency Commission Pitch — We Get Results",
+  "name": "Agency Commission Pitch \u2014 We Get Results",
   "placement": "meta_fullscreen",
   "format": "9:16",
-  "dimensions": { "width": 1080, "height": 1920 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
   "goal": "seller_leads",
   "offerId": "commission-savings",
   "audienceIntent": "Homeowners considering selling who want to maximise their net proceeds by cutting agent commission. Motivated sellers looking for a trusted agency with a proven track record.",
   "category": "agency_brand",
-  "tags": ["agency_brand", "results", "commission", "meta-fullscreen"],
+  "tags": [
+    "agency_brand",
+    "results",
+    "commission",
+    "meta-fullscreen"
+  ],
   "promptHint": "High-energy fullscreen story ad for a real estate agency, leading with bold results claim and commission savings to convert home sellers.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "9575b405-8adf-41f8-ab2d-6663817f6042" },
-  "classification": { "ad_type": "agency_brand", "primary_intent": "agency_brand", "property_or_agent_focus": "agency" },
+  "sourceAd": {
+    "creativeId": "9575b405-8adf-41f8-ab2d-6663817f6042"
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
   "sampleCopy": {
     "headline": "We Get Results!",
     "primaryText": "Sell your house and save thousands in commission. Request a call back today.",
@@ -53,7 +67,9 @@
         "height": 900,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg"
       },
       {
         "objectId": "meta-fullscreen-003-image-overlay",
@@ -193,7 +209,13 @@
           "height": 1920,
           "fill": "#0d1b2e",
           "selectable": false,
-          "blockwise": { "objectId": "meta-fullscreen-003-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
@@ -201,9 +223,15 @@
           "top": 280,
           "width": 1080,
           "height": 900,
-          "src": "",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-fullscreen-003-hero-image", "role": "hero_image", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-hero-image",
+            "role": "hero_image",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
@@ -214,7 +242,13 @@
           "fill": "#0d1b2e",
           "opacity": 0.35,
           "selectable": false,
-          "blockwise": { "objectId": "meta-fullscreen-003-image-overlay", "role": "image_overlay", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-image-overlay",
+            "role": "image_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -228,7 +262,13 @@
           "fill": "#f5c842",
           "textAlign": "center",
           "lineHeight": 1.2,
-          "blockwise": { "objectId": "meta-fullscreen-003-eyebrow", "role": "eyebrow", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-eyebrow",
+            "role": "eyebrow",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -242,7 +282,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 0.95,
-          "blockwise": { "objectId": "meta-fullscreen-003-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "rect",
@@ -254,7 +300,13 @@
           "ry": 12,
           "fill": "#f5c842",
           "selectable": false,
-          "blockwise": { "objectId": "meta-fullscreen-003-savings-badge", "role": "savings_badge", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-savings-badge",
+            "role": "savings_badge",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -268,7 +320,13 @@
           "fill": "#0d1b2e",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-fullscreen-003-savings-text", "role": "savings_text", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-savings-text",
+            "role": "savings_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -282,7 +340,13 @@
           "fill": "#d6dde8",
           "textAlign": "center",
           "lineHeight": 1.3,
-          "blockwise": { "objectId": "meta-fullscreen-003-body", "role": "body", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-body",
+            "role": "body",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -293,7 +357,13 @@
           "rx": 10,
           "ry": 10,
           "fill": "#e63b2e",
-          "blockwise": { "objectId": "meta-fullscreen-003-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
@@ -307,7 +377,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-fullscreen-003-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-fullscreen-003-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         }
       ]
     }
@@ -316,13 +392,26 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["story"],
-    "instagramPositions": ["story"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
     "cta": "CONTACT_US",
-    "primaryText": ["Sell your house and save thousands in commission. Request a call back today."],
-    "headlines": ["We Get Results!"],
-    "descriptions": ["Save thousands in commission"],
+    "primaryText": [
+      "Sell your house and save thousands in commission. Request a call back today."
+    ],
+    "headlines": [
+      "We Get Results!"
+    ],
+    "descriptions": [
+      "Save thousands in commission"
+    ],
     "leadForm": {
       "headline": "Get your free callback",
       "questions": [

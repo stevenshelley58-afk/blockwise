@@ -4,20 +4,34 @@
   "name": "Aveley Suburb Stats Appraisal",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "appraisal_bookings",
   "offerId": "suburb-appraisal-stats",
   "audienceIntent": "Homeowners in a specific suburb who want to know their home's current market value.",
   "category": "appraisal",
-  "tags": ["appraisal", "suburb-stats", "market-data", "meta-feed"],
-  "promptHint": "Suburb appraisal ad with real market statistics — median price and 5-year growth prominently featured.",
+  "tags": [
+    "appraisal",
+    "suburb-stats",
+    "market-data",
+    "meta-feed"
+  ],
+  "promptHint": "Suburb appraisal ad with real market statistics \u2014 median price and 5-year growth prominently featured.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "552636e6-960d-4933-ad5b-cb4b36b2b5e1" },
-  "classification": { "ad_type": "appraisal", "primary_intent": "appraisal", "property_or_agent_focus": "suburb" },
+  "sourceAd": {
+    "creativeId": "552636e6-960d-4933-ad5b-cb4b36b2b5e1"
+  },
+  "classification": {
+    "ad_type": "appraisal",
+    "primary_intent": "appraisal",
+    "property_or_agent_focus": "suburb"
+  },
   "sampleCopy": {
     "headline": "Get Your FREE Price Update",
-    "primaryText": "Aveley homeowners — median price $827,000, 5-year growth 92.3%. Find out what YOUR home is worth.",
+    "primaryText": "Aveley homeowners \u2014 median price $827,000, 5-year growth 92.3%. Find out what YOUR home is worth.",
     "cta": "Get Free Price Update"
   },
   "gallery": {
@@ -52,7 +66,9 @@
         "height": 560,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg"
       },
       {
         "objectId": "meta-feed-003-photo-overlay",
@@ -210,7 +226,7 @@
         "objectId": "meta-feed-003-body-text",
         "type": "text",
         "role": "body",
-        "content": "The market's moved a lot. Don't miss your window — find out what your home is worth right now.",
+        "content": "The market's moved a lot. Don't miss your window \u2014 find out what your home is worth right now.",
         "x": 60,
         "y": 994,
         "width": 960,
@@ -284,7 +300,13 @@
           "height": 1350,
           "fill": "#0f1e2e",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-003-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-003-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
@@ -292,9 +314,15 @@
           "top": 0,
           "width": 1080,
           "height": 560,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-003-property-image", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-feed-003-property-image",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
@@ -304,7 +332,13 @@
           "height": 200,
           "fill": "#0f1e2e",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-003-photo-overlay", "role": "photo_gradient_overlay", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-003-photo-overlay",
+            "role": "photo_gradient_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -318,7 +352,13 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-003-suburb-label", "role": "suburb_name", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-003-suburb-label",
+            "role": "suburb_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "textbox",
@@ -332,7 +372,13 @@
           "fill": "#4db8ff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-003-owners-label", "role": "audience_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-003-owners-label",
+            "role": "audience_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -342,7 +388,13 @@
           "height": 3,
           "fill": "#4db8ff",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-003-divider", "role": "divider", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-003-divider",
+            "role": "divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "rect",
@@ -354,7 +406,13 @@
           "ry": 12,
           "fill": "#162840",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-003-stat1-card", "role": "stat_card_median", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat1-card",
+            "role": "stat_card_median",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -368,7 +426,13 @@
           "fill": "#4db8ff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-003-stat1-label", "role": "stat_label_median", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat1-label",
+            "role": "stat_label_median",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -382,7 +446,13 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-003-stat1-value", "role": "stat_value_median", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat1-value",
+            "role": "stat_value_median",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "rect",
@@ -394,7 +464,13 @@
           "ry": 12,
           "fill": "#162840",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-003-stat2-card", "role": "stat_card_growth", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat2-card",
+            "role": "stat_card_growth",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -408,7 +484,13 @@
           "fill": "#4db8ff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-003-stat2-label", "role": "stat_label_growth", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat2-label",
+            "role": "stat_label_growth",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -422,21 +504,33 @@
           "fill": "#2ecc71",
           "textAlign": "left",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-003-stat2-value", "role": "stat_value_growth", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-003-stat2-value",
+            "role": "stat_value_growth",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "textbox",
           "left": 60,
           "top": 994,
           "width": 960,
-          "text": "The market's moved a lot. Don't miss your window — find out what your home is worth right now.",
+          "text": "The market's moved a lot. Don't miss your window \u2014 find out what your home is worth right now.",
           "fontFamily": "Inter",
           "fontSize": 30,
           "fontWeight": 400,
           "fill": "#c8d8e8",
           "textAlign": "left",
           "lineHeight": 1.4,
-          "blockwise": { "objectId": "meta-feed-003-body-text", "role": "body", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-003-body-text",
+            "role": "body",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -450,7 +544,13 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-003-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-003-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "rect",
@@ -461,7 +561,13 @@
           "rx": 10,
           "ry": 10,
           "fill": "#4db8ff",
-          "blockwise": { "objectId": "meta-feed-003-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-003-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
@@ -475,7 +581,13 @@
           "fill": "#0f1e2e",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-003-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-003-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         }
       ]
     }
@@ -484,12 +596,25 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["Aveley homeowners — the market has moved significantly. Median price $827,000 with 92.3% growth over 5 years. Find out what YOUR home is worth now."],
-    "headlines": ["Get Your FREE Price Update"],
-    "descriptions": ["Free property appraisal for Aveley homeowners."],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Aveley homeowners \u2014 the market has moved significantly. Median price $827,000 with 92.3% growth over 5 years. Find out what YOUR home is worth now."
+    ],
+    "headlines": [
+      "Get Your FREE Price Update"
+    ],
+    "descriptions": [
+      "Free property appraisal for Aveley homeowners."
+    ],
     "cta": "CONTACT_US",
     "leadForm": {
       "headline": "Get your free property appraisal",

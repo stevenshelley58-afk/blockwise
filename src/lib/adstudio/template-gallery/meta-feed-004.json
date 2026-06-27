@@ -4,20 +4,34 @@
   "name": "North Fremantle Urgent Appraisal",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "appraisal_bookings",
   "offerId": "suburb-appraisal-urgent",
   "audienceIntent": "Homeowners in a fast-moving suburb who fear missing the peak of the market.",
   "category": "appraisal",
-  "tags": ["appraisal", "urgent", "suburb", "meta-feed"],
-  "promptHint": "Urgent appraisal ad for homeowners in a fast-moving suburb — 'don't get left behind' messaging.",
+  "tags": [
+    "appraisal",
+    "urgent",
+    "suburb",
+    "meta-feed"
+  ],
+  "promptHint": "Urgent appraisal ad for homeowners in a fast-moving suburb \u2014 'don't get left behind' messaging.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "11efdb0c-837c-4fea-9fc6-3daabea02878" },
-  "classification": { "ad_type": "appraisal", "primary_intent": "appraisal", "property_or_agent_focus": "property" },
+  "sourceAd": {
+    "creativeId": "11efdb0c-837c-4fea-9fc6-3daabea02878"
+  },
+  "classification": {
+    "ad_type": "appraisal",
+    "primary_intent": "appraisal",
+    "property_or_agent_focus": "property"
+  },
   "sampleCopy": {
     "headline": "Get your FREE property appraisal",
-    "primaryText": "North Fremantle homeowners are in the driver's seat. High demand, low stock — don't get left in the dust.",
+    "primaryText": "North Fremantle homeowners are in the driver's seat. High demand, low stock \u2014 don't get left in the dust.",
     "cta": "Book My Free Appraisal"
   },
   "gallery": {
@@ -40,7 +54,9 @@
         "height": 1350,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/hero-tall.jpg",
+        "assetId": "/adstudio-samples/photos/hero-tall.jpg"
       },
       {
         "objectId": "meta-feed-004-overlay",
@@ -134,7 +150,7 @@
         "objectId": "meta-feed-004-urgency-text",
         "type": "text",
         "role": "urgency_label",
-        "content": "The market is moving — are you?",
+        "content": "The market is moving \u2014 are you?",
         "x": 60,
         "y": 724,
         "width": 960,
@@ -189,7 +205,7 @@
           "top": 0,
           "width": 1080,
           "height": 1350,
-          "src": "",
+          "src": "/adstudio-samples/photos/hero-tall.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-004-photo",
@@ -314,7 +330,7 @@
           "left": 60,
           "top": 724,
           "width": 960,
-          "text": "The market is moving — are you?",
+          "text": "The market is moving \u2014 are you?",
           "fontFamily": "Inter",
           "fontSize": 30,
           "fontWeight": 700,
@@ -373,12 +389,25 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["North Fremantle homeowners — the market is moving fast. High demand, low stock, motivated buyers. Book your free appraisal now."],
-    "headlines": ["Get Your Free Property Appraisal"],
-    "descriptions": ["Fast-moving market. Don't miss your window."],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "North Fremantle homeowners \u2014 the market is moving fast. High demand, low stock, motivated buyers. Book your free appraisal now."
+    ],
+    "headlines": [
+      "Get Your Free Property Appraisal"
+    ],
+    "descriptions": [
+      "Fast-moving market. Don't miss your window."
+    ],
     "cta": "CONTACT_US",
     "leadForm": {
       "headline": "Book your free appraisal",

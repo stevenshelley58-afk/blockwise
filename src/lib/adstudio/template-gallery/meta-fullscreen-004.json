@@ -1,7 +1,7 @@
 {
   "id": "meta-fullscreen-004",
   "templateKey": "meta-fullscreen-004",
-  "name": "Agent Testimonial — Jay 5-Star Review",
+  "name": "Agent Testimonial \u2014 Jay 5-Star Review",
   "placement": "meta_fullscreen",
   "format": "9:16",
   "dimensions": {
@@ -10,7 +10,7 @@
   },
   "goal": "seller_leads",
   "offerId": "agent-social-proof",
-  "audienceIntent": "Homeowners considering selling who want reassurance from a trusted, proven local agent — motivated by spring market timing and peer validation from recent sellers.",
+  "audienceIntent": "Homeowners considering selling who want reassurance from a trusted, proven local agent \u2014 motivated by spring market timing and peer validation from recent sellers.",
   "category": "agency_brand",
   "tags": [
     "agency_brand",
@@ -31,8 +31,8 @@
   },
   "sampleCopy": {
     "headline": "Stop Guessing & Start Knowing",
-    "primaryText": "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" — Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast.",
-    "rating": "★★★★★",
+    "primaryText": "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" \u2014 Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast.",
+    "rating": "\u2605\u2605\u2605\u2605\u2605",
     "agentName": "Jay",
     "seasonalNote": "Spring is the perfect season to sell.",
     "cta": "Find Out My Home's Value"
@@ -69,7 +69,9 @@
         "height": 1080,
         "imageAnchor": "top",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/agent-1.jpg",
+        "assetId": "/adstudio-samples/photos/agent-1.jpg"
       },
       {
         "objectId": "mfs004-overlay",
@@ -104,7 +106,7 @@
         "objectId": "mfs004-stars",
         "type": "text",
         "role": "star_rating",
-        "content": "★★★★★",
+        "content": "\u2605\u2605\u2605\u2605\u2605",
         "x": 60,
         "y": 1188,
         "width": 960,
@@ -151,7 +153,7 @@
         "objectId": "mfs004-attribution",
         "type": "text",
         "role": "testimonial_attribution",
-        "content": "— Recent Seller",
+        "content": "\u2014 Recent Seller",
         "x": 96,
         "y": 1494,
         "width": 888,
@@ -256,7 +258,7 @@
           "top": 0,
           "width": 1080,
           "height": 1080,
-          "src": "",
+          "src": "/adstudio-samples/photos/agent-1.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "mfs004-hero-image",
@@ -307,7 +309,7 @@
           "left": 60,
           "top": 1188,
           "width": 960,
-          "text": "★★★★★",
+          "text": "\u2605\u2605\u2605\u2605\u2605",
           "fontFamily": "Inter",
           "fontSize": 44,
           "fontWeight": 700,
@@ -365,7 +367,7 @@
           "left": 96,
           "top": 1494,
           "width": 888,
-          "text": "— Recent Seller",
+          "text": "\u2014 Recent Seller",
           "fontFamily": "Inter",
           "fontSize": 22,
           "fontWeight": 600,
@@ -476,7 +478,7 @@
       "story"
     ],
     "primaryText": [
-      "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" — Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast."
+      "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" \u2014 Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast."
     ],
     "headlines": [
       "Stop Guessing & Start Knowing"
@@ -496,7 +498,7 @@
       }
     },
     "descriptions": [
-      "Stop guessing — find out the peak selling price for your home this spring."
+      "Stop guessing \u2014 find out the peak selling price for your home this spring."
     ]
   }
 }

@@ -4,16 +4,27 @@
   "name": "Off-Plan Development Launch",
   "placement": "meta_feed",
   "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
   "goal": "seller_leads",
   "offerId": "off-plan-development",
   "audienceIntent": "Buyers and investors looking for a new off-plan apartment development.",
   "category": "listing",
-  "tags": ["listing", "off-plan", "development", "new-build", "meta-feed"],
+  "tags": [
+    "listing",
+    "off-plan",
+    "development",
+    "new-build",
+    "meta-feed"
+  ],
   "promptHint": "Off-plan development launch ad with development name, apartment types, and low-deposit offer.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "creativeId": "8de45c37-e3fb-4524-a453-b9fa31265d4e" },
+  "sourceAd": {
+    "creativeId": "8de45c37-e3fb-4524-a453-b9fa31265d4e"
+  },
   "classification": {
     "ad_type": "listing",
     "primary_intent": "listing",
@@ -55,7 +66,9 @@
         "height": 720,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg"
       },
       {
         "objectId": "meta-feed-009-image-scrim",
@@ -236,7 +249,13 @@
           "height": 1350,
           "fill": "#0d1117",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-009-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-009-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "image",
@@ -244,9 +263,15 @@
           "top": 0,
           "width": 1080,
           "height": 720,
-          "src": "",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
           "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-009-hero-image", "role": "development_rendering", "type": "image", "locked": false, "editableKind": "image" }
+          "blockwise": {
+            "objectId": "meta-feed-009-hero-image",
+            "role": "development_rendering",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
         },
         {
           "type": "rect",
@@ -256,7 +281,13 @@
           "height": 200,
           "fill": "#0d111788",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-009-image-scrim", "role": "image_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-009-image-scrim",
+            "role": "image_scrim",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "rect",
@@ -268,7 +299,13 @@
           "ry": 6,
           "fill": "#c8963c",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-009-deposit-badge-bg", "role": "deposit_badge", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-009-deposit-badge-bg",
+            "role": "deposit_badge",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -282,7 +319,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-009-deposit-badge-text", "role": "deposit_badge_label", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-009-deposit-badge-text",
+            "role": "deposit_badge_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -296,7 +339,13 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-009-dev-name", "role": "development_name", "type": "text", "locked": false, "editableKind": "headline" }
+          "blockwise": {
+            "objectId": "meta-feed-009-dev-name",
+            "role": "development_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
         },
         {
           "type": "textbox",
@@ -310,7 +359,13 @@
           "fill": "#c8963c",
           "textAlign": "left",
           "lineHeight": 1.15,
-          "blockwise": { "objectId": "meta-feed-009-tagline", "role": "tagline", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-009-tagline",
+            "role": "tagline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -320,7 +375,13 @@
           "height": 2,
           "fill": "#2d3748",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-009-divider", "role": "accent_divider", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": {
+            "objectId": "meta-feed-009-divider",
+            "role": "accent_divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
         },
         {
           "type": "textbox",
@@ -334,7 +395,13 @@
           "fill": "#ffffff",
           "textAlign": "left",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-009-bedroom-types", "role": "bedroom_types", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-009-bedroom-types",
+            "role": "bedroom_types",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -348,7 +415,13 @@
           "fill": "#8a9bb0",
           "textAlign": "left",
           "lineHeight": 1.2,
-          "blockwise": { "objectId": "meta-feed-009-address", "role": "address", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-009-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "textbox",
@@ -362,7 +435,13 @@
           "fill": "#b0bec8",
           "textAlign": "left",
           "lineHeight": 1.4,
-          "blockwise": { "objectId": "meta-feed-009-offer-text", "role": "offer_body", "type": "text", "locked": false, "editableKind": "description" }
+          "blockwise": {
+            "objectId": "meta-feed-009-offer-text",
+            "role": "offer_body",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
         },
         {
           "type": "rect",
@@ -373,7 +452,13 @@
           "rx": 8,
           "ry": 8,
           "fill": "#c8963c",
-          "blockwise": { "objectId": "meta-feed-009-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-009-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
         },
         {
           "type": "textbox",
@@ -387,7 +472,13 @@
           "fill": "#ffffff",
           "textAlign": "center",
           "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-009-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+          "blockwise": {
+            "objectId": "meta-feed-009-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
         }
       ]
     }
@@ -396,12 +487,25 @@
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["Horizon Hurstville — 1, 2 & 3 Bedroom Residences at 6 Jack Brabham Drive. Secure with just 5% deposit and receive 5% rebate at settlement."],
-    "headlines": ["Horizon Hurstville"],
-    "descriptions": ["1, 2 & 3 Bedroom Residences · 5% Deposit · Hurstville"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Horizon Hurstville \u2014 1, 2 & 3 Bedroom Residences at 6 Jack Brabham Drive. Secure with just 5% deposit and receive 5% rebate at settlement."
+    ],
+    "headlines": [
+      "Horizon Hurstville"
+    ],
+    "descriptions": [
+      "1, 2 & 3 Bedroom Residences \u00b7 5% Deposit \u00b7 Hurstville"
+    ],
     "cta": "LEARN_MORE",
     "leadForm": {
       "headline": "Register your interest",

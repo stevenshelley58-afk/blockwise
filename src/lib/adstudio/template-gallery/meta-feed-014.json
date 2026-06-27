@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-014",
   "templateKey": "meta-feed-014",
-  "name": "Just Sold — Calamvale Home Value Hook",
+  "name": "Just Sold \u2014 Calamvale Home Value Hook",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -33,10 +33,10 @@
     "soldStamp": "SOLD",
     "soldPrice": "$1,250,000",
     "address": "60 Menser Street, Calamvale",
-    "specs": "5 Bed  |  3 Bath  |  2 Car  |  422m²",
+    "specs": "5 Bed  |  3 Bath  |  2 Car  |  422m\u00b2",
     "hookQuestion": "Wondering what YOUR home is worth?",
     "hookSubtext": "Get your free online estimate today.",
-    "primaryText": "SOLD — $1,250,000 | 60 Menser Street, Calamvale | 5 Bed | 3 Bath | 2 Car | 422m2. Wondering what your home might be worth today? Get your free online estimate.",
+    "primaryText": "SOLD \u2014 $1,250,000 | 60 Menser Street, Calamvale | 5 Bed | 3 Bath | 2 Car | 422m2. Wondering what your home might be worth today? Get your free online estimate.",
     "cta": "Get Free Estimate"
   },
   "gallery": {
@@ -71,7 +71,9 @@
         "height": 700,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg"
       },
       {
         "objectId": "meta-feed-014-photo-scrim",
@@ -165,7 +167,7 @@
         "objectId": "meta-feed-014-specs",
         "type": "text",
         "role": "property_specs",
-        "content": "5 Bed  |  3 Bath  |  2 Car  |  422m²",
+        "content": "5 Bed  |  3 Bath  |  2 Car  |  422m\u00b2",
         "x": 52,
         "y": 796,
         "width": 976,
@@ -299,7 +301,7 @@
           "top": 0,
           "width": 1080,
           "height": 700,
-          "src": "",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-014-property-photo",
@@ -424,7 +426,7 @@
           "left": 52,
           "top": 796,
           "width": 976,
-          "text": "5 Bed  |  3 Bath  |  2 Car  |  422m²",
+          "text": "5 Bed  |  3 Bath  |  2 Car  |  422m\u00b2",
           "fontFamily": "Inter",
           "fontSize": 26,
           "fontWeight": 500,
@@ -570,7 +572,7 @@
       "stream"
     ],
     "primaryText": [
-      "SOLD — $1,250,000 | 60 Menser Street, Calamvale | 5 Bed | 3 Bath | 2 Car | 422m2. Wondering what your home might be worth today? Get your free online estimate."
+      "SOLD \u2014 $1,250,000 | 60 Menser Street, Calamvale | 5 Bed | 3 Bath | 2 Car | 422m2. Wondering what your home might be worth today? Get your free online estimate."
     ],
     "headlines": [
       "Curious what your home is worth?"
@@ -581,7 +583,7 @@
       "questions": [
         "What is your property address?",
         "How many bedrooms does your property have?",
-        "Are you thinking of selling in the next 6–12 months?"
+        "Are you thinking of selling in the next 6\u201312 months?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
@@ -590,7 +592,7 @@
       }
     },
     "descriptions": [
-      "See what your home could be worth — get a free online estimate today."
+      "See what your home could be worth \u2014 get a free online estimate today."
     ]
   }
 }

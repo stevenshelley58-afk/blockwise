@@ -1,7 +1,7 @@
 {
   "id": "meta-fullscreen-005",
   "templateKey": "meta-fullscreen-005",
-  "name": "Luxury Listing — Grand Coastal Sanctuary Sorrento",
+  "name": "Luxury Listing \u2014 Grand Coastal Sanctuary Sorrento",
   "placement": "meta_fullscreen",
   "format": "9:16",
   "dimensions": {
@@ -32,7 +32,7 @@
   "sampleCopy": {
     "property_name": "GRAND COASTAL\nSANCTUARY",
     "location": "3 Newby Place, Sorrento",
-    "stats": "5 Bed  •  2 Bath  •  2 Car",
+    "stats": "5 Bed  \u2022  2 Bath  \u2022  2 Car",
     "views_label": "Breath-taking ocean views to Rottnest Island",
     "agency_name": "Ray White Keevers Group",
     "cta_text": "Learn More"
@@ -69,7 +69,9 @@
         "height": 1300,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg"
       },
       {
         "objectId": "meta-fullscreen-005-photo-gradient",
@@ -134,7 +136,7 @@
         "objectId": "meta-fullscreen-005-stats",
         "type": "text",
         "role": "property_stats",
-        "content": "5 Bed  •  2 Bath  •  2 Car",
+        "content": "5 Bed  \u2022  2 Bath  \u2022  2 Car",
         "x": 60,
         "y": 1410,
         "width": 960,
@@ -280,7 +282,7 @@
           "top": 0,
           "width": 1080,
           "height": 1300,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-fullscreen-005-property-photo",
@@ -368,7 +370,7 @@
           "left": 60,
           "top": 1410,
           "width": 960,
-          "text": "5 Bed  •  2 Bath  •  2 Car",
+          "text": "5 Bed  \u2022  2 Bath  \u2022  2 Car",
           "fontFamily": "Inter",
           "fontSize": 30,
           "fontWeight": 400,
@@ -551,7 +553,7 @@
       }
     },
     "descriptions": [
-      "Grand coastal sanctuary in Sorrento — 5 bed, ocean views, resort-style living."
+      "Grand coastal sanctuary in Sorrento \u2014 5 bed, ocean views, resort-style living."
     ]
   }
 }

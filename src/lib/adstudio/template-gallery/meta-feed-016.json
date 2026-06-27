@@ -1,7 +1,7 @@
 {
   "id": "meta-feed-016",
   "templateKey": "meta-feed-016",
-  "name": "Just Sold — Doubleview Results Proof",
+  "name": "Just Sold \u2014 Doubleview Results Proof",
   "placement": "meta_feed",
   "format": "4:5",
   "dimensions": {
@@ -10,7 +10,7 @@
   },
   "goal": "seller_leads",
   "offerId": "just-sold-social-proof",
-  "audienceIntent": "Homeowners in nearby streets who see a local sale result and feel the social proof of an agent who delivers — prompting them to reach out before they even start thinking of selling.",
+  "audienceIntent": "Homeowners in nearby streets who see a local sale result and feel the social proof of an agent who delivers \u2014 prompting them to reach out before they even start thinking of selling.",
   "category": "just_sold",
   "tags": [
     "just_sold",
@@ -18,7 +18,7 @@
     "social-proof",
     "meta-feed"
   ],
-  "promptHint": "Bold just-sold social proof ad: full-bleed property photo with a SOLD banner stamp at top, two punchy taglines below, and clean agency branding — confident and minimal.",
+  "promptHint": "Bold just-sold social proof ad: full-bleed property photo with a SOLD banner stamp at top, two punchy taglines below, and clean agency branding \u2014 confident and minimal.",
   "source": "builtin",
   "status": "approved",
   "sourceAd": {
@@ -36,7 +36,7 @@
     "taglineB": "Just Ask a Local.",
     "agencyLine": "Your Local Real Estate Expert",
     "primaryText": "Results That Speak. Just Ask a Local.",
-    "headline": "SOLD — 243A Huntriss Road, Doubleview"
+    "headline": "SOLD \u2014 243A Huntriss Road, Doubleview"
   },
   "gallery": {
     "thumbnailSrc": "/adstudio-samples/meta/meta-feed-016.svg",
@@ -70,7 +70,9 @@
         "height": 800,
         "imageAnchor": "center",
         "fill": null,
-        "locked": false
+        "locked": false,
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg"
       },
       {
         "objectId": "meta-feed-016-sold-banner-bg",
@@ -245,7 +247,7 @@
           "top": 0,
           "width": 1080,
           "height": 800,
-          "src": "",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
           "crossOrigin": "anonymous",
           "blockwise": {
             "objectId": "meta-feed-016-property-photo",
@@ -456,7 +458,7 @@
       "Results That Speak. Just Ask a Local."
     ],
     "headlines": [
-      "SOLD — 243A Huntriss Road, Doubleview"
+      "SOLD \u2014 243A Huntriss Road, Doubleview"
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
@@ -468,12 +470,12 @@
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
-        "title": "Thanks — we will be in touch",
+        "title": "Thanks \u2014 we will be in touch",
         "body": "One of our local agents will contact you shortly to discuss your property."
       }
     },
     "descriptions": [
-      "Results that speak — SOLD in Doubleview. Just ask a local."
+      "Results that speak \u2014 SOLD in Doubleview. Just ask a local."
     ]
   }
 }
