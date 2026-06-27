@@ -334,7 +334,7 @@ test("Ad Radar use action opens the template popout in Ad Studio", () => {
   assert.match(types, /hooks\?: string\[\]/);
 });
 
-test("Ad Studio template picker is in the intentional empty reset state", () => {
+test("Ad Studio template picker uses the local self-contained gallery", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
@@ -348,8 +348,8 @@ test("Ad Studio template picker is in the intentional empty reset state", () => 
   assert.match(workbench, /builtInAdStudioTemplates/);
   assert.match(route, /export async function GET/);
   assert.match(route, /export async function PATCH/);
-  assert.match(route, /source: "template_reset"/);
-  assert.match(route, /status: 410/);
+  assert.match(route, /source: "self_contained_gallery"/);
+  assert.match(route, /status: 405/);
   assert.doesNotMatch(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
   for (const removedSource of [
     ["v", "ad", "template", "library"].join("_"),
@@ -358,16 +358,16 @@ test("Ad Studio template picker is in the intentional empty reset state", () => 
     assert.equal(route.includes(`from("${removedSource}")`), false);
   }
   assert.match(templates, /mapAdStudioLibraryTemplate/);
-  assert.match(templates, /AD_STUDIO_TEMPLATES: AdStudioTemplate\[\] = \[\]/);
-  assert.match(templates, /RESOLVABLE_AD_STUDIO_TEMPLATES: AdStudioTemplate\[\] = \[\]/);
-  assert.match(templates, /resolveAdStudioTemplate[\s\S]*return null/);
-  assert.match(templates, /builtInAdStudioTemplates[\s\S]*return \[\]/);
+  assert.match(templates, /RAW_ADSTUDIO_GALLERY_TEMPLATES\.map\(validateGalleryTemplate\)/);
+  assert.match(templates, /RESOLVABLE_AD_STUDIO_TEMPLATES[\s\S]*status === "approved"/);
+  assert.match(templates, /resolveAdStudioTemplate[\s\S]*template\.id === templateId/);
+  assert.match(templates, /builtInAdStudioTemplates[\s\S]*return \[\.\.\.AD_STUDIO_TEMPLATES\]/);
   for (const term of ["fallback", "gold", "extracted", "creative" + "Skeleton"]) {
     assert.equal(templates.includes(term), false, `templates.ts must not contain ${term}`);
   }
   assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
-  assert.match(templatePanel, /No templates installed\./);
-  assert.match(dialog, /No templates installed\. The previous template library was removed/);
+  assert.match(templatePanel, /Self-contained Meta feed and fullscreen templates\./);
+  assert.match(dialog, /No templates available\. Start blank or use a previous ad\./);
   assert.match(dialog, /Saved Ad Radar inspiration/);
   assert.match(dialog, /Previous ads/);
   assert.match(dialog, /Ad Radar/);
@@ -389,7 +389,7 @@ test("Ad Studio template picker is in the intentional empty reset state", () => 
   assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
   assert.doesNotMatch(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
   assert.match(generator, /function resolveTemplateForGeneration/);
-  assert.match(generator, /ADSTUDIO_TEMPLATE_RESET_MESSAGE/);
+  assert.match(generator, /Selected template was not found\./);
   assert.match(generator, /templateKey/);
   assert.match(generator, /templateSnapshot/);
   assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);

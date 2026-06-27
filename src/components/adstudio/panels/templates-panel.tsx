@@ -69,10 +69,10 @@ type TemplatesPanelProps = {
 export function TemplatesPanel({ templates, brandKit, onUseTemplate, onStartBlank, showHeader = true }: TemplatesPanelProps) {
   return (
     <>
-      {showHeader && <PanelHeader title="Templates" detail="Template library reset. Fresh self-contained templates have not been installed yet." />}
+      {showHeader && <PanelHeader title="Templates" detail="Self-contained Meta feed and fullscreen templates." />}
       <div className="studio-tpl-grid">
         {templates.length === 0 ? (
-          <p className="studio-empty">No templates installed.</p>
+          <p className="studio-empty">No templates available.</p>
         ) : (
           templates.map((template) => (
             <TemplateCard key={template.id} template={template} brandKit={brandKit} onSelect={onUseTemplate} />

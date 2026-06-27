@@ -43,8 +43,14 @@ export {
   mergeAdStudioTemplateLibrary,
   resolvableAdStudioTemplates,
   resolveAdStudioTemplate,
+  type AdStudioGalleryTemplate,
   type AdStudioLibraryTemplate,
   type AdStudioTemplate,
+  type AdStudioTemplateCanvas,
+  type AdStudioTemplateEditableImage,
+  type AdStudioTemplateEditableText,
+  type AdStudioTemplateMeta,
+  type AdStudioTemplatePlacement,
 } from "./templates.ts";
 export {
   createOpenAiImageProvider,
@@ -83,6 +89,7 @@ export {
   templatePromptHint,
 } from "./template-resolver.ts";
 export { ADSTUDIO_TEMPLATE_VERSIONS, type AdStudioTemplateVersion } from "./templates.ts";
+export { metaLeadAdPackSchema } from "./types.ts";
 export type {
   AdStudioBrandKit,
   AdStudioCampaign,

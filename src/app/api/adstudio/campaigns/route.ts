@@ -42,6 +42,7 @@ function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
     value?.startsWith("data:image/") ||
       value?.startsWith("/api/adstudio/media?") ||
+      value?.startsWith("/adstudio-samples/") ||
       value?.startsWith("/ads/"),
   );
 }

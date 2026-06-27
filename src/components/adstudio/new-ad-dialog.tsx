@@ -695,9 +695,7 @@ export function NewAdDialog({
                   </div>
                   <div className="studio-explore-grid">
                     {visibleTemplates.length === 0 ? (
-                      <p className="studio-explore-msg">
-                        No templates installed. The previous template library was removed; fresh self-contained templates have not been added yet.
-                      </p>
+                      <p className="studio-explore-msg">No templates available. Start blank or use a previous ad.</p>
                     ) : null}
                     {visibleTemplates.map((template) => (
                       <article key={template.id} className="studio-explore-card">

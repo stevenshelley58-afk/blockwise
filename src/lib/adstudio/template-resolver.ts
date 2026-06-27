@@ -11,7 +11,7 @@ export async function resolveApprovedAdStudioTemplate(input: {
 }): Promise<AdStudioTemplate> {
   const key = cleanTemplateKey(input.templateKey) ?? cleanTemplateKey(input.templateId);
   if (!key) throw new Error("Selected template was not found.");
-  if (!isBuiltInAdStudioTemplate(key)) throw new Error(ADSTUDIO_TEMPLATE_RESET_MESSAGE);
+  if (!isBuiltInAdStudioTemplate(key)) throw new Error("Selected template was not found.");
   return resolveBuiltInApprovedTemplate(key);
 }
 

@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blockwise landing — before/after craft changes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+:root{
+  --navy:#123e75;--navy-h:#0d3263;--navy-ring:rgba(18,62,117,.18);--navy-pill:#eef3fb;--navy-pillbd:rgba(18,62,117,.22);--navy-sh:rgba(18,62,117,.45);
+  --blue:#006bff;--blue-h:#0055d4;--blue-ring:rgba(0,107,255,.18);--blue-pill:rgba(0,107,255,.07);--blue-pillbd:rgba(0,107,255,.22);--blue-sh:rgba(0,107,255,.5);
+  --ink:#131b2e;--muted:#475569;--faint:#94a3b8;--line:#e2e8f0;--line2:#edf1f6;--bg:#f8fafc;--surf:#fff;
+  --rc:8px;--rcard:12px;--rpanel:16px;
+}
+*{box-sizing:border-box}
+.mk{font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);max-width:1000px;margin:0 auto;padding:8px 4px 32px;line-height:1.5;
+  --acc:var(--blue);--acc-h:var(--blue-h);--acc-ring:var(--blue-ring);--acc-pill:var(--blue-pill);--acc-pillbd:var(--blue-pillbd);--acc-sh:var(--blue-sh);}
+.mk.navy{--acc:var(--navy);--acc-h:var(--navy-h);--acc-ring:var(--navy-ring);--acc-pill:var(--navy-pill);--acc-pillbd:var(--navy-pillbd);--acc-sh:var(--navy-sh);}
+.disp{font-family:Manrope,Inter,sans-serif}
+.mk-title{font-family:Manrope;font-weight:800;font-size:20px;letter-spacing:-.01em;margin:0 0 2px}
+.mk-sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--line);border-radius:var(--rpanel);padding:12px 14px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.bar .lbl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--rc);overflow:hidden}
+.seg button{appearance:none;border:0;background:var(--surf);color:var(--muted);font:600 12px Inter;padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--acc);color:#fff}
+.ghost{appearance:none;border:1px solid var(--line);background:var(--surf);color:var(--ink);font:600 12px Inter;padding:7px 12px;border-radius:var(--rc);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s ease,transform .16s cubic-bezier(.23,1,.32,1)}
+.ghost:hover{background:var(--bg)}.ghost:active{transform:scale(.97)}
+.sec{background:var(--surf);border:1px solid var(--line);border-radius:var(--rpanel);padding:16px 16px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.sec-n{font:700 11px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--acc)}
+.sec-t{font-family:Manrope;font-weight:700;font-size:16px;margin:3px 0 2px}
+.sec-d{color:var(--muted);font-size:13px;margin:0}
+.ba{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:14px}
+.pane{border:1px solid var(--line);border-radius:var(--rcard);padding:16px;background:var(--bg);min-height:120px;display:flex;flex-direction:column;gap:10px}
+.pane.after{background:#fff;border-color:var(--acc-pillbd)}
+.tag{font:700 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px}
+.tag.b{color:#94a3b8}.tag.a{color:var(--acc)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.cap{font-size:12px;color:var(--faint);margin-top:auto}
+.btn{appearance:none;border:0;cursor:pointer;font:600 14px Inter;height:42px;padding:0 18px;border-radius:var(--rc);background:var(--acc);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s ease}
+.btn:hover{background:var(--acc-h)}
+.btn.press{transition:background .15s ease,transform .16s cubic-bezier(.23,1,.32,1)}
+.btn.press:active{transform:scale(.97)}
+.btn.hero{height:50px;padding:0 24px;font-size:15.5px;font-weight:700;box-shadow:0 16px 34px -12px var(--acc-sh)}
+.pill{align-self:flex-start;display:inline-flex;gap:7px;align-items:center;font:700 12px Inter;color:var(--acc);background:var(--acc-pill);border:1px solid var(--acc-pillbd);padding:5px 11px;border-radius:999px}
+.pill .d{width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.kpi{display:flex;align-items:baseline;gap:9px;position:relative}
+.kpi .num{font-family:Manrope;font-weight:800;font-size:32px;color:var(--ink)}
+.kpi.tab .num{font-variant-numeric:tabular-nums}
+.kpi .lab{color:var(--muted);font-size:13px;border-left:2px solid var(--line);padding-left:9px}
+.h-demo{font-family:Manrope;font-weight:700;font-size:19px;line-height:1.25;color:var(--ink);width:250px;border:1px dashed var(--line);padding:10px;border-radius:var(--rc);background:#fff}
+.h-demo.bal{text-wrap:balance}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:12px;font-weight:600;color:var(--muted)}
+.fld input{height:40px;border:1px solid var(--line);border-radius:var(--rc);padding:0 11px;font:400 14px Inter;color:var(--ink);background:#fff;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+.fld input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-ring)}
+.fld input.bad{border-color:#ba1a1a;box-shadow:0 0 0 3px rgba(186,26,26,.12)}
+.fld input.ok{border-color:#006d38}
+.msg{font-size:12px;min-height:15px}
+.msg.err{color:#ba1a1a}.msg.good{color:#006d38}
+.track{height:6px;background:var(--line2);border-radius:999px;overflow:hidden}
+.track i{display:block;height:100%;width:0;background:var(--acc);border-radius:999px}
+.race-row{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.race-row .v{font-family:Manrope;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);min-width:42px;text-align:right}
+.swatch{display:flex;gap:10px;align-items:center}
+.chip{width:34px;height:34px;border-radius:9px;border:1px solid rgba(0,0,0,.08)}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;background:#0e1726;color:#d6e2f5;border-radius:var(--rcard);padding:12px 13px;white-space:pre-wrap;overflow:auto}
+.code .del{color:#ff9b9b}.code .add{color:#9ff0c4}.code .c{color:#7d8aa3}
+.sway{width:150px;height:96px;border-radius:var(--rcard);background:linear-gradient(135deg,#fff,#f1f5fb);border:1px solid var(--line);box-shadow:0 18px 40px -22px rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;font:700 12px Inter;color:var(--muted)}
+.sway.on{animation:sway 9s ease-in-out infinite}
+.sway.on:hover{animation-play-state:paused}
+@keyframes sway{0%,100%{transform:translateY(0) rotate(-.6deg)}50%{transform:translateY(-8px) rotate(.6deg)}}
+.note{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:var(--rc);padding:8px 10px;margin-top:10px}
+.kbd{font:600 11px ui-monospace,monospace;background:#eef2f7;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:#334155}
+@media (prefers-reduced-motion: reduce){.sway.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="mk" id="mk">
+  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Interactive before-and-after mockup of eight proposed craft changes to the Blockwise landing page.</h2>
+  <p class="mk-title disp">Blockwise landing — before / after</p>
+  <p class="mk-sub">Live mockup of the 8 craft fixes from the review. Press the buttons, replay the counters, type a bad email. Toggle the accent to compare both blues across everything.</p>
+
+  <div class="bar">
+    <span class="lbl">Accent</span>
+    <div class="seg" role="group" aria-label="Accent color">
+      <button id="t-blue" aria-pressed="true">Bright #006bff (current)</button>
+      <button id="t-navy" aria-pressed="false">Navy #123e75 (app)</button>
+    </div>
+    <button class="ghost" id="replay"><i>↻</i> Replay animations</button>
+    <span class="lbl" id="rm-note" style="margin-left:auto"></span>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">01 · pick one blue</span>
+    <p class="sec-t disp">One accent, everywhere</p>
+    <p class="sec-d">The landing runs on bright <code>#006bff</code>; the app on navy <code>#123e75</code>. Use the toggle above to preview each across the whole mockup. Same element, two identities:</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Today — two blues</span>
+        <div class="swatch"><span class="chip" style="background:#006bff"></span><div><div style="font-weight:700;font-size:13px">Landing · #006bff</div><div style="font-size:12px;color:var(--faint)">hero, pills, rings</div></div></div>
+        <div class="swatch"><span class="chip" style="background:#123e75"></span><div><div style="font-weight:700;font-size:13px">App · #123e75</div><div style="font-size:12px;color:var(--faint)">signup, product, pricing</div></div></div>
+        <span class="cap">Landing → signup feels like two products.</span>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>Proposed — unify</span>
+        <span class="pill"><span class="d"></span>Meta ads for real estate agents</span>
+        <button class="btn hero press">Start free trial</button>
+        <span class="cap">Pill, button, ring + focus all share one accent.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">02 · scale on press</span>
+    <p class="sec-t disp">Buttons that feel pressed</p>
+    <p class="sec-d">No landing button has an <code>:active</code> state today. Press both — only the right one depresses (<code>scale(0.97)</code>, 160ms ease-out).</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Before — hover only</span>
+        <button class="btn">Free suburb audit</button>
+        <span class="cap">Click: nothing acknowledges the press.</span>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>After — scale on press</span>
+        <button class="btn press">Free suburb audit</button>
+        <span class="cap">Click: tactile dip, then release.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">03 · tabular numerals</span>
+    <p class="sec-t disp">Counters that don't wobble</p>
+    <p class="sec-d">The hero KPIs count up on scroll. Without <code>tabular-nums</code> the digits change width every frame, so the label jitters. Watch the left edge of each label.</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Before — proportional</span>
+        <div class="kpi"><span class="num" data-c="47" id="n1">0</span><span class="lab">leads / week</span></div>
+        <div class="kpi"><span class="num" data-c="13" data-pre="$" id="n2">$0</span><span class="lab">cost per lead</span></div>
+        <span class="cap">Label edge shifts as numbers tick.</span>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>After — tabular-nums</span>
+        <div class="kpi tab"><span class="num" data-c="47" id="n3">0</span><span class="lab">leads / week</span></div>
+        <div class="kpi tab"><span class="num" data-c="13" data-pre="$" id="n4">$0</span><span class="lab">cost per lead</span></div>
+        <span class="cap">Label edge stays put.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">04 · balanced headings</span>
+    <p class="sec-t disp">No orphan words</p>
+    <p class="sec-d">Same heading, same width. <code>text-wrap: balance</code> evens the lines so a lone word never dangles.</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Before</span>
+        <div class="h-demo">Ads built from what's actually working in your area</div>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>After — balance</span>
+        <div class="h-demo bal">Ads built from what's actually working in your area</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">06 · inline validation</span>
+    <p class="sec-t disp">Catch a bad email before submit</p>
+    <p class="sec-d">The demo form has <code>noValidate</code> and no field checks. Type <span class="kbd">notanemail</span> and submit each.</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Before — server round-trip</span>
+        <div class="fld"><label for="e1">Email</label><input id="e1" type="text" placeholder="name@agency.com.au"></div>
+        <button class="btn press" id="sub1" style="align-self:flex-start">Request setup</button>
+        <div class="msg err" id="m1"></div>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>After — instant inline check</span>
+        <div class="fld"><label for="e2">Email</label><input id="e2" type="email" placeholder="name@agency.com.au"></div>
+        <button class="btn press" id="sub2" style="align-self:flex-start">Request setup</button>
+        <div class="msg" id="m2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">08 · motion craft</span>
+    <p class="sec-t disp">Easing &amp; ambient sway</p>
+    <p class="sec-d">Two count-ups race: linear (today's figure counter) vs ease-out (the KPI counter). Ease-out feels responsive — it moves first. The hero "slab" sways forever; it should at least pause on hover and stop under reduced-motion.</p>
+    <div class="ba">
+      <div class="pane"><span class="tag b"><span class="dot"></span>Easing — pick one</span>
+        <div class="race-row" style="margin-bottom:8px"><span style="min-width:70px">linear</span><div class="track" style="flex:1"><i id="rl"></i></div><span class="v" id="rlv">0</span></div>
+        <div class="race-row"><span style="min-width:70px">ease-out</span><div class="track" style="flex:1"><i id="re"></i></div><span class="v" id="rev">0</span></div>
+        <span class="cap">Both counters on the page should use the same curve.</span>
+      </div>
+      <div class="pane after"><span class="tag a"><span class="dot"></span>Ambient sway — hover to pause</span>
+        <div class="sway on" id="sway">slab</div>
+        <button class="ghost" id="swayoff" style="align-self:flex-start">Toggle sway</button>
+        <span class="cap">Already pauses on hover &amp; respects reduced-motion.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <span class="sec-n">05 &amp; 07 · structural</span>
+    <p class="sec-t disp">Hover gating &amp; one stylesheet</p>
+    <p class="sec-d">Two fixes that are code-shape, not pixels — shown as the diff.</p>
+    <div class="ba">
+      <div class="pane" style="background:#fff"><span class="tag b"><span class="dot"></span>05 · gate hover for touch</span>
+<div class="code"><span class="del">- .lp-feature:hover { background: … }</span>
+<span class="add">+ @media (hover:hover) and (pointer:fine) {</span>
+<span class="add">+   .lp-feature:hover { background: … } }</span>
+<span class="c">// stops hover styles sticking after tap</span></div>
+      </div>
+      <div class="pane" style="background:#fff"><span class="tag b"><span class="dot"></span>07 · consolidate styles</span>
+<div class="code"><span class="c">// page.tsx — styles in 3 places</span>
+<span class="del">- const FLOW_CSS = `…`  // inline</span>
+<span class="del">- const DFY_CSS  = `…`  // inline</span>
+<span class="add">+ move both into landing.css</span>
+<span class="c">// one home for the palette → no stray #006bff</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var mk=document.getElementById('mk');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('rm-note').textContent=reduce?'reduced-motion on — animations held':'';
+  var tb=document.getElementById('t-blue'),tn=document.getElementById('t-navy');
+  function setAcc(navy){mk.classList.toggle('navy',navy);tb.setAttribute('aria-pressed',String(!navy));tn.setAttribute('aria-pressed',String(navy));}
+  tb.onclick=function(){setAcc(false)};tn.onclick=function(){setAcc(true)};
+
+  function ease(p){return 1-Math.pow(1-p,3)}
+  function run(el,to,pre,dur,curve){
+    if(reduce){el.textContent=(pre||'')+to;return;}
+    var t0=performance.now();
+    (function tick(t){var p=Math.min(1,(t-t0)/dur);var v=curve?ease(p):p;el.textContent=(pre||'')+Math.round(to*v);if(p<1)requestAnimationFrame(tick);else el.textContent=(pre||'')+to;})(t0);
+  }
+  function runBar(bar,val,dur,curve){
+    if(reduce){bar.style.width='100%';val.textContent=100;return;}
+    var t0=performance.now();
+    (function tick(t){var p=Math.min(1,(t-t0)/dur);var v=curve?ease(p):p;bar.style.width=(v*100).toFixed(1)+'%';val.textContent=Math.round(v*100);if(p<1)requestAnimationFrame(tick);})(t0);
+  }
+  function replay(){
+    run(document.getElementById('n1'),47,'',1400,true);
+    run(document.getElementById('n2'),13,'$',1400,true);
+    run(document.getElementById('n3'),47,'',1400,true);
+    run(document.getElementById('n4'),13,'$',1400,true);
+    runBar(document.getElementById('rl'),document.getElementById('rlv'),1500,false);
+    runBar(document.getElementById('re'),document.getElementById('rev'),1500,true);
+  }
+  document.getElementById('replay').onclick=replay;
+
+  var re=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  document.getElementById('sub1').onclick=function(){
+    var m=document.getElementById('m1');m.textContent='Checking…';m.className='msg err';
+    setTimeout(function(){m.textContent="Couldn't verify that email. Please try again.";},800);
+  };
+  document.getElementById('sub2').onclick=function(){
+    var v=document.getElementById('e2').value.trim(),inp=document.getElementById('e2'),m=document.getElementById('m2');
+    if(re.test(v)){inp.className='ok';m.className='msg good';m.textContent='Looks good — sending…';}
+    else{inp.className='bad';m.className='msg err';m.textContent='Enter a valid email address.';}
+  };
+  document.getElementById('e2').addEventListener('blur',function(){
+    var v=this.value.trim(),m=document.getElementById('m2');
+    if(!v){this.className='';m.textContent='';return;}
+    if(re.test(v)){this.className='ok';m.className='msg good';m.textContent='Looks good.';}
+    else{this.className='bad';m.className='msg err';m.textContent='Enter a valid email address.';}
+  });
+  var sw=document.getElementById('sway');
+  document.getElementById('swayoff').onclick=function(){sw.classList.toggle('on');};
+
+  setTimeout(replay,250);
+})();
+</script>
+</body>
+</html>
