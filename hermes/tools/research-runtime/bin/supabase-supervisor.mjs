@@ -10,6 +10,9 @@ import { join } from "node:path";
 import {
   CLASSIFIER_VERSION,
   classifyCreativeWithModels,
+  hasUnresolvedDynamicPlaceholder,
+  hasUsableCapturedMedia,
+  shouldDisplayClassifiedCreative,
   shouldReclassifyCreative,
   shouldWaitForMediaClassification,
 } from "./ad-classifier.mjs";
@@ -5347,7 +5350,7 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
   if (shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
   }
@@ -5358,8 +5361,9 @@ async function handleAdClassifier(job) {
   });
   const classification = classificationResult.classification;
   const requiresMedia = ["image", "video", "carousel"].includes(creative.format);
-  const mediaReady = !requiresMedia || capturedAssets.length > 0;
-  const displayState = classification.is_real_estate_ad && mediaReady ? "displayable" : "hidden";
+  const mediaReady = !requiresMedia || hasUsableCapturedMedia(capturedAssets);
+  const unresolvedDynamicPlaceholder = hasUnresolvedDynamicPlaceholder(creative);
+  const displayState = shouldDisplayClassifiedCreative(creative, capturedAssets, classification) ? "displayable" : "hidden";
   const decisionRows = await rest("research", "agent_decisions", {
     method: "POST",
     headers: { Prefer: "return=representation" },
@@ -5381,9 +5385,10 @@ async function handleAdClassifier(job) {
         cta: creative.cta,
         landing_url: creative.landing_url,
         media_ready: mediaReady,
+        unresolved_dynamic_placeholder: unresolvedDynamicPlaceholder,
         evidence_source: classificationResult.evidenceSource,
         classifier_version: CLASSIFIER_VERSION,
-        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, storage_path: asset.storage_path })),
+        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, storage_path: asset.storage_path, byte_size: asset.byte_size })),
       },
       hermes_session_id: workerId,
       hermes_skill: "blockwise-ad-classifier",
@@ -5409,6 +5414,7 @@ async function handleAdClassifier(job) {
       ad_creative_id: creative.id,
       display_state: displayState,
       media_ready: mediaReady,
+      unresolved_dynamic_placeholder: unresolvedDynamicPlaceholder,
       is_real_estate_ad: classification.is_real_estate_ad,
       ad_type: classification.ad_type,
       primary_intent: classification.primary_intent,

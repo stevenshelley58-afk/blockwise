@@ -5,7 +5,10 @@ import {
   CLASSIFIER_VERSION,
   classifyCreativeDeterministically,
   classifyCreativeWithModels,
+  hasUnresolvedDynamicPlaceholder,
+  hasUsableCapturedMedia,
   shouldReclassifyCreative,
+  shouldDisplayClassifiedCreative,
   shouldWaitForMediaClassification,
 } from "../../hermes/tools/research-runtime/bin/ad-classifier.mjs";
 
@@ -189,5 +192,38 @@ test("Hermes classifier waits for media when copy is unusable and media sources 
       [{ kind: "image", url: "https://cdn.example.test/captured.jpg" }],
     ),
     false,
+  );
+});
+
+test("Hermes display gate rejects dynamic placeholders and known tiny media artifacts", () => {
+  const classification = { is_real_estate_ad: true };
+
+  assert.equal(hasUnresolvedDynamicPlaceholder({ headline: "{{product.name}}", body: "Agency brand" }), true);
+  assert.equal(hasUsableCapturedMedia([{ kind: "image", storage_path: "tiny.jpg", byte_size: 645 }]), false);
+  assert.equal(hasUsableCapturedMedia([{ kind: "video", storage_path: "ad.mp4", byte_size: 250_000 }]), true);
+
+  assert.equal(
+    shouldDisplayClassifiedCreative(
+      { headline: "{{product.name}}", body: "Agency brand", format: "video" },
+      [{ kind: "video", storage_path: "ad.mp4", byte_size: 250_000 }],
+      classification,
+    ),
+    false,
+  );
+  assert.equal(
+    shouldDisplayClassifiedCreative(
+      { headline: "Real headline", body: "Agency brand", format: "video" },
+      [{ kind: "image", storage_path: "tiny.jpg", byte_size: 645 }],
+      classification,
+    ),
+    false,
+  );
+  assert.equal(
+    shouldDisplayClassifiedCreative(
+      { headline: "Real headline", body: "Agency brand", format: "video" },
+      [{ kind: "video", storage_path: "ad.mp4", byte_size: 250_000 }],
+      classification,
+    ),
+    true,
   );
 });

@@ -132,7 +132,7 @@ export async function classifyCreativeWithModels(creative, capturedAssets = [], 
 }
 
 export function shouldWaitForMediaClassification(creative, capturedAssets = []) {
-  return !hasUsableCreativeCopy(creative) && !hasCapturedMedia(capturedAssets) && hasSourceMedia(creative);
+  return !hasUsableCreativeCopy(creative) && !hasUsableCapturedMedia(capturedAssets) && hasSourceMedia(creative);
 }
 
 export function shouldReclassifyCreative(row, classifierVersion = CLASSIFIER_VERSION) {
@@ -202,6 +202,29 @@ export function hasUsableCreativeCopy(creative) {
   if (letters < 12) return false;
   if (hasClassificationSignal(text.toLowerCase())) return true;
   return text.split(/\s+/u).filter(Boolean).length >= 8 && letters >= 45;
+}
+
+export function hasUnresolvedDynamicPlaceholder(creative) {
+  return [
+    creative?.headline,
+    creative?.body,
+    creative?.cta,
+    creative?.metadata?.description,
+  ].some((value) => /\{\{\s*[a-z0-9_.-]+\s*\}\}/iu.test(cleanString(value) ?? ""));
+}
+
+export function hasUsableCapturedMedia(capturedAssets = []) {
+  return Array.isArray(capturedAssets) && capturedAssets.some((asset) => {
+    if (!firstMediaUrl([asset]) && !cleanString(asset?.storage_path)) return false;
+    const byteSize = mediaByteSize(asset);
+    return byteSize === null || byteSize >= 2048;
+  });
+}
+
+export function shouldDisplayClassifiedCreative(creative, capturedAssets = [], classification = {}) {
+  const requiresMedia = ["image", "video", "carousel"].includes(cleanString(creative?.format) ?? "");
+  const mediaReady = !requiresMedia || hasUsableCapturedMedia(capturedAssets);
+  return Boolean(classification?.is_real_estate_ad) && mediaReady && !hasUnresolvedDynamicPlaceholder(creative);
 }
 
 async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, options) {
@@ -335,7 +358,7 @@ function parseTaskModels(value) {
 
 function evidenceSourceForCreative(creative, capturedAssets) {
   if (hasUsableCreativeCopy(creative)) return "text";
-  if (hasCapturedMedia(capturedAssets)) return "vision";
+  if (hasUsableCapturedMedia(capturedAssets)) return "vision";
   return "fallback";
 }
 
@@ -351,10 +374,6 @@ function firstMediaUrl(capturedAssets, options = {}) {
     if (value) return value;
   }
   return null;
-}
-
-function hasCapturedMedia(capturedAssets) {
-  return Array.isArray(capturedAssets) && capturedAssets.some((asset) => firstMediaUrl([asset]));
 }
 
 function hasSourceMedia(creative) {
@@ -419,6 +438,12 @@ function hasListingSignal(text) {
     /\b(new\s+listing|just\s+listed|new\s+to\s+market|for\s+sale|set\s+date\s+sale|offers?\s+(?:over|invited|from)|expressions?\s+of\s+interest|\d+\s*bed(?:room)?s?|\d+\s*bath(?:room)?s?|\d+\s*car\b|\d+\s*(?:sqm|m2)\b|property\s+link|price\s+guide|under\s+offer)\b/iu.test(text) ||
     (hasStreetAddressSignal(text) && hasPropertyListingLanguage(text))
   );
+}
+
+function mediaByteSize(asset) {
+  const value = asset?.byte_size ?? asset?.byteSize;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function hasStreetAddressSignal(text) {

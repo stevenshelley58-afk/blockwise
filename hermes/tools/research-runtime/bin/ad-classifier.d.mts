@@ -27,6 +27,13 @@ export function shouldWaitForMediaClassification(
   creative: Record<string, unknown>,
   capturedAssets?: Array<Record<string, unknown>>,
 ): boolean;
+export function hasUnresolvedDynamicPlaceholder(creative: Record<string, unknown>): boolean;
+export function hasUsableCapturedMedia(capturedAssets?: Array<Record<string, unknown>>): boolean;
+export function shouldDisplayClassifiedCreative(
+  creative: Record<string, unknown>,
+  capturedAssets?: Array<Record<string, unknown>>,
+  classification?: Record<string, unknown>,
+): boolean;
 export function normaliseAdClassification(
   input: Record<string, unknown>,
   options?: Record<string, unknown>,
