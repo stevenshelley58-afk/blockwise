@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#0f1e2e" rx="0"/>
+  <rect x="0" y="0" width="1080" height="560" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="289.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="360" width="1080" height="200" fill="#0f1e2e" rx="0"/>
+  <text x="60" y="670" text-anchor="start" font-family="sans-serif" font-size="80" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-003-suburb-label)">AVELEY</text>
+  <clipPath id="clip-meta-feed-003-suburb-label"><rect x="60" y="590" width="960" height="170"/></clipPath>
+  <text x="60" y="722" text-anchor="start" font-family="sans-serif" font-size="34" font-weight="700" fill="#4db8ff" clip-path="url(#clip-meta-feed-003-owners-label)">HOMEOWNERS</text>
+  <clipPath id="clip-meta-feed-003-owners-label"><rect x="60" y="688" width="960" height="78"/></clipPath>
+  <rect x="60" y="748" width="960" height="3" fill="#4db8ff" rx="0"/>
+  <rect x="60" y="768" width="455" height="200" fill="#162840" rx="12"/>
+  <text x="80" y="814" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="700" fill="#4db8ff" clip-path="url(#clip-meta-feed-003-stat1-label)">MEDIAN PRICE</text>
+  <clipPath id="clip-meta-feed-003-stat1-label"><rect x="80" y="792" width="415" height="58"/></clipPath>
+  <text x="80" y="900" text-anchor="start" font-family="sans-serif" font-size="64" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-003-stat1-value)">$827,000</text>
+  <clipPath id="clip-meta-feed-003-stat1-value"><rect x="80" y="836" width="415" height="164"/></clipPath>
+  <rect x="565" y="768" width="455" height="200" fill="#162840" rx="12"/>
+  <text x="585" y="814" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="700" fill="#4db8ff" clip-path="url(#clip-meta-feed-003-stat2-label)">5-YEAR GROWTH</text>
+  <clipPath id="clip-meta-feed-003-stat2-label"><rect x="585" y="792" width="415" height="58"/></clipPath>
+  <text x="585" y="900" text-anchor="start" font-family="sans-serif" font-size="64" font-weight="900" fill="#2ecc71" clip-path="url(#clip-meta-feed-003-stat2-value)">92.3%</text>
+  <clipPath id="clip-meta-feed-003-stat2-value"><rect x="585" y="836" width="415" height="164"/></clipPath>
+  <text x="60" y="1024" text-anchor="start" font-family="sans-serif" font-size="30" font-weight="400" fill="#c8d8e8" clip-path="url(#clip-meta-feed-003-body-text)">The market's moved a lot. Don't miss your window — find out what your home is worth right now.</text>
+  <clipPath id="clip-meta-feed-003-body-text"><rect x="60" y="994" width="960" height="130"/></clipPath>
+  <text x="60" y="1162" text-anchor="start" font-family="sans-serif" font-size="52" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-003-headline)">Get Your FREE Price Update</text>
+  <clipPath id="clip-meta-feed-003-headline"><rect x="60" y="1110" width="960" height="132"/></clipPath>
+  <rect x="60" y="1218" width="540" height="88" fill="#4db8ff" rx="10"/>
+  <text x="330" y="1270" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#0f1e2e" clip-path="url(#clip-meta-feed-003-cta-text)">Get Free Price Update</text>
+  <clipPath id="clip-meta-feed-003-cta-text"><rect x="80" y="1242" width="500" height="68"/></clipPath>
+</svg>

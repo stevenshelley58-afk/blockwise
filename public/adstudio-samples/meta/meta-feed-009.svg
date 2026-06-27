@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#0d1117" rx="0"/>
+  <rect x="0" y="0" width="1080" height="720" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="369.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[development_rendering]</text>
+  <rect x="0" y="520" width="1080" height="200" fill="#0d111788" rx="0"/>
+  <rect x="60" y="640" width="280" height="64" fill="#c8963c" rx="6"/>
+  <text x="200" y="681" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-009-deposit-badge-text)">5% DEPOSIT</text>
+  <clipPath id="clip-meta-feed-009-deposit-badge-text"><rect x="76" y="657" width="248" height="54"/></clipPath>
+  <text x="60" y="826" text-anchor="start" font-family="sans-serif" font-size="88" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-009-dev-name)">Horizon Hurstville</text>
+  <clipPath id="clip-meta-feed-009-dev-name"><rect x="60" y="738" width="960" height="208"/></clipPath>
+  <text x="60" y="898" text-anchor="start" font-family="sans-serif" font-size="30" font-weight="600" fill="#c8963c" clip-path="url(#clip-meta-feed-009-tagline)">Exceed every expectation</text>
+  <clipPath id="clip-meta-feed-009-tagline"><rect x="60" y="868" width="960" height="74"/></clipPath>
+  <rect x="60" y="928" width="960" height="2" fill="#2d3748" rx="0"/>
+  <text x="60" y="988" text-anchor="start" font-family="sans-serif" font-size="40" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-009-bedroom-types)">1, 2 &amp; 3 Bedroom Residences</text>
+  <clipPath id="clip-meta-feed-009-bedroom-types"><rect x="60" y="948" width="960" height="100"/></clipPath>
+  <text x="60" y="1042" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="400" fill="#8a9bb0" clip-path="url(#clip-meta-feed-009-address)">6 Jack Brabham Drive, Hurstville</text>
+  <clipPath id="clip-meta-feed-009-address"><rect x="60" y="1016" width="960" height="68"/></clipPath>
+  <text x="60" y="1100" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="400" fill="#b0bec8" clip-path="url(#clip-meta-feed-009-offer-text)">Secure your new home with only 5% deposit
+and receive 5% rebate at settlement.</text>
+  <clipPath id="clip-meta-feed-009-offer-text"><rect x="60" y="1074" width="960" height="114"/></clipPath>
+  <rect x="60" y="1238" width="360" height="80" fill="#c8963c" rx="8"/>
+  <text x="240" y="1288" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-009-cta-text)">See Details</text>
+  <clipPath id="clip-meta-feed-009-cta-text"><rect x="80" y="1260" width="320" height="64"/></clipPath>
+</svg>

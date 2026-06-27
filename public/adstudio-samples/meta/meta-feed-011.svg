@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f8f5f0" rx="0"/>
+  <rect x="0" y="0" width="1080" height="820" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="419.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="620" width="1080" height="200" fill="#00000055" rx="0"/>
+  <rect x="48" y="48" width="198" height="52" fill="#ffffff" rx="6"/>
+  <text x="147" y="81" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="800" fill="#1a1a1a" clip-path="url(#clip-meta-feed-011-kicker)">OPEN HOME</text>
+  <clipPath id="clip-meta-feed-011-kicker"><rect x="58" y="61" width="178" height="48"/></clipPath>
+  <text x="48" y="758" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="600" fill="#ffffff" clip-path="url(#clip-meta-feed-011-address)">30/34 Smith Street, Highgate</text>
+  <clipPath id="clip-meta-feed-011-address"><rect x="48" y="730" width="984" height="88"/></clipPath>
+  <rect x="0" y="820" width="1080" height="530" fill="#f8f5f0" rx="0"/>
+  <text x="48" y="904" text-anchor="start" font-family="sans-serif" font-size="60" font-weight="800" fill="#1a1a1a" clip-path="url(#clip-meta-feed-011-headline)">Inner Urban Living with Architectural Personality</text>
+  <clipPath id="clip-meta-feed-011-headline"><rect x="48" y="844" width="984" height="216"/></clipPath>
+  <rect x="48" y="1016" width="984" height="1" fill="#d4cec8" rx="0"/>
+  <text x="48" y="1056" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="700" fill="#3a3a3a" clip-path="url(#clip-meta-feed-011-stats-row)">2 BED  |  1 BATH  |  1 CAR</text>
+  <clipPath id="clip-meta-feed-011-stats-row"><rect x="48" y="1030" width="984" height="66"/></clipPath>
+  <rect x="48" y="1082" width="984" height="1" fill="#d4cec8" rx="0"/>
+  <text x="48" y="1122" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="400" fill="#6b6560" clip-path="url(#clip-meta-feed-011-features)">Whitewashed brick · Loft architecture · Dual balconies · Pool &amp; tennis</text>
+  <clipPath id="clip-meta-feed-011-features"><rect x="48" y="1100" width="984" height="66"/></clipPath>
+  <rect x="48" y="1162" width="330" height="52" fill="#1a1a1a" rx="4"/>
+  <text x="213" y="1194" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="600" fill="#ffffff" clip-path="url(#clip-meta-feed-011-offers-text)">Offers by 16 June 2026</text>
+  <clipPath id="clip-meta-feed-011-offers-text"><rect x="60" y="1176" width="306" height="44"/></clipPath>
+  <rect x="48" y="1238" width="984" height="1" fill="#d4cec8" rx="0"/>
+  <text x="48" y="1276" text-anchor="start" font-family="sans-serif" font-size="20" font-weight="500" fill="#3a3a3a" clip-path="url(#clip-meta-feed-011-agent-name)">Chris Pham — Acton Belle Property</text>
+  <clipPath id="clip-meta-feed-011-agent-name"><rect x="48" y="1256" width="700" height="50"/></clipPath>
+  <rect x="882" y="1246" width="150" height="56" fill="#888" rx="4"/>
+  <text x="957" y="1279" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#fff">[logo]</text>
+</svg>

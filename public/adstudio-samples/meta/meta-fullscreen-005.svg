@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <rect width="1080" height="1920" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1920" fill="#0b1a2e" rx="0"/>
+  <rect x="0" y="0" width="1080" height="1300" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="659.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="900" width="1080" height="400" fill="#0b1a2e" rx="0"/>
+  <text x="540" y="1140" text-anchor="middle" font-family="sans-serif" font-size="110" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-005-property-name)">GRAND COASTAL
+SANCTUARY</text>
+  <clipPath id="clip-meta-fullscreen-005-property-name"><rect x="60" y="1030" width="960" height="390"/></clipPath>
+  <rect x="300" y="1322" width="480" height="3" fill="#c9a84c" rx="0"/>
+  <text x="540" y="1377" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="600" fill="#c9a84c" clip-path="url(#clip-meta-fullscreen-005-location)">3 Newby Place, Sorrento</text>
+  <clipPath id="clip-meta-fullscreen-005-location"><rect x="60" y="1345" width="960" height="88"/></clipPath>
+  <text x="540" y="1440" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="400" fill="#e8e0cc" clip-path="url(#clip-meta-fullscreen-005-stats)">5 Bed  •  2 Bath  •  2 Car</text>
+  <clipPath id="clip-meta-fullscreen-005-stats"><rect x="60" y="1410" width="960" height="82"/></clipPath>
+  <text x="540" y="1506" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="300" fill="#b0c0d6" clip-path="url(#clip-meta-fullscreen-005-views-label)">Breath-taking ocean views to Rottnest Island</text>
+  <clipPath id="clip-meta-fullscreen-005-views-label"><rect x="80" y="1480" width="920" height="82"/></clipPath>
+  <rect x="0" y="1600" width="1080" height="320" fill="#0b1a2e" rx="0"/>
+  <rect x="0" y="1600" width="1080" height="4" fill="#c9a84c" rx="0"/>
+  <text x="540" y="1704" text-anchor="middle" font-family="sans-serif" font-size="44" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-005-agency-name)">Ray White Keevers Group</text>
+  <clipPath id="clip-meta-fullscreen-005-agency-name"><rect x="60" y="1660" width="960" height="116"/></clipPath>
+  <text x="540" y="1772" text-anchor="middle" font-family="sans-serif" font-size="22" font-weight="400" fill="#c9a84c" clip-path="url(#clip-meta-fullscreen-005-luxury-tag)">LUXURY COASTAL REAL ESTATE</text>
+  <clipPath id="clip-meta-fullscreen-005-luxury-tag"><rect x="60" y="1750" width="960" height="62"/></clipPath>
+  <rect x="160" y="1820" width="760" height="80" fill="#c9a84c" rx="6"/>
+  <text x="540" y="1873" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="800" fill="#0b1a2e" clip-path="url(#clip-meta-fullscreen-005-cta-text)">Learn More</text>
+  <clipPath id="clip-meta-fullscreen-005-cta-text"><rect x="180" y="1843" width="720" height="74"/></clipPath>
+</svg>

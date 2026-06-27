@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <rect width="1080" height="1920" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1920" fill="#1a2e1a" rx="0"/>
+  <rect x="0" y="0" width="1080" height="1080" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="549.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[agent_photo]</text>
+  <rect x="0" y="680" width="1080" height="400" fill="#1a2e1a" rx="0"/>
+  <text x="540" y="1102" text-anchor="middle" font-family="sans-serif" font-size="52" font-weight="800" fill="#ffffff" clip-path="url(#clip-mfs004-headline)">Stop Guessing &amp; Start Knowing</text>
+  <clipPath id="clip-mfs004-headline"><rect x="60" y="1050" width="960" height="172"/></clipPath>
+  <text x="540" y="1232" text-anchor="middle" font-family="sans-serif" font-size="44" font-weight="700" fill="#f5c518" clip-path="url(#clip-mfs004-stars)">★★★★★</text>
+  <clipPath id="clip-mfs004-stars"><rect x="60" y="1188" width="960" height="104"/></clipPath>
+  <rect x="60" y="1266" width="960" height="280" fill="#ffffff" rx="16"/>
+  <text x="540" y="1322" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="400" fill="#1a2e1a" clip-path="url(#clip-mfs004-quote)">"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free."</text>
+  <clipPath id="clip-mfs004-quote"><rect x="96" y="1294" width="888" height="216"/></clipPath>
+  <text x="540" y="1516" text-anchor="middle" font-family="sans-serif" font-size="22" font-weight="600" fill="#4a7c4a" clip-path="url(#clip-mfs004-attribution)">— Recent Seller</text>
+  <clipPath id="clip-mfs004-attribution"><rect x="96" y="1494" width="888" height="58"/></clipPath>
+  <text x="540" y="1598" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="500" fill="#c8e6c8" clip-path="url(#clip-mfs004-seasonal-note)">Spring is the perfect season to sell. Buyers are active and homes sell fast.</text>
+  <clipPath id="clip-mfs004-seasonal-note"><rect x="60" y="1572" width="960" height="106"/></clipPath>
+  <text x="540" y="1712" text-anchor="middle" font-family="sans-serif" font-size="38" font-weight="700" fill="#ffffff" clip-path="url(#clip-mfs004-agent-label)">Jay</text>
+  <clipPath id="clip-mfs004-agent-label"><rect x="60" y="1674" width="960" height="94"/></clipPath>
+  <rect x="120" y="1754" width="840" height="88" fill="#4a7c4a" rx="44"/>
+  <text x="540" y="1806" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#ffffff" clip-path="url(#clip-mfs004-cta-text)">Find Out My Home's Value</text>
+  <clipPath id="clip-mfs004-cta-text"><rect x="150" y="1778" width="780" height="68"/></clipPath>
+</svg>

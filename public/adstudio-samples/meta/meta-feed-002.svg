@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f9f4ee" rx="0"/>
+  <rect x="0" y="0" width="1080" height="742" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="380.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="560" width="1080" height="182" fill="#00000066" rx="0"/>
+  <rect x="60" y="780" width="960" height="110" fill="#c8873b" rx="10"/>
+  <text x="540" y="834" text-anchor="middle" font-family="sans-serif" font-size="34" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-002-growth-stat)">Properties selling 10–20% HIGHER than last year</text>
+  <clipPath id="clip-meta-feed-002-growth-stat"><rect x="80" y="800" width="920" height="104"/></clipPath>
+  <text x="540" y="982" text-anchor="middle" font-family="sans-serif" font-size="62" font-weight="800" fill="#2b1f0e" clip-path="url(#clip-meta-feed-002-headline)">See How Much Your Home Is Worth!</text>
+  <clipPath id="clip-meta-feed-002-headline"><rect x="60" y="920" width="960" height="222"/></clipPath>
+  <text x="540" y="1126" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="400" fill="#5a4a35" clip-path="url(#clip-meta-feed-002-subtext)">Property values in Mount Hawthorn have increased significantly — properties are selling 10–20% higher than last year.</text>
+  <clipPath id="clip-meta-feed-002-subtext"><rect x="80" y="1098" width="920" height="108"/></clipPath>
+  <rect x="220" y="1210" width="640" height="88" fill="#c8873b" rx="44"/>
+  <text x="540" y="1264" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-002-cta-text)">Get My Free Appraisal</text>
+  <clipPath id="clip-meta-feed-002-cta-text"><rect x="240" y="1234" width="600" height="70"/></clipPath>
+</svg>

@@ -1,0 +1,502 @@
+{
+  "id": "meta-fullscreen-004",
+  "templateKey": "meta-fullscreen-004",
+  "name": "Agent Testimonial — Jay 5-Star Review",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "agent-social-proof",
+  "audienceIntent": "Homeowners considering selling who want reassurance from a trusted, proven local agent — motivated by spring market timing and peer validation from recent sellers.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "testimonial",
+    "social-proof",
+    "meta-fullscreen"
+  ],
+  "promptHint": "Fullscreen story ad featuring a 5-star seller testimonial for agent Jay, with a seasonal spring selling call to action.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "0e869736-3e3d-40e6-ae8a-8e1588bea8ed"
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "Stop Guessing & Start Knowing",
+    "primaryText": "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" — Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast.",
+    "rating": "★★★★★",
+    "agentName": "Jay",
+    "seasonalNote": "Spring is the perfect season to sell.",
+    "cta": "Find Out My Home's Value"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-004.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-004.svg",
+    "alt": "Fullscreen 9:16 story ad with a 5-star seller testimonial centrepiece, agent name Jay, and a spring selling call to action."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "mfs004-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#1a2e1a",
+        "locked": true
+      },
+      {
+        "objectId": "mfs004-hero-image",
+        "type": "image",
+        "role": "agent_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1080,
+        "imageAnchor": "top",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "mfs004-overlay",
+        "type": "shape",
+        "role": "image_overlay",
+        "content": "",
+        "x": 0,
+        "y": 680,
+        "width": 1080,
+        "height": 400,
+        "fill": "#1a2e1a",
+        "locked": true
+      },
+      {
+        "objectId": "mfs004-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Stop Guessing & Start Knowing",
+        "x": 60,
+        "y": 1050,
+        "width": 960,
+        "height": 120,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 52,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "mfs004-stars",
+        "type": "text",
+        "role": "star_rating",
+        "content": "★★★★★",
+        "x": 60,
+        "y": 1188,
+        "width": 960,
+        "height": 60,
+        "fill": "#f5c518",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 44,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "mfs004-testimonial-card",
+        "type": "shape",
+        "role": "testimonial_card",
+        "content": "",
+        "x": 60,
+        "y": 1266,
+        "width": 960,
+        "height": 280,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 16
+      },
+      {
+        "objectId": "mfs004-quote",
+        "type": "text",
+        "role": "testimonial_quote",
+        "content": "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\"",
+        "x": 96,
+        "y": 1294,
+        "width": 888,
+        "height": 188,
+        "fill": "#1a2e1a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      {
+        "objectId": "mfs004-attribution",
+        "type": "text",
+        "role": "testimonial_attribution",
+        "content": "— Recent Seller",
+        "x": 96,
+        "y": 1494,
+        "width": 888,
+        "height": 36,
+        "fill": "#4a7c4a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "mfs004-seasonal-note",
+        "type": "text",
+        "role": "seasonal_message",
+        "content": "Spring is the perfect season to sell. Buyers are active and homes sell fast.",
+        "x": 60,
+        "y": 1572,
+        "width": 960,
+        "height": 80,
+        "fill": "#c8e6c8",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      {
+        "objectId": "mfs004-agent-label",
+        "type": "text",
+        "role": "agent_name_label",
+        "content": "Jay",
+        "x": 60,
+        "y": 1674,
+        "width": 960,
+        "height": 56,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 38,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "mfs004-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 120,
+        "y": 1754,
+        "width": 840,
+        "height": 88,
+        "fill": "#4a7c4a",
+        "locked": false,
+        "radius": 44
+      },
+      {
+        "objectId": "mfs004-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Find Out My Home's Value",
+        "x": 150,
+        "y": 1778,
+        "width": 780,
+        "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "fill": "#1a2e1a",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "mfs004-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1080,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "mfs004-hero-image",
+            "role": "agent_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 680,
+          "width": 1080,
+          "height": 400,
+          "fill": "#1a2e1a",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "mfs004-overlay",
+            "role": "image_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1050,
+          "width": 960,
+          "text": "Stop Guessing & Start Knowing",
+          "fontFamily": "Inter",
+          "fontSize": 52,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "mfs004-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1188,
+          "width": 960,
+          "text": "★★★★★",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 700,
+          "fill": "#f5c518",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "mfs004-stars",
+            "role": "star_rating",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1266,
+          "width": 960,
+          "height": 280,
+          "rx": 16,
+          "ry": 16,
+          "fill": "#ffffff",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "mfs004-testimonial-card",
+            "role": "testimonial_card",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 1294,
+          "width": 888,
+          "text": "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\"",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 400,
+          "fill": "#1a2e1a",
+          "textAlign": "center",
+          "lineHeight": 1.45,
+          "blockwise": {
+            "objectId": "mfs004-quote",
+            "role": "testimonial_quote",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 1494,
+          "width": 888,
+          "text": "— Recent Seller",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 600,
+          "fill": "#4a7c4a",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "mfs004-attribution",
+            "role": "testimonial_attribution",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1572,
+          "width": 960,
+          "text": "Spring is the perfect season to sell. Buyers are active and homes sell fast.",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 500,
+          "fill": "#c8e6c8",
+          "textAlign": "center",
+          "lineHeight": 1.3,
+          "blockwise": {
+            "objectId": "mfs004-seasonal-note",
+            "role": "seasonal_message",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1674,
+          "width": 960,
+          "text": "Jay",
+          "fontFamily": "Inter",
+          "fontSize": 38,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "mfs004-agent-label",
+            "role": "agent_name_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 120,
+          "top": 1754,
+          "width": 840,
+          "height": 88,
+          "rx": 44,
+          "ry": 44,
+          "fill": "#4a7c4a",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "mfs004-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 150,
+          "top": 1778,
+          "width": 780,
+          "text": "Find Out My Home's Value",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "mfs004-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
+    "primaryText": [
+      "\"Very professional and a pleasure to work with! Jay made selling our property smooth and stress-free.\" — Recent Seller. Spring is the perfect season to sell. Buyers are active and homes sell fast."
+    ],
+    "headlines": [
+      "Stop Guessing & Start Knowing"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Find Out What Your Home Is Worth",
+      "questions": [
+        "What is your property address?",
+        "Are you thinking of selling in the next 6 months?",
+        "Best number to reach you?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "We'll be in touch soon",
+        "body": "Jay will prepare a personalised appraisal and contact you shortly."
+      }
+    },
+    "descriptions": [
+      "Stop guessing — find out the peak selling price for your home this spring."
+    ]
+  }
+}

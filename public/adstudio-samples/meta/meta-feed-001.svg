@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f5f0e6" rx="0"/>
+  <rect x="60" y="80" width="480" height="620" fill="#d0cdc8" rx="4"/>
+  <text x="300" y="399.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[primary_image]</text>
+  <rect x="560" y="80" width="460" height="620" fill="#d0cdc8" rx="4"/>
+  <text x="790" y="399.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[secondary_image]</text>
+  <text x="80" y="774" text-anchor="start" font-family="sans-serif" font-size="34" font-weight="700" fill="#746447" clip-path="url(#clip-meta-feed-001-kicker)">JUST LISTED</text>
+  <clipPath id="clip-meta-feed-001-kicker"><rect x="80" y="740" width="920" height="82"/></clipPath>
+  <text x="80" y="868" text-anchor="start" font-family="sans-serif" font-size="68" font-weight="800" fill="#1f352d" clip-path="url(#clip-meta-feed-001-headline)">Two new listings this week</text>
+  <clipPath id="clip-meta-feed-001-headline"><rect x="80" y="800" width="920" height="268"/></clipPath>
+  <rect x="80" y="1180" width="420" height="88" fill="#e05d3f" rx="8"/>
+  <text x="290" y="1234" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-001-cta-text)">Book an inspection</text>
+  <clipPath id="clip-meta-feed-001-cta-text"><rect x="110" y="1204" width="360" height="70"/></clipPath>
+</svg>

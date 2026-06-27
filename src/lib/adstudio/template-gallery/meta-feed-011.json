@@ -1,0 +1,409 @@
+{
+  "id": "meta-feed-011",
+  "templateKey": "meta-feed-011",
+  "name": "Open Home — Urban Loft Highgate",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": { "width": 1080, "height": 1350 },
+  "goal": "open_home_followup",
+  "offerId": "open-home-single",
+  "audienceIntent": "Inner-city buyers seeking character-rich apartments with architectural interest and resort-style amenities in walkable urban suburbs. Likely first-time buyers or upsizers drawn to loft living with outdoor space.",
+  "category": "open_home",
+  "tags": ["open_home", "property", "urban-loft", "meta-feed"],
+  "promptHint": "Editorial-style open home ad for an inner-city loft apartment — full bleed photo, property address, bed/bath/car icon row, agent credit line, and offers-by date badge.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": { "creativeId": "ec32096a-7100-47fc-8182-0a7ae5d32be0" },
+  "classification": { "ad_type": "open_home", "primary_intent": "open_home", "property_or_agent_focus": "property" },
+  "sampleCopy": {
+    "headline": "Inner Urban Living with Architectural Personality",
+    "kicker": "OPEN HOME",
+    "address": "30/34 Smith Street, Highgate",
+    "stats": "2 BED  |  1 BATH  |  1 CAR",
+    "features": "Whitewashed brick · Loft architecture · Dual balconies · Pool & tennis",
+    "agent": "Chris Pham — Acton Belle Property",
+    "offers_badge": "Offers by 16 June 2026"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-011.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-011.svg",
+    "alt": "Editorial open home ad for urban loft apartment at Highgate with full-bleed property photo, icon stat row, and agent credit."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-011-bg",
+        "type": "shape",
+        "role": "background",
+        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "fill": "#f8f5f0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-property-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0, "y": 0, "width": 1080, "height": 820,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-011-photo-gradient",
+        "type": "shape",
+        "role": "photo_gradient_overlay",
+        "x": 0, "y": 620, "width": 1080, "height": 200,
+        "fill": "#00000055",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-kicker-pill",
+        "type": "shape",
+        "role": "kicker_pill",
+        "x": 48, "y": 48, "width": 198, "height": 52,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-feed-011-kicker",
+        "type": "text",
+        "role": "kicker_label",
+        "content": "OPEN HOME",
+        "x": 58, "y": 61, "width": 178, "height": 28,
+        "fill": "#1a1a1a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-011-address",
+        "type": "text",
+        "role": "property_address",
+        "content": "30/34 Smith Street, Highgate",
+        "x": 48, "y": 730, "width": 984, "height": 60,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.15
+      },
+      {
+        "objectId": "meta-feed-011-bottom-panel",
+        "type": "shape",
+        "role": "bottom_panel",
+        "x": 0, "y": 820, "width": 1080, "height": 530,
+        "fill": "#f8f5f0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Inner Urban Living with\nArchitectural Personality",
+        "x": 48, "y": 844, "width": 984, "height": 156,
+        "fill": "#1a1a1a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 60,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-011-stat-divider-top",
+        "type": "shape",
+        "role": "stat_divider_top",
+        "x": 48, "y": 1016, "width": 984, "height": 1,
+        "fill": "#d4cec8",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-stats-row",
+        "type": "text",
+        "role": "property_stats",
+        "content": "2 BED  |  1 BATH  |  1 CAR",
+        "x": 48, "y": 1030, "width": 984, "height": 40,
+        "fill": "#3a3a3a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-011-stat-divider-bottom",
+        "type": "shape",
+        "role": "stat_divider_bottom",
+        "x": 48, "y": 1082, "width": 984, "height": 1,
+        "fill": "#d4cec8",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-features",
+        "type": "text",
+        "role": "property_features",
+        "content": "Whitewashed brick · Loft architecture · Dual balconies · Pool & tennis",
+        "x": 48, "y": 1100, "width": 984, "height": 44,
+        "fill": "#6b6560",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.25
+      },
+      {
+        "objectId": "meta-feed-011-offers-badge",
+        "type": "shape",
+        "role": "offers_badge_bg",
+        "x": 48, "y": 1162, "width": 330, "height": 52,
+        "fill": "#1a1a1a",
+        "locked": true,
+        "radius": 4
+      },
+      {
+        "objectId": "meta-feed-011-offers-text",
+        "type": "text",
+        "role": "offers_badge_text",
+        "content": "Offers by 16 June 2026",
+        "x": 60, "y": 1176, "width": 306, "height": 26,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 18,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15
+      },
+      {
+        "objectId": "meta-feed-011-agent-divider",
+        "type": "shape",
+        "role": "agent_divider",
+        "x": 48, "y": 1238, "width": 984, "height": 1,
+        "fill": "#d4cec8",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-011-agent-name",
+        "type": "text",
+        "role": "agent_credit",
+        "content": "Chris Pham — Acton Belle Property",
+        "x": 48, "y": 1256, "width": 700, "height": 30,
+        "fill": "#3a3a3a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-011-agency-logo",
+        "type": "logo",
+        "role": "agency_logo",
+        "x": 882, "y": 1246, "width": 150, "height": 56,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "fill": "#f8f5f0",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "image",
+          "left": 0, "top": 0, "width": 1080, "height": 820,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": { "objectId": "meta-feed-011-property-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 620, "width": 1080, "height": 200,
+          "fill": "#00000055",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-photo-gradient", "role": "photo_gradient_overlay", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 48, "width": 198, "height": 52,
+          "rx": 6, "ry": 6,
+          "fill": "#ffffff",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-kicker-pill", "role": "kicker_pill", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 58, "top": 61, "width": 178,
+          "text": "OPEN HOME",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#1a1a1a",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-011-kicker", "role": "kicker_label", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 730, "width": 984,
+          "text": "30/34 Smith Street, Highgate",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": { "objectId": "meta-feed-011-address", "role": "property_address", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 820, "width": 1080, "height": 530,
+          "fill": "#f8f5f0",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-bottom-panel", "role": "bottom_panel", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 844, "width": 984,
+          "text": "Inner Urban Living with\nArchitectural Personality",
+          "fontFamily": "Inter",
+          "fontSize": 60,
+          "fontWeight": 800,
+          "fill": "#1a1a1a",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": { "objectId": "meta-feed-011-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1016, "width": 984, "height": 1,
+          "fill": "#d4cec8",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-stat-divider-top", "role": "stat_divider_top", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 1030, "width": 984,
+          "text": "2 BED  |  1 BATH  |  1 CAR",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#3a3a3a",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": { "objectId": "meta-feed-011-stats-row", "role": "property_stats", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1082, "width": 984, "height": 1,
+          "fill": "#d4cec8",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-stat-divider-bottom", "role": "stat_divider_bottom", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 1100, "width": 984,
+          "text": "Whitewashed brick · Loft architecture · Dual balconies · Pool & tennis",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 400,
+          "fill": "#6b6560",
+          "textAlign": "left",
+          "lineHeight": 1.25,
+          "blockwise": { "objectId": "meta-feed-011-features", "role": "property_features", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1162, "width": 330, "height": 52,
+          "rx": 4, "ry": 4,
+          "fill": "#1a1a1a",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-offers-badge", "role": "offers_badge_bg", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 60, "top": 1176, "width": 306,
+          "text": "Offers by 16 June 2026",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": { "objectId": "meta-feed-011-offers-text", "role": "offers_badge_text", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1238, "width": 984, "height": 1,
+          "fill": "#d4cec8",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-011-agent-divider", "role": "agent_divider", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 1256, "width": 700,
+          "text": "Chris Pham — Acton Belle Property",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 500,
+          "fill": "#3a3a3a",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": { "objectId": "meta-feed-011-agent-name", "role": "agent_credit", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "image",
+          "left": 882, "top": 1246, "width": 150, "height": 56,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": { "objectId": "meta-feed-011-agency-logo", "role": "agency_logo", "type": "image", "locked": false, "editableKind": "logo" }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": ["facebook", "instagram"],
+    "facebookPositions": ["feed"],
+    "instagramPositions": ["stream"],
+    "cta": "LEARN_MORE",
+    "primaryText": ["2 Bed | 1 Bath | 1 Car | 30/34 Smith Street, Highgate. Whitewashed brick walls, loft architecture, dual balconies, resort amenities (pool, tennis). End Date Sale: offers by 16 June 2026."],
+    "headlines": ["Inner Urban Living with Architectural Personality"],
+    "descriptions": ["Open Home — Highgate urban loft with resort amenities"],
+    "leadForm": {
+      "headline": "Register your interest in this property",
+      "questions": [
+        "Are you currently pre-approved for finance?",
+        "What is your preferred inspection time?",
+        "Best contact number for the agent?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks for your interest",
+        "body": "The listing agent will be in touch shortly to confirm your inspection details."
+      }
+    }
+  }
+}

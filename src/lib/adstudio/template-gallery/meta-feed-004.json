@@ -1,0 +1,397 @@
+{
+  "id": "meta-feed-004",
+  "templateKey": "meta-feed-004",
+  "name": "North Fremantle Urgent Appraisal",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": { "width": 1080, "height": 1350 },
+  "goal": "appraisal_bookings",
+  "offerId": "suburb-appraisal-urgent",
+  "audienceIntent": "Homeowners in a fast-moving suburb who fear missing the peak of the market.",
+  "category": "appraisal",
+  "tags": ["appraisal", "urgent", "suburb", "meta-feed"],
+  "promptHint": "Urgent appraisal ad for homeowners in a fast-moving suburb — 'don't get left behind' messaging.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": { "creativeId": "11efdb0c-837c-4fea-9fc6-3daabea02878" },
+  "classification": { "ad_type": "appraisal", "primary_intent": "appraisal", "property_or_agent_focus": "property" },
+  "sampleCopy": {
+    "headline": "Get your FREE property appraisal",
+    "primaryText": "North Fremantle homeowners are in the driver's seat. High demand, low stock — don't get left in the dust.",
+    "cta": "Book My Free Appraisal"
+  },
+  "gallery": {
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-004.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-004.svg",
+    "alt": "Urgent appraisal ad with bold suburb name and fast-moving market messaging."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-004-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-004-overlay",
+        "type": "shape",
+        "role": "dark_overlay",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "rgba(10,18,30,0.62)",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-004-suburb-badge-bg",
+        "type": "shape",
+        "role": "suburb_badge",
+        "content": "",
+        "x": 60,
+        "y": 80,
+        "width": 620,
+        "height": 72,
+        "fill": "#e8400c",
+        "locked": true,
+        "radius": 4
+      },
+      {
+        "objectId": "meta-feed-004-suburb-label",
+        "type": "text",
+        "role": "suburb_name",
+        "content": "NORTH FREMANTLE",
+        "x": 80,
+        "y": 96,
+        "width": 580,
+        "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-004-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Get your FREE\nproperty appraisal",
+        "x": 60,
+        "y": 210,
+        "width": 960,
+        "height": 240,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 80,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.0
+      },
+      {
+        "objectId": "meta-feed-004-body",
+        "type": "text",
+        "role": "body_text",
+        "content": "High demand, low stock and fast-moving buyers mean the market is moving at full speed. Don't get left in the dust.",
+        "x": 60,
+        "y": 500,
+        "width": 960,
+        "height": 160,
+        "fill": "#f0ece4",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      {
+        "objectId": "meta-feed-004-divider",
+        "type": "shape",
+        "role": "accent_rule",
+        "content": "",
+        "x": 60,
+        "y": 694,
+        "width": 120,
+        "height": 6,
+        "fill": "#e8400c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-004-urgency-text",
+        "type": "text",
+        "role": "urgency_label",
+        "content": "The market is moving — are you?",
+        "x": 60,
+        "y": 724,
+        "width": 960,
+        "height": 50,
+        "fill": "#f5c842",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-004-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 60,
+        "y": 1200,
+        "width": 520,
+        "height": 92,
+        "fill": "#e8400c",
+        "locked": false,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-feed-004-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Book My Free Appraisal",
+        "x": 80,
+        "y": 1224,
+        "width": 480,
+        "height": 44,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-004-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "rgba(10,18,30,0.62)",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-004-overlay",
+            "role": "dark_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 80,
+          "width": 620,
+          "height": 72,
+          "rx": 4,
+          "ry": 4,
+          "fill": "#e8400c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-004-suburb-badge-bg",
+            "role": "suburb_badge",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 96,
+          "width": 580,
+          "text": "NORTH FREMANTLE",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-004-suburb-label",
+            "role": "suburb_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 210,
+          "width": 960,
+          "text": "Get your FREE\nproperty appraisal",
+          "fontFamily": "Inter",
+          "fontSize": 80,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.0,
+          "blockwise": {
+            "objectId": "meta-feed-004-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 500,
+          "width": 960,
+          "text": "High demand, low stock and fast-moving buyers mean the market is moving at full speed. Don't get left in the dust.",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 400,
+          "fill": "#f0ece4",
+          "textAlign": "left",
+          "lineHeight": 1.35,
+          "blockwise": {
+            "objectId": "meta-feed-004-body",
+            "role": "body_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 694,
+          "width": 120,
+          "height": 6,
+          "fill": "#e8400c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-004-divider",
+            "role": "accent_rule",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 724,
+          "width": 960,
+          "text": "The market is moving — are you?",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 700,
+          "fill": "#f5c842",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-004-urgency-text",
+            "role": "urgency_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1200,
+          "width": 520,
+          "height": 92,
+          "rx": 6,
+          "ry": 6,
+          "fill": "#e8400c",
+          "blockwise": {
+            "objectId": "meta-feed-004-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1224,
+          "width": 480,
+          "text": "Book My Free Appraisal",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-004-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": ["facebook", "instagram"],
+    "facebookPositions": ["feed"],
+    "instagramPositions": ["stream"],
+    "primaryText": ["North Fremantle homeowners — the market is moving fast. High demand, low stock, motivated buyers. Book your free appraisal now."],
+    "headlines": ["Get Your Free Property Appraisal"],
+    "descriptions": ["Fast-moving market. Don't miss your window."],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Book your free appraisal",
+      "questions": [
+        "What is your property address?",
+        "How many bedrooms?",
+        "When are you thinking of selling?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Booked in!",
+        "body": "Our agent will contact you shortly to confirm your free appraisal."
+      }
+    }
+  }
+}

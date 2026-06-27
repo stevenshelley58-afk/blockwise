@@ -1,0 +1,320 @@
+{
+  "id": "meta-feed-006",
+  "templateKey": "meta-feed-006",
+  "name": "Modern Apartment Listing with Price",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": { "width": 1080, "height": 1350 },
+  "goal": "seller_leads",
+  "offerId": "property-listing",
+  "audienceIntent": "Buyers looking for a modern apartment in a well-connected inner suburb.",
+  "category": "listing",
+  "tags": ["listing", "apartment", "price-guide", "meta-feed"],
+  "promptHint": "Modern apartment listing with address, price guide, and amenity proximity call-out.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": { "creativeId": "3c0bf183-e568-4043-92da-fe6272a99604" },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Modern Living Surrounded by Amenities!",
+    "primaryText": "6/20 Signal Terrace, Cockburn Central • 2 Bed • Price Guide $550,000 • Fully furnished, heart of Cockburn Central.",
+    "cta": "View This Property"
+  },
+  "gallery": {
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-006.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-006.svg",
+    "alt": "Modern apartment listing at Cockburn Central showing address and $550,000 price guide."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-006-bg",
+        "type": "shape",
+        "role": "background",
+        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-006-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0, "y": 0, "width": 1080, "height": 800,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-006-photo-scrim",
+        "type": "shape",
+        "role": "photo_scrim",
+        "x": 0, "y": 580, "width": 1080, "height": 220,
+        "fill": "#000000bb",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-006-address",
+        "type": "text",
+        "role": "address",
+        "content": "📍 6/20 Signal Terrace, Cockburn Central",
+        "x": 48, "y": 600, "width": 984, "height": 56,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.15
+      },
+      {
+        "objectId": "meta-feed-006-price-badge-bg",
+        "type": "shape",
+        "role": "price_badge_background",
+        "x": 48, "y": 668, "width": 380, "height": 88,
+        "fill": "#1b4f3a",
+        "locked": true,
+        "radius": 8
+      },
+      {
+        "objectId": "meta-feed-006-price",
+        "type": "text",
+        "role": "price_guide",
+        "content": "$550,000",
+        "x": 68, "y": 684, "width": 340, "height": 56,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 42,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.0
+      },
+      {
+        "objectId": "meta-feed-006-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Modern Living Surrounded by Amenities!",
+        "x": 48, "y": 830, "width": 984, "height": 160,
+        "fill": "#0f2d1e",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 58,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-006-bedrooms",
+        "type": "text",
+        "role": "property_details",
+        "content": "2 Bed · Fully Furnished",
+        "x": 48, "y": 1002, "width": 500, "height": 44,
+        "fill": "#1b4f3a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-006-descriptor",
+        "type": "text",
+        "role": "descriptor",
+        "content": "Contemporary apartment in the heart of Cockburn Central — easy access to train station, shops & cafes.",
+        "x": 48, "y": 1060, "width": 984, "height": 110,
+        "fill": "#3d3d3d",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      {
+        "objectId": "meta-feed-006-divider",
+        "type": "shape",
+        "role": "divider",
+        "x": 48, "y": 1190, "width": 984, "height": 2,
+        "fill": "#e0e0e0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-006-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 48, "y": 1220, "width": 984, "height": 88,
+        "fill": "#1b4f3a",
+        "locked": false,
+        "radius": 8
+      },
+      {
+        "objectId": "meta-feed-006-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "View This Property",
+        "x": 68, "y": 1244, "width": 944, "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "fill": "#ffffff",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-006-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "image",
+          "left": 0, "top": 0, "width": 1080, "height": 800,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": { "objectId": "meta-feed-006-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 580, "width": 1080, "height": 220,
+          "fill": "#000000bb",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-006-photo-scrim", "role": "photo_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 600, "width": 984,
+          "text": "📍 6/20 Signal Terrace, Cockburn Central",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": { "objectId": "meta-feed-006-address", "role": "address", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 668, "width": 380, "height": 88,
+          "fill": "#1b4f3a",
+          "rx": 8, "ry": 8,
+          "blockwise": { "objectId": "meta-feed-006-price-badge-bg", "role": "price_badge_background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 68, "top": 684, "width": 340,
+          "text": "$550,000",
+          "fontFamily": "Inter",
+          "fontSize": 42,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.0,
+          "blockwise": { "objectId": "meta-feed-006-price", "role": "price_guide", "type": "text", "locked": false, "editableKind": "headline" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 830, "width": 984,
+          "text": "Modern Living Surrounded by Amenities!",
+          "fontFamily": "Inter",
+          "fontSize": 58,
+          "fontWeight": 800,
+          "fill": "#0f2d1e",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": { "objectId": "meta-feed-006-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 1002, "width": 500,
+          "text": "2 Bed · Fully Furnished",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "fill": "#1b4f3a",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-006-bedrooms", "role": "property_details", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "textbox",
+          "left": 48, "top": 1060, "width": 984,
+          "text": "Contemporary apartment in the heart of Cockburn Central — easy access to train station, shops & cafes.",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 400,
+          "fill": "#3d3d3d",
+          "textAlign": "left",
+          "lineHeight": 1.3,
+          "blockwise": { "objectId": "meta-feed-006-descriptor", "role": "descriptor", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1190, "width": 984, "height": 2,
+          "fill": "#e0e0e0",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-006-divider", "role": "divider", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "rect",
+          "left": 48, "top": 1220, "width": 984, "height": 88,
+          "fill": "#1b4f3a",
+          "rx": 8, "ry": 8,
+          "blockwise": { "objectId": "meta-feed-006-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+        },
+        {
+          "type": "textbox",
+          "left": 68, "top": 1244, "width": 944,
+          "text": "View This Property",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-006-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": ["facebook", "instagram"],
+    "facebookPositions": ["feed"],
+    "instagramPositions": ["stream"],
+    "primaryText": ["Modern 2-bedroom apartment at 6/20 Signal Terrace, Cockburn Central. Price guide $550,000. Contemporary, fully furnished, brilliantly located."],
+    "headlines": ["Modern Living Surrounded by Amenities!"],
+    "descriptions": ["2 Bed · $550,000 · Cockburn Central"],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Find out more about this property",
+      "questions": [
+        "Are you looking to buy or invest?",
+        "When are you looking to purchase?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks for your interest",
+        "body": "Our agent will be in touch with more details about this listing."
+      }
+    }
+  }
+}

@@ -1,0 +1,591 @@
+{
+  "id": "meta-feed-013",
+  "templateKey": "meta-feed-013",
+  "name": "Lifestyle Property — The Ponderosa Warnbro",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "open_home_followup",
+  "offerId": "open-home-lifestyle",
+  "audienceIntent": "Aspirational buyers seeking a distinctive lifestyle property with land and space — drawn to prestige rural/coastal fringe homes and private inspection campaigns.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "lifestyle",
+    "private-inspection",
+    "meta-feed"
+  ],
+  "promptHint": "Full-bleed lifestyle land photo with styled italic property name, 'Price on Application' badge, and private inspection note in an earthy rural palette.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "82899b22-8cf6-4a85-8e13-bc9c7504b8ad"
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "The Property That Has It All",
+    "primaryText": "The Ponderosa — space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692.",
+    "cta": "Contact Agent"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-013.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-013.svg",
+    "alt": "Aspirational lifestyle property ad for The Ponderosa Warnbro with full-bleed land photo, italic display name, Price on Application badge, and Private Inspections Only note in earthy tones."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-013-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#2e2518",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-013-hero-photo",
+        "type": "image",
+        "role": "lifestyle_property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 900,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-013-photo-gradient",
+        "type": "shape",
+        "role": "photo_gradient_overlay",
+        "content": "",
+        "x": 0,
+        "y": 580,
+        "width": 1080,
+        "height": 320,
+        "fill": "rgba(30,20,8,0.72)",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-013-poa-badge-bg",
+        "type": "shape",
+        "role": "price_on_application_badge",
+        "content": "",
+        "x": 60,
+        "y": 620,
+        "width": 360,
+        "height": 60,
+        "fill": "#8c6d3f",
+        "locked": true,
+        "radius": 4
+      },
+      {
+        "objectId": "meta-feed-013-poa-label",
+        "type": "text",
+        "role": "price_on_application_label",
+        "content": "PRICE ON APPLICATION",
+        "x": 76,
+        "y": 636,
+        "width": 328,
+        "height": 28,
+        "fill": "#f5ede0",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-013-property-display-name",
+        "type": "text",
+        "role": "property_display_name",
+        "content": "The Ponderosa",
+        "x": 60,
+        "y": 700,
+        "width": 960,
+        "height": 130,
+        "fill": "#f5ede0",
+        "locked": false,
+        "fontFamily": "Georgia",
+        "size": 96,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-013-lower-panel",
+        "type": "shape",
+        "role": "lower_panel",
+        "content": "",
+        "x": 0,
+        "y": 900,
+        "width": 1080,
+        "height": 450,
+        "fill": "#1e1408",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-013-address",
+        "type": "text",
+        "role": "address",
+        "content": "14 Pembroke Court, Warnbro WA",
+        "x": 60,
+        "y": 922,
+        "width": 960,
+        "height": 56,
+        "fill": "#c9a96e",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-013-tagline",
+        "type": "text",
+        "role": "tagline",
+        "content": "Space, lifestyle, endless possibilities.",
+        "x": 60,
+        "y": 988,
+        "width": 960,
+        "height": 44,
+        "fill": "#a8916a",
+        "locked": false,
+        "fontFamily": "Georgia",
+        "size": 28,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-013-divider",
+        "type": "shape",
+        "role": "accent_divider",
+        "content": "",
+        "x": 60,
+        "y": 1046,
+        "width": 960,
+        "height": 2,
+        "fill": "#5a4228",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-013-private-inspection-note",
+        "type": "text",
+        "role": "private_inspection_note",
+        "content": "PRIVATE INSPECTIONS ONLY",
+        "x": 60,
+        "y": 1064,
+        "width": 700,
+        "height": 32,
+        "fill": "#c9a96e",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-013-contact-name",
+        "type": "text",
+        "role": "agent_contact_name",
+        "content": "Rowade Hilwa",
+        "x": 60,
+        "y": 1110,
+        "width": 600,
+        "height": 44,
+        "fill": "#f5ede0",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 32,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-013-contact-phone",
+        "type": "text",
+        "role": "agent_contact_phone",
+        "content": "0450 019 692",
+        "x": 60,
+        "y": 1160,
+        "width": 400,
+        "height": 36,
+        "fill": "#a8916a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-013-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 60,
+        "y": 1240,
+        "width": 360,
+        "height": 76,
+        "fill": "#8c6d3f",
+        "locked": false,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-feed-013-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Contact Agent",
+        "x": 80,
+        "y": 1263,
+        "width": 320,
+        "height": 32,
+        "fill": "#f5ede0",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#2e2518",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-013-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 900,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-013-hero-photo",
+            "role": "lifestyle_property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 580,
+          "width": 1080,
+          "height": 320,
+          "fill": "rgba(30,20,8,0.72)",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-013-photo-gradient",
+            "role": "photo_gradient_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 620,
+          "width": 360,
+          "height": 60,
+          "rx": 4,
+          "ry": 4,
+          "fill": "#8c6d3f",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-013-poa-badge-bg",
+            "role": "price_on_application_badge",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 76,
+          "top": 636,
+          "width": 328,
+          "text": "PRICE ON APPLICATION",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 700,
+          "fill": "#f5ede0",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-poa-label",
+            "role": "price_on_application_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 700,
+          "width": 960,
+          "text": "The Ponderosa",
+          "fontFamily": "Georgia",
+          "fontSize": 96,
+          "fontWeight": 400,
+          "fill": "#f5ede0",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-013-property-display-name",
+            "role": "property_display_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 900,
+          "width": 1080,
+          "height": 450,
+          "fill": "#1e1408",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-013-lower-panel",
+            "role": "lower_panel",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 922,
+          "width": 960,
+          "text": "14 Pembroke Court, Warnbro WA",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#c9a96e",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 988,
+          "width": 960,
+          "text": "Space, lifestyle, endless possibilities.",
+          "fontFamily": "Georgia",
+          "fontSize": 28,
+          "fontWeight": 400,
+          "fill": "#a8916a",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-feed-013-tagline",
+            "role": "tagline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1046,
+          "width": 960,
+          "height": 2,
+          "fill": "#5a4228",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-013-divider",
+            "role": "accent_divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1064,
+          "width": 700,
+          "text": "PRIVATE INSPECTIONS ONLY",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 700,
+          "fill": "#c9a96e",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-private-inspection-note",
+            "role": "private_inspection_note",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1110,
+          "width": 600,
+          "text": "Rowade Hilwa",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 600,
+          "fill": "#f5ede0",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-contact-name",
+            "role": "agent_contact_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1160,
+          "width": 400,
+          "text": "0450 019 692",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 400,
+          "fill": "#a8916a",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-contact-phone",
+            "role": "agent_contact_phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1240,
+          "width": 360,
+          "height": 76,
+          "rx": 6,
+          "ry": 6,
+          "fill": "#8c6d3f",
+          "blockwise": {
+            "objectId": "meta-feed-013-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1263,
+          "width": 320,
+          "text": "Contact Agent",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#f5ede0",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-013-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "cta": "CONTACT_US",
+    "primaryText": [
+      "The Ponderosa — space, lifestyle, endless possibilities. 14 Pembroke Court, Warnbro WA. Price on Application. Private Inspections Only. Contact Rowade Hilwa: 0450 019 692."
+    ],
+    "headlines": [
+      "The Property That Has It All"
+    ],
+    "leadForm": {
+      "headline": "Enquire about The Ponderosa",
+      "questions": [
+        "Would you like to arrange a private inspection?",
+        "Are you looking to buy in the near future?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thank you for your enquiry",
+        "body": "Rowade Hilwa will be in touch to arrange your private inspection of The Ponderosa."
+      }
+    },
+    "descriptions": [
+      "The Ponderosa — space, lifestyle, and endless possibilities. Private inspections only."
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <rect width="1080" height="1920" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1920" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="969.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[suburb_photo]</text>
+  <rect x="0" y="0" width="1080" height="1920" fill="rgba(0,0,0,0.45)" rx="0"/>
+  <rect x="0" y="0" width="1080" height="8" fill="#2d6a4f" rx="0"/>
+  <text x="80" y="196" text-anchor="start" font-family="sans-serif" font-size="36" font-weight="600" fill="#a8d5b5" clip-path="url(#clip-meta-fullscreen-006-season-label)">Winter 2026</text>
+  <clipPath id="clip-meta-fullscreen-006-season-label"><rect x="80" y="160" width="920" height="96"/></clipPath>
+  <text x="80" y="326" text-anchor="start" font-family="sans-serif" font-size="96" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-006-suburb-name)">MOUNT LAWLEY</text>
+  <clipPath id="clip-meta-fullscreen-006-suburb-name"><rect x="80" y="230" width="920" height="256"/></clipPath>
+  <rect x="80" y="420" width="120" height="6" fill="#2d6a4f" rx="0"/>
+  <text x="80" y="476" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="400" fill="#d4e8dc" clip-path="url(#clip-meta-fullscreen-006-descriptor)">Inner suburb · Leafy streets · 4km to CBD</text>
+  <clipPath id="clip-meta-fullscreen-006-descriptor"><rect x="80" y="448" width="920" height="80"/></clipPath>
+  <rect x="80" y="680" width="920" height="340" fill="rgba(255,255,255,0.12)" rx="16"/>
+  <text x="120" y="744" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="700" fill="#a8d5b5" clip-path="url(#clip-meta-fullscreen-006-stat-label)">MEDIAN PRICE</text>
+  <clipPath id="clip-meta-fullscreen-006-stat-label"><rect x="120" y="720" width="480" height="72"/></clipPath>
+  <text x="120" y="880" text-anchor="start" font-family="sans-serif" font-size="112" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-006-median-price)">$1,690,000</text>
+  <clipPath id="clip-meta-fullscreen-006-median-price"><rect x="120" y="768" width="700" height="272"/></clipPath>
+  <rect x="560" y="920" width="360" height="80" fill="#2d6a4f" rx="40"/>
+  <text x="740" y="970" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-006-growth-value)">+11.8%</text>
+  <clipPath id="clip-meta-fullscreen-006-growth-value"><rect x="566" y="934" width="348" height="88"/></clipPath>
+  <text x="120" y="978" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="400" fill="#d4e8dc" clip-path="url(#clip-meta-fullscreen-006-growth-caption)">12-Month Growth</text>
+  <clipPath id="clip-meta-fullscreen-006-growth-caption"><rect x="120" y="956" width="400" height="66"/></clipPath>
+  <text x="80" y="1124" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="400" fill="#d4e8dc" clip-path="url(#clip-meta-fullscreen-006-recent-label)">Recent Results: Grosvenor Rd &amp; Queens Crescent</text>
+  <clipPath id="clip-meta-fullscreen-006-recent-label"><rect x="80" y="1100" width="920" height="76"/></clipPath>
+  <rect x="80" y="1700" width="920" height="100" fill="#2d6a4f" rx="12"/>
+  <text x="540" y="1760" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-006-cta-text)">Get Your Free Property Update</text>
+  <clipPath id="clip-meta-fullscreen-006-cta-text"><rect x="100" y="1728" width="880" height="76"/></clipPath>
+</svg>

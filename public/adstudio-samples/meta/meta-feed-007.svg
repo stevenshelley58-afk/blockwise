@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#ffffff" rx="0"/>
+  <rect x="0" y="0" width="1080" height="740" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="379.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="0" width="1080" height="72" fill="rgba(10,10,10,0.68)" rx="0"/>
+  <text x="40" y="40" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-007-agency-name)">TEAM RENOUF REAL ESTATE</text>
+  <clipPath id="clip-meta-feed-007-agency-name"><rect x="40" y="18" width="820" height="58"/></clipPath>
+  <rect x="40" y="660" width="192" height="52" fill="#1a4f8a" rx="4"/>
+  <text x="136" y="693" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-007-for-sale-label)">FOR SALE</text>
+  <clipPath id="clip-meta-feed-007-for-sale-label"><rect x="56" y="675" width="160" height="42"/></clipPath>
+  <rect x="0" y="740" width="1080" height="610" fill="#f6f4f0" rx="0"/>
+  <text x="40" y="814" text-anchor="start" font-family="sans-serif" font-size="52" font-weight="800" fill="#1a1a1a" clip-path="url(#clip-meta-feed-007-address)">13 Jaydee Court, Thornlands</text>
+  <clipPath id="clip-meta-feed-007-address"><rect x="40" y="762" width="1000" height="142"/></clipPath>
+  <rect x="40" y="872" width="1000" height="112" fill="#1a4f8a" rx="8"/>
+  <text x="152" y="922" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-007-spec-bed-value)">4</text>
+  <clipPath id="clip-meta-feed-007-spec-bed-value"><rect x="72" y="886" width="160" height="80"/></clipPath>
+  <text x="152" y="948" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#a8c8f0" clip-path="url(#clip-meta-feed-007-spec-bed-label)">BED</text>
+  <clipPath id="clip-meta-feed-007-spec-bed-label"><rect x="72" y="930" width="160" height="54"/></clipPath>
+  <rect x="270" y="896" width="2" height="72" fill="rgba(255,255,255,0.3)" rx="0"/>
+  <text x="382" y="922" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-007-spec-bath-value)">2</text>
+  <clipPath id="clip-meta-feed-007-spec-bath-value"><rect x="302" y="886" width="160" height="80"/></clipPath>
+  <text x="382" y="948" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#a8c8f0" clip-path="url(#clip-meta-feed-007-spec-bath-label)">BATH</text>
+  <clipPath id="clip-meta-feed-007-spec-bath-label"><rect x="302" y="930" width="160" height="54"/></clipPath>
+  <rect x="500" y="896" width="2" height="72" fill="rgba(255,255,255,0.3)" rx="0"/>
+  <text x="612" y="922" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-007-spec-car-value)">2</text>
+  <clipPath id="clip-meta-feed-007-spec-car-value"><rect x="532" y="886" width="160" height="80"/></clipPath>
+  <text x="612" y="948" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#a8c8f0" clip-path="url(#clip-meta-feed-007-spec-car-label)">CAR</text>
+  <clipPath id="clip-meta-feed-007-spec-car-label"><rect x="532" y="930" width="160" height="54"/></clipPath>
+  <rect x="730" y="896" width="2" height="72" fill="rgba(255,255,255,0.3)" rx="0"/>
+  <text x="882" y="922" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-007-spec-land-value)">700m²</text>
+  <clipPath id="clip-meta-feed-007-spec-land-value"><rect x="762" y="886" width="240" height="80"/></clipPath>
+  <text x="882" y="948" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#a8c8f0" clip-path="url(#clip-meta-feed-007-spec-land-label)">LAND</text>
+  <clipPath id="clip-meta-feed-007-spec-land-label"><rect x="762" y="930" width="240" height="54"/></clipPath>
+  <text x="40" y="1036" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="400" fill="#3d3d3d" clip-path="url(#clip-meta-feed-007-description)">Positioned in a quiet family friendly cul-de-sac, this beautifully presented home offers privacy, space and quality living.</text>
+  <clipPath id="clip-meta-feed-007-description"><rect x="40" y="1008" width="1000" height="138"/></clipPath>
+  <rect x="40" y="1148" width="380" height="88" fill="#1a4f8a" rx="6"/>
+  <text x="230" y="1198" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-007-cta-text)">View Property</text>
+  <clipPath id="clip-meta-feed-007-cta-text"><rect x="60" y="1172" width="340" height="66"/></clipPath>
+  <text x="1040" y="1290" text-anchor="end" font-family="sans-serif" font-size="20" font-weight="500" fill="#888888" clip-path="url(#clip-meta-feed-007-footer-agency)">Team Renouf Real Estate</text>
+  <clipPath id="clip-meta-feed-007-footer-agency"><rect x="460" y="1270" width="580" height="56"/></clipPath>
+</svg>

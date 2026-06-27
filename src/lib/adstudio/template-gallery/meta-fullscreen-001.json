@@ -1,0 +1,600 @@
+{
+  "id": "meta-fullscreen-001",
+  "templateKey": "meta-fullscreen-001",
+  "name": "PM Switch Offer — Johnson 90-Day Free Management",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "investor_leads",
+  "offerId": "pm-switch-offer",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "agency",
+    "limited-offer",
+    "meta-fullscreen"
+  ],
+  "audienceIntent": "Property investors who are dissatisfied with their current manager and are open to switching before a deadline. Motivated by a limited-time financial incentive.",
+  "promptHint": "Full-screen urgency ad for investors: bold deadline banner, massive free-management hero offer, agency branding, orange-red accent palette.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "92abcd30-6620-4011-a5f6-c6a1633cb979"
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "urgency_banner": "THIS MONTH ONLY",
+    "hero_offer": "90 DAYS FREE",
+    "offer_label": "PROPERTY MANAGEMENT",
+    "deadline_text": "Switch before 30 June 2026",
+    "body_text": "Johnson Property Group: 90 days FREE property management when you switch before 30 June 2026. Get more from your investment.",
+    "disclaimer": "*New clients only.",
+    "cta_text": "Learn More"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg",
+    "alt": "Full-screen 9:16 property management ad with a bold THIS MONTH ONLY urgency banner at the top, massive 90 DAYS FREE hero text, a deadline date, Johnson branding, and an orange call-to-action strip at the bottom."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-001-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#1a1a2e",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-001-urgency-bar",
+        "type": "shape",
+        "role": "urgency_bar",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 140,
+        "fill": "#e8341c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-001-urgency-banner",
+        "type": "text",
+        "role": "urgency_banner",
+        "content": "THIS MONTH ONLY",
+        "x": 60,
+        "y": 40,
+        "width": 960,
+        "height": 80,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 54,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-001-property-image",
+        "type": "image",
+        "role": "property_image",
+        "x": 0,
+        "y": 140,
+        "width": 1080,
+        "height": 720,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-001-overlay",
+        "type": "shape",
+        "role": "image_overlay",
+        "content": "",
+        "x": 0,
+        "y": 680,
+        "width": 1080,
+        "height": 180,
+        "fill": "#1a1a2e",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-001-hero-days",
+        "type": "text",
+        "role": "hero_offer_number",
+        "content": "90 DAYS",
+        "x": 60,
+        "y": 880,
+        "width": 960,
+        "height": 200,
+        "fill": "#e8341c",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 160,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-fullscreen-001-hero-free",
+        "type": "text",
+        "role": "hero_offer_label",
+        "content": "FREE",
+        "x": 60,
+        "y": 1070,
+        "width": 960,
+        "height": 160,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 140,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-fullscreen-001-offer-sublabel",
+        "type": "text",
+        "role": "offer_sublabel",
+        "content": "PROPERTY MANAGEMENT",
+        "x": 60,
+        "y": 1230,
+        "width": 960,
+        "height": 60,
+        "fill": "#f0a500",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 40,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-001-divider",
+        "type": "shape",
+        "role": "divider",
+        "content": "",
+        "x": 240,
+        "y": 1306,
+        "width": 600,
+        "height": 4,
+        "fill": "#e8341c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-001-deadline",
+        "type": "text",
+        "role": "deadline_text",
+        "content": "Switch before 30 June 2026",
+        "x": 60,
+        "y": 1330,
+        "width": 960,
+        "height": 60,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 38,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-001-body",
+        "type": "text",
+        "role": "body_text",
+        "content": "Johnson Property Group: Get more from your investment.",
+        "x": 80,
+        "y": 1410,
+        "width": 920,
+        "height": 120,
+        "fill": "#cccccc",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      {
+        "objectId": "meta-fullscreen-001-disclaimer",
+        "type": "text",
+        "role": "disclaimer",
+        "content": "*New clients only.",
+        "x": 80,
+        "y": 1540,
+        "width": 920,
+        "height": 36,
+        "fill": "#999999",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-001-agency-name",
+        "type": "text",
+        "role": "agency_name",
+        "content": "JOHNSON PROPERTY GROUP",
+        "x": 60,
+        "y": 1610,
+        "width": 960,
+        "height": 56,
+        "fill": "#f0a500",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 32,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-001-cta-bar",
+        "type": "shape",
+        "role": "cta_bar",
+        "content": "",
+        "x": 0,
+        "y": 1720,
+        "width": 1080,
+        "height": 200,
+        "fill": "#e8341c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-001-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Learn More",
+        "x": 60,
+        "y": 1790,
+        "width": 960,
+        "height": 70,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 52,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "fill": "#1a1a2e",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 140,
+          "fill": "#e8341c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-urgency-bar",
+            "role": "urgency_bar",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 40,
+          "width": 960,
+          "text": "THIS MONTH ONLY",
+          "fontFamily": "Inter",
+          "fontSize": 54,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-urgency-banner",
+            "role": "urgency_banner",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 140,
+          "width": 1080,
+          "height": 720,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-property-image",
+            "role": "property_image",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 680,
+          "width": 1080,
+          "height": 180,
+          "fill": "#1a1a2e",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-overlay",
+            "role": "image_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 880,
+          "width": 960,
+          "text": "90 DAYS",
+          "fontFamily": "Inter",
+          "fontSize": 160,
+          "fontWeight": 900,
+          "fill": "#e8341c",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-hero-days",
+            "role": "hero_offer_number",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1070,
+          "width": 960,
+          "text": "FREE",
+          "fontFamily": "Inter",
+          "fontSize": 140,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-hero-free",
+            "role": "hero_offer_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1230,
+          "width": 960,
+          "text": "PROPERTY MANAGEMENT",
+          "fontFamily": "Inter",
+          "fontSize": 40,
+          "fontWeight": 700,
+          "fill": "#f0a500",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-offer-sublabel",
+            "role": "offer_sublabel",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 240,
+          "top": 1306,
+          "width": 600,
+          "height": 4,
+          "fill": "#e8341c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-divider",
+            "role": "divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1330,
+          "width": 960,
+          "text": "Switch before 30 June 2026",
+          "fontFamily": "Inter",
+          "fontSize": 38,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-deadline",
+            "role": "deadline_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1410,
+          "width": 920,
+          "text": "Johnson Property Group: Get more from your investment.",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 400,
+          "fill": "#cccccc",
+          "textAlign": "center",
+          "lineHeight": 1.3,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-body",
+            "role": "body_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1540,
+          "width": 920,
+          "text": "*New clients only.",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 400,
+          "fill": "#999999",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-disclaimer",
+            "role": "disclaimer",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1610,
+          "width": 960,
+          "text": "JOHNSON PROPERTY GROUP",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#f0a500",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-agency-name",
+            "role": "agency_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 1720,
+          "width": 1080,
+          "height": 200,
+          "fill": "#e8341c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-cta-bar",
+            "role": "cta_bar",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1790,
+          "width": 960,
+          "text": "Learn More",
+          "fontFamily": "Inter",
+          "fontSize": 52,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-001-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
+    "cta": "LEARN_MORE",
+    "primaryText": [
+      "Johnson Property Group: 90 days FREE property management when you switch before 30 June 2026. Get more from your investment. *New clients only."
+    ],
+    "headlines": [
+      "THIS MONTH ONLY"
+    ],
+    "leadForm": {
+      "headline": "Claim your 90 days free management",
+      "questions": [
+        "How many investment properties do you currently manage?",
+        "Who is your current property manager?",
+        "What suburb is your investment property in?",
+        "Best contact number to discuss the offer?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "We will be in touch shortly",
+        "body": "A Johnson Property Group specialist will contact you to arrange your switch and lock in your 90 days free management."
+      }
+    },
+    "descriptions": [
+      "90 days free property management when you switch to Johnson Property Group before 30 June."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#0f1f17" rx="0"/>
+  <text x="60" y="78" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="700" fill="#7ecba1" clip-path="url(#clip-meta-feed-018-kicker)">INVIDA CO-LIVING</text>
+  <clipPath id="clip-meta-feed-018-kicker"><rect x="60" y="56" width="960" height="62"/></clipPath>
+  <text x="60" y="174" text-anchor="start" font-family="sans-serif" font-size="66" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-018-headline)">Co-Living Done Properly — By Design.</text>
+  <clipPath id="clip-meta-feed-018-headline"><rect x="60" y="108" width="960" height="246"/></clipPath>
+  <rect x="60" y="310" width="960" height="620" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="629.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_interior]</text>
+  <rect x="60" y="954" width="960" height="200" fill="#1a3526" rx="8"/>
+  <text x="220" y="1004" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="700" fill="#7ecba1" clip-path="url(#clip-meta-feed-018-prop1-label)">Cash Flow</text>
+  <clipPath id="clip-meta-feed-018-prop1-label"><rect x="80" y="980" width="280" height="84"/></clipPath>
+  <text x="220" y="1066" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="400" fill="#c8e6d4" clip-path="url(#clip-meta-feed-018-prop1-desc)">Strong, consistent
+rental returns</text>
+  <clipPath id="clip-meta-feed-018-prop1-desc"><rect x="80" y="1048" width="280" height="98"/></clipPath>
+  <text x="540" y="1004" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="700" fill="#7ecba1" clip-path="url(#clip-meta-feed-018-prop2-label)">Tenant Diversity</text>
+  <clipPath id="clip-meta-feed-018-prop2-label"><rect x="400" y="980" width="280" height="84"/></clipPath>
+  <text x="540" y="1066" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="400" fill="#c8e6d4" clip-path="url(#clip-meta-feed-018-prop2-desc)">Resilient demand
+across demographics</text>
+  <clipPath id="clip-meta-feed-018-prop2-desc"><rect x="400" y="1048" width="280" height="98"/></clipPath>
+  <text x="860" y="1004" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="700" fill="#7ecba1" clip-path="url(#clip-meta-feed-018-prop3-label)">Compliance</text>
+  <clipPath id="clip-meta-feed-018-prop3-label"><rect x="720" y="980" width="280" height="84"/></clipPath>
+  <text x="860" y="1066" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="400" fill="#c8e6d4" clip-path="url(#clip-meta-feed-018-prop3-desc)">Built to spec,
+strategy-first</text>
+  <clipPath id="clip-meta-feed-018-prop3-desc"><rect x="720" y="1048" width="280" height="98"/></clipPath>
+  <rect x="0" y="1180" width="1080" height="170" fill="#2a6e4a" rx="0"/>
+  <text x="60" y="1245" text-anchor="start" font-family="sans-serif" font-size="30" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-018-cta-text)">Learn More</text>
+  <clipPath id="clip-meta-feed-018-cta-text"><rect x="60" y="1215" width="680" height="90"/></clipPath>
+  <text x="990" y="1251" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="700" fill="#7ecba1" clip-path="url(#clip-meta-feed-018-cta-arrow)">→</text>
+  <clipPath id="clip-meta-feed-018-cta-arrow"><rect x="960" y="1215" width="60" height="96"/></clipPath>
+  <text x="60" y="1298" text-anchor="start" font-family="sans-serif" font-size="20" font-weight="400" fill="#c8e6d4" clip-path="url(#clip-meta-feed-018-cta-sub)">Strategy-built. Compliance-ready. Investor-designed.</text>
+  <clipPath id="clip-meta-feed-018-cta-sub"><rect x="60" y="1278" width="960" height="68"/></clipPath>
+</svg>

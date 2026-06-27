@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#12202f" rx="0"/>
+  <rect x="0" y="0" width="560" height="900" fill="#d0cdc8" rx="4"/>
+  <text x="280" y="459.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="720" width="560" height="180" fill="#00000088" rx="0"/>
+  <rect x="560" y="0" width="520" height="900" fill="#12202f" rx="0"/>
+  <text x="580" y="96" text-anchor="start" font-family="sans-serif" font-size="36" font-weight="800" fill="#d4a84b" clip-path="url(#clip-meta-feed-005-suburbs)">YOKINE &amp;
+NOLLAMARA</text>
+  <clipPath id="clip-meta-feed-005-suburbs"><rect x="580" y="60" width="480" height="156"/></clipPath>
+  <text x="570" y="430" text-anchor="start" font-family="sans-serif" font-size="220" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-005-stat-value)">20%</text>
+  <clipPath id="clip-meta-feed-005-stat-value"><rect x="570" y="210" width="490" height="520"/></clipPath>
+  <text x="580" y="548" text-anchor="start" font-family="sans-serif" font-size="38" font-weight="700" fill="#d4a84b" clip-path="url(#clip-meta-feed-005-stat-label)">growth in
+12 months</text>
+  <clipPath id="clip-meta-feed-005-stat-label"><rect x="580" y="510" width="460" height="138"/></clipPath>
+  <rect x="580" y="630" width="80" height="6" fill="#d4a84b" rx="0"/>
+  <text x="580" y="686" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="400" fill="#a8b8c8" clip-path="url(#clip-meta-feed-005-stat-detail)">Your home could be worth
+more than you think.</text>
+  <clipPath id="clip-meta-feed-005-stat-detail"><rect x="580" y="658" width="460" height="148"/></clipPath>
+  <rect x="0" y="900" width="1080" height="450" fill="#1e3048" rx="0"/>
+  <text x="60" y="988" text-anchor="start" font-family="sans-serif" font-size="58" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-005-headline)">What's your Yokine or Nollamara home actually worth?</text>
+  <clipPath id="clip-meta-feed-005-headline"><rect x="60" y="930" width="960" height="258"/></clipPath>
+  <text x="60" y="1174" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="400" fill="#a8b8c8" clip-path="url(#clip-meta-feed-005-body)">Property values in Yokine &amp; Nollamara have increased ~20% in the past 12 months. Your home could be worth significantly more than you think.</text>
+  <clipPath id="clip-meta-feed-005-body"><rect x="60" y="1148" width="960" height="96"/></clipPath>
+  <rect x="60" y="1240" width="320" height="76" fill="#d4a84b" rx="8"/>
+  <text x="220" y="1286" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="800" fill="#12202f" clip-path="url(#clip-meta-feed-005-cta-text)">Learn More</text>
+  <clipPath id="clip-meta-feed-005-cta-text"><rect x="80" y="1260" width="280" height="62"/></clipPath>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <rect width="1080" height="1920" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1920" fill="#111827" rx="0"/>
+  <rect x="0" y="0" width="1080" height="1280" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="649.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[agent_headshot]</text>
+  <rect x="0" y="900" width="1080" height="380" fill="#111827" rx="0"/>
+  <text x="64" y="1328" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="700" fill="#d4a84b" clip-path="url(#clip-meta-fullscreen-002-expert-label)">YOUR LOCAL EXPERT</text>
+  <clipPath id="clip-meta-fullscreen-002-expert-label"><rect x="64" y="1300" width="952" height="76"/></clipPath>
+  <text x="64" y="1440" text-anchor="start" font-family="sans-serif" font-size="80" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-fullscreen-002-suburb-name)">Your Local Park Ridge South Expert</text>
+  <clipPath id="clip-meta-fullscreen-002-suburb-name"><rect x="64" y="1360" width="952" height="240"/></clipPath>
+  <text x="64" y="1574" text-anchor="start" font-family="sans-serif" font-size="34" font-weight="400" fill="#d1d5db" clip-path="url(#clip-meta-fullscreen-002-body-text)">Local knowledge. Exceptional results.</text>
+  <clipPath id="clip-meta-fullscreen-002-body-text"><rect x="64" y="1540" width="952" height="90"/></clipPath>
+  <rect x="64" y="1626" width="120" height="4" fill="#d4a84b" rx="0"/>
+  <rect x="64" y="1780" width="420" height="88" fill="#d4a84b" rx="6"/>
+  <text x="274" y="1832" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="700" fill="#111827" clip-path="url(#clip-meta-fullscreen-002-cta-text)">Learn More</text>
+  <clipPath id="clip-meta-fullscreen-002-cta-text"><rect x="94" y="1804" width="360" height="68"/></clipPath>
+</svg>

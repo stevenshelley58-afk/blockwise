@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f8f5f0" rx="0"/>
+  <rect x="0" y="0" width="1080" height="840" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="429.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="660" width="1080" height="180" fill="rgba(20,14,8,0.55)" rx="0"/>
+  <rect x="60" y="776" width="500" height="68" fill="#b8913c" rx="34"/>
+  <text x="310" y="815" text-anchor="middle" font-family="sans-serif" font-size="22" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-008-price-badge-text)">$1.3m – $1.5m  ·  PRICE GUIDE</text>
+  <clipPath id="clip-meta-feed-008-price-badge-text"><rect x="80" y="793" width="460" height="56"/></clipPath>
+  <text x="60" y="898" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="600" fill="#7a6040" clip-path="url(#clip-meta-feed-008-address)">19/146-148 Joel Terrace, Mount Lawley</text>
+  <clipPath id="clip-meta-feed-008-address"><rect x="60" y="874" width="960" height="64"/></clipPath>
+  <text x="60" y="998" text-anchor="start" font-family="sans-serif" font-size="72" font-weight="800" fill="#1c1208" clip-path="url(#clip-meta-feed-008-headline)">Classy 2-Level Home Near the River!</text>
+  <clipPath id="clip-meta-feed-008-headline"><rect x="60" y="926" width="960" height="252"/></clipPath>
+  <text x="60" y="1148" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="400" fill="#5a4630" clip-path="url(#clip-meta-feed-008-lifestyle)">Perfectly positioned between the peaceful Swan River foreshore and the vibrant Beaufort Street lifestyle precinct.</text>
+  <clipPath id="clip-meta-feed-008-lifestyle"><rect x="60" y="1122" width="960" height="126"/></clipPath>
+  <rect x="60" y="1254" width="320" height="72" fill="#b8913c" rx="36"/>
+  <text x="220" y="1296" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-008-cta-text)">Learn More</text>
+  <clipPath id="clip-meta-feed-008-cta-text"><rect x="80" y="1272" width="280" height="60"/></clipPath>
+</svg>
