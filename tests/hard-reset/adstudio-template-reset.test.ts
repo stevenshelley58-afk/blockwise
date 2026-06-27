@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  ADSTUDIO_TEMPLATE_RESET_MESSAGE,
   AD_STUDIO_TEMPLATES,
   RESOLVABLE_AD_STUDIO_TEMPLATES,
   builtInAdStudioTemplates,
@@ -10,9 +9,14 @@ import {
   generateAdStudioCampaignPack,
   resolveAdStudioTemplate,
   resolvableAdStudioTemplates,
-  type AdStudioTemplate,
+  metaLeadAdPackSchema,
 } from "../../src/lib/adstudio/index.ts";
-import { templatePreviewDataUrl } from "../../src/lib/adstudio/template-preview.ts";
+
+// Doctrine: the gallery has NO fixed count and NO fixed role set. A type-only ad,
+// a multi-image collage, and a headshot ad are all valid. These tests assert the
+// invariants that hold for ANY installed set (including an empty set during a
+// rebuild). Structural diversity + source-ad provenance are enforced by
+// scripts/verify/adstudio-templates.mjs and hermes/skills/adstudio-template-builder.
 
 function brandKit() {
   return {
@@ -26,31 +30,44 @@ function brandKit() {
   };
 }
 
-test("AdStudio template registry is intentionally empty", () => {
-  assert.deepEqual(AD_STUDIO_TEMPLATES, []);
-  assert.deepEqual(RESOLVABLE_AD_STUDIO_TEMPLATES, []);
-  assert.deepEqual(builtInAdStudioTemplates(), []);
-  assert.deepEqual(resolvableAdStudioTemplates(), []);
-  assert.equal(resolveAdStudioTemplate("meta_002"), null);
+test("AdStudio gallery loads without throwing and is internally consistent", () => {
+  const all = builtInAdStudioTemplates();
+  assert.equal(all.length, AD_STUDIO_TEMPLATES.length);
+  assert.equal(resolvableAdStudioTemplates().length, RESOLVABLE_AD_STUDIO_TEMPLATES.length);
+  assert.equal(new Set(all.map((template) => template.id)).size, all.length);
+  assert.equal(new Set(all.map((template) => template.templateKey)).size, all.length);
+  for (const template of RESOLVABLE_AD_STUDIO_TEMPLATES) {
+    assert.equal(template.status, "approved");
+  }
 });
 
-test("AdStudio template preview fails closed while reset is active", () => {
-  const template: AdStudioTemplate = {
-    id: "reset_probe",
-    templateKey: "reset_probe",
-    name: "Reset Probe",
-    goal: "seller_leads",
-    offerId: "seller_prep_checklist",
-    promptHint: "Reset probe.",
-  };
+test("every installed template satisfies the envelope (no fixed-role assumption)", () => {
+  for (const template of AD_STUDIO_TEMPLATES) {
+    assert.equal("conceptGroupId" in template, false, `${template.id} must not contain pairing metadata`);
+    assert.equal(template.id, template.templateKey);
+    assert.equal(template.source, "builtin");
+    assert.equal(template.status, "approved");
+    assert.ok(template.gallery.sampleImageSrc, template.id);
+    assert.ok(template.gallery.thumbnailSrc, template.id);
+    assert.equal(template.canvas.fabricJson.version, "blockwise-fabric-v1");
+    assert.equal(metaLeadAdPackSchema.safeParse(template.meta).success, true, `${template.id} meta pack should match Meta schema`);
 
-  assert.throws(
-    () => templatePreviewDataUrl(template, brandKit()),
-    new RegExp(ADSTUDIO_TEMPLATE_RESET_MESSAGE),
-  );
+    // object <-> fabric lockstep by objectId, NOT by a required role list
+    const objectIds = new Set(template.canvas.objects.map((object) => object.objectId));
+    const fabricIds = new Set(
+      template.canvas.fabricJson.objects
+        .map((object) => object.blockwise?.objectId)
+        .filter((value): value is string => typeof value === "string"),
+    );
+    for (const objectId of objectIds) {
+      assert.ok(fabricIds.has(objectId), `${template.id}: ${objectId} missing fabric mirror`);
+    }
+
+    assert.equal(resolveAdStudioTemplate(template.id)?.id, template.id);
+  }
 });
 
-test("AdStudio selected-template generation fails closed while reset is active", () => {
+test("AdStudio selected-template generation fails closed for unknown templates", () => {
   assert.throws(
     () =>
       generateAdStudioCampaignPack({
@@ -66,12 +83,12 @@ test("AdStudio selected-template generation fails closed while reset is active",
         firstAd: {
           mode: "template",
           source: "template_library",
-          templateKey: "meta_002",
-          description: "Reset should block template generation.",
-          imageDataUrl: "data:image/png;base64,aW1hZ2U=",
+          templateKey: "missing-template",
+          description: "Unknown templates should still be blocked.",
+          imageDataUrl: "data:image/png;base64,original",
           formats: ["9:16", "4:5", "1:1"],
         },
       }),
-    new RegExp(ADSTUDIO_TEMPLATE_RESET_MESSAGE),
+    /Selected template was not found\./,
   );
 });

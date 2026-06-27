@@ -13,7 +13,6 @@ import {
   validateMetaLeadAdPack,
   validateProviderJsonOutput,
   resolveAdStudioTemplate,
-  ADSTUDIO_TEMPLATE_RESET_MESSAGE,
 } from "../src/lib/adstudio/index.ts";
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
 import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
@@ -354,7 +353,7 @@ test("template first-ad generation fails closed while the registry is reset", ()
           formats: ["9:16", "4:5", "1:1"],
         },
       }),
-    new RegExp(ADSTUDIO_TEMPLATE_RESET_MESSAGE),
+    /Selected template was not found\./,
   );
 });
 

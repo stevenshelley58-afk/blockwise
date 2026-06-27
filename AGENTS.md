@@ -30,6 +30,28 @@
 - Provider tokens live in `private.provider_token_vault` and are only touched
   through service-role code.
 
+## AdStudio templates (the ad product)
+
+AdStudio templates are the ads customers ship, and they have repeatedly regressed
+into look-alike sets. Before creating, changing, or reviewing any template, read
+and follow `hermes/skills/adstudio-template-builder/SKILL.md`. Non-negotiable:
+
+- Diversity is the product, measured by what the ad DOES — the ad-radar
+  classification (ad_type / primary_intent / focus), AI-extracted, never a hard
+  visual-type list. Never reintroduce a fixed-role schema or a shared layout
+  recipe/archetype/DSL. Templates declare their own slots; a no-headline ad, a
+  multi-image collage, and a headshot ad are all valid.
+- Every template derives from a real source ad in `meta_ad_candidates/` and
+  records `sourceAd` provenance (one source ad -> at most one template).
+- `node scripts/verify/adstudio-templates.mjs` (wired into `verify:hard-reset`)
+  must pass, including the homogenization detector. Never weaken, bypass, lower a
+  threshold, or special-case the gate to make work pass; strengthen it if it is
+  genuinely wrong, with a test.
+- Use canonical field names on `canvas.objects` (`size`/`weight`/`align`, never
+  `fontSize`/`fontWeight`/`textAlign`), keep the Fabric mirror in lockstep, and
+  make the gallery sample render as a real Meta ad. Photos fit slots via AI
+  (vision + outpaint); `smart-crop.ts` rules are fallback only.
+
 ## Acceptance (every PR)
 
 - `npm run typecheck` and `npm run test` pass; update or delete stale tests

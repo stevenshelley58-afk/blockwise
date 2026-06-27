@@ -3,7 +3,7 @@ import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { findOfferTemplate, getOfferTemplate } from "./offers.ts";
 import { scoreAdStudioVariant } from "./scoring.ts";
-import { ADSTUDIO_TEMPLATE_RESET_MESSAGE, resolveAdStudioTemplate, type AdStudioTemplate } from "./templates.ts";
+import { resolveAdStudioTemplate, type AdStudioGalleryTemplate, type AdStudioTemplate } from "./templates.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaign,
@@ -82,7 +82,7 @@ function resolveTemplateForGeneration(input: GenerateCampaignPackInput): AdStudi
   const templateKey = input.firstAd.templateId ?? input.firstAd.templateKey;
   const resolved = resolveAdStudioTemplate(templateKey);
   if (!resolved) {
-    throw new Error(ADSTUDIO_TEMPLATE_RESET_MESSAGE);
+    throw new Error("Selected template was not found.");
   }
   return resolved;
 }
@@ -98,7 +98,8 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     template,
     fallbackGoal: input.goal,
   });
-  const formats = input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
+  const galleryTemplate = galleryTemplateOrNull(template);
+  const formats = galleryTemplate ? [galleryTemplate.format] : input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
   const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${templateKey ?? "blank"}:${input.suburb}:${input.firstAd?.description ?? ""}`);
   const campaign: AdStudioCampaign = {
     campaignId,
@@ -123,10 +124,12 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     creativeFormats: formats,
     status: "ready",
   };
-  const messages = input.firstAd
+  const messages = galleryTemplate
+    ? buildGalleryTemplateMessages(galleryTemplate)
+    : input.firstAd
     ? buildFirstAdMessages(template, offer.offerId, input.suburb)
     : buildFallbackMessages(offer.offerId, input.suburb);
-  const variantCount = Math.max(1, Math.min(input.variantCount ?? messages.length, 8));
+  const variantCount = galleryTemplate ? 1 : Math.max(1, Math.min(input.variantCount ?? messages.length, 8));
   const variants = messages.slice(0, variantCount).map((message, index): AdStudioCampaignVariant => {
     const complianceSafety = message.headline.includes("improve") ? 18 : 20;
     const score = scoreAdStudioVariant({
@@ -158,6 +161,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       variant,
       brandKit: input.brandKit,
       message: messages[index] ?? messages[0]!,
+      template: galleryTemplate,
     }),
   );
   const sourceImageDataUrl = input.sourceImageDataUrl ?? input.firstAd?.imageDataUrl;
@@ -170,7 +174,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       template,
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
-      subheadline: copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
+      subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
   const compliance = runAdStudioComplianceReview({ campaign, copyPacks });
@@ -498,6 +502,18 @@ function templateHeroHeadline(template: AdStudioTemplate): string {
   return "A fresh local listing to watch";
 }
 
+function buildGalleryTemplateMessages(template: AdStudioGalleryTemplate): DefaultCreativeMessage[] {
+  return [
+    {
+      label: template.name,
+      headline: template.editableText?.headline ?? template.sampleCopy?.headline ?? template.name,
+      primaryText: template.editableText?.primaryText ?? template.sampleCopy?.primaryText ?? "",
+      description: template.editableText?.description ?? template.sampleCopy?.description ?? "",
+      notes: ["Self-contained template", "Uses editable template image", "No blocking compliance issues"],
+    },
+  ];
+}
+
 function localTemplateHeadline(templateName: string): string {
   if (/appraisal|price/i.test(templateName)) return "A clearer view of your home's value";
   if (/open home/i.test(templateName)) return "Open-home questions to ask";
@@ -573,26 +589,45 @@ function buildCopyPack(input: {
   variant: AdStudioCampaignVariant;
   brandKit: AdStudioBrandKit;
   message: DefaultCreativeMessage;
+  template?: AdStudioGalleryTemplate | null;
 }): AdStudioPlatformCopyPack {
   const privacyUrl = input.brandKit.compliance.privacyPolicyUrl ?? `${input.brandKit.source.url}/privacy`;
   const seed = buildOfferCopySeed(input);
-  const meta: MetaLeadAdPack = {
-    platform: "meta",
-    specialAdCategory: "housing",
-    primaryText: [shorten(input.message.primaryText, 125)],
-    headlines: seed.metaHeadlines,
-    descriptions: seed.metaDescriptions,
-    cta: metaCtaFromLabel(input.variant.cta),
-    leadForm: {
-      headline: seed.leadFormHeadline,
-      questions: seed.leadFormQuestions,
-      privacyPolicyUrl: privacyUrl,
-      thankYouScreen: {
-        title: seed.thankYouTitle,
-        body: seed.thankYouBody,
-      },
-    },
-  };
+  const meta: MetaLeadAdPack = input.template
+    ? {
+        platform: "meta",
+        specialAdCategory: input.template.meta.specialAdCategory,
+        primaryText: [...input.template.meta.primaryText],
+        headlines: [...input.template.meta.headlines],
+        descriptions: [...input.template.meta.descriptions],
+        cta: input.template.meta.cta,
+        leadForm: {
+          headline: input.template.meta.leadForm.headline,
+          questions: [...input.template.meta.leadForm.questions],
+          privacyPolicyUrl: privacyUrl,
+          thankYouScreen: {
+            title: input.template.meta.leadForm.thankYouScreen.title,
+            body: input.template.meta.leadForm.thankYouScreen.body,
+          },
+        },
+      }
+    : {
+        platform: "meta",
+        specialAdCategory: "housing",
+        primaryText: [shorten(input.message.primaryText, 125)],
+        headlines: seed.metaHeadlines,
+        descriptions: seed.metaDescriptions,
+        cta: metaCtaFromLabel(input.variant.cta),
+        leadForm: {
+          headline: seed.leadFormHeadline,
+          questions: seed.leadFormQuestions,
+          privacyPolicyUrl: privacyUrl,
+          thankYouScreen: {
+            title: seed.thankYouTitle,
+            body: seed.thankYouBody,
+          },
+        },
+      };
   const googleSearch: GoogleSearchPack = {
     platform: "google_search",
     finalUrl: seed.finalUrl,
@@ -934,8 +969,23 @@ function buildCreative(input: {
   sourceImagesBySlot?: Partial<Record<string, string>>;
   subheadline?: string;
 }): AdStudioCreative {
+  const galleryTemplate = galleryTemplateOrNull(input.template);
+  if (galleryTemplate) {
+    return buildTemplateCreative({
+      creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}`),
+      campaignId: input.campaign.campaignId,
+      variantId: input.variant.variantId,
+      template: galleryTemplate,
+      headline: input.variant.headline,
+      subheadline: input.subheadline ?? templateDefaultSubheadline(galleryTemplate),
+      cta: input.variant.cta,
+      imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl ?? templateDefaultImage(galleryTemplate),
+      imagesBySlot: input.sourceImagesBySlot,
+    });
+  }
+
   if (input.template) {
-    throw new Error(ADSTUDIO_TEMPLATE_RESET_MESSAGE);
+    throw new Error("Selected template is not a self-contained gallery template.");
   }
 
   return buildCustomCreative({
@@ -949,6 +999,94 @@ function buildCreative(input: {
     cta: input.variant.cta,
     imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl,
   });
+}
+
+function buildTemplateCreative(input: {
+  creativeId: string;
+  campaignId: string;
+  variantId: string;
+  template: AdStudioGalleryTemplate;
+  headline: string;
+  subheadline: string;
+  cta: string;
+  imageUrl: string;
+  imagesBySlot?: Partial<Record<string, string>>;
+}): AdStudioCreative {
+  const imagesBySlot = input.imagesBySlot ?? {};
+  let primaryAssigned = false;
+  const objects = input.template.canvas.objects.map((object) => {
+    if (object.type === "image" || object.role === "primary_image") {
+      const slotImage = imagesBySlot[object.role] ?? imagesBySlot[object.objectId] ?? (!primaryAssigned ? input.imageUrl : undefined);
+      if (slotImage) { primaryAssigned = true; return { ...object, content: slotImage, assetId: slotImage }; }
+      return { ...object };
+    }
+    if (object.role === "headline") return { ...object, content: input.headline };
+    if (object.role === "subheadline") return { ...object, content: input.subheadline };
+    if (object.role === "cta_text" || object.role === "cta_button") return { ...object, content: input.cta };
+    return { ...object };
+  });
+  const creative: Omit<AdStudioCreative, "previewSvg"> = {
+    creativeId: input.creativeId,
+    campaignId: input.campaignId,
+    variantId: input.variantId,
+    format: input.template.format,
+    source: "custom_composite",
+    canvas: {
+      width: input.template.canvas.width,
+      height: input.template.canvas.height,
+      backgroundAssetId: null,
+      objects,
+      fabricJson: syncTemplateFabricJson(input.template.canvas.fabricJson, {
+        headline: input.headline,
+        description: input.subheadline,
+        cta: input.cta,
+        imageUrl: input.imageUrl,
+        imagesBySlot,
+      }),
+    },
+    safeZones: {
+      metaStory: input.template.format === "9:16",
+      googleDemandGen: true,
+    },
+  };
+
+  return {
+    ...creative,
+    previewSvg: renderGeneratedCreativeSvg(creative),
+  };
+}
+
+function syncTemplateFabricJson(
+  fabricJson: AdStudioGalleryTemplate["canvas"]["fabricJson"],
+  copy: { headline: string; description: string; cta: string; imageUrl: string; imagesBySlot?: Partial<Record<string, string>> },
+): AdStudioGalleryTemplate["canvas"]["fabricJson"] {
+  const imagesBySlot = copy.imagesBySlot ?? {};
+  let primaryAssigned = false;
+  return {
+    ...fabricJson,
+    objects: fabricJson.objects.map((object) => {
+      const meta = object.blockwise;
+      if (!meta || typeof meta !== "object") return { ...object };
+      if (meta.type === "image" || meta.role === "primary_image") {
+        const slotImage = imagesBySlot[meta.role] ?? imagesBySlot[meta.objectId] ?? (!primaryAssigned ? copy.imageUrl : undefined);
+        if (slotImage) { primaryAssigned = true; return { ...object, src: slotImage }; }
+        return { ...object };
+      }
+      if (meta.role === "headline") return { ...object, text: copy.headline };
+      if (meta.role === "subheadline") return { ...object, text: copy.description };
+      if (meta.role === "cta_text" || meta.role === "cta_button") return { ...object, text: copy.cta };
+      return { ...object };
+    }),
+  };
+}
+
+function templateDefaultSubheadline(t: AdStudioGalleryTemplate): string {
+  return t.editableText?.description ?? t.sampleCopy?.primaryText ?? t.sampleCopy?.description ?? "";
+}
+
+function templateDefaultImage(t: AdStudioGalleryTemplate): string {
+  const img = t.canvas?.objects?.find((o) => o.type === "image" || o.role === "primary_image");
+  return t.editableImage?.src ?? img?.content ?? img?.assetId ?? t.gallery?.sampleImageSrc ?? "";
 }
 
 function buildCustomCreative(input: {
@@ -1191,7 +1329,15 @@ function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unkno
     source: template.source ?? null,
     status: template.status ?? null,
     promptHint: template.promptHint,
+    placement: template.placement ?? null,
+    format: template.format ?? null,
   };
+}
+
+function galleryTemplateOrNull(template: AdStudioTemplate | null): AdStudioGalleryTemplate | null {
+  if (!template?.canvas || !template.gallery || !template.meta) return null;
+  if (template.format !== "4:5" && template.format !== "9:16") return null;
+  return template as AdStudioGalleryTemplate;
 }
 
 function landingPathForOffer(offerId: string): string {

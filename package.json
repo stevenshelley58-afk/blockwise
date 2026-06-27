@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "check:nul": "node scripts/check-no-nul.mjs",
     "check": "npm run check:nul && npm run test && npm run typecheck",
-    "verify:hard-reset": "node scripts/verify/hard-reset-static.mjs && node --test tests/hard-reset/*.test.ts",
+    "verify:hard-reset": "node scripts/verify/hard-reset-static.mjs && node scripts/verify/adstudio-templates.mjs && node --test tests/hard-reset/*.test.ts",
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
     "seed:test-users": "node scripts/seed-test-users.mjs",
