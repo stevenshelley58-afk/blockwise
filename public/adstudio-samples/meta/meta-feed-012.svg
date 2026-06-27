@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#0d0d0d" rx="0"/>
+  <rect x="0" y="0" width="1080" height="720" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="369.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[river_view_photo]</text>
+  <rect x="0" y="480" width="1080" height="240" fill="#0d0d0d" rx="0"/>
+  <rect x="60" y="740" width="960" height="2" fill="#c9a84c" rx="0"/>
+  <text x="60" y="788" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="400" fill="#c9a84c" clip-path="url(#clip-meta-feed-012-price-kicker)">LUXURY RESIDENCES</text>
+  <clipPath id="clip-meta-feed-012-price-kicker"><rect x="60" y="760" width="960" height="72"/></clipPath>
+  <text x="60" y="900" text-anchor="start" font-family="sans-serif" font-size="88" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-012-price-hero)">from $1.375m</text>
+  <clipPath id="clip-meta-feed-012-price-hero"><rect x="60" y="812" width="960" height="208"/></clipPath>
+  <text x="60" y="978" text-anchor="start" font-family="sans-serif" font-size="34" font-weight="400" fill="#e8e0cc" clip-path="url(#clip-meta-feed-012-dev-name)">Somerset at Burswood Point</text>
+  <clipPath id="clip-meta-feed-012-dev-name"><rect x="60" y="944" width="960" height="86"/></clipPath>
+  <text x="60" y="1024" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="400" fill="#c9a84c" clip-path="url(#clip-meta-feed-012-location-tag)">3.5km from Perth CBD</text>
+  <clipPath id="clip-meta-feed-012-location-tag"><rect x="60" y="1002" width="600" height="58"/></clipPath>
+  <rect x="60" y="1054" width="960" height="1" fill="#3a3226" rx="0"/>
+  <text x="60" y="1086" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="700" fill="#c9a84c" clip-path="url(#clip-meta-feed-012-hours-label)">DISPLAY SUITE HOURS</text>
+  <clipPath id="clip-meta-feed-012-hours-label"><rect x="60" y="1068" width="960" height="50"/></clipPath>
+  <text x="60" y="1132" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="400" fill="#e8e0cc" clip-path="url(#clip-meta-feed-012-hours-lines)">Wed 10am–2pm &amp; 4–6pm  |  Thur–Sun 10am–2pm</text>
+  <clipPath id="clip-meta-feed-012-hours-lines"><rect x="60" y="1108" width="960" height="68"/></clipPath>
+  <text x="60" y="1184" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="400" fill="#8a7e6a" clip-path="url(#clip-meta-feed-012-address-line)">1 Saintly Entrance, Burswood</text>
+  <clipPath id="clip-meta-feed-012-address-line"><rect x="60" y="1162" width="960" height="58"/></clipPath>
+  <rect x="60" y="1218" width="380" height="76" fill="#c9a84c" rx="4"/>
+  <text x="250" y="1262" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="700" fill="#0d0d0d" clip-path="url(#clip-meta-feed-012-cta-text)">Register Interest</text>
+  <clipPath id="clip-meta-feed-012-cta-text"><rect x="80" y="1238" width="340" height="62"/></clipPath>
+</svg>

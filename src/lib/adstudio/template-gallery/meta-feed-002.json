@@ -1,0 +1,249 @@
+{
+  "id": "meta-feed-002",
+  "templateKey": "meta-feed-002",
+  "name": "Mount Hawthorn Home Value Reveal",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": { "width": 1080, "height": 1350 },
+  "goal": "appraisal_bookings",
+  "offerId": "suburb-appraisal",
+  "audienceIntent": "Homeowners curious about the current market value of their property.",
+  "category": "appraisal",
+  "tags": ["appraisal", "property-value", "suburb-growth", "meta-feed"],
+  "promptHint": "Suburb homeowner appraisal ad highlighting rising property values and a free appraisal CTA.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": { "creativeId": "b861a33c-9eb5-413c-9b40-bd51c4c71736" },
+  "classification": { "ad_type": "appraisal", "primary_intent": "appraisal", "property_or_agent_focus": "property" },
+  "sampleCopy": {
+    "headline": "See How Much Your Home Is Worth!",
+    "primaryText": "Property values in Mount Hawthorn have increased significantly — properties are selling 10–20% higher than last year.",
+    "cta": "Get My Free Appraisal"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-002.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-002.svg",
+    "alt": "Appraisal ad showing rising property values in Mount Hawthorn with a free appraisal CTA."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-002-bg",
+        "type": "shape",
+        "role": "background",
+        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "fill": "#f9f4ee",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-002-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0, "y": 0, "width": 1080, "height": 742,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-002-photo-overlay",
+        "type": "shape",
+        "role": "photo_scrim",
+        "x": 0, "y": 560, "width": 1080, "height": 182,
+        "fill": "#00000066",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-002-growth-badge-bg",
+        "type": "shape",
+        "role": "growth_badge_background",
+        "x": 60, "y": 780, "width": 960, "height": 110,
+        "fill": "#c8873b",
+        "locked": true,
+        "radius": 10
+      },
+      {
+        "objectId": "meta-feed-002-growth-stat",
+        "type": "text",
+        "role": "growth_stat",
+        "content": "Properties selling 10–20% HIGHER than last year",
+        "x": 80, "y": 800, "width": 920, "height": 70,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-002-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "See How Much Your Home Is Worth!",
+        "x": 60, "y": 920, "width": 960, "height": 160,
+        "fill": "#2b1f0e",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 62,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-002-subtext",
+        "type": "text",
+        "role": "value_proposition",
+        "content": "Mount Hawthorn values have increased significantly — find out what yours is worth.",
+        "x": 80, "y": 1098, "width": 920, "height": 80,
+        "fill": "#5a4a35",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-002-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 220, "y": 1210, "width": 640, "height": 88,
+        "fill": "#c8873b",
+        "locked": false,
+        "radius": 44
+      },
+      {
+        "objectId": "meta-feed-002-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Get My Free Appraisal",
+        "x": 240, "y": 1234, "width": 600, "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "fill": "#f9f4ee",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-002-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "image",
+          "left": 0, "top": 0, "width": 1080, "height": 742,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": { "objectId": "meta-feed-002-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 560, "width": 1080, "height": 182,
+          "fill": "#00000066",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-002-photo-overlay", "role": "photo_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "rect",
+          "left": 60, "top": 780, "width": 960, "height": 110,
+          "fill": "#c8873b",
+          "rx": 10, "ry": 10,
+          "blockwise": { "objectId": "meta-feed-002-growth-badge-bg", "role": "growth_badge_background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 80, "top": 800, "width": 920,
+          "text": "Properties selling 10–20% HIGHER than last year",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-002-growth-stat", "role": "growth_stat", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "textbox",
+          "left": 60, "top": 920, "width": 960,
+          "text": "See How Much Your Home Is Worth!",
+          "fontFamily": "Inter",
+          "fontSize": 62,
+          "fontWeight": 800,
+          "fill": "#2b1f0e",
+          "textAlign": "center",
+          "lineHeight": 1.05,
+          "blockwise": { "objectId": "meta-feed-002-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+        },
+        {
+          "type": "textbox",
+          "left": 80, "top": 1098, "width": 920,
+          "text": "Mount Hawthorn values have increased significantly — find out what yours is worth.",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 400,
+          "fill": "#5a4a35",
+          "textAlign": "center",
+          "lineHeight": 1.2,
+          "blockwise": { "objectId": "meta-feed-002-subtext", "role": "value_proposition", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 220, "top": 1210, "width": 640, "height": 88,
+          "fill": "#c8873b",
+          "rx": 44, "ry": 44,
+          "blockwise": { "objectId": "meta-feed-002-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+        },
+        {
+          "type": "textbox",
+          "left": 240, "top": 1234, "width": 600,
+          "text": "Get My Free Appraisal",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-002-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": ["facebook", "instagram"],
+    "facebookPositions": ["feed"],
+    "instagramPositions": ["stream"],
+    "primaryText": ["Property values in Mount Hawthorn have increased significantly — properties are selling 10–20% higher than last year."],
+    "headlines": ["See How Much Your Home Is Worth!"],
+    "descriptions": ["Free property appraisal — find out what your home is worth today."],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Get your free property appraisal",
+      "questions": [
+        "What is your property address?",
+        "How many bedrooms does your property have?",
+        "Are you considering selling in the next 12 months?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "We'll be in touch",
+        "body": "One of our local agents will contact you shortly to arrange your free appraisal."
+      }
+    }
+  }
+}

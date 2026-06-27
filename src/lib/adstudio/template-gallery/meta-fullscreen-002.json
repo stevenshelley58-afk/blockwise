@@ -1,0 +1,387 @@
+{
+  "id": "meta-fullscreen-002",
+  "templateKey": "meta-fullscreen-002",
+  "name": "Local Agent — Park Ridge South Expert",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "local-agent-expertise",
+  "audienceIntent": "Homeowners and prospective sellers in Park Ridge South who want to work with a trusted local agent who knows their suburb intimately. Motivated by confidence in local expertise and exceptional outcomes.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "agent",
+    "local-expert",
+    "meta-fullscreen"
+  ],
+  "promptHint": "Fullscreen vertical story ad showcasing a local real estate agent's suburb expertise with a dominant lifestyle photo and clean professional typography.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "389b6f11-22e8-4553-93d4-740f085cf937"
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agent"
+  },
+  "sampleCopy": {
+    "suburb_name": "Park Ridge South",
+    "local_expert_label": "Your Local Expert",
+    "headline": "Your Local Park Ridge South Expert",
+    "body": "Local knowledge. Exceptional results.",
+    "cta": "Learn More"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-002.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-002.svg",
+    "alt": "Fullscreen vertical real estate story ad featuring a dominant agent headshot or suburb lifestyle photo with large suburb name text, a 'Your Local Expert' label, and a contact CTA at the bottom."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-002-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#111827",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-002-hero-image",
+        "type": "image",
+        "role": "agent_headshot",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1280,
+        "imageAnchor": "top-center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-002-gradient-overlay",
+        "type": "shape",
+        "role": "gradient_overlay",
+        "content": "",
+        "x": 0,
+        "y": 900,
+        "width": 1080,
+        "height": 380,
+        "fill": "#111827",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-002-expert-label",
+        "type": "text",
+        "role": "supporting_text",
+        "content": "YOUR LOCAL EXPERT",
+        "x": 64,
+        "y": 1300,
+        "width": 952,
+        "height": 48,
+        "fill": "#d4a84b",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-fullscreen-002-suburb-name",
+        "type": "text",
+        "role": "headline",
+        "content": "Park Ridge South",
+        "x": 64,
+        "y": 1360,
+        "width": 952,
+        "height": 160,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 80,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-fullscreen-002-body-text",
+        "type": "text",
+        "role": "body",
+        "content": "Local knowledge. Exceptional results.",
+        "x": 64,
+        "y": 1540,
+        "width": 952,
+        "height": 56,
+        "fill": "#d1d5db",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      {
+        "objectId": "meta-fullscreen-002-divider",
+        "type": "shape",
+        "role": "divider",
+        "content": "",
+        "x": 64,
+        "y": 1626,
+        "width": 120,
+        "height": 4,
+        "fill": "#d4a84b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-002-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 64,
+        "y": 1780,
+        "width": 420,
+        "height": 88,
+        "fill": "#d4a84b",
+        "locked": false,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-fullscreen-002-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Learn More",
+        "x": 94,
+        "y": 1804,
+        "width": 360,
+        "height": 40,
+        "fill": "#111827",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "fill": "#111827",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1280,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-hero-image",
+            "role": "agent_headshot",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 900,
+          "width": 1080,
+          "height": 380,
+          "fill": "#111827",
+          "opacity": 0.85,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-gradient-overlay",
+            "role": "gradient_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 64,
+          "top": 1300,
+          "width": 952,
+          "text": "YOUR LOCAL EXPERT",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "fill": "#d4a84b",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-expert-label",
+            "role": "supporting_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 64,
+          "top": 1360,
+          "width": 952,
+          "text": "Park Ridge South",
+          "fontFamily": "Inter",
+          "fontSize": 80,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-suburb-name",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 64,
+          "top": 1540,
+          "width": 952,
+          "text": "Local knowledge. Exceptional results.",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 400,
+          "fill": "#d1d5db",
+          "textAlign": "left",
+          "lineHeight": 1.3,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-body-text",
+            "role": "body",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 64,
+          "top": 1626,
+          "width": 120,
+          "height": 4,
+          "fill": "#d4a84b",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-divider",
+            "role": "divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 64,
+          "top": 1780,
+          "width": 420,
+          "height": 88,
+          "rx": 6,
+          "ry": 6,
+          "fill": "#d4a84b",
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 94,
+          "top": 1804,
+          "width": 360,
+          "text": "Learn More",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "fill": "#111827",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-002-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
+    "primaryText": [
+      "Local knowledge. Exceptional results."
+    ],
+    "headlines": [
+      "Your Local Park Ridge South Expert"
+    ],
+    "descriptions": [
+      "Your local Park Ridge South expert — local knowledge, exceptional results."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Connect with your local Park Ridge South expert",
+      "questions": [
+        "Are you thinking of selling in the next 12 months?",
+        "What is your property address in Park Ridge South?",
+        "What is the best way to contact you?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thank you for reaching out",
+        "body": "Your local expert will be in touch shortly to discuss your property goals."
+      }
+    }
+  }
+}

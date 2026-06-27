@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f5ede0" rx="0"/>
+  <rect x="0" y="0" width="1080" height="700" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="359.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="40" y="588" width="400" height="92" fill="#c8622a" rx="6"/>
+  <text x="60" y="622" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-010-badge-label)">HOME OPEN</text>
+  <clipPath id="clip-meta-feed-010-badge-label"><rect x="60" y="600" width="200" height="58"/></clipPath>
+  <text x="60" y="656" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="600" fill="#fde8d8" clip-path="url(#clip-meta-feed-010-badge-time)">Sat 6 Jun · 10:00–10:30am</text>
+  <clipPath id="clip-meta-feed-010-badge-time"><rect x="60" y="634" width="360" height="58"/></clipPath>
+  <text x="60" y="780" text-anchor="start" font-family="sans-serif" font-size="52" font-weight="800" fill="#2b1f12" clip-path="url(#clip-meta-feed-010-address)">28 Ardglass Gardens, Ridgewood</text>
+  <clipPath id="clip-meta-feed-010-address"><rect x="60" y="728" width="960" height="142"/></clipPath>
+  <text x="60" y="868" text-anchor="start" font-family="sans-serif" font-size="40" font-weight="700" fill="#c8622a" clip-path="url(#clip-meta-feed-010-price)">Offers from $995,000</text>
+  <clipPath id="clip-meta-feed-010-price"><rect x="60" y="828" width="700" height="92"/></clipPath>
+  <rect x="60" y="896" width="960" height="3" fill="#d9c4ae" rx="0"/>
+  <text x="60" y="942" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="500" fill="#5c3d20" clip-path="url(#clip-meta-feed-010-property-detail)">4–5 bed · 2 bath · entertainment room · ducted A/C</text>
+  <clipPath id="clip-meta-feed-010-property-detail"><rect x="60" y="916" width="960" height="66"/></clipPath>
+  <rect x="330" y="1220" width="420" height="80" fill="#c8622a" rx="8"/>
+  <text x="540" y="1272" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-010-cta-text)">Find Out More</text>
+  <clipPath id="clip-meta-feed-010-cta-text"><rect x="360" y="1244" width="360" height="64"/></clipPath>
+</svg>

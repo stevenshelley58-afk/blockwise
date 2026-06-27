@@ -1,0 +1,673 @@
+{
+  "id": "meta-feed-015",
+  "templateKey": "meta-feed-015",
+  "name": "Just Sold — Alexandra Hills Market Snapshot",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "just-sold-appraisal",
+  "audienceIntent": "Homeowners in Alexandra Hills and nearby suburbs who are quietly watching the local market and want to know if a nearby sale signals it's time to find out what their own property is worth. The consultative tone meets them where they are — curious, not yet committed.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "market-snapshot",
+    "property-value",
+    "meta-feed"
+  ],
+  "promptHint": "Clean data-card just-sold ad with a large sale price number as the hero, suburb name, a property photo with SOLD badge, a curiosity question hook, and a personalised property update CTA.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "6ce68b00-e447-4e5a-9643-50161724e48b"
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "questionHook": "Curious where your property sits today?",
+    "salePriceLabel": "SOLD",
+    "salePrice": "$1,350,000",
+    "suburbName": "Alexandra Hills",
+    "address": "44 Snowdon Street",
+    "specs": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
+    "marketNote": "A recent local sale — see where today's market is heading.",
+    "ctaText": "Get My Property Update",
+    "primaryText": "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale — see where today's market is heading.",
+    "headline": "Curious where your property sits today?"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-015.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-015.svg",
+    "alt": "Clean white data-card just-sold ad with a large $1,350,000 sale price as the hero number, Alexandra Hills suburb name, a property photo with red SOLD badge, curiosity question hook, and a teal 'Get My Property Update' CTA button."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-015-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#f7f8f9",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-015-top-bar",
+        "type": "shape",
+        "role": "brand_bar",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 10,
+        "fill": "#00868a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-015-question-hook",
+        "type": "text",
+        "role": "question_hook",
+        "content": "Curious where your property sits today?",
+        "x": 60,
+        "y": 36,
+        "width": 960,
+        "height": 96,
+        "fill": "#1a2e35",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 46,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-015-card-bg",
+        "type": "shape",
+        "role": "price_card",
+        "content": "",
+        "x": 60,
+        "y": 156,
+        "width": 960,
+        "height": 200,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 12
+      },
+      {
+        "objectId": "meta-feed-015-sold-label",
+        "type": "text",
+        "role": "sold_label",
+        "content": "SOLD",
+        "x": 96,
+        "y": 174,
+        "width": 200,
+        "height": 40,
+        "fill": "#c0392b",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-015-sale-price",
+        "type": "text",
+        "role": "sale_price",
+        "content": "$1,350,000",
+        "x": 96,
+        "y": 212,
+        "width": 700,
+        "height": 100,
+        "fill": "#1a2e35",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 86,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-015-suburb-name",
+        "type": "text",
+        "role": "suburb_name",
+        "content": "Alexandra Hills",
+        "x": 96,
+        "y": 316,
+        "width": 700,
+        "height": 34,
+        "fill": "#00868a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-015-photo-frame",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 380,
+        "width": 1080,
+        "height": 560,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-015-sold-badge-bg",
+        "type": "shape",
+        "role": "sold_badge_background",
+        "content": "",
+        "x": 0,
+        "y": 400,
+        "width": 220,
+        "height": 72,
+        "fill": "#c0392b",
+        "locked": true,
+        "radius": 0
+      },
+      {
+        "objectId": "meta-feed-015-sold-badge-text",
+        "type": "text",
+        "role": "sold_badge_text",
+        "content": "SOLD",
+        "x": 12,
+        "y": 416,
+        "width": 196,
+        "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 32,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-015-address-row",
+        "type": "text",
+        "role": "address",
+        "content": "44 Snowdon Street, Alexandra Hills",
+        "x": 60,
+        "y": 960,
+        "width": 960,
+        "height": 46,
+        "fill": "#1a2e35",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-015-specs-row",
+        "type": "text",
+        "role": "property_specs",
+        "content": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
+        "x": 60,
+        "y": 1016,
+        "width": 960,
+        "height": 32,
+        "fill": "#4a5568",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-015-divider",
+        "type": "shape",
+        "role": "section_divider",
+        "content": "",
+        "x": 60,
+        "y": 1068,
+        "width": 960,
+        "height": 2,
+        "fill": "#e2e8f0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-015-market-note",
+        "type": "text",
+        "role": "market_note",
+        "content": "A recent local sale — see where today's market is heading.",
+        "x": 60,
+        "y": 1088,
+        "width": 960,
+        "height": 52,
+        "fill": "#4a5568",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-015-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 60,
+        "y": 1170,
+        "width": 680,
+        "height": 88,
+        "fill": "#00868a",
+        "locked": false,
+        "radius": 8
+      },
+      {
+        "objectId": "meta-feed-015-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Get My Property Update",
+        "x": 80,
+        "y": 1194,
+        "width": 640,
+        "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-015-footer",
+        "type": "text",
+        "role": "footer_note",
+        "content": "Local market data. Speak with an agent for a full appraisal.",
+        "x": 60,
+        "y": 1290,
+        "width": 960,
+        "height": 30,
+        "fill": "#9aa5b4",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 18,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#f7f8f9",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-015-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 10,
+          "fill": "#00868a",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-015-top-bar",
+            "role": "brand_bar",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 36,
+          "width": 960,
+          "text": "Curious where your property sits today?",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 800,
+          "fill": "#1a2e35",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-015-question-hook",
+            "role": "question_hook",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 156,
+          "width": 960,
+          "height": 200,
+          "rx": 12,
+          "ry": 12,
+          "fill": "#ffffff",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-015-card-bg",
+            "role": "price_card",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 174,
+          "width": 200,
+          "text": "SOLD",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 900,
+          "fill": "#c0392b",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-015-sold-label",
+            "role": "sold_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 212,
+          "width": 700,
+          "text": "$1,350,000",
+          "fontFamily": "Inter",
+          "fontSize": 86,
+          "fontWeight": 900,
+          "fill": "#1a2e35",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-015-sale-price",
+            "role": "sale_price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 316,
+          "width": 700,
+          "text": "Alexandra Hills",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fill": "#00868a",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-015-suburb-name",
+            "role": "suburb_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 380,
+          "width": 1080,
+          "height": 560,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-015-photo-frame",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 400,
+          "width": 220,
+          "height": 72,
+          "fill": "#c0392b",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-015-sold-badge-bg",
+            "role": "sold_badge_background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 12,
+          "top": 416,
+          "width": 196,
+          "text": "SOLD",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-015-sold-badge-text",
+            "role": "sold_badge_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 960,
+          "width": 960,
+          "text": "44 Snowdon Street, Alexandra Hills",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 700,
+          "fill": "#1a2e35",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-015-address-row",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1016,
+          "width": 960,
+          "text": "4 Bed  |  2 Bath  |  2 Car  |  711m²",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 500,
+          "fill": "#4a5568",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-015-specs-row",
+            "role": "property_specs",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1068,
+          "width": 960,
+          "height": 2,
+          "fill": "#e2e8f0",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-015-divider",
+            "role": "section_divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1088,
+          "width": 960,
+          "text": "A recent local sale — see where today's market is heading.",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 400,
+          "fill": "#4a5568",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-feed-015-market-note",
+            "role": "market_note",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1170,
+          "width": 680,
+          "height": 88,
+          "rx": 8,
+          "ry": 8,
+          "fill": "#00868a",
+          "blockwise": {
+            "objectId": "meta-feed-015-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1194,
+          "width": 640,
+          "text": "Get My Property Update",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-015-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1290,
+          "width": 960,
+          "text": "Local market data. Speak with an agent for a full appraisal.",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": 400,
+          "fill": "#9aa5b4",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-015-footer",
+            "role": "footer_note",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "SOLD | $1,350,000 | 44 Snowdon Street, Alexandra Hills | 4 Bed | 2 Bath | 2 Car | 711m2. A recent local sale — see where today's market is heading."
+    ],
+    "headlines": [
+      "Curious where your property sits today?"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Find out what your property is worth",
+      "questions": [
+        "What is your property address?",
+        "How many bedrooms does your property have?",
+        "Are you thinking of selling in the next 12 months?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Your property update is on the way",
+        "body": "A local agent will be in touch shortly with a personalised market snapshot for your property."
+      }
+    },
+    "descriptions": [
+      "Local sale snapshot: SOLD $1,350,000 in Alexandra Hills. See where your property sits."
+    ]
+  }
+}

@@ -1,0 +1,461 @@
+{
+  "id": "meta-feed-019",
+  "templateKey": "meta-feed-019",
+  "name": "Property Management — Belle Cottesloe Performance Check",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "investor_leads",
+  "offerId": "pm-performance-check",
+  "audienceIntent": "Investment property owners in coastal suburbs who are questioning whether their property is being managed to its full potential and are open to switching to a more performance-focused agency.",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "investor",
+    "suburb",
+    "meta-feed"
+  ],
+  "promptHint": "Consultative investor-focused ad asking how well their property is performing, with coastal suburb branding and a performance-check hook.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "32876945-abd6-4abe-8dfc-353bb2147afd"
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "suburb"
+  },
+  "sampleCopy": {
+    "question_headline": "How is your investment performing?",
+    "market_context": "The market is shifting, and investment property values along with it.",
+    "body": "Make sure yours performs at its best with Belle Property Cottesloe's experienced property management team.",
+    "hook": "What could your property be achieving?",
+    "cta": "Get a Performance Check"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-019.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-019.svg",
+    "alt": "Consultative property management ad asking investors how their property is performing, with a coastal suburb feel and Belle Property Cottesloe branding."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-019-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#f0f4f2",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-019-property-image",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 780,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-019-image-overlay",
+        "type": "shape",
+        "role": "image_overlay",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 780,
+        "fill": "#00000066",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-019-question-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "How is your investment performing?",
+        "x": 60,
+        "y": 580,
+        "width": 960,
+        "height": 180,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 72,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-019-brand-strip",
+        "type": "shape",
+        "role": "brand_strip",
+        "content": "",
+        "x": 0,
+        "y": 780,
+        "width": 1080,
+        "height": 6,
+        "fill": "#1a4f3a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-019-market-context",
+        "type": "text",
+        "role": "market_context",
+        "content": "The market is shifting, and investment property values along with it.",
+        "x": 60,
+        "y": 810,
+        "width": 960,
+        "height": 72,
+        "fill": "#1a4f3a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      {
+        "objectId": "meta-feed-019-body",
+        "type": "text",
+        "role": "body_copy",
+        "content": "Make sure yours performs at its best with Belle Property Cottesloe's experienced property management team.",
+        "x": 60,
+        "y": 898,
+        "width": 960,
+        "height": 120,
+        "fill": "#333333",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      {
+        "objectId": "meta-feed-019-hook",
+        "type": "text",
+        "role": "hook_text",
+        "content": "What could your property be achieving?",
+        "x": 60,
+        "y": 1040,
+        "width": 960,
+        "height": 48,
+        "fill": "#1a4f3a",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-019-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 60,
+        "y": 1220,
+        "width": 480,
+        "height": 90,
+        "fill": "#1a4f3a",
+        "locked": false,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-feed-019-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Get a Performance Check",
+        "x": 90,
+        "y": 1244,
+        "width": 420,
+        "height": 42,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-019-agency-name",
+        "type": "text",
+        "role": "agency_name",
+        "content": "Belle Property Cottesloe",
+        "x": 60,
+        "y": 1116,
+        "width": 600,
+        "height": 40,
+        "fill": "#666666",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#f0f4f2",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-019-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 780,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-019-property-image",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 780,
+          "fill": "#00000066",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-019-image-overlay",
+            "role": "image_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 580,
+          "width": 960,
+          "text": "How is your investment performing?",
+          "fontFamily": "Inter",
+          "fontSize": 72,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-019-question-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 780,
+          "width": 1080,
+          "height": 6,
+          "fill": "#1a4f3a",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-019-brand-strip",
+            "role": "brand_strip",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 810,
+          "width": 960,
+          "text": "The market is shifting, and investment property values along with it.",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 600,
+          "fill": "#1a4f3a",
+          "textAlign": "left",
+          "lineHeight": 1.3,
+          "blockwise": {
+            "objectId": "meta-feed-019-market-context",
+            "role": "market_context",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 898,
+          "width": 960,
+          "text": "Make sure yours performs at its best with Belle Property Cottesloe's experienced property management team.",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 400,
+          "fill": "#333333",
+          "textAlign": "left",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-feed-019-body",
+            "role": "body_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1040,
+          "width": 960,
+          "text": "What could your property be achieving?",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 700,
+          "fill": "#1a4f3a",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-feed-019-hook",
+            "role": "hook_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1116,
+          "width": 600,
+          "text": "Belle Property Cottesloe",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 500,
+          "fill": "#666666",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-feed-019-agency-name",
+            "role": "agency_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 60,
+          "top": 1220,
+          "width": 480,
+          "height": 90,
+          "rx": 6,
+          "ry": 6,
+          "fill": "#1a4f3a",
+          "blockwise": {
+            "objectId": "meta-feed-019-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 90,
+          "top": 1244,
+          "width": 420,
+          "text": "Get a Performance Check",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-019-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "cta": "LEARN_MORE",
+    "primaryText": [
+      "The market is shifting, and investment property values along with it. Make sure yours performs at its best with Belle Property Cottesloe's experienced property management team."
+    ],
+    "headlines": [
+      "How is your investment performing?"
+    ],
+    "leadForm": {
+      "headline": "Get a free property performance check",
+      "questions": [
+        "What suburb is your investment property in?",
+        "How long have you owned this investment property?",
+        "Are you currently using a property manager?",
+        "What is your primary concern — vacancy, rent yield, or maintenance?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "We will be in touch",
+        "body": "A member of the Belle Property Cottesloe team will contact you shortly to discuss your investment performance."
+      }
+    },
+    "descriptions": [
+      "Is your investment performing at its best? Find out with Belle Property Cottesloe."
+    ]
+  }
+}

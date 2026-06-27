@@ -1,0 +1,479 @@
+{
+  "id": "meta-feed-016",
+  "templateKey": "meta-feed-016",
+  "name": "Just Sold — Doubleview Results Proof",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "just-sold-social-proof",
+  "audienceIntent": "Homeowners in nearby streets who see a local sale result and feel the social proof of an agent who delivers — prompting them to reach out before they even start thinking of selling.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "results",
+    "social-proof",
+    "meta-feed"
+  ],
+  "promptHint": "Bold just-sold social proof ad: full-bleed property photo with a SOLD banner stamp at top, two punchy taglines below, and clean agency branding — confident and minimal.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "04c86705-e2f2-434c-bfcf-04243bba3f92"
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "soldStamp": "SOLD",
+    "address": "243A Huntriss Road, Doubleview",
+    "taglineA": "Results That Speak.",
+    "taglineB": "Just Ask a Local.",
+    "agencyLine": "Your Local Real Estate Expert",
+    "primaryText": "Results That Speak. Just Ask a Local.",
+    "headline": "SOLD — 243A Huntriss Road, Doubleview"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-016.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-016.svg",
+    "alt": "Just-sold real estate ad with a full-bleed property photo, a red SOLD banner stamp across the top, bold two-line taglines 'Results That Speak. / Just Ask a Local.' in a dark panel, and the property address and agency branding below."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-016-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#111111",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-016-property-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 800,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-016-sold-banner-bg",
+        "type": "shape",
+        "role": "sold_banner_background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 96,
+        "fill": "#c0392b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-016-sold-stamp",
+        "type": "text",
+        "role": "sold_stamp",
+        "content": "SOLD",
+        "x": 52,
+        "y": 20,
+        "width": 240,
+        "height": 58,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 52,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-016-address-on-banner",
+        "type": "text",
+        "role": "address_on_banner",
+        "content": "243A Huntriss Road, Doubleview",
+        "x": 316,
+        "y": 30,
+        "width": 712,
+        "height": 40,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1
+      },
+      {
+        "objectId": "meta-feed-016-photo-fade",
+        "type": "shape",
+        "role": "photo_bottom_fade",
+        "content": "",
+        "x": 0,
+        "y": 640,
+        "width": 1080,
+        "height": 160,
+        "fill": "#111111",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-016-copy-panel",
+        "type": "shape",
+        "role": "copy_panel",
+        "content": "",
+        "x": 0,
+        "y": 800,
+        "width": 1080,
+        "height": 550,
+        "fill": "#111111",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-016-tagline-a",
+        "type": "text",
+        "role": "tagline_primary",
+        "content": "Results That Speak.",
+        "x": 52,
+        "y": 830,
+        "width": 976,
+        "height": 110,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 88,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-016-tagline-b",
+        "type": "text",
+        "role": "tagline_secondary",
+        "content": "Just Ask a Local.",
+        "x": 52,
+        "y": 956,
+        "width": 976,
+        "height": 110,
+        "fill": "#c0392b",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 88,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-016-rule",
+        "type": "shape",
+        "role": "brand_rule",
+        "content": "",
+        "x": 52,
+        "y": 1094,
+        "width": 976,
+        "height": 3,
+        "fill": "#c0392b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-016-agency-line",
+        "type": "text",
+        "role": "agency_tagline",
+        "content": "Your Local Real Estate Expert",
+        "x": 52,
+        "y": 1116,
+        "width": 976,
+        "height": 40,
+        "fill": "#aaaaaa",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-016-logo-zone",
+        "type": "logo",
+        "role": "agency_logo",
+        "x": 52,
+        "y": 1178,
+        "width": 280,
+        "height": 80,
+        "imageAnchor": "left",
+        "fill": null,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#111111",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-016-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 800,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-016-property-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 96,
+          "fill": "#c0392b",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-016-sold-banner-bg",
+            "role": "sold_banner_background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 52,
+          "top": 20,
+          "width": 240,
+          "text": "SOLD",
+          "fontFamily": "Inter",
+          "fontSize": 52,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-016-sold-stamp",
+            "role": "sold_stamp",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 316,
+          "top": 30,
+          "width": 712,
+          "text": "243A Huntriss Road, Doubleview",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1,
+          "blockwise": {
+            "objectId": "meta-feed-016-address-on-banner",
+            "role": "address_on_banner",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 640,
+          "width": 1080,
+          "height": 160,
+          "fill": "#111111",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-016-photo-fade",
+            "role": "photo_bottom_fade",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 800,
+          "width": 1080,
+          "height": 550,
+          "fill": "#111111",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-016-copy-panel",
+            "role": "copy_panel",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 52,
+          "top": 830,
+          "width": 976,
+          "text": "Results That Speak.",
+          "fontFamily": "Inter",
+          "fontSize": 88,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-016-tagline-a",
+            "role": "tagline_primary",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 52,
+          "top": 956,
+          "width": 976,
+          "text": "Just Ask a Local.",
+          "fontFamily": "Inter",
+          "fontSize": 88,
+          "fontWeight": 900,
+          "fill": "#c0392b",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-016-tagline-b",
+            "role": "tagline_secondary",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 52,
+          "top": 1094,
+          "width": 976,
+          "height": 3,
+          "fill": "#c0392b",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-016-rule",
+            "role": "brand_rule",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 52,
+          "top": 1116,
+          "width": 976,
+          "text": "Your Local Real Estate Expert",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 400,
+          "fill": "#aaaaaa",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-feed-016-agency-line",
+            "role": "agency_tagline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 52,
+          "top": 1178,
+          "width": 280,
+          "height": 80,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-016-logo-zone",
+            "role": "agency_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "logo"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Results That Speak. Just Ask a Local."
+    ],
+    "headlines": [
+      "SOLD — 243A Huntriss Road, Doubleview"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Thinking of selling? Let's talk.",
+      "questions": [
+        "What is your property address?",
+        "Are you considering selling in the next 12 months?",
+        "Best number to reach you?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks — we will be in touch",
+        "body": "One of our local agents will contact you shortly to discuss your property."
+      }
+    },
+    "descriptions": [
+      "Results that speak — SOLD in Doubleview. Just ask a local."
+    ]
+  }
+}

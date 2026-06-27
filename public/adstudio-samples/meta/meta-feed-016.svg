@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#111111" rx="0"/>
+  <rect x="0" y="0" width="1080" height="800" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="409.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="0" width="1080" height="96" fill="#c0392b" rx="0"/>
+  <text x="52" y="72" text-anchor="start" font-family="sans-serif" font-size="52" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-016-sold-stamp)">SOLD</text>
+  <clipPath id="clip-meta-feed-016-sold-stamp"><rect x="52" y="20" width="240" height="110"/></clipPath>
+  <text x="1028" y="56" text-anchor="end" font-family="sans-serif" font-size="26" font-weight="600" fill="#ffffff" clip-path="url(#clip-meta-feed-016-address-on-banner)">243A Huntriss Road, Doubleview</text>
+  <clipPath id="clip-meta-feed-016-address-on-banner"><rect x="316" y="30" width="712" height="66"/></clipPath>
+  <rect x="0" y="640" width="1080" height="160" fill="#111111" rx="0"/>
+  <rect x="0" y="800" width="1080" height="550" fill="#111111" rx="0"/>
+  <text x="52" y="918" text-anchor="start" font-family="sans-serif" font-size="88" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-016-tagline-a)">Results That Speak.</text>
+  <clipPath id="clip-meta-feed-016-tagline-a"><rect x="52" y="830" width="976" height="198"/></clipPath>
+  <text x="52" y="1044" text-anchor="start" font-family="sans-serif" font-size="88" font-weight="900" fill="#c0392b" clip-path="url(#clip-meta-feed-016-tagline-b)">Just Ask a Local.</text>
+  <clipPath id="clip-meta-feed-016-tagline-b"><rect x="52" y="956" width="976" height="198"/></clipPath>
+  <rect x="52" y="1094" width="976" height="3" fill="#c0392b" rx="0"/>
+  <text x="52" y="1142" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="400" fill="#aaaaaa" clip-path="url(#clip-meta-feed-016-agency-line)">Your Local Real Estate Expert</text>
+  <clipPath id="clip-meta-feed-016-agency-line"><rect x="52" y="1116" width="976" height="66"/></clipPath>
+  <rect x="52" y="1178" width="280" height="80" fill="#888" rx="4"/>
+  <text x="192" y="1223" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#fff">[logo]</text>
+</svg>

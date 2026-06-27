@@ -1,0 +1,557 @@
+{
+  "id": "meta-fullscreen-005",
+  "templateKey": "meta-fullscreen-005",
+  "name": "Luxury Listing — Grand Coastal Sanctuary Sorrento",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-showcase",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "luxury-listing",
+    "coastal",
+    "meta-fullscreen"
+  ],
+  "audienceIntent": "Prestige homeowners and high-net-worth buyers in coastal markets who respond to aspirational lifestyle imagery and exclusivity signals. Sellers considering listing a premium property who want an agency with proven luxury credentials.",
+  "promptHint": "Full-bleed ocean-view luxury listing story ad: dramatic coastal property photo, oversized property name display text, location and stats strip, Ray White Keevers Group gold-navy branding.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "creativeId": "6d6fc439-5ac8-45a2-b602-7fcdaba04542"
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "property_name": "GRAND COASTAL\nSANCTUARY",
+    "location": "3 Newby Place, Sorrento",
+    "stats": "5 Bed  •  2 Bath  •  2 Car",
+    "views_label": "Breath-taking ocean views to Rottnest Island",
+    "agency_name": "Ray White Keevers Group",
+    "cta_text": "Learn More"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-005.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-005.svg",
+    "alt": "Full-screen 9:16 luxury coastal listing ad with a full-bleed ocean-view property photo, oversized GRAND COASTAL SANCTUARY display headline in white, location and bedroom/bath/car stats in gold, and Ray White Keevers Group agency branding on a navy footer strip."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-005-bg",
+        "type": "shape",
+        "role": "background",
+        "content": "",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#0b1a2e",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-005-property-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1300,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-005-photo-gradient",
+        "type": "shape",
+        "role": "photo_gradient_overlay",
+        "content": "",
+        "x": 0,
+        "y": 900,
+        "width": 1080,
+        "height": 400,
+        "fill": "#0b1a2e",
+        "opacity": 0.82,
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-005-property-name",
+        "type": "text",
+        "role": "property_name",
+        "content": "GRAND COASTAL\nSANCTUARY",
+        "x": 60,
+        "y": 1030,
+        "width": 960,
+        "height": 280,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Georgia",
+        "size": 110,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 0.95
+      },
+      {
+        "objectId": "meta-fullscreen-005-gold-rule",
+        "type": "shape",
+        "role": "gold_divider",
+        "content": "",
+        "x": 300,
+        "y": 1322,
+        "width": 480,
+        "height": 3,
+        "fill": "#c9a84c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-005-location",
+        "type": "text",
+        "role": "location",
+        "content": "3 Newby Place, Sorrento",
+        "x": 60,
+        "y": 1345,
+        "width": 960,
+        "height": 56,
+        "fill": "#c9a84c",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 32,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15
+      },
+      {
+        "objectId": "meta-fullscreen-005-stats",
+        "type": "text",
+        "role": "property_stats",
+        "content": "5 Bed  •  2 Bath  •  2 Car",
+        "x": 60,
+        "y": 1410,
+        "width": 960,
+        "height": 52,
+        "fill": "#e8e0cc",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15
+      },
+      {
+        "objectId": "meta-fullscreen-005-views-label",
+        "type": "text",
+        "role": "views_label",
+        "content": "Breath-taking ocean views to Rottnest Island",
+        "x": 80,
+        "y": 1480,
+        "width": 920,
+        "height": 56,
+        "fill": "#b0c0d6",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 300,
+        "align": "center",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-fullscreen-005-navy-footer",
+        "type": "shape",
+        "role": "agency_footer",
+        "content": "",
+        "x": 0,
+        "y": 1600,
+        "width": 1080,
+        "height": 320,
+        "fill": "#0b1a2e",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-005-footer-gold-rule",
+        "type": "shape",
+        "role": "footer_gold_rule",
+        "content": "",
+        "x": 0,
+        "y": 1600,
+        "width": 1080,
+        "height": 4,
+        "fill": "#c9a84c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-005-agency-name",
+        "type": "text",
+        "role": "agency_name",
+        "content": "Ray White Keevers Group",
+        "x": 60,
+        "y": 1660,
+        "width": 960,
+        "height": 72,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 44,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-005-luxury-tag",
+        "type": "text",
+        "role": "luxury_tag",
+        "content": "LUXURY COASTAL REAL ESTATE",
+        "x": 60,
+        "y": 1750,
+        "width": 960,
+        "height": 40,
+        "fill": "#c9a84c",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-fullscreen-005-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "content": "",
+        "x": 160,
+        "y": 1820,
+        "width": 760,
+        "height": 80,
+        "fill": "#c9a84c",
+        "locked": false,
+        "radius": 6
+      },
+      {
+        "objectId": "meta-fullscreen-005-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Learn More",
+        "x": 180,
+        "y": 1843,
+        "width": 720,
+        "height": 44,
+        "fill": "#0b1a2e",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "fill": "#0b1a2e",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-bg",
+            "role": "background",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1300,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-property-photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 900,
+          "width": 1080,
+          "height": 400,
+          "fill": "#0b1a2e",
+          "opacity": 0.82,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-photo-gradient",
+            "role": "photo_gradient_overlay",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1030,
+          "width": 960,
+          "text": "GRAND COASTAL\nSANCTUARY",
+          "fontFamily": "Georgia",
+          "fontSize": 110,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 0.95,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-property-name",
+            "role": "property_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 300,
+          "top": 1322,
+          "width": 480,
+          "height": 3,
+          "fill": "#c9a84c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-gold-rule",
+            "role": "gold_divider",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1345,
+          "width": 960,
+          "text": "3 Newby Place, Sorrento",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 600,
+          "fill": "#c9a84c",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-location",
+            "role": "location",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1410,
+          "width": 960,
+          "text": "5 Bed  •  2 Bath  •  2 Car",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 400,
+          "fill": "#e8e0cc",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-stats",
+            "role": "property_stats",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 80,
+          "top": 1480,
+          "width": 920,
+          "text": "Breath-taking ocean views to Rottnest Island",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 300,
+          "fill": "#b0c0d6",
+          "textAlign": "center",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-views-label",
+            "role": "views_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 1600,
+          "width": 1080,
+          "height": 320,
+          "fill": "#0b1a2e",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-navy-footer",
+            "role": "agency_footer",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 1600,
+          "width": 1080,
+          "height": 4,
+          "fill": "#c9a84c",
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-footer-gold-rule",
+            "role": "footer_gold_rule",
+            "type": "rect",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1660,
+          "width": 960,
+          "text": "Ray White Keevers Group",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-agency-name",
+            "role": "agency_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 60,
+          "top": 1750,
+          "width": 960,
+          "text": "LUXURY COASTAL REAL ESTATE",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 400,
+          "fill": "#c9a84c",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-luxury-tag",
+            "role": "luxury_tag",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 160,
+          "top": 1820,
+          "width": 760,
+          "height": 80,
+          "rx": 6,
+          "ry": 6,
+          "fill": "#c9a84c",
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-cta-button",
+            "role": "cta_button",
+            "type": "rect",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 180,
+          "top": 1843,
+          "width": 720,
+          "text": "Learn More",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#0b1a2e",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": {
+            "objectId": "meta-fullscreen-005-cta-text",
+            "role": "cta_text",
+            "type": "text",
+            "locked": false,
+            "editableKind": "cta"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
+    "cta": "LEARN_MORE",
+    "primaryText": [
+      "3 Newby Place, Sorrento | 5 Bed | 2 Bath | 2 Car. Breath-taking ocean views to Rottnest Island. Luxury reverse-living design, resort-style pool. Ray White Keevers Group."
+    ],
+    "headlines": [
+      "Grand Coastal Sanctuary"
+    ],
+    "leadForm": {
+      "headline": "Enquire about Grand Coastal Sanctuary",
+      "questions": [
+        "Are you looking to buy or sell a prestige property?",
+        "Which suburb are you interested in?",
+        "What is your ideal price range?",
+        "Best contact number for our team to reach you?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thank you for your enquiry",
+        "body": "A Ray White Keevers Group specialist will be in touch shortly to discuss your coastal property goals."
+      }
+    },
+    "descriptions": [
+      "Grand coastal sanctuary in Sorrento — 5 bed, ocean views, resort-style living."
+    ]
+  }
+}

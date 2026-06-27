@@ -1,0 +1,356 @@
+{
+  "id": "meta-feed-005",
+  "templateKey": "meta-feed-005",
+  "name": "Yokine & Nollamara 20% Growth Appraisal",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": { "width": 1080, "height": 1350 },
+  "goal": "appraisal_bookings",
+  "offerId": "suburb-appraisal-growth",
+  "audienceIntent": "Homeowners in Yokine or Nollamara considering selling after strong price growth.",
+  "category": "appraisal",
+  "tags": ["appraisal", "suburb-growth", "property-value", "meta-feed"],
+  "promptHint": "Appraisal ad for two suburbs with 20% annual growth stat as the hook.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": { "creativeId": "468504c4-0e7c-4d42-ba0f-62d222ce09b3" },
+  "classification": { "ad_type": "appraisal", "primary_intent": "appraisal", "property_or_agent_focus": "property" },
+  "sampleCopy": {
+    "headline": "What's your Yokine or Nollamara home actually worth?",
+    "primaryText": "Property values in Yokine & Nollamara have increased ~20% in the past 12 months. Your home could be worth significantly more than you think.",
+    "cta": "Learn More"
+  },
+  "gallery": {
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-005.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-005.svg",
+    "alt": "Appraisal ad for Yokine and Nollamara highlighting 20% annual property value growth."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-005-bg",
+        "type": "shape",
+        "role": "background",
+        "x": 0, "y": 0, "width": 1080, "height": 1350,
+        "fill": "#12202f",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-005-photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0, "y": 0, "width": 560, "height": 900,
+        "imageAnchor": "center",
+        "fill": null,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-005-photo-scrim",
+        "type": "shape",
+        "role": "photo_scrim",
+        "x": 0, "y": 720, "width": 560, "height": 180,
+        "fill": "#00000088",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-005-right-panel",
+        "type": "shape",
+        "role": "stat_panel",
+        "x": 560, "y": 0, "width": 520, "height": 900,
+        "fill": "#12202f",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-005-suburbs",
+        "type": "text",
+        "role": "suburb_label",
+        "content": "YOKINE &\nNOLLAMARA",
+        "x": 580, "y": 60, "width": 480, "height": 120,
+        "fill": "#d4a84b",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 36,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      {
+        "objectId": "meta-feed-005-stat-value",
+        "type": "text",
+        "role": "growth_stat_value",
+        "content": "20%",
+        "x": 570, "y": 210, "width": 490, "height": 300,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 220,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.0
+      },
+      {
+        "objectId": "meta-feed-005-stat-label",
+        "type": "text",
+        "role": "growth_stat_label",
+        "content": "growth in\n12 months",
+        "x": 580, "y": 510, "width": 460, "height": 100,
+        "fill": "#d4a84b",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 38,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      {
+        "objectId": "meta-feed-005-divider",
+        "type": "shape",
+        "role": "accent_divider",
+        "x": 580, "y": 630, "width": 80, "height": 6,
+        "fill": "#d4a84b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-005-stat-detail",
+        "type": "text",
+        "role": "growth_detail",
+        "content": "Your home could be worth\nmore than you think.",
+        "x": 580, "y": 658, "width": 460, "height": 120,
+        "fill": "#a8b8c8",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      {
+        "objectId": "meta-feed-005-bottom-strip",
+        "type": "shape",
+        "role": "bottom_panel",
+        "x": 0, "y": 900, "width": 1080, "height": 450,
+        "fill": "#1e3048",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-005-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "What's your Yokine or\nNollamara home actually worth?",
+        "x": 60, "y": 930, "width": 960, "height": 200,
+        "fill": "#ffffff",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 58,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      {
+        "objectId": "meta-feed-005-body",
+        "type": "text",
+        "role": "body_text",
+        "content": "Property values in Yokine & Nollamara are up ~20% in 12 months.",
+        "x": 60, "y": 1148, "width": 960, "height": 70,
+        "fill": "#a8b8c8",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.25
+      },
+      {
+        "objectId": "meta-feed-005-cta-button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 60, "y": 1240, "width": 320, "height": 76,
+        "fill": "#d4a84b",
+        "locked": false,
+        "radius": 8
+      },
+      {
+        "objectId": "meta-feed-005-cta-text",
+        "type": "text",
+        "role": "cta_text",
+        "content": "Learn More",
+        "x": 80, "y": 1260, "width": 280, "height": 36,
+        "fill": "#12202f",
+        "locked": false,
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 0, "top": 0, "width": 1080, "height": 1350,
+          "fill": "#12202f",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-005-bg", "role": "background", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "image",
+          "left": 0, "top": 0, "width": 560, "height": 900,
+          "src": "",
+          "crossOrigin": "anonymous",
+          "blockwise": { "objectId": "meta-feed-005-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 720, "width": 560, "height": 180,
+          "fill": "#00000088",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-005-photo-scrim", "role": "photo_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "rect",
+          "left": 560, "top": 0, "width": 520, "height": 900,
+          "fill": "#12202f",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-005-right-panel", "role": "stat_panel", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 580, "top": 60, "width": 480,
+          "text": "YOKINE &\nNOLLAMARA",
+          "fontFamily": "Inter",
+          "fontSize": 36,
+          "fontWeight": 800,
+          "fill": "#d4a84b",
+          "textAlign": "left",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-005-suburbs", "role": "suburb_label", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "textbox",
+          "left": 570, "top": 210, "width": 490,
+          "text": "20%",
+          "fontFamily": "Inter",
+          "fontSize": 220,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.0,
+          "blockwise": { "objectId": "meta-feed-005-stat-value", "role": "growth_stat_value", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "textbox",
+          "left": 580, "top": 510, "width": 460,
+          "text": "growth in\n12 months",
+          "fontFamily": "Inter",
+          "fontSize": 38,
+          "fontWeight": 700,
+          "fill": "#d4a84b",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": { "objectId": "meta-feed-005-stat-label", "role": "growth_stat_label", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 580, "top": 630, "width": 80, "height": 6,
+          "fill": "#d4a84b",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-005-divider", "role": "accent_divider", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 580, "top": 658, "width": 460,
+          "text": "Your home could be worth\nmore than you think.",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 400,
+          "fill": "#a8b8c8",
+          "textAlign": "left",
+          "lineHeight": 1.35,
+          "blockwise": { "objectId": "meta-feed-005-stat-detail", "role": "growth_detail", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 0, "top": 900, "width": 1080, "height": 450,
+          "fill": "#1e3048",
+          "selectable": false,
+          "blockwise": { "objectId": "meta-feed-005-bottom-strip", "role": "bottom_panel", "type": "rect", "locked": true, "editableKind": "template" }
+        },
+        {
+          "type": "textbox",
+          "left": 60, "top": 930, "width": 960,
+          "text": "What's your Yokine or\nNollamara home actually worth?",
+          "fontFamily": "Inter",
+          "fontSize": 58,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": { "objectId": "meta-feed-005-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
+        },
+        {
+          "type": "textbox",
+          "left": 60, "top": 1148, "width": 960,
+          "text": "Property values in Yokine & Nollamara are up ~20% in 12 months.",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 400,
+          "fill": "#a8b8c8",
+          "textAlign": "left",
+          "lineHeight": 1.25,
+          "blockwise": { "objectId": "meta-feed-005-body", "role": "body_text", "type": "text", "locked": false, "editableKind": "description" }
+        },
+        {
+          "type": "rect",
+          "left": 60, "top": 1240, "width": 320, "height": 76,
+          "fill": "#d4a84b",
+          "rx": 8, "ry": 8,
+          "blockwise": { "objectId": "meta-feed-005-cta-button", "role": "cta_button", "type": "rect", "locked": false, "editableKind": "cta" }
+        },
+        {
+          "type": "textbox",
+          "left": 80, "top": 1260, "width": 280,
+          "text": "Learn More",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 800,
+          "fill": "#12202f",
+          "textAlign": "center",
+          "lineHeight": 1.1,
+          "blockwise": { "objectId": "meta-feed-005-cta-text", "role": "cta_text", "type": "text", "locked": false, "editableKind": "cta" }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": ["facebook", "instagram"],
+    "facebookPositions": ["feed"],
+    "instagramPositions": ["stream"],
+    "primaryText": ["Property values in Yokine & Nollamara are up ~20% in 12 months. Discover what your home is actually worth today."],
+    "headlines": ["Discover what your Yokine or Nollamara home is actually worth"],
+    "descriptions": ["Free property appraisal for Yokine and Nollamara homeowners."],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Find out what your home is worth",
+      "questions": [
+        "Is your property in Yokine or Nollamara?",
+        "What is your property address?",
+        "Are you thinking of selling this year?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "We'll be in touch",
+        "body": "One of our local agents will contact you shortly with your property's current market value."
+      }
+    }
+  }
+}

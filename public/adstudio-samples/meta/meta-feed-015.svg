@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#f7f8f9" rx="0"/>
+  <rect x="0" y="0" width="1080" height="10" fill="#00868a" rx="0"/>
+  <text x="60" y="82" text-anchor="start" font-family="sans-serif" font-size="46" font-weight="800" fill="#1a2e35" clip-path="url(#clip-meta-feed-015-question-hook)">Curious where your property sits today?</text>
+  <clipPath id="clip-meta-feed-015-question-hook"><rect x="60" y="36" width="960" height="142"/></clipPath>
+  <rect x="60" y="156" width="960" height="200" fill="#ffffff" rx="12"/>
+  <text x="96" y="200" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="900" fill="#c0392b" clip-path="url(#clip-meta-feed-015-sold-label)">SOLD</text>
+  <clipPath id="clip-meta-feed-015-sold-label"><rect x="96" y="174" width="200" height="66"/></clipPath>
+  <text x="96" y="298" text-anchor="start" font-family="sans-serif" font-size="86" font-weight="900" fill="#1a2e35" clip-path="url(#clip-meta-feed-015-sale-price)">$1,350,000</text>
+  <clipPath id="clip-meta-feed-015-sale-price"><rect x="96" y="212" width="700" height="186"/></clipPath>
+  <text x="96" y="340" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="700" fill="#00868a" clip-path="url(#clip-meta-feed-015-suburb-name)">Alexandra Hills</text>
+  <clipPath id="clip-meta-feed-015-suburb-name"><rect x="96" y="316" width="700" height="58"/></clipPath>
+  <rect x="0" y="380" width="1080" height="560" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="669.3333333333334" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="400" width="220" height="72" fill="#c0392b" rx="0"/>
+  <text x="110" y="448" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-015-sold-badge-text)">SOLD</text>
+  <clipPath id="clip-meta-feed-015-sold-badge-text"><rect x="12" y="416" width="196" height="72"/></clipPath>
+  <text x="60" y="990" text-anchor="start" font-family="sans-serif" font-size="30" font-weight="700" fill="#1a2e35" clip-path="url(#clip-meta-feed-015-address-row)">44 Snowdon Street, Alexandra Hills</text>
+  <clipPath id="clip-meta-feed-015-address-row"><rect x="60" y="960" width="960" height="76"/></clipPath>
+  <text x="60" y="1038" text-anchor="start" font-family="sans-serif" font-size="22" font-weight="500" fill="#4a5568" clip-path="url(#clip-meta-feed-015-specs-row)">4 Bed  |  2 Bath  |  2 Car  |  711m²</text>
+  <clipPath id="clip-meta-feed-015-specs-row"><rect x="60" y="1016" width="960" height="54"/></clipPath>
+  <rect x="60" y="1068" width="960" height="2" fill="#e2e8f0" rx="0"/>
+  <text x="60" y="1112" text-anchor="start" font-family="sans-serif" font-size="24" font-weight="400" fill="#4a5568" clip-path="url(#clip-meta-feed-015-market-note)">A recent local sale — see where today's market is heading.</text>
+  <clipPath id="clip-meta-feed-015-market-note"><rect x="60" y="1088" width="960" height="76"/></clipPath>
+  <rect x="60" y="1170" width="680" height="88" fill="#00868a" rx="8"/>
+  <text x="400" y="1222" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-015-cta-text)">Get My Property Update</text>
+  <clipPath id="clip-meta-feed-015-cta-text"><rect x="80" y="1194" width="640" height="68"/></clipPath>
+  <text x="60" y="1308" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="400" fill="#9aa5b4" clip-path="url(#clip-meta-feed-015-footer)">Local market data. Speak with an agent for a full appraisal.</text>
+  <clipPath id="clip-meta-feed-015-footer"><rect x="60" y="1290" width="960" height="48"/></clipPath>
+</svg>

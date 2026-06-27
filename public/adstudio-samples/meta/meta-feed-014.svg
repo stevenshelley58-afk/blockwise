@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <rect width="1080" height="1350" fill="#f0ede8"/>
+  <rect x="0" y="0" width="1080" height="1350" fill="#1a1a1a" rx="0"/>
+  <rect x="0" y="0" width="1080" height="700" fill="#d0cdc8" rx="4"/>
+  <text x="540" y="359.3333333333333" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#888">[property_photo]</text>
+  <rect x="0" y="480" width="1080" height="220" fill="#1a1a1a" rx="0"/>
+  <rect x="52" y="52" width="360" height="112" fill="#c0392b" rx="6"/>
+  <text x="232" y="106" text-anchor="middle" font-family="sans-serif" font-size="40" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-014-sold-label)">SOLD</text>
+  <clipPath id="clip-meta-feed-014-sold-label"><rect x="72" y="66" width="320" height="88"/></clipPath>
+  <text x="232" y="142" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="700" fill="#ffffff" clip-path="url(#clip-meta-feed-014-sold-price)">$1,250,000</text>
+  <clipPath id="clip-meta-feed-014-sold-price"><rect x="72" y="114" width="320" height="66"/></clipPath>
+  <rect x="0" y="700" width="1080" height="650" fill="#1a1a1a" rx="0"/>
+  <text x="52" y="764" text-anchor="start" font-family="sans-serif" font-size="40" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-014-address)">60 Menser Street, Calamvale</text>
+  <clipPath id="clip-meta-feed-014-address"><rect x="52" y="724" width="976" height="100"/></clipPath>
+  <text x="52" y="822" text-anchor="start" font-family="sans-serif" font-size="26" font-weight="500" fill="#aaaaaa" clip-path="url(#clip-meta-feed-014-specs)">5 Bed  |  3 Bath  |  2 Car  |  422m²</text>
+  <clipPath id="clip-meta-feed-014-specs"><rect x="52" y="796" width="976" height="62"/></clipPath>
+  <rect x="52" y="858" width="976" height="2" fill="#c0392b" rx="0"/>
+  <text x="52" y="942" text-anchor="start" font-family="sans-serif" font-size="60" font-weight="900" fill="#ffffff" clip-path="url(#clip-meta-feed-014-hook-question)">Wondering what YOUR home is worth?</text>
+  <clipPath id="clip-meta-feed-014-hook-question"><rect x="52" y="882" width="976" height="190"/></clipPath>
+  <text x="52" y="1056" text-anchor="start" font-family="sans-serif" font-size="28" font-weight="400" fill="#cccccc" clip-path="url(#clip-meta-feed-014-hook-subtext)">Get your free online estimate today.</text>
+  <clipPath id="clip-meta-feed-014-hook-subtext"><rect x="52" y="1028" width="976" height="68"/></clipPath>
+  <rect x="52" y="1106" width="440" height="88" fill="#c0392b" rx="8"/>
+  <text x="272" y="1158" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="800" fill="#ffffff" clip-path="url(#clip-meta-feed-014-cta-text)">Get Free Estimate</text>
+  <clipPath id="clip-meta-feed-014-cta-text"><rect x="72" y="1130" width="400" height="68"/></clipPath>
+  <text x="52" y="1246" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="400" fill="#666666" clip-path="url(#clip-meta-feed-014-footer-text)">Results may vary. Past sales do not guarantee future price.</text>
+  <clipPath id="clip-meta-feed-014-footer-text"><rect x="52" y="1228" width="976" height="50"/></clipPath>
+</svg>
