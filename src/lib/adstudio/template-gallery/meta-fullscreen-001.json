@@ -39,8 +39,8 @@
     "cta_text": "Learn More"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-001.svg?v=2",
     "alt": "Full-screen 9:16 property management ad with a bold THIS MONTH ONLY urgency banner at the top, massive 90 DAYS FREE hero text, a deadline date, Johnson branding, and an orange call-to-action strip at the bottom."
   },
   "canvas": {

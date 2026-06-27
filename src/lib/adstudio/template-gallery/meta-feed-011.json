@@ -39,8 +39,8 @@
     "offers_badge": "Offers by 16 June 2026"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-011.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-011.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-011.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-011.svg?v=2",
     "alt": "Editorial open home ad for urban loft apartment at Highgate with full-bleed property photo, icon stat row, and agent credit."
   },
   "canvas": {

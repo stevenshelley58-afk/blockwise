@@ -39,8 +39,8 @@
     "cta": "Learn More"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-018.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-018.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-018.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-018.svg?v=2",
     "alt": "Co-living investment property ad with bold headline, interior property photo, three key investor benefit props, and a CTA strip."
   },
   "canvas": {

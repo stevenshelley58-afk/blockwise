@@ -39,8 +39,8 @@
     "metaHeadline": "Thinking of selling your property?"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-017.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-017.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-017.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-017.svg?v=2",
     "alt": "Just-sold real estate feed ad with a full-width property photo in the top half, a bold question headline overlaid at the bottom of the photo, a warm cream panel below with buyer-demand body copy, and a teal Free Appraisal CTA button."
   },
   "canvas": {

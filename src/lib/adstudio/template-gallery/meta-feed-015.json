@@ -42,8 +42,8 @@
     "headline": "Curious where your property sits today?"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-015.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-015.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-015.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-015.svg?v=2",
     "alt": "Clean white data-card just-sold ad with a large $1,350,000 sale price as the hero number, Alexandra Hills suburb name, a property photo with red SOLD badge, curiosity question hook, and a teal 'Get My Property Update' CTA button."
   },
   "canvas": {

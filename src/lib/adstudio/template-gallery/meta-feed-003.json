@@ -35,8 +35,8 @@
     "cta": "Get Free Price Update"
   },
   "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-003.svg",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-003.svg",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-003.svg?v=2",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-003.svg?v=2",
     "alt": "Suburb stats appraisal ad showing median price $827,000 and 92.3% five-year growth."
   },
   "canvas": {

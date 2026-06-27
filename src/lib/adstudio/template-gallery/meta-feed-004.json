@@ -35,8 +35,8 @@
     "cta": "Book My Free Appraisal"
   },
   "gallery": {
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-004.svg",
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-004.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-004.svg?v=2",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-004.svg?v=2",
     "alt": "Urgent appraisal ad with bold suburb name and fast-moving market messaging."
   },
   "canvas": {
