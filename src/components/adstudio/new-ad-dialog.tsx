@@ -128,8 +128,14 @@ function templateHasGalleryPreview(template: AdStudioTemplate, brandKit: AdStudi
 }
 
 function templateSampleDescription(template: AdStudioTemplate): string {
-  if (!template.sampleCopy) return template.promptHint;
-  return `${template.sampleCopy.headline} - ${template.sampleCopy.primaryText}`;
+  const head = template.sampleCopy?.headline ?? template.meta?.headlines?.[0];
+  const body =
+    template.sampleCopy?.primaryText ??
+    template.meta?.primaryText?.[0] ??
+    template.audienceIntent ??
+    template.promptHint;
+  if (head && body) return `${head} - ${body}`;
+  return head ?? body ?? template.promptHint ?? "";
 }
 
 function tabForStep(step: StartStep): ExploreTab {
@@ -658,7 +664,7 @@ export function NewAdDialog({
             <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
             {step === "source" ? (
-              <p>Templates are reset. Start blank until fresh self-contained templates are installed.</p>
+              <p>{templates.length > 0 ? "Start from a template below, or start blank and describe your own." : "No templates installed yet — start blank and describe your ad."}</p>
             ) : mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
               <p>{activeImageSlot.label}</p>
             ) : null}
