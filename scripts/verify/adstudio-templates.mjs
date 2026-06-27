@@ -77,7 +77,7 @@ for (const { fn, t } of templates) {
     fail(id, "sourceAd is required (radar creativeId or meta_ad_candidates file) — templates derive from a real ad");
   } else {
     const key = sa.creativeId ?? sa.file;
-    if (sa.file && !sa.creativeId && !existsSync(join(SRC, sa.file))) fail(id, `sourceAd.file not found: ${sa.file}`);
+    if (sa.file && !sa.creativeId && existsSync(SRC) && !existsSync(join(SRC, sa.file))) fail(id, `sourceAd.file not found: ${sa.file}`);
     if (seenSource.has(key)) fail(id, `sourceAd ${key} already used by ${seenSource.get(key)}`);
     else seenSource.set(key, id);
   }
