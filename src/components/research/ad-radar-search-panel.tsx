@@ -139,9 +139,9 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   }
 
   function onChangeSort(nextSort: ResearchSort) {
+    setSortOpen(false);
     if (nextSort === sort) return;
     setSort(nextSort);
-    setSortOpen(false);
     if (searched && query.trim()) doSearch(query, nextSort, includeSurrounding, filters);
   }
 
