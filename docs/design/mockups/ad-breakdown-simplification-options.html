@@ -1,0 +1,1150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ad Breakdown Simplification Options</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #eef1f5;
+      --surface: #ffffff;
+      --surface-soft: #f6f8fb;
+      --line: #dfe5ed;
+      --line-soft: #edf1f5;
+      --ink: #11141a;
+      --muted: #5b6371;
+      --faint: #8b94a3;
+      --green: #0d7a43;
+      --green-soft: #e8f7ef;
+      --blue: #174f8f;
+      --blue-soft: #edf4ff;
+      --amber: #935f00;
+      --amber-soft: #fff4d8;
+      --shadow: 0 18px 48px rgba(15, 23, 42, .12);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--page);
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .wrap {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .sheet-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sheet-head h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 44px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .sheet-head p {
+      max-width: 760px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .key {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .key span {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      padding: 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(320px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+
+    .option {
+      display: grid;
+      gap: 12px;
+    }
+
+    .option-meta {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+    }
+
+    .option-meta span {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .option-meta h2 {
+      margin: 6px 0 4px;
+      font-size: 19px;
+      line-height: 1.15;
+    }
+
+    .option-meta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .phone {
+      width: min(100%, 390px);
+      margin: 0 auto;
+      border: 1px solid #cad3df;
+      border-radius: 34px;
+      background: #101318;
+      padding: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .screen {
+      min-height: 812px;
+      overflow: hidden;
+      border-radius: 26px;
+      background: var(--page);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .app-top {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 42px;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      padding: 0 16px;
+    }
+
+    .logo {
+      width: 27px;
+      height: 27px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 3px;
+    }
+
+    .logo i {
+      border-radius: 1px;
+      background: var(--ink);
+    }
+
+    .logo i:nth-child(1),
+    .logo i:nth-child(2),
+    .logo i:nth-child(4) {
+      opacity: 0;
+    }
+
+    .account {
+      justify-self: center;
+      min-width: 0;
+      max-width: 160px;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .icon-button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    .app-body {
+      min-width: 0;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      padding: 16px 16px 18px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .tab {
+      flex: 0 0 auto;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      padding: 0 13px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      border-color: #c9d8ee;
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .page-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .page-title h3 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .page-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ad-shell {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+      overflow: hidden;
+    }
+
+    .ad-head {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+    }
+
+    .thumb {
+      width: 76px;
+      height: 76px;
+      border-radius: 14px;
+      background: url("../../../public/ads/ad-northstar.jpg") center / cover;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45);
+    }
+
+    .ad-title {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .name-row strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      min-height: 22px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .campaign {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.3;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--line-soft);
+    }
+
+    .primary-read {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+    }
+
+    .primary-read span,
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .primary-read strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 34px;
+      line-height: .95;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0;
+    }
+
+    .read-note {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .delta {
+      justify-self: end;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+      background: #fbfcfe;
+    }
+
+    .metric-strip div {
+      min-width: 0;
+      padding: 10px 12px;
+      border-left: 1px solid var(--line-soft);
+    }
+
+    .metric-strip div:first-child {
+      border-left: 0;
+    }
+
+    .metric-strip span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 750;
+    }
+
+    .metric-strip strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 17px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .details-list {
+      display: grid;
+      padding: 8px 14px 12px;
+    }
+
+    .details-list .row {
+      min-height: 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border-top: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .details-list .row:first-child {
+      border-top: 0;
+    }
+
+    .details-list b {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .distribution {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .barline {
+      display: grid;
+      gap: 7px;
+    }
+
+    .barline-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--line-soft);
+      display: flex;
+    }
+
+    .bar span:nth-child(1) {
+      background: var(--ink);
+    }
+
+    .bar span:nth-child(2) {
+      background: var(--green);
+    }
+
+    .bar span:nth-child(3) {
+      background: #9aa7b9;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .button.primary {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .button.wide {
+      grid-column: 1 / -1;
+    }
+
+    .ad-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .compact-row {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+    }
+
+    .row-main {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+    }
+
+    .row-main .thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+    }
+
+    .row-title {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .row-title strong,
+    .row-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row-title strong {
+      font-size: 13px;
+    }
+
+    .row-title span {
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+
+    .row-kpi {
+      text-align: right;
+    }
+
+    .row-kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .row-kpi strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .inline-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .inline-stats div {
+      min-width: 0;
+      padding: 9px 8px;
+      border-left: 1px solid var(--line-soft);
+      text-align: center;
+    }
+
+    .inline-stats div:first-child {
+      border-left: 0;
+    }
+
+    .inline-stats span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .inline-stats b {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .expand-sheet {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border-top: 1px solid var(--line-soft);
+      background: #fbfcfe;
+    }
+
+    .signal {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border-radius: 14px;
+      background: var(--amber-soft);
+      padding: 11px 12px;
+      color: #563900;
+    }
+
+    .signal strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .signal span {
+      display: block;
+      margin-top: 2px;
+      font-size: 11.5px;
+    }
+
+    .mini-button {
+      min-height: 30px;
+      border: 1px solid rgba(86, 57, 0, .2);
+      border-radius: 999px;
+      background: #fff;
+      color: #563900;
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .ledger {
+      display: grid;
+      gap: 12px;
+    }
+
+    .decision-panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+    }
+
+    .hero-image {
+      min-height: 172px;
+      background:
+        linear-gradient(180deg, rgba(17, 20, 26, 0) 38%, rgba(17, 20, 26, .72) 100%),
+        url("../../../public/ads/ad-northstar.jpg") center / cover;
+      display: grid;
+      align-content: end;
+      padding: 14px;
+      color: #fff;
+    }
+
+    .hero-image .status {
+      justify-self: start;
+      margin-bottom: 8px;
+      background: rgba(232, 247, 239, .96);
+    }
+
+    .hero-image strong {
+      max-width: 260px;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .decision-copy {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .decision-copy h4 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .decision-copy p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .kpi-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .kpi-pair div {
+      min-height: 70px;
+      border-top: 1px solid var(--line-soft);
+      padding-top: 10px;
+    }
+
+    .kpi-pair span {
+      display: block;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .kpi-pair strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 27px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .plain-section {
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+
+    .plain-section h5 {
+      margin: 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .plain-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+    }
+
+    .plain-grid div {
+      display: grid;
+      gap: 2px;
+    }
+
+    .plain-grid span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .plain-grid b {
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bottom-nav {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .bottom-nav span {
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .bottom-nav i {
+      width: 18px;
+      height: 18px;
+      border: 2px solid currentColor;
+      border-radius: 6px;
+      display: block;
+    }
+
+    .bottom-nav span.active {
+      color: var(--ink);
+    }
+
+    .bottom-nav span.active i {
+      background: var(--ink);
+      box-shadow: 0 0 0 9px #eef1f5;
+    }
+
+    @media (max-width: 1120px) {
+      .options {
+        grid-template-columns: 1fr;
+      }
+
+      .option {
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+        align-items: start;
+      }
+
+      .phone {
+        width: 390px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .wrap {
+        width: min(100% - 20px, 1440px);
+        padding-top: 18px;
+      }
+
+      .sheet-head,
+      .option {
+        grid-template-columns: 1fr;
+      }
+
+      .key {
+        justify-content: flex-start;
+      }
+
+      .phone {
+        width: min(100%, 390px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="sheet-head">
+      <div>
+        <h1>Ad breakdown simplification options</h1>
+        <p>Three mobile-first directions for replacing the current nine boxed metric cards with one dominant read, compact supporting numbers, and cleaner drill-down.</p>
+      </div>
+      <div class="key" aria-label="Design goals">
+        <span>Fewer boxes</span>
+        <span>One primary KPI</span>
+        <span>Distribution as detail</span>
+      </div>
+    </header>
+
+    <section class="options" aria-label="Mockup options">
+      <article class="option">
+        <div class="option-meta">
+          <span>Option A</span>
+          <h2>Executive Read</h2>
+          <p>Best if the ad card should still feel like a card, but with one KPI hierarchy instead of a grid of equal tiles.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <header class="app-top">
+              <div class="logo" aria-label="Blockwise logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="account">Mark Test - AU</div>
+              <button class="icon-button" aria-label="Exit">></button>
+            </header>
+            <div class="app-body">
+              <nav class="tabs" aria-label="Campaign tabs">
+                <span class="tab">House Sold</span>
+                <span class="tab active">Lover</span>
+                <span class="tab">40% OFF</span>
+              </nav>
+              <div class="page-title">
+                <h3>Ad breakdown</h3>
+                <p>Creative performance, delivery mix, and links.</p>
+              </div>
+
+              <article class="ad-shell">
+                <div class="ad-head">
+                  <div class="thumb" aria-hidden="true"></div>
+                  <div class="ad-title">
+                    <div class="name-row">
+                      <strong>Lover (Image)</strong>
+                      <span class="status">Active</span>
+                    </div>
+                    <span class="campaign">Suburb Appraisal - Carlingford</span>
+                    <span class="meta">Ad set: Suburb - Carlingford</span>
+                    <span class="meta">ID: 120208746201302</span>
+                  </div>
+                </div>
+                <div class="divider"></div>
+                <div class="primary-read">
+                  <div>
+                    <span>Valid CPL</span>
+                    <strong>$39</strong>
+                    <p class="read-note">38 valid leads from $1,495 spend.</p>
+                  </div>
+                  <span class="delta">76% valid</span>
+                </div>
+                <div class="metric-strip" aria-label="Primary metrics">
+                  <div><span>Leads</span><strong>50</strong></div>
+                  <div><span>CTR</span><strong>2.43%</strong></div>
+                  <div><span>Clicks</span><strong>8,120</strong></div>
+                </div>
+                <div class="details-list">
+                  <div class="row"><span>Reach</span><b>143,200</b></div>
+                  <div class="row"><span>Impressions</span><b>334,500</b></div>
+                  <div class="row"><span>Spend</span><b>$1,495</b></div>
+                </div>
+                <div class="distribution">
+                  <div class="barline">
+                    <div class="barline-head"><span>Placement</span><b>Feed 90%</b></div>
+                    <div class="bar"><span style="width:72%"></span><span style="width:18%"></span><span style="width:10%"></span></div>
+                  </div>
+                  <div class="barline">
+                    <div class="barline-head"><span>Device</span><b>Mobile 86%</b></div>
+                    <div class="bar"><span style="width:86%"></span><span style="width:11%"></span><span style="width:3%"></span></div>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="button primary">Pause</button>
+                  <button class="button">Export leads</button>
+                  <button class="button wide">Open landing page</button>
+                </div>
+              </article>
+            </div>
+            <nav class="bottom-nav" aria-label="App nav">
+              <span><i></i>Studio</span>
+              <span><i></i>Radar</span>
+              <span class="active"><i></i>Performance</span>
+              <span><i></i>Leads</span>
+              <span><i></i>More</span>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="option">
+        <div class="option-meta">
+          <span>Option B</span>
+          <h2>Compact Rows</h2>
+          <p>Best if users scan several ads at once. Each ad is a row first, with expanded details only when needed.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <header class="app-top">
+              <div class="logo" aria-label="Blockwise logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="account">Mark Test - AU</div>
+              <button class="icon-button" aria-label="Exit">></button>
+            </header>
+            <div class="app-body">
+              <div class="page-title">
+                <h3>Ad breakdown</h3>
+                <p>Sort by what matters, open the row for more.</p>
+              </div>
+              <div class="metric-strip" aria-label="Campaign summary">
+                <div><span>Spend</span><strong>$4,860</strong></div>
+                <div><span>Valid</span><strong>112</strong></div>
+                <div><span>CPL</span><strong>$43</strong></div>
+              </div>
+
+              <section class="ad-list" aria-label="Ads">
+                <article class="compact-row">
+                  <div class="row-main">
+                    <div class="thumb" aria-hidden="true"></div>
+                    <div class="row-title">
+                      <strong>Lover (Image)</strong>
+                      <span>Suburb Appraisal - Carlingford</span>
+                    </div>
+                    <div class="row-kpi">
+                      <span>Valid CPL</span>
+                      <strong>$39</strong>
+                    </div>
+                  </div>
+                  <div class="inline-stats">
+                    <div><span>Spend</span><b>$1,495</b></div>
+                    <div><span>Valid</span><b>38</b></div>
+                    <div><span>CTR</span><b>2.43%</b></div>
+                    <div><span>Status</span><b>Active</b></div>
+                  </div>
+                  <div class="expand-sheet">
+                    <div class="signal">
+                      <div>
+                        <strong>Keep running</strong>
+                        <span>Valid rate is healthy. Mobile feed is carrying delivery.</span>
+                      </div>
+                      <button class="mini-button">View</button>
+                    </div>
+                    <div class="barline">
+                      <div class="barline-head"><span>Placement</span><b>Facebook Feed 72%</b></div>
+                      <div class="bar"><span style="width:72%"></span><span style="width:18%"></span><span style="width:10%"></span></div>
+                    </div>
+                    <div class="barline">
+                      <div class="barline-head"><span>Device</span><b>Mobile 86%</b></div>
+                      <div class="bar"><span style="width:86%"></span><span style="width:11%"></span><span style="width:3%"></span></div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="compact-row">
+                  <div class="row-main">
+                    <div class="thumb" style="background-image:url('../../../public/ads/ad-hillview.jpg')" aria-hidden="true"></div>
+                    <div class="row-title">
+                      <strong>40% OFF (Image)</strong>
+                      <span>Suburb Appraisal - Carlingford</span>
+                    </div>
+                    <div class="row-kpi">
+                      <span>Valid CPL</span>
+                      <strong>$48</strong>
+                    </div>
+                  </div>
+                  <div class="inline-stats">
+                    <div><span>Spend</span><b>$960</b></div>
+                    <div><span>Valid</span><b>20</b></div>
+                    <div><span>CTR</span><b>1.91%</b></div>
+                    <div><span>Status</span><b>Active</b></div>
+                  </div>
+                </article>
+
+                <article class="compact-row">
+                  <div class="row-main">
+                    <div class="thumb" style="background-image:url('../../../public/ads/ad-coastline.jpg')" aria-hidden="true"></div>
+                    <div class="row-title">
+                      <strong>Open Home (Video)</strong>
+                      <span>Buyer Leads - Parramatta</span>
+                    </div>
+                    <div class="row-kpi">
+                      <span>Valid CPL</span>
+                      <strong>$62</strong>
+                    </div>
+                  </div>
+                  <div class="inline-stats">
+                    <div><span>Spend</span><b>$705</b></div>
+                    <div><span>Valid</span><b>11</b></div>
+                    <div><span>CTR</span><b>1.42%</b></div>
+                    <div><span>Status</span><b>Watch</b></div>
+                  </div>
+                </article>
+              </section>
+            </div>
+            <nav class="bottom-nav" aria-label="App nav">
+              <span><i></i>Studio</span>
+              <span><i></i>Radar</span>
+              <span class="active"><i></i>Performance</span>
+              <span><i></i>Leads</span>
+              <span><i></i>More</span>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="option">
+        <div class="option-meta">
+          <span>Option C</span>
+          <h2>Creative Ledger</h2>
+          <p>Best if the screen should feel less like analytics and more like a decision record for each creative.</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <header class="app-top">
+              <div class="logo" aria-label="Blockwise logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="account">Mark Test - AU</div>
+              <button class="icon-button" aria-label="Exit">></button>
+            </header>
+            <div class="app-body">
+              <div class="page-title">
+                <h3>Creative performance</h3>
+                <p>One recommendation, then the evidence.</p>
+              </div>
+
+              <section class="ledger">
+                <article class="decision-panel">
+                  <div class="hero-image">
+                    <span class="status">Active</span>
+                    <strong>Lover is producing valid leads efficiently.</strong>
+                  </div>
+                  <div class="decision-copy">
+                    <div>
+                      <span class="label">Recommendation</span>
+                      <h4>Keep this creative live. Do not refresh yet.</h4>
+                      <p>Cost per valid lead is below account average and mobile feed is still delivering.</p>
+                    </div>
+                    <div class="kpi-pair">
+                      <div><span>Valid CPL</span><strong>$39</strong></div>
+                      <div><span>Valid leads</span><strong>38</strong></div>
+                    </div>
+                    <div class="plain-section">
+                      <h5>Evidence</h5>
+                      <div class="plain-grid">
+                        <div><span>Spend</span><b>$1,495</b></div>
+                        <div><span>Valid rate</span><b>76%</b></div>
+                        <div><span>CTR</span><b>2.43%</b></div>
+                        <div><span>Clicks</span><b>8,120</b></div>
+                        <div><span>Reach</span><b>143,200</b></div>
+                        <div><span>Impressions</span><b>334,500</b></div>
+                      </div>
+                    </div>
+                    <div class="plain-section">
+                      <h5>Delivery</h5>
+                      <div class="barline">
+                        <div class="barline-head"><span>Placement</span><b>Feed heavy</b></div>
+                        <div class="bar"><span style="width:72%"></span><span style="width:18%"></span><span style="width:10%"></span></div>
+                      </div>
+                      <div class="barline">
+                        <div class="barline-head"><span>Device</span><b>Mobile 86%</b></div>
+                        <div class="bar"><span style="width:86%"></span><span style="width:11%"></span><span style="width:3%"></span></div>
+                      </div>
+                    </div>
+                    <div class="actions" style="padding:0;border-top:0">
+                      <button class="button primary">Pause</button>
+                      <button class="button">Export leads</button>
+                    </div>
+                  </div>
+                </article>
+              </section>
+            </div>
+            <nav class="bottom-nav" aria-label="App nav">
+              <span><i></i>Studio</span>
+              <span><i></i>Radar</span>
+              <span class="active"><i></i>Performance</span>
+              <span><i></i>Leads</span>
+              <span><i></i>More</span>
+            </nav>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
