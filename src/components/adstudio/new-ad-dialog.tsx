@@ -781,13 +781,12 @@ export function NewAdDialog({
         : `${selectedTemplate?.name ?? "Template"} - add your details`;
 
   const footHint =
-    step !== "brief"
-      ? "Pick a starting point. You can change everything later."
-      : mediaSourceMode === "library"
-        ? `Select an image for ${activeImageSlot.label}.`
-        : mediaSourceMode === "generate"
-          ? `Generate an image for ${activeImageSlot.label}.`
-          : "Blockwise will generate Story, Feed, and Square.";
+    mediaSourceMode === "library"
+      ? `Select an image for ${activeImageSlot.label}.`
+      : mediaSourceMode === "generate"
+        ? `Generate an image for ${activeImageSlot.label}.`
+        : "Blockwise will generate Story, Feed, and Square.";
+  const showFooter = step === "brief";
 
   return (
     <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && closeCurrentView()}>
@@ -809,9 +808,7 @@ export function NewAdDialog({
           <div className="studio-newad-titleblock">
             <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
-            {step === "source" ? (
-              <p>{templates.length > 0 ? "Start from a template below, or start blank and describe your own." : "No templates installed yet — start blank and describe your ad."}</p>
-            ) : mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
+            {mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
               <p>{activeImageSlot.label}</p>
             ) : null}
           </div>
@@ -827,8 +824,15 @@ export function NewAdDialog({
                 <button type="button" role="tab" aria-selected={tab === "templates"} className={tab === "templates" ? "on" : ""} onClick={() => setTab("templates")}>
                   Templates <i>{templates.length}</i>
                 </button>
-                <button type="button" role="tab" aria-selected={tab === "myads"} className={tab === "myads" ? "on" : ""} onClick={() => setTab("myads")}>
-                  Previous ads <i>{reuseAds === null ? "..." : reuseAds.length}</i>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === "myads"}
+                  aria-label={`Previous ads (${reuseAds === null ? "loading" : reuseAds.length})`}
+                  className={tab === "myads" ? "on" : ""}
+                  onClick={() => setTab("myads")}
+                >
+                  Previous <i>{reuseAds === null ? "..." : reuseAds.length}</i>
                 </button>
                 <button type="button" role="tab" aria-selected={tab === "research"} className={tab === "research" ? "on" : ""} onClick={() => setTab("research")}>
                   Ad Radar <i>{radarAds === null ? "..." : radarAds.length}</i>
@@ -837,12 +841,15 @@ export function NewAdDialog({
 
               {tab === "templates" && (
                 <>
-                  <div className="studio-explore-chips" role="group" aria-label="Filter templates">
-                    {TEMPLATE_FILTERS.map((chip) => (
-                      <button key={chip.id} type="button" className={filter === chip.id ? "on" : ""} onClick={() => setFilter(chip.id)}>
-                        {chip.label}
-                      </button>
-                    ))}
+                  <div className="studio-explore-filterbar">
+                    <label className="studio-explore-filter">
+                      <span>Category</span>
+                      <select value={filter} onChange={(event) => setFilter(event.target.value as TemplateFilter)}>
+                        {TEMPLATE_FILTERS.map((chip) => (
+                          <option key={chip.id} value={chip.id}>{chip.label}</option>
+                        ))}
+                      </select>
+                    </label>
                     <span className="studio-explore-count">{visibleTemplates.length} templates</span>
                   </div>
                   <div className="studio-explore-grid">
@@ -1076,34 +1083,36 @@ export function NewAdDialog({
           )}
         </div>
 
-        <div className={`studio-newad-foot${showFooterAlert ? " has-alert" : ""}`}>
-          {showFooterAlert ? (
-            <div className="studio-newad-requirements" id={requirementsAlertId} role="alert" aria-live="assertive">
-              <div className="studio-newad-requirements-head">
-                <AlertTriangle aria-hidden size={18} />
-                <strong>{footerAlertTitle}</strong>
+        {showFooter && (
+          <div className={`studio-newad-foot${showFooterAlert ? " has-alert" : ""}`}>
+            {showFooterAlert ? (
+              <div className="studio-newad-requirements" id={requirementsAlertId} role="alert" aria-live="assertive">
+                <div className="studio-newad-requirements-head">
+                  <AlertTriangle aria-hidden size={18} />
+                  <strong>{footerAlertTitle}</strong>
+                </div>
+                {footerAlertItems.length === 1 ? (
+                  <p>{footerAlertItems[0]?.message}</p>
+                ) : (
+                  <ul>
+                    {footerAlertItems.map((item) => (
+                      <li key={item.id}>{item.message}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {footerAlertItems.length === 1 ? (
-                <p>{footerAlertItems[0]?.message}</p>
-              ) : (
-                <ul>
-                  {footerAlertItems.map((item) => (
-                    <li key={item.id}>{item.message}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
-          )}
-          <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
-          {step === "brief" && mediaSourceMode === "details" && (
-            <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-              {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}
-              <ArrowUpRight aria-hidden size={16} />
-            </button>
-          )}
-        </div>
+            ) : (
+              <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
+            )}
+            <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
+            {step === "brief" && mediaSourceMode === "details" && (
+              <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
+                {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}
+                <ArrowUpRight aria-hidden size={16} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1286,18 +1295,19 @@ function storagePathFromMediaSrc(src: string): string | null {
 }
 
 const EXPLORE_STYLES = `
-.studio-explore{display:grid;gap:18px}
-.studio-explore-tabs{display:flex;gap:10px;flex-wrap:wrap}
-.studio-explore-tabs button{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-weight:650;font-size:13.5px;padding:9px 16px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.studio-explore{display:grid;gap:14px}
+.studio-explore-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;border-radius:12px;background:var(--line-soft);padding:3px}
+.studio-explore-tabs button{min-width:0;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:background-color .15s,color .15s,box-shadow .15s}
 .studio-explore-tabs button:hover{color:var(--ink)}
-.studio-explore-tabs button.on{background:#001b3d;color:#fff;border-color:#001b3d}
-.studio-explore-tabs button i{font-style:normal;font-size:11.5px;font-weight:700;min-width:22px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:var(--line-soft);color:var(--muted)}
-.studio-explore-tabs button.on i{background:rgba(255,255,255,.22);color:#fff}
-.studio-explore-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.studio-explore-chips button{border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-weight:650;font-size:12.5px;padding:7px 13px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.studio-explore-chips button:hover{color:var(--ink)}
-.studio-explore-chips button.on{background:var(--ink,#0f172a);color:#fff;border-color:var(--ink,#0f172a)}
-.studio-explore-count{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.studio-explore-tabs button.on{background:#fff;color:#001b3d;box-shadow:var(--st-sh-1)}
+.studio-explore-tabs button i{font-style:normal;font-size:11px;font-weight:800;min-width:21px;height:19px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:#fff;color:var(--muted);font-variant-numeric:tabular-nums}
+.studio-explore-tabs button.on i{background:#001b3d;color:#fff}
+.studio-explore-filterbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.studio-explore-filter{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.studio-explore-filter span{font-size:12px;font-weight:700;color:var(--muted)}
+.studio-explore-filter select{min-height:38px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
+.studio-explore-filter select:focus{outline:2px solid var(--accent);outline-offset:2px}
+.studio-explore-count{flex:0 0 auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
 .studio-explore-card{display:flex;min-width:0;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;color:var(--ink);font:inherit;text-align:left;transition:transform .15s,box-shadow .15s,border-color .15s}
 button.studio-explore-card{padding:0;cursor:pointer}
@@ -1385,16 +1395,20 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-generated-grid img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
-  .studio-explore-tabs button{font-size:12.5px;padding:8px 13px}
   .studio-explore-thumb{height:210px}
   .studio-explore-thumb--sample{height:286px}
   .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
+  .studio-explore-tabs button{min-height:38px;font-size:11.5px;padding:0 5px;gap:4px}
+  .studio-explore-tabs button i{min-width:18px;height:18px;padding:0 5px;font-size:10px}
+  .studio-explore-filterbar{gap:8px}
+  .studio-explore-filter{flex:1}
+  .studio-explore-filter select{min-width:0;width:100%}
   .studio-explore-grid{grid-template-columns:1fr}
   .studio-explore-thumb{height:220px}
   .studio-explore-thumb--sample{height:320px}
   .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:1fr}
 }
 `;
-// NewAdDialog: Templates pop-up with Templates, Previous ads, and Ad Radar tabs.
+// NewAdDialog: Templates pop-up with Templates, Previous, and Ad Radar tabs.
