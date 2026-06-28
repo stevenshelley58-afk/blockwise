@@ -323,6 +323,9 @@ test("Ad Radar use action opens the template popout in Ad Studio", () => {
   assert.match(workbench, /useSearchParams/);
   assert.match(workbench, /searchParams\.get\("newAd"\) !== "radar"/);
   assert.match(workbench, /openTemplatePicker\("radar"\)/);
+  assert.match(workbench, /searchParams\.get\("template"\)/);
+  assert.match(workbench, /linkedTemplatePromptedRef/);
+  assert.match(workbench, /selectTemplate\(linkedTemplate\.id\)/);
   assert.doesNotMatch(workbench, /studio\.setSection\("templates"\)/);
   assert.match(workbench, /Choose a template, then add your own photo\./);
   assert.doesNotMatch(workbench, /setNewAdStep\("radar"\)/);
