@@ -160,8 +160,8 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
           <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} />
           <div className="mm-section-heading">
             <div>
-              <h2>Ad breakdown</h2>
-              <p>Per-ad creative, delivery mix, fatigue signals, and links.</p>
+              <h2>Lead results</h2>
+              <p>Results by listing or offer, with lead quality, cost, and the next action.</p>
             </div>
           </div>
           <div className="mm-ad-grid">
