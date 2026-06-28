@@ -285,6 +285,7 @@ export function AdStudioWorkbench({
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
   const radarPromptedRef = useRef(false);
+  const linkedTemplatePromptedRef = useRef(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const studio = useAdStudio();
@@ -640,6 +641,20 @@ export function AdStudioWorkbench({
     openTemplatePicker("radar");
     studio.showToast("Choose a template, then add your own photo.");
   }, [searchParams]);
+
+  useEffect(() => {
+    const templateKey = searchParams.get("template");
+    if (!templateKey || linkedTemplatePromptedRef.current) return;
+
+    const linkedTemplate = adTemplates.find(
+      (template) =>
+        template.id === templateKey || template.templateKey === templateKey,
+    );
+    if (!linkedTemplate) return;
+
+    linkedTemplatePromptedRef.current = true;
+    selectTemplate(linkedTemplate.id);
+  }, [adTemplates, searchParams]);
 
   useEffect(() => {
     if (!showBrandSetupPrompt || brandKit.reviewStatus === "approved") {
