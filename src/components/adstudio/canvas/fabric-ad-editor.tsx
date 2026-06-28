@@ -23,6 +23,7 @@ import {
   type FocalPoint,
   type FrameBox,
 } from "@/lib/adstudio/smart-crop.ts";
+import { getFabricImageLoadOptions } from "@/lib/adstudio/fabric-image-load.ts";
 import type { AdStudioBrandKit, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import type { SelectedElement } from "../preview";
 import { useCreativeHistory } from "./use-creative-history";
@@ -492,7 +493,7 @@ async function addImageObject(canvas: Canvas, object: CreativeDesignObjectJson, 
   }
 
   try {
-    const image = await FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+    const image = await loadFabricImage(src);
     image.set({
       ...interactiveOptions(meta),
       left: frame.left,
@@ -539,7 +540,7 @@ async function addLogoObject(canvas: Canvas, object: CreativeDesignObjectJson, m
 
   if (src) {
     try {
-      const image = await FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+      const image = await loadFabricImage(src);
       image.set({
         ...interactiveOptions(meta),
         left: frame.left,
@@ -649,7 +650,7 @@ async function replaceImageLayer(canvas: Canvas, src: string, options: { select?
   canvas.remove(current);
 
   try {
-    const image = await FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+    const image = await loadFabricImage(src);
     image.set({
       ...interactiveOptions(meta),
       left: frame.left,
@@ -666,6 +667,11 @@ async function replaceImageLayer(canvas: Canvas, src: string, options: { select?
   } catch {
     addImagePlaceholder(canvas, frame, meta);
   }
+}
+
+function loadFabricImage(src: string) {
+  const loadOptions = getFabricImageLoadOptions(src);
+  return loadOptions ? FabricImage.fromURL(src, loadOptions) : FabricImage.fromURL(src);
 }
 
 function fitSelectedImage(canvas: Canvas | null) {
