@@ -4,20 +4,14 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import {
-  BarChart3,
   ChevronDown,
   ChevronRight,
-  Eye,
   ImageOff,
-  MousePointerClick,
-  Percent,
   Play,
-  UserPlus,
-  Wallet,
 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
-import { calculateTrend, formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
+import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import {
   buildResultsHierarchy,
   type ResultsCampaignRow,
@@ -29,18 +23,17 @@ import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
 import { AdManagementControls, BudgetManagementControl } from "./AdManagementControls";
 import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
-import { MetaKpiCard } from "./MetaKpiCard";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
 import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
 import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
 // initial /results JS on mobile. Behaviour is unchanged — charts still render client-side.
-const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
+const PerformanceOverviewCharts = dynamic(
+  () => import("./PerformanceOverviewCharts").then((m) => m.PerformanceOverviewCharts),
+  { ssr: false },
+);
 const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
-
-const SPEND_COLOR = "#123e75";
-const LEADS_COLOR = "#31c46f";
 
 export type OAuthNotice = {
   tone: "success" | "error" | "warning";
@@ -148,8 +141,6 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
   const summary = payload.summary!;
   const previous = summary.previousPeriod;
   const hierarchy = useMemo(() => buildResultsHierarchy(payload.ads), [payload.ads]);
-  const ctr = safeRate(summary.clicks, summary.impressions);
-  const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
   const wrapperStyle = refreshing
     ? ({ opacity: 0.55, pointerEvents: "none" as const, transition: "opacity 200ms ease" })
@@ -157,87 +148,12 @@ function Dashboard({ payload, onSelectAd, refreshing = false }: { payload: MetaM
 
   return (
     <div className="mm-dashboard-body" style={wrapperStyle} aria-busy={refreshing || undefined} aria-live="polite">
-      <div className="mm-kpi-grid">
-        <MetaKpiCard
-          icon={Eye}
-          iconTone="blue"
-          label="Reach"
-          value={summary.reach.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
-        />
-        <MetaKpiCard
-          icon={BarChart3}
-          iconTone="slate"
-          label="Impressions"
-          value={summary.impressions.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
-        />
-        <MetaKpiCard
-          icon={MousePointerClick}
-          iconTone="indigo"
-          label="Link clicks"
-          value={summary.clicks.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
-        />
-        <MetaKpiCard
-          icon={Percent}
-          iconTone="orange"
-          label="CTR"
-          value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
-          compareText={compare}
-          trend={previous ? calculateTrend(ctr, previousCtr) : null}
-        />
-        <MetaKpiCard
-          icon={UserPlus}
-          iconTone="green"
-          label="Leads"
-          value={summary.leads.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
-        />
-        <MetaKpiCard
-          icon={Wallet}
-          iconTone="rose"
-          label="Spend"
-          value={formatCurrency(summary.spend)}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
-        />
-      </div>
-
-      <div className="mm-chart-grid">
-        <section className="panel mm-chart-panel">
-          <h3>Spend over time</h3>
-          <SmoothAreaChart
-            id="spend"
-            color={SPEND_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.spend }))}
-            valueFormatter={(value) => formatCurrency(value)}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Valid leads over time</h3>
-          <SmoothAreaChart
-            id="valid-leads"
-            color={LEADS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.validLeads }))}
-            valueFormatter={(value) => String(Math.round(value))}
-          />
-        </section>
-        <section className="panel mm-chart-panel">
-          <h3>Valid CPL over time</h3>
-          <p className="mm-chart-note">Gaps mark days with no valid leads — a $0 CPL is never shown.</p>
-          <SmoothAreaChart
-            id="valid-cpl"
-            color={LEADS_COLOR}
-            data={payload.daily.map((point) => ({ date: point.date, value: point.validCpl }))}
-            valueFormatter={(value) => formatCurrency(value)}
-          />
-        </section>
-      </div>
+      <PerformanceOverviewCharts
+        daily={payload.daily}
+        summary={summary}
+        rangeLabel={payload.range.label}
+        compareText={compare}
+      />
 
       {payload.ads.length > 0 ? (
         <>
