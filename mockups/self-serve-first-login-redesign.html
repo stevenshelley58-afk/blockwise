@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blockwise Self-Serve First Login Redesign</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #fff;
+      --ink: #16181d;
+      --muted: #5b616e;
+      --faint: #8d94a3;
+      --line: #e8ebf0;
+      --wash: #f1f2f4;
+      --current: #d8a31a;
+      --current-bg: #fff5d8;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #dfe3ea;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .phone {
+      width: 400px;
+      min-height: 900px;
+      margin: 0 auto;
+      background: var(--bg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .topbar {
+      height: 57px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      align-items: end;
+    }
+
+    .mark i {
+      display: block;
+      background: var(--ink);
+      border-radius: 1px;
+    }
+
+    .mark i:nth-child(1) { height: 8px; align-self: end; }
+    .mark i:nth-child(2) { height: 18px; align-self: end; }
+    .mark i:nth-child(3) { height: 26px; align-self: end; }
+    .mark i:nth-child(4) { height: 8px; grid-column: 1; }
+    .mark i:nth-child(5) { height: 8px; grid-column: 2; }
+    .mark i:nth-child(6) { height: 8px; grid-column: 3; }
+
+    .workspace {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .exit {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      font-size: 21px;
+    }
+
+    main {
+      padding: 28px 16px 112px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 22px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      font-family: Newsreader, Georgia, "Times New Roman", serif;
+      font-size: 30px;
+      line-height: 1.08;
+      font-weight: 500;
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    .primary {
+      min-height: 46px;
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 14.5px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    .stepper {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .step {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--line);
+    }
+
+    .done .bar { background: var(--ink); }
+    .current .bar { background: var(--current); }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--wash);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      font-size: 12px;
+    }
+
+    .done .dot {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff;
+    }
+
+    .current .dot {
+      background: var(--current-bg);
+      border-color: #efd580;
+      color: #7b5700;
+    }
+
+    .label {
+      overflow-wrap: anywhere;
+      line-height: 1.15;
+    }
+
+    .remaining {
+      margin-top: 28px;
+    }
+
+    .task-list {
+      border-bottom: 1px solid var(--line);
+      margin-top: 10px;
+    }
+
+    .task {
+      color: var(--ink);
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) 18px;
+      gap: 14px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 18px 0;
+      text-decoration: none;
+    }
+
+    .tag {
+      min-height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--current-bg);
+      color: #7b5700;
+      padding: 0 10px;
+      font-size: 11.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .copy strong {
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .copy span {
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.45;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 70px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .95);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 8px 6px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 3px;
+      place-items: center;
+      color: #586071;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .nav svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.9;
+    }
+
+    .nav.active {
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="topbar">
+      <div class="mark" aria-label="Blockwise">
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="workspace">Mark Test - AU</div>
+      <div class="exit" aria-hidden="true">↗</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Welcome back, Mark Test.</h1>
+        <a class="primary" href="#">Continue setup <span aria-hidden="true">→</span></a>
+      </section>
+
+      <section class="panel" aria-label="Setup progress">
+        <div class="row">
+          <p class="eyebrow">Setup progress</p>
+          <span class="muted">2 of 3 complete</span>
+        </div>
+        <ol class="stepper">
+          <li class="step done">
+            <span class="bar"></span>
+            <span class="meta"><span class="dot">✓</span><span class="label">Brand identity</span></span>
+          </li>
+          <li class="step done">
+            <span class="bar"></span>
+            <span class="meta"><span class="dot">✓</span><span class="label">Connect channels</span></span>
+          </li>
+          <li class="step current">
+            <span class="bar"></span>
+            <span class="meta"><span class="dot">3</span><span class="label">Create &amp; launch</span></span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="remaining" aria-label="Left to do">
+        <p class="eyebrow">Left to do</p>
+        <div class="task-list">
+          <a class="task" href="#">
+            <span class="tag">Next</span>
+            <span class="copy">
+              <strong>Create &amp; launch</strong>
+              <span>Drop in a listing photo, approve the copy, and generate Story, Feed and Square.</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom" aria-label="Primary mobile navigation">
+      <div class="nav active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        <span>Ad Studio</span>
+      </div>
+      <div class="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/></svg>
+        <span>Ad Radar</span>
+      </div>
+      <div class="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16M8 16l3-4 3 2 4-7"/></svg>
+        <span>Perform...</span>
+      </div>
+      <div class="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 11a4 4 0 1 0-8 0M4 20a8 8 0 0 1 16 0M19 8a3 3 0 0 1 1 5M5 8a3 3 0 0 0-1 5"/></svg>
+        <span>Leads</span>
+      </div>
+      <div class="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+        <span>More</span>
+      </div>
+    </nav>
+  </div>
+</body>
+</html>
