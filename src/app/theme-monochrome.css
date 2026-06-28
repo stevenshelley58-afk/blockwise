@@ -10,7 +10,7 @@
  *   - Neutral-grey lines / tints / ink (warm-neutral instead of blue-slate)
  *   - Light sidebar by default with a solid black active pill
  *   - Rounder cards, gentle card elevation, and pill-shaped buttons
- *   - Tightened, balanced dashboard spacing (compact KPI cards)
+ *   - Tightened, balanced dashboard spacing
  * Display font (Manrope) is intentionally unchanged.
  */
 
@@ -81,9 +81,7 @@
 
 /* ---------------------------------------------------------------------------
    Balanced dashboard density (desktop, >=641px so mobile rules stay
-   authoritative). KPI cards size to their content instead of leaving an empty
-   band below, and values are sized to read cleanly even when short ("$3") or
-   long ("Unavailable"). Markup and data are unchanged.
+   authoritative).
    --------------------------------------------------------------------------- */
 @media (min-width: 641px) {
   .content {
@@ -107,34 +105,4 @@
     font-size: 27px;
   }
 
-  /* Compact KPI cards — no tall empty bottom, tidy value scale */
-  .mm-kpi.metric-card {
-    min-height: 0;
-  }
-  .mm-kpi {
-    padding: 18px 18px 16px;
-  }
-  .mm-kpi-icon {
-    width: 34px;
-    height: 34px;
-    margin-bottom: 12px;
-  }
-  .mm-kpi-label {
-    font-size: 12.5px;
-  }
-  .mm-kpi-value {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-  .mm-kpi-compare {
-    margin-top: 5px;
-  }
-}
-
-/* Results KPI row has six operational metrics — keep the full row on wide screens. */
-@media (min-width: 1241px) {
-  .mm-kpi-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
 }
