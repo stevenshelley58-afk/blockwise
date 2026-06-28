@@ -1,10 +1,9 @@
 "use client";
 
-import { Bookmark, ChevronDown, Clock3, FileSearch, ImageIcon, MapPin, SlidersHorizontal, Users } from "lucide-react";
+import { Bookmark, ChevronDown, Clock3, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
-import { MetricCard } from "@/components/metric-card";
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
@@ -154,8 +153,6 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   );
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const mediaReady = cards.filter((c) => c.media.length > 0).length;
-  const allPostcodes = unique(cards.flatMap((c) => c.adAreaPostcodes));
   const newestSeenAt = cards
     .map((c) => c.lastSeenAt)
     .filter((v): v is string => Boolean(v))
@@ -165,22 +162,83 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   const sortButtonStyle = (active: boolean): CSSProperties => ({
     fontSize: 13,
     fontWeight: 700,
-    padding: "6px 14px",
+    minHeight: 40,
+    padding: "0 12px",
     border: "none",
     background: active ? "var(--navy, #131b2e)" : "transparent",
     color: active ? "#fff" : "var(--ink)",
     cursor: "pointer",
+    lineHeight: 1.2,
+    whiteSpace: "nowrap",
   });
 
   return (
     <>
       <style>{`
-        .ad-radar-search-card { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 14px; }
+        .ad-radar-search-card { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 12px; }
         .ad-radar-search-card .research-search-form { width: 100%; align-items: center; }
         .ad-radar-search-card .research-search-form > label { flex: 1 1 260px; min-width: 0; }
         .ad-radar-search-card .research-location-field { width: 100%; }
         .ad-radar-search-card .research-location-note { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-        .ad-radar-filters-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+        .ad-radar-support-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); }
+        .ad-radar-support-row .research-surrounding-toggle,
+        .ad-radar-support-row .research-freshness { min-height: 28px; font-size: 12.5px; }
+        .ad-radar-support-row .research-surrounding-toggle { min-height: 40px; font-weight: 700; }
+        .ad-radar-support-row .research-freshness { margin-left: auto; }
+        .ad-radar-controls-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+        .ad-radar-control-cluster,
+        .ad-radar-sort-wrap { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+        .ad-radar-control-button,
+        .ad-radar-swipe-link,
+        .ad-radar-sort-button {
+          transition: transform 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+        }
+        .ad-radar-control-button:active,
+        .ad-radar-swipe-link:active,
+        .ad-radar-sort-button:active { transform: scale(0.96); }
+        .ad-radar-control-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 0 14px;
+          border: 1px solid var(--line);
+          border-radius: 999px;
+          background: var(--surface);
+          color: var(--ink);
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .ad-radar-swipe-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 40px;
+          padding: 0 12px;
+          border-radius: 999px;
+          color: var(--ink);
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .ad-radar-sort-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .ad-radar-sort-group { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+        @media (max-width: 520px) {
+          .ad-radar-support-row .research-freshness { margin-left: 0; }
+          .ad-radar-controls-row { align-items: stretch; }
+          .ad-radar-control-cluster,
+          .ad-radar-sort-wrap { width: 100%; }
+          .ad-radar-control-button,
+          .ad-radar-swipe-link { flex: 1 1 0; }
+          .ad-radar-sort-wrap { justify-content: space-between; }
+          .ad-radar-sort-group { flex: 1; }
+          .ad-radar-sort-button { flex: 1 1 0; padding: 0 8px; font-size: 12.5px; }
+        }
       `}</style>
       <section className="panel research-search-panel ad-radar-search-card">
         <AdRadarLocationForm
@@ -193,78 +251,75 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           surface="research"
         />
 
-        <label className="research-surrounding-toggle">
-          <input
-            checked={includeSurrounding}
-            name="includeSurrounding"
-            onChange={(event) => onToggleSurrounding(event.target.checked)}
-            type="checkbox"
-            value="1"
-          />
-          <span>Include surrounding suburbs</span>
-        </label>
+        <div className="ad-radar-support-row">
+          <label className="research-surrounding-toggle">
+            <input
+              checked={includeSurrounding}
+              name="includeSurrounding"
+              onChange={(event) => onToggleSurrounding(event.target.checked)}
+              type="checkbox"
+              value="1"
+            />
+            <span>Include surrounding suburbs</span>
+          </label>
 
-        <div className="ad-radar-filters-row">
-          <button
-            type="button"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              minHeight: 36,
-              padding: "0 14px",
-              border: "1px solid var(--line)",
-              borderRadius: 999,
-              background: "var(--surface)",
-              color: "var(--ink)",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            <SlidersHorizontal size={16} />
-            Filters
-            {activeFilterCount > 0 && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: 18,
-                  height: 18,
-                  padding: "0 5px",
-                  borderRadius: 999,
-                  background: "var(--navy, #131b2e)",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}
-              >
-                {activeFilterCount}
-              </span>
-            )}
-            <ChevronDown size={15} style={{ transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
-          </button>
+          <div className="research-freshness">
+            <Clock3 size={14} />
+            {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
+          </div>
+        </div>
 
-          <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 10 }}>
+        <div className="ad-radar-controls-row">
+          <div className="ad-radar-control-cluster">
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+              className="ad-radar-control-button"
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 18,
+                    height: 18,
+                    padding: "0 5px",
+                    borderRadius: 999,
+                    background: "var(--navy, #131b2e)",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown size={15} style={{ transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
+            </button>
+
             <Link
               href="/ad-radar/swipe-file"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: "var(--ink)", textDecoration: "none" }}
+              className="ad-radar-swipe-link"
             >
               <Bookmark size={13} /> Swipe file
             </Link>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>Sort</span>
+          </div>
+
+          <div className="ad-radar-sort-wrap">
+            <span className="ad-radar-sort-label">Sort</span>
             <div
+              className="ad-radar-sort-group"
               role="group"
               aria-label="Sort ads"
-              style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}
             >
-              <button type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} style={sortButtonStyle(sort === "recent")}>
+              <button className="ad-radar-sort-button" type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} style={sortButtonStyle(sort === "recent")}>
                 Most recent
               </button>
-              <button type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} style={{ ...sortButtonStyle(sort === "longest"), borderLeft: "1px solid var(--line)" }}>
+              <button className="ad-radar-sort-button" type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} style={{ ...sortButtonStyle(sort === "longest"), borderLeft: "1px solid var(--line)" }}>
                 Longest running
               </button>
             </div>
@@ -352,21 +407,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             </div>
           </div>
         )}
-
-        <div className="research-freshness">
-          <Clock3 size={14} />
-          {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
-        </div>
       </section>
-
-      {searched && (
-        <section className="grid cols-4">
-          <MetricCard icon={FileSearch} label="Ads in view" value={String(cards.length)} note="Meta Ad Library results" />
-          <MetricCard icon={Users} label="Advertisers" value={String(advertiserCount)} note="Meta pages with visible ads" />
-          <MetricCard icon={MapPin} label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
-          <MetricCard icon={ImageIcon} label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
-        </section>
-      )}
 
       {searched && (
         <section className="research-results-section">
