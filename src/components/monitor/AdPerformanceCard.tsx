@@ -6,8 +6,6 @@ import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import type { MetaAdPerformance } from "@/lib/meta-monitor/types";
 
 import { AdManagementControls } from "./AdManagementControls";
-import { BreakdownBars } from "./BreakdownBars";
-import { DeviceDonut } from "./DeviceDonut";
 
 export function adCardDomId(adId: string): string {
   return `meta-ad-${adId}`;
@@ -15,58 +13,64 @@ export function adCardDomId(adId: string): string {
 
 export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
   const metrics = ad.metrics;
+  const guidance = leadGuidance(ad);
+  const leadSource = leadSourceLabel(ad);
+  const leadContext = leadContextLabel(ad);
 
   return (
     <article className="panel mm-ad-card" id={adCardDomId(ad.adId)}>
-      <div className="mm-ad-head">
-        <CreativePreview ad={ad} size={88} />
+      <div className="mm-ad-row-main">
+        <CreativePreview ad={ad} size={58} />
         <div className="mm-ad-head-text">
           <h4>
-            {ad.adName}
+            <span className="mm-ad-title-text">{leadSource}</span>
             <StatusPill status={ad.status} />
             {ad.fatigued ? <span className="mm-pill amber">Fatiguing</span> : null}
           </h4>
-          <span className="mm-ad-campaign">{ad.campaignName}</span>
-          <span className="mm-ad-meta">
-            Ad set: {ad.adsetName || "—"} · Suburb: {ad.suburb ?? "—"}
-          </span>
-          <span className="mm-ad-meta">ID: {ad.adId}</span>
+          <span className="mm-ad-campaign">{leadContext}</span>
+        </div>
+        <div className="mm-ad-row-kpi">
+          <span>Cost/lead</span>
+          <strong>{metrics.validCpl != null ? formatCurrency(metrics.validCpl) : "Unavailable"}</strong>
         </div>
       </div>
 
       {ad.fatigued ? (
         <p className="mm-ad-meta" role="status">
-          This creative is showing fatigue (high frequency, falling CTR).{" "}
+          This lead source may be tiring.{" "}
           <Link href={`/ad-studio?from=fatigue&adId=${encodeURIComponent(ad.adId)}`}>
-            Refresh it in Ad Studio
+            Refresh it
           </Link>
           .
         </p>
       ) : null}
 
-      <dl className="mm-ad-metrics">
-        <Metric label="Reach" value={metrics.reach.toLocaleString("en-AU")} />
+      <dl className="mm-ad-inline-stats">
         <Metric label="Spend" value={formatCurrency(metrics.spend)} />
-        <Metric label="Impressions" value={metrics.impressions.toLocaleString("en-AU")} />
-        <Metric label="Clicks" value={metrics.clicks.toLocaleString("en-AU")} />
-        <Metric label="CTR" value={metrics.ctr != null ? formatPercent(metrics.ctr, 2) : "—"} />
         <Metric label="Leads" value={String(metrics.leads)} />
-        <Metric label="Valid leads" value={String(metrics.validLeads)} />
-        <Metric label="Valid rate" value={metrics.validRate != null ? formatPercent(metrics.validRate) : "—"} />
-        <Metric label="Valid CPL" value={metrics.validCpl != null ? formatCurrency(metrics.validCpl) : "—"} />
+        <Metric label="Good" value={String(metrics.validLeads)} />
+        <Metric label="Action" value={guidance.action} />
       </dl>
 
-      {(ad.placementBreakdown?.length ?? 0) > 0 || (ad.deviceBreakdown?.length ?? 0) > 0 ? (
-        <div className="mm-ad-breakdowns">
-          <BreakdownBars title="Placement" rows={ad.placementBreakdown ?? []} />
-          <DeviceDonut rows={ad.deviceBreakdown ?? []} />
+      <div className={`mm-ad-guidance ${guidance.tone}`}>
+        <div>
+          <strong>{guidance.title}</strong>
+          <span>{guidance.body}</span>
         </div>
-      ) : null}
+        <Link className="button secondary" href="/leads">Open leads</Link>
+      </div>
+
+      <dl className="mm-ad-reason-grid" aria-label="Lead source evidence">
+        <Metric label="Qualified leads" value={String(metrics.validLeads)} />
+        <Metric label="Lead quality" value={metrics.validRate != null ? formatPercent(metrics.validRate) : "Unavailable"} />
+        <Metric label="Total enquiries" value={String(metrics.leads)} />
+        <Metric label="Spend" value={formatCurrency(metrics.spend)} />
+      </dl>
 
       <div className="mm-ad-actions">
         <AdManagementControls target={{ kind: "ad", adId: ad.adId }} status={ad.status} showExport />
-        <ActionLink href={ad.landingPageUrl} label="Open landing page" />
-        <ActionLink href={ad.metaPermalinkUrl} label="View in Meta" />
+        <ActionLink href={ad.landingPageUrl} label="Open page" />
+        <ActionLink href={ad.metaPermalinkUrl} label="Meta details" />
       </div>
     </article>
   );
@@ -112,6 +116,57 @@ function Metric({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+function leadSourceLabel(ad: MetaAdPerformance): string {
+  if (ad.suburb) return `${ad.suburb} lead source`;
+  return ad.campaignName || ad.adName;
+}
+
+function leadContextLabel(ad: MetaAdPerformance): string {
+  if (ad.suburb && ad.campaignName) return ad.campaignName;
+  return ad.adsetName || ad.adName;
+}
+
+function leadGuidance(ad: MetaAdPerformance): { action: string; title: string; body: string; tone: "good" | "warn" } {
+  const { spend, leads, validLeads, validCpl, validRate } = ad.metrics;
+
+  if (ad.fatigued) {
+    return {
+      action: "Review",
+      title: "Refresh soon",
+      body: "Qualified leads are worth watching, but this source is showing fatigue.",
+      tone: "warn",
+    };
+  }
+
+  if (spend > 0 && validLeads === 0) {
+    return {
+      action: "Review",
+      title: "No qualified leads yet",
+      body: "Money has been spent but no qualified leads have come through.",
+      tone: "warn",
+    };
+  }
+
+  if (validRate != null && validRate < 0.45 && leads >= 5) {
+    return {
+      action: "Review",
+      title: "Lead quality is weak",
+      body: `${formatPercent(validRate)} of enquiries are qualified. Review this source before adding budget.`,
+      tone: "warn",
+    };
+  }
+
+  return {
+    action: "Keep",
+    title: "Keep running",
+    body:
+      validCpl != null
+        ? `${validLeads} qualified lead${validLeads === 1 ? "" : "s"} at ${formatCurrency(validCpl)} each.`
+        : `${validLeads} qualified lead${validLeads === 1 ? "" : "s"} so far.`,
+    tone: "good",
+  };
 }
 
 function ActionLink({ href, label }: { href: string | null; label: string }) {
