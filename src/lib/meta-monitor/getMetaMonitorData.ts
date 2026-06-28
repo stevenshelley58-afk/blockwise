@@ -550,7 +550,10 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
+  const insightsByDate = new Map<
+    string,
+    { reach: number; impressions: number; clicks: number; spend: number; platformLeads: number }
+  >();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -559,23 +562,39 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0 };
+    const existing = insightsByDate.get(date) ?? {
+      reach: 0,
+      impressions: 0,
+      clicks: 0,
+      spend: 0,
+      platformLeads: 0,
+    };
 
+    existing.reach += Math.round(toNumber(row.reach));
+    existing.impressions += Math.round(toNumber(row.impressions));
+    existing.clicks += Math.round(toNumber(row.clicks));
     existing.spend += toNumber(row.spend);
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
-    spendByDate.set(date, existing);
+    insightsByDate.set(date, existing);
   }
 
   const points: MetaDailyPoint[] = [];
 
   for (let offset = 0; offset < range.days; offset += 1) {
     const date = addDays(range.since, offset);
-    const insights = spendByDate.get(date);
+    const insights = insightsByDate.get(date);
     const spend = round2(insights?.spend ?? 0);
+    const reach = insights?.reach ?? 0;
+    const impressions = insights?.impressions ?? 0;
+    const clicks = insights?.clicks ?? 0;
     const validLeads = leadFacts.validByDate.get(date) ?? 0;
 
     points.push({
       date,
+      reach,
+      impressions,
+      clicks,
+      ctr: safeRate(clicks, impressions),
       spend,
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,

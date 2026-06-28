@@ -102,21 +102,34 @@ export function buildSampleMetaMonitorPayload(
   const leadsSeries = LEADS_30.slice(30 - days);
   const scale = sum(spendSeries) / sum(SPEND_30);
 
-  const daily: MetaDailyPoint[] = spendSeries.map((spend, index) => {
-    const date = addDays(range.since, index);
-
-    return {
-      date,
-      spend,
-      leads: leadsSeries[index],
-      validLeads: validSeries[index],
-      validCpl: safeCpl(spend, validSeries[index]),
-    };
-  });
-
   const spend = sum(spendSeries);
   const leads = sum(leadsSeries);
   const validLeads = sum(validSeries);
+  const totalReach = sum(SAMPLE_ADS.map((ad) => Math.round(ad.reach * scale)));
+  const totalImpressions = sum(SAMPLE_ADS.map((ad) => Math.round(ad.impressions * scale)));
+  const totalClicks = sum(SAMPLE_ADS.map((ad) => Math.round(ad.clicks * scale)));
+  const reachSeries = allocateIntegerSeries(totalReach, spendSeries);
+  const impressionSeries = allocateIntegerSeries(totalImpressions, spendSeries);
+  const clickSeries = allocateIntegerSeries(totalClicks, spendSeries);
+
+  const daily: MetaDailyPoint[] = spendSeries.map((daySpend, index) => {
+    const date = addDays(range.since, index);
+    const impressions = impressionSeries[index] ?? 0;
+    const clicks = clickSeries[index] ?? 0;
+    const valid = validSeries[index] ?? 0;
+
+    return {
+      date,
+      reach: reachSeries[index] ?? 0,
+      impressions,
+      clicks,
+      ctr: safeRate(clicks, impressions),
+      spend: daySpend,
+      leads: leadsSeries[index] ?? 0,
+      validLeads: valid,
+      validCpl: safeCpl(daySpend, valid),
+    };
+  });
 
   const ads: MetaAdPerformance[] = SAMPLE_ADS.map((ad, adIndex) => {
     const creativeImage = SAMPLE_CREATIVES[adIndex % SAMPLE_CREATIVES.length];
@@ -233,6 +246,30 @@ export function buildSampleMetaMonitorPayload(
 
 function sum(values: number[]): number {
   return values.reduce((total, value) => total + value, 0);
+}
+
+function allocateIntegerSeries(total: number, weights: number[]): number[] {
+  const weightTotal = sum(weights);
+
+  if (weightTotal <= 0 || total <= 0) {
+    return weights.map(() => 0);
+  }
+
+  const raw = weights.map((weight) => (total * weight) / weightTotal);
+  const base = raw.map(Math.floor);
+  let remainder = total - sum(base);
+
+  const order = raw
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction);
+
+  for (const entry of order) {
+    if (remainder <= 0) break;
+    base[entry.index] += 1;
+    remainder -= 1;
+  }
+
+  return base;
 }
 
 function round2(value: number): number {
