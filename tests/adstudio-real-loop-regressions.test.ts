@@ -407,15 +407,18 @@ test("Ad Studio template picker uses the local self-contained gallery", () => {
   assert.equal(existsSync("src/lib/adstudio/creative/composition-to-creative.ts"), false);
 });
 
-test("Ad Radar longest-running sort reaches the authenticated search route", () => {
+test("Ad Radar sort options reach the authenticated search route", () => {
   const panel = readFileSync("src/components/research/ad-radar-search-panel.tsx", "utf8");
   const route = readFileSync("src/app/api/research/ads/search/route.ts", "utf8");
   const search = readFileSync("src/lib/research/ad-radar-card-search.ts", "utf8");
 
+  assert.match(panel, /AD_RADAR_SORT_OPTIONS\.map/);
   assert.match(panel, /if \(activeSort !== "recent"\) params\.set\("sort", activeSort\)/);
   assert.match(panel, /doSearch\(initialQuery, initialSort, initialIncludeSurrounding\)/);
-  assert.match(route, /searchParams\.get\("sort"\) === "longest"/);
+  assert.match(route, /normaliseAdRadarSort\(searchParams\.get\("sort"\)\)/);
   assert.match(route, /searchCustomerMetaAdLibraryCards/);
   assert.match(search, /ad_delivery_started_at/);
+  assert.match(search, /ad_delivery_stopped_at/);
+  assert.match(search, /active_status/);
   assert.match(search, /adRunningMs/);
 });

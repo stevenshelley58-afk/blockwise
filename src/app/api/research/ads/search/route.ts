@@ -8,6 +8,7 @@ import {
   type AdRadarCardSearchFilters,
   type AdRadarCardSearchSort,
 } from "@/lib/research/ad-radar-card-search";
+import { normaliseAdRadarSort } from "@/lib/research/ad-radar-sort";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const q = normaliseAdRadarCardSearchQuery(searchParams.get("q") ?? "");
-  const sort: AdRadarCardSearchSort = searchParams.get("sort") === "longest" ? "longest" : "recent";
+  const sort: AdRadarCardSearchSort = normaliseAdRadarSort(searchParams.get("sort"));
   const includeSurroundingSuburbs = isTruthySearchParam(searchParams.get("includeSurrounding"));
   const filters = parseFilters(searchParams);
   if (!q) {

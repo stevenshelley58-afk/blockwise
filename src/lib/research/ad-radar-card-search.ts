@@ -11,8 +11,9 @@ import {
   type CustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCardRow,
 } from "./customer-meta-card.ts";
+import { normaliseAdRadarSort, type AdRadarSort } from "./ad-radar-sort.ts";
 
-export type AdRadarCardSearchSort = "recent" | "longest";
+export type AdRadarCardSearchSort = AdRadarSort;
 
 export type AdRadarCardSearchFilters = {
   status?: "active" | "inactive";
@@ -78,7 +79,7 @@ export async function searchCustomerMetaAdLibraryCards(
   input: SearchInput,
 ): Promise<CustomerMetaAdLibraryCard[]> {
   const q = normaliseAdRadarCardSearchQuery(input.query);
-  const sort = input.sort === "longest" ? "longest" : "recent";
+  const sort = normaliseAdRadarSort(input.sort);
   const includeSurroundingSuburbs = input.includeSurroundingSuburbs === true;
   const filters = normaliseCardSearchFilters(input.filters);
   const hasFilters = Object.keys(filters).length > 0;
@@ -94,7 +95,7 @@ export async function searchCustomerMetaAdLibraryCards(
 
   // The ranked RPC does not accept facet filters, so skip it when filters are
   // active and use the filterable fallback/structured paths instead.
-  if (!locationSearch.active && !hasFilters && shouldUseRankedFullTextSearch(q)) {
+  if (!locationSearch.active && !hasFilters && supportsRankedFullTextSort(sort) && shouldUseRankedFullTextSearch(q)) {
     rows = await loadRankedFullTextRows(supabase, q, sort, rowLimit);
   }
 
@@ -261,12 +262,7 @@ async function loadFallbackSearchRows(
     .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
     .or(buildFallbackSearchFilter(q));
   query = applyCardSearchFilters(query, filters);
-  const { data, error } = await query
-    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
-      ascending: sort === "longest",
-      nullsFirst: false,
-    })
-    .limit(rowLimit);
+  const { data, error } = await applySearchOrder(query, sort).limit(rowLimit);
 
   return { rows: (data ?? null) as unknown as CustomerMetaAdLibraryCardRow[] | null, error };
 }
@@ -281,22 +277,56 @@ async function fetchSearchRows(
   let query = supabase
     .schema("research")
     .from("v_customer_meta_ad_library_cards")
-    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-    .order(sort === "longest" ? "ad_delivery_started_at" : "last_seen_at", {
-      ascending: sort === "longest",
-      nullsFirst: false,
-    })
-    .limit(limit);
+    .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT);
 
   query = applyFilter(query);
   query = applyCardSearchFilters(query, filters);
-  const { data, error } = await query;
+  query = applySearchOrder(query, sort);
+  const { data, error } = await query.limit(limit);
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as CustomerMetaAdLibraryCardRow[];
 }
 
 function shouldUseRankedFullTextSearch(q: string): boolean {
   return q.length >= 3 && !/^\d+$/u.test(q);
+}
+
+function supportsRankedFullTextSort(sort: AdRadarCardSearchSort): boolean {
+  return sort === "recent" || sort === "longest";
+}
+
+function applySearchOrder(query: any, sort: AdRadarCardSearchSort): any {
+  let next = query;
+  for (const order of searchOrders(sort)) {
+    next = next.order(order.column, { ascending: order.ascending, nullsFirst: false });
+  }
+  return next;
+}
+
+function searchOrders(sort: AdRadarCardSearchSort): Array<{ column: string; ascending: boolean }> {
+  switch (sort) {
+    case "longest":
+      return [{ column: "ad_delivery_started_at", ascending: true }];
+    case "newest_started":
+      return [{ column: "ad_delivery_started_at", ascending: false }];
+    case "oldest_started":
+      return [{ column: "ad_delivery_started_at", ascending: true }];
+    case "recently_stopped":
+      return [{ column: "ad_delivery_stopped_at", ascending: false }];
+    case "active_first":
+      return [
+        { column: "active_status", ascending: true },
+        { column: "last_seen_at", ascending: false },
+      ];
+    case "advertiser_az":
+      return [
+        { column: "page_name", ascending: true },
+        { column: "last_seen_at", ascending: false },
+      ];
+    case "recent":
+    default:
+      return [{ column: "last_seen_at", ascending: false }];
+  }
 }
 
 function buildFallbackSearchFilter(q: string): string {
@@ -341,16 +371,59 @@ function locationTextTerms(guess: AdRadarLocationGuess): string[] {
 }
 
 function sortCards(cards: CustomerMetaAdLibraryCard[], sort: AdRadarCardSearchSort): CustomerMetaAdLibraryCard[] {
-  if (sort === "longest") {
-    const now = Date.now();
-    return [...cards].sort((a, b) => {
+  const now = Date.now();
+  return [...cards].sort((a, b) => compareCards(a, b, sort, now));
+}
+
+function compareCards(a: CustomerMetaAdLibraryCard, b: CustomerMetaAdLibraryCard, sort: AdRadarCardSearchSort, now: number): number {
+  switch (sort) {
+    case "longest": {
       const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
       const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
-      return (bMs ?? -1) - (aMs ?? -1) || dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt);
-    });
+      return (bMs ?? -1) - (aMs ?? -1) || compareRecent(a, b);
+    }
+    case "newest_started":
+      return compareDateDesc(a.startedAt, b.startedAt) || compareRecent(a, b);
+    case "oldest_started":
+      return compareDateAsc(a.startedAt, b.startedAt) || compareRecent(a, b);
+    case "recently_stopped":
+      return compareDateDesc(a.stoppedAt, b.stoppedAt) || compareRecent(a, b);
+    case "active_first":
+      return activeStatusRank(a.activeStatus) - activeStatusRank(b.activeStatus) || compareRecent(a, b);
+    case "advertiser_az":
+      return a.pageName.localeCompare(b.pageName, "en-AU", { sensitivity: "base" }) || compareRecent(a, b);
+    case "recent":
+    default:
+      return compareRecent(a, b);
   }
+}
 
-  return [...cards].sort((a, b) => dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt));
+function compareRecent(a: CustomerMetaAdLibraryCard, b: CustomerMetaAdLibraryCard): number {
+  return compareDateDesc(a.lastSeenAt, b.lastSeenAt);
+}
+
+function compareDateDesc(a: string | null, b: string | null): number {
+  const aValue = dateValue(a);
+  const bValue = dateValue(b);
+  if (aValue === bValue) return 0;
+  if (!aValue) return 1;
+  if (!bValue) return -1;
+  return bValue - aValue;
+}
+
+function compareDateAsc(a: string | null, b: string | null): number {
+  const aValue = dateValue(a);
+  const bValue = dateValue(b);
+  if (aValue === bValue) return 0;
+  if (!aValue) return 1;
+  if (!bValue) return -1;
+  return aValue - bValue;
+}
+
+function activeStatusRank(status: CustomerMetaAdLibraryCard["activeStatus"]): number {
+  if (status === "active") return 0;
+  if (status === "unknown") return 1;
+  return 2;
 }
 
 function dedupeRowsByCardId(rows: CustomerMetaAdLibraryCardRow[]): CustomerMetaAdLibraryCardRow[] {

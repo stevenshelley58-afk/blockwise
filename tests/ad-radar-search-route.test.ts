@@ -90,6 +90,47 @@ test("ad card search pushes facet filters to the database and narrows results", 
   );
 });
 
+test("ad card search supports expanded non-RPC sort modes", async () => {
+  const fake = new FakeSearchClient([
+    row({
+      card_id: "beta-active",
+      page_name: "Beta Realty",
+      active_status: "active",
+      ad_delivery_started_at: "2026-02-01T00:00:00Z",
+      last_seen_at: "2026-06-01T00:00:00Z",
+    }),
+    row({
+      card_id: "alpha-inactive",
+      page_name: "Alpha Realty",
+      active_status: "inactive",
+      ad_delivery_started_at: "2026-05-01T00:00:00Z",
+      ad_delivery_stopped_at: "2026-06-10T00:00:00Z",
+      last_seen_at: "2026-06-10T00:00:00Z",
+    }),
+    row({
+      card_id: "zeta-inactive",
+      page_name: "Zeta Realty",
+      active_status: "inactive",
+      ad_delivery_started_at: "2025-12-01T00:00:00Z",
+      ad_delivery_stopped_at: "2026-05-20T00:00:00Z",
+      last_seen_at: "2026-05-20T00:00:00Z",
+    }),
+  ]);
+
+  const newestStarted = await searchCustomerMetaAdLibraryCards(fake.client, { query: "realty", sort: "newest_started" });
+  const oldestStarted = await searchCustomerMetaAdLibraryCards(fake.client, { query: "realty", sort: "oldest_started" });
+  const recentlyStopped = await searchCustomerMetaAdLibraryCards(fake.client, { query: "realty", sort: "recently_stopped" });
+  const activeFirst = await searchCustomerMetaAdLibraryCards(fake.client, { query: "realty", sort: "active_first" });
+  const advertiserAz = await searchCustomerMetaAdLibraryCards(fake.client, { query: "realty", sort: "advertiser_az" });
+
+  assert.deepEqual(newestStarted.map((card) => card.id), ["alpha-inactive", "beta-active", "zeta-inactive"]);
+  assert.deepEqual(oldestStarted.map((card) => card.id), ["zeta-inactive", "beta-active", "alpha-inactive"]);
+  assert.deepEqual(recentlyStopped.map((card) => card.id), ["alpha-inactive", "zeta-inactive", "beta-active"]);
+  assert.deepEqual(activeFirst.map((card) => card.id), ["beta-active", "alpha-inactive", "zeta-inactive"]);
+  assert.deepEqual(advertiserAz.map((card) => card.id), ["alpha-inactive", "beta-active", "zeta-inactive"]);
+  assert.equal(fake.rpcCalls.length, 0);
+});
+
 test("ad card fallback search uses strict DB-backed agency attribution fields", async () => {
   const fake = new FakeSearchClient([
     row({

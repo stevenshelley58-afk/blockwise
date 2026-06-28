@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 
 import { adRunningMs, type CustomerMetaAdLibraryCard } from "./customer-meta-card.ts";
+import type { AdRadarSort } from "./ad-radar-sort.ts";
 
 export type AdRadarLocationGuess = {
   city: string | null;
@@ -189,7 +190,7 @@ export function shouldPrioritiseAdRadarLocationSearch(value: string, guess: AdRa
 export function pickAdRadarCardsForLocation(
   cards: CustomerMetaAdLibraryCard[],
   guess: AdRadarLocationGuess,
-  sort: "recent" | "longest",
+  sort: AdRadarSort,
   now = Date.now(),
 ): { cards: CustomerMetaAdLibraryCard[]; matchedLocation: boolean } {
   const scored = cards
@@ -218,7 +219,7 @@ export function pickAdRadarCardsForLocation(
 export function matchAdRadarCardsForLocation(
   cards: CustomerMetaAdLibraryCard[],
   guess: AdRadarLocationGuess,
-  sort: "recent" | "longest",
+  sort: AdRadarSort,
   now = Date.now(),
 ): CustomerMetaAdLibraryCard[] {
   return sortScoredCards(
@@ -298,25 +299,67 @@ function formatSearchLocationLabel(city: string | null, stateCode: string | null
   return stateCode || fallback;
 }
 
-function sortScoredCards(cards: ScoredCard[], sort: "recent" | "longest", now: number): ScoredCard[] {
+function sortScoredCards(cards: ScoredCard[], sort: AdRadarSort, now: number): ScoredCard[] {
   return [...cards].sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score;
     return compareCards(a.card, b.card, sort, now);
   });
 }
 
-function sortCards(cards: CustomerMetaAdLibraryCard[], sort: "recent" | "longest", now: number): CustomerMetaAdLibraryCard[] {
+function sortCards(cards: CustomerMetaAdLibraryCard[], sort: AdRadarSort, now: number): CustomerMetaAdLibraryCard[] {
   return [...cards].sort((a, b) => compareCards(a, b, sort, now));
 }
 
-function compareCards(a: CustomerMetaAdLibraryCard, b: CustomerMetaAdLibraryCard, sort: "recent" | "longest", now: number): number {
-  if (sort === "longest") {
-    const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
-    const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
-    if (aMs !== null || bMs !== null) return (bMs ?? -1) - (aMs ?? -1);
+function compareCards(a: CustomerMetaAdLibraryCard, b: CustomerMetaAdLibraryCard, sort: AdRadarSort, now: number): number {
+  switch (sort) {
+    case "longest": {
+      const aMs = adRunningMs(a.startedAt, a.stoppedAt, now);
+      const bMs = adRunningMs(b.startedAt, b.stoppedAt, now);
+      if (aMs !== null || bMs !== null) return (bMs ?? -1) - (aMs ?? -1) || compareRecent(a, b);
+      return compareRecent(a, b);
+    }
+    case "newest_started":
+      return compareDateDesc(a.startedAt, b.startedAt) || compareRecent(a, b);
+    case "oldest_started":
+      return compareDateAsc(a.startedAt, b.startedAt) || compareRecent(a, b);
+    case "recently_stopped":
+      return compareDateDesc(a.stoppedAt, b.stoppedAt) || compareRecent(a, b);
+    case "active_first":
+      return activeStatusRank(a.activeStatus) - activeStatusRank(b.activeStatus) || compareRecent(a, b);
+    case "advertiser_az":
+      return a.pageName.localeCompare(b.pageName, "en-AU", { sensitivity: "base" }) || compareRecent(a, b);
+    case "recent":
+    default:
+      return compareRecent(a, b);
   }
+}
 
-  return dateValue(b.lastSeenAt) - dateValue(a.lastSeenAt);
+function compareRecent(a: CustomerMetaAdLibraryCard, b: CustomerMetaAdLibraryCard): number {
+  return compareDateDesc(a.lastSeenAt, b.lastSeenAt);
+}
+
+function compareDateDesc(a: string | null, b: string | null): number {
+  const aValue = dateValue(a);
+  const bValue = dateValue(b);
+  if (aValue === bValue) return 0;
+  if (!aValue) return 1;
+  if (!bValue) return -1;
+  return bValue - aValue;
+}
+
+function compareDateAsc(a: string | null, b: string | null): number {
+  const aValue = dateValue(a);
+  const bValue = dateValue(b);
+  if (aValue === bValue) return 0;
+  if (!aValue) return 1;
+  if (!bValue) return -1;
+  return aValue - bValue;
+}
+
+function activeStatusRank(status: CustomerMetaAdLibraryCard["activeStatus"]): number {
+  if (status === "active") return 0;
+  if (status === "unknown") return 1;
+  return 2;
 }
 
 function resolveAustralianState(value: string | null): { code: string; name: string; defaultPostcodes: string[] } | null {

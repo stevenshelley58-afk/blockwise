@@ -1,14 +1,15 @@
 "use client";
 
-import { Bookmark, ChevronDown, Clock3, SlidersHorizontal } from "lucide-react";
+import { ArrowUpDown, Bookmark, Check, ChevronDown, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
+import { AD_RADAR_SORT_OPTIONS, type AdRadarSort } from "@/lib/research/ad-radar-sort";
 
-type ResearchSort = "recent" | "longest";
+type ResearchSort = AdRadarSort;
 
 type Filters = {
   status: "" | "active" | "inactive";
@@ -71,6 +72,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
   const [agentOptions, setAgentOptions] = useState<string[]>([]);
   const [cards, setCards] = useState<CustomerMetaAdLibraryCard[]>([]);
@@ -139,6 +141,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   function onChangeSort(nextSort: ResearchSort) {
     if (nextSort === sort) return;
     setSort(nextSort);
+    setSortOpen(false);
     if (searched && query.trim()) doSearch(query, nextSort, includeSurrounding, filters);
   }
 
@@ -153,24 +156,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
   );
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const newestSeenAt = cards
-    .map((c) => c.lastSeenAt)
-    .filter((v): v is string => Boolean(v))
-    .sort()
-    .at(-1);
-
-  const sortButtonStyle = (active: boolean): CSSProperties => ({
-    fontSize: 13,
-    fontWeight: 700,
-    minHeight: 40,
-    padding: "0 12px",
-    border: "none",
-    background: active ? "var(--navy, #131b2e)" : "transparent",
-    color: active ? "#fff" : "var(--ink)",
-    cursor: "pointer",
-    lineHeight: 1.2,
-    whiteSpace: "nowrap",
-  });
+  const activeSort = AD_RADAR_SORT_OPTIONS.find((option) => option.value === sort) ?? AD_RADAR_SORT_OPTIONS[0];
 
   return (
     <>
@@ -181,21 +167,19 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
         .ad-radar-search-card .research-location-field { width: 100%; }
         .ad-radar-search-card .research-location-note { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--muted); }
         .ad-radar-support-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); }
-        .ad-radar-support-row .research-surrounding-toggle,
-        .ad-radar-support-row .research-freshness { min-height: 28px; font-size: 12.5px; }
+        .ad-radar-support-row .research-surrounding-toggle { min-height: 28px; font-size: 12.5px; }
         .ad-radar-support-row .research-surrounding-toggle { min-height: 40px; font-weight: 700; }
-        .ad-radar-support-row .research-freshness { margin-left: auto; }
         .ad-radar-controls-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px; border-top: 1px solid var(--line); padding-top: 12px; }
         .ad-radar-control-cluster,
         .ad-radar-sort-wrap { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
         .ad-radar-control-button,
         .ad-radar-swipe-link,
-        .ad-radar-sort-button {
+        .ad-radar-sort-option {
           transition: transform 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease;
         }
         .ad-radar-control-button:active,
         .ad-radar-swipe-link:active,
-        .ad-radar-sort-button:active { transform: scale(0.96); }
+        .ad-radar-sort-option:active { transform: scale(0.98); }
         .ad-radar-control-button {
           display: inline-flex;
           align-items: center;
@@ -212,32 +196,75 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           cursor: pointer;
           white-space: nowrap;
         }
+        .ad-radar-control-value {
+          max-width: 126px;
+          overflow: hidden;
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 700;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         .ad-radar-swipe-link {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
           min-height: 40px;
-          padding: 0 12px;
+          width: 42px;
           border-radius: 999px;
+          border: 1px solid transparent;
           color: var(--ink);
-          font-size: 13px;
-          font-weight: 700;
           text-decoration: none;
-          white-space: nowrap;
         }
-        .ad-radar-sort-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
-        .ad-radar-sort-group { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+        .ad-radar-swipe-link:hover { border-color: var(--line); background: var(--surface); }
+        .ad-radar-sort-menu {
+          display: grid;
+          gap: 6px;
+          padding-top: 2px;
+        }
+        .ad-radar-sort-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          width: 100%;
+          min-height: 44px;
+          padding: 8px 10px 8px 12px;
+          border: 1px solid var(--line);
+          border-radius: var(--r-card, 10px);
+          background: var(--surface);
+          color: var(--ink);
+          cursor: pointer;
+          text-align: left;
+        }
+        .ad-radar-sort-option[aria-checked="true"] {
+          border-color: var(--navy, #131b2e);
+          background: rgba(19, 27, 46, 0.04);
+        }
+        .ad-radar-sort-copy {
+          display: block;
+          min-width: 0;
+        }
+        .ad-radar-sort-copy strong {
+          display: block;
+          font-size: 13px;
+          line-height: 1.2;
+        }
+        .ad-radar-sort-description {
+          display: block;
+          margin-top: 2px;
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.25;
+        }
         @media (max-width: 520px) {
-          .ad-radar-support-row .research-freshness { margin-left: 0; }
           .ad-radar-controls-row { align-items: stretch; }
           .ad-radar-control-cluster,
-          .ad-radar-sort-wrap { width: 100%; }
-          .ad-radar-control-button,
-          .ad-radar-swipe-link { flex: 1 1 0; }
-          .ad-radar-sort-wrap { justify-content: space-between; }
-          .ad-radar-sort-group { flex: 1; }
-          .ad-radar-sort-button { flex: 1 1 0; padding: 0 8px; font-size: 12.5px; }
+          .ad-radar-sort-wrap { width: 100%; gap: 8px; }
+          .ad-radar-control-cluster { display: grid; grid-template-columns: 1fr 44px; }
+          .ad-radar-control-button { flex: 1 1 auto; }
+          .ad-radar-sort-wrap .ad-radar-control-button { width: 100%; }
+          .ad-radar-control-value { max-width: 112px; }
         }
       `}</style>
       <section className="panel research-search-panel ad-radar-search-card">
@@ -262,11 +289,6 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             />
             <span>Include surrounding suburbs</span>
           </label>
-
-          <div className="research-freshness">
-            <Clock3 size={14} />
-            {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
-          </div>
         </div>
 
         <div className="ad-radar-controls-row">
@@ -274,7 +296,10 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             <button
               type="button"
               aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen((open) => !open)}
+              onClick={() => {
+                setFiltersOpen((open) => !open);
+                setSortOpen(false);
+              }}
               className="ad-radar-control-button"
             >
               <SlidersHorizontal size={16} />
@@ -304,27 +329,51 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
             <Link
               href="/ad-radar/swipe-file"
               className="ad-radar-swipe-link"
+              aria-label="Open swipe file"
+              title="Swipe file"
             >
-              <Bookmark size={13} /> Swipe file
+              <Bookmark size={16} />
             </Link>
           </div>
 
           <div className="ad-radar-sort-wrap">
-            <span className="ad-radar-sort-label">Sort</span>
-            <div
-              className="ad-radar-sort-group"
-              role="group"
-              aria-label="Sort ads"
+            <button
+              type="button"
+              aria-expanded={sortOpen}
+              onClick={() => {
+                setSortOpen((open) => !open);
+                setFiltersOpen(false);
+              }}
+              className="ad-radar-control-button"
             >
-              <button className="ad-radar-sort-button" type="button" aria-pressed={sort === "recent"} onClick={() => onChangeSort("recent")} style={sortButtonStyle(sort === "recent")}>
-                Most recent
-              </button>
-              <button className="ad-radar-sort-button" type="button" aria-pressed={sort === "longest"} onClick={() => onChangeSort("longest")} style={{ ...sortButtonStyle(sort === "longest"), borderLeft: "1px solid var(--line)" }}>
-                Longest running
-              </button>
-            </div>
+              <ArrowUpDown size={16} />
+              Sort
+              <span className="ad-radar-control-value">{activeSort.label}</span>
+              <ChevronDown size={15} style={{ transform: sortOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }} />
+            </button>
           </div>
         </div>
+
+        {sortOpen && (
+          <div className="ad-radar-sort-menu" role="menu" aria-label="Sort ads">
+            {AD_RADAR_SORT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={sort === option.value}
+                onClick={() => onChangeSort(option.value)}
+                className="ad-radar-sort-option"
+              >
+                <span className="ad-radar-sort-copy">
+                  <strong>{option.label}</strong>
+                  <span className="ad-radar-sort-description">{option.description}</span>
+                </span>
+                {sort === option.value ? <Check size={16} aria-hidden="true" /> : null}
+              </button>
+            ))}
+          </div>
+        )}
 
         {filtersOpen && (
           <div style={{ paddingTop: 4 }}>
@@ -447,15 +496,6 @@ function mergeOptions(prev: string[], incoming: Array<string | null>): string[] 
     if (value) next.add(value);
   }
   return Array.from(next).sort((a, b) => a.localeCompare(b));
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-AU", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 }
 
 function unique(values: string[]): string[] {
