@@ -54,22 +54,30 @@ export function MetaMonitorHeader(props: {
           <span className="mm-synced-dot" aria-hidden />
           {props.lastSyncedAt ? `Last synced ${timeAgo(props.lastSyncedAt)}` : "Not synced yet"}
         </span>
-        <div className="mm-range-segment" role="group" aria-label={`Date range, ${formatRangeSpan(props.range)}`}>
-          {RANGE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={option.value === props.rangeKey ? "active" : undefined}
-              onClick={() => props.onRangeChange(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="mm-range-toolbar">
+          <div className="mm-range-segment" role="group" aria-label={`Date range, ${formatRangeSpan(props.range)}`}>
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={option.value === props.rangeKey ? "active" : undefined}
+                onClick={() => props.onRangeChange(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="button secondary mm-refresh-button"
+            type="button"
+            onClick={props.onRefresh}
+            disabled={props.isRefreshing}
+            aria-label={props.isRefreshing ? "Refreshing results" : "Refresh results"}
+          >
+            <RefreshCw size={14} className={props.isRefreshing ? "mm-spin" : undefined} aria-hidden />
+            <span>{props.isRefreshing ? "Refreshing" : "Refresh"}</span>
+          </button>
         </div>
-        <button className="button secondary" type="button" onClick={props.onRefresh} disabled={props.isRefreshing}>
-          <RefreshCw size={14} className={props.isRefreshing ? "mm-spin" : undefined} aria-hidden />
-          {props.isRefreshing ? "Refreshing" : "Refresh"}
-        </button>
       </div>
     </header>
   );
