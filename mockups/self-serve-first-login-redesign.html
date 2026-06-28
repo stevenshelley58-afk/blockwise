@@ -274,6 +274,87 @@
       line-height: 1.45;
     }
 
+    .templates {
+      margin-top: 28px;
+    }
+
+    .template-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .rail {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(136px, 42vw);
+      gap: 12px;
+      margin-inline: -4px;
+      overflow-x: auto;
+      padding: 4px 4px 12px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+
+    .rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    .template {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      display: grid;
+      overflow: hidden;
+      scroll-snap-align: start;
+      text-decoration: none;
+    }
+
+    .template-img {
+      aspect-ratio: 4 / 5;
+      background: var(--wash);
+      display: block;
+      overflow: hidden;
+    }
+
+    .template-img img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .template-meta {
+      min-height: 44px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .template-meta strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .template-meta span {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      padding: 6px 9px;
+      font-size: 11.5px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
     .bottom {
       position: absolute;
       left: 0;
@@ -354,6 +435,31 @@
               <span>Drop in a listing photo, approve the copy, and generate Story, Feed and Square.</span>
             </span>
             <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="templates" aria-label="Templates">
+        <div class="template-head">
+          <p class="eyebrow">Templates</p>
+          <span class="muted">Swipe to choose</span>
+        </div>
+        <div class="rail">
+          <a class="template" href="#">
+            <span class="template-img"><img src="../public/adstudio-samples/meta/meta-feed-008.png" alt="" /></span>
+            <span class="template-meta"><strong>Prestige</strong><span>Use</span></span>
+          </a>
+          <a class="template" href="#">
+            <span class="template-img"><img src="../public/adstudio-samples/meta/meta-feed-002.png" alt="" /></span>
+            <span class="template-meta"><strong>Value</strong><span>Use</span></span>
+          </a>
+          <a class="template" href="#">
+            <span class="template-img"><img src="../public/adstudio-samples/meta/meta-feed-010.png" alt="" /></span>
+            <span class="template-meta"><strong>Open home</strong><span>Use</span></span>
+          </a>
+          <a class="template" href="#">
+            <span class="template-img"><img src="../public/adstudio-samples/meta/meta-fullscreen-002.png" alt="" /></span>
+            <span class="template-meta"><strong>Agent</strong><span>Use</span></span>
           </a>
         </div>
       </section>

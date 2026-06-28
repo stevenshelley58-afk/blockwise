@@ -250,6 +250,98 @@
   margin: 0 0 16px;
 }
 
+.bw-hub .bwh-templates {
+  margin-top: 28px;
+}
+
+.bw-hub .bwh-template-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bw-hub .bwh-template-rail {
+  display: grid;
+  gap: 12px;
+  grid-auto-columns: minmax(150px, 178px);
+  grid-auto-flow: column;
+  margin-inline: -4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 4px 4px 12px;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.bw-hub .bwh-template-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.bw-hub .bwh-template-card {
+  background: var(--h-paper);
+  border: 1px solid var(--h-line);
+  border-radius: var(--h-radius);
+  color: var(--h-ink);
+  display: grid;
+  overflow: hidden;
+  scroll-snap-align: start;
+  text-decoration: none;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+
+.bw-hub .bwh-template-card:hover {
+  border-color: var(--h-line-strong);
+  box-shadow: 0 12px 28px rgba(16, 18, 23, .08);
+  transform: translateY(-1px);
+}
+
+.bw-hub .bwh-template-image {
+  aspect-ratio: 4 / 5;
+  background: var(--h-wash);
+  display: block;
+  overflow: hidden;
+}
+
+.bw-hub .bwh-template-image img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.bw-hub .bwh-template-meta {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.bw-hub .bwh-template-meta strong {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bw-hub .bwh-template-meta span {
+  background: var(--h-ink);
+  border-radius: 999px;
+  color: #fff;
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 9px;
+}
+
 @media (max-width: 720px) {
   .bw-hub .bwh-header {
     display: grid;
@@ -278,5 +370,9 @@
 
   .bw-hub .bwh-task {
     grid-template-columns: 56px minmax(0, 1fr) 18px;
+  }
+
+  .bw-hub .bwh-template-rail {
+    grid-auto-columns: minmax(136px, 42vw);
   }
 }

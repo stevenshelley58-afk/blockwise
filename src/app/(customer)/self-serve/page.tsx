@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { builtInAdStudioTemplates, type AdStudioTemplate } from "@/lib/adstudio";
 
 import "./self-serve.css";
 
@@ -16,6 +17,26 @@ type Step = {
   href: string;
   complete: boolean;
 };
+
+type TemplateWithThumbnail = AdStudioTemplate & { gallery: NonNullable<AdStudioTemplate["gallery"]> };
+
+const FEATURED_TEMPLATE_CARDS = [
+  { id: "meta-feed-008", label: "Prestige" },
+  { id: "meta-feed-002", label: "Value" },
+  { id: "meta-feed-010", label: "Open home" },
+  { id: "meta-feed-014", label: "Sold" },
+  { id: "meta-fullscreen-002", label: "Agent" },
+  { id: "meta-fullscreen-006", label: "Market" },
+  { id: "meta-fullscreen-001", label: "PM" },
+];
+
+function hasTemplateThumbnail(template: AdStudioTemplate | undefined): template is TemplateWithThumbnail {
+  return Boolean(template?.gallery?.thumbnailSrc);
+}
+
+function templateHref(template: AdStudioTemplate) {
+  return `/ad-studio?first=1&template=${encodeURIComponent(template.templateKey ?? template.id)}`;
+}
 
 export default async function SelfServePage() {
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
@@ -67,6 +88,12 @@ export default async function SelfServePage() {
   const nextStep = remainingSteps[0] ?? steps[steps.length - 1];
   const setupComplete = remainingSteps.length === 0;
   const greeting = businessName ? `Welcome back, ${businessName}.` : "Welcome back.";
+  const templatesById = new Map(builtInAdStudioTemplates().map((template) => [template.id, template]));
+  const featuredTemplates = FEATURED_TEMPLATE_CARDS.flatMap((card) => {
+    const template = templatesById.get(card.id);
+    return hasTemplateThumbnail(template) ? [{ ...card, template }] : [];
+  });
+  const showTemplateCarousel = featuredTemplates.length > 0 && (setupComplete || nextStep.id === "create");
 
   return (
     <main className="content bw-hub">
@@ -131,6 +158,29 @@ export default async function SelfServePage() {
           </div>
         )}
       </section>
+
+      {showTemplateCarousel ? (
+        <section className="bwh-templates" aria-labelledby="template-carousel-title">
+          <div className="bwh-template-head">
+            <p className="bwh-eyebrow" id="template-carousel-title">Templates</p>
+            <span className="bwh-muted">Swipe to choose</span>
+          </div>
+          <div className="bwh-template-rail" role="list">
+            {featuredTemplates.map(({ label, template }) => (
+              <Link key={template.id} href={templateHref(template)} className="bwh-template-card" role="listitem" aria-label={`Use ${template.name}`}>
+                <span className="bwh-template-image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={template.gallery.thumbnailSrc} alt="" loading="lazy" />
+                </span>
+                <span className="bwh-template-meta">
+                  <strong>{label}</strong>
+                  <span>Use</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
