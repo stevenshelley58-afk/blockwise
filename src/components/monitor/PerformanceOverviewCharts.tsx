@@ -115,24 +115,28 @@ export function PerformanceOverviewCharts({
         </PerformancePanel>
 
         <PerformancePanel
-          title="Leads + spend"
-          note="Lead volume against media spend"
+          className="mm-leads-card"
+          title="Leads generated"
+          note="Lead volume from Meta activity"
           metrics={[
             {
               label: "Leads",
               value: summary.leads.toLocaleString("en-AU"),
               trend: previous ? calculateTrend(summary.leads, previous.leads) : null,
             },
-            {
-              label: "Spend",
-              value: formatCurrency(summary.spend),
-              trend: previous ? calculateTrend(summary.spend, previous.spend) : null,
-            },
           ]}
           compareText={compareText}
         >
-          <LeadsSpendChart data={chartData} />
+          <LeadsChart data={chartData} />
         </PerformancePanel>
+
+        <SpendDetailsPanel
+          data={chartData}
+          totalSpend={summary.spend}
+          budget={summary.budget}
+          trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
+          compareText={compareText}
+        />
       </div>
     </section>
   );
@@ -319,9 +323,132 @@ function ClicksCtrChart({ data }: { data: ChartPoint[] }) {
   );
 }
 
-function LeadsSpendChart({ data }: { data: ChartPoint[] }) {
+function LeadsChart({ data }: { data: ChartPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={206}>
+      <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -8 }}>
+        <defs>
+          <linearGradient id="mm-performance-leads" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={LEADS_COLOR} stopOpacity={0.24} />
+            <stop offset="100%" stopColor={LEADS_COLOR} stopOpacity={0.04} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke="var(--line-soft)" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={formatDayTick}
+          tick={{ fontSize: 10, fill: "var(--faint)" }}
+          tickLine={false}
+          axisLine={false}
+          interval="preserveStartEnd"
+          minTickGap={36}
+        />
+        <YAxis width={32} tick={{ fontSize: 10, fill: "var(--faint)" }} tickLine={false} axisLine={false} />
+        <Tooltip
+          cursor={{ fill: "rgba(31, 143, 89, 0.06)" }}
+          contentStyle={tooltipStyle}
+          labelFormatter={(label) => formatDayTick(String(label))}
+          formatter={countTooltipFormatter}
+        />
+        <Bar
+          dataKey="leads"
+          name="Leads"
+          fill="url(#mm-performance-leads)"
+          stroke={LEADS_COLOR}
+          strokeOpacity={0.28}
+          radius={[5, 5, 0, 0]}
+          isAnimationActive={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="leads"
+          name="Lead trend"
+          stroke={LEADS_COLOR}
+          strokeWidth={2.2}
+          dot={false}
+          activeDot={{ r: 3.5 }}
+          isAnimationActive={false}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+function SpendDetailsPanel({
+  data,
+  totalSpend,
+  budget,
+  trend,
+  compareText,
+}: {
+  data: ChartPoint[];
+  totalSpend: number;
+  budget: number | null;
+  trend: number | null;
+  compareText?: string;
+}) {
+  const dayCount = Math.max(data.length, 1);
+  const averageDailySpend = totalSpend / dayCount;
+  const peakSpendDay = data.reduce<ChartPoint | null>((best, point) => {
+    if (!best || point.spend > best.spend) {
+      return point;
+    }
+
+    return best;
+  }, null);
+  const budgetUsed = budget && budget > 0 ? totalSpend / budget : null;
+  const topSpendDays = [...data].sort((a, b) => b.spend - a.spend).slice(0, 3);
+
+  return (
+    <details className="panel mm-spend-disclosure">
+      <summary className="mm-spend-summary">
+        <span className="mm-spend-summary-main">
+          <span className="mm-spend-kicker">Spend details</span>
+          <strong>{formatCurrency(totalSpend)}</strong>
+        </span>
+        <span className="mm-spend-summary-meta">
+          <TrendBadge trend={trend} />
+          {compareText ? <span className="mm-spend-compare">{compareText}</span> : null}
+        </span>
+        <span className="mm-spend-chevron" aria-hidden="true" />
+      </summary>
+      <div className="mm-spend-body">
+        <div className="mm-spend-insights" aria-label="Spend summary">
+          <div>
+            <span>Avg/day</span>
+            <b>{formatCurrency(averageDailySpend)}</b>
+          </div>
+          <div>
+            <span>Peak day</span>
+            <b>{peakSpendDay ? formatCurrency(peakSpendDay.spend) : "Unavailable"}</b>
+            {peakSpendDay ? <small>{formatDayTick(peakSpendDay.date)}</small> : null}
+          </div>
+          <div>
+            <span>Budget used</span>
+            <b>{budgetUsed != null ? formatPercent(budgetUsed, 0) : "Not set"}</b>
+          </div>
+        </div>
+        <div className="mm-spend-detail-grid">
+          <div className="mm-performance-chart mm-spend-chart">
+            <SpendChart data={data} />
+          </div>
+          <ol className="mm-spend-list" aria-label="Highest spend days">
+            {topSpendDays.map((point) => (
+              <li key={point.date}>
+                <span>{formatDayTick(point.date)}</span>
+                <b>{formatCurrency(point.spend)}</b>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function SpendChart({ data }: { data: ChartPoint[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={178}>
       <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -8 }}>
         <defs>
           <linearGradient id="mm-performance-spend" x1="0" y1="0" x2="0" y2="1">
@@ -340,15 +467,6 @@ function LeadsSpendChart({ data }: { data: ChartPoint[] }) {
           minTickGap={36}
         />
         <YAxis
-          yAxisId="leads"
-          width={32}
-          tick={{ fontSize: 10, fill: "var(--faint)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          yAxisId="spend"
-          orientation="right"
           width={42}
           tick={{ fontSize: 10, fill: "var(--faint)" }}
           tickLine={false}
@@ -362,24 +480,12 @@ function LeadsSpendChart({ data }: { data: ChartPoint[] }) {
           formatter={leadsTooltipFormatter}
         />
         <Area
-          yAxisId="spend"
           type="monotone"
           dataKey="spend"
           name="Spend"
           stroke={SPEND_COLOR}
           strokeWidth={2}
           fill="url(#mm-performance-spend)"
-          dot={false}
-          activeDot={{ r: 3.5 }}
-          isAnimationActive={false}
-        />
-        <Line
-          yAxisId="leads"
-          type="monotone"
-          dataKey="leads"
-          name="Leads"
-          stroke={LEADS_COLOR}
-          strokeWidth={2.4}
           dot={false}
           activeDot={{ r: 3.5 }}
           isAnimationActive={false}
@@ -398,6 +504,10 @@ function clicksTooltipFormatter(value: unknown, name: unknown) {
     return [typeof value === "number" ? formatPercent(value, 2) : "-", "CTR"];
   }
 
+  return [typeof value === "number" ? value.toLocaleString("en-AU") : "-", String(name)];
+}
+
+function countTooltipFormatter(value: unknown, name: unknown) {
   return [typeof value === "number" ? value.toLocaleString("en-AU") : "-", String(name)];
 }
 

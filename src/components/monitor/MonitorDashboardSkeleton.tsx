@@ -16,18 +16,33 @@ export function MonitorDashboardSkeleton() {
           </div>
         </div>
         <div className="mm-performance-grid">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className={`panel mm-performance-card ${i === 0 ? "mm-performance-card-primary" : ""}`.trim()}
+              className={[
+                "panel",
+                i === 3 ? "mm-spend-disclosure" : "mm-performance-card",
+                i === 0 ? "mm-performance-card-primary" : "",
+                i === 2 ? "mm-leads-card" : "",
+              ].filter(Boolean).join(" ")}
             >
-              <div className="mm-skeleton" style={{ height: 16, width: "42%", marginBottom: 8 }} />
-              <div className="mm-skeleton" style={{ height: 12, width: "56%", marginBottom: 16 }} />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 18 }}>
-                <div className="mm-skeleton" style={{ height: 48, width: "100%" }} />
-                <div className="mm-skeleton" style={{ height: 48, width: "100%" }} />
-              </div>
-              <div className="mm-skeleton" style={{ height: i === 0 ? 232 : 206, width: "100%" }} />
+              {i === 3 ? (
+                <div className="mm-spend-summary">
+                  <div className="mm-skeleton" style={{ height: 28, width: "44%" }} />
+                  <div className="mm-skeleton" style={{ height: 22, width: 88 }} />
+                  <div className="mm-skeleton" style={{ height: 24, width: 24, borderRadius: 999 }} />
+                </div>
+              ) : (
+                <>
+                  <div className="mm-skeleton" style={{ height: 16, width: "42%", marginBottom: 8 }} />
+                  <div className="mm-skeleton" style={{ height: 12, width: "56%", marginBottom: 16 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: i === 2 ? "1fr" : "repeat(2, 1fr)", gap: 12, marginBottom: 18 }}>
+                    <div className="mm-skeleton" style={{ height: 48, width: "100%" }} />
+                    {i === 2 ? null : <div className="mm-skeleton" style={{ height: 48, width: "100%" }} />}
+                  </div>
+                  <div className="mm-skeleton" style={{ height: i === 0 ? 232 : 206, width: "100%" }} />
+                </>
+              )}
             </div>
           ))}
         </div>
