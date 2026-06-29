@@ -26,10 +26,6 @@ export type MetaMonitorSummary = {
 
 export type MetaDailyPoint = {
   date: string;
-  reach: number;
-  impressions: number;
-  clicks: number;
-  ctr: number | null;
   spend: number;
   leads: number;
   validLeads: number;
