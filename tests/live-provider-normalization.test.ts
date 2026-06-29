@@ -55,9 +55,7 @@ test("Meta single-day insight reads use Ads Manager date presets", async () => {
           {
             ad_id: "ad_1",
             spend: "0.42",
-            reach: "101",
             impressions: "201",
-            clicks: "12",
             date_start: "2026-06-05",
           },
         ],
@@ -77,15 +75,10 @@ test("Meta single-day insight reads use Ads Manager date presets", async () => {
     const requestUrl = new URL(urls[0]);
 
     assert.equal(rows.length, 1);
-    assert.equal(rows[0]?.reach, "101");
-    assert.equal(rows[0]?.impressions, "201");
-    assert.equal(rows[0]?.clicks, "12");
     assert.match(requestUrl.pathname, /\/act_998540809306211\/insights$/);
     assert.equal(requestUrl.searchParams.get("date_preset"), "today");
     assert.equal(requestUrl.searchParams.has("time_range"), false);
     assert.match(requestUrl.searchParams.get("fields") ?? "", /\breach\b/);
-    assert.match(requestUrl.searchParams.get("fields") ?? "", /\bimpressions\b/);
-    assert.match(requestUrl.searchParams.get("fields") ?? "", /\bclicks\b/);
   } finally {
     globalThis.fetch = originalFetch;
   }

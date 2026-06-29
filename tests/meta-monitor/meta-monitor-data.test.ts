@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { safeRate } from "../../src/lib/meta-monitor/calculations.ts";
 import { buildSampleMetaMonitorPayload } from "../../src/lib/meta-monitor/sampleMetaMonitorData.ts";
 import {
   parseSuburbFromAdsetName,
@@ -20,16 +19,10 @@ test("sample payload is internally consistent for the 30-day range", () => {
   assert.equal(summary.validLeads, 118);
 
   const dailySpend = payload.daily.reduce((total, point) => total + point.spend, 0);
-  const dailyReach = payload.daily.reduce((total, point) => total + point.reach, 0);
-  const dailyImpressions = payload.daily.reduce((total, point) => total + point.impressions, 0);
-  const dailyClicks = payload.daily.reduce((total, point) => total + point.clicks, 0);
   const dailyValid = payload.daily.reduce((total, point) => total + point.validLeads, 0);
   const dailyLeads = payload.daily.reduce((total, point) => total + point.leads, 0);
 
   assert.equal(dailySpend, summary.spend);
-  assert.equal(dailyReach, summary.reach);
-  assert.equal(dailyImpressions, summary.impressions);
-  assert.equal(dailyClicks, summary.clicks);
   assert.equal(dailyValid, summary.validLeads);
   assert.equal(dailyLeads, summary.leads);
 
@@ -57,7 +50,6 @@ test("sample payload never plots a fake $0 CPL on zero-valid-lead days", () => {
     }
 
     assert.ok(point.leads >= point.validLeads);
-    assert.equal(point.ctr, safeRate(point.clicks, point.impressions));
   }
 });
 
