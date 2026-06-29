@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { briefGuidanceForTemplate } from "../src/components/adstudio/new-ad-dialog-brief.ts";
+import { imageRequirementsForTemplate } from "../src/components/adstudio/new-ad-dialog-slots.ts";
+import type { AdStudioTemplate } from "../src/lib/adstudio/index.ts";
 
 test("new ad dialog shows combined missing-requirements guidance before generating", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
@@ -29,6 +31,74 @@ test("new ad dialog shows combined missing-requirements guidance before generati
   assert.match(submitBody, /setShowRequirementsAlert\(true\)/);
   assert.doesNotMatch(submitBody, /setError\("Add a short description\."\)/);
   assert.doesNotMatch(submitBody, /setError\("Upload one image to generate the ad\."\)/);
+});
+
+test("new ad dialog derives upload slots from the selected template canvas", () => {
+  const template = {
+    canvas: {
+      objects: [
+        {
+          objectId: "hero",
+          type: "image",
+          role: "property_photo",
+          x: 0,
+          y: 0,
+          width: 900,
+          height: 600,
+          locked: false,
+        },
+        {
+          objectId: "supporting",
+          type: "image",
+          role: "secondary_property_photo",
+          x: 0,
+          y: 610,
+          width: 420,
+          height: 300,
+          locked: false,
+        },
+        {
+          objectId: "headshot",
+          type: "image",
+          role: "agent_headshot",
+          x: 760,
+          y: 40,
+          width: 120,
+          height: 120,
+          clip: "circle",
+          locked: false,
+        },
+      ],
+    },
+  } as AdStudioTemplate;
+
+  const slots = imageRequirementsForTemplate(template, false);
+
+  assert.deepEqual(
+    slots.map((slot) => ({ id: slot.id, label: slot.label, required: slot.required, role: slot.role })),
+    [
+      { id: "property_photo", label: "Property image", required: true, role: "primary" },
+      { id: "secondary_property_photo", label: "Property image 2", required: true, role: "secondary" },
+      { id: "agent_headshot", label: "Agent headshot", required: false, role: "agent_headshot" },
+    ],
+  );
+  assert.equal(slots[2]?.guidance, "Circular slot");
+});
+
+test("new ad dialog uses object IDs for duplicate image roles", () => {
+  const template = {
+    canvas: {
+      objects: [
+        { objectId: "photo-a", type: "image", role: "property_photo", x: 0, y: 0, width: 500, height: 500, locked: false },
+        { objectId: "photo-b", type: "image", role: "property_photo", x: 500, y: 0, width: 500, height: 500, locked: false },
+      ],
+    },
+  } as AdStudioTemplate;
+
+  assert.deepEqual(
+    imageRequirementsForTemplate(template, false).map((slot) => slot.id),
+    ["photo-a", "photo-b"],
+  );
 });
 
 test("selected templates ask for goal-specific campaign details", () => {
