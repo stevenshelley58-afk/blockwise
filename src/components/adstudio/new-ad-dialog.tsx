@@ -10,6 +10,11 @@ import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-fi
 
 import { uploadAdStudioMedia } from "./media-upload";
 import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
+import {
+  DEFAULT_IMAGE_SLOT,
+  imageRequirementsForTemplate,
+  type TemplateImageRequirement,
+} from "./new-ad-dialog-slots";
 
 type StartStep = "source" | "template" | "reuse" | "radar";
 type Step = "source" | "brief";
@@ -29,13 +34,6 @@ type GeneratedImageOption = {
   provider?: string;
   index?: number;
 };
-type TemplateImageRequirement = {
-  id: string;
-  label: string;
-  guidance?: string;
-  role: "primary" | "secondary" | "agent_headshot";
-  required: boolean;
-};
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
   id: string;
@@ -44,12 +42,6 @@ type RequirementBlocker = {
 };
 
 const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5", "1:1"];
-const DEFAULT_IMAGE_SLOT: TemplateImageRequirement = {
-  id: "primary_photo",
-  label: "Property image",
-  role: "primary",
-  required: true,
-};
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -340,7 +332,7 @@ export function NewAdDialog({
     () => imageRequirementsForTemplate(selectedTemplate, isBlank),
     [isBlank, selectedTemplate],
   );
-  const primaryImageSlot = imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
+  const primaryImageSlot = imageRequirements.find((slot) => slot.required) ?? imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
   const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
   const imageDataUrl = imageDataUrlsBySlot[primaryImageSlot.id] ?? "";
   const missingImageLabels = useMemo(
@@ -1116,13 +1108,6 @@ export function NewAdDialog({
       </div>
     </div>
   );
-}
-
-function imageRequirementsForTemplate(
-  template: AdStudioTemplate | undefined,
-  isBlank: boolean,
-): TemplateImageRequirement[] {
-  return [DEFAULT_IMAGE_SLOT];
 }
 
 function uploadActionText(slot: TemplateImageRequirement, slotCount: number): string {
