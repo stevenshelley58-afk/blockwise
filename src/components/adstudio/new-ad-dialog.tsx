@@ -34,6 +34,11 @@ type GeneratedImageOption = {
   provider?: string;
   index?: number;
 };
+type TemplateCloneResult = {
+  image: string;
+  model?: string;
+  provider?: string;
+};
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
   id: string;
@@ -735,6 +740,13 @@ export function NewAdDialog({
     setShowRequirementsAlert(false);
     try {
       const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
+      const templateClone = !isBlank && selectedTemplate
+        ? await generateTemplateClone({
+            template: selectedTemplate,
+            images: cloneImagesForTemplate(selectedTemplate, imageDataUrls),
+            brandHex: brandKit.colours.accent || brandKit.colours.primary,
+          })
+        : null;
       await onGenerate({
         mode: isBlank ? "custom" : "template",
         source,
@@ -747,8 +759,11 @@ export function NewAdDialog({
         referenceAdType: radarInspiration?.adType,
         referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
-        imageDataUrl,
+        imageDataUrl: templateClone?.image ?? imageDataUrl,
         imageDataUrls,
+        templateCloneImage: templateClone?.image,
+        templateCloneProvider: templateClone?.provider,
+        templateCloneModel: templateClone?.model,
         formats: FIRST_AD_FORMATS,
       });
       onClose();
@@ -777,7 +792,9 @@ export function NewAdDialog({
       ? `Select an image for ${activeImageSlot.label}.`
       : mediaSourceMode === "generate"
         ? `Generate an image for ${activeImageSlot.label}.`
-        : "Blockwise will generate Story, Feed, and Square.";
+        : isBlank
+          ? "Blockwise will generate Story, Feed, and Square."
+          : "Blockwise will clone the selected Meta template with your image.";
   const showFooter = step === "brief";
 
   return (
@@ -1099,7 +1116,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting ? "Generating" : "Generate ad"}
+                {uploadingImage ? "Uploading" : submitting && !isBlank ? "Cloning template" : submitting ? "Generating" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}
@@ -1198,6 +1215,43 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
   }
 
   return "Uses one ad pack. No Meta account is needed until publish.";
+}
+
+function cloneImagesForTemplate(
+  template: AdStudioTemplate,
+  imageDataUrls: Partial<Record<string, string>>,
+): Record<string, string> {
+  const images: Record<string, string> = {};
+  const imageObjects = template.canvas?.objects?.filter((object) => object.type === "image") ?? [];
+
+  for (const object of imageObjects) {
+    const image = imageDataUrls[object.role] ?? imageDataUrls[object.objectId];
+    if (!image) continue;
+    images[object.role] = image;
+    images[object.objectId] = image;
+  }
+
+  return images;
+}
+
+async function generateTemplateClone(input: {
+  template: AdStudioTemplate;
+  images: Record<string, string>;
+  brandHex?: string;
+}): Promise<TemplateCloneResult> {
+  const response = await fetch("/api/adstudio/generate-clone", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      templateId: input.template.id,
+      images: input.images,
+      brandHex: input.brandHex,
+    }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as TemplateCloneResult & { error?: string };
+  if (!response.ok) throw new Error(payload.error || "Could not clone that template.");
+  if (!payload.image) throw new Error("Template clone did not return an image.");
+  return payload;
 }
 
 function buildRequirementBlockers(input: {

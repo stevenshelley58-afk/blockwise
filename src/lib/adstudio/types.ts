@@ -36,6 +36,9 @@ export type FirstAdInput = {
   description: string;
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
+  templateCloneImage?: string;
+  templateCloneProvider?: string;
+  templateCloneModel?: string;
   formats: ["9:16", "4:5", "1:1"];
 };
 

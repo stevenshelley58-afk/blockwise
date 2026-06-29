@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   const suppliedImages = body.images ?? {};
   const resolvedImages: Record<string, string> = {};
   for (const slot of brief.imageSlots) {
-    const ref = suppliedImages[slot.role];
+    const ref = suppliedImages[slot.role] ?? (slot.objectId ? suppliedImages[slot.objectId] : undefined);
     if (ref && ref.trim()) {
       const resolved = await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, ref.trim());
       if (!resolved) {

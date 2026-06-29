@@ -85,6 +85,39 @@ test("new ad dialog derives upload slots from the selected template canvas", () 
   assert.equal(slots[2]?.guidance, "Circular slot");
 });
 
+test("selected template generation calls clone endpoint before creating the campaign", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const submitStart = dialog.indexOf("async function submit()");
+  const submitEnd = dialog.indexOf("const stepTitle =", submitStart);
+  const submitBody = dialog.slice(submitStart, submitEnd);
+
+  assert.match(dialog, /function cloneImagesForTemplate/);
+  assert.match(dialog, /async function generateTemplateClone/);
+  assert.match(dialog, /\/api\/adstudio\/generate-clone/);
+  assert.match(submitBody, /generateTemplateClone\(\{/);
+  assert.match(submitBody, /templateCloneImage: templateClone\?\.image/);
+  assert.match(submitBody, /imageDataUrl: templateClone\?\.image \?\? imageDataUrl/);
+  assert.match(submitBody, /templateCloneProvider: templateClone\?\.provider/);
+  assert.match(submitBody, /templateCloneModel: templateClone\?\.model/);
+});
+
+test("campaign creation accepts persisted template clone media", () => {
+  const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+
+  assert.match(route, /firstAd\.templateCloneImage/);
+  assert.match(route, /Generated template clone is invalid/);
+});
+
+test("generate clone route resolves images by slot role or object id", () => {
+  const route = readFileSync("src/app/api/adstudio/generate-clone/route.ts", "utf8");
+  const brief = readFileSync("src/lib/adstudio/template-brief.ts", "utf8");
+  const cloneTypes = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
+
+  assert.match(cloneTypes, /objectId\?: string/);
+  assert.match(brief, /objectId: o\.objectId/);
+  assert.match(route, /suppliedImages\[slot\.role\] \?\? \(slot\.objectId \? suppliedImages\[slot\.objectId\] : undefined\)/);
+});
+
 test("new ad dialog uses object IDs for duplicate image roles", () => {
   const template = {
     canvas: {

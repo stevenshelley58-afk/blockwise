@@ -9,6 +9,7 @@ import {
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
+import { createFalImageProvider } from "../src/lib/adstudio/fal-image-provider.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -217,6 +218,52 @@ test("createOpenAiImageProvider attaches a mask when one is supplied", async () 
 
   const body = calls[0].init.body as FormData;
   assert.ok(body.get("mask"), "mask must be attached when provided");
+});
+
+test("createFalImageProvider forwards mask images to fal edits", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const provider = createFalImageProvider({
+    env: { FAL_KEY: "fal_test" },
+    pollMs: 0,
+    timeoutMs: 1_000,
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      if (String(url).includes("/openai/gpt-image-2/edit")) {
+        return new Response(
+          JSON.stringify({
+            request_id: "req_1",
+            status_url: "https://fal.test/status",
+            response_url: "https://fal.test/response",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (String(url) === "https://fal.test/status") {
+        return new Response(JSON.stringify({ status: "COMPLETED" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ images: [{ url: "https://fal.test/image.png" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  assert.equal(provider.capabilities.inpainting, true);
+
+  await provider.generate({
+    prompt: "Clone the template with clean copy zones.",
+    referenceAssets: ["https://example.test/reference.png"],
+    maskImage: "data:image/png;base64,bWFzaw==",
+    aspectRatio: "4:5",
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+  });
+
+  const body = JSON.parse(String(calls[0].init.body));
+  assert.equal(body.mask_url, "data:image/png;base64,bWFzaw==");
 });
 
 test("createOpenAiImageProvider honours quality tier and the Cloudflare gateway for edits", async () => {
