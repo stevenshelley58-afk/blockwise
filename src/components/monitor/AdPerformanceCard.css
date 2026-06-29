@@ -1,0 +1,29 @@
+/* Lead results - Option 3 grid tiles. Co-located with AdPerformanceCard. */
+.mm-dashboard-body .mm-ad-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .mm-dashboard-body .mm-ad-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .mm-dashboard-body .mm-ad-grid { grid-template-columns: 1fr; } }
+
+.panel.mm-tile { overflow: hidden; padding: 0; display: flex; flex-direction: column; }
+.mm-tile.mm-flash { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(18, 62, 117, 0.15); }
+.mm-tile .mm-tile-media { position: relative; }
+.mm-tile .mm-creative-banner { display: block; width: 100%; height: 118px; border-radius: 0; }
+.mm-tile .mm-creative-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mm-tile .mm-tile-media .mm-pill { position: absolute; top: 9px; left: 9px; }
+.mm-tile .mm-tile-media .mm-pill.onimg { background: rgba(255, 255, 255, 0.92); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+.mm-tile .mm-tile-body { display: flex; flex-direction: column; padding: 12px 13px 13px; }
+.mm-tile .mm-tile-head { min-width: 0; }
+.mm-tile .mm-tile-name { margin: 0; font-size: 13.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-tile .mm-tile-context { display: block; color: var(--muted); font-size: 11.5px; font-weight: 600; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-tile .mm-tile-cost { display: flex; align-items: baseline; gap: 7px; margin: 9px 0 0; }
+.mm-tile .mm-tile-cost strong { font-size: 26px; line-height: 1; font-weight: 850; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.mm-tile .mm-tile-cost span { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.mm-tile .mm-tile-stats { display: flex; margin: 11px 0 0; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.mm-tile .mm-tile-stat { display: flex; flex-direction: column; gap: 2px; padding: 0 13px; border-left: 1px solid var(--line-soft); min-width: 0; }
+.mm-tile .mm-tile-stat:first-child { padding-left: 0; border-left: 0; }
+.mm-tile .mm-tile-stat dt { margin: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.mm-tile .mm-tile-stat dd { margin: 0; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mm-tile .mm-tile-actions { display: flex; gap: 7px; margin-top: 12px; }
+.mm-tile .mm-tile-actions > * { flex: 1 1 0; min-width: 0; }
+.mm-tile .mm-tile-actions .button { width: 100%; justify-content: center; min-height: 33px; font-size: 12px; gap: 5px; }
+.mm-tile .mm-tile-actions .mm-mgmt-row { display: flex; }
+.mm-tile .mm-tile-actions .mm-mgmt-btn { flex: 1; }

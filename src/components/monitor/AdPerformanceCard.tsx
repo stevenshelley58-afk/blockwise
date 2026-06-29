@@ -1,11 +1,10 @@
-import Link from "next/link";
-
 import { ExternalLink, ImageOff, Play } from "lucide-react";
 
-import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
+import { formatCurrency, safeCpl } from "@/lib/meta-monitor/calculations";
 import type { MetaAdPerformance } from "@/lib/meta-monitor/types";
 
 import { AdManagementControls } from "./AdManagementControls";
+import "./AdPerformanceCard.css";
 
 export function adCardDomId(adId: string): string {
   return `meta-ad-${adId}`;
@@ -13,81 +12,71 @@ export function adCardDomId(adId: string): string {
 
 export function AdPerformanceCard({ ad }: { ad: MetaAdPerformance }) {
   const metrics = ad.metrics;
-  const guidance = leadGuidance(ad);
+  const costPerLead = safeCpl(metrics.spend, metrics.leads);
   const leadSource = leadSourceLabel(ad);
   const leadContext = leadContextLabel(ad);
 
   return (
-    <article className="panel mm-ad-card" id={adCardDomId(ad.adId)}>
-      <div className="mm-ad-row-main">
-        <CreativePreview ad={ad} size={58} />
-        <div className="mm-ad-head-text">
-          <h4>
-            <span className="mm-ad-title-text">{leadSource}</span>
-            <StatusPill status={ad.status} />
-            {ad.fatigued ? <span className="mm-pill amber">Fatiguing</span> : null}
-          </h4>
-          <span className="mm-ad-campaign">{leadContext}</span>
-        </div>
-        <div className="mm-ad-row-kpi">
-          <span>Cost/lead</span>
-          <strong>{metrics.validCpl != null ? formatCurrency(metrics.validCpl) : "Unavailable"}</strong>
-        </div>
+    <article className="panel mm-tile" id={adCardDomId(ad.adId)}>
+      <div className="mm-tile-media">
+        <CreativePreview ad={ad} variant="banner" />
+        <StatusPill status={ad.status} onImage />
       </div>
 
-      {ad.fatigued ? (
-        <p className="mm-ad-meta" role="status">
-          This lead source may be tiring.{" "}
-          <Link href={`/ad-studio?from=fatigue&adId=${encodeURIComponent(ad.adId)}`}>
-            Refresh it
-          </Link>
-          .
+      <div className="mm-tile-body">
+        <div className="mm-tile-head">
+          <h4 className="mm-tile-name" title={leadSource}>{leadSource}</h4>
+          <span className="mm-tile-context" title={leadContext}>{leadContext}</span>
+        </div>
+
+        <p className="mm-tile-cost">
+          <strong>{costPerLead != null ? formatCurrency(costPerLead) : "-"}</strong>
+          <span>/ lead</span>
         </p>
-      ) : null}
 
-      <dl className="mm-ad-inline-stats">
-        <Metric label="Spend" value={formatCurrency(metrics.spend)} />
-        <Metric label="Leads" value={String(metrics.leads)} />
-        <Metric label="Good" value={String(metrics.validLeads)} />
-        <Metric label="Action" value={guidance.action} />
-      </dl>
+        <dl className="mm-tile-stats">
+          <div className="mm-tile-stat">
+            <dt>Leads</dt>
+            <dd>{metrics.leads}</dd>
+          </div>
+          <div className="mm-tile-stat">
+            <dt>Spend</dt>
+            <dd>{formatCurrency(metrics.spend)}</dd>
+          </div>
+        </dl>
 
-      <div className={`mm-ad-guidance ${guidance.tone}`}>
-        <div>
-          <strong>{guidance.title}</strong>
-          <span>{guidance.body}</span>
+        <div className="mm-tile-actions">
+          <ActionLink href={ad.landingPageUrl} label="Open page" />
+          <AdManagementControls target={{ kind: "ad", adId: ad.adId }} status={ad.status} />
         </div>
-        <Link className="button secondary" href="/leads">Open leads</Link>
-      </div>
-
-      <dl className="mm-ad-reason-grid" aria-label="Lead source evidence">
-        <Metric label="Qualified leads" value={String(metrics.validLeads)} />
-        <Metric label="Lead quality" value={metrics.validRate != null ? formatPercent(metrics.validRate) : "Unavailable"} />
-        <Metric label="Total enquiries" value={String(metrics.leads)} />
-        <Metric label="Spend" value={formatCurrency(metrics.spend)} />
-      </dl>
-
-      <div className="mm-ad-actions">
-        <AdManagementControls target={{ kind: "ad", adId: ad.adId }} status={ad.status} showExport />
-        <ActionLink href={ad.landingPageUrl} label="Open page" />
-        <ActionLink href={ad.metaPermalinkUrl} label="Meta details" />
       </div>
     </article>
   );
 }
 
-export function CreativePreview({ ad, size }: { ad: MetaAdPerformance; size: number }) {
+export function CreativePreview({
+  ad,
+  size = 58,
+  variant = "square",
+}: {
+  ad: MetaAdPerformance;
+  size?: number;
+  variant?: "square" | "banner";
+}) {
   const src = ad.creative.thumbnailUrl ?? ad.creative.imageUrl ?? ad.creative.videoThumbnailUrl;
+  const isBanner = variant === "banner";
+  const style = isBanner ? undefined : { width: size, height: size };
+  const baseClass = isBanner ? "mm-creative mm-creative-banner" : "mm-creative";
 
   if (src) {
     return (
-      <span className="mm-creative" style={{ width: size, height: size }}>
+      <span className={baseClass} style={style}>
         {/* Meta CDN thumbnails are short-lived signed URLs; next/image optimization would break them. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={`${ad.adName} creative`} width={size} height={size} loading="lazy" />
+        <img src={src} alt={`${ad.adName} creative`} loading="lazy" />
         {ad.creative.type === "VIDEO" ? (
           <span className="mm-creative-play">
-            <Play size={12} aria-hidden />
+            <Play size={isBanner ? 16 : 12} aria-hidden />
           </span>
         ) : null}
       </span>
@@ -95,27 +84,24 @@ export function CreativePreview({ ad, size }: { ad: MetaAdPerformance; size: num
   }
 
   return (
-    <span className="mm-creative mm-creative-placeholder" style={{ width: size, height: size }}>
-      <ImageOff size={Math.max(14, size / 5)} aria-hidden />
+    <span className={`${baseClass} mm-creative-placeholder`} style={style}>
+      <ImageOff size={isBanner ? 22 : Math.max(14, size / 5)} aria-hidden />
       <small>No preview</small>
     </span>
   );
 }
 
-export function StatusPill({ status }: { status: MetaAdPerformance["status"] }) {
+export function StatusPill({
+  status,
+  onImage = false,
+}: {
+  status: MetaAdPerformance["status"];
+  onImage?: boolean;
+}) {
   const tone = status === "ACTIVE" ? "green" : status === "PAUSED" ? "amber" : "neutral";
   const label = status.charAt(0) + status.slice(1).toLowerCase();
 
-  return <span className={`mm-pill ${tone}`}>{label}</span>;
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mm-ad-metric">
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
+  return <span className={`mm-pill ${tone}${onImage ? " onimg" : ""}`}>{label}</span>;
 }
 
 function leadSourceLabel(ad: MetaAdPerformance): string {
@@ -126,47 +112,6 @@ function leadSourceLabel(ad: MetaAdPerformance): string {
 function leadContextLabel(ad: MetaAdPerformance): string {
   if (ad.suburb && ad.campaignName) return ad.campaignName;
   return ad.adsetName || ad.adName;
-}
-
-function leadGuidance(ad: MetaAdPerformance): { action: string; title: string; body: string; tone: "good" | "warn" } {
-  const { spend, leads, validLeads, validCpl, validRate } = ad.metrics;
-
-  if (ad.fatigued) {
-    return {
-      action: "Review",
-      title: "Refresh soon",
-      body: "Qualified leads are worth watching, but this source is showing fatigue.",
-      tone: "warn",
-    };
-  }
-
-  if (spend > 0 && validLeads === 0) {
-    return {
-      action: "Review",
-      title: "No qualified leads yet",
-      body: "Money has been spent but no qualified leads have come through.",
-      tone: "warn",
-    };
-  }
-
-  if (validRate != null && validRate < 0.45 && leads >= 5) {
-    return {
-      action: "Review",
-      title: "Lead quality is weak",
-      body: `${formatPercent(validRate)} of enquiries are qualified. Review this source before adding budget.`,
-      tone: "warn",
-    };
-  }
-
-  return {
-    action: "Keep",
-    title: "Keep running",
-    body:
-      validCpl != null
-        ? `${validLeads} qualified lead${validLeads === 1 ? "" : "s"} at ${formatCurrency(validCpl)} each.`
-        : `${validLeads} qualified lead${validLeads === 1 ? "" : "s"} so far.`,
-    tone: "good",
-  };
 }
 
 function ActionLink({ href, label }: { href: string | null; label: string }) {
