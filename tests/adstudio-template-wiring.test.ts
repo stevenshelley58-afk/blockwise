@@ -74,3 +74,56 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
   assert.equal(saved.canvas.objects.find((o) => o.role === "headline")?.content, "EDITED HEADLINE");
   assert.match(saved.previewSvg, /EDITED HEADLINE/);
 });
+
+test("template clone output becomes the generated creative image instead of redrawn template layers", () => {
+  const template = AD_STUDIO_TEMPLATES[0];
+  assert.ok(template, "a proof template must be installed");
+  const cloneImage = "/api/adstudio/media?path=workspace_wiring%2Fadstudio%2Fclones%2Fclone.png";
+
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_wiring",
+    brandKit: brandKit(),
+    goal: template.goal,
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: template.offerId,
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      mode: "template",
+      source: "template_library",
+      templateKey: template.templateKey,
+      description: "Two fresh listings.",
+      imageDataUrl: cloneImage,
+      imageDataUrls: { primary_image: A, secondary_image: B },
+      templateCloneImage: cloneImage,
+      templateCloneProvider: "fal",
+      templateCloneModel: "openai/gpt-image-2/edit",
+      formats: ["9:16", "4:5", "1:1"],
+    },
+  });
+
+  const creative = pack.creatives[0];
+  assert.ok(creative);
+  assert.equal(creative.source, "generative");
+  assert.equal(creative.canvas.objects.length, 1);
+  assert.deepEqual(
+    creative.canvas.objects[0],
+    {
+      objectId: "template_clone_image",
+      type: "image",
+      role: "primary_image",
+      content: cloneImage,
+      assetId: cloneImage,
+      x: 0,
+      y: 0,
+      width: template.canvas.width,
+      height: template.canvas.height,
+      imageAnchor: "center",
+      locked: false,
+    },
+  );
+  assert.match(creative.previewSvg, /template_clone_image|workspace_wiring%2Fadstudio%2Fclones%2Fclone\.png/);
+  assert.equal(creative.canvas.objects.some((object) => object.type === "text"), false);
+});

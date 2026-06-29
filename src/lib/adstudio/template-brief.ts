@@ -9,6 +9,7 @@ import { RAW_ADSTUDIO_GALLERY_TEMPLATES } from "./template-gallery/index.ts";
 import type { CloneCopyField, CloneImageSlot, TemplateCloneBrief } from "./reference-clone.ts";
 
 type TemplateObject = {
+  objectId?: string;
   type?: string;
   role?: string;
   content?: string;
@@ -57,6 +58,7 @@ export function deriveTemplateBrief(template: GalleryTemplateLike): TemplateClon
     const ratio = (o.width ?? 1) / (o.height ?? 1);
     return {
       role,
+      objectId: o.objectId,
       required: !optional,
       aspect: ratio > 1.15 ? "landscape" : ratio < 0.87 ? "portrait" : "square",
       description: `the customer's ${labelize(role).toLowerCase()} (placed where it sits in the reference)`,

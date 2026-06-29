@@ -53,6 +53,9 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (!firstAd.description?.trim()) return "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.";
   if (firstAd.description.length > 500) return "Keep the short description to 500 characters or less.";
   if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.";
+  if (firstAd.templateCloneImage && !isAdStudioImageSrc(firstAd.templateCloneImage)) {
+    return "Generated template clone is invalid. Generate the ad again.";
+  }
   for (const slotImage of Object.values(firstAd.imageDataUrls ?? {})) {
     if (slotImage && !isAdStudioImageSrc(slotImage)) return "One of the selected template images is invalid. Replace it and try again.";
   }

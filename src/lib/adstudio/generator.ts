@@ -174,6 +174,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       template,
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
+      templateCloneImage: input.firstAd?.templateCloneImage,
       subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -967,10 +968,21 @@ function buildCreative(input: {
   template: AdStudioTemplate | null;
   sourceImageDataUrl?: string;
   sourceImagesBySlot?: Partial<Record<string, string>>;
+  templateCloneImage?: string;
   subheadline?: string;
 }): AdStudioCreative {
   const galleryTemplate = galleryTemplateOrNull(input.template);
   if (galleryTemplate) {
+    if (input.templateCloneImage) {
+      return buildTemplateCloneCreative({
+        creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}:clone`),
+        campaignId: input.campaign.campaignId,
+        variantId: input.variant.variantId,
+        template: galleryTemplate,
+        cloneImage: input.templateCloneImage,
+      });
+    }
+
     return buildTemplateCreative({
       creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}`),
       campaignId: input.campaign.campaignId,
@@ -999,6 +1011,52 @@ function buildCreative(input: {
     cta: input.variant.cta,
     imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl,
   });
+}
+
+function buildTemplateCloneCreative(input: {
+  creativeId: string;
+  campaignId: string;
+  variantId: string;
+  template: AdStudioGalleryTemplate;
+  cloneImage: string;
+}): AdStudioCreative {
+  const creative: Omit<AdStudioCreative, "previewSvg"> = {
+    creativeId: input.creativeId,
+    campaignId: input.campaignId,
+    variantId: input.variantId,
+    format: input.template.format,
+    source: "generative",
+    canvas: {
+      width: input.template.canvas.width,
+      height: input.template.canvas.height,
+      backgroundAssetId: null,
+      objects: [
+        {
+          objectId: "template_clone_image",
+          type: "image",
+          role: "primary_image",
+          content: input.cloneImage,
+          assetId: input.cloneImage,
+          x: 0,
+          y: 0,
+          width: input.template.canvas.width,
+          height: input.template.canvas.height,
+          imageAnchor: "center",
+          locked: false,
+        },
+      ],
+      fabricJson: null,
+    },
+    safeZones: {
+      metaStory: input.template.format === "9:16",
+      googleDemandGen: true,
+    },
+  };
+
+  return {
+    ...creative,
+    previewSvg: renderGeneratedCreativeSvg(creative),
+  };
 }
 
 function buildTemplateCreative(input: {

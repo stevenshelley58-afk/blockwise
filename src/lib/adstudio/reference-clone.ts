@@ -17,6 +17,7 @@ import type { ImageProviderRequest, ImageProviderResponse } from "./providers.ts
 /** One image the customer must (or may) supply for a template, by role. */
 export type CloneImageSlot = {
   role: string;
+  objectId?: string;
   required: boolean;
   /** Hint for the upload UI / cropper, e.g. "landscape" | "square". */
   aspect?: string;

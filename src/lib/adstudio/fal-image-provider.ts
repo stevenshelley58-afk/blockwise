@@ -54,7 +54,7 @@ export function createFalImageProvider(options: FalProviderOptions = {}): ImageP
   return {
     providerName: "fal",
     providerType: "image_generation",
-    capabilities: { textToImage: true, imageToImage: true, multiReference: true },
+    capabilities: { textToImage: true, imageToImage: true, inpainting: true, multiReference: true },
     async generate(input: ImageProviderRequest): Promise<ImageProviderResponse> {
       const key = env.FAL_KEY ?? env.FAL_API_KEY;
       if (!key) throw new Error("FAL_KEY is not configured.");
@@ -65,6 +65,7 @@ export function createFalImageProvider(options: FalProviderOptions = {}): ImageP
         prompt: buildFalPrompt(input),
         image_urls: input.referenceAssets,
         image_size: falImageSizeForAspect(input.aspectRatio),
+        mask_url: input.maskImage || undefined,
         quality,
         num_images: 1,
         output_format: "png",
