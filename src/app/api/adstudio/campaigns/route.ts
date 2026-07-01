@@ -206,13 +206,19 @@ export async function POST(request: NextRequest) {
     }
     const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
 
+    // A generation the user cannot get back after reload is a failure, not a
+    // success with a buried warning. The RPC is transactional, so nothing
+    // partial was written; refund the credit and let the client retry.
     if (persisted.error) {
       await refundReservedTrialCredit(trialReservation);
+      return NextResponse.json(
+        { error: `Your ad was generated but could not be saved (${persisted.error.message}). Please try again.` },
+        { status: 500 },
+      );
     }
 
     const liveResult = buildAdStudioLiveResult({
       data: compactAdStudioCampaignPackForTransport(pack),
-      persistenceError: persisted.error?.message,
     });
 
     return NextResponse.json(

@@ -55,12 +55,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const campaignPack = existingPack ? mergeCampaignPack(existingPack, submittedPack) : submittedPack;
 
     const persisted = await persistAdStudioCampaignPack(access.supabase, campaignPack, access.access.userId);
-    const responsePack = persisted.error
-      ? campaignPack
-      : (await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id)) ?? campaignPack;
+
+    // A silent "Saved" over an unsaved draft is how users lose work: fail the
+    // request so the client shows the retryable error state instead.
+    if (persisted.error) {
+      return NextResponse.json(
+        { error: `Draft could not be saved (${persisted.error.message}).` },
+        { status: 500 },
+      );
+    }
+
+    const responsePack = (await loadAdStudioCampaignPack(access.supabase, access.access.workspaceId, id)) ?? campaignPack;
     const liveResult = buildAdStudioLiveResult({
       data: compactAdStudioCampaignPackForTransport(responsePack),
-      persistenceError: persisted.error?.message,
     });
 
     return NextResponse.json({
