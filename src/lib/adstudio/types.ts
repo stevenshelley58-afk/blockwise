@@ -39,6 +39,16 @@ export type FirstAdInput = {
   templateCloneImage?: string;
   templateCloneProvider?: string;
   templateCloneModel?: string;
+  /**
+   * Brief-grounded Meta feed copy generated alongside the template clone —
+   * replaces the offer-library defaults so the feed text matches the ad image.
+   */
+  copy?: {
+    primaryText: string;
+    headline: string;
+    description: string;
+    cta: string;
+  };
   formats: ["9:16", "4:5", "1:1"];
 };
 

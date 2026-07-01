@@ -10,7 +10,7 @@ import {
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
-import { enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
+import { applyProvidedCopyToCampaignPack, enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
@@ -64,6 +64,12 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   }
   if (firstAd.mode === "template" && !(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
     return "Selected template was not found.";
+  }
+  if (firstAd.copy) {
+    const fields = [firstAd.copy.primaryText, firstAd.copy.headline, firstAd.copy.description, firstAd.copy.cta];
+    if (fields.some((field) => typeof field !== "string" || field.length > 500)) {
+      return "Generated copy is invalid. Generate the ad again.";
+    }
   }
   return null;
 }
@@ -178,13 +184,16 @@ export async function POST(request: NextRequest) {
       sourceImageDataUrl: body.sourceImageDataUrl,
       sourceImagesBySlot: body.firstAd?.imageDataUrls,
     });
-    // Selected templates ship their curated, on-brand copy (headline, body, and
-    // CTA) as-is. AI copy enrichment is reserved for the free-form "describe your
-    // ad" flow, where there is no curated copy to preserve. Routing template copy
-    // through enrichment was the regression: it overwrote the curated headline and
-    // body with generic AI text ("Spearwood Double-Storey Price Update") and
-    // collapsed CTAs like "Request price update" down to "Learn more".
-    if (body.firstAd?.mode !== "template") {
+    // Template mode: the dialog already generated brief-grounded copy in one
+    // pass with the clone (see /api/adstudio/copy templateFields mode), so the
+    // pack's offer-library defaults are replaced with it here. Running full AI
+    // enrichment on template ads was a past regression: it overwrote curated
+    // copy with generic AI text and collapsed CTAs down to "Learn more".
+    if (body.firstAd?.mode === "template") {
+      if (body.firstAd.copy) {
+        pack = applyProvidedCopyToCampaignPack(pack, body.firstAd.copy);
+      }
+    } else {
       pack = await enrichCampaignPackCopyWithAi({
         pack,
         workspaceId: context.access.workspaceId,
