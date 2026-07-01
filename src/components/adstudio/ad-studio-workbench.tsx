@@ -264,7 +264,6 @@ export function AdStudioWorkbench({
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(visibleBuiltInTemplates);
   const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
-  const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
@@ -275,6 +274,20 @@ export function AdStudioWorkbench({
   const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
+
+  // Campaign defaults are editable (Settings/Publish panels) and autosave like copy.
+  function updateMarket(value: string) {
+    setMarket(value);
+    studio.setSaveState("saving");
+  }
+  function updatePropertyType(value: string) {
+    setPropertyType(value);
+    studio.setSaveState("saving");
+  }
+  function updateDestinationUrl(value: string) {
+    setDestinationUrl(value);
+    studio.setSaveState("saving");
+  }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -631,12 +644,6 @@ export function AdStudioWorkbench({
   }
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
-  // First open with no ad yet: keep the embedded Create ad panel visible. The
-  // modal only opens from an explicit source choice.
-  useEffect(() => {
-    if (promptedForFirstAd) return;
-    setPromptedForFirstAd(true);
-  }, [pack.variants.length, promptedForFirstAd]);
 
   useEffect(() => {
     if (searchParams.get("newAd") !== "radar" || radarPromptedRef.current) return;
@@ -1068,6 +1075,7 @@ export function AdStudioWorkbench({
           campaignId={pack.campaign.campaignId}
           campaignPack={pack}
           destinationUrl={destinationUrl}
+          onChangeDestinationUrl={updateDestinationUrl}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
           brandApproved={!brandIsDraft}
@@ -1080,7 +1088,12 @@ export function AdStudioWorkbench({
       return (
         <>
           <BrandPanel brand={brand} brandKit={brandKit} />
-          <SettingsPanel />
+          <SettingsPanel
+            market={market}
+            propertyType={propertyType}
+            onChangeMarket={updateMarket}
+            onChangePropertyType={updatePropertyType}
+          />
         </>
       );
     }
@@ -1274,6 +1287,7 @@ export function AdStudioWorkbench({
               campaignId={pack.campaign.campaignId}
               campaignPack={pack}
               destinationUrl={destinationUrl}
+              onChangeDestinationUrl={updateDestinationUrl}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
               brandApproved={!brandIsDraft}
@@ -1286,7 +1300,12 @@ export function AdStudioWorkbench({
         {studio.mobileTab === "settings" && (
           <div className="studio-mobile-panel">
             <BrandPanel brand={brand} brandKit={brandKit} />
-            <SettingsPanel />
+            <SettingsPanel
+              market={market}
+              propertyType={propertyType}
+              onChangeMarket={updateMarket}
+              onChangePropertyType={updatePropertyType}
+            />
           </div>
         )}
 

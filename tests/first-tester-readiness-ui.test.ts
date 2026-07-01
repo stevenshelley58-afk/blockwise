@@ -35,18 +35,13 @@ test("billing settings prefer friendly portal messages and hide billing manageme
   assert.match(source, /10 free ad packs included/);
 });
 
-test("ad studio lead destination points to real connection settings instead of local-only state", () => {
-  const campaignPanel = read("src/components/adstudio/panels/campaign-panel.tsx");
-  const landingPanel = read("src/components/adstudio/panels/landing-panel.tsx");
+test("ad studio lead destination stays out of local-only workbench state", () => {
+  // The campaign/landing panels that once held a local-only lead-destination
+  // selector were deleted; the workbench must not reintroduce that state.
   const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
 
-  for (const source of [campaignPanel, landingPanel]) {
-    assert.match(source, /href="\/settings#connections"/);
-    assert.match(source, /Manage in Settings -> Connections/);
-    assert.doesNotMatch(source, /<select value=\{leadDestination\}/);
-    assert.doesNotMatch(source, /setLeadDestination/);
-  }
   assert.doesNotMatch(workbench, /leadDestination/);
+  assert.doesNotMatch(workbench, /setLeadDestination/);
 });
 
 test("Meta OAuth notices handle missing code and never echo unknown provider errors", () => {

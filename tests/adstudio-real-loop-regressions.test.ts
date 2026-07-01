@@ -344,7 +344,6 @@ test("Ad Studio template picker uses the local self-contained gallery", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
-  const templatePanel = readFileSync("src/components/adstudio/panels/templates-panel.tsx", "utf8");
 
   assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
   assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
@@ -369,7 +368,6 @@ test("Ad Studio template picker uses the local self-contained gallery", () => {
     assert.equal(templates.includes(term), false, `templates.ts must not contain ${term}`);
   }
   assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
-  assert.match(templatePanel, /Self-contained Meta feed and fullscreen templates\./);
   assert.match(dialog, /No templates available\. Start blank or use a previous ad\./);
   assert.match(dialog, /Saved Ad Radar inspiration/);
   assert.match(dialog, /Previous ads/);
