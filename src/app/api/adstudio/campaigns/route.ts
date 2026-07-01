@@ -15,6 +15,7 @@ import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } 
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
@@ -101,6 +102,51 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ campaigns: data ?? [] });
 }
 
+type SupabaseAccessClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/**
+ * Cross-instance dedup: the primary-key insert into adstudio_generation_locks
+ * wins; a concurrent duplicate on another Vercel instance sees the conflict
+ * and 409s. Stale locks (crashed runs) older than the TTL are stolen. Fails
+ * open on unexpected DB errors — the in-memory Map still guards this instance.
+ */
+async function acquireGenerationLock(
+  supabase: SupabaseAccessClient,
+  workspaceId: string,
+  dedupeKey: string,
+): Promise<boolean> {
+  const inserted = await supabase
+    .from("adstudio_generation_locks")
+    .insert({ dedupe_key: dedupeKey, workspace_id: workspaceId });
+  if (!inserted.error) return true;
+  if (inserted.error.code !== "23505") {
+    console.error("adstudio_generation_locks insert failed", inserted.error.message);
+    return true;
+  }
+
+  const existing = await supabase
+    .from("adstudio_generation_locks")
+    .select("created_at")
+    .eq("dedupe_key", dedupeKey)
+    .maybeSingle();
+  const createdAt = existing.data?.created_at ? Date.parse(existing.data.created_at) : 0;
+  if (Date.now() - createdAt < GENERATION_DEDUP_TTL_MS) return false;
+
+  const stolen = await supabase
+    .from("adstudio_generation_locks")
+    .upsert(
+      { dedupe_key: dedupeKey, workspace_id: workspaceId, created_at: new Date().toISOString() },
+      { onConflict: "dedupe_key" },
+    );
+  if (stolen.error) console.error("adstudio_generation_locks steal failed", stolen.error.message);
+  return true;
+}
+
+async function releaseGenerationLock(supabase: SupabaseAccessClient, dedupeKey: string): Promise<void> {
+  const deleted = await supabase.from("adstudio_generation_locks").delete().eq("dedupe_key", dedupeKey);
+  if (deleted.error) console.error("adstudio_generation_locks release failed", deleted.error.message);
+}
+
 export async function POST(request: NextRequest) {
   const context = await requireAdStudioRequest(request);
 
@@ -113,6 +159,13 @@ export async function POST(request: NextRequest) {
   const inFlightSince = inFlightGenerations.get(dedupKey);
 
   if (inFlightSince !== undefined && Date.now() - inFlightSince < GENERATION_DEDUP_TTL_MS) {
+    return NextResponse.json(
+      { error: "This generation is already running. Wait for it to finish before retrying." },
+      { status: 409 },
+    );
+  }
+
+  if (!(await acquireGenerationLock(context.supabase, context.access.workspaceId, dedupKey))) {
     return NextResponse.json(
       { error: "This generation is already running. Wait for it to finish before retrying." },
       { status: 409 },
@@ -235,5 +288,6 @@ export async function POST(request: NextRequest) {
     return errorResponse(error, 400);
   } finally {
     inFlightGenerations.delete(dedupKey);
+    await releaseGenerationLock(context.supabase, dedupKey);
   }
 }
