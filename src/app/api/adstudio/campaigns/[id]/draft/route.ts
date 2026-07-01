@@ -20,6 +20,11 @@ type DraftBody = {
   campaignPack?: AdStudioCampaignPack;
 };
 
+// navigator.sendBeacon can only POST; the unload flush uses it with the same payload.
+export async function POST(request: NextRequest, context: RouteContext) {
+  return PATCH(request, context);
+}
+
 export async function PATCH(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);

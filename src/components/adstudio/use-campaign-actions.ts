@@ -404,7 +404,20 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  return { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives, retryExportFormat, exportStatus };
+  // Unload-safe flush: sendBeacon survives page teardown where fetch may not.
+  function flushDraftBeacon(): boolean {
+    if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return false;
+    try {
+      const currentPack = buildCurrentPack({});
+      const draftPack = compactPackForDraft(currentPack, currentVariant?.variantId);
+      const body = new Blob([JSON.stringify({ campaignPack: draftPack })], { type: "application/json" });
+      return navigator.sendBeacon(`/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`, body);
+    } catch {
+      return false;
+    }
+  }
+
+  return { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus };
 }
 
 // Formats the browser renderer can actually export (see META_EXPORT_FORMATS).

@@ -283,6 +283,7 @@ export function AdStudioWorkbench({
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
+  const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
   const radarPromptedRef = useRef(false);
   const linkedTemplatePromptedRef = useRef(false);
@@ -544,7 +545,7 @@ export function AdStudioWorkbench({
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
   // Campaign readiness checklist lives in the publish panel.
-  const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
+  const { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
     pack,
     brandKit,
     offers,
@@ -572,8 +573,9 @@ export function AdStudioWorkbench({
 
   useEffect(() => {
     saveDraftRef.current = saveDraft;
+    flushDraftBeaconRef.current = flushDraftBeacon;
     saveStateRef.current = studio.saveState;
-  }, [saveDraft, studio.saveState]);
+  }, [saveDraft, flushDraftBeacon, studio.saveState]);
 
   useEffect(() => {
     if (studio.saveState !== "saving") return;
@@ -597,10 +599,11 @@ export function AdStudioWorkbench({
   ]);
 
   useEffect(() => {
+    // sendBeacon survives page teardown; async fetch from beforeunload does not.
     function flushPendingDraft() {
-      if (saveStateRef.current === "saving") {
-        void saveDraftRef.current?.({ silent: true });
-      }
+      if (saveStateRef.current !== "saving") return;
+      if (flushDraftBeaconRef.current?.()) return;
+      void saveDraftRef.current?.({ silent: true });
     }
 
     window.addEventListener("pagehide", flushPendingDraft);
