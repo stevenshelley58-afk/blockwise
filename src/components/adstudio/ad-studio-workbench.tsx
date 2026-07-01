@@ -144,6 +144,14 @@ function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBra
   );
 }
 
+/** A reference-clone creative: a single flat image with copy baked into pixels. */
+function isCloneCreative(creative: AdStudioCreative): boolean {
+  return (
+    creative.canvas.objects.length === 1 &&
+    creative.canvas.objects[0]?.objectId === "template_clone_image"
+  );
+}
+
 function dedupeAssetsBySrc<T extends { src: string }>(assets: T[]): T[] {
   const seen = new Set<string>();
   return assets.filter((asset) => (seen.has(asset.src) ? false : seen.add(asset.src)));
@@ -892,6 +900,7 @@ export function AdStudioWorkbench({
         onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
         onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
         onApplyAlternate={applyAlternate}
+        cloneCreative={currentCreative ? isCloneCreative(currentCreative) : false}
       />
     );
   }
@@ -914,6 +923,22 @@ export function AdStudioWorkbench({
 
   function renderCreativeEditor() {
     if (!currentCreative) return renderFallbackPreview();
+
+    // AI-designed clone: one flat image with the copy baked into the pixels.
+    // The layer editor would silently no-op on it, so show the truth instead.
+    if (isCloneCreative(currentCreative)) {
+      const src = currentCreative.canvas.objects[0]?.content ?? currentCreative.canvas.objects[0]?.assetId ?? "";
+      return (
+        <div className="studio-clone-stage">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="AI-designed ad creative" />
+          <span className="studio-clone-badge">
+            <Sparkles aria-hidden size={13} />
+            AI-designed — the text is part of the image. Create a new ad to change it.
+          </span>
+        </div>
+      );
+    }
 
     return (
       <FabricAdEditor

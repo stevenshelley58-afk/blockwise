@@ -190,6 +190,9 @@
 .studio-fabric-shell[data-format="4:5"]{width:min(475px,82%)}
 .studio-fabric-shell[data-format="1:1"]{width:min(520px,84%)}
 .studio-fabric-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
+.studio-clone-stage{position:relative;display:grid;justify-items:center;gap:10px}
+.studio-clone-stage img{display:block;max-width:min(475px,82%);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-clone-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
 .studio-preview-device{transform:scale(var(--preview-scale));transform-origin:center;transition:transform .16s ease}
 .studio-story-card{position:relative;width:332px;aspect-ratio:9/16;overflow:hidden;border-radius:24px;background:#111;color:#fff;box-shadow:0 30px 70px rgba(0,0,0,.5)}
 .studio-story-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
