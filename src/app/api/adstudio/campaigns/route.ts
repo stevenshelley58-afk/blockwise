@@ -26,10 +26,19 @@ import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+// The synchronous degraded-mode pipeline (copy + clone + vision QA in one
+// request) regularly needs more than 120s; 300 is the Pro plan ceiling.
+export const maxDuration = 300;
 
 // Headroom under maxDuration for the synchronous fallback path.
-const SYNC_GENERATION_DEADLINE_MS = 95_000;
+const SYNC_GENERATION_DEADLINE_MS = 240_000;
+
+// Secrets pasted into the Vercel dashboard can pick up an invisible BOM
+// (U+FEFF), which makes every trigger call throw "Cannot convert argument to
+// a ByteString" — the async path then silently degrades to sync forever.
+if (process.env.TRIGGER_SECRET_KEY) {
+  process.env.TRIGGER_SECRET_KEY = process.env.TRIGGER_SECRET_KEY.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+}
 
 const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 30_000;

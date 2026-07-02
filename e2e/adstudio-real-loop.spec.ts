@@ -24,7 +24,7 @@ if (!canRun && process.env.CI) {
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
   // Real AI generation + edit + export can take several minutes end to end.
-  test.setTimeout(420_000);
+  test.setTimeout(600_000);
 
   test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
     // The cookie banner renders late (post-hydration) and overlays the dialog
@@ -63,8 +63,9 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
         return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
       },
       // The synchronous degraded-mode pipeline (copy + clone + vision QA in
-      // one request) can legitimately take ~2 minutes.
-      { timeout: 150_000 },
+      // one request) runs against a 240s server deadline (route maxDuration
+      // 300) — wait past it so the server's own answer arrives, not a guess.
+      { timeout: 280_000 },
     );
     // If the click below stalls past this watcher's timeout, its rejection
     // must not surface as an unhandled rejection that ends the whole test —
@@ -77,7 +78,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     const dialogBlocked = page
       .locator(".studio-newad-requirements, .studio-newad-error")
       .first()
-      .waitFor({ state: "visible", timeout: 150_000 })
+      .waitFor({ state: "visible", timeout: 280_000 })
       .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
       .then((text) => text?.trim() || "the dialog blocked the submit without a message")
       .catch(() => null);

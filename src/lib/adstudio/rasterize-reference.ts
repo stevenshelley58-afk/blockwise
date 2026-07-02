@@ -15,16 +15,28 @@ export async function ensureRasterReferenceImage(reference: string): Promise<str
     return rasterizeSvg(trimmed, svgDataUrlToBuffer(trimmed));
   }
 
-  let pathname: string;
+  let url: URL;
   try {
-    pathname = new URL(trimmed).pathname;
+    url = new URL(trimmed);
   } catch {
     return trimmed;
   }
-  if (!/\.svg$/i.test(pathname)) return trimmed;
+  if (!/\.svg$/i.test(url.pathname)) return trimmed;
 
   const cached = rasterCache.get(trimmed);
   if (cached) return cached;
+
+  // Gallery samples ship with a pre-rendered .jpg sibling (see
+  // scripts/build/rasterize-adstudio-samples.mjs) — rendered at build time
+  // with real fonts, unlike serverless sharp which has no fontconfig.
+  const sibling = new URL(url.toString());
+  sibling.pathname = url.pathname.replace(/\.svg$/i, ".jpg");
+  sibling.search = "";
+  const prerendered = await fetch(sibling, { method: "HEAD" }).catch(() => null);
+  if (prerendered?.ok) {
+    rememberRaster(trimmed, sibling.toString());
+    return sibling.toString();
+  }
 
   const response = await fetch(trimmed);
   if (!response.ok) {
@@ -45,10 +57,14 @@ async function rasterizeSvg(cacheKey: string, svg: Buffer): Promise<string> {
   const { default: sharp } = await import("sharp");
   const png = await sharp(svg).png().toBuffer();
   const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
+  rememberRaster(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+function rememberRaster(cacheKey: string, value: string): void {
   if (rasterCache.size >= RASTER_CACHE_MAX) {
     const oldest = rasterCache.keys().next().value;
     if (oldest !== undefined) rasterCache.delete(oldest);
   }
-  rasterCache.set(cacheKey, dataUrl);
-  return dataUrl;
+  rasterCache.set(cacheKey, value);
 }
