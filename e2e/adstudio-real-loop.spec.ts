@@ -44,9 +44,14 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await openNewAd(page);
     await chooseFirstTemplate(page);
     await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
-    // The brief label is template-specific (e.g. "Listing details"); the
-    // generic "Short description" only appears for the defensive fallback.
-    await page.getByLabel(/details|short description/i).first().fill("Open home this Saturday, renovated family home in Scarborough.");
+    // The brief label is template-specific (e.g. "Listing details") and the
+    // dialog title can match the same words — target the textbox role so the
+    // locator can never resolve to the dialog container.
+    await page
+      .getByRole("dialog")
+      .getByRole("textbox", { name: /details|description/i })
+      .first()
+      .fill("Open home this Saturday, renovated family home in Scarborough.");
     const generationResponse = page.waitForResponse(
       (response) => {
         const url = new URL(response.url());
