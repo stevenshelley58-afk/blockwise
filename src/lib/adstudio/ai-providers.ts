@@ -3,6 +3,7 @@ import type {
 } from "@/lib/ai/model-registry";
 
 import { dataUrlToUploadBytes } from "./generated-media.ts";
+import { createFalImageProvider } from "./fal-image-provider.ts";
 import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
 import type {
   ImageProviderAdapter,
@@ -325,6 +326,83 @@ async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch, 
   return response.blob();
 }
 
+// Google AI Studio direct (free-tier keys, no card): Gemini through Google's
+// OpenAI-compatible endpoint, so the standard chat-completion path applies.
+const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+export function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-2.5-flash";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "google",
+    providerType: "text_generation",
+    capabilities: { structuredJson: true, visionInput: true },
+    async generate(input) {
+      const apiKey = env.GOOGLE_AI_API_KEY;
+      if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not configured.");
+      return postChatCompletion({ url: GOOGLE_AI_CHAT_URL, apiKey, model, input, fetchImpl });
+    },
+  };
+}
+
+// fal any-llm: text (and best-effort vision) billed to the fal account — the
+// all-fal degraded mode for when no other text provider has credit. The DB
+// model pin is the source of truth for the model slug; a wrong slug surfaces
+// verbatim in the provider-run attempts and is fixed with one SQL update.
+const FAL_ANY_LLM_URL = "https://fal.run/fal-ai/any-llm";
+
+export function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+  const env = options.env ?? process.env;
+  const model = options.model ?? env.BLOCKWISE_FAL_TEXT_MODEL ?? "google/gemini-flash-1.5";
+  const fetchImpl = options.fetchImpl ?? fetch;
+
+  return {
+    providerName: "fal",
+    providerType: "text_generation",
+    capabilities: { structuredJson: true, visionInput: true },
+    async generate(input) {
+      const apiKey = env.FAL_KEY ?? env.FAL_API_KEY;
+      if (!apiKey) throw new Error("FAL_KEY is not configured.");
+
+      const userText = input.messages
+        .map((message) => (typeof message.content === "string" ? message.content : ""))
+        .filter(Boolean)
+        .join("\n\n");
+      const url = input.imageUrl ? `${FAL_ANY_LLM_URL}/vision` : FAL_ANY_LLM_URL;
+      const response = await fetchImpl(url, {
+        method: "POST",
+        signal: undefined,
+        headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          system_prompt: `${input.system}\nRespond with ONLY valid JSON.`,
+          prompt: userText,
+          ...(input.imageUrl ? { image_url: input.imageUrl } : {}),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { output?: string; error?: string; detail?: unknown };
+      if (!response.ok) {
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : `fal any-llm request failed (${response.status}): ${JSON.stringify(payload.detail ?? payload).slice(0, 200)}`,
+        );
+      }
+      const rawText = (payload.output ?? "").trim();
+      if (!rawText) throw new Error("fal any-llm returned no output.");
+
+      return {
+        json: parseJson(rawText),
+        rawText,
+        usage: { inputTokens: 0, outputTokens: 0 },
+        providerMetadata: { model, schemaName: input.schemaName },
+      };
+    },
+  };
+}
+
 export function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
@@ -443,13 +521,23 @@ export function createTextProviderForCandidate(candidate: ModelCandidate, option
   if (candidate.provider === "azure") {
     return createAzureOpenAiTextProvider({ ...options, model: candidate.model });
   }
+  if (candidate.provider === "google") {
+    return createGoogleAiTextProvider({ ...options, model: candidate.model });
+  }
+  if (candidate.provider === "fal") {
+    return createFalTextProvider({ ...options, model: candidate.model });
+  }
   return createOpenAiTextProvider({ ...options, model: candidate.model });
 }
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
-  return candidate.provider === "openrouter"
-    ? createOpenRouterImageProvider({ ...options, model: candidate.model })
-    : createOpenAiImageProvider({ ...options, model: candidate.model });
+  if (candidate.provider === "openrouter") {
+    return createOpenRouterImageProvider({ ...options, model: candidate.model });
+  }
+  if (candidate.provider === "fal") {
+    return createFalImageProvider({ model: candidate.model });
+  }
+  return createOpenAiImageProvider({ ...options, model: candidate.model });
 }
 
 async function postChatCompletion(input: {
