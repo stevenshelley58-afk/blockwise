@@ -34,6 +34,13 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     }
 
+    // The cookie consent banner overlays the workbench footer and intercepts
+    // clicks on anything underneath it (including Generate Ad).
+    const consent = page.getByRole("button", { name: /essential only/i });
+    if (await consent.isVisible().catch(() => false)) {
+      await consent.click();
+    }
+
     // The soft brand prompt ("Set your brand before launch?") is skippable and
     // otherwise intercepts every click on the workbench.
     const skipBrand = page.getByRole("button", { name: /skip for now/i });
