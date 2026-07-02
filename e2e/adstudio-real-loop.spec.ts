@@ -8,6 +8,19 @@ const previewUrl = process.env.PLAYWRIGHT_BASE_URL;
 const canRun = Boolean(previewUrl && workspaceId && hasAuthState(storageStatePath));
 const describeAdStudioRealLoop = canRun ? test.describe : test.describe.skip;
 
+// In CI a missing precondition is a FAILURE, not a skip — the silent skip is
+// how runtime regressions shipped green. Locally it still skips quietly.
+if (!canRun && process.env.CI) {
+  test("Ad Studio real-loop preconditions are present in CI", () => {
+    const missing = [
+      !previewUrl && "PLAYWRIGHT_BASE_URL",
+      !workspaceId && "ADSTUDIO_E2E_WORKSPACE_ID",
+      !hasAuthState(storageStatePath) && `auth storage state at ${storageStatePath}`,
+    ].filter(Boolean);
+    throw new Error(`Ad Studio real-loop e2e cannot run in CI — missing: ${missing.join(", ")}.`);
+  });
+}
+
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
   test.setTimeout(180_000);
