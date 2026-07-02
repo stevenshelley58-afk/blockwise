@@ -68,6 +68,12 @@ jobs:
           ADSTUDIO_E2E_BRAND_URL: ${{ github.event.deployment_status.environment_url }}
         run: npx playwright test e2e/adstudio-real-loop.spec.ts --project=chromium
 
+      # The DOM snapshot at the moment of failure, inlined into the job log —
+      # the report artifact is not reachable from every diagnosis environment.
+      - name: Print Playwright error context
+        if: failure()
+        run: find test-results -name 'error-context.md' -print -exec cat {} \; 2>/dev/null || true
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

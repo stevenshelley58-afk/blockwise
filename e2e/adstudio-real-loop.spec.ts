@@ -51,7 +51,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
 
     await openNewAd(page);
     await chooseFirstTemplate(page);
-    await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
+    await uploadRequiredTemplateImages(page, testInfo.outputPath("listing.png"));
     // The brief label is template-specific (e.g. "Listing details") and the
     // dialog title can match the same words — target the textbox role so the
     // locator can never resolve to the dialog container.
@@ -69,7 +69,25 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       // one request) can legitimately take ~2 minutes.
       { timeout: 150_000 },
     );
+    // submit() bails out with a footer alert (requirement blockers) or an
+    // inline error instead of a disabled button, so a blocked submit produces
+    // NO network request at all. Racing the alert against the response turns
+    // that silent timeout into the dialog's own message.
+    const dialogBlocked = page
+      .locator(".studio-newad-requirements, .studio-newad-error")
+      .first()
+      .waitFor({ state: "visible", timeout: 150_000 })
+      .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
+      .then((text) => text?.trim() || "the dialog blocked the submit without a message")
+      .catch(() => null);
     await page.getByRole("button", { name: /generate ad/i }).click();
+    const blockedMessage = await Promise.race([
+      generationResponse.then(() => null).catch(() => null),
+      dialogBlocked,
+    ]);
+    if (blockedMessage) {
+      throw new Error(`Generate ad never sent POST /api/adstudio/campaigns — dialog says: ${blockedMessage}`);
+    }
     const generated = await generationResponse;
     expect(generated.ok(), await generated.text()).toBe(true);
     const generatedPayload = (await generated.json()) as {
@@ -164,11 +182,22 @@ async function chooseFirstTemplate(page: Page) {
   }
 }
 
-async function uploadGeneratedListingImage(page: Page, path: string) {
+// Templates expose one file input per image slot, and EVERY non-headshot slot
+// is required (see imageRequirementsForTemplate) — an unfilled slot blocks
+// submit() with a footer alert, not a disabled button. Fill them all, waiting
+// out each slot's upload round-trip before starting the next.
+async function uploadRequiredTemplateImages(page: Page, path: string) {
   await writeTinyPng(path);
-  // Templates can expose several image slots; the first is the required primary.
-  await page.locator('.studio-newad input[type="file"]').first().setInputFiles(path);
-  await expect(page.getByRole("button", { name: /listing\.png[\s\S]*selected file/i })).toBeVisible({ timeout: 30_000 });
+  const inputs = page.locator('.studio-newad input[type="file"]');
+  const count = await inputs.count();
+  expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    await inputs.nth(index).setInputFiles(path);
+    await expect(
+      page.locator('.studio-newad .asset-upload-zone[data-has-file="true"]'),
+      `image slot ${index + 1} of ${count} should finish uploading`,
+    ).toHaveCount(index + 1, { timeout: 30_000 });
+  }
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
