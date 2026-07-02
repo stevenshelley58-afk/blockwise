@@ -23,7 +23,14 @@ const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE?.trim() || "e2e/
 if (!baseUrl) throw new Error("Set PLAYWRIGHT_BASE_URL to the deployment to log into.");
 if (!email || !password) throw new Error("Set ADSTUDIO_E2E_EMAIL and ADSTUDIO_E2E_PASSWORD.");
 
-const browser = await chromium.launch();
+// ADSTUDIO_E2E_CHROMIUM lets sandboxes with a system chromium (but a different
+// Playwright browser revision) run this without downloading browsers; the
+// proxy option honours sandbox egress proxies (no-op when unset, as in CI).
+const proxyServer = process.env.HTTPS_PROXY || process.env.https_proxy;
+const browser = await chromium.launch({
+  executablePath: process.env.ADSTUDIO_E2E_CHROMIUM || undefined,
+  proxy: proxyServer ? { server: proxyServer } : undefined,
+});
 const context = await browser.newContext();
 const page = await context.newPage();
 
