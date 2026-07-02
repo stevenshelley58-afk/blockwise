@@ -76,7 +76,9 @@ export async function loadPersistedModelProfileVersions(
     return [
       {
         profileKey,
-        provider: row.provider === "openrouter" ? "openrouter" : "openai",
+        provider: ["openrouter", "azure", "google", "fal"].includes(row.provider)
+          ? (row.provider as "openrouter" | "azure" | "google" | "fal")
+          : "openai",
         model: row.model,
         inputUsdPerMillionTokens: Number(row.input_usd_per_million_tokens),
         outputUsdPerMillionTokens: Number(row.output_usd_per_million_tokens),

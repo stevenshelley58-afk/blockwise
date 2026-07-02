@@ -1,6 +1,8 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
-export type ModelProvider = "openai" | "openrouter" | "azure";
+// "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
+// "fal" = fal.run hosted image models (billed to the fal account).
+export type ModelProvider = "openai" | "openrouter" | "azure" | "google" | "fal";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -66,6 +68,8 @@ const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_onl
   openai: "allowed",
   openrouter: "allowed",
   azure: "allowed",
+  google: "allowed",
+  fal: "allowed",
 };
 
 const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
