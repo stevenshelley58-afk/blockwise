@@ -147,7 +147,7 @@ export async function generateAdStudioCopy(
       modelProfile: "structured_json",
       prompt: assembled,
       input: generationLogInput(input),
-      attempts: generation?.attempts ?? [],
+      attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
       latencyMs: Date.now() - startedAt,
       providerName: generation?.provider.providerName ?? "unavailable",
       providerType: "text_generation",
@@ -280,7 +280,7 @@ export async function generateAdStudioTemplateCopy(
       modelProfile: "structured_json",
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
-      attempts: generation?.attempts ?? [],
+      attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
       latencyMs: Date.now() - startedAt,
       providerName: generation?.provider.providerName ?? "unavailable",
       providerType: "text_generation",
@@ -421,6 +421,25 @@ async function generateCopyWithProfile(
     }
   }
 
-  if (lastError instanceof Error) throw lastError;
-  throw new Error("Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.");
+  // Carry the per-candidate outcomes on the error: the failure-path provider
+  // run must record WHICH models failed and why, not just the last message —
+  // losing this is how a dead OpenRouter key masqueraded as an OpenAI quota
+  // problem for half a day.
+  const failure = new CopyCascadeError(
+    lastError instanceof Error
+      ? lastError.message
+      : "Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.",
+    attempts,
+  );
+  throw failure;
+}
+
+class CopyCascadeError extends Error {
+  readonly attempts: CopyGenerationResult["attempts"];
+
+  constructor(message: string, attempts: CopyGenerationResult["attempts"]) {
+    super(message);
+    this.name = "CopyCascadeError";
+    this.attempts = attempts;
+  }
 }
