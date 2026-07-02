@@ -3,12 +3,13 @@
 # creates a real ad, edits copy, saves, reloads, and exports through the
 # deployed app.
 #
-# Required repository secrets (the job FAILS loudly when they are missing —
+# ONE required repository secret (the job FAILS loudly when it is missing —
 # a silent skip is how runtime regressions shipped green for months):
-#   ADSTUDIO_E2E_EMAIL           dedicated e2e login (e.g. adstudio-e2e@blockwise.test)
-#   ADSTUDIO_E2E_PASSWORD        its password (>= 16 chars)
-#   NEXT_PUBLIC_SUPABASE_URL     the Supabase project URL
-#   SUPABASE_SERVICE_ROLE_KEY    service-role key (used only to seed the fixture)
+#   ADSTUDIO_E2E_PASSWORD   password of the seeded adstudio-e2e@blockwise.test account
+#
+# Everything else is non-secret and hardcoded below. The test account itself is
+# seeded once (already done) — to rotate or re-seed it, run with service-role env:
+#   node scripts/e2e/seed-adstudio-e2e.mjs
 
 name: AdStudio E2E (Vercel Preview)
 
@@ -30,20 +31,13 @@ jobs:
     env:
       PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
-      ADSTUDIO_E2E_EMAIL: ${{ secrets.ADSTUDIO_E2E_EMAIL }}
+      ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
-      - name: Require e2e secrets
+      - name: Require the e2e secret
         run: |
-          missing=""
-          [ -z "$ADSTUDIO_E2E_EMAIL" ] && missing="$missing ADSTUDIO_E2E_EMAIL"
-          [ -z "$ADSTUDIO_E2E_PASSWORD" ] && missing="$missing ADSTUDIO_E2E_PASSWORD"
-          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] && missing="$missing NEXT_PUBLIC_SUPABASE_URL"
-          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && missing="$missing SUPABASE_SERVICE_ROLE_KEY"
-          if [ -n "$missing" ]; then
-            echo "::error::Ad Studio real-loop e2e cannot run — missing repository secrets:$missing. Add them (see the header of this workflow file); do NOT disable this job, it is the only runtime gate."
+          if [ -z "$ADSTUDIO_E2E_PASSWORD" ]; then
+            echo "::error::Add ONE repository secret named ADSTUDIO_E2E_PASSWORD (Settings -> Secrets and variables -> Actions) — the password of the seeded adstudio-e2e@blockwise.test account. This is the only runtime gate; do NOT disable it."
             exit 1
           fi
 
@@ -63,9 +57,6 @@ jobs:
 
       - name: Install Playwright chromium
         run: npx playwright install --with-deps chromium
-
-      - name: Seed e2e user + workspace
-        run: node scripts/e2e/seed-adstudio-e2e.mjs
 
       - name: Log in and capture storage state
         run: node scripts/e2e/login-storage-state.mjs
