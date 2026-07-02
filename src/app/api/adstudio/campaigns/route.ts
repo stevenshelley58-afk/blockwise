@@ -43,6 +43,11 @@ if (process.env.TRIGGER_SECRET_KEY) {
 const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 30_000;
 
+// Warm-lambda cache: once trigger.dev rejects the key as invalid, stop paying
+// the queue-insert + failed-trigger round trip on every generation. Fixing
+// the key requires a redeploy, which resets this.
+let triggerAuthBroken = false;
+
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
     value?.startsWith("data:image/") ||
@@ -210,7 +215,7 @@ export async function POST(request: NextRequest) {
     if (body.firstAd?.mode === "template" && !body.firstAd.templateCloneImage) {
       const origin = request.nextUrl.origin;
 
-      if (process.env.TRIGGER_SECRET_KEY && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
+      if (process.env.TRIGGER_SECRET_KEY && !triggerAuthBroken && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
         const service = createSupabaseServiceClient();
         const inserted = await service
           .from("adstudio_creative_jobs")
@@ -262,6 +267,7 @@ export async function POST(request: NextRequest) {
           // and FALL THROUGH to the inline sync path — generation must never
           // depend on the queue being healthy.
           console.error("adstudio.generate.template trigger failed; falling back to sync", error);
+          if ((error as { status?: number })?.status === 401) triggerAuthBroken = true;
           await service
             .from("adstudio_creative_jobs")
             .update({ status: "failed", error: "The generation job could not be started; ran synchronously instead.", updated_at: new Date().toISOString() })
@@ -284,11 +290,13 @@ export async function POST(request: NextRequest) {
         body,
         deadlineMs: SYNC_GENERATION_DEADLINE_MS,
         maxCloneAttempts: 1,
-        // Draft-then-upgrade: the sync path returns a fast draft the user can
-        // see and edit in ~a minute; the client immediately re-renders it at
-        // the quality tier in the background (creatives/[id]/enhance) and
-        // swaps it in when it verifies.
+        // Draft-then-upgrade: the sync path returns a fast draft as quickly
+        // as possible; the client immediately re-renders it at the quality
+        // tier in the background (creatives/[id]/enhance) and swaps it in
+        // when it verifies. Inline QA is skipped for the same reason — the
+        // enhance pass verifies the expected copy before replacing anything.
         tier: "preview",
+        qaMode: "deferred",
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,

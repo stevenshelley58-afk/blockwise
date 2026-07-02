@@ -86,6 +86,13 @@ export type RunTemplateCampaignGenerationInput = {
    * inside a Vercel request window.
    */
   tier?: "preview" | "final";
+  /**
+   * "blocking" (default): vision QA verifies the render inline, with rerolls.
+   * "deferred": ship the draft immediately without inline QA — the client's
+   * quality-upgrade pass (creatives/[id]/enhance) verifies the expected copy
+   * before it swaps anything in. Cuts ~15-30s off the first response.
+   */
+  qaMode?: "blocking" | "deferred";
   workspaceName?: string;
   region?: string;
   /** From the route's credit reservation; drives the trial fallback brand kit. */
@@ -213,6 +220,7 @@ export async function runTemplateCampaignGeneration(
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
   let correction = "";
+  const deferQa = input.qaMode === "deferred";
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const generated = await generateCloneWithCascade({
@@ -229,6 +237,25 @@ export async function runTemplateCampaignGeneration(
       attempt,
     });
     lastImage = generated;
+
+    if (deferQa) {
+      // The draft ships unverified — honestly marked so — and the enhance
+      // pass verifies this expected copy before anything replaces the draft.
+      qa = {
+        passed: false,
+        attempts: 0,
+        checkedAt: new Date().toISOString(),
+        copyChecks: Object.entries(expectedCopy).map(([key, expected]) => ({
+          key,
+          expected,
+          rendered: "",
+          exact: false,
+        })),
+        defects: ["Copy verification deferred to the quality-upgrade pass."],
+        regions: [],
+      };
+      break;
+    }
 
     // QA on the raw model output (data: URL) — the persisted media path is
     // auth-protected and unreachable for the vision model.
@@ -250,8 +277,9 @@ export async function runTemplateCampaignGeneration(
     throw new Error("Clone generation failed. Try again.");
   }
 
-  // A clone that failed copy verification never ships silently.
-  if (qa && !qa.passed) {
+  // A clone that failed copy verification never ships silently. Deferred mode
+  // ships the draft by design — its verification happens in the enhance pass.
+  if (!deferQa && qa && !qa.passed) {
     throw new TemplateCampaignQaError(
       "The generated ad did not render your copy correctly. Please try again.",
       qa,
