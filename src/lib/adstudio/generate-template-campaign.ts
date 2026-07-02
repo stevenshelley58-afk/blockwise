@@ -16,6 +16,7 @@ import { cloneQaCorrectionPrompt, runCloneQa } from "./clone-qa.ts";
 import { generateAdStudioTemplateCopy } from "./copy-generation.ts";
 import { generateAdStudioCampaignPack } from "./generator.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
+import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import { buildCloneImageRequest, resolveCloneCopy } from "./reference-clone.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import { getTemplateBrief } from "./template-brief.ts";
@@ -193,7 +194,11 @@ export async function runTemplateCampaignGeneration(
   // Clone cascade + QA reroll (same loop as the generate-clone route, quality
   // tier): generate → verify the exact rendered copy → reroll with a corrective
   // prompt until it passes, attempts or deadline run out.
-  const referenceImage = new URL(brief.referenceImage, input.origin).toString();
+  // Gallery samples are SVGs, which no image provider accepts — rasterize to
+  // a PNG data URL before the clone request is built.
+  const referenceImage = await ensureRasterReferenceImage(
+    new URL(brief.referenceImage, input.origin).toString(),
+  );
   const expectedCopy = resolveCloneCopy(brief, copyResult.onImage);
   const baseRequest = buildCloneImageRequest(brief, {
     referenceImage,

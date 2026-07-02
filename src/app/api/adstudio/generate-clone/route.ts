@@ -6,6 +6,7 @@ import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } f
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import { runComplianceGate } from "@/lib/adstudio/creative-qa";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { ensureRasterReferenceImage } from "@/lib/adstudio/rasterize-reference";
 import { buildCloneImageRequest, resolveCloneCopy } from "@/lib/adstudio/reference-clone";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { getTemplateBrief } from "@/lib/adstudio/template-brief";
@@ -76,8 +77,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // The design-to-clone is the template's public sample, made absolute so any provider can fetch it.
-  const referenceImage = new URL(brief.referenceImage, request.nextUrl.origin).toString();
+  // The design-to-clone is the template's public sample, made absolute so any
+  // provider can fetch it — and rasterized, because the samples are SVGs and
+  // image providers only accept JPEG/PNG/WebP.
+  const referenceImage = await ensureRasterReferenceImage(
+    new URL(brief.referenceImage, request.nextUrl.origin).toString(),
+  );
   const tier: "preview" | "final" = body.tier === "preview" ? "preview" : "final";
 
   let expectedCopy: Record<string, string>;
