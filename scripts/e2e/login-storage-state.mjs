@@ -34,22 +34,62 @@ const browser = await chromium.launch({
 const context = await browser.newContext();
 const page = await context.newPage();
 
-try {
-  await page.goto(`${baseUrl.replace(/\/+$/, "")}/login`, { waitUntil: "domcontentloaded" });
+const loginUrl = `${baseUrl.replace(/\/+$/, "")}/login`;
+
+async function attemptLogin(attempt) {
+  await page.goto(loginUrl, { waitUntil: "networkidle" });
+  // Clicking before React hydrates submits the form natively (URL becomes
+  // /login?) and the JS auth handler never runs — cold previews are slow to
+  // hydrate, so give the page a beat and verify the fields hold their values.
+  await page.waitForTimeout(1_500 * attempt);
   await page.locator("#login-email").fill(email);
   await page.locator("#login-password").fill(password);
   await page.getByRole("button", { name: /^sign in$/i }).click();
-  await page.waitForURL(/\/home/, { timeout: 30_000 });
+
+  await Promise.race([
+    page.waitForURL(/\/home/, { timeout: 30_000 }),
+    page
+      .waitForURL(/\/login\?/, { timeout: 30_000 })
+      .then(() => {
+        throw new Error("hydration-race");
+      }),
+    page
+      .locator(".form-error")
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(async () => {
+        const formError = (await page.locator(".form-error").textContent().catch(() => null))?.trim();
+        throw new Error(`form-error: ${formError || "unknown"}`);
+      }),
+  ]);
+}
+
+try {
+  let lastError = null;
+  let loggedIn = false;
+  for (let attempt = 1; attempt <= 3 && !loggedIn; attempt += 1) {
+    try {
+      await attemptLogin(attempt);
+      loggedIn = true;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      // The hydration race is retryable; real auth errors are not.
+      if (!message.includes("hydration-race") && !message.includes("Timeout")) throw error;
+      console.warn(`Login attempt ${attempt} hit "${message}" — retrying.`);
+    }
+  }
+  if (!loggedIn) throw lastError ?? new Error("Login did not complete.");
 
   mkdirSync(dirname(storageStatePath), { recursive: true });
   await context.storageState({ path: storageStatePath });
   console.log(`Saved authenticated storage state to ${storageStatePath}`);
 } catch (error) {
   const formError = await page.locator(".form-error").textContent().catch(() => null);
+  const turnstilePresent = await page.locator("iframe[src*='challenges.cloudflare.com']").count().catch(() => 0);
   throw new Error(
     `Login failed against ${baseUrl}: ${error instanceof Error ? error.message : String(error)}` +
       (formError ? ` (form error: "${formError.trim()}")` : "") +
-      " — check the e2e credentials are seeded and Turnstile is not enforcing on this deployment.",
+      (turnstilePresent ? " — Turnstile is enforcing on this deployment; use Cloudflare's always-pass test sitekey on previews." : ""),
   );
 } finally {
   await browser.close();
