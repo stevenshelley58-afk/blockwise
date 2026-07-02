@@ -23,6 +23,11 @@ export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 export const FIRST_AD_FORMATS = ["9:16", "4:5", "1:1"] as const;
 
 export type FirstAdInput = {
+  /**
+   * "custom" mode is legacy (P2.3 cut blank mode): the New Ad dialog only ever
+   * submits "template" now, but the API keeps accepting "custom" for existing
+   * consumers and legacy canvas-composited campaigns.
+   */
   mode: "template" | "custom";
   source?: "blank" | "template_library" | "ad_radar" | "saved_ad";
   templateId?: string;

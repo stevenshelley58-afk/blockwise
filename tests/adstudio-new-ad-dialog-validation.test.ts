@@ -21,7 +21,7 @@ test("new ad dialog shows combined missing-requirements guidance before generati
   assert.match(dialog, /Add a short description so Blockwise knows what to write/);
   assert.match(dialog, /missingImageLabels/);
   assert.match(dialog, /Upload a file, choose from library, or generate an image/);
-  assert.match(dialog, /briefGuidanceForTemplate\(selectedTemplate, isBlank\)/);
+  assert.match(dialog, /briefGuidanceForTemplate\(selectedTemplate\)/);
   assert.match(dialog, /studio-newad-field-help/);
   assert.match(dialog, /Image upload is still running\. Wait for it to finish, then generate the ad\./);
   assert.match(dialog, /aria-invalid=\{hasDescriptionRequirement \? true : undefined\}/);
@@ -72,7 +72,7 @@ test("new ad dialog derives upload slots from the selected template canvas", () 
     },
   } as AdStudioTemplate;
 
-  const slots = imageRequirementsForTemplate(template, false);
+  const slots = imageRequirementsForTemplate(template);
 
   assert.deepEqual(
     slots.map((slot) => ({ id: slot.id, label: slot.label, required: slot.required, role: slot.role })),
@@ -146,7 +146,7 @@ test("new ad dialog uses object IDs for duplicate image roles", () => {
   } as AdStudioTemplate;
 
   assert.deepEqual(
-    imageRequirementsForTemplate(template, false).map((slot) => slot.id),
+    imageRequirementsForTemplate(template).map((slot) => slot.id),
     ["photo-a", "photo-b"],
   );
 });
@@ -159,7 +159,6 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "home_value_update",
       promptHint: "Ask homeowners to request a current value update.",
     },
-    false,
   );
 
   assert.equal(appraisal.fieldLabel, "Appraisal offer details");
@@ -174,7 +173,6 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "suburb_market_report",
       promptHint: "Promote a suburb report with a market stat.",
     },
-    false,
   );
 
   assert.equal(market.fieldLabel, "Market update details");
@@ -188,15 +186,16 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "listing_inquiries",
       promptHint: "Use customer media, local market context, compliant copy, and a direct call to action.",
     },
-    false,
   );
 
   assert.equal(listing.fieldLabel, "Listing details");
   assert.match(listing.helperText, /price guide or inspection time/);
 
-  const blank = briefGuidanceForTemplate(undefined, true);
-  assert.equal(blank.fieldLabel, "Short description");
-  assert.match(blank.placeholder, /Open home this Saturday/);
+  // No template resolved (defensive fallback only — the dialog always selects
+  // a template now that blank mode is cut).
+  const fallback = briefGuidanceForTemplate(undefined);
+  assert.equal(fallback.fieldLabel, "Short description");
+  assert.match(fallback.placeholder, /Open home this Saturday/);
 });
 
 test("campaign creation route returns actionable first-ad validation fallbacks", () => {

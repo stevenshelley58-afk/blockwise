@@ -98,7 +98,6 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
   feed: "4:5",
   square: "1:1",
-  landscape: "1.91:1",
 };
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";

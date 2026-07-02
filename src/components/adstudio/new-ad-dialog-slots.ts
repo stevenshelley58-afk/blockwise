@@ -20,9 +20,8 @@ export const DEFAULT_IMAGE_SLOT: TemplateImageRequirement = {
 
 export function imageRequirementsForTemplate(
   template: AdStudioTemplate | undefined,
-  isBlank: boolean,
 ): TemplateImageRequirement[] {
-  if (isBlank || !template?.canvas?.objects?.length) return [DEFAULT_IMAGE_SLOT];
+  if (!template?.canvas?.objects?.length) return [DEFAULT_IMAGE_SLOT];
 
   const imageObjects = template.canvas.objects.filter((object) => object.type === "image");
   if (!imageObjects.length) return [DEFAULT_IMAGE_SLOT];

@@ -8,7 +8,7 @@ import { labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 import type { CopyState } from "./use-copy";
 
-export type PreviewFormat = "story" | "feed" | "square" | "landscape";
+export type PreviewFormat = "story" | "feed" | "square";
 export type SelectedElement = "canvas" | "headline" | "primaryText" | "description" | "cta" | "image";
 
 export const FORMAT_META: Record<
@@ -18,7 +18,6 @@ export const FORMAT_META: Record<
   story: { label: "Story", size: "1080x1920" },
   feed: { label: "Feed", size: "1080x1350" },
   square: { label: "Square", size: "1080x1080" },
-  landscape: { label: "Landscape", size: "1200x628" },
 };
 
 type PreviewControlsProps = {

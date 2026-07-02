@@ -368,14 +368,14 @@ test("Ad Studio template picker uses the local self-contained gallery", () => {
     assert.equal(templates.includes(term), false, `templates.ts must not contain ${term}`);
   }
   assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
-  assert.match(dialog, /No templates available\. Start blank or use a previous ad\./);
+  assert.match(dialog, /No templates in this category yet\. Pick another category, reuse a previous ad, or use saved Ad Radar inspiration\./);
   assert.match(dialog, /Saved Ad Radar inspiration/);
   assert.match(dialog, /Previous ads/);
   assert.match(dialog, /Ad Radar/);
   assert.doesNotMatch(dialog, /isBuiltInAdStudioTemplate/);
-  assert.match(dialog, /mode: isBlank \? "custom" : "template"/);
-  assert.match(dialog, /source = radarInspiration \? "ad_radar" : isBlank \? "blank" : "template_library"/);
-  assert.match(dialog, /templateKey: isBlank \? undefined : selectedTemplate\?\.templateKey \?\? selectedTemplate\?\.id/);
+  assert.match(dialog, /mode: "template"/);
+  assert.match(dialog, /source = radarInspiration \? "ad_radar" : "template_library"/);
+  assert.match(dialog, /templateKey: selectedTemplate\.templateKey \?\? selectedTemplate\.id/);
   assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
   assert.match(createRoute, /resolvedTemplate/);
   assert.match(createRoute, /photoPrep: \{ status: "skipped"/);
@@ -419,4 +419,45 @@ test("Ad Radar longest-running sort reaches the authenticated search route", () 
   assert.match(route, /searchCustomerMetaAdLibraryCards/);
   assert.match(search, /ad_delivery_started_at/);
   assert.match(search, /adRunningMs/);
+});
+
+test("P2.3: blank mode is cut — every new ad starts from a template", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  // No blank affordance and no isBlank branching anywhere in the dialog.
+  assert.equal(dialog.includes("Start blank"), false, "dialog must not offer Start blank");
+  assert.equal(dialog.includes("isBlank"), false, "dialog must not branch on isBlank");
+  assert.equal(dialog.includes('chooseTemplate("")'), false, "dialog must not select an empty template id");
+  // The dialog only ever submits template mode; "custom" stays server-side legacy.
+  assert.doesNotMatch(dialog, /mode: "custom"/);
+  assert.match(dialog, /mode: "template"/);
+  // Ad Radar starts map to a template so they carry a template id.
+  assert.match(dialog, /function templateForRadarAd/);
+  assert.match(dialog, /templateForRadarAd\(templates, ad\)/);
+  // The API keeps accepting legacy custom mode for existing consumers.
+  const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  assert.match(createRoute, /firstAd\.mode !== "template" && firstAd\.mode !== "custom"/);
+});
+
+test("P2.3: legacy creative snapshot script guards renderer deletion", () => {
+  assert.equal(existsSync("scripts/migrations/snapshot-legacy-creatives.mjs"), true);
+  const script = readFileSync("scripts/migrations/snapshot-legacy-creatives.mjs", "utf8");
+
+  assert.match(script, /--dry-run/);
+  assert.match(script, /legacy_snapshot/);
+  assert.match(script, /legacySnapshotPath/);
+  assert.match(script, /workspace-artifacts/);
+  assert.match(script, /adstudio\/legacy-snapshots\//);
+  assert.match(script, /renderCreativeSvg/);
+  assert.match(script, /SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test("P2.3: nothing generates the dangling 1.91:1 landscape format anymore", () => {
+  const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
+  const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+
+  assert.match(generator, /const FALLBACK_FORMATS: AdStudioFormat\[\] = \["1:1", "4:5", "9:16"\];/);
+  assert.match(preview, /export type PreviewFormat = "story" \| "feed" \| "square";/);
+  assert.doesNotMatch(workbench, /landscape: "1\.91:1"/);
 });

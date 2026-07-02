@@ -69,7 +69,9 @@ type OfferCopySeed = {
   assetLongHeadline: string;
 };
 
-const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
+// 1.91:1 landscape is legacy-only: nothing generates it anymore (P2.3), but the
+// AdStudioFormat member stays so existing landscape creatives keep rendering.
+const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16"];
 const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
 const CANVAS_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
   "1:1": { width: 1080, height: 1080 },

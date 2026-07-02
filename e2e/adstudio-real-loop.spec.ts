@@ -35,9 +35,11 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     }
 
     await openNewAd(page);
-    await chooseBlankTemplate(page);
+    await chooseFirstTemplate(page);
     await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
-    await page.getByLabel(/short description/i).fill("Open home this Saturday, renovated family home in Scarborough.");
+    // The brief label is template-specific (e.g. "Listing details"); the
+    // generic "Short description" only appears for the defensive fallback.
+    await page.getByLabel(/details|short description/i).first().fill("Open home this Saturday, renovated family home in Scarborough.");
     const generationResponse = page.waitForResponse(
       (response) => {
         const url = new URL(response.url());
@@ -110,16 +112,19 @@ async function openNewAd(page: Page) {
   await browse.click();
 }
 
-async function chooseBlankTemplate(page: Page) {
-  const blank = page.getByRole("button", { name: /start blank|blank|create your own|describe your ad/i }).first();
-  if (await blank.isVisible().catch(() => false)) {
-    await blank.click();
+// Blank mode was cut (P2.3): every new ad starts from a template, so the loop
+// picks the first template card when the dialog opens on the source step.
+async function chooseFirstTemplate(page: Page) {
+  const template = page.getByRole("button", { name: /use .* template/i }).first();
+  if (await template.isVisible().catch(() => false)) {
+    await template.click();
   }
 }
 
 async function uploadGeneratedListingImage(page: Page, path: string) {
   await writeTinyPng(path);
-  await page.setInputFiles('.studio-newad input[type="file"]', path);
+  // Templates can expose several image slots; the first is the required primary.
+  await page.locator('.studio-newad input[type="file"]').first().setInputFiles(path);
   await expect(page.getByRole("button", { name: /listing\.png[\s\S]*selected file/i })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
