@@ -34,7 +34,7 @@ import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
-import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
+import { AdPreview, FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -932,13 +932,23 @@ export function AdStudioWorkbench({
     // AI-designed clone: one flat image with the copy baked into the pixels.
     // The layer editor would silently no-op on it, so edit in place instead —
     // hit-targets from the QA regions drive the targeted edit endpoint.
+    // P2.2: the editor sits inside real Meta chrome (page header, live primary
+    // text above the creative, headline/description strip, real CTA enum label)
+    // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
       return (
-        <InPlaceAdEditor
-          creative={currentCreative}
-          onCreativeChange={updateCreative}
-          showToast={studio.showToast}
-        />
+        <MetaChromePreview
+          brandKit={brandKit}
+          copy={copy}
+          format={previewFormat}
+          onSelectText={() => goToSection("text")}
+        >
+          <InPlaceAdEditor
+            creative={currentCreative}
+            onCreativeChange={updateCreative}
+            showToast={studio.showToast}
+          />
+        </MetaChromePreview>
       );
     }
 

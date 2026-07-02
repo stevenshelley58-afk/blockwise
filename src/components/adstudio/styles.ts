@@ -531,4 +531,29 @@
 .studio-inplace-undo:hover:not(:disabled){background:rgba(15,23,42,.88)}
 .studio-inplace-undo:disabled{opacity:.5;cursor:not-allowed}
 .studio-inplace-hint{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
+
+/* P2.2 Meta chrome: the stage shows the clone creative exactly as Meta renders it.
+   Reuses the .studio-feed-card / .studio-story-card visual language; the creative
+   itself is the embedded in-place editor, never a second static render. */
+.studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:18px;scrollbar-width:thin}
+.studio-metachrome-card{width:440px;max-width:100%;overflow:visible}
+.studio-metachrome-card footer{border-radius:0 0 18px 18px}
+.studio-metachrome-copy{cursor:pointer}
+.studio-metachrome-copy:hover{color:var(--accent)}
+.studio-metachrome-media{position:relative;background:#eee;min-height:120px}
+.studio-metachrome-media .studio-inplace-stage,.studio-metachrome-media .studio-clone-stage{width:100%;gap:0}
+.studio-metachrome-media .studio-inplace-frame{width:100%}
+.studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;max-width:100%;max-height:none;border-radius:0;box-shadow:none}
+.studio-metachrome-media .studio-inplace-hint,.studio-metachrome-media .studio-clone-badge{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
+.studio-metachrome-media .studio-fabric-loading{min-height:320px;color:var(--muted)}
+.studio-metachrome-story{position:relative;display:inline-block}
+.studio-metachrome-story .studio-inplace-stage,.studio-metachrome-story .studio-clone-stage{gap:0}
+.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{border-radius:24px}
+.studio-metachrome-story .studio-inplace-hint,.studio-metachrome-story .studio-clone-badge{position:absolute;left:50%;top:calc(100% + 12px);transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
+.studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:24px;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 74%,rgba(0,0,0,.5) 100%)}
+.studio-metachrome-story-progress{position:absolute;top:10px;left:14px;right:14px;display:flex;gap:5px}
+.studio-metachrome-story-progress i{flex:1;height:2.5px;border-radius:999px;background:rgba(255,255,255,.45)}
+.studio-metachrome-story-progress i:first-child{background:#fff}
+.studio-metachrome-story-brand{top:24px}
+.studio-metachrome-story-cta{pointer-events:none}
 `;

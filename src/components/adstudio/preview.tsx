@@ -1,7 +1,10 @@
 "use client";
 
 import { Check, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
+
+import type { AdStudioBrandKit } from "@/lib/adstudio";
+import { labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 import type { CopyState } from "./use-copy";
 
@@ -37,6 +40,100 @@ export function PreviewControls({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Mirrors useBrandKit's hostOf — MetaChromePreview takes the raw brand kit. */
+function chromeHostOf(url: string): string {
+  try {
+    const host = new URL(url).host.replace(/^www\./, "");
+    return host.endsWith(".example") ? "" : host;
+  } catch {
+    return "";
+  }
+}
+
+type MetaChromePreviewProps = {
+  format: PreviewFormat;
+  brandKit: AdStudioBrandKit;
+  /** Live copy state — edits in the Text panel show up immediately. */
+  copy: CopyState;
+  /** The creative itself (the in-place clone editor); the chrome wraps, never replaces it. */
+  children: ReactNode;
+  /** Clicking the primary text or headline/description focuses the Text panel. */
+  onSelectText?: () => void;
+};
+
+/**
+ * P2.2: renders the ad exactly as Meta does around the embedded creative —
+ * page header (avatar, brand, Sponsored), primary text above the creative,
+ * then the headline/description strip with the real CTA enum button label.
+ * Story format overlays the chrome instead (avatar, progress bars, CTA pill)
+ * with pointer-events disabled so in-place edit regions stay clickable.
+ */
+export function MetaChromePreview({ format, brandKit, copy, children, onSelectText }: MetaChromePreviewProps) {
+  const brand = brandKit.identity.businessName || brandKit.identity.tradingName || "Your agency";
+  const initial = brand.charAt(0).toUpperCase();
+  const domain = chromeHostOf(brandKit.source.url);
+  const ctaLabel = labelForMetaCta(toMetaCta(copy.cta));
+
+  if (format === "story") {
+    return (
+      <div className="studio-metachrome-story">
+        {children}
+        <div className="studio-metachrome-story-chrome">
+          <span className="studio-metachrome-story-progress" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          <div className="studio-story-brand studio-metachrome-story-brand">
+            <span>{initial}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
+            </div>
+          </div>
+          <span className="studio-story-cta studio-metachrome-story-cta">
+            {ctaLabel}
+            <ChevronRight aria-hidden size={17} />
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="studio-metachrome">
+      <article className="studio-feed-card studio-metachrome-card" data-format={format}>
+        <header>
+          <div className="studio-feed-id">
+            <span>{initial}</span>
+            <div>
+              <strong>{brand}</strong>
+              <small>Sponsored</small>
+            </div>
+          </div>
+          <MoreHorizontal aria-hidden size={18} />
+        </header>
+        <button className="studio-feed-primary studio-metachrome-copy" type="button" onClick={onSelectText}>
+          {copy.primaryText}
+        </button>
+        <div className="studio-metachrome-media">{children}</div>
+        <footer>
+          <div>
+            {domain ? <small>{domain}</small> : null}
+            <button className="studio-feed-headline studio-metachrome-copy" type="button" onClick={onSelectText}>
+              {copy.headline}
+            </button>
+            <button className="studio-feed-desc studio-metachrome-copy" type="button" onClick={onSelectText}>
+              {copy.description}
+            </button>
+          </div>
+          <span className="studio-feed-cta">{ctaLabel}</span>
+        </footer>
+      </article>
     </div>
   );
 }
