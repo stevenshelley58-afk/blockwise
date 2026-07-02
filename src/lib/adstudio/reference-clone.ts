@@ -31,6 +31,12 @@ export type CloneCopyField = {
   maxLength?: number;
   default?: string;
   rules?: string;
+  /**
+   * The customer types this value verbatim (price, address, phone…) — the
+   * copy model must never invent or paraphrase it. Fields a customer cannot
+   * supply and a model cannot know do not belong on a template at all.
+   */
+  customerSupplied?: boolean;
 };
 
 /** The per-template extraction artifact: input contract + short clone prompt. */
@@ -154,6 +160,25 @@ export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProvi
     prompt: instruction,
     negativePrompt: GLOBAL_CLONE_NEGATIVES,
     referenceAssets,
+    aspectRatio: inputs.aspectRatio,
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+    seed: inputs.seed ?? 0,
+  };
+}
+
+/**
+ * Build the request for the quality-upgrade pass: re-render the finished draft
+ * ad at maximum fidelity without changing ANY element. Anchoring on the draft
+ * (not the original inputs) keeps the design pixel-stable between the fast
+ * draft the user sees first and the final version that replaces it.
+ */
+export function buildRefineRequest(inputs: { currentImage: string; aspectRatio: string; seed?: number }): ImageProviderRequest {
+  return {
+    prompt:
+      "Reference image 1 is a finished ad design. Re-render this EXACT ad at maximum fidelity: crisp, clean typography with sharp edges; professional photographic quality in the photos; smooth colour gradients. Keep the layout, colours, every text string, logos, and photos exactly as they appear in reference image 1 — change nothing, only render it better.",
+    negativePrompt: GLOBAL_CLONE_NEGATIVES,
+    referenceAssets: [inputs.currentImage],
     aspectRatio: inputs.aspectRatio,
     stylePreset: "real_estate_clone",
     requiresReferenceAssets: true,

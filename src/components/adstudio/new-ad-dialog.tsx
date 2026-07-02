@@ -12,6 +12,7 @@ import { uploadAdStudioMedia } from "./media-upload";
 import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
 import {
   DEFAULT_IMAGE_SLOT,
+  customerCopyFieldsForTemplate,
   imageRequirementsForTemplate,
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
@@ -331,6 +332,7 @@ export function NewAdDialog({
   const [description, setDescription] = useState("");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   const [imageNamesBySlot, setImageNamesBySlot] = useState<Record<string, string>>({});
+  const [onImageCopy, setOnImageCopy] = useState<Record<string, string>>({});
   const [activeImageSlotId, setActiveImageSlotId] = useState(DEFAULT_IMAGE_SLOT.id);
   const [mediaSourceMode, setMediaSourceMode] = useState<MediaSourceMode>("details");
   const [dialogMediaAssets, setDialogMediaAssets] = useState<ImageLibraryAsset[]>([]);
@@ -356,6 +358,12 @@ export function NewAdDialog({
     () => imageRequirementsForTemplate(selectedTemplate),
     [selectedTemplate],
   );
+  // Fields the customer types verbatim (price, address, phone...) — rendered
+  // as explicit inputs so the copy model never has to invent facts.
+  const customerCopyFields = useMemo(
+    () => customerCopyFieldsForTemplate(selectedTemplate),
+    [selectedTemplate],
+  );
   const primaryImageSlot = imageRequirements.find((slot) => slot.required) ?? imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
   const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
   const imageDataUrl = imageDataUrlsBySlot[primaryImageSlot.id] ?? "";
@@ -373,9 +381,14 @@ export function NewAdDialog({
     }, {}),
     [imageDataUrlsBySlot, imageRequirements],
   );
+  const missingCopyLabels = useMemo(
+    () => customerCopyFields.filter((field) => !onImageCopy[field.key]?.trim()).map((field) => field.label),
+    [customerCopyFields, onImageCopy],
+  );
   const requirementBlockers = buildRequirementBlockers({
     description,
     missingImageLabels,
+    missingCopyLabels,
     uploadingImage,
   });
   const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
@@ -555,6 +568,7 @@ export function NewAdDialog({
     // The customer adds their own listing photo; the template only drives layout/copy.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
+    setOnImageCopy({});
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
@@ -751,7 +765,7 @@ export function NewAdDialog({
 
   async function submit() {
     const trimmed = description.trim();
-    const blockers = buildRequirementBlockers({ description, missingImageLabels, uploadingImage });
+    const blockers = buildRequirementBlockers({ description, missingImageLabels, missingCopyLabels, uploadingImage });
     if (blockers.length > 0) {
       setShowRequirementsAlert(true);
       setError("");
@@ -791,6 +805,11 @@ export function NewAdDialog({
         description: trimmed,
         imageDataUrl,
         imageDataUrls,
+        onImageCopy: Object.fromEntries(
+          Object.entries(onImageCopy)
+            .map(([key, value]) => [key, value.trim()])
+            .filter(([, value]) => value),
+        ),
         formats: FIRST_AD_FORMATS,
       });
       onClose();
@@ -1006,6 +1025,27 @@ export function NewAdDialog({
                   </div>
                 ))}
               </div>
+              {customerCopyFields.length > 0 && (
+                <div className="studio-newad-copyfields" aria-label="Ad text fields">
+                  {customerCopyFields.map((field) => (
+                    <label className="studio-newad-field" key={field.key}>
+                      <span>
+                        {field.label}
+                        <small> — appears on the ad exactly as typed</small>
+                      </span>
+                      <input
+                        type="text"
+                        value={onImageCopy[field.key] ?? ""}
+                        maxLength={Math.min(field.maxLength, 200)}
+                        placeholder={field.sample}
+                        onChange={(event) =>
+                          setOnImageCopy((current) => ({ ...current, [field.key]: event.target.value }))
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
               <label className="studio-newad-field">
                 <span>{briefGuidance.fieldLabel}</span>
                 <textarea
@@ -1227,10 +1267,22 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
 function buildRequirementBlockers(input: {
   description: string;
   missingImageLabels: string[];
+  missingCopyLabels?: string[];
   uploadingImage: boolean;
 }): RequirementBlocker[] {
   const blockers: RequirementBlocker[] = [];
   const trimmed = input.description.trim();
+
+  if (input.missingCopyLabels && input.missingCopyLabels.length > 0) {
+    blockers.push({
+      id: "missing_copy_fields",
+      target: "description",
+      message:
+        input.missingCopyLabels.length === 1
+          ? `Fill in ${input.missingCopyLabels[0]} — it appears on the ad exactly as you type it.`
+          : `Fill in ${input.missingCopyLabels.join(", ")} — these appear on the ad exactly as you type them.`,
+    });
+  }
 
   if (!trimmed) {
     blockers.push({

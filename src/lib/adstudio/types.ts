@@ -56,6 +56,13 @@ export type FirstAdInput = {
   };
   /** Vision-QA verdict + editable-element regions for the clone image. */
   templateCloneQa?: AdStudioCloneQa;
+  /**
+   * On-image copy typed by the customer, keyed by the template's copy-field
+   * key (price, address, phone…). Rendered VERBATIM: these values override
+   * anything the copy model writes, and QA verifies them letter for letter —
+   * the fix for AI-invented prices and filler stats.
+   */
+  onImageCopy?: Partial<Record<string, string>>;
   formats: ["9:16", "4:5", "1:1"];
 };
 
@@ -213,6 +220,8 @@ export type AdStudioCanvasObject = {
   radius?: number;
   opacity?: number;
   fill?: string;
+  /** Text the customer types verbatim (price, address…) — see FirstAdInput.onImageCopy. */
+  customerSupplied?: boolean;
   locked: boolean;
 };
 

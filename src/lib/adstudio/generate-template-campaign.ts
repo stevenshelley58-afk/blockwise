@@ -86,6 +86,13 @@ export type RunTemplateCampaignGenerationInput = {
    * inside a Vercel request window.
    */
   tier?: "preview" | "final";
+  /**
+   * "blocking" (default): vision QA verifies the render inline, with rerolls.
+   * "deferred": ship the draft immediately without inline QA — the client's
+   * quality-upgrade pass (creatives/[id]/enhance) verifies the expected copy
+   * before it swaps anything in. Cuts ~15-30s off the first response.
+   */
+  qaMode?: "blocking" | "deferred";
   workspaceName?: string;
   region?: string;
   /** From the route's credit reservation; drives the trial fallback brand kit. */
@@ -191,6 +198,16 @@ export async function runTemplateCampaignGeneration(
     },
   });
 
+  // Customer-typed on-image values (price, address, phone…) override the
+  // model's suggestions VERBATIM — the copy model must never invent facts the
+  // customer supplies. QA then verifies these exact strings on the render.
+  const customerOnImage: Record<string, string> = {};
+  for (const field of brief.copyFields) {
+    const provided = firstAd.onImageCopy?.[field.key]?.trim();
+    if (provided) customerOnImage[field.key] = provided;
+  }
+  const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
+
   // Clone cascade + QA reroll (same loop as the generate-clone route, quality
   // tier): generate → verify the exact rendered copy → reroll with a corrective
   // prompt until it passes, attempts or deadline run out.
@@ -199,11 +216,11 @@ export async function runTemplateCampaignGeneration(
   const referenceImage = await ensureRasterReferenceImage(
     new URL(brief.referenceImage, input.origin).toString(),
   );
-  const expectedCopy = resolveCloneCopy(brief, copyResult.onImage);
+  const expectedCopy = resolveCloneCopy(brief, onImageCopy);
   const baseRequest = buildCloneImageRequest(brief, {
     referenceImage,
     images: resolvedImages,
-    copy: copyResult.onImage,
+    copy: onImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
   const tier = input.tier ?? "final";
@@ -213,6 +230,7 @@ export async function runTemplateCampaignGeneration(
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
   let correction = "";
+  const deferQa = input.qaMode === "deferred";
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const generated = await generateCloneWithCascade({
@@ -229,6 +247,25 @@ export async function runTemplateCampaignGeneration(
       attempt,
     });
     lastImage = generated;
+
+    if (deferQa) {
+      // The draft ships unverified — honestly marked so — and the enhance
+      // pass verifies this expected copy before anything replaces the draft.
+      qa = {
+        passed: false,
+        attempts: 0,
+        checkedAt: new Date().toISOString(),
+        copyChecks: Object.entries(expectedCopy).map(([key, expected]) => ({
+          key,
+          expected,
+          rendered: "",
+          exact: false,
+        })),
+        defects: ["Copy verification deferred to the quality-upgrade pass."],
+        regions: [],
+      };
+      break;
+    }
 
     // QA on the raw model output (data: URL) — the persisted media path is
     // auth-protected and unreachable for the vision model.
@@ -250,8 +287,9 @@ export async function runTemplateCampaignGeneration(
     throw new Error("Clone generation failed. Try again.");
   }
 
-  // A clone that failed copy verification never ships silently.
-  if (qa && !qa.passed) {
+  // A clone that failed copy verification never ships silently. Deferred mode
+  // ships the draft by design — its verification happens in the enhance pass.
+  if (!deferQa && qa && !qa.passed) {
     throw new TemplateCampaignQaError(
       "The generated ad did not render your copy correctly. Please try again.",
       qa,

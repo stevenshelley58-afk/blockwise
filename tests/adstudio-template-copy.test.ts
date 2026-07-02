@@ -91,8 +91,12 @@ test("template mode wires brief-grounded copy through the server-side generation
 
   // Server pipeline: the copy pass runs before the clone so the image carries
   // the user's copy; both the on-image fields and the feed copy travel onward.
+  // Customer-typed on-image values (firstAd.onImageCopy) override the model's
+  // suggestions VERBATIM — the anti-fabrication contract.
   assert.match(generation, /generateAdStudioTemplateCopy\(\{/);
-  assert.match(generation, /copy: copyResult\.onImage/);
+  assert.match(generation, /\.\.\.copyResult\.onImage, \.\.\.customerOnImage/);
+  assert.match(generation, /firstAd\.onImageCopy\?\.\[field\.key\]/);
+  assert.match(generation, /copy: onImageCopy/);
   assert.match(generation, /copy: copyResult\.copy/);
   assert.ok(
     generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildCloneImageRequest(brief"),

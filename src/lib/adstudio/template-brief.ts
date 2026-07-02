@@ -16,6 +16,7 @@ type TemplateObject = {
   width?: number;
   height?: number;
   fill?: string;
+  customerSupplied?: boolean;
 };
 type GalleryTemplateLike = {
   id: string;
@@ -74,7 +75,13 @@ export function deriveTemplateBrief(template: GalleryTemplateLike): TemplateClon
     .filter((o) => o.type === "text" && typeof o.content === "string" && o.content.trim().length > 0)
     .map((o) => {
       const v = (o.content as string).trim();
-      return { key: o.role ?? "text", label: labelize(o.role ?? "text"), maxLength: Math.max(v.length + 8, 16), default: v };
+      return {
+        key: o.role ?? "text",
+        label: labelize(o.role ?? "text"),
+        maxLength: Math.max(v.length + 8, 16),
+        default: v,
+        ...(o.customerSupplied ? { customerSupplied: true } : {}),
+      };
     });
 
   return {

@@ -263,35 +263,50 @@ async function postOpenAiImageEdit(input: {
     throw new Error("Reference-image edit requires at least one image.");
   }
 
-  const form = new FormData();
-  form.set("model", input.model);
-  form.set("prompt", buildImagePrompt(input.input, { includeReferenceList: false }));
-  form.set("size", imageSizeForAspect(input.input.aspectRatio));
-  form.set("quality", input.quality);
-  form.set("n", "1");
-
-  const single = references.length === 1;
-  for (const [index, reference] of references.entries()) {
-    const blob = await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal);
-    // Single reference uses `image`; multiple uses `image[]` per the API contract.
-    form.append(single ? "image" : "image[]", blob, `reference-${index}.png`);
+  const blobs: Blob[] = [];
+  for (const reference of references) {
+    blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
   }
+  const maskBlob = input.input.maskImage
+    ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
+    : null;
 
-  if (input.input.maskImage) {
-    const maskBlob = await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal);
-    form.set("mask", maskBlob, "mask.png");
+  const send = (size: string) => {
+    const form = new FormData();
+    form.set("model", input.model);
+    form.set("prompt", buildImagePrompt(input.input, { includeReferenceList: false }));
+    form.set("size", size);
+    form.set("quality", input.quality);
+    form.set("n", "1");
+    const single = blobs.length === 1;
+    blobs.forEach((blob, index) => {
+      // Single reference uses `image`; multiple uses `image[]` per the API contract.
+      form.append(single ? "image" : "image[]", blob, `reference-${index}.png`);
+    });
+    if (maskBlob) form.set("mask", maskBlob, "mask.png");
+    // No explicit Content-Type — fetch sets the multipart boundary itself.
+    return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
+      method: "POST",
+      signal: input.input.signal,
+      headers: {
+        Authorization: `Bearer ${input.apiKey}`,
+        ...gatewayHeaders(input.env),
+      },
+      body: form,
+    });
+  };
+
+  const response = await send(imageSizeForAspect(input.input.aspectRatio));
+  if (response.ok) return response;
+
+  // Supported size sets differ per model generation (e.g. gpt-image-1-mini
+  // rejects 1024x1280 while gpt-image-2 accepts it). On that specific error,
+  // retry once with "auto" — the model picks the nearest size to the inputs.
+  const failure = (await response.clone().json().catch(() => null)) as { error?: { message?: string } } | null;
+  if (/invalid size/i.test(failure?.error?.message ?? "")) {
+    return send("auto");
   }
-
-  // No explicit Content-Type — fetch sets the multipart boundary itself.
-  return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
-    method: "POST",
-    signal: input.input.signal,
-    headers: {
-      Authorization: `Bearer ${input.apiKey}`,
-      ...gatewayHeaders(input.env),
-    },
-    body: form,
-  });
+  return response;
 }
 
 // Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.

@@ -1,0 +1,60 @@
+# Deploys the trigger.dev background tasks (the async generation lane).
+# Runs on main when task code changes, or manually via workflow_dispatch.
+#
+# Requires TWO repository secrets — until they exist the job exits quietly
+# and the app keeps working on the synchronous fallback:
+#   TRIGGER_ACCESS_TOKEN   personal access token from trigger.dev (Account -> API keys)
+#   TRIGGER_PROJECT_ID     the project ref (proj_...) from the trigger.dev project settings
+
+name: Deploy trigger.dev tasks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "trigger/**"
+      - "trigger.config.ts"
+      - ".github/workflows/trigger-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: trigger-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+      TRIGGER_PROJECT_ID: ${{ secrets.TRIGGER_PROJECT_ID }}
+    steps:
+      - name: Check for trigger.dev credentials
+        id: gate
+        run: |
+          if [ -z "$TRIGGER_ACCESS_TOKEN" ] || [ -z "$TRIGGER_PROJECT_ID" ]; then
+            echo "::notice::TRIGGER_ACCESS_TOKEN / TRIGGER_PROJECT_ID secrets not set — skipping deploy. Generation keeps running on the synchronous fallback."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
+        run: npm ci
+
+      # trigger.config.ts deliberately keeps a placeholder project ref
+      # (enforced by test) — the real ref is passed only here.
+      - name: Deploy to trigger.dev
+        if: steps.gate.outputs.skip != 'true'
+        run: npx trigger.dev@4.4.6 deploy --project-ref "$TRIGGER_PROJECT_ID"

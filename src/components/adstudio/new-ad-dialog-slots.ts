@@ -18,6 +18,41 @@ export const DEFAULT_IMAGE_SLOT: TemplateImageRequirement = {
   required: true,
 };
 
+export type TemplateCopyRequirement = {
+  key: string;
+  label: string;
+  maxLength: number;
+  /** The reference ad's own text — shown as the placeholder, never submitted. */
+  sample: string;
+};
+
+/**
+ * Copy fields the CUSTOMER types verbatim (price, address, phone…), declared
+ * on the template's text objects via customerSupplied. These render as
+ * explicit inputs in the brief step — the fix for AI-invented facts.
+ */
+export function customerCopyFieldsForTemplate(
+  template: AdStudioTemplate | undefined,
+): TemplateCopyRequirement[] {
+  const objects = template?.canvas?.objects ?? [];
+  return objects
+    .filter(
+      (object) =>
+        object.type === "text" &&
+        (object as { customerSupplied?: boolean }).customerSupplied === true &&
+        typeof object.content === "string",
+    )
+    .map((object) => {
+      const sample = String(object.content).trim();
+      return {
+        key: object.role || object.objectId,
+        label: labelize(object.role || object.objectId),
+        maxLength: Math.max(sample.length + 8, 16),
+        sample,
+      };
+    });
+}
+
 export function imageRequirementsForTemplate(
   template: AdStudioTemplate | undefined,
 ): TemplateImageRequirement[] {
