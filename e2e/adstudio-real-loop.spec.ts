@@ -47,8 +47,9 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     }
 
     await openNewAd(page);
-    await chooseFirstTemplate(page);
+    await chooseKillTestTemplate(page);
     await uploadRequiredTemplateImages(page, testInfo.outputPath("listing.png"));
+    await fillCustomerCopyFields(page);
     // The brief label is template-specific (e.g. "Listing details") and the
     // dialog title can match the same words — target the textbox role so the
     // locator can never resolve to the dialog container.
@@ -181,12 +182,42 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
   }
 }
 
-// Blank mode was cut (P2.3): every new ad starts from a template, so the loop
-// picks the first template card when the dialog opens on the source step.
-async function chooseFirstTemplate(page: Page) {
+// Blank mode was cut (P2.3): every new ad starts from a template. The loop
+// exercises Template #1 of the kill test (meta-feed-020, "Just Listed Sage
+// Panel" — customer-typed copy fields) and falls back to the first card.
+async function chooseKillTestTemplate(page: Page) {
+  const killTest = page.getByRole("button", { name: /use just listed sage panel template/i }).first();
+  if (await killTest.isVisible().catch(() => false)) {
+    await killTest.click();
+    return;
+  }
   const template = page.getByRole("button", { name: /use .* template/i }).first();
   if (await template.isVisible().catch(() => false)) {
     await template.click();
+  }
+}
+
+// Customer-typed on-image fields (price, address, phone…) render on the ad
+// verbatim; the vision QA then verifies these exact strings. Distinct values
+// prove nothing was invented or paraphrased.
+const KILL_TEST_COPY: Record<string, string> = {
+  headline: "JUST LISTED",
+  price: "$847,500",
+  address: "12 MARINE PDE, SCARBOROUGH WA 6019",
+  phone: "+61 411 222 333",
+  "website handle": "@scarboroughhomes",
+};
+
+async function fillCustomerCopyFields(page: Page) {
+  const fields = page.locator(".studio-newad-copyfields input");
+  const count = await fields.count();
+  for (let index = 0; index < count; index += 1) {
+    const input = fields.nth(index);
+    const label = ((await input.evaluate(
+      (el) => el.closest("label")?.querySelector("span")?.textContent ?? "",
+    )) as string).toLowerCase();
+    const match = Object.entries(KILL_TEST_COPY).find(([key]) => label.includes(key));
+    await input.fill(match?.[1] ?? "SAMPLE TEXT");
   }
 }
 

@@ -26,7 +26,7 @@ test("new ad dialog shows combined missing-requirements guidance before generati
   assert.match(dialog, /Image upload is still running\. Wait for it to finish, then generate the ad\./);
   assert.match(dialog, /aria-invalid=\{hasDescriptionRequirement \? true : undefined\}/);
   assert.match(dialog, /aria-describedby=\{hasDescriptionRequirement \? requirementsAlertId : undefined\}/);
-  assert.match(submitBody, /buildRequirementBlockers\(\{ description, missingImageLabels, uploadingImage \}\)/);
+  assert.match(submitBody, /buildRequirementBlockers\(\{ description, missingImageLabels, missingCopyLabels, uploadingImage \}\)/);
   assert.match(submitBody, /descriptionRef\.current\?\.focus\(\)/);
   assert.match(submitBody, /setShowRequirementsAlert\(true\)/);
   assert.doesNotMatch(submitBody, /setError\("Add a short description\."\)/);
