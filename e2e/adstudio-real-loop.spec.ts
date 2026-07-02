@@ -234,12 +234,33 @@ async function exportCreatives(page: Page) {
         url.pathname.endsWith("/download") &&
         response.request().method() === "POST";
     },
-    { timeout: 120_000 },
+    // Browser-side rendering of all formats precedes the download request.
+    { timeout: 150_000 },
   );
+  void exportResponse.catch(() => {});
   const download = page.waitForEvent("download", { timeout: 30_000 }).catch(() => null);
+
+  // The export flow refuses silently via a 2.4s toast (copy limits, render
+  // failures, save errors) — race it so the app's own refusal message becomes
+  // the test failure instead of a blind timeout. The filter keeps benign
+  // toasts (e.g. the quality-upgrade "Sharpened your ad") from matching.
+  const refusalToast = page
+    .locator(".studio-toast", { hasText: /fix the ad copy|export failed|could not|failed|retry/i })
+    .first()
+    .waitFor({ state: "visible", timeout: 150_000 })
+    .then(() => page.locator(".studio-toast").first().textContent())
+    .then((text) => text?.trim() || "the export was refused without a message")
+    .catch(() => null);
 
   await page.getByRole("button", { name: /export/i }).click();
 
+  const refused = await Promise.race([
+    exportResponse.then(() => null).catch(() => null),
+    refusalToast,
+  ]);
+  if (refused) {
+    throw new Error(`Export never sent the download request — the app says: ${refused}`);
+  }
   const response = await exportResponse;
   expect(response.ok(), await response.text()).toBe(true);
   expect(response.headers()["content-type"] ?? "").toMatch(/zip|octet-stream/i);
