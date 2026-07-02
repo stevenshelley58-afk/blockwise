@@ -103,18 +103,24 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     expect(campaignId).toBeTruthy();
 
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
-    await openPanel(page, "Copy");
+    // The feed copy lives in the sidebar "Text" section (the old Copy panel).
+    await openPanel(page, "Text");
     await page.getByLabel(/headline/i).fill("Scarborough open home");
     await saveDraft(page);
     await waitForSavedStatus(page);
 
-    await page.getByRole("button", { name: /ad 2/i }).click();
-    await page.getByRole("button", { name: /ad 1/i }).click();
-    await openPanel(page, "Copy");
-    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home");
+    // Template mode generates a single clone ad; the variant switch only
+    // exists when a multi-ad pack is present.
+    const adTwo = page.getByRole("button", { name: /ad 2/i }).first();
+    if (await adTwo.isVisible().catch(() => false)) {
+      await adTwo.click();
+      await page.getByRole("button", { name: /ad 1/i }).first().click();
+      await openPanel(page, "Text");
+      await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home");
+    }
 
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    await openPanel(page, "Copy");
+    await openPanel(page, "Text");
     await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home", { timeout: 30_000 });
 
     await openPanel(page, "Publish");
@@ -203,7 +209,7 @@ async function uploadRequiredTemplateImages(page: Page, path: string) {
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
-async function openPanel(page: Page, label: "Copy" | "Publish") {
+async function openPanel(page: Page, label: "Text" | "Publish") {
   const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
