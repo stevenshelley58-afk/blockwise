@@ -34,6 +34,13 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     }
 
+    // The soft brand prompt ("Set your brand before launch?") is skippable and
+    // otherwise intercepts every click on the workbench.
+    const skipBrand = page.getByRole("button", { name: /skip for now/i });
+    if (await skipBrand.isVisible().catch(() => false)) {
+      await skipBrand.click();
+    }
+
     await openNewAd(page);
     await chooseFirstTemplate(page);
     await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
