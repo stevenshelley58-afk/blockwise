@@ -28,7 +28,7 @@ const supabaseAnonKey = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || pr
 const supabaseServiceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
 const supabaseJwtSecret = cleanEnv(process.env.SUPABASE_JWT_SECRET);
 const generatedPassword = process.env.META_REVIEW_TEST_PASSWORD || process.env.BLOCKWISE_DEV_PASSWORD || makePassword();
-const reviewEmail = process.env.META_REVIEW_TEST_EMAIL || "operator@blockwise.test";
+const reviewEmail = process.env.META_REVIEW_TEST_EMAIL || process.env.BLOCKWISE_OPERATOR_EMAIL || "steven@blockwise.sale";
 const reviewWorkspaceId = process.env.META_REVIEW_WORKSPACE_ID || "00000000-0000-4000-8000-000000000001";
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 

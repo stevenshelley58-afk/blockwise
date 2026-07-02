@@ -7,6 +7,8 @@ function cleanEnv(value) {
 const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
 const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const password = cleanEnv(process.env.BLOCKWISE_DEV_PASSWORD);
+const operatorEmail = cleanEnv(process.env.BLOCKWISE_OPERATOR_EMAIL) || "steven@blockwise.sale";
+const operatorFullName = cleanEnv(process.env.BLOCKWISE_OPERATOR_FULL_NAME) || "Steven Shelley";
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
@@ -26,21 +28,9 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 const users = [
   {
     key: "operator",
-    email: "operator@blockwise.test",
-    fullName: "Blockwise Operator",
+    email: operatorEmail,
+    fullName: operatorFullName,
     isOperator: true,
-  },
-  {
-    key: "monitor",
-    email: "monitor@blockwise.test",
-    fullName: "Monitor Test User",
-    isOperator: false,
-  },
-  {
-    key: "self_serve",
-    email: "selfserve@blockwise.test",
-    fullName: "Self-Serve Test User",
-    isOperator: false,
   },
 ];
 
@@ -140,7 +130,7 @@ await requireNoError(
         region: "AU",
         managed_service_enabled: true,
         approval_required_by_default: true,
-        created_by: authUsers.get("self_serve").id,
+        created_by: authUsers.get("operator").id,
       },
       {
         id: workspaceIds.monitor,
@@ -150,7 +140,7 @@ await requireNoError(
         region: "AU",
         managed_service_enabled: false,
         approval_required_by_default: true,
-        created_by: authUsers.get("monitor").id,
+        created_by: authUsers.get("operator").id,
       },
     ],
     { onConflict: "id" },
@@ -161,16 +151,6 @@ await requireNoError(
 await requireNoError(
   await supabase.from("workspace_members").upsert(
     [
-      {
-        workspace_id: workspaceIds.selfServe,
-        profile_id: authUsers.get("self_serve").id,
-        role: "owner",
-      },
-      {
-        workspace_id: workspaceIds.monitor,
-        profile_id: authUsers.get("monitor").id,
-        role: "owner",
-      },
       {
         workspace_id: workspaceIds.selfServe,
         profile_id: authUsers.get("operator").id,
@@ -187,7 +167,7 @@ await requireNoError(
   "Upsert workspace members",
 );
 
-console.log("Seeded dev login profiles:");
+console.log("Seeded dev operator login:");
 for (const user of users) {
   console.log(`- ${user.email}`);
 }
