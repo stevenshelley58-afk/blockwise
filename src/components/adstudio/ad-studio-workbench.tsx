@@ -108,6 +108,11 @@ const FabricAdEditor = dynamic(
   { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
 );
 
+const InPlaceAdEditor = dynamic(
+  () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
+  { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
+);
+
 const GOAL_LABELS: Record<string, string> = {
   seller_leads: "Generate vendor leads",
   appraisal_bookings: "Get appraisal leads",
@@ -925,18 +930,15 @@ export function AdStudioWorkbench({
     if (!currentCreative) return renderFallbackPreview();
 
     // AI-designed clone: one flat image with the copy baked into the pixels.
-    // The layer editor would silently no-op on it, so show the truth instead.
+    // The layer editor would silently no-op on it, so edit in place instead —
+    // hit-targets from the QA regions drive the targeted edit endpoint.
     if (isCloneCreative(currentCreative)) {
-      const src = currentCreative.canvas.objects[0]?.content ?? currentCreative.canvas.objects[0]?.assetId ?? "";
       return (
-        <div className="studio-clone-stage">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="AI-designed ad creative" />
-          <span className="studio-clone-badge">
-            <Sparkles aria-hidden size={13} />
-            AI-designed — the text is part of the image. Create a new ad to change it.
-          </span>
-        </div>
+        <InPlaceAdEditor
+          creative={currentCreative}
+          onCreativeChange={updateCreative}
+          showToast={studio.showToast}
+        />
       );
     }
 

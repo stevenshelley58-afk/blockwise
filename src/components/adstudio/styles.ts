@@ -504,4 +504,31 @@
   .studio-story-body{font-size:19px}
   .studio-mobile-body{padding-left:14px;padding-right:14px}
 }
+
+/* In-place clone editor: hit-targets from cloneQa.regions over the flat render */
+.studio-inplace-stage{position:relative;display:grid;justify-items:center;gap:10px}
+.studio-inplace-frame{position:relative;display:inline-block;line-height:0}
+.studio-inplace-frame img{display:block;max-width:min(475px,82vw);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-inplace-region{position:absolute;min-width:24px;min-height:24px;margin:0;padding:0;display:grid;place-items:center;border:1.5px dashed transparent;border-radius:8px;background:transparent;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.studio-inplace-region:hover:not(:disabled),.studio-inplace-region:focus-visible{border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:rgba(255,255,255,.06)}
+.studio-inplace-region:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-region:disabled{cursor:not-allowed}
+.studio-inplace-region[data-pending]{border-color:color-mix(in srgb,var(--accent) 40%,transparent);cursor:progress;background:linear-gradient(100deg,rgba(255,255,255,.14) 30%,rgba(255,255,255,.42) 50%,rgba(255,255,255,.14) 70%);background-size:200% 100%;animation:studio-inplace-shimmer 1.2s ease infinite}
+@keyframes studio-inplace-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.studio-inplace-chip{position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:9999px;background:#fff;color:var(--accent);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25);opacity:0;transform:scale(.8);transition:opacity .15s ease,transform .15s ease;pointer-events:none}
+.studio-inplace-region:hover .studio-inplace-chip,.studio-inplace-region:focus-visible .studio-inplace-chip{opacity:1;transform:scale(1)}
+.studio-inplace-status{display:inline-flex;align-items:center;padding:3px 9px;border-radius:9999px;background:rgba(15,23,42,.78);color:#e6edf9;font-size:11px;font-weight:650;line-height:1.4;white-space:nowrap}
+.studio-inplace-editor{position:absolute;z-index:6;min-width:180px;display:grid;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 18px 44px rgba(0,0,0,.28);line-height:1.4}
+.studio-inplace-editor textarea{width:100%;resize:none;border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px;font:inherit;font-size:13px;line-height:1.4;color:var(--ink);outline:none}
+.studio-inplace-editor textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-editor-actions{display:flex;justify-content:flex-end;gap:6px}
+.studio-inplace-editor-actions button{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.studio-inplace-editor-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.studio-inplace-editor-actions button.confirm{background:var(--accent);border-color:var(--accent);color:#fff}
+.studio-inplace-editor-actions button.confirm:hover{opacity:.9;color:#fff}
+.studio-inplace-editor-actions button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-undo{position:absolute;top:10px;right:10px;z-index:5;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:0;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650;cursor:pointer;transition:background .15s ease}
+.studio-inplace-undo:hover:not(:disabled){background:rgba(15,23,42,.88)}
+.studio-inplace-undo:disabled{opacity:.5;cursor:not-allowed}
+.studio-inplace-hint{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
 `;
