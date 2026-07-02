@@ -425,10 +425,16 @@ async function generateCopyWithProfile(
   // run must record WHICH models failed and why, not just the last message —
   // losing this is how a dead OpenRouter key masqueraded as an OpenAI quota
   // problem for half a day.
+  // The dialog shows this message: summarize EVERY lane's failure instead of
+  // quoting whichever provider happened to speak last (that masked a fal
+  // parsing bug behind OpenAI's quota message for hours).
+  const summary = attempts
+    .filter((attempt) => attempt.status === "failed")
+    .map((attempt) => `${attempt.provider} (${attempt.model}): ${attempt.error ?? "failed"}`)
+    .join(" · ")
+    .slice(0, 600);
   const failure = new CopyCascadeError(
-    lastError instanceof Error
-      ? lastError.message
-      : "Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.",
+    summary || "Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.",
     attempts,
   );
   throw failure;
