@@ -827,11 +827,67 @@ export function AdStudioWorkbench({
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
-    await generateFirstAd(input);
+    const generated = await generateFirstAd(input);
     setActiveTemplateKey(input.templateKey ?? input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
     studio.setMobileTab("media");
+    // Draft-then-upgrade: the sync path returns a fast draft; quietly
+    // re-render it at the quality tier and swap in when it verifies. The
+    // background job already renders at full quality — no second pass.
+    if (input.mode === "template" && generated && !generated.viaBackgroundJob) {
+      void upgradeCloneQuality(generated.campaignPack);
+    }
+  }
+
+  // Re-renders the freshly generated draft clone at the quality tier in the
+  // background and swaps it in. Every failure path keeps the draft — this
+  // never makes the ad worse — and a user edit made during the render wins.
+  async function upgradeCloneQuality(generatedPack: AdStudioCampaignPack) {
+    const clone = generatedPack.creatives.find(isCloneCreative);
+    const draftObject = clone?.canvas.objects[0];
+    const draftImage = draftObject?.content || draftObject?.assetId || "";
+    if (!clone || !draftImage) return;
+
+    try {
+      const response = await fetch(`/api/adstudio/creatives/${encodeURIComponent(clone.creativeId)}/enhance`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ expectedCurrentImage: draftImage }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { image?: string; qa?: AdStudioCreative["canvas"]["cloneQa"]; renderHistory?: string[] }
+        | null;
+      if (!response.ok || !payload?.image) return;
+
+      const upgradedImage = payload.image;
+      let applied = false;
+      setPack((current) => ({
+        ...current,
+        creatives: current.creatives.map((creative) => {
+          if (creative.creativeId !== clone.creativeId) return creative;
+          const object = creative.canvas.objects[0];
+          const currentImage = object?.content || object?.assetId || "";
+          if (currentImage !== draftImage) return creative;
+          applied = true;
+          return {
+            ...creative,
+            canvas: {
+              ...creative.canvas,
+              objects: [{ ...object, content: upgradedImage, assetId: upgradedImage }],
+              cloneQa: payload.qa ?? creative.canvas.cloneQa,
+              renderHistory: payload.renderHistory ?? creative.canvas.renderHistory,
+            },
+          };
+        }),
+      }));
+      if (applied) {
+        setPrimaryImage(upgradedImage);
+        studio.showToast("Sharpened your ad to full quality");
+      }
+    } catch {
+      // Network hiccup: the draft stays current.
+    }
   }
 
   function renderTextLayerPanel(field: "primaryText" | "headline" | "description" | "cta") {

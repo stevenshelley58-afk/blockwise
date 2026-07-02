@@ -284,11 +284,11 @@ export async function POST(request: NextRequest) {
         body,
         deadlineMs: SYNC_GENERATION_DEADLINE_MS,
         maxCloneAttempts: 1,
-        // The sync path is currently production's ONLY path (the trigger.dev
-        // key is invalid, so every request lands here), and shipping draft-tier
-        // creatives as the product is worse than a longer wait: run full
-        // quality — the 240s deadline under maxDuration 300 fits it.
-        tier: "final",
+        // Draft-then-upgrade: the sync path returns a fast draft the user can
+        // see and edit in ~a minute; the client immediately re-renders it at
+        // the quality tier in the background (creatives/[id]/enhance) and
+        // swaps it in when it verifies.
+        tier: "preview",
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,
