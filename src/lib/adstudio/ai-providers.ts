@@ -636,6 +636,19 @@ function parseJson(rawText: string): unknown {
   try {
     return JSON.parse(rawText);
   } catch {
+    // Models frequently fence JSON in markdown or preface it with prose
+    // (fal any-llm does both). Extract the outermost JSON object before
+    // giving up — rejecting good content cost a whole provider lane.
+    const unfenced = rawText.replace(/```(?:json)?/gi, "");
+    const start = unfenced.indexOf("{");
+    const end = unfenced.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(unfenced.slice(start, end + 1));
+      } catch {
+        // fall through
+      }
+    }
     throw new Error("Provider returned non-JSON content.");
   }
 }
