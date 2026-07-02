@@ -10,6 +10,7 @@ import type {
   AdStudioCampaignPack,
   AdStudioCampaignVariant,
   AdStudioCanvasObject,
+  AdStudioCloneQa,
   AdStudioCreative,
   AdStudioFormat,
   AdStudioGoal,
@@ -175,6 +176,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
       templateCloneImage: input.firstAd?.templateCloneImage,
+      templateCloneQa: input.firstAd?.templateCloneQa,
       subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -969,6 +971,7 @@ function buildCreative(input: {
   sourceImageDataUrl?: string;
   sourceImagesBySlot?: Partial<Record<string, string>>;
   templateCloneImage?: string;
+  templateCloneQa?: AdStudioCloneQa;
   subheadline?: string;
 }): AdStudioCreative {
   const galleryTemplate = galleryTemplateOrNull(input.template);
@@ -980,6 +983,7 @@ function buildCreative(input: {
         variantId: input.variant.variantId,
         template: galleryTemplate,
         cloneImage: input.templateCloneImage,
+        cloneQa: input.templateCloneQa,
       });
     }
 
@@ -1019,6 +1023,7 @@ function buildTemplateCloneCreative(input: {
   variantId: string;
   template: AdStudioGalleryTemplate;
   cloneImage: string;
+  cloneQa?: AdStudioCloneQa;
 }): AdStudioCreative {
   const creative: Omit<AdStudioCreative, "previewSvg"> = {
     creativeId: input.creativeId,
@@ -1030,6 +1035,7 @@ function buildTemplateCloneCreative(input: {
       width: input.template.canvas.width,
       height: input.template.canvas.height,
       backgroundAssetId: null,
+      cloneQa: input.cloneQa,
       objects: [
         {
           objectId: "template_clone_image",

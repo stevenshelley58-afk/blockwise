@@ -49,6 +49,8 @@ export type FirstAdInput = {
     description: string;
     cta: string;
   };
+  /** Vision-QA verdict + editable-element regions for the clone image. */
+  templateCloneQa?: AdStudioCloneQa;
   formats: ["9:16", "4:5", "1:1"];
 };
 
@@ -216,6 +218,24 @@ export type AdStudioCanvasObject = {
  */
 export type AdStudioCreativeSource = "custom_composite" | "generative";
 
+/** A normalized 0-1 bounding box for an editable element on a clone image. */
+export type AdStudioCloneRegion = {
+  key: string;
+  kind: "text" | "image";
+  box: { x: number; y: number; width: number; height: number };
+};
+
+/** Vision-QA verdict for an AI-cloned creative (copy verification + regions). */
+export type AdStudioCloneQa = {
+  passed: boolean;
+  attempts: number;
+  checkedAt: string;
+  copyChecks: Array<{ key: string; expected: string; rendered: string; exact: boolean }>;
+  defects: string[];
+  regions: AdStudioCloneRegion[];
+  model?: string;
+};
+
 export type AdStudioCreative = {
   creativeId: string;
   campaignId: string;
@@ -228,6 +248,8 @@ export type AdStudioCreative = {
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
     fabricJson?: Record<string, unknown> | null;
+    /** Present on AI-cloned creatives: QA verdict + editable-element regions. */
+    cloneQa?: AdStudioCloneQa;
   };
   safeZones: {
     metaStory: boolean;

@@ -11,8 +11,7 @@
 // This module is the request builder + a thin generate wrapper. It is pure and
 // dependency-light (no DB/auth) so it is unit-testable and runnable from a script.
 
-import { generateMixedImageVariantsInParallel } from "./ai-providers.ts";
-import type { ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
+import type { ImageProviderRequest } from "./providers.ts";
 
 /** One image the customer must (or may) supply for a template, by role. */
 export type CloneImageSlot = {
@@ -169,25 +168,3 @@ export function buildCloneImageRequest(brief: TemplateCloneBrief, inputs: CloneI
   };
 }
 
-export type GenerateAdFromTemplateOptions = {
-  env?: Partial<Record<string, string>>;
-  fetchImpl?: typeof fetch;
-  openAiCount?: number;
-  openRouterCount?: number;
-  openAiModel?: string;
-  openRouterModel?: string;
-};
-
-/**
- * Generate ad variants for a template by cloning its sample with the customer's
- * inputs. Runs gpt-image-2 and Gemini flash image in parallel (the existing mixed
- * runner) so you get several variants per request to choose from.
- */
-export async function generateAdFromTemplate(
-  brief: TemplateCloneBrief,
-  inputs: CloneInputs,
-  options: GenerateAdFromTemplateOptions = {},
-): Promise<ImageProviderResponse[]> {
-  const request = buildCloneImageRequest(brief, inputs);
-  return generateMixedImageVariantsInParallel(request, options);
-}

@@ -58,7 +58,6 @@ export {
   createOpenAiVisionProvider,
   createOpenRouterImageProvider,
   createOpenRouterTextProvider,
-  generateMixedImageVariantsInParallel,
 } from "./ai-providers.ts";
 export {
   approveAdStudioBrandKitForUse,

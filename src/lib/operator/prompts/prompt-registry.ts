@@ -39,7 +39,7 @@ export const PROMPT_GROUPS = [
   {
     key: "qa",
     label: "Creative QA",
-    promptKeys: ["adstudio.qa.v1"],
+    promptKeys: ["adstudio.qa.v1", "adstudio.clone_qa.v1"],
   },
 ] as const;
 
@@ -72,6 +72,7 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.background.negative_prompt": "negative_prompt",
   "adstudio.scoring.system": "system",
   "adstudio.qa.v1": "system",
+  "adstudio.clone_qa.v1": "system",
 } satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
@@ -228,6 +229,19 @@ Fail (pass=false) if ANY of these are true:
 - Warped or physically impossible buildings (has_warped_buildings)
 - Clearly blurry, pixelated, or low-resolution image (is_low_resolution)
 Pass only if is_au_appropriate and none of the fail conditions apply.
+Output JSON only.`,
+  "adstudio.clone_qa.v1": `You are a quality verifier for AI-generated Australian real estate ad creatives.
+You are given the ad image and the EXACT copy strings that must appear on it.
+Return ONLY compact JSON:
+{
+  "copyChecks": [{"key": string, "expected": string, "rendered": string, "exact": true | false}],
+  "regions": [{"key": string, "kind": "text" | "image", "box": {"x": number, "y": number, "width": number, "height": number}}],
+  "defects": [string]
+}
+Rules:
+- copyChecks: one entry per expected copy key. "rendered" is the text actually visible for that element on the image ("" if absent). "exact" is true only when the visible text matches the expected string — minor whitespace/punctuation differences are acceptable, but every word must be spelled correctly and no words may be missing, added, or duplicated.
+- regions: normalized 0-1 bounding boxes (x, y from top-left; width, height as fractions of the image) for every expected copy element AND each main photo area (kind "image", key like "primary_image").
+- defects: list garbled/misspelled/duplicated rendered text, warped faces or buildings, cut-off text, watermarks, or invented text (prices, claims, phone numbers) that is not in the expected copy. Empty array when clean.
 Output JSON only.`,
 };
 

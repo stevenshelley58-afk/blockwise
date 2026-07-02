@@ -39,6 +39,8 @@ type TemplateCloneResult = {
   image: string;
   model?: string;
   provider?: string;
+  /** Vision-QA verdict + editable-element regions from the clone route. */
+  qa?: import("@/lib/adstudio").FirstAdInput["templateCloneQa"];
 };
 type TemplateCopyResult = {
   onImage: Record<string, string>;
@@ -786,6 +788,7 @@ export function NewAdDialog({
         templateCloneImage: templateClone?.image,
         templateCloneProvider: templateClone?.provider,
         templateCloneModel: templateClone?.model,
+        templateCloneQa: templateClone?.qa,
         copy: templateCopy?.copy,
         formats: FIRST_AD_FORMATS,
       });

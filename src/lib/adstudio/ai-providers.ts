@@ -26,15 +26,6 @@ type ProviderOptions = {
   quality?: string;
 };
 
-type MixedImageVariantOptions = {
-  env?: EnvLike;
-  fetchImpl?: typeof fetch;
-  openAiCount?: number;
-  openRouterCount?: number;
-  openAiModel?: string;
-  openRouterModel?: string;
-};
-
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
@@ -393,39 +384,6 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
       };
     },
   };
-}
-
-export async function generateMixedImageVariantsInParallel(
-  input: ImageProviderRequest,
-  options: MixedImageVariantOptions = {},
-): Promise<ImageProviderResponse[]> {
-  const env = options.env ?? process.env;
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const openAiCount = options.openAiCount ?? 2;
-  const openRouterCount = options.openRouterCount ?? 2;
-  const openAiProvider = createOpenAiImageProvider({
-    env,
-    fetchImpl,
-    model: options.openAiModel ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2",
-  });
-  const openRouterProvider = createOpenRouterImageProvider({
-    env,
-    fetchImpl,
-    model: options.openRouterModel ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview",
-  });
-  const jobs = [
-    ...Array.from({ length: openAiCount }, (_, index) => ({ provider: openAiProvider, index })),
-    ...Array.from({ length: openRouterCount }, (_, index) => ({ provider: openRouterProvider, index: index + openAiCount })),
-  ];
-
-  return Promise.all(
-    jobs.map(({ provider, index }) =>
-      provider.generate({
-        ...input,
-        seed: (input.seed ?? 0) + index + 1,
-      }),
-    ),
-  );
 }
 
 export function createOpenAiVisionProvider(options: ProviderOptions = {}): VisionProviderAdapter {

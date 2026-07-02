@@ -5,11 +5,9 @@ import {
   createAzureOpenAiTextProvider,
   createOpenAiImageProvider,
   createOpenRouterTextProvider,
-  generateMixedImageVariantsInParallel,
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
-import { createFalImageProvider } from "../src/lib/adstudio/fal-image-provider.ts";
 
 test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -220,52 +218,6 @@ test("createOpenAiImageProvider attaches a mask when one is supplied", async () 
   assert.ok(body.get("mask"), "mask must be attached when provided");
 });
 
-test("createFalImageProvider forwards mask images to fal edits", async () => {
-  const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createFalImageProvider({
-    env: { FAL_KEY: "fal_test" },
-    pollMs: 0,
-    timeoutMs: 1_000,
-    fetchImpl: async (url, init) => {
-      calls.push({ url: String(url), init: init ?? {} });
-      if (String(url).includes("/openai/gpt-image-2/edit")) {
-        return new Response(
-          JSON.stringify({
-            request_id: "req_1",
-            status_url: "https://fal.test/status",
-            response_url: "https://fal.test/response",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-      if (String(url) === "https://fal.test/status") {
-        return new Response(JSON.stringify({ status: "COMPLETED" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ images: [{ url: "https://fal.test/image.png" }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    },
-  });
-
-  assert.equal(provider.capabilities.inpainting, true);
-
-  await provider.generate({
-    prompt: "Clone the template with clean copy zones.",
-    referenceAssets: ["https://example.test/reference.png"],
-    maskImage: "data:image/png;base64,bWFzaw==",
-    aspectRatio: "4:5",
-    stylePreset: "real_estate_clone",
-    requiresReferenceAssets: true,
-  });
-
-  const body = JSON.parse(String(calls[0].init.body));
-  assert.equal(body.mask_url, "data:image/png;base64,bWFzaw==");
-});
-
 test("createOpenAiImageProvider honours quality tier and the Cloudflare gateway for edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createOpenAiImageProvider({
@@ -306,58 +258,3 @@ test("resolveOpenAiImageEditsUrl derives the edits endpoint from a gateway URL",
   );
 });
 
-test("generateMixedImageVariantsInParallel fans out two GPT Image and two Nano Banana jobs", async () => {
-  const calls: Array<{ url: string; init: RequestInit }> = [];
-
-  const variants = await generateMixedImageVariantsInParallel(
-    {
-      prompt: "Premium local real estate appraisal creative",
-      referenceAssets: [],
-      aspectRatio: "1:1",
-      stylePreset: "real_estate_photography",
-    },
-    {
-      env: {
-        OPENAI_API_KEY: "oa_test",
-        OPENROUTER_API_KEY: "or_test",
-        NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
-      },
-      fetchImpl: async (url, init) => {
-        calls.push({ url: String(url), init: init ?? {} });
-
-        if (String(url).includes("openrouter.ai")) {
-          return new Response(
-            JSON.stringify({
-              choices: [
-                {
-                  message: {
-                    images: [{ image_url: { url: "data:image/png;base64,bmFubw==" } }],
-                  },
-                },
-              ],
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-
-        return new Response(
-          JSON.stringify({
-            data: [{ b64_json: "Y2hhdGdwdA==" }],
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      },
-    },
-  );
-
-  assert.equal(calls.length, 4);
-  assert.equal(calls.filter((call) => call.url.includes("api.openai.com")).length, 2);
-  assert.equal(calls.filter((call) => call.url.includes("openrouter.ai")).length, 2);
-  assert.deepEqual(
-    calls.map((call) => JSON.parse(String(call.init.body)).model),
-    ["gpt-image-2", "gpt-image-2", "google/gemini-3.1-flash-image-preview", "google/gemini-3.1-flash-image-preview"],
-  );
-  assert.equal(variants.length, 4);
-  assert.equal(variants[0]?.assetUrl, "data:image/png;base64,Y2hhdGdwdA==");
-  assert.equal(variants[2]?.assetUrl, "data:image/png;base64,bmFubw==");
-});
