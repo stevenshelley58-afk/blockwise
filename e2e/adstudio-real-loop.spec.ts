@@ -27,19 +27,16 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.setTimeout(420_000);
 
   test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
+    // The cookie banner renders late (post-hydration) and overlays the dialog
+    // footer, intercepting the Generate Ad click — a click-if-visible dismissal
+    // races it. Seeding the stored choice keeps it from ever rendering.
+    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
 
     if (await page.getByRole("heading", { name: /approve your brand kit first/i }).isVisible().catch(() => false)) {
       await page.getByRole("link", { name: /open brand studio/i }).click();
       await approveBrandKit(page);
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    }
-
-    // The cookie consent banner overlays the workbench footer and intercepts
-    // clicks on anything underneath it (including Generate Ad).
-    const consent = page.getByRole("button", { name: /essential only/i });
-    if (await consent.isVisible().catch(() => false)) {
-      await consent.click();
     }
 
     // The soft brand prompt ("Set your brand before launch?") is skippable and
@@ -69,6 +66,10 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       // one request) can legitimately take ~2 minutes.
       { timeout: 150_000 },
     );
+    // If the click below stalls past this watcher's timeout, its rejection
+    // must not surface as an unhandled rejection that ends the whole test —
+    // it is consumed via the race and the await further down.
+    void generationResponse.catch(() => {});
     // submit() bails out with a footer alert (requirement blockers) or an
     // inline error instead of a disabled button, so a blocked submit produces
     // NO network request at all. Racing the alert against the response turns
