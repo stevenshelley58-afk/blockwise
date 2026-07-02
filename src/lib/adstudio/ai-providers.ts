@@ -459,7 +459,9 @@ async function postChatCompletion(input: {
       ...(includeModelInBody ? { model: input.model } : {}),
       messages: buildChatMessages(input.input),
       response_format: { type: "json_object" },
-      temperature: 0.4,
+      // Reasoning models (gpt-5*, o*) accept only the default temperature and
+      // reject the request outright when any other value is sent.
+      ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
     }),
   });
   const payload = (await response.json()) as {
@@ -486,6 +488,11 @@ async function postChatCompletion(input: {
       schemaName: input.input.schemaName,
     },
   };
+}
+
+function supportsCustomTemperature(model: string): boolean {
+  const name = model.split("/").pop() ?? model;
+  return !/^(gpt-5|o\d)/i.test(name);
 }
 
 // Builds the chat payload. When an image is supplied, it is attached to the final
