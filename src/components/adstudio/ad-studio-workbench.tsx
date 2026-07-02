@@ -34,7 +34,7 @@ import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
-import { AdPreview, FORMAT_META, PreviewControls, VariantStrip } from "./preview";
+import { AdPreview, FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -98,13 +98,17 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
   feed: "4:5",
   square: "1:1",
-  landscape: "1.91:1",
 };
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
 
 const FabricAdEditor = dynamic(
   () => import("./canvas/fabric-ad-editor").then((mod) => mod.FabricAdEditor),
+  { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
+);
+
+const InPlaceAdEditor = dynamic(
+  () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
   { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
 );
 
@@ -141,6 +145,14 @@ function initialDestinationUrl(pack: AdStudioCampaignPack, brandKit: AdStudioBra
     copyPack?.googleDemandGen.finalUrl ||
     brandKit.source.url ||
     ""
+  );
+}
+
+/** A reference-clone creative: a single flat image with copy baked into pixels. */
+function isCloneCreative(creative: AdStudioCreative): boolean {
+  return (
+    creative.canvas.objects.length === 1 &&
+    creative.canvas.objects[0]?.objectId === "template_clone_image"
   );
 }
 
@@ -264,7 +276,6 @@ export function AdStudioWorkbench({
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(visibleBuiltInTemplates);
   const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
-  const [promptedForFirstAd, setPromptedForFirstAd] = useState(false);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
@@ -275,6 +286,20 @@ export function AdStudioWorkbench({
   const [market, setMarket] = useState(() => initialMarket(initialPack));
   const [propertyType, setPropertyType] = useState("Houses");
   const [destinationUrl, setDestinationUrl] = useState(() => initialDestinationUrl(initialPack, brandKit));
+
+  // Campaign defaults are editable (Settings/Publish panels) and autosave like copy.
+  function updateMarket(value: string) {
+    setMarket(value);
+    studio.setSaveState("saving");
+  }
+  function updatePropertyType(value: string) {
+    setPropertyType(value);
+    studio.setSaveState("saving");
+  }
+  function updateDestinationUrl(value: string) {
+    setDestinationUrl(value);
+    studio.setSaveState("saving");
+  }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -283,6 +308,7 @@ export function AdStudioWorkbench({
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
+  const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
   const radarPromptedRef = useRef(false);
   const linkedTemplatePromptedRef = useRef(false);
@@ -544,7 +570,7 @@ export function AdStudioWorkbench({
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
   // Campaign readiness checklist lives in the publish panel.
-  const { generateFirstAd, generateVariantsForAngle, saveDraft, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
+  const { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
     pack,
     brandKit,
     offers,
@@ -572,8 +598,9 @@ export function AdStudioWorkbench({
 
   useEffect(() => {
     saveDraftRef.current = saveDraft;
+    flushDraftBeaconRef.current = flushDraftBeacon;
     saveStateRef.current = studio.saveState;
-  }, [saveDraft, studio.saveState]);
+  }, [saveDraft, flushDraftBeacon, studio.saveState]);
 
   useEffect(() => {
     if (studio.saveState !== "saving") return;
@@ -597,10 +624,11 @@ export function AdStudioWorkbench({
   ]);
 
   useEffect(() => {
+    // sendBeacon survives page teardown; async fetch from beforeunload does not.
     function flushPendingDraft() {
-      if (saveStateRef.current === "saving") {
-        void saveDraftRef.current?.({ silent: true });
-      }
+      if (saveStateRef.current !== "saving") return;
+      if (flushDraftBeaconRef.current?.()) return;
+      void saveDraftRef.current?.({ silent: true });
     }
 
     window.addEventListener("pagehide", flushPendingDraft);
@@ -628,12 +656,6 @@ export function AdStudioWorkbench({
   }
 
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
-  // First open with no ad yet: keep the embedded Create ad panel visible. The
-  // modal only opens from an explicit source choice.
-  useEffect(() => {
-    if (promptedForFirstAd) return;
-    setPromptedForFirstAd(true);
-  }, [pack.variants.length, promptedForFirstAd]);
 
   useEffect(() => {
     if (searchParams.get("newAd") !== "radar" || radarPromptedRef.current) return;
@@ -882,6 +904,7 @@ export function AdStudioWorkbench({
         onGenerate={(kind, context) => void generateCopy(kind, context, primaryImage)}
         onAssist={(action, context) => void applyCopyAssist(action, context, primaryImage)}
         onApplyAlternate={applyAlternate}
+        cloneCreative={currentCreative ? isCloneCreative(currentCreative) : false}
       />
     );
   }
@@ -904,6 +927,29 @@ export function AdStudioWorkbench({
 
   function renderCreativeEditor() {
     if (!currentCreative) return renderFallbackPreview();
+
+    // AI-designed clone: one flat image with the copy baked into the pixels.
+    // The layer editor would silently no-op on it, so edit in place instead —
+    // hit-targets from the QA regions drive the targeted edit endpoint.
+    // P2.2: the editor sits inside real Meta chrome (page header, live primary
+    // text above the creative, headline/description strip, real CTA enum label)
+    // so the stage shows the ad exactly as Meta renders it.
+    if (isCloneCreative(currentCreative)) {
+      return (
+        <MetaChromePreview
+          brandKit={brandKit}
+          copy={copy}
+          format={previewFormat}
+          onSelectText={() => goToSection("text")}
+        >
+          <InPlaceAdEditor
+            creative={currentCreative}
+            onCreativeChange={updateCreative}
+            showToast={studio.showToast}
+          />
+        </MetaChromePreview>
+      );
+    }
 
     return (
       <FabricAdEditor
@@ -1065,6 +1111,7 @@ export function AdStudioWorkbench({
           campaignId={pack.campaign.campaignId}
           campaignPack={pack}
           destinationUrl={destinationUrl}
+          onChangeDestinationUrl={updateDestinationUrl}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
           brandApproved={!brandIsDraft}
@@ -1077,7 +1124,12 @@ export function AdStudioWorkbench({
       return (
         <>
           <BrandPanel brand={brand} brandKit={brandKit} />
-          <SettingsPanel />
+          <SettingsPanel
+            market={market}
+            propertyType={propertyType}
+            onChangeMarket={updateMarket}
+            onChangePropertyType={updatePropertyType}
+          />
         </>
       );
     }
@@ -1271,6 +1323,7 @@ export function AdStudioWorkbench({
               campaignId={pack.campaign.campaignId}
               campaignPack={pack}
               destinationUrl={destinationUrl}
+              onChangeDestinationUrl={updateDestinationUrl}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
               brandApproved={!brandIsDraft}
@@ -1283,7 +1336,12 @@ export function AdStudioWorkbench({
         {studio.mobileTab === "settings" && (
           <div className="studio-mobile-panel">
             <BrandPanel brand={brand} brandKit={brandKit} />
-            <SettingsPanel />
+            <SettingsPanel
+              market={market}
+              propertyType={propertyType}
+              onChangeMarket={updateMarket}
+              onChangePropertyType={updatePropertyType}
+            />
           </div>
         )}
 

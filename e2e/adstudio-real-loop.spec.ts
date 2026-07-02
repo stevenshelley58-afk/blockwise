@@ -8,11 +8,29 @@ const previewUrl = process.env.PLAYWRIGHT_BASE_URL;
 const canRun = Boolean(previewUrl && workspaceId && hasAuthState(storageStatePath));
 const describeAdStudioRealLoop = canRun ? test.describe : test.describe.skip;
 
+// In CI a missing precondition is a FAILURE, not a skip — the silent skip is
+// how runtime regressions shipped green. Locally it still skips quietly.
+if (!canRun && process.env.CI) {
+  test("Ad Studio real-loop preconditions are present in CI", () => {
+    const missing = [
+      !previewUrl && "PLAYWRIGHT_BASE_URL",
+      !workspaceId && "ADSTUDIO_E2E_WORKSPACE_ID",
+      !hasAuthState(storageStatePath) && `auth storage state at ${storageStatePath}`,
+    ].filter(Boolean);
+    throw new Error(`Ad Studio real-loop e2e cannot run in CI — missing: ${missing.join(", ")}.`);
+  });
+}
+
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
-  test.setTimeout(180_000);
+  // Real AI generation + edit + export can take several minutes end to end.
+  test.setTimeout(600_000);
 
   test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
+    // The cookie banner renders late (post-hydration) and overlays the dialog
+    // footer, intercepting the Generate Ad click — a click-if-visible dismissal
+    // races it. Seeding the stored choice keeps it from ever rendering.
+    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
 
     if (await page.getByRole("heading", { name: /approve your brand kit first/i }).isVisible().catch(() => false)) {
@@ -21,38 +39,89 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     }
 
+    // The soft brand prompt ("Set your brand before launch?") is skippable and
+    // otherwise intercepts every click on the workbench.
+    const skipBrand = page.getByRole("button", { name: /skip for now/i });
+    if (await skipBrand.isVisible().catch(() => false)) {
+      await skipBrand.click();
+    }
+
     await openNewAd(page);
-    await chooseBlankTemplate(page);
-    await uploadGeneratedListingImage(page, testInfo.outputPath("listing.png"));
-    await page.getByLabel(/short description/i).fill("Open home this Saturday, renovated family home in Scarborough.");
+    await chooseFirstTemplate(page);
+    await uploadRequiredTemplateImages(page, testInfo.outputPath("listing.png"));
+    // The brief label is template-specific (e.g. "Listing details") and the
+    // dialog title can match the same words — target the textbox role so the
+    // locator can never resolve to the dialog container.
+    await page
+      .getByRole("dialog")
+      .getByRole("textbox", { name: /details|description/i })
+      .first()
+      .fill("Open home this Saturday, renovated family home in Scarborough.");
     const generationResponse = page.waitForResponse(
       (response) => {
         const url = new URL(response.url());
         return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
       },
-      { timeout: 90_000 },
+      // The synchronous degraded-mode pipeline (copy + clone + vision QA in
+      // one request) runs against a 240s server deadline (route maxDuration
+      // 300) — wait past it so the server's own answer arrives, not a guess.
+      { timeout: 280_000 },
     );
+    // If the click below stalls past this watcher's timeout, its rejection
+    // must not surface as an unhandled rejection that ends the whole test —
+    // it is consumed via the race and the await further down.
+    void generationResponse.catch(() => {});
+    // submit() bails out with a footer alert (requirement blockers) or an
+    // inline error instead of a disabled button, so a blocked submit produces
+    // NO network request at all. Racing the alert against the response turns
+    // that silent timeout into the dialog's own message.
+    const dialogBlocked = page
+      .locator(".studio-newad-requirements, .studio-newad-error")
+      .first()
+      .waitFor({ state: "visible", timeout: 280_000 })
+      .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
+      .then((text) => text?.trim() || "the dialog blocked the submit without a message")
+      .catch(() => null);
     await page.getByRole("button", { name: /generate ad/i }).click();
+    const blockedMessage = await Promise.race([
+      generationResponse.then(() => null).catch(() => null),
+      dialogBlocked,
+    ]);
+    if (blockedMessage) {
+      throw new Error(`Generate ad never sent POST /api/adstudio/campaigns — dialog says: ${blockedMessage}`);
+    }
     const generated = await generationResponse;
     expect(generated.ok(), await generated.text()).toBe(true);
-    const generatedPayload = (await generated.json()) as { campaignPack?: { campaign?: { campaignId?: string } } };
-    const campaignId = generatedPayload.campaignPack?.campaign?.campaignId;
+    const generatedPayload = (await generated.json()) as {
+      campaignPack?: { campaign?: { campaignId?: string } };
+      jobId?: string;
+    };
+    // Async path (202 + job polling) or sync fallback (201 + pack) — both valid.
+    const campaignId = generatedPayload.jobId
+      ? await waitForGenerationJob(page, generatedPayload.jobId)
+      : generatedPayload.campaignPack?.campaign?.campaignId;
     expect(campaignId).toBeTruthy();
 
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
-    await openPanel(page, "Copy");
-    await page.getByLabel(/headline/i).fill("Scarborough open home");
+    // The feed copy lives in the sidebar "Text" section (the old Copy panel).
+    await openPanel(page, "Text");
+    await page.getByRole("textbox", { name: /^headline/i }).fill("Scarborough open home");
     await saveDraft(page);
     await waitForSavedStatus(page);
 
-    await page.getByRole("button", { name: /ad 2/i }).click();
-    await page.getByRole("button", { name: /ad 1/i }).click();
-    await openPanel(page, "Copy");
-    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home");
+    // Template mode generates a single clone ad; the variant switch only
+    // exists when a multi-ad pack is present.
+    const adTwo = page.getByRole("button", { name: /ad 2/i }).first();
+    if (await adTwo.isVisible().catch(() => false)) {
+      await adTwo.click();
+      await page.getByRole("button", { name: /ad 1/i }).first().click();
+      await openPanel(page, "Text");
+      await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home");
+    }
 
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    await openPanel(page, "Copy");
-    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home", { timeout: 30_000 });
+    await openPanel(page, "Text");
+    await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home", { timeout: 30_000 });
 
     await openPanel(page, "Publish");
     await exportCreatives(page);
@@ -97,21 +166,50 @@ async function openNewAd(page: Page) {
   await browse.click();
 }
 
-async function chooseBlankTemplate(page: Page) {
-  const blank = page.getByRole("button", { name: /start blank|blank|create your own|describe your ad/i }).first();
-  if (await blank.isVisible().catch(() => false)) {
-    await blank.click();
+// Async generation: poll the jobs endpoint with the page's session until the
+// trigger.dev job completes, mirroring what the dialog does.
+async function waitForGenerationJob(page: Page, jobId: string): Promise<string> {
+  const deadline = Date.now() + 10 * 60_000;
+  for (;;) {
+    const response = await page.request.get(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`);
+    expect(response.ok(), await response.text()).toBe(true);
+    const job = (await response.json()) as { status?: string; error?: string | null; campaign_id?: string | null };
+    if (job.status === "done" && job.campaign_id) return job.campaign_id;
+    if (job.status === "failed") throw new Error(`Generation job failed: ${job.error ?? "unknown error"}`);
+    if (Date.now() > deadline) throw new Error("Generation job did not finish within 10 minutes.");
+    await page.waitForTimeout(2_500);
   }
 }
 
-async function uploadGeneratedListingImage(page: Page, path: string) {
-  await writeTinyPng(path);
-  await page.setInputFiles('.studio-newad input[type="file"]', path);
-  await expect(page.getByRole("button", { name: /listing\.png[\s\S]*selected file/i })).toBeVisible({ timeout: 30_000 });
+// Blank mode was cut (P2.3): every new ad starts from a template, so the loop
+// picks the first template card when the dialog opens on the source step.
+async function chooseFirstTemplate(page: Page) {
+  const template = page.getByRole("button", { name: /use .* template/i }).first();
+  if (await template.isVisible().catch(() => false)) {
+    await template.click();
+  }
+}
+
+// Templates expose one file input per image slot, and EVERY non-headshot slot
+// is required (see imageRequirementsForTemplate) — an unfilled slot blocks
+// submit() with a footer alert, not a disabled button. Fill them all, waiting
+// out each slot's upload round-trip before starting the next.
+async function uploadRequiredTemplateImages(page: Page, path: string) {
+  await writeListingPng(page, path);
+  const inputs = page.locator('.studio-newad input[type="file"]');
+  const count = await inputs.count();
+  expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    await inputs.nth(index).setInputFiles(path);
+    await expect(
+      page.locator('.studio-newad .asset-upload-zone[data-has-file="true"]'),
+      `image slot ${index + 1} of ${count} should finish uploading`,
+    ).toHaveCount(index + 1, { timeout: 30_000 });
+  }
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
-async function openPanel(page: Page, label: "Copy" | "Publish") {
+async function openPanel(page: Page, label: "Text" | "Publish") {
   const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
@@ -161,9 +259,40 @@ async function waitForSavedStatus(page: Page) {
     .toBe(true);
 }
 
-async function writeTinyPng(path: string) {
-  const base64 =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+// A 1x1 stub PNG travels the whole pipeline only to be rejected by the image
+// provider ("You uploaded an unsupported image"), so draw a plausible
+// 1080x1350 listing photo on a canvas instead — real dimensions, real content.
+async function writeListingPng(page: Page, path: string) {
+  const dataUrl = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas 2d context unavailable");
+    const sky = ctx.createLinearGradient(0, 0, 0, 700);
+    sky.addColorStop(0, "#87b7e0");
+    sky.addColorStop(1, "#dbe9f4");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, 1080, 700);
+    ctx.fillStyle = "#6f9e5f";
+    ctx.fillRect(0, 700, 1080, 650);
+    ctx.fillStyle = "#7a5844";
+    ctx.beginPath();
+    ctx.moveTo(160, 430);
+    ctx.lineTo(540, 240);
+    ctx.lineTo(920, 430);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#e8e0d2";
+    ctx.fillRect(200, 430, 680, 370);
+    ctx.fillStyle = "#4a3b2f";
+    ctx.fillRect(500, 620, 90, 180);
+    ctx.fillStyle = "#9ec7e8";
+    ctx.fillRect(280, 500, 120, 100);
+    ctx.fillRect(680, 500, 120, 100);
+    return canvas.toDataURL("image/png");
+  });
+  const base64 = dataUrl.split(",")[1] ?? "";
   await import("node:fs/promises").then((fs) => fs.writeFile(path, Buffer.from(base64, "base64")));
 }
 

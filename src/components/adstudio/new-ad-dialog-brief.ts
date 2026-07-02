@@ -9,7 +9,7 @@ export type TemplateBriefGuidance = {
   placeholder: string;
 };
 
-const BLANK_BRIEF_GUIDANCE: TemplateBriefGuidance = {
+const FALLBACK_BRIEF_GUIDANCE: TemplateBriefGuidance = {
   fieldLabel: "Short description",
   helperText: "Include the property, suburb, offer, or key selling point.",
   note: "Add your own photo and a short brief so Blockwise can build the ad.",
@@ -18,9 +18,8 @@ const BLANK_BRIEF_GUIDANCE: TemplateBriefGuidance = {
 
 export function briefGuidanceForTemplate(
   template: Pick<AdStudioTemplate, "goal" | "name" | "offerId" | "promptHint" | "sampleCopy"> | undefined,
-  isBlank: boolean,
 ): TemplateBriefGuidance {
-  if (isBlank || !template) return BLANK_BRIEF_GUIDANCE;
+  if (!template) return FALLBACK_BRIEF_GUIDANCE;
 
   const category = briefCategoryForTemplate(template);
   const suburb = "Scarborough, WA";

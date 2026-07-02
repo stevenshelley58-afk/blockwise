@@ -21,6 +21,8 @@ type CopyPanelProps = {
   onGenerate: (kind: "ai" | "brief", context: CopyContext) => void;
   onAssist: (action: string, context: CopyContext) => void;
   onApplyAlternate: (field: "headline" | "primaryText", value: string) => void;
+  /** True when the current creative is an AI-designed clone (text baked into the image). */
+  cloneCreative?: boolean;
 };
 
 export function CopyPanel({
@@ -37,6 +39,7 @@ export function CopyPanel({
   onGenerate,
   onAssist,
   onApplyAlternate,
+  cloneCreative = false,
 }: CopyPanelProps) {
   const hasAlternates = alternates.headline.length > 0 || alternates.primaryText.length > 0;
   const feedbackNode = feedback ? (
@@ -52,7 +55,14 @@ export function CopyPanel({
 
   return (
     <>
-      <PanelHeader title="Text" detail="Click canvas text to edit that layer, or write and rewrite the ad copy here." />
+      <PanelHeader
+        title="Text"
+        detail={
+          cloneCreative
+            ? "This edits the feed text shown around the image. Text on the image itself is AI-designed — create a new ad to change it."
+            : "Click canvas text to edit that layer, or write and rewrite the ad copy here."
+        }
+      />
 
       <div className="studio-mode-seg" role="tablist" aria-label="Copy mode">
         <button

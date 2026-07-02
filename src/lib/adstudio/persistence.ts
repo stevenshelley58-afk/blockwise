@@ -81,14 +81,35 @@ export async function persistAdStudioCampaignPack(
     return persistenceError("Demo brand kits cannot be used for saved campaigns.");
   }
 
-  const brandKitResult = await persistAdStudioBrandKit(supabase, pack.brandKit, userId);
+  const now = new Date().toISOString();
+  const compactCreatives = compactCreativesForPersistence(pack.creatives);
 
-  if (brandKitResult.error) {
-    return brandKitResult;
-  }
-
-  const campaignResult = await supabase.from("adstudio_campaigns").upsert(
-    {
+  // One transactional RPC (adstudio_persist_campaign_pack, SECURITY INVOKER so
+  // RLS still applies): a failure in any table rolls back the whole pack —
+  // partially written campaigns are impossible.
+  const result = await supabase.rpc("adstudio_persist_campaign_pack", {
+    brand_kit: {
+      id: pack.brandKit.brandKitId,
+      workspace_id: pack.brandKit.workspaceId,
+      source_type: pack.brandKit.source.type,
+      source_url: pack.brandKit.source.url,
+      business_name: pack.brandKit.identity.businessName,
+      market_country: pack.brandKit.identity.marketCountry,
+      market_region: pack.brandKit.identity.marketRegion,
+      identity_json: pack.brandKit.identity,
+      logos_json: pack.brandKit.logos,
+      colours_json: pack.brandKit.colours,
+      typography_json: pack.brandKit.typography,
+      tone_json: pack.brandKit.tone,
+      visual_style_json: pack.brandKit.visualStyle,
+      compliance_json: pack.brandKit.compliance,
+      contact_json: pack.brandKit.contact,
+      review_status: pack.brandKit.reviewStatus,
+      locked_fields_json: pack.brandKit.lockedFields,
+      created_by: userId,
+      updated_at: now,
+    },
+    campaign: {
       id: pack.campaign.campaignId,
       workspace_id: pack.campaign.workspaceId,
       brand_kit_id: pack.campaign.brandKitId,
@@ -105,17 +126,9 @@ export async function persistAdStudioCampaignPack(
       creative_formats_json: pack.campaign.creativeFormats,
       status: pack.campaign.status,
       created_by: userId,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     },
-    { onConflict: "id" },
-  );
-
-  if (campaignResult.error) {
-    return campaignResult;
-  }
-
-  const variantResult = await supabase.from("adstudio_campaign_variants").upsert(
-    pack.variants.map((variant) => ({
+    variants: pack.variants.map((variant) => ({
       id: variant.variantId,
       workspace_id: pack.campaign.workspaceId,
       campaign_id: pack.campaign.campaignId,
@@ -126,18 +139,9 @@ export async function persistAdStudioCampaignPack(
       score_json: variant.score,
       status: variant.status,
       locked_fields_json: variant.lockedFields,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })),
-    { onConflict: "id" },
-  );
-
-  if (variantResult.error) {
-    return variantResult;
-  }
-
-  const compactCreatives = compactCreativesForPersistence(pack.creatives);
-  const creativeResult = await supabase.from("adstudio_creatives").upsert(
-    compactCreatives.map((creative) => ({
+    creatives: compactCreatives.map((creative) => ({
       id: creative.creativeId,
       workspace_id: pack.campaign.workspaceId,
       campaign_id: creative.campaignId,
@@ -148,17 +152,9 @@ export async function persistAdStudioCampaignPack(
       canvas_json: creative.canvas,
       render_status: "rendered",
       preview_svg: null,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })),
-    { onConflict: "id" },
-  );
-
-  if (creativeResult.error) {
-    return creativeResult;
-  }
-
-  const copyResult = await supabase.from("adstudio_platform_copy").upsert(
-    pack.copyPacks.map((copyPack) => ({
+    copy_packs: pack.copyPacks.map((copyPack) => ({
       id: copyPack.copyPackId,
       workspace_id: pack.campaign.workspaceId,
       campaign_id: copyPack.campaignId,
@@ -170,17 +166,9 @@ export async function persistAdStudioCampaignPack(
       landing_page_json: copyPack.landingPage,
       followup_json: copyPack.followUp,
       locked_fields_json: copyPack.lockedFields,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })),
-    { onConflict: "id" },
-  );
-
-  if (copyResult.error) {
-    return copyResult;
-  }
-
-  const complianceResult = await supabase.from("adstudio_compliance_reports").upsert(
-    {
+    compliance: {
       id: pack.compliance.reportId,
       workspace_id: pack.campaign.workspaceId,
       campaign_id: pack.campaign.campaignId,
@@ -188,10 +176,9 @@ export async function persistAdStudioCampaignPack(
       issues_json: pack.compliance.issues,
       checked_at: pack.compliance.checkedAt,
     },
-    { onConflict: "id" },
-  );
+  });
 
-  return complianceResult;
+  return { data: result.data, error: result.error ? { message: result.error.message } : null };
 }
 
 export function compactAdStudioCampaignPackForTransport(pack: AdStudioCampaignPack): AdStudioCampaignPack {

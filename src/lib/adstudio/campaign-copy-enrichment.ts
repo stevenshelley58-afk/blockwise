@@ -101,6 +101,31 @@ export async function enrichCampaignPackCopyWithAi(input: {
   });
 }
 
+/**
+ * Apply already-generated copy (e.g. the brief-grounded template copy produced
+ * alongside a clone) to every variant, then re-run the deterministic compliance
+ * review. Used by template mode, where AI enrichment is skipped but the
+ * offer-library defaults must still be replaced with the user's copy.
+ */
+export function applyProvidedCopyToCampaignPack(
+  pack: AdStudioCampaignPack,
+  copy: AdStudioCopyFields,
+): AdStudioCampaignPack {
+  let next = pack;
+  for (const variant of pack.variants) {
+    next = applyGeneratedCopy(next, variant.variantId, copy);
+  }
+  const compliance = runAdStudioComplianceReview({ campaign: next.campaign, copyPacks: next.copyPacks });
+  return {
+    ...next,
+    campaign: {
+      ...next.campaign,
+      status: compliance.status === "blocked" ? "blocked" : "ready",
+    },
+    compliance,
+  };
+}
+
 function applyGeneratedCopy(
   pack: AdStudioCampaignPack,
   variantId: string,

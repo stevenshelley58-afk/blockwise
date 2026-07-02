@@ -190,6 +190,9 @@
 .studio-fabric-shell[data-format="4:5"]{width:min(475px,82%)}
 .studio-fabric-shell[data-format="1:1"]{width:min(520px,84%)}
 .studio-fabric-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
+.studio-clone-stage{position:relative;display:grid;justify-items:center;gap:10px}
+.studio-clone-stage img{display:block;max-width:min(475px,82%);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-clone-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
 .studio-preview-device{transform:scale(var(--preview-scale));transform-origin:center;transition:transform .16s ease}
 .studio-story-card{position:relative;width:332px;aspect-ratio:9/16;overflow:hidden;border-radius:24px;background:#111;color:#fff;box-shadow:0 30px 70px rgba(0,0,0,.5)}
 .studio-story-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -501,4 +504,56 @@
   .studio-story-body{font-size:19px}
   .studio-mobile-body{padding-left:14px;padding-right:14px}
 }
+
+/* In-place clone editor: hit-targets from cloneQa.regions over the flat render */
+.studio-inplace-stage{position:relative;display:grid;justify-items:center;gap:10px}
+.studio-inplace-frame{position:relative;display:inline-block;line-height:0}
+.studio-inplace-frame img{display:block;max-width:min(475px,82vw);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-inplace-region{position:absolute;min-width:24px;min-height:24px;margin:0;padding:0;display:grid;place-items:center;border:1.5px dashed transparent;border-radius:8px;background:transparent;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.studio-inplace-region:hover:not(:disabled),.studio-inplace-region:focus-visible{border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:rgba(255,255,255,.06)}
+.studio-inplace-region:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-region:disabled{cursor:not-allowed}
+.studio-inplace-region[data-pending]{border-color:color-mix(in srgb,var(--accent) 40%,transparent);cursor:progress;background:linear-gradient(100deg,rgba(255,255,255,.14) 30%,rgba(255,255,255,.42) 50%,rgba(255,255,255,.14) 70%);background-size:200% 100%;animation:studio-inplace-shimmer 1.2s ease infinite}
+@keyframes studio-inplace-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.studio-inplace-chip{position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:9999px;background:#fff;color:var(--accent);display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.25);opacity:0;transform:scale(.8);transition:opacity .15s ease,transform .15s ease;pointer-events:none}
+.studio-inplace-region:hover .studio-inplace-chip,.studio-inplace-region:focus-visible .studio-inplace-chip{opacity:1;transform:scale(1)}
+.studio-inplace-status{display:inline-flex;align-items:center;padding:3px 9px;border-radius:9999px;background:rgba(15,23,42,.78);color:#e6edf9;font-size:11px;font-weight:650;line-height:1.4;white-space:nowrap}
+.studio-inplace-editor{position:absolute;z-index:6;min-width:180px;display:grid;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 18px 44px rgba(0,0,0,.28);line-height:1.4}
+.studio-inplace-editor textarea{width:100%;resize:none;border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px;font:inherit;font-size:13px;line-height:1.4;color:var(--ink);outline:none}
+.studio-inplace-editor textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-editor-actions{display:flex;justify-content:flex-end;gap:6px}
+.studio-inplace-editor-actions button{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.studio-inplace-editor-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.studio-inplace-editor-actions button.confirm{background:var(--accent);border-color:var(--accent);color:#fff}
+.studio-inplace-editor-actions button.confirm:hover{opacity:.9;color:#fff}
+.studio-inplace-editor-actions button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(18,62,117,.12)}
+.studio-inplace-undo{position:absolute;top:10px;right:10px;z-index:5;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:0;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650;cursor:pointer;transition:background .15s ease}
+.studio-inplace-undo:hover:not(:disabled){background:rgba(15,23,42,.88)}
+.studio-inplace-undo:disabled{opacity:.5;cursor:not-allowed}
+.studio-inplace-hint{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
+
+/* P2.2 Meta chrome: the stage shows the clone creative exactly as Meta renders it.
+   Reuses the .studio-feed-card / .studio-story-card visual language; the creative
+   itself is the embedded in-place editor, never a second static render. */
+.studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:18px;scrollbar-width:thin}
+.studio-metachrome-card{width:440px;max-width:100%;overflow:visible}
+.studio-metachrome-card footer{border-radius:0 0 18px 18px}
+.studio-metachrome-copy{cursor:pointer}
+.studio-metachrome-copy:hover{color:var(--accent)}
+.studio-metachrome-media{position:relative;background:#eee;min-height:120px}
+.studio-metachrome-media .studio-inplace-stage,.studio-metachrome-media .studio-clone-stage{width:100%;gap:0}
+.studio-metachrome-media .studio-inplace-frame{width:100%}
+.studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;max-width:100%;max-height:none;border-radius:0;box-shadow:none}
+.studio-metachrome-media .studio-inplace-hint,.studio-metachrome-media .studio-clone-badge{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
+.studio-metachrome-media .studio-fabric-loading{min-height:320px;color:var(--muted)}
+.studio-metachrome-story{position:relative;display:inline-block}
+.studio-metachrome-story .studio-inplace-stage,.studio-metachrome-story .studio-clone-stage{gap:0}
+.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{border-radius:24px}
+.studio-metachrome-story .studio-inplace-hint,.studio-metachrome-story .studio-clone-badge{position:absolute;left:50%;top:calc(100% + 12px);transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
+.studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:24px;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 74%,rgba(0,0,0,.5) 100%)}
+.studio-metachrome-story-progress{position:absolute;top:10px;left:14px;right:14px;display:flex;gap:5px}
+.studio-metachrome-story-progress i{flex:1;height:2.5px;border-radius:999px;background:rgba(255,255,255,.45)}
+.studio-metachrome-story-progress i:first-child{background:#fff}
+.studio-metachrome-story-brand{top:24px}
+.studio-metachrome-story-cta{pointer-events:none}
 `;

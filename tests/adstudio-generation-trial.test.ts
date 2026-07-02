@@ -64,11 +64,14 @@ test("trial helper checks confirmed email only for trial workspaces before the r
   assert.match(source, /refund_trial_ad_pack_credit/);
 });
 
-test("campaign-pack persistence returns brand-kit persistence errors", () => {
+test("campaign-pack persistence is transactional and surfaces errors", () => {
   const source = read(persistence);
 
-  assert.match(source, /const brandKitResult = await persistAdStudioBrandKit/);
-  assert.match(source, /if \(brandKitResult\.error\) \{\s*return brandKitResult;\s*\}/);
+  // One RPC writes the whole pack; any table failure rolls everything back.
+  assert.match(source, /supabase\.rpc\("adstudio_persist_campaign_pack"/);
+  assert.match(source, /error: result\.error \? \{ message: result\.error\.message \} : null/);
+  // Demo kits still refuse to persist before any write happens.
+  assert.match(source, /Demo brand kits cannot be used for saved campaigns\./);
 });
 
 test("first-session seeded campaign packs are persisted without reserving trial credits", () => {

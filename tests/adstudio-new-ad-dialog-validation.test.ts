@@ -21,7 +21,7 @@ test("new ad dialog shows combined missing-requirements guidance before generati
   assert.match(dialog, /Add a short description so Blockwise knows what to write/);
   assert.match(dialog, /missingImageLabels/);
   assert.match(dialog, /Upload a file, choose from library, or generate an image/);
-  assert.match(dialog, /briefGuidanceForTemplate\(selectedTemplate, isBlank\)/);
+  assert.match(dialog, /briefGuidanceForTemplate\(selectedTemplate\)/);
   assert.match(dialog, /studio-newad-field-help/);
   assert.match(dialog, /Image upload is still running\. Wait for it to finish, then generate the ad\./);
   assert.match(dialog, /aria-invalid=\{hasDescriptionRequirement \? true : undefined\}/);
@@ -72,7 +72,7 @@ test("new ad dialog derives upload slots from the selected template canvas", () 
     },
   } as AdStudioTemplate;
 
-  const slots = imageRequirementsForTemplate(template, false);
+  const slots = imageRequirementsForTemplate(template);
 
   assert.deepEqual(
     slots.map((slot) => ({ id: slot.id, label: slot.label, required: slot.required, role: slot.role })),
@@ -85,20 +85,37 @@ test("new ad dialog derives upload slots from the selected template canvas", () 
   assert.equal(slots[2]?.guidance, "Circular slot");
 });
 
-test("selected template generation calls clone endpoint before creating the campaign", () => {
+test("selected template generation submits the brief and the server clones asynchronously", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const submitStart = dialog.indexOf("async function submit()");
   const submitEnd = dialog.indexOf("const stepTitle =", submitStart);
   const submitBody = dialog.slice(submitStart, submitEnd);
+  const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+  const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
 
-  assert.match(dialog, /function cloneImagesForTemplate/);
-  assert.match(dialog, /async function generateTemplateClone/);
-  assert.match(dialog, /\/api\/adstudio\/generate-clone/);
-  assert.match(submitBody, /generateTemplateClone\(\{/);
-  assert.match(submitBody, /templateCloneImage: templateClone\?\.image/);
-  assert.match(submitBody, /imageDataUrl: templateClone\?\.image \?\? imageDataUrl/);
-  assert.match(submitBody, /templateCloneProvider: templateClone\?\.provider/);
-  assert.match(submitBody, /templateCloneModel: templateClone\?\.model/);
+  // The dialog submits raw inputs only — no client-side clone orchestration.
+  assert.doesNotMatch(dialog, /generateTemplateClone/);
+  assert.doesNotMatch(dialog, /\/api\/adstudio\/generate-clone/);
+  assert.match(submitBody, /imageDataUrl,/);
+  assert.match(submitBody, /imageDataUrls,/);
+  assert.doesNotMatch(submitBody, /templateCloneImage/);
+
+  // The route enqueues an async job (202 + jobId) with a sync dev fallback,
+  // and the client polls the job then loads the finished campaign.
+  assert.match(createRoute, /adstudio\.generate\.template/);
+  assert.match(createRoute, /status: 202/);
+  assert.match(createRoute, /ADSTUDIO_SYNC_GENERATE/);
+  assert.match(actions, /response\.status === 202/);
+  assert.match(actions, /\/api\/adstudio\/jobs\//);
+  assert.match(actions, /\/api\/adstudio\/campaigns\/\$\{/);
+
+  // The server pipeline still runs the cascade, QA reroll, and persisted render.
+  assert.match(generation, /generateCloneWithCascade/);
+  assert.match(generation, /runCloneQa/);
+  assert.match(generation, /cloneQaCorrectionPrompt/);
+  assert.match(generation, /persistCloneRender/);
+  assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
 test("campaign creation accepts persisted template clone media", () => {
@@ -129,7 +146,7 @@ test("new ad dialog uses object IDs for duplicate image roles", () => {
   } as AdStudioTemplate;
 
   assert.deepEqual(
-    imageRequirementsForTemplate(template, false).map((slot) => slot.id),
+    imageRequirementsForTemplate(template).map((slot) => slot.id),
     ["photo-a", "photo-b"],
   );
 });
@@ -142,7 +159,6 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "home_value_update",
       promptHint: "Ask homeowners to request a current value update.",
     },
-    false,
   );
 
   assert.equal(appraisal.fieldLabel, "Appraisal offer details");
@@ -157,7 +173,6 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "suburb_market_report",
       promptHint: "Promote a suburb report with a market stat.",
     },
-    false,
   );
 
   assert.equal(market.fieldLabel, "Market update details");
@@ -171,15 +186,16 @@ test("selected templates ask for goal-specific campaign details", () => {
       offerId: "listing_inquiries",
       promptHint: "Use customer media, local market context, compliant copy, and a direct call to action.",
     },
-    false,
   );
 
   assert.equal(listing.fieldLabel, "Listing details");
   assert.match(listing.helperText, /price guide or inspection time/);
 
-  const blank = briefGuidanceForTemplate(undefined, true);
-  assert.equal(blank.fieldLabel, "Short description");
-  assert.match(blank.placeholder, /Open home this Saturday/);
+  // No template resolved (defensive fallback only — the dialog always selects
+  // a template now that blank mode is cut).
+  const fallback = briefGuidanceForTemplate(undefined);
+  assert.equal(fallback.fieldLabel, "Short description");
+  assert.match(fallback.placeholder, /Open home this Saturday/);
 });
 
 test("campaign creation route returns actionable first-ad validation fallbacks", () => {

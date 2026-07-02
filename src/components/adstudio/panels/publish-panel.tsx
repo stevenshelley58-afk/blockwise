@@ -50,6 +50,7 @@ type PublishSetupPanelProps = {
   campaignId: string;
   campaignPack: AdStudioCampaignPack;
   destinationUrl: string;
+  onChangeDestinationUrl?: (value: string) => void;
   onExport: () => void;
   onDelete?: () => void;
   /** B2: false while the brand kit is still a draft — publish stays blocked until it is confirmed. */
@@ -63,6 +64,7 @@ export function PublishSetupPanel({
   campaignId,
   campaignPack,
   destinationUrl,
+  onChangeDestinationUrl,
   onExport,
   onDelete,
   brandApproved = true,
@@ -326,13 +328,23 @@ export function PublishSetupPanel({
         </span>
       </section>
 
-      {/* Destination confirmation */}
-      {destinationUrl && (
-        <div style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-          <span style={{ color: "var(--muted)" }}>Destination</span>
-          <strong style={{ display: "block", marginTop: 2, wordBreak: "break-all" }}>{destinationUrl}</strong>
-        </div>
-      )}
+      {/* Destination: editable when the workbench provides a setter, read-only otherwise */}
+      <div style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+        <label style={{ display: "grid", gap: 4 }}>
+          <span style={{ color: "var(--muted)" }}>Destination URL</span>
+          {onChangeDestinationUrl ? (
+            <input
+              type="url"
+              value={destinationUrl}
+              placeholder="https://your-agency.com.au/appraisal"
+              onChange={(event) => onChangeDestinationUrl(event.target.value)}
+              style={{ border: 0, background: "transparent", outline: "none", fontWeight: 700, wordBreak: "break-all" }}
+            />
+          ) : (
+            <strong style={{ display: "block", wordBreak: "break-all" }}>{destinationUrl || "Not set"}</strong>
+          )}
+        </label>
+      </div>
 
       <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14, display: "grid", gap: 12 }}>
         <strong style={{ fontSize: 13, fontWeight: 750 }}>Budget and duration</strong>

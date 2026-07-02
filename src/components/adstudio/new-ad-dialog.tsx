@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus, Radar, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Radar, Sparkles, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -33,11 +33,6 @@ type GeneratedImageOption = {
   model?: string;
   provider?: string;
   index?: number;
-};
-type TemplateCloneResult = {
-  image: string;
-  model?: string;
-  provider?: string;
 };
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
@@ -113,6 +108,30 @@ function templateCategory(goal: string | null | undefined): "listings" | "apprai
 
 function isNewTemplate(template: AdStudioTemplate): boolean {
   return template.source === "operator" || template.source === "radar";
+}
+
+/**
+ * Ad Radar starts build on a real template (blank mode was cut in P2.3): the
+ * saved ad's intent picks the closest template category so every radar
+ * submission carries a template id and goes down the single template path.
+ */
+function templateForRadarAd(templates: AdStudioTemplate[], ad: RadarAd): AdStudioTemplate | undefined {
+  const intent = `${ad.primaryIntent} ${ad.adType}`.toLowerCase();
+  const category: TemplateFilter | null = /appraisal|valuation|home value/u.test(intent)
+    ? "appraisals"
+    : /market|report|update|stat/u.test(intent)
+      ? "market"
+      : /sold|open home|nurture|testimonial|follow/u.test(intent)
+        ? "sold"
+        : /listing|buyer|seller|property/u.test(intent)
+          ? "listings"
+          : null;
+
+  return (
+    (category ? templates.find((template) => templateCategory(template.goal) === category) : undefined) ??
+    templates.find((template) => template.source === "radar") ??
+    templates[0]
+  );
 }
 
 function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
@@ -306,7 +325,8 @@ export function NewAdDialog({
   const [step, setStep] = useState<Step>("source");
   const [tab, setTab] = useState<ExploreTab>("templates");
   const [filter, setFilter] = useState<TemplateFilter>("all");
-  // undefined = nothing chosen yet; "" = blank (create your own)
+  // undefined = nothing chosen yet. Every new ad starts from a template (Ad
+  // Radar starts map to the closest template) — blank mode was cut in P2.3.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
@@ -331,11 +351,10 @@ export function NewAdDialog({
   const [reuseError, setReuseError] = useState("");
   const [radarAds, setRadarAds] = useState<RadarAd[] | null>(null);
   const [radarError, setRadarError] = useState("");
-  const isBlank = templateId === "";
   const selectedTemplate = templates.find((template) => template.id === templateId);
   const imageRequirements = useMemo(
-    () => imageRequirementsForTemplate(selectedTemplate, isBlank),
-    [isBlank, selectedTemplate],
+    () => imageRequirementsForTemplate(selectedTemplate),
+    [selectedTemplate],
   );
   const primaryImageSlot = imageRequirements.find((slot) => slot.required) ?? imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
   const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
@@ -362,7 +381,7 @@ export function NewAdDialog({
   const visibleRequirementBlockers = showRequirementsAlert ? requirementBlockers : [];
   const hasDescriptionRequirement = visibleRequirementBlockers.some((blocker) => blocker.target === "description");
   const detailsErrorMessage = step === "brief" && mediaSourceMode === "details" ? error : "";
-  const briefGuidance = briefGuidanceForTemplate(selectedTemplate, isBlank);
+  const briefGuidance = briefGuidanceForTemplate(selectedTemplate);
   const footerAlertItems = visibleRequirementBlockers.length > 0
     ? [
         ...visibleRequirementBlockers,
@@ -547,9 +566,16 @@ export function NewAdDialog({
   }
 
   function chooseRadar(ad: RadarAd) {
-    setTemplateId("");
+    // Radar starts map to the closest template — the submission always carries
+    // a template id (mode "template"); the saved ad only shapes the copy brief.
+    const template = templateForRadarAd(templates, ad);
+    if (!template) {
+      setRadarError("Templates are still loading. Try again in a moment.");
+      return;
+    }
+    setTemplateId(template.id);
     setDescription("Use this saved Ad Radar pattern as structure only. Write original Blockwise copy for this campaign.");
-    setSourceNote("Ad Radar structure selected. Add your own photo and Blockwise will write an original version.");
+    setSourceNote(`Ad Radar structure selected — built on the ${template.name} template. Add your own photo and Blockwise will write an original version.`);
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
@@ -735,23 +761,27 @@ export function NewAdDialog({
       return;
     }
 
+    if (!selectedTemplate) {
+      // Every new ad starts from a template; without one, go pick it.
+      setError("Choose a template to start this ad.");
+      setStep("source");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     setShowRequirementsAlert(false);
     try {
-      const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
-      const templateClone = !isBlank && selectedTemplate
-        ? await generateTemplateClone({
-            template: selectedTemplate,
-            images: cloneImagesForTemplate(selectedTemplate, imageDataUrls),
-            brandHex: brandKit.colours.accent || brandKit.colours.primary,
-          })
-        : null;
+      const source = radarInspiration ? "ad_radar" : "template_library";
+      // Template mode: copy, clone, and QA all run server-side in one async
+      // generation job (see runTemplateCampaignGeneration) — the dialog only
+      // submits the brief and images, and onGenerate polls until it finishes.
+      // The dialog only ever submits mode "template"; "custom" is legacy-only.
       await onGenerate({
-        mode: isBlank ? "custom" : "template",
+        mode: "template",
         source,
-        templateId: isBlank ? undefined : selectedTemplate?.id,
-        templateKey: isBlank ? undefined : selectedTemplate?.templateKey ?? selectedTemplate?.id,
+        templateId: selectedTemplate.id,
+        templateKey: selectedTemplate.templateKey ?? selectedTemplate.id,
         savedAdId: radarInspiration?.savedId,
         observedAdId: radarInspiration?.observedAdId,
         hooks: radarInspiration?.hooks,
@@ -759,11 +789,8 @@ export function NewAdDialog({
         referenceAdType: radarInspiration?.adType,
         referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
-        imageDataUrl: templateClone?.image ?? imageDataUrl,
+        imageDataUrl,
         imageDataUrls,
-        templateCloneImage: templateClone?.image,
-        templateCloneProvider: templateClone?.provider,
-        templateCloneModel: templateClone?.model,
         formats: FIRST_AD_FORMATS,
       });
       onClose();
@@ -781,20 +808,14 @@ export function NewAdDialog({
         ? "Choose from library"
         : mediaSourceMode === "generate"
           ? "Generate image"
-      : isBlank
-        ? sourceNote
-          ? "Make it yours"
-          : "Describe your ad"
-        : `${selectedTemplate?.name ?? "Template"} - add your details`;
+          : `${selectedTemplate?.name ?? "Template"} - add your details`;
 
   const footHint =
     mediaSourceMode === "library"
       ? `Select an image for ${activeImageSlot.label}.`
       : mediaSourceMode === "generate"
         ? `Generate an image for ${activeImageSlot.label}.`
-        : isBlank
-          ? "Blockwise will generate Story, Feed, and Square."
-          : "Blockwise will clone the selected Meta template with your image.";
+        : "Blockwise will clone the selected Meta template with your image.";
   const showFooter = step === "brief";
 
   return (
@@ -863,25 +884,11 @@ export function NewAdDialog({
                   </div>
                   <div className="studio-explore-grid">
                     {visibleTemplates.length === 0 ? (
-                      <p className="studio-explore-msg">No templates available. Start blank or use a previous ad.</p>
+                      <p className="studio-explore-msg">No templates in this category yet. Pick another category, reuse a previous ad, or use saved Ad Radar inspiration.</p>
                     ) : null}
                     {visibleTemplates.map((template) => (
                       <TemplateChoiceCard key={template.id} template={template} brandKit={brandKit} onSelect={chooseTemplate} />
                     ))}
-                    <article className="studio-explore-card blank">
-                      <div className="studio-explore-thumb blank">
-                        <span className="studio-explore-plus"><Plus aria-hidden size={22} /></span>
-                      </div>
-                      <div className="studio-explore-meta">
-                        <div className="studio-explore-row">
-                          <strong>Start blank</strong>
-                        </div>
-                        <p>Describe your own ad and Blockwise builds it from scratch.</p>
-                        <button type="button" className="studio-explore-use ghost" onClick={() => chooseTemplate("")}>
-                          Start blank
-                        </button>
-                      </div>
-                    </article>
                   </div>
                 </>
               )}
@@ -952,7 +959,7 @@ export function NewAdDialog({
 
           {step === "brief" && mediaSourceMode === "details" && (
             <div className="studio-newad-own">
-              {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{isBlank ? trialCreditNote : briefGuidance.note}</p>}
+              {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{briefGuidance.note} {trialCreditNote}</p>}
               <div className="studio-newad-upload-group">
                 {imageRequirements.map((slot) => (
                   <div className="studio-newad-image-slot" key={slot.id}>
@@ -1116,7 +1123,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting && !isBlank ? "Cloning template" : submitting ? "Generating" : "Generate ad"}
+                {uploadingImage ? "Uploading" : submitting ? "Cloning template" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}
@@ -1215,43 +1222,6 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
   }
 
   return "Uses one ad pack. No Meta account is needed until publish.";
-}
-
-function cloneImagesForTemplate(
-  template: AdStudioTemplate,
-  imageDataUrls: Partial<Record<string, string>>,
-): Record<string, string> {
-  const images: Record<string, string> = {};
-  const imageObjects = template.canvas?.objects?.filter((object) => object.type === "image") ?? [];
-
-  for (const object of imageObjects) {
-    const image = imageDataUrls[object.role] ?? imageDataUrls[object.objectId];
-    if (!image) continue;
-    images[object.role] = image;
-    images[object.objectId] = image;
-  }
-
-  return images;
-}
-
-async function generateTemplateClone(input: {
-  template: AdStudioTemplate;
-  images: Record<string, string>;
-  brandHex?: string;
-}): Promise<TemplateCloneResult> {
-  const response = await fetch("/api/adstudio/generate-clone", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      templateId: input.template.id,
-      images: input.images,
-      brandHex: input.brandHex,
-    }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as TemplateCloneResult & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "Could not clone that template.");
-  if (!payload.image) throw new Error("Template clone did not return an image.");
-  return payload;
 }
 
 function buildRequirementBlockers(input: {
@@ -1396,8 +1366,6 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-thumb--sample{height:326px;background:linear-gradient(180deg,#f8fafc 0%,#e8edf4 100%)}
 .studio-explore-thumb img{max-width:calc(100% - 24px);max-height:calc(100% - 20px);object-fit:contain;background:#fff;border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.18);display:block}
 .studio-explore-ph{display:grid;justify-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0;color:rgba(15,23,42,.35)}
-.studio-explore-thumb.blank{background:var(--accent-tint);color:var(--accent)}
-.studio-explore-plus{width:46px;height:46px;border-radius:999px;background:#fff;box-shadow:var(--st-sh-1);display:grid;place-items:center;color:var(--accent)}
 .studio-explore-meta{display:flex;flex-direction:column;gap:7px;padding:14px;flex:1}
 .studio-explore-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .studio-explore-row strong{font-size:14.5px;font-weight:700;line-height:1.22;letter-spacing:0}
@@ -1405,8 +1373,6 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-meta p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .studio-explore-use{margin-top:auto;align-self:flex-start;border:0;border-radius:9px;background:#001b3d;color:#fff;font-weight:650;font-size:13px;padding:9px 16px;cursor:pointer;transition:background .15s}
 .studio-explore-use:hover{background:#0a2c55}
-.studio-explore-use.ghost{background:#fff;color:var(--accent);border:1px solid var(--line)}
-.studio-explore-use.ghost:hover{background:var(--accent-tint)}
 .studio-explore-msg{grid-column:1/-1;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:18px;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-explore-msg a{color:var(--accent);font-weight:650}
 .studio-newad-upload-group{display:grid;gap:14px}

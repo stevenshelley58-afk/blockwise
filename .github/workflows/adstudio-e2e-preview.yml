@@ -1,0 +1,83 @@
+# Runs the Ad Studio real-loop e2e against every successful Vercel Preview
+# deployment. This is the runtime gate the static CI cannot provide: it
+# creates a real ad, edits copy, saves, reloads, and exports through the
+# deployed app.
+#
+# ONE required repository secret (the job FAILS loudly when it is missing —
+# a silent skip is how runtime regressions shipped green for months):
+#   ADSTUDIO_E2E_PASSWORD   password of the seeded adstudio-e2e@blockwise.test account
+#
+# Everything else is non-secret and hardcoded below. The test account itself is
+# seeded once (already done) — to rotate or re-seed it, run with service-role env:
+#   node scripts/e2e/seed-adstudio-e2e.mjs
+
+name: AdStudio E2E (Vercel Preview)
+
+on:
+  deployment_status:
+
+concurrency:
+  group: adstudio-e2e-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+jobs:
+  real-loop:
+    name: Real-loop against preview
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment_status.environment, 'Preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+      ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
+      ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
+      ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
+    steps:
+      - name: Require the e2e secret
+        run: |
+          if [ -z "$ADSTUDIO_E2E_PASSWORD" ]; then
+            echo "::error::Add ONE repository secret named ADSTUDIO_E2E_PASSWORD (Settings -> Secrets and variables -> Actions) — the password of the seeded adstudio-e2e@blockwise.test account. This is the only runtime gate; do NOT disable it."
+            exit 1
+          fi
+
+      - name: Checkout deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Log in and capture storage state
+        run: node scripts/e2e/login-storage-state.mjs
+
+      - name: Run Ad Studio real loop
+        env:
+          # The spec's brand-kit approval scans a URL; the deployment's own
+          # landing page is always fetchable and never an example.* host.
+          ADSTUDIO_E2E_BRAND_URL: ${{ github.event.deployment_status.environment_url }}
+        run: npx playwright test e2e/adstudio-real-loop.spec.ts --project=chromium
+
+      # The DOM snapshot at the moment of failure, inlined into the job log —
+      # the report artifact is not reachable from every diagnosis environment.
+      - name: Print Playwright error context
+        if: failure()
+        run: find test-results -name 'error-context.md' -print -exec cat {} \; 2>/dev/null || true
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adstudio-e2e-report
+          path: playwright-report
+          retention-days: 7

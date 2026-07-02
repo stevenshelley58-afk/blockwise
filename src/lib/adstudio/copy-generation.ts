@@ -160,6 +160,139 @@ export async function generateAdStudioCopy(
   }
 }
 
+export type AdStudioTemplateCopyFieldSpec = {
+  key: string;
+  label: string;
+  maxLength?: number;
+  /** The template's sample value — tone/shape reference only, never final text. */
+  sample?: string;
+};
+
+export type AdStudioTemplateCopyInput = {
+  workspaceId: string;
+  userId: string;
+  correlationId?: string;
+  /** The user's brief ("Open home Saturday, 18 Smith St Scarborough..."). */
+  description: string;
+  /** The on-image text fields the selected template declares. */
+  fields: AdStudioTemplateCopyFieldSpec[];
+  sourceImageUrl?: string;
+  context?: AdStudioCopyRequestBody["context"];
+};
+
+export type AdStudioTemplateCopyResponse = {
+  /** Values for every declared field key — the text rendered ON the ad image. */
+  onImage: Record<string, string>;
+  /** Meta feed copy shown around the image. */
+  copy: AdStudioCopyFields;
+  source: "ai";
+};
+
+const ON_IMAGE_INSTRUCTION_HEADER =
+  "This ad is built from a design template with fixed text elements printed ON the image. " +
+  "In addition to the standard output fields, return an \"onImage\" JSON object with EXACTLY these keys. " +
+  "Write each value from the user's brief and brand context. Match the tone, length, and shape of each " +
+  "sample value, but NEVER reuse the sample's facts (addresses, suburbs, prices, names, dates) — those " +
+  "are placeholder examples from a different campaign.";
+
+/**
+ * One structured call that writes the complete copy set for a template ad:
+ * the on-image field values (baked into the generated image by the clone) AND
+ * the Meta feed copy around it — all grounded in the same brief so they tell
+ * one story.
+ */
+export async function generateAdStudioTemplateCopy(
+  input: AdStudioTemplateCopyInput,
+): Promise<AdStudioTemplateCopyResponse> {
+  const startedAt = Date.now();
+  const correlationId = input.correlationId ?? randomUUID();
+  const bundle = await getActivePromptBundle(COPY_PROMPT_KEYS);
+  const assembled = assembleMetaCopyPrompt({
+    bundle,
+    mode: "brief",
+    context: input.context ?? {},
+    brief: input.description,
+  });
+  const fieldLines = input.fields
+    .map((field) => {
+      const limit = field.maxLength ? `, max ${field.maxLength} characters` : "";
+      const sample = field.sample ? ` — sample for tone/shape only: "${field.sample}"` : "";
+      return `- "${field.key}" (${field.label}${limit})${sample}`;
+    })
+    .join("\n");
+  const imageUrl = usableModelImage(input.sourceImageUrl);
+  const userPrompt = [
+    assembled.user,
+    `${ON_IMAGE_INSTRUCTION_HEADER}\n${fieldLines}`,
+    imageUrl ? IMAGE_GROUNDING_INSTRUCTION : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  let generation: CopyGenerationResult | null = null;
+
+  try {
+    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl);
+    const json = (generation.output.json ?? {}) as Record<string, unknown>;
+    const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
+    const onImage: Record<string, string> = {};
+    for (const field of input.fields) {
+      const raw = typeof onImageRaw[field.key] === "string" ? (onImageRaw[field.key] as string).trim() : "";
+      // Fall back to the sample so the clone never receives an empty label;
+      // the brief-grounded value is strongly preferred.
+      const value = raw || field.sample || "";
+      onImage[field.key] =
+        field.maxLength && value.length > field.maxLength ? value.slice(0, field.maxLength).trimEnd() : value;
+    }
+
+    await recordAdStudioProviderRun({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      taskType: "adstudio.template_copy",
+      modelProfile: "structured_json",
+      prompt: assembled,
+      input: { description: input.description, fields: input.fields, context: input.context ?? {} },
+      attempts: generation.attempts,
+      latencyMs: Date.now() - startedAt,
+      providerName: generation.provider.providerName,
+      providerType: generation.provider.providerType,
+      modelName: generation.modelName,
+      output: generation.output,
+      status: "completed",
+    });
+
+    return {
+      onImage,
+      copy: {
+        headline: clamp(json.headline, ADSTUDIO_COPY_LIMITS.headline, ""),
+        primaryText: clamp(json.primaryText, ADSTUDIO_COPY_LIMITS.primaryText, ""),
+        description: clamp(json.description, ADSTUDIO_COPY_LIMITS.description, ""),
+        cta: clamp(json.cta, ADSTUDIO_COPY_LIMITS.cta, "Learn more"),
+      },
+      source: "ai",
+    };
+  } catch (error) {
+    await recordAdStudioProviderRun({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId,
+      taskType: "adstudio.template_copy",
+      modelProfile: "structured_json",
+      prompt: assembled,
+      input: { description: input.description, fields: input.fields, context: input.context ?? {} },
+      attempts: generation?.attempts ?? [],
+      latencyMs: Date.now() - startedAt,
+      providerName: generation?.provider.providerName ?? "unavailable",
+      providerType: "text_generation",
+      modelName: generation?.modelName ?? "unavailable",
+      output: null,
+      status: "failed",
+      error,
+    });
+    throw error;
+  }
+}
+
 function generationLogInput(input: AdStudioCopyGenerationInput) {
   return {
     mode: input.mode ?? "generate",

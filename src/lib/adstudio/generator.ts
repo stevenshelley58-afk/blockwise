@@ -1,3 +1,4 @@
+import { toMetaCta } from "./meta-cta.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
@@ -10,6 +11,7 @@ import type {
   AdStudioCampaignPack,
   AdStudioCampaignVariant,
   AdStudioCanvasObject,
+  AdStudioCloneQa,
   AdStudioCreative,
   AdStudioFormat,
   AdStudioGoal,
@@ -67,7 +69,9 @@ type OfferCopySeed = {
   assetLongHeadline: string;
 };
 
-const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16", "1.91:1"];
+// 1.91:1 landscape is legacy-only: nothing generates it anymore (P2.3), but the
+// AdStudioFormat member stays so existing landscape creatives keep rendering.
+const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16"];
 const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
 const CANVAS_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
   "1:1": { width: 1080, height: 1080 },
@@ -175,6 +179,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
       templateCloneImage: input.firstAd?.templateCloneImage,
+      templateCloneQa: input.firstAd?.templateCloneQa,
       subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -618,7 +623,7 @@ function buildCopyPack(input: {
         primaryText: [shorten(input.message.primaryText, 125)],
         headlines: seed.metaHeadlines,
         descriptions: seed.metaDescriptions,
-        cta: metaCtaFromLabel(input.variant.cta),
+        cta: toMetaCta(input.variant.cta),
         leadForm: {
           headline: seed.leadFormHeadline,
           questions: seed.leadFormQuestions,
@@ -969,6 +974,7 @@ function buildCreative(input: {
   sourceImageDataUrl?: string;
   sourceImagesBySlot?: Partial<Record<string, string>>;
   templateCloneImage?: string;
+  templateCloneQa?: AdStudioCloneQa;
   subheadline?: string;
 }): AdStudioCreative {
   const galleryTemplate = galleryTemplateOrNull(input.template);
@@ -980,6 +986,7 @@ function buildCreative(input: {
         variantId: input.variant.variantId,
         template: galleryTemplate,
         cloneImage: input.templateCloneImage,
+        cloneQa: input.templateCloneQa,
       });
     }
 
@@ -1019,6 +1026,7 @@ function buildTemplateCloneCreative(input: {
   variantId: string;
   template: AdStudioGalleryTemplate;
   cloneImage: string;
+  cloneQa?: AdStudioCloneQa;
 }): AdStudioCreative {
   const creative: Omit<AdStudioCreative, "previewSvg"> = {
     creativeId: input.creativeId,
@@ -1030,6 +1038,7 @@ function buildTemplateCloneCreative(input: {
       width: input.template.canvas.width,
       height: input.template.canvas.height,
       backgroundAssetId: null,
+      cloneQa: input.cloneQa,
       objects: [
         {
           objectId: "template_clone_image",
@@ -1414,14 +1423,6 @@ function landingPathForOffer(offerId: string): string {
 
 function appendPath(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
-}
-
-function metaCtaFromLabel(label: string): MetaLeadAdPack["cta"] {
-  const normalised = label.trim().toLowerCase();
-  if (/download|checklist|guide|report|timeline|snapshot/.test(normalised)) return "DOWNLOAD";
-  if (/book|contact|request|appraisal|update/.test(normalised)) return "CONTACT_US";
-  if (/sign/.test(normalised)) return "SIGN_UP";
-  return "LEARN_MORE";
 }
 
 function uniqueShort(values: string[], limit: number, max: number): string[] {

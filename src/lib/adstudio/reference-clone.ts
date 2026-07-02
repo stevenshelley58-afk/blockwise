@@ -11,8 +11,7 @@
 // This module is the request builder + a thin generate wrapper. It is pure and
 // dependency-light (no DB/auth) so it is unit-testable and runnable from a script.
 
-import { generateMixedImageVariantsInParallel } from "./ai-providers.ts";
-import type { ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
+import type { ImageProviderRequest } from "./providers.ts";
 
 /** One image the customer must (or may) supply for a template, by role. */
 export type CloneImageSlot = {
@@ -126,6 +125,42 @@ function interpolate(template: string, values: Record<string, string>): string {
   );
 }
 
+export type TargetedEditInputs = {
+  /** The current creative image (data: URL or absolute URL) — the anchor. */
+  currentImage: string;
+  /** Human label of the element being changed (e.g. "headline"). */
+  fieldLabel: string;
+  /** The exact new text to render. */
+  newValue: string;
+  /** Optional replacement image for an image slot instead of a text change. */
+  newImage?: string;
+  aspectRatio: string;
+  seed?: number;
+};
+
+/**
+ * Build the request for a Stitch-style in-place edit: the CURRENT image is the
+ * anchor (never the template sample), and the instruction changes exactly one
+ * element while everything else stays pixel-identical. This is what keeps the
+ * design stable across edits.
+ */
+export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProviderRequest {
+  const referenceAssets = inputs.newImage ? [inputs.currentImage, inputs.newImage] : [inputs.currentImage];
+  const instruction = inputs.newImage
+    ? `Reference image 1 is an existing finished ad. Replace ONLY the ${inputs.fieldLabel} photo with reference image 2 (fit it naturally into the same area). Keep every other pixel — all text, layout, colours, logos, and other photos — exactly identical to reference image 1.`
+    : `Reference image 1 is an existing finished ad. Change ONLY the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position, font treatment, and colour. Keep every other pixel — all other text, layout, colours, logos, and photos — exactly identical to reference image 1.`;
+
+  return {
+    prompt: instruction,
+    negativePrompt: GLOBAL_CLONE_NEGATIVES,
+    referenceAssets,
+    aspectRatio: inputs.aspectRatio,
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+    seed: inputs.seed ?? 0,
+  };
+}
+
 /**
  * Build the image-provider request for a reference clone. Reference order is the
  * contract the prompt relies on: index 1 is always the design to clone, then the
@@ -169,25 +204,3 @@ export function buildCloneImageRequest(brief: TemplateCloneBrief, inputs: CloneI
   };
 }
 
-export type GenerateAdFromTemplateOptions = {
-  env?: Partial<Record<string, string>>;
-  fetchImpl?: typeof fetch;
-  openAiCount?: number;
-  openRouterCount?: number;
-  openAiModel?: string;
-  openRouterModel?: string;
-};
-
-/**
- * Generate ad variants for a template by cloning its sample with the customer's
- * inputs. Runs gpt-image-2 and Gemini flash image in parallel (the existing mixed
- * runner) so you get several variants per request to choose from.
- */
-export async function generateAdFromTemplate(
-  brief: TemplateCloneBrief,
-  inputs: CloneInputs,
-  options: GenerateAdFromTemplateOptions = {},
-): Promise<ImageProviderResponse[]> {
-  const request = buildCloneImageRequest(brief, inputs);
-  return generateMixedImageVariantsInParallel(request, options);
-}
