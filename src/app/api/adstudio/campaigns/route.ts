@@ -228,6 +228,7 @@ export async function POST(request: NextRequest) {
         }
 
         const jobId = String(inserted.data.id);
+        let triggered = false;
 
         try {
           await tasks.trigger(
@@ -245,19 +246,25 @@ export async function POST(request: NextRequest) {
               maxAttempts: 1,
             },
           );
+          triggered = true;
         } catch (error) {
-          // Never leave a queued row nothing will ever run.
+          // Trigger unavailable or the task not yet registered (e.g. the
+          // deploy window right after a release): mark the queued row failed
+          // and FALL THROUGH to the inline sync path — generation must never
+          // depend on the queue being healthy.
+          console.error("adstudio.generate.template trigger failed; falling back to sync", error);
           await service
             .from("adstudio_creative_jobs")
-            .update({ status: "failed", error: "The generation job could not be started.", updated_at: new Date().toISOString() })
+            .update({ status: "failed", error: "The generation job could not be started; ran synchronously instead.", updated_at: new Date().toISOString() })
             .eq("id", jobId)
             .eq("workspace_id", context.access.workspaceId);
-          throw error;
         }
 
         // The generation lock is released in finally, as for the sync path; the
         // job itself is idempotent via the deterministic campaign id.
-        return NextResponse.json({ jobId }, { status: 202 });
+        if (triggered) {
+          return NextResponse.json({ jobId }, { status: 202 });
+        }
       }
 
       const result = await runTemplateCampaignGeneration({

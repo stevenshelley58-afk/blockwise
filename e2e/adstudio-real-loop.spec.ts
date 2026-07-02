@@ -50,8 +50,14 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await page.getByRole("button", { name: /generate ad/i }).click();
     const generated = await generationResponse;
     expect(generated.ok(), await generated.text()).toBe(true);
-    const generatedPayload = (await generated.json()) as { campaignPack?: { campaign?: { campaignId?: string } } };
-    const campaignId = generatedPayload.campaignPack?.campaign?.campaignId;
+    const generatedPayload = (await generated.json()) as {
+      campaignPack?: { campaign?: { campaignId?: string } };
+      jobId?: string;
+    };
+    // Async path (202 + job polling) or sync fallback (201 + pack) — both valid.
+    const campaignId = generatedPayload.jobId
+      ? await waitForGenerationJob(page, generatedPayload.jobId)
+      : generatedPayload.campaignPack?.campaign?.campaignId;
     expect(campaignId).toBeTruthy();
 
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
@@ -110,6 +116,21 @@ async function openNewAd(page: Page) {
   const browse = page.getByRole("button", { name: /browse|create new/i }).first();
   await expect(browse).toBeEnabled({ timeout: 30_000 });
   await browse.click();
+}
+
+// Async generation: poll the jobs endpoint with the page's session until the
+// trigger.dev job completes, mirroring what the dialog does.
+async function waitForGenerationJob(page: Page, jobId: string): Promise<string> {
+  const deadline = Date.now() + 10 * 60_000;
+  for (;;) {
+    const response = await page.request.get(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`);
+    expect(response.ok(), await response.text()).toBe(true);
+    const job = (await response.json()) as { status?: string; error?: string | null; campaign_id?: string | null };
+    if (job.status === "done" && job.campaign_id) return job.campaign_id;
+    if (job.status === "failed") throw new Error(`Generation job failed: ${job.error ?? "unknown error"}`);
+    if (Date.now() > deadline) throw new Error("Generation job did not finish within 10 minutes.");
+    await page.waitForTimeout(2_500);
+  }
 }
 
 // Blank mode was cut (P2.3): every new ad starts from a template, so the loop
