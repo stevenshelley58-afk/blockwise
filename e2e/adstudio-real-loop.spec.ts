@@ -187,7 +187,7 @@ async function chooseFirstTemplate(page: Page) {
 // submit() with a footer alert, not a disabled button. Fill them all, waiting
 // out each slot's upload round-trip before starting the next.
 async function uploadRequiredTemplateImages(page: Page, path: string) {
-  await writeTinyPng(path);
+  await writeListingPng(page, path);
   const inputs = page.locator('.studio-newad input[type="file"]');
   const count = await inputs.count();
   expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
@@ -251,9 +251,40 @@ async function waitForSavedStatus(page: Page) {
     .toBe(true);
 }
 
-async function writeTinyPng(path: string) {
-  const base64 =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+// A 1x1 stub PNG travels the whole pipeline only to be rejected by the image
+// provider ("You uploaded an unsupported image"), so draw a plausible
+// 1080x1350 listing photo on a canvas instead — real dimensions, real content.
+async function writeListingPng(page: Page, path: string) {
+  const dataUrl = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas 2d context unavailable");
+    const sky = ctx.createLinearGradient(0, 0, 0, 700);
+    sky.addColorStop(0, "#87b7e0");
+    sky.addColorStop(1, "#dbe9f4");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, 1080, 700);
+    ctx.fillStyle = "#6f9e5f";
+    ctx.fillRect(0, 700, 1080, 650);
+    ctx.fillStyle = "#7a5844";
+    ctx.beginPath();
+    ctx.moveTo(160, 430);
+    ctx.lineTo(540, 240);
+    ctx.lineTo(920, 430);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#e8e0d2";
+    ctx.fillRect(200, 430, 680, 370);
+    ctx.fillStyle = "#4a3b2f";
+    ctx.fillRect(500, 620, 90, 180);
+    ctx.fillStyle = "#9ec7e8";
+    ctx.fillRect(280, 500, 120, 100);
+    ctx.fillRect(680, 500, 120, 100);
+    return canvas.toDataURL("image/png");
+  });
+  const base64 = dataUrl.split(",")[1] ?? "";
   await import("node:fs/promises").then((fs) => fs.writeFile(path, Buffer.from(base64, "base64")));
 }
 
