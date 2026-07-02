@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const parsed = propertyCheckCreateSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "A valid address and client situation are required." }, { status: 400 });
+    return NextResponse.json({ error: "A valid street address is required." }, { status: 400 });
   }
 
   const result = await runDraftCheckPropertyCheck({

@@ -62,6 +62,12 @@ test("property check request schema accepts valid inputs and rejects invalid cli
   assert.equal(propertyCheckCreateSchema.safeParse({ address: "A", clientSituation: "general" }).success, false);
 });
 
+test("property check request schema defaults the client situation to general for address-only submissions", () => {
+  const parsed = propertyCheckCreateSchema.safeParse({ address: "12 Example Street, Suburb WA" });
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.success && parsed.data.clientSituation, "general");
+});
+
 test("adapter sends a server-side engine request and normalizes a cited success", async () => {
   let capturedUrl = "";
   let capturedBody: unknown = null;
