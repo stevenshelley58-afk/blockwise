@@ -53,6 +53,8 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: npm ci
 
+      # trigger.config.ts deliberately keeps a placeholder project ref
+      # (enforced by test) — the real ref is passed only here.
       - name: Deploy to trigger.dev
         if: steps.gate.outputs.skip != 'true'
-        run: npx trigger.dev@4.4.6 deploy
+        run: npx trigger.dev@4.4.6 deploy --project-ref "$TRIGGER_PROJECT_ID"

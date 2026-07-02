@@ -2,10 +2,10 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 import { captureTriggerException, initTriggerSentry } from "./trigger/sentry";
 
 export default defineConfig({
-  // The trigger.dev project ref (proj_...) comes from the environment — the
-  // committed value was a placeholder, which is one of the reasons the async
-  // lane never worked. Set TRIGGER_PROJECT_ID locally and in CI to deploy.
-  project: process.env.TRIGGER_PROJECT_ID ?? "configured-by-trigger-cli-project-ref",
+  // Deliberately a placeholder: the real project ref is supplied at deploy
+  // time (see .github/workflows/trigger-deploy.yml, --project-ref) so no
+  // environment identifier is committed. Enforced by observability-config test.
+  project: "configured-by-trigger-cli-project-ref",
   dirs: ["./trigger"],
   maxDuration: 300,
   init: async () => {
