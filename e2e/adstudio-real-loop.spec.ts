@@ -23,7 +23,8 @@ if (!canRun && process.env.CI) {
 
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
-  test.setTimeout(180_000);
+  // Real AI generation + edit + export can take several minutes end to end.
+  test.setTimeout(420_000);
 
   test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
     await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
@@ -64,7 +65,9 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
         const url = new URL(response.url());
         return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
       },
-      { timeout: 90_000 },
+      // The synchronous degraded-mode pipeline (copy + clone + vision QA in
+      // one request) can legitimately take ~2 minutes.
+      { timeout: 150_000 },
     );
     await page.getByRole("button", { name: /generate ad/i }).click();
     const generated = await generationResponse;

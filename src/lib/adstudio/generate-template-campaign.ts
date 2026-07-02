@@ -79,6 +79,12 @@ export type RunTemplateCampaignGenerationInput = {
   /** Hard time budget; QA rerolls stop once it is spent. */
   deadlineMs: number;
   maxCloneAttempts: number;
+  /**
+   * Image tier. The async job runs "final" (quality); the synchronous
+   * degraded-mode fallback runs "preview" (fast) so the whole pipeline fits
+   * inside a Vercel request window.
+   */
+  tier?: "preview" | "final";
   workspaceName?: string;
   region?: string;
   /** From the route's credit reservation; drives the trial fallback brand kit. */
@@ -195,7 +201,8 @@ export async function runTemplateCampaignGeneration(
     copy: copyResult.onImage,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
-  const providers = await resolveCloneProviders("final");
+  const tier = input.tier ?? "final";
+  const providers = await resolveCloneProviders(tier);
   const maxAttempts = Math.max(1, input.maxCloneAttempts);
 
   let qa: AdStudioCloneQa | null = null;
@@ -213,7 +220,7 @@ export async function runTemplateCampaignGeneration(
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
-      tier: "final",
+      tier,
       attempt,
     });
     lastImage = generated;

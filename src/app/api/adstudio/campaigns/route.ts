@@ -275,6 +275,9 @@ export async function POST(request: NextRequest) {
         body,
         deadlineMs: SYNC_GENERATION_DEADLINE_MS,
         maxCloneAttempts: 1,
+        // Degraded mode (queue unavailable): the fast tier keeps the whole
+        // pipeline inside the request window; the async job runs full quality.
+        tier: "preview",
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,
