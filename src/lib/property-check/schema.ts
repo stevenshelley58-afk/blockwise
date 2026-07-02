@@ -14,7 +14,7 @@ const optionalTrimmedString = (max: number) =>
 
 export const propertyCheckCreateSchema = z.object({
   address: z.string().trim().min(3).max(500),
-  clientSituation: propertyCheckClientSituationSchema,
+  clientSituation: propertyCheckClientSituationSchema.default("general"),
   notes: optionalTrimmedString(1500),
 });
 

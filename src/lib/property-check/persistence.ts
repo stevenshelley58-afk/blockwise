@@ -47,6 +47,25 @@ export async function listPropertyChecks(supabase: SupabaseServerClient, workspa
   return ((data ?? []) as PropertyCheckRow[]).map(rowToPropertyCheckRecord);
 }
 
+export async function getPropertyCheck(
+  supabase: SupabaseServerClient,
+  workspaceId: string,
+  checkId: string,
+): Promise<PropertyCheckRecord | null> {
+  const { data, error } = await supabase
+    .from("property_checks")
+    .select(PROPERTY_CHECK_SELECT)
+    .eq("workspace_id", workspaceId)
+    .eq("id", checkId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? rowToPropertyCheckRecord(data as PropertyCheckRow) : null;
+}
+
 export async function createPropertyCheckRecord(
   supabase: SupabaseServerClient,
   input: {

@@ -1,5 +1,4 @@
-import { PropertyCheckWorkspace } from "@/components/property-check/property-check-workspace";
-import { PageHeading } from "@/components/page-heading";
+import { PropertyCheckSearch } from "@/components/property-check/property-check-search";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listPropertyChecks } from "@/lib/property-check/persistence";
 import type { PropertyCheckRecord } from "@/lib/property-check/types";
@@ -18,12 +17,7 @@ export default async function PropertyCheckPage() {
 
   return (
     <main className="content property-check-page">
-      <PageHeading
-        eyebrow="Property Check"
-        title="Know the property before the call"
-        description="Run preliminary property signal checks before seller, buyer, investor, renovation, and subdivision conversations."
-      />
-      <PropertyCheckWorkspace initialChecks={checks} />
+      <PropertyCheckSearch initialChecks={checks} />
     </main>
   );
 }
