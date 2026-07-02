@@ -105,7 +105,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
     // The feed copy lives in the sidebar "Text" section (the old Copy panel).
     await openPanel(page, "Text");
-    await page.getByLabel(/headline/i).fill("Scarborough open home");
+    await page.getByRole("textbox", { name: /^headline/i }).fill("Scarborough open home");
     await saveDraft(page);
     await waitForSavedStatus(page);
 
@@ -116,12 +116,12 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await adTwo.click();
       await page.getByRole("button", { name: /ad 1/i }).first().click();
       await openPanel(page, "Text");
-      await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home");
+      await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home");
     }
 
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
     await openPanel(page, "Text");
-    await expect(page.getByLabel(/headline/i)).toHaveValue("Scarborough open home", { timeout: 30_000 });
+    await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home", { timeout: 30_000 });
 
     await openPanel(page, "Publish");
     await exportCreatives(page);
