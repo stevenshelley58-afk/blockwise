@@ -1,22 +1,23 @@
 do $$
 declare
   operator_user_id uuid;
+  operator_email text := 'steven@blockwise.sale';
   growth_plan_id uuid;
   demo_workspace_id uuid := '00000000-0000-4000-8000-000000000001';
   demo_campaign_id uuid := '00000000-0000-4000-8000-000000000101';
 begin
   select id into operator_user_id
   from auth.users
-  order by created_at
+  where lower(email) = operator_email
   limit 1;
 
   if operator_user_id is null then
-    raise notice 'Create one Supabase auth user before running the Blockwise demo seed.';
+    raise notice 'Create the Supabase auth user % before running the Blockwise demo seed.', operator_email;
     return;
   end if;
 
   insert into public.profiles (id, email, full_name, is_operator)
-  select id, email, coalesce(raw_user_meta_data ->> 'full_name', 'Demo Operator'), true
+  select id, email, coalesce(raw_user_meta_data ->> 'full_name', 'Steven Shelley'), true
   from auth.users
   where id = operator_user_id
   on conflict (id) do update set is_operator = true;
