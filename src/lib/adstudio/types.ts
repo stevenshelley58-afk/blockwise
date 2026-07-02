@@ -250,6 +250,8 @@ export type AdStudioCreative = {
     fabricJson?: Record<string, unknown> | null;
     /** Present on AI-cloned creatives: QA verdict + editable-element regions. */
     cloneQa?: AdStudioCloneQa;
+    /** Previous renders (media paths, newest last) for undo on clone edits. */
+    renderHistory?: string[];
   };
   safeZones: {
     metaStory: boolean;
