@@ -81,6 +81,11 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
       return "Generated copy is invalid. Generate the ad again.";
     }
   }
+  for (const value of Object.values(firstAd.onImageCopy ?? {})) {
+    if (typeof value !== "string" || value.length > 200) {
+      return "Keep each ad text field to 200 characters or less.";
+    }
+  }
   return null;
 }
 

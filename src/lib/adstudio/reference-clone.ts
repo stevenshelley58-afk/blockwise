@@ -31,6 +31,12 @@ export type CloneCopyField = {
   maxLength?: number;
   default?: string;
   rules?: string;
+  /**
+   * The customer types this value verbatim (price, address, phone…) — the
+   * copy model must never invent or paraphrase it. Fields a customer cannot
+   * supply and a model cannot know do not belong on a template at all.
+   */
+  customerSupplied?: boolean;
 };
 
 /** The per-template extraction artifact: input contract + short clone prompt. */

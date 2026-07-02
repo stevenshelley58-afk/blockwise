@@ -198,6 +198,16 @@ export async function runTemplateCampaignGeneration(
     },
   });
 
+  // Customer-typed on-image values (price, address, phone…) override the
+  // model's suggestions VERBATIM — the copy model must never invent facts the
+  // customer supplies. QA then verifies these exact strings on the render.
+  const customerOnImage: Record<string, string> = {};
+  for (const field of brief.copyFields) {
+    const provided = firstAd.onImageCopy?.[field.key]?.trim();
+    if (provided) customerOnImage[field.key] = provided;
+  }
+  const onImageCopy = { ...copyResult.onImage, ...customerOnImage };
+
   // Clone cascade + QA reroll (same loop as the generate-clone route, quality
   // tier): generate → verify the exact rendered copy → reroll with a corrective
   // prompt until it passes, attempts or deadline run out.
@@ -206,11 +216,11 @@ export async function runTemplateCampaignGeneration(
   const referenceImage = await ensureRasterReferenceImage(
     new URL(brief.referenceImage, input.origin).toString(),
   );
-  const expectedCopy = resolveCloneCopy(brief, copyResult.onImage);
+  const expectedCopy = resolveCloneCopy(brief, onImageCopy);
   const baseRequest = buildCloneImageRequest(brief, {
     referenceImage,
     images: resolvedImages,
-    copy: copyResult.onImage,
+    copy: onImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
   const tier = input.tier ?? "final";

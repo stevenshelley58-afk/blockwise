@@ -18,6 +18,7 @@ import metaFeed016 from "./meta-feed-016.json" with { type: "json" };
 import metaFeed017 from "./meta-feed-017.json" with { type: "json" };
 import metaFeed018 from "./meta-feed-018.json" with { type: "json" };
 import metaFeed019 from "./meta-feed-019.json" with { type: "json" };
+import metaFeed020 from "./meta-feed-020.json" with { type: "json" };
 import metaFullscreen001 from "./meta-fullscreen-001.json" with { type: "json" };
 import metaFullscreen002 from "./meta-fullscreen-002.json" with { type: "json" };
 import metaFullscreen003 from "./meta-fullscreen-003.json" with { type: "json" };
@@ -49,6 +50,7 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaFeed017 as unknown as AdStudioGalleryTemplate,
   metaFeed018 as unknown as AdStudioGalleryTemplate,
   metaFeed019 as unknown as AdStudioGalleryTemplate,
+  metaFeed020 as unknown as AdStudioGalleryTemplate,
   metaFullscreen001 as unknown as AdStudioGalleryTemplate,
   metaFullscreen002 as unknown as AdStudioGalleryTemplate,
   metaFullscreen003 as unknown as AdStudioGalleryTemplate,
