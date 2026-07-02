@@ -16,14 +16,11 @@ type TemplateWithThumbnail = AdStudioTemplate & {
   gallery: NonNullable<AdStudioTemplate["gallery"]>;
 };
 
+// The gallery holds only eye-approved templates now (the look-alike set was
+// deleted, not archived — Steven's call). Cards resolve defensively: missing
+// ids simply don't render, so this list can lead the gallery, never crash it.
 const FEATURED_TEMPLATE_CARDS = [
-  { id: "meta-feed-008", label: "Prestige" },
-  { id: "meta-feed-002", label: "Value" },
-  { id: "meta-feed-010", label: "Open home" },
-  { id: "meta-feed-014", label: "Sold" },
-  { id: "meta-fullscreen-002", label: "Agent" },
-  { id: "meta-fullscreen-006", label: "Market" },
-  { id: "meta-fullscreen-001", label: "PM" },
+  { id: "meta-feed-020", label: "Just listed" },
 ];
 
 function hasTemplateThumbnail(

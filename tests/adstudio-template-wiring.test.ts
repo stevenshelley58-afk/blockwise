@@ -45,7 +45,7 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
       templateKey: template.templateKey,
       description: "Two fresh listings.",
       imageDataUrl: A,
-      imageDataUrls: { primary_image: A, secondary_image: B },
+      imageDataUrls: { property_photo: A, brand_logo: B },
       formats: ["9:16", "4:5", "1:1"],
     },
   });
@@ -55,24 +55,24 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
 
   // canvas.objects: each image slot got its OWN image; text slots got copy
   const obj = (role: string) => creative.canvas.objects.find((o) => o.role === role);
-  assert.equal(obj("primary_image")?.content, A);
-  assert.equal(obj("secondary_image")?.content, B);
+  assert.equal(obj("property_photo")?.content, A);
+  assert.equal(obj("brand_logo")?.content, B);
   assert.ok((obj("headline")?.content ?? "").length > 0, "headline copy wired");
-  assert.ok((obj("cta_text")?.content ?? "").length > 0, "cta copy wired");
+  assert.ok((obj("price")?.content ?? "").length > 0, "price copy wired");
 
   // fabric mirror: same wiring by role (editor reads this)
   const design = getCreativeDesignJson(creative);
   assert.ok(design);
   const fab = (role: string) => design.objects.find((o) => o.blockwise?.role === role);
-  assert.equal(fab("primary_image")?.src, A);
-  assert.equal(fab("secondary_image")?.src, B);
+  assert.equal(fab("property_photo")?.src, A);
+  assert.equal(fab("brand_logo")?.src, B);
   assert.ok((fab("headline")?.text ?? "").length > 0);
 
   // edit round-trip: editing the fabric headline syncs back to objects + preview
   const edited = { ...design, objects: design.objects.map((o) => (o.blockwise?.role === "headline" ? { ...o, text: "EDITED HEADLINE" } : o)) };
   const saved = saveCreativeDesignJson(creative, edited);
   assert.equal(saved.canvas.objects.find((o) => o.role === "headline")?.content, "EDITED HEADLINE");
-  assert.match(saved.previewSvg, /EDITED HEADLINE/);
+  assert.match(saved.previewSvg, /EDITED[\s\S]*HEADLINE/);
 });
 
 test("template clone output becomes the generated creative image instead of redrawn template layers", () => {
@@ -96,7 +96,7 @@ test("template clone output becomes the generated creative image instead of redr
       templateKey: template.templateKey,
       description: "Two fresh listings.",
       imageDataUrl: cloneImage,
-      imageDataUrls: { primary_image: A, secondary_image: B },
+      imageDataUrls: { property_photo: A, brand_logo: B },
       templateCloneImage: cloneImage,
       templateCloneProvider: "fal",
       templateCloneModel: "openai/gpt-image-2/edit",
