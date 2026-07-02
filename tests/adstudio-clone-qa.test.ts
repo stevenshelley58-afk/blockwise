@@ -94,9 +94,13 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
 
 test("clone QA verdict and regions persist on the clone creative", () => {
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
-  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
   assert.match(generator, /cloneQa: input\.cloneQa/);
   assert.match(generator, /templateCloneQa: input\.firstAd\?\.templateCloneQa/);
-  assert.match(dialog, /templateCloneQa: templateClone\?\.qa/);
+  // The server pipeline feeds its QA verdict into the pack build and throws a
+  // typed error carrying the report when QA never passes.
+  assert.match(generation, /templateCloneQa: qa/);
+  assert.match(generation, /class TemplateCampaignQaError extends Error/);
+  assert.match(generation, /readonly qa: AdStudioCloneQa/);
 });

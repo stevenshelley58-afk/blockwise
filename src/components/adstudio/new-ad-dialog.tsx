@@ -5,7 +5,6 @@ import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Plus,
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
-import { deriveTemplateBrief } from "@/lib/adstudio/template-brief.ts";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
@@ -34,22 +33,6 @@ type GeneratedImageOption = {
   model?: string;
   provider?: string;
   index?: number;
-};
-type TemplateCloneResult = {
-  image: string;
-  model?: string;
-  provider?: string;
-  /** Vision-QA verdict + editable-element regions from the clone route. */
-  qa?: import("@/lib/adstudio").FirstAdInput["templateCloneQa"];
-};
-type TemplateCopyResult = {
-  onImage: Record<string, string>;
-  copy: {
-    primaryText: string;
-    headline: string;
-    description: string;
-    cta: string;
-  };
 };
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
@@ -752,25 +735,9 @@ export function NewAdDialog({
     setShowRequirementsAlert(false);
     try {
       const source = radarInspiration ? "ad_radar" : isBlank ? "blank" : "template_library";
-      // Template mode: one copy pass writes the on-image field values AND the
-      // Meta feed copy from the user's brief, then the clone bakes the on-image
-      // values into the design. Without this, the template's sample copy ships.
-      const templateCopy = !isBlank && selectedTemplate
-        ? await generateTemplateFieldsCopy({
-            template: selectedTemplate,
-            brandKit,
-            description: trimmed,
-            sourceImageUrl: imageDataUrl || undefined,
-          })
-        : null;
-      const templateClone = !isBlank && selectedTemplate
-        ? await generateTemplateClone({
-            template: selectedTemplate,
-            images: cloneImagesForTemplate(selectedTemplate, imageDataUrls),
-            copy: templateCopy?.onImage,
-            brandHex: brandKit.colours.accent || brandKit.colours.primary,
-          })
-        : null;
+      // Template mode: copy, clone, and QA all run server-side in one async
+      // generation job (see runTemplateCampaignGeneration) — the dialog only
+      // submits the brief and images, and onGenerate polls until it finishes.
       await onGenerate({
         mode: isBlank ? "custom" : "template",
         source,
@@ -783,13 +750,8 @@ export function NewAdDialog({
         referenceAdType: radarInspiration?.adType,
         referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
-        imageDataUrl: templateClone?.image ?? imageDataUrl,
+        imageDataUrl,
         imageDataUrls,
-        templateCloneImage: templateClone?.image,
-        templateCloneProvider: templateClone?.provider,
-        templateCloneModel: templateClone?.model,
-        templateCloneQa: templateClone?.qa,
-        copy: templateCopy?.copy,
         formats: FIRST_AD_FORMATS,
       });
       onClose();
@@ -1241,82 +1203,6 @@ function formatTrialCreditNote(status: TrialStatus | null): string {
   }
 
   return "Uses one ad pack. No Meta account is needed until publish.";
-}
-
-function cloneImagesForTemplate(
-  template: AdStudioTemplate,
-  imageDataUrls: Partial<Record<string, string>>,
-): Record<string, string> {
-  const images: Record<string, string> = {};
-  const imageObjects = template.canvas?.objects?.filter((object) => object.type === "image") ?? [];
-
-  for (const object of imageObjects) {
-    const image = imageDataUrls[object.role] ?? imageDataUrls[object.objectId];
-    if (!image) continue;
-    images[object.role] = image;
-    images[object.objectId] = image;
-  }
-
-  return images;
-}
-
-async function generateTemplateFieldsCopy(input: {
-  template: AdStudioTemplate;
-  brandKit: AdStudioBrandKit;
-  description: string;
-  sourceImageUrl?: string;
-}): Promise<TemplateCopyResult> {
-  const brief = deriveTemplateBrief(input.template);
-  const response = await fetch("/api/adstudio/copy", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      mode: "templateFields",
-      brief: input.description,
-      sourceImageUrl: input.sourceImageUrl,
-      templateFields: brief.copyFields.map((field) => ({
-        key: field.key,
-        label: field.label,
-        maxLength: field.maxLength,
-        sample: field.default,
-      })),
-      context: {
-        goal: input.template.goal,
-        templateName: input.template.name,
-        templateHint: input.template.promptHint,
-        businessName: input.brandKit.identity.tradingName ?? input.brandKit.identity.businessName,
-        voice: input.brandKit.tone.voice,
-        preferredPhrases: input.brandKit.tone.preferredPhrases,
-        neverSay: input.brandKit.tone.avoid,
-      },
-    }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as TemplateCopyResult & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "Could not write the ad copy. Try again.");
-  if (!payload.onImage || !payload.copy) throw new Error("Copy generation returned an unexpected result.");
-  return payload;
-}
-
-async function generateTemplateClone(input: {
-  template: AdStudioTemplate;
-  images: Record<string, string>;
-  copy?: Record<string, string>;
-  brandHex?: string;
-}): Promise<TemplateCloneResult> {
-  const response = await fetch("/api/adstudio/generate-clone", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      templateId: input.template.id,
-      images: input.images,
-      copy: input.copy,
-      brandHex: input.brandHex,
-    }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as TemplateCloneResult & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "Could not clone that template.");
-  if (!payload.image) throw new Error("Template clone did not return an image.");
-  return payload;
 }
 
 function buildRequirementBlockers(input: {

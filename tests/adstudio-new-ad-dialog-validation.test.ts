@@ -85,20 +85,37 @@ test("new ad dialog derives upload slots from the selected template canvas", () 
   assert.equal(slots[2]?.guidance, "Circular slot");
 });
 
-test("selected template generation calls clone endpoint before creating the campaign", () => {
+test("selected template generation submits the brief and the server clones asynchronously", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const submitStart = dialog.indexOf("async function submit()");
   const submitEnd = dialog.indexOf("const stepTitle =", submitStart);
   const submitBody = dialog.slice(submitStart, submitEnd);
+  const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
+  const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
 
-  assert.match(dialog, /function cloneImagesForTemplate/);
-  assert.match(dialog, /async function generateTemplateClone/);
-  assert.match(dialog, /\/api\/adstudio\/generate-clone/);
-  assert.match(submitBody, /generateTemplateClone\(\{/);
-  assert.match(submitBody, /templateCloneImage: templateClone\?\.image/);
-  assert.match(submitBody, /imageDataUrl: templateClone\?\.image \?\? imageDataUrl/);
-  assert.match(submitBody, /templateCloneProvider: templateClone\?\.provider/);
-  assert.match(submitBody, /templateCloneModel: templateClone\?\.model/);
+  // The dialog submits raw inputs only — no client-side clone orchestration.
+  assert.doesNotMatch(dialog, /generateTemplateClone/);
+  assert.doesNotMatch(dialog, /\/api\/adstudio\/generate-clone/);
+  assert.match(submitBody, /imageDataUrl,/);
+  assert.match(submitBody, /imageDataUrls,/);
+  assert.doesNotMatch(submitBody, /templateCloneImage/);
+
+  // The route enqueues an async job (202 + jobId) with a sync dev fallback,
+  // and the client polls the job then loads the finished campaign.
+  assert.match(createRoute, /adstudio\.generate\.template/);
+  assert.match(createRoute, /status: 202/);
+  assert.match(createRoute, /ADSTUDIO_SYNC_GENERATE/);
+  assert.match(actions, /response\.status === 202/);
+  assert.match(actions, /\/api\/adstudio\/jobs\//);
+  assert.match(actions, /\/api\/adstudio\/campaigns\/\$\{/);
+
+  // The server pipeline still runs the cascade, QA reroll, and persisted render.
+  assert.match(generation, /generateCloneWithCascade/);
+  assert.match(generation, /runCloneQa/);
+  assert.match(generation, /cloneQaCorrectionPrompt/);
+  assert.match(generation, /persistCloneRender/);
+  assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
 test("campaign creation accepts persisted template clone media", () => {

@@ -1,3 +1,4 @@
+import { tasks } from "@trigger.dev/sdk/v3";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
@@ -11,30 +12,24 @@ import {
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
 import { applyProvidedCopyToCampaignPack, enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
+import {
+  runTemplateCampaignGeneration,
+  type CreateCampaignBody,
+} from "@/lib/adstudio/generate-template-campaign";
 import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
 import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
 import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import { FIRST_AD_FORMATS, type AdStudioBrandKit, type AdStudioFormat, type AdStudioGoal, type AdStudioPlatform, type FirstAdInput } from "@/lib/adstudio";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-type CreateCampaignBody = {
-  brandKit?: AdStudioBrandKit;
-  goal?: AdStudioGoal;
-  suburb?: string;
-  city?: string;
-  state?: string;
-  offerId?: string;
-  platforms?: AdStudioPlatform[];
-  creativeFormats?: AdStudioFormat[];
-  variantCount?: number;
-  firstAd?: FirstAdInput;
-  sourceImageDataUrl?: string;
-};
+// Headroom under maxDuration for the synchronous fallback path.
+const SYNC_GENERATION_DEADLINE_MS = 95_000;
 
 const inFlightGenerations = new Map<string, number>();
 const GENERATION_DEDUP_TTL_MS = 30_000;
@@ -198,6 +193,100 @@ export async function POST(request: NextRequest) {
     }
 
     trialReservation = trialGate.reservation;
+
+    // New-style template request (no pre-generated clone from the dialog): the
+    // whole copy → clone → QA → persist pipeline runs server-side. Normally as
+    // a trigger.dev job (202 + polling — kills the 120s ceiling); inline only
+    // when trigger is not configured or ADSTUDIO_SYNC_GENERATE=1 (local/dev).
+    if (body.firstAd?.mode === "template" && !body.firstAd.templateCloneImage) {
+      const origin = request.nextUrl.origin;
+
+      if (process.env.TRIGGER_SECRET_KEY && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
+        const service = createSupabaseServiceClient();
+        const inserted = await service
+          .from("adstudio_creative_jobs")
+          .insert({
+            workspace_id: context.access.workspaceId,
+            created_by: context.access.userId,
+            status: "queued",
+            kind: "template_campaign",
+            headline: body.firstAd.description.slice(0, 200),
+            // The task refunds the reservation on failure; the route cannot —
+            // it has already returned 202 by then.
+            payload: {
+              body,
+              reservation: trialReservation,
+              workspaceName: context.access.workspaceName,
+              region: context.access.region,
+            },
+          })
+          .select("id")
+          .single();
+
+        if (inserted.error) {
+          throw new Error(`Could not queue the generation job (${inserted.error.message}).`);
+        }
+
+        const jobId = String(inserted.data.id);
+
+        try {
+          await tasks.trigger(
+            "adstudio.generate.template",
+            {
+              workspaceId: context.access.workspaceId,
+              userId: context.access.userId,
+              jobId,
+              origin,
+              body,
+            },
+            {
+              idempotencyKey: jobId,
+              tags: ["adstudio-generate", context.access.workspaceId, jobId],
+              maxAttempts: 1,
+            },
+          );
+        } catch (error) {
+          // Never leave a queued row nothing will ever run.
+          await service
+            .from("adstudio_creative_jobs")
+            .update({ status: "failed", error: "The generation job could not be started.", updated_at: new Date().toISOString() })
+            .eq("id", jobId)
+            .eq("workspace_id", context.access.workspaceId);
+          throw error;
+        }
+
+        // The generation lock is released in finally, as for the sync path; the
+        // job itself is idempotent via the deterministic campaign id.
+        return NextResponse.json({ jobId }, { status: 202 });
+      }
+
+      const result = await runTemplateCampaignGeneration({
+        supabase: context.supabase,
+        workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        origin,
+        body,
+        deadlineMs: SYNC_GENERATION_DEADLINE_MS,
+        maxCloneAttempts: 1,
+        workspaceName: context.access.workspaceName,
+        region: context.access.region,
+        isTrialWorkspace: trialReservation.isTrialWorkspace,
+      });
+
+      const liveResult = buildAdStudioLiveResult({
+        data: compactAdStudioCampaignPackForTransport(result.campaignPack),
+      });
+
+      return NextResponse.json(
+        {
+          campaignPack: liveResult.data,
+          data: liveResult.data,
+          persistence: liveResult.persistence,
+          photoPrep: { status: "skipped", readyFormats: [], pendingFormats: [] },
+        },
+        { status: 201 },
+      );
+    }
 
     const brandKitResult = await resolveAdStudioGenerationBrandKit({
       supabase: context.supabase,

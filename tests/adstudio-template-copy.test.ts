@@ -76,30 +76,39 @@ test("applyProvidedCopyToCampaignPack replaces offer-library copy on every varia
   assert.notEqual(applied.campaign.status, undefined);
 });
 
-test("template mode wires brief-grounded copy through clone and campaign creation", () => {
+test("template mode wires brief-grounded copy through the server-side generation flow", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const copyGeneration = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
 
-  // Dialog: copy pass runs before the clone; both the on-image fields and the
-  // feed copy travel onward.
-  assert.match(dialog, /generateTemplateFieldsCopy/);
-  assert.match(dialog, /copy: templateCopy\?\.onImage/);
-  assert.match(dialog, /copy: templateCopy\?\.copy/);
+  // The dialog no longer orchestrates copy/clone calls client-side — the whole
+  // pipeline runs server-side (async job or the sync route fallback).
+  assert.doesNotMatch(dialog, /\/api\/adstudio\/copy["'`]/);
+  assert.doesNotMatch(dialog, /\/api\/adstudio\/generate-clone/);
+  assert.doesNotMatch(dialog, /generateTemplateFieldsCopy/);
+
+  // Server pipeline: the copy pass runs before the clone so the image carries
+  // the user's copy; both the on-image fields and the feed copy travel onward.
+  assert.match(generation, /generateAdStudioTemplateCopy\(\{/);
+  assert.match(generation, /copy: copyResult\.onImage/);
+  assert.match(generation, /copy: copyResult\.copy/);
   assert.ok(
-    dialog.indexOf("generateTemplateFieldsCopy({") < dialog.indexOf("generateTemplateClone({"),
+    generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildCloneImageRequest(brief"),
     "copy generation must run before the clone so the image carries the user's copy",
   );
 
-  // Copy route: templateFields mode requires a brief and the field specs.
+  // Provided copy replaces offer-library defaults (with compliance re-run) in
+  // the server pipeline AND in the route's old-style template branch.
+  assert.match(generation, /applyProvidedCopyToCampaignPack/);
+  assert.match(createRoute, /applyProvidedCopyToCampaignPack/);
+  assert.match(createRoute, /runTemplateCampaignGeneration/);
+
+  // Copy route: templateFields mode stays available for other callers.
   assert.match(copyRoute, /mode === "templateFields"/);
   assert.match(copyRoute, /generateAdStudioTemplateCopy/);
   assert.match(copyRoute, /templateFields is required/);
-
-  // Campaign route: template mode applies the provided copy (with compliance
-  // re-run) instead of leaving offer-library defaults in the pack.
-  assert.match(createRoute, /applyProvidedCopyToCampaignPack/);
 
   // The on-image instruction forbids reusing sample facts; field values are
   // clamped to the template's declared maxLength.

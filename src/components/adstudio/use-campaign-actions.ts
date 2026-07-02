@@ -31,6 +31,23 @@ const GENERATION_PHASES: Array<{ label: string; atMs: number }> = [
   { label: "Scoring each ad...", atMs: 16_000 },
 ];
 
+// Async template generation (202 + job polling). Stages mirror the server-side
+// pipeline order in runTemplateCampaignGeneration and rotate by elapsed time.
+const TEMPLATE_JOB_POLL_INTERVAL_MS = 2_500;
+const TEMPLATE_JOB_TIMEOUT_MS = 10 * 60_000;
+const TEMPLATE_JOB_PHASES: Array<{ label: string; atMs: number }> = [
+  { label: "Writing copy...", atMs: 0 },
+  { label: "Designing your ad...", atMs: 15_000 },
+  { label: "Checking every word...", atMs: 75_000 },
+];
+
+type CampaignJobStatus = {
+  id: string;
+  status: "queued" | "running" | "done" | "failed";
+  error: string | null;
+  campaign_id: string | null;
+};
+
 function startGenerationPhases(
   setGeneration: (progress: GenerationProgress | null) => void,
   count: number,
@@ -241,34 +258,55 @@ export function useCampaignActions(s: CampaignActionsState) {
 
     try {
       const m = parseMarket();
-      const payload = await postJson<GenerateCampaignResponse>("/api/adstudio/campaigns", {
-        firstAd: input,
-        goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
-        offerId: offerIdForLabel({
-          label: s.offerLabel,
-          offers: s.offers,
-          fallback: s.pack.campaign.offerId,
-          pack: s.pack,
+      const response = await fetch("/api/adstudio/campaigns", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          firstAd: input,
+          goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
+          offerId: offerIdForLabel({
+            label: s.offerLabel,
+            offers: s.offers,
+            fallback: s.pack.campaign.offerId,
+            pack: s.pack,
+          }),
+          suburb: m.suburb,
+          city: m.city,
+          state: m.state,
+          platforms: ["meta"],
+          creativeFormats: input.formats,
+          variantCount: 3,
         }),
-        suburb: m.suburb,
-        city: m.city,
-        state: m.state,
-        platforms: ["meta"],
-        creativeFormats: input.formats,
-        variantCount: 3,
       });
+      const payload = (await response.json().catch(() => null)) as
+        | (Partial<GenerateCampaignResponse> & { jobId?: string; error?: string })
+        | null;
+      if (!response.ok) throw new Error(payload?.error ?? `Request failed with ${response.status}.`);
+
+      let campaignPack: AdStudioCampaignPack;
+      if (response.status === 202 && payload?.jobId) {
+        // Async generation: the server runs copy → clone → QA → persist in a
+        // background job; poll it and keep the staged-progress skeletons alive.
+        stopPhases();
+        campaignPack = await waitForTemplateCampaignJob(String(payload.jobId), (phase) =>
+          s.setGeneration({ phase, count: expectedCount, error: null }),
+        );
+      } else {
+        if (!payload?.campaignPack) throw new Error("Ad generation returned an unexpected result.");
+        campaignPack = payload.campaignPack;
+      }
 
       stopPhases();
       s.setGeneration(null);
-      s.setPack(payload.campaignPack);
+      s.setPack(campaignPack);
       s.setSelectedVariantIndex(0);
-      s.setCopy(seedCopy(payload.campaignPack));
-      s.setPrimaryImage(input.templateCloneImage ?? input.imageDataUrl);
+      s.setCopy(seedCopy(campaignPack));
+      s.setPrimaryImage(input.templateCloneImage ?? packPrimaryImage(campaignPack) ?? input.imageDataUrl);
       s.setSaveState("saved");
       s.setSection("media");
       s.showToast(input.mode === "template" ? "Generated template clone" : "Generated Story, Feed, and Square");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
-      return payload.campaignPack;
+      return campaignPack;
     } catch (error) {
       stopPhases();
       // The New Ad dialog shows this error inline, so clear the skeletons.
@@ -424,6 +462,63 @@ export function useCampaignActions(s: CampaignActionsState) {
   }
 
   return { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus };
+}
+
+/**
+ * Poll the async generation job until it lands, rotating honest stage labels by
+ * elapsed time, then load the persisted campaign pack the job produced.
+ */
+async function waitForTemplateCampaignJob(
+  jobId: string,
+  onPhase: (phase: string) => void,
+): Promise<AdStudioCampaignPack> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < TEMPLATE_JOB_TIMEOUT_MS) {
+    const elapsed = Date.now() - startedAt;
+    const phase =
+      [...TEMPLATE_JOB_PHASES].reverse().find((candidate) => elapsed >= candidate.atMs) ?? TEMPLATE_JOB_PHASES[0];
+    onPhase(phase.label);
+
+    const response = await fetch(`/api/adstudio/jobs/${encodeURIComponent(jobId)}`, { cache: "no-store" });
+    const payload = (await response.json().catch(() => null)) as { job?: CampaignJobStatus; error?: string } | null;
+    if (!response.ok) throw new Error(payload?.error ?? "Could not check the ad generation job.");
+
+    const job = payload?.job;
+    if (!job) throw new Error("The ad generation job was not found.");
+    if (job.status === "failed") throw new Error(job.error || "Ad generation failed. Please try again.");
+    if (job.status === "done") {
+      if (!job.campaign_id) throw new Error("Generation finished but no campaign was returned.");
+      return loadCampaignPackById(job.campaign_id);
+    }
+
+    await sleep(TEMPLATE_JOB_POLL_INTERVAL_MS);
+  }
+
+  throw new Error("Ad generation is taking longer than expected. Reload Ad Studio in a minute to see the result.");
+}
+
+async function loadCampaignPackById(campaignId: string): Promise<AdStudioCampaignPack> {
+  const response = await fetch(`/api/adstudio/campaigns/${encodeURIComponent(campaignId)}`, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as
+    | { campaignPack?: AdStudioCampaignPack | null; error?: string }
+    | null;
+  if (!response.ok) throw new Error(payload?.error ?? "Could not load the generated ad.");
+  if (!payload?.campaignPack) throw new Error("The generated ad could not be loaded. Reload Ad Studio to see it.");
+  return payload.campaignPack;
+}
+
+/** First persisted primary image in the pack (the clone render for template ads). */
+function packPrimaryImage(pack: AdStudioCampaignPack): string | undefined {
+  for (const creative of pack.creatives) {
+    const image = creative.canvas.objects.find((object) => object.role === "primary_image");
+    if (image?.content) return image.content;
+  }
+  return undefined;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 // Formats the browser renderer can actually export (see META_EXPORT_FORMATS).
