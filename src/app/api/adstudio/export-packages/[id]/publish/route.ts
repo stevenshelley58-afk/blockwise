@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import { findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
 import type { AdStudioCampaignPack } from "@/lib/adstudio";
 import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
 import {
@@ -74,6 +75,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const pack = body.campaignPack;
+
+  // Over-limit copy gets rejected or truncated by Meta — block, don't warn.
+  const copyViolations = findPackCopyLimitViolations(pack);
+  if (copyViolations.length > 0) {
+    return NextResponse.json(
+      { error: `Fix the ad copy before publishing: ${copyViolations.join(" ")}` },
+      { status: 422 },
+    );
+  }
+
   const serviceSupabase = createSupabaseServiceClient();
   const persistResult = await persistAdStudioCampaignPack(access.supabase, pack, access.access.userId);
 

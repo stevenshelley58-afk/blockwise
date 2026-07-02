@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
+import { findCopyLimitViolations } from "@/lib/adstudio/readiness";
 import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import type { AngleCard } from "./angles";
@@ -320,6 +321,11 @@ export function useCampaignActions(s: CampaignActionsState) {
 
   async function exportCreatives() {
     if (exportInFlightRef.current) return;
+    const violations = findCopyLimitViolations(s.copy);
+    if (violations.length > 0) {
+      s.showToast(`Fix the ad copy before exporting: ${violations.join(" ")}`);
+      return;
+    }
     exportInFlightRef.current = true;
     s.setBusy(true);
     s.setBusyMessage("Preparing creative export");

@@ -1,3 +1,4 @@
+import { toMetaCta } from "./meta-cta.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
@@ -620,7 +621,7 @@ function buildCopyPack(input: {
         primaryText: [shorten(input.message.primaryText, 125)],
         headlines: seed.metaHeadlines,
         descriptions: seed.metaDescriptions,
-        cta: metaCtaFromLabel(input.variant.cta),
+        cta: toMetaCta(input.variant.cta),
         leadForm: {
           headline: seed.leadFormHeadline,
           questions: seed.leadFormQuestions,
@@ -1420,14 +1421,6 @@ function landingPathForOffer(offerId: string): string {
 
 function appendPath(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
-}
-
-function metaCtaFromLabel(label: string): MetaLeadAdPack["cta"] {
-  const normalised = label.trim().toLowerCase();
-  if (/download|checklist|guide|report|timeline|snapshot/.test(normalised)) return "DOWNLOAD";
-  if (/book|contact|request|appraisal|update/.test(normalised)) return "CONTACT_US";
-  if (/sign/.test(normalised)) return "SIGN_UP";
-  return "LEARN_MORE";
 }
 
 function uniqueShort(values: string[], limit: number, max: number): string[] {

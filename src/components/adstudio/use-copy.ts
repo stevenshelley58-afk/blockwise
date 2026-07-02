@@ -44,20 +44,9 @@ export const COPY_LIMITS: Record<keyof CopyState, number> = {
 
 const EMPTY_ALTERNATES: CopyAlternates = { headline: [], primaryText: [] };
 
-export function labelForCta(cta: MetaLeadAdPack["cta"] | string | undefined): string {
-  if (cta === "SIGN_UP") return "Sign up";
-  if (cta === "DOWNLOAD") return "Download";
-  if (cta === "CONTACT_US") return "Contact us";
-  return "Learn more";
-}
-
-export function toMetaCta(label: string): MetaLeadAdPack["cta"] {
-  const normalised = label.trim().toLowerCase();
-  if (normalised.includes("download")) return "DOWNLOAD";
-  if (normalised.includes("contact") || normalised.includes("book")) return "CONTACT_US";
-  if (normalised.includes("sign")) return "SIGN_UP";
-  return "LEARN_MORE";
-}
+// Single source of truth for CTA mapping lives in meta-cta.ts.
+import { labelForMetaCta as labelForCta, toMetaCta } from "@/lib/adstudio/meta-cta";
+export { labelForCta, toMetaCta };
 
 function getCopyPack(pack: AdStudioCampaignPack, variantId: string): AdStudioPlatformCopyPack | undefined {
   return pack.copyPacks.find((copyPack) => copyPack.variantId === variantId) ?? pack.copyPacks[0];

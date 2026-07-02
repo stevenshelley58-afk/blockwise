@@ -2,6 +2,8 @@
 
 import type { LucideIcon } from "lucide-react";
 
+import { META_CTA_LABELS, META_CTA_VALUES, labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
+
 import type { CopyState } from "./use-copy";
 import { COPY_LIMITS } from "./use-copy";
 
@@ -38,7 +40,6 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
         ["primaryText", "Primary text"],
         ["headline", "Headline"],
         ["description", "Description"],
-        ["cta", "CTA"],
       ] as Array<[keyof CopyState, string]>).map(([key, label]) => {
         const overLimit = copy[key].length > COPY_LIMITS[key];
         return (
@@ -58,6 +59,15 @@ export function CopyFields({ copy, updateCopy }: CopyFieldsProps) {
           </label>
         );
       })}
+      {/* The CTA is Meta's fixed button set, not free text — pick, don't type. */}
+      <label>
+        <span>CTA button</span>
+        <select value={toMetaCta(copy.cta)} onChange={(event) => updateCopy("cta", labelForMetaCta(event.target.value))}>
+          {META_CTA_VALUES.map((value) => (
+            <option key={value} value={value}>{META_CTA_LABELS[value]}</option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }

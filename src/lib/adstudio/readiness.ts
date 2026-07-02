@@ -20,12 +20,41 @@ export const COPY_LIMITS: Record<keyof AdStudioCopyState, number> = {
   cta: 24,
 };
 
-export function toMetaCta(label: string): "LEARN_MORE" | "SIGN_UP" | "DOWNLOAD" | "CONTACT_US" {
-  const normalised = label.trim().toLowerCase();
-  if (normalised.includes("download")) return "DOWNLOAD";
-  if (normalised.includes("contact") || normalised.includes("book")) return "CONTACT_US";
-  if (normalised.includes("sign")) return "SIGN_UP";
-  return "LEARN_MORE";
+// Single source of truth for CTA mapping lives in meta-cta.ts.
+import { toMetaCta } from "./meta-cta.ts";
+export { toMetaCta };
+
+/**
+ * Meta rejects (or truncates) over-limit copy — publishing it is a foot-gun,
+ * so export/publish BLOCK on violations instead of warning.
+ */
+export function findCopyLimitViolations(copy: AdStudioCopyState): string[] {
+  const violations: string[] = [];
+  for (const [key, limit] of Object.entries(COPY_LIMITS) as Array<[keyof AdStudioCopyState, number]>) {
+    const value = copy[key] ?? "";
+    if (value.length > limit) {
+      violations.push(`${key} is ${value.length} characters (Meta limit ${limit}).`);
+    }
+  }
+  return violations;
+}
+
+/** Violations across every variant's primary Meta copy in a pack. */
+export function findPackCopyLimitViolations(pack: {
+  copyPacks: Array<{ meta: { primaryText: string[]; headlines: string[]; descriptions: string[] } }>;
+}): string[] {
+  const seen = new Set<string>();
+  for (const copyPack of pack.copyPacks) {
+    for (const violation of findCopyLimitViolations({
+      primaryText: copyPack.meta.primaryText[0] ?? "",
+      headline: copyPack.meta.headlines[0] ?? "",
+      description: copyPack.meta.descriptions[0] ?? "",
+      cta: "",
+    })) {
+      seen.add(violation);
+    }
+  }
+  return [...seen];
 }
 
 export function buildReadinessItems(input: {
