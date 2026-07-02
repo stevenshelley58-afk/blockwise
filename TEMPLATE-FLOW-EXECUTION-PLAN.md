@@ -1,6 +1,12 @@
 # AdStudio Template Flow — Execution Plan (fix → prod-ready → cleanup)
 
 Date: 2026-07-01. Companion to `TEMPLATE-FLOW-REVIEW.md` (the findings; this is the work).
+
+## Status ledger (updated 2026-07-02)
+
+- **Phase 0: DONE** — P0.1–P0.7 all shipped on PR #154. Both migrations applied. Owner action outstanding: add the four e2e repository secrets (`ADSTUDIO_E2E_EMAIL`, `ADSTUDIO_E2E_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) to turn the new runtime gate green.
+- **Phase 1: 4/5 DONE** — P1.1 (cascade, fal retired), P1.2 (vision QA + regions + reroll), P1.4 (targeted edit endpoint), P1.5 (one CTA module + publish gates) shipped. **P1.3 (async generation) is the next slice** — deliberately not rushed: it changes the dialog contract and requires a trigger.dev task deployment that must be confirmed registered before merge (AGENTS.md), which needs `TRIGGER_SECRET_KEY`. Refined design for the next session: one `runTemplateAdGeneration` lib module consolidating copy pass → clone cascade → QA/reroll → pack build → transactional persist; campaigns POST inserts an `adstudio_creative_jobs` row + triggers the task + returns 202 `{jobId}` when trigger is configured (sync fallback otherwise, clone attempts capped at 1); `GET /api/adstudio/jobs/[id]` (workspace-scoped read policy migration); dialog drops its client-side copy/clone orchestration and polls with staged progress. Deploy the task and confirm registration before enabling.
+- Phases 2–5: not started.
 Audience: an executing agent. Every task states the files, the exact change, and an acceptance check. Do phases in order; tasks within a phase are ordered by dependency. Do not improvise beyond what is written; where a decision is marked **[DECISION]**, the recommended option is stated — confirm with the owner only if you must deviate.
 
 ## Ground rules (hold for every task)
