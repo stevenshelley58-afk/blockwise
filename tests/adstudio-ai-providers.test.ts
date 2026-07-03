@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createAzureOpenAiTextProvider,
   createOpenAiImageProvider,
+  createOpenRouterImageProvider,
   createOpenRouterTextProvider,
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
@@ -108,6 +109,55 @@ test("resolveAzureOpenAiChatUrl supports explicit URLs and deployment URLs", () 
     ),
     "https://custom.azure.test/chat",
   );
+});
+
+test("createOpenRouterImageProvider attaches references as image parts, never as prompt text", async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+  const provider = createOpenRouterImageProvider({
+    env: {
+      OPENROUTER_API_KEY: "or_test",
+      NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
+    },
+    model: "google/gemini-2.5-flash-image",
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { images: [{ image_url: { url: "data:image/png;base64,b3V0" } }] } }],
+          usage: { prompt_tokens: 900, completion_tokens: 1 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+
+  const references = [
+    "data:image/png;base64,cmVmZXJlbmNl",
+    "data:image/jpeg;base64,cGhvdG8=",
+  ];
+  const output = await provider.generate({
+    prompt: "Clone the reference ad with the supplied photo",
+    referenceAssets: references,
+    aspectRatio: "4:5",
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+  });
+
+  const body = JSON.parse(String(calls[0].init.body));
+  const content = body.messages[0].content as Array<Record<string, unknown>>;
+  const textParts = content.filter((part) => part.type === "text");
+  const imageParts = content.filter((part) => part.type === "image_url");
+
+  assert.equal(textParts.length, 1);
+  // A data URL inside the text prompt is tokenized as text and blows the
+  // image model's context window — references belong in image_url parts only.
+  assert.doesNotMatch(String(textParts[0].text), /data:image/);
+  assert.deepEqual(
+    imageParts.map((part) => (part.image_url as { url: string }).url),
+    references,
+  );
+  assert.equal(output.assetUrl, "data:image/png;base64,b3V0");
 });
 
 test("createOpenAiImageProvider defaults client creative generation to GPT Image 2", async () => {
