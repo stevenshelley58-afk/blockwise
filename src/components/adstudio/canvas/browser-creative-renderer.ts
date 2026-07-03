@@ -8,6 +8,7 @@ import type {
   AdStudioCanvasObject,
   AdStudioCreative,
 } from "@/lib/adstudio/types.ts";
+import { getFabricImageLoadOptions } from "@/lib/adstudio/fabric-image-load.ts";
 
 const META_EXPORT_FORMATS = new Set(["1:1", "4:5", "9:16"]);
 const IMAGE_LOAD_TIMEOUT_MS = 12_000;
@@ -193,7 +194,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
       image.onerror = null;
       reject(new Error("Image timed out while loading."));
     }, IMAGE_LOAD_TIMEOUT_MS);
-    image.crossOrigin = "anonymous";
+    const options = getFabricImageLoadOptions(src);
+    if (options?.crossOrigin) image.crossOrigin = options.crossOrigin;
     image.onload = () => {
       window.clearTimeout(timeout);
       resolve(image);

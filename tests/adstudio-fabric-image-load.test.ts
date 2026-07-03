@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { getFabricImageLoadOptions } from "../src/lib/adstudio/fabric-image-load.ts";
@@ -26,4 +27,12 @@ test("Ad Studio Fabric image loading keeps anonymous CORS for external images", 
     getFabricImageLoadOptions("https://cdn.example.com/listing.jpg", "https://app.blockwise.com/ad-studio"),
     { crossOrigin: "anonymous" },
   );
+});
+
+test("browser export renderer reuses the same image credential policy", () => {
+  const renderer = readFileSync("src/components/adstudio/canvas/browser-creative-renderer.ts", "utf8");
+
+  assert.match(renderer, /getFabricImageLoadOptions/);
+  assert.match(renderer, /const options = getFabricImageLoadOptions\(src\)/);
+  assert.match(renderer, /if \(options\?\.crossOrigin\) image\.crossOrigin = options\.crossOrigin/);
 });
