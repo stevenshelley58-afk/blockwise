@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const [command, ...passthroughArgs] = process.argv.slice(2);
 
@@ -14,8 +15,19 @@ if (!projectRef) {
   process.exit(1);
 }
 
+const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+const triggerSdkVersion =
+  packageJson.devDependencies?.["@trigger.dev/sdk"] ??
+  packageJson.dependencies?.["@trigger.dev/sdk"];
+
+if (!triggerSdkVersion) {
+  console.error("@trigger.dev/sdk must be pinned in package.json before running Trigger.dev tasks.");
+  process.exit(1);
+}
+
+const triggerCliPackage = `trigger.dev@${String(triggerSdkVersion).replace(/^[~^]/, "")}`;
 const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
-const child = spawn(npxBin, ["trigger.dev", command, "--project-ref", projectRef, ...passthroughArgs], {
+const child = spawn(npxBin, ["--yes", triggerCliPackage, command, "--project-ref", projectRef, ...passthroughArgs], {
   env: {
     ...process.env,
     TRIGGER_PROJECT_ID: projectRef,

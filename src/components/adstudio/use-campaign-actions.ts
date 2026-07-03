@@ -389,10 +389,6 @@ export function useCampaignActions(s: CampaignActionsState) {
         })),
       );
 
-      if (renders.length === 0) {
-        throw new Error("Creative render failed — please retry.");
-      }
-
       await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, renders);
 
       if (failedFormats.length === 0) {
@@ -400,7 +396,7 @@ export function useCampaignActions(s: CampaignActionsState) {
         s.showToast("Creative export downloaded");
       } else {
         s.showToast(
-          `Exported ${formats.length - failedFormats.length} of ${formats.length} formats — retry ${failedFormats
+          `Creative export downloaded; SVG fallback used for ${failedFormats
             .map(exportFormatLabel)
             .join(", ")} below`,
         );
@@ -630,7 +626,7 @@ function packForVariant(pack: AdStudioCampaignPack, variantId: string | undefine
     ...pack,
     variants: pack.variants.filter((variant) => variant.variantId === variantId),
     copyPacks: pack.copyPacks.filter((copyPack) => copyPack.variantId === variantId),
-    creatives: pack.creatives.filter((creative) => creative.variantId === variantId).map(stripRenderState),
+    creatives: pack.creatives.filter((creative) => creative.variantId === variantId).map(stripFabricJson),
   };
 }
 
@@ -642,6 +638,16 @@ function stripRenderState(creative: AdStudioCampaignPack["creatives"][number]): 
       fabricJson: null,
     },
     previewSvg: "",
+  };
+}
+
+function stripFabricJson(creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] {
+  return {
+    ...creative,
+    canvas: {
+      ...creative.canvas,
+      fabricJson: null,
+    },
   };
 }
 
