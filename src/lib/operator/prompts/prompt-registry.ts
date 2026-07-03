@@ -158,7 +158,9 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 
 {{OUTPUT_SCHEMA}}`,
   "adstudio.copy.output_schema": `Always respond with a single JSON object:
-{"headline": string, "primaryText": string, "description": string, "cta": string, "altHeadlines": [string, string], "altPrimaryTexts": [string, string]}`,
+{"headline": string, "primaryText": string, "description": string, "cta": string, "altHeadlines": [string, string], "altPrimaryTexts": [string, string]}
+
+primaryText is one JSON string with actual newline characters: a one-line hook, then 2-4 short benefit or offer lines.`,
   "adstudio.copy.compliance_rules": `Compliance rules:
 - Never guarantee prices, returns, sale outcomes, buyer demand, or timeframes.
 - No discriminatory, exclusionary, or demographic targeting language.
@@ -166,6 +168,7 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 - Plain Australian English. Warm, useful, local, never hype or pressure.
 - Do not turn raw customer wording into finished copy when it contains claims, targeting, or weak placeholder language.
 - Respect character limits exactly: headline <= 40 chars, primaryText <= 125 chars, description <= 90 chars, cta <= 24 chars.
+- Format primaryText as a one-line hook followed by 2-4 short benefit or offer lines separated by newline characters. No hashtags. No emoji unless the brand voice explicitly calls for it.
 - The CTA is a short button label such as "Book free appraisal", "Download checklist", or "Get the report".`,
   "adstudio.image.system": `Create customer-facing real-estate ad imagery prompts. Follow brand and compliance constraints before customer input. Generate background and style instructions only; do not ask the image model to render final ad text, prices, claims, or guarantees.`,
   "adstudio.image.input_template": `{{BRAND_CONSTRAINTS}}

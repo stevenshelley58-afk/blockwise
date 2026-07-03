@@ -118,4 +118,7 @@ test("template mode wires brief-grounded copy through the server-side generation
   // clamped to the template's declared maxLength.
   assert.match(copyGeneration, /NEVER reuse the sample's facts/);
   assert.match(copyGeneration, /field\.maxLength && value\.length > field\.maxLength/);
+  assert.match(copyGeneration, /PRIMARY_TEXT_FORMATTING_INSTRUCTION/);
+  assert.match(copyGeneration, /actual newline characters/);
+  assert.match(copyGeneration, /one-line hook followed by 2-4 short benefit or offer lines/);
 });

@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Radar
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
+import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
@@ -293,12 +294,7 @@ function initialForBrand(brandName: string): string {
 }
 
 function domainForPreview(brandKit: AdStudioBrandKit): string {
-  try {
-    const host = new URL(brandKit.source.url).host.replace(/^www\./, "");
-    return host || "youragency.com.au";
-  } catch {
-    return "youragency.com.au";
-  }
+  return resolveAdvertiserDomain({ brandKit }).host;
 }
 
 function tabForStep(step: StartStep): ExploreTab {

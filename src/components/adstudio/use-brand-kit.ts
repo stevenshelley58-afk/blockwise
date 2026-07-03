@@ -3,15 +3,7 @@
 import { useState } from "react";
 
 import type { AdStudioBrandKit } from "@/lib/adstudio";
-
-function hostOf(url: string): string {
-  try {
-    const host = new URL(url).host.replace(/^www\./, "");
-    return host.endsWith(".example") ? "" : host;
-  } catch {
-    return "";
-  }
-}
+import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 
 /** Format a bare 10-digit AU number as (0X) XXXX XXXX, otherwise pass through. */
 function formatAuPhone(raw: string | null): string {
@@ -27,7 +19,7 @@ export function useBrandKit(brandKit: AdStudioBrandKit) {
   // Derived read-only values
   const brand = brandKit.identity.businessName || "Your agency";
   const initials = brand.charAt(0).toUpperCase();
-  const domain = hostOf(brandKit.source.url);
+  const domain = resolveAdvertiserDomain({ brandKit }).host;
 
   // Editable field state — initialised from prop
   const [editedBrand, setEditedBrand] = useState(brand);

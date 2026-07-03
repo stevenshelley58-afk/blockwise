@@ -31,6 +31,7 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
+import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
@@ -317,7 +318,7 @@ export function AdStudioWorkbench({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const studio = useAdStudio();
-  const { brand, initials, domain } = useBrandKit(brandKit);
+  const { brand, initials } = useBrandKit(brandKit);
   // B2: an unapproved extracted kit can generate and edit, but is flagged as a
   // draft everywhere and keeps publish blocked until it is confirmed.
   const brandIsDraft = !isSample && brandKit.reviewStatus !== "approved";
@@ -698,6 +699,7 @@ export function AdStudioWorkbench({
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time; no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
+  const previewDomain = resolveAdvertiserDomain({ brandKit, finalUrls: [destinationUrl], copyPacks: pack.copyPacks }).host;
   const campaignName = pack.campaign.name || "Ad draft";
   const selectedVariant = pack.variants[selectedVariantIndex] ?? pack.variants[0];
   const editorFormat = PREVIEW_TO_AD_FORMAT[previewFormat];
@@ -983,7 +985,7 @@ export function AdStudioWorkbench({
     return (
       <AdPreview
         brand={brand}
-        domain={domain}
+        domain={previewDomain}
         initials={initials}
         copy={copy}
         image={primaryImage}
@@ -1009,6 +1011,7 @@ export function AdStudioWorkbench({
         <div className="studio-clone-editor-wrap">
           <MetaChromePreview
             brandKit={brandKit}
+            destinationUrl={destinationUrl}
             copy={copy}
             format={previewFormat}
             onSelectText={() => goToSection("text")}
@@ -1019,6 +1022,9 @@ export function AdStudioWorkbench({
               showToast={studio.showToast}
             />
           </MetaChromePreview>
+          {currentCreative.canvas.cloneQa?.regions.length ? (
+            <p className="studio-metachrome-edit-hint">Click text on the canvas to edit it.</p>
+          ) : null}
           {showCloneWarnings && (
             <div className="studio-clone-warning-strip" role="status" aria-live="polite">
               <CircleAlert aria-hidden size={16} />

@@ -4,6 +4,7 @@ import { Check, ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { AdStudioBrandKit } from "@/lib/adstudio";
+import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 import type { CopyState } from "./use-copy";
@@ -43,19 +44,48 @@ export function PreviewControls({
   );
 }
 
-/** Mirrors useBrandKit's hostOf — MetaChromePreview takes the raw brand kit. */
-function chromeHostOf(url: string): string {
-  try {
-    const host = new URL(url).host.replace(/^www\./, "");
-    return host.endsWith(".example") ? "" : host;
-  } catch {
-    return "";
+const META_PRIMARY_VISIBLE_LINES = 4;
+const META_PRIMARY_VISIBLE_CHARS = 220;
+
+export function formatMetaPrimaryText(text: string): string {
+  const normalised = text.replace(/\r\n?/g, "\n").trim();
+  const lines = normalised.split("\n");
+  const visibleLines = lines.slice(0, META_PRIMARY_VISIBLE_LINES);
+  let visible = visibleLines.join("\n").trimEnd();
+  let truncated = lines.length > META_PRIMARY_VISIBLE_LINES || normalised.length > META_PRIMARY_VISIBLE_CHARS;
+
+  if (visible.length > META_PRIMARY_VISIBLE_CHARS) {
+    visible = visible.slice(0, META_PRIMARY_VISIBLE_CHARS).trimEnd();
+    truncated = true;
   }
+
+  return truncated ? `${visible}... See more` : visible;
+}
+
+function metaPageName(brandKit: AdStudioBrandKit): string {
+  return brandKit.identity.tradingName?.trim() || brandKit.identity.businessName || "Your agency";
+}
+
+function metaAvatarUrl(brandKit: AdStudioBrandKit): string | null {
+  return brandKit.logos.primaryLogoUrl || brandKit.logos.faviconUrl || null;
+}
+
+function MetaAvatar({ brandKit }: { brandKit: AdStudioBrandKit }) {
+  const pageName = metaPageName(brandKit);
+  const avatarUrl = metaAvatarUrl(brandKit);
+  const initial = pageName.charAt(0).toUpperCase();
+
+  return (
+    <span className="studio-meta-avatar" aria-hidden>
+      {avatarUrl ? <img src={avatarUrl} alt="" /> : initial}
+    </span>
+  );
 }
 
 type MetaChromePreviewProps = {
   format: PreviewFormat;
   brandKit: AdStudioBrandKit;
+  destinationUrl?: string;
   /** Live copy state — edits in the Text panel show up immediately. */
   copy: CopyState;
   /** The creative itself (the in-place clone editor); the chrome wraps, never replaces it. */
@@ -71,11 +101,11 @@ type MetaChromePreviewProps = {
  * Story format overlays the chrome instead (avatar, progress bars, CTA pill)
  * with pointer-events disabled so in-place edit regions stay clickable.
  */
-export function MetaChromePreview({ format, brandKit, copy, children, onSelectText }: MetaChromePreviewProps) {
-  const brand = brandKit.identity.businessName || brandKit.identity.tradingName || "Your agency";
-  const initial = brand.charAt(0).toUpperCase();
-  const domain = chromeHostOf(brandKit.source.url);
+export function MetaChromePreview({ format, brandKit, destinationUrl, copy, children, onSelectText }: MetaChromePreviewProps) {
+  const pageName = metaPageName(brandKit);
+  const domain = resolveAdvertiserDomain({ brandKit, finalUrls: [destinationUrl] });
   const ctaLabel = labelForMetaCta(toMetaCta(copy.cta));
+  const primaryText = formatMetaPrimaryText(copy.primaryText);
 
   if (format === "story") {
     return (
@@ -88,14 +118,14 @@ export function MetaChromePreview({ format, brandKit, copy, children, onSelectTe
             <i />
           </span>
           <div className="studio-story-brand studio-metachrome-story-brand">
-            <span>{initial}</span>
+            <MetaAvatar brandKit={brandKit} />
             <div>
-              <strong>{brand}</strong>
+              <strong>{pageName}</strong>
               <small>Sponsored</small>
             </div>
           </div>
           <span className="studio-story-cta studio-metachrome-story-cta">
-            {ctaLabel}
+            Learn more
             <ChevronRight aria-hidden size={17} />
           </span>
         </div>
@@ -108,21 +138,21 @@ export function MetaChromePreview({ format, brandKit, copy, children, onSelectTe
       <article className="studio-feed-card studio-metachrome-card" data-format={format}>
         <header>
           <div className="studio-feed-id">
-            <span>{initial}</span>
+            <MetaAvatar brandKit={brandKit} />
             <div>
-              <strong>{brand}</strong>
+              <strong>{pageName}</strong>
               <small>Sponsored</small>
             </div>
           </div>
           <MoreHorizontal aria-hidden size={18} />
         </header>
         <button className="studio-feed-primary studio-metachrome-copy" type="button" onClick={onSelectText}>
-          {copy.primaryText}
+          {primaryText}
         </button>
         <div className="studio-metachrome-media">{children}</div>
         <footer>
           <div>
-            {domain ? <small>{domain}</small> : null}
+            <small>{domain.host}</small>
             <button className="studio-feed-headline studio-metachrome-copy" type="button" onClick={onSelectText}>
               {copy.headline}
             </button>
@@ -133,6 +163,7 @@ export function MetaChromePreview({ format, brandKit, copy, children, onSelectTe
           <span className="studio-feed-cta">{ctaLabel}</span>
         </footer>
       </article>
+      {domain.setupNudge ? <p className="studio-metachrome-nudge">{domain.setupNudge}</p> : null}
     </div>
   );
 }
