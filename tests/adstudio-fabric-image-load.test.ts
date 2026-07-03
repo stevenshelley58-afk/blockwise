@@ -36,3 +36,11 @@ test("browser export renderer reuses the same image credential policy", () => {
   assert.match(renderer, /const options = getFabricImageLoadOptions\(src\)/);
   assert.match(renderer, /if \(options\?\.crossOrigin\) image\.crossOrigin = options\.crossOrigin/);
 });
+
+test("browser export renderer falls back to inline data when storage upload fails", () => {
+  const renderer = readFileSync("src/components/adstudio/canvas/browser-creative-renderer.ts", "utf8");
+
+  assert.match(renderer, /try \{\s+return await uploadCreativeRenders\(pack, renders\);/);
+  assert.match(renderer, /falling back to inline render data/);
+  assert.match(renderer, /return renders;\s+\}/);
+});
