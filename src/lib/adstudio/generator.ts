@@ -1,5 +1,6 @@
 import { toMetaCta } from "./meta-cta.ts";
 import { runAdStudioComplianceReview } from "./compliance.ts";
+import { appendAdvertiserPath, resolveAdvertiserBaseUrl, resolveLeadFormPrivacyPolicyUrl } from "./advertiser-domain.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { deterministicUuid } from "./id.ts";
 import { findOfferTemplate, getOfferTemplate } from "./offers.ts";
@@ -606,7 +607,7 @@ function buildCopyPack(input: {
   message: DefaultCreativeMessage;
   template?: AdStudioGalleryTemplate | null;
 }): AdStudioPlatformCopyPack {
-  const privacyUrl = input.brandKit.compliance.privacyPolicyUrl ?? `${input.brandKit.source.url}/privacy`;
+  const privacyUrl = resolveLeadFormPrivacyPolicyUrl(input.brandKit);
   const seed = buildOfferCopySeed(input);
   const meta: MetaLeadAdPack = input.template
     ? {
@@ -685,7 +686,7 @@ function buildOfferCopySeed(input: {
   const suburb = input.campaign.market.suburb;
   const businessName = input.brandKit.identity.tradingName || input.brandKit.identity.businessName;
   const offerId = input.campaign.offerId;
-  const finalUrl = appendPath(input.brandKit.source.url, landingPathForOffer(offerId));
+  const finalUrl = appendPath(resolveAdvertiserBaseUrl(input.brandKit), landingPathForOffer(offerId));
   const headline = input.variant.headline;
   const description = input.message.description;
   const templateName = templateSnapshotText(input.campaign.templateSnapshot, "name");
@@ -1444,7 +1445,7 @@ function landingPathForOffer(offerId: string): string {
 }
 
 function appendPath(baseUrl: string, path: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+  return appendAdvertiserPath(baseUrl, path);
 }
 
 function uniqueShort(values: string[], limit: number, max: number): string[] {

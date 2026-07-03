@@ -70,6 +70,9 @@ type CopyGenerationResult = {
 const IMAGE_GROUNDING_INSTRUCTION =
   "An image of the advertised property is attached. Ground the copy in what is actually visible in it — the property's style, setting, and standout features — and do not invent details that contradict the image.";
 
+const PRIMARY_TEXT_FORMATTING_INSTRUCTION =
+  "Primary text must read like a real Meta lead ad: return one string with actual newline characters, starting with a one-line hook followed by 2-4 short benefit or offer lines. Preserve those newlines in JSON, use no hashtags, and use emoji only when the brand voice explicitly calls for it. Keep the wording compliant with Meta Housing rules.";
+
 const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.system",
   "adstudio.copy.input_template",
@@ -99,7 +102,11 @@ export async function generateAdStudioCopy(
     assistAction: input.assistAction,
   });
   const imageUrl = usableModelImage(input.sourceImageUrl);
-  const userPrompt = imageUrl ? `${assembled.user}\n\n${IMAGE_GROUNDING_INSTRUCTION}` : assembled.user;
+  const userPrompt = [
+    assembled.user,
+    PRIMARY_TEXT_FORMATTING_INSTRUCTION,
+    imageUrl ? IMAGE_GROUNDING_INSTRUCTION : "",
+  ].filter(Boolean).join("\n\n");
   let generation: CopyGenerationResult | null = null;
 
   try {
@@ -223,6 +230,7 @@ export async function generateAdStudioTemplateCopy(
   const imageUrl = usableModelImage(input.sourceImageUrl);
   const userPrompt = [
     assembled.user,
+    PRIMARY_TEXT_FORMATTING_INSTRUCTION,
     `${ON_IMAGE_INSTRUCTION_HEADER}\n${fieldLines}`,
     imageUrl ? IMAGE_GROUNDING_INSTRUCTION : "",
   ]

@@ -78,6 +78,8 @@ test("in-place editor styles exist with hover affordance and shimmer", () => {
   assert.match(styles, /studio-inplace-shimmer/);
   assert.match(styles, /\.studio-inplace-undo\{position:absolute;top:10px;right:10px/);
   assert.match(styles, /\.studio-inplace-hint\{/);
+  assert.match(styles, /\.studio-metachrome-media \.studio-inplace-hint,\.studio-metachrome-media \.studio-inplace-undo\{display:none\}/);
+  assert.match(styles, /\.studio-metachrome-story \.studio-inplace-hint,\.studio-metachrome-story \.studio-inplace-undo\{display:none\}/);
   assert.match(styles, /\.studio-clone-warning-strip\{/);
   assert.doesNotMatch(styles, /\.studio-clone-badge\{/);
 });

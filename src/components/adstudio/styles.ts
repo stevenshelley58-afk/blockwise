@@ -227,7 +227,8 @@
 .studio-feed-card.landscape{width:560px}
 .studio-feed-card header{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 18px}
 .studio-feed-id{display:flex;align-items:center;gap:11px}
-.studio-feed-id span{width:42px;height:42px;border-radius:999px;background:#123e75;color:#fff;display:grid;place-items:center;font-weight:850}
+.studio-feed-id>span,.studio-meta-avatar{width:42px;height:42px;border-radius:999px;background:#123e75;color:#fff;display:grid;place-items:center;font-weight:850;overflow:hidden;flex:0 0 auto}
+.studio-meta-avatar img{display:block;width:100%;height:100%;object-fit:cover}
 .studio-feed-id strong,.studio-feed-id small{display:block}
 .studio-feed-id small{color:var(--muted);font-size:12px}
 .studio-feed-primary,.studio-feed-headline,.studio-feed-desc{display:block;width:100%;border:0;background:transparent;color:var(--ink);text-align:left}
@@ -539,25 +540,39 @@
 /* P2.2 Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
    itself is the embedded in-place editor, never a second static render. */
-.studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:18px;scrollbar-width:thin}
-.studio-metachrome-card{width:440px;max-width:100%;overflow:visible}
-.studio-metachrome-card footer{border-radius:0 0 18px 18px}
+.studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:0;scrollbar-width:thin;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.studio-metachrome-card{width:min(500px,92vw);max-width:100%;overflow:visible;border-radius:0;background:#fff;color:#050505}
+.studio-metachrome-card header{height:64px;padding:12px 16px}
+.studio-metachrome-card .studio-feed-id{gap:8px}
+.studio-metachrome-card .studio-meta-avatar{width:40px;height:40px;font-size:19px}
+.studio-metachrome-card .studio-feed-id strong{font-size:15px;line-height:1.2;font-weight:700;color:#050505}
+.studio-metachrome-card .studio-feed-id small{font-size:13px;line-height:1.2;color:#65676b}
+.studio-metachrome-card footer{min-height:76px;border-top:1px solid #dadde1;border-radius:0;background:#f0f2f5;padding:10px 16px;grid-template-columns:minmax(0,1fr) auto;gap:12px}
+.studio-metachrome-card footer small{color:#65676b;font-size:12px;line-height:1.2;font-weight:600;letter-spacing:0;text-transform:uppercase}
+.studio-metachrome-card .studio-feed-headline{font-size:16px;line-height:1.22;font-weight:650;color:#050505;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-metachrome-card .studio-feed-desc{font-size:13px;line-height:1.25;color:#65676b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-metachrome-card .studio-feed-cta{min-height:36px;border-radius:6px;background:#e4e6eb;color:#050505;padding:0 14px;font-size:15px;font-weight:650;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
 .studio-metachrome-copy{cursor:pointer}
 .studio-metachrome-copy:hover{color:var(--accent)}
+.studio-metachrome-card .studio-feed-primary{padding:0 16px 12px;color:#050505;font-size:15px;line-height:1.333;white-space:pre-line}
 .studio-metachrome-media{position:relative;background:#eee;min-height:120px}
 .studio-metachrome-media .studio-inplace-stage,.studio-metachrome-media .studio-clone-stage{width:100%;gap:0}
 .studio-metachrome-media .studio-inplace-frame{width:100%}
 .studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;max-width:100%;max-height:none;border-radius:0;box-shadow:none}
-.studio-metachrome-media .studio-inplace-hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
+.studio-metachrome-media .studio-inplace-hint,.studio-metachrome-media .studio-inplace-undo{display:none}
 .studio-metachrome-media .studio-fabric-loading{min-height:320px;color:var(--muted)}
-.studio-metachrome-story{position:relative;display:inline-block}
+.studio-metachrome-nudge,.studio-metachrome-edit-hint{margin:10px auto 0;width:min(500px,92vw);color:#d7deea;font-size:12px;font-weight:650;line-height:1.35;text-align:left}
+.studio-metachrome-story{position:relative;display:inline-block;overflow:hidden;background:#000}
 .studio-metachrome-story .studio-inplace-stage,.studio-metachrome-story .studio-clone-stage{gap:0}
-.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{border-radius:24px}
-.studio-metachrome-story .studio-inplace-hint{position:absolute;left:50%;top:calc(100% + 12px);transform:translateX(-50%);z-index:5;white-space:nowrap;margin:0}
-.studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:24px;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 74%,rgba(0,0,0,.5) 100%)}
-.studio-metachrome-story-progress{position:absolute;top:10px;left:14px;right:14px;display:flex;gap:5px}
+.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{border-radius:0;box-shadow:none}
+.studio-metachrome-story .studio-inplace-hint,.studio-metachrome-story .studio-inplace-undo{display:none}
+.studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:0;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 78%,rgba(0,0,0,.45) 100%)}
+.studio-metachrome-story-progress{position:absolute;top:10px;left:12px;right:12px;display:flex;gap:4px}
 .studio-metachrome-story-progress i{flex:1;height:2.5px;border-radius:999px;background:rgba(255,255,255,.45)}
 .studio-metachrome-story-progress i:first-child{background:#fff}
-.studio-metachrome-story-brand{top:24px}
-.studio-metachrome-story-cta{pointer-events:none}
+.studio-metachrome-story-brand{top:24px;left:14px;right:14px;gap:8px}
+.studio-metachrome-story-brand .studio-meta-avatar{width:32px;height:32px;font-size:16px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4)}
+.studio-metachrome-story-brand strong{font-size:13px;font-weight:700}
+.studio-metachrome-story-brand small{font-size:11px}
+.studio-metachrome-story-cta{left:50%;right:auto;bottom:28px;min-height:34px;transform:translateX(-50%);border-radius:999px;background:rgba(255,255,255,.92);color:#050505;padding:0 16px;font-size:13px;font-weight:700;pointer-events:none}
 `;
