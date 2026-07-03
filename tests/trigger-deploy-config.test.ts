@@ -20,6 +20,9 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(packageJson, /"trigger:deploy":\s*"node scripts\/run-trigger-with-project-ref\.mjs deploy"/);
   assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
   assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);
+  assert.match(triggerWrapper, /@trigger\.dev\/sdk/);
+  assert.match(triggerWrapper, /triggerCliPackage = `trigger\.dev@\$\{String\(triggerSdkVersion\)\.replace/);
+  assert.match(triggerWrapper, /"--yes", triggerCliPackage/);
   assert.match(triggerWrapper, /"--project-ref", projectRef/);
   assert.match(triggerWrapper, /TRIGGER_PROJECT_ID or TRIGGER_PROJECT_REF is required to deploy or run Trigger\.dev tasks\./);
 });
