@@ -31,6 +31,7 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
+import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
 import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
 import { ANGLES } from "./angles";
@@ -306,6 +307,7 @@ export function AdStudioWorkbench({
   const [templatePickerInitialStep, setTemplatePickerInitialStep] = useState<TemplateStartStep>("source");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
+  const [dismissedCloneWarningKeys, setDismissedCloneWarningKeys] = useState<Set<string>>(() => new Set());
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
@@ -708,6 +710,14 @@ export function AdStudioWorkbench({
       null
     );
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
+  const cloneWarningKey = currentCreative?.canvas.cloneQa
+    ? `${currentCreative.creativeId}:${currentCreative.canvas.cloneQa.checkedAt}`
+    : "";
+  const cloneWarnings = useMemo(
+    () => cloneQaWarnings(currentCreative?.canvas.cloneQa),
+    [currentCreative?.canvas.cloneQa],
+  );
+  const showCloneWarnings = cloneWarningKey.length > 0 && cloneWarnings.length > 0 && !dismissedCloneWarningKeys.has(cloneWarningKey);
   const currentVariantFormats = useMemo(
     () =>
       Array.from(
@@ -844,7 +854,11 @@ export function AdStudioWorkbench({
   // background and swaps it in. Every failure path keeps the draft — this
   // never makes the ad worse — and a user edit made during the render wins.
   async function upgradeCloneQuality(generatedPack: AdStudioCampaignPack) {
-    const clone = generatedPack.creatives.find(isCloneCreative);
+    const clones = generatedPack.creatives.filter(isCloneCreative);
+    await Promise.all(clones.map((clone) => upgradeCloneCreative(clone)));
+  }
+
+  async function upgradeCloneCreative(clone: AdStudioCreative) {
     const draftObject = clone?.canvas.objects[0];
     const draftImage = draftObject?.content || draftObject?.assetId || "";
     if (!clone || !draftImage) return;
@@ -856,7 +870,7 @@ export function AdStudioWorkbench({
         body: JSON.stringify({ expectedCurrentImage: draftImage }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | { image?: string; qa?: AdStudioCreative["canvas"]["cloneQa"]; renderHistory?: string[] }
+        | { image?: string; qa?: AdStudioCreative["canvas"]["cloneQa"]; renderHistory?: string[]; keptCurrent?: boolean }
         | null;
       if (!response.ok || !payload?.image) return;
 
@@ -882,8 +896,8 @@ export function AdStudioWorkbench({
         }),
       }));
       if (applied) {
-        setPrimaryImage(upgradedImage);
-        studio.showToast("Sharpened your ad to full quality");
+        if (clone.format === editorFormat) setPrimaryImage(upgradedImage);
+        if (!payload.keptCurrent && clone.format === editorFormat) studio.showToast("Sharpened your ad to full quality");
       }
     } catch {
       // Network hiccup: the draft stays current.
@@ -992,18 +1006,44 @@ export function AdStudioWorkbench({
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
       return (
-        <MetaChromePreview
-          brandKit={brandKit}
-          copy={copy}
-          format={previewFormat}
-          onSelectText={() => goToSection("text")}
-        >
-          <InPlaceAdEditor
-            creative={currentCreative}
-            onCreativeChange={updateCreative}
-            showToast={studio.showToast}
-          />
-        </MetaChromePreview>
+        <div className="studio-clone-editor-wrap">
+          <MetaChromePreview
+            brandKit={brandKit}
+            copy={copy}
+            format={previewFormat}
+            onSelectText={() => goToSection("text")}
+          >
+            <InPlaceAdEditor
+              creative={currentCreative}
+              onCreativeChange={updateCreative}
+              showToast={studio.showToast}
+            />
+          </MetaChromePreview>
+          {showCloneWarnings && (
+            <div className="studio-clone-warning-strip" role="status" aria-live="polite">
+              <CircleAlert aria-hidden size={16} />
+              <div>
+                {cloneWarnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+              <button
+                type="button"
+                aria-label="Dismiss text warnings"
+                onClick={() => {
+                  if (!cloneWarningKey) return;
+                  setDismissedCloneWarningKeys((current) => {
+                    const next = new Set(current);
+                    next.add(cloneWarningKey);
+                    return next;
+                  });
+                }}
+              >
+                <X aria-hidden size={14} />
+              </button>
+            </div>
+          )}
+        </div>
       );
     }
 

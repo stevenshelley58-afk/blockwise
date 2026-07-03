@@ -49,26 +49,27 @@ test("in-flight edits show an elapsed-time-aware status and disable other region
   assert.match(editor, /disabled=\{busy && !pending\}/);
 });
 
-test("creatives without QA regions fall back to the honest badge", () => {
+test("creatives without QA regions show the plain image without a badge", () => {
   assert.match(editor, /if \(regions\.length === 0\)/);
-  assert.match(editor, /studio-clone-badge/);
-  assert.match(editor, /AI-designed — the text is part of the image\. Create a new ad to change it\./);
+  assert.doesNotMatch(editor, /studio-clone-badge/);
+  assert.doesNotMatch(editor, /AI-designed .* the text is part of the image/);
   // The persistent hint only exists on the editable path.
   assert.match(editor, /Click any text on the ad to edit it/);
 });
 
 test("workbench renders the in-place editor for clone creatives", () => {
   // P2.2: the editor is embedded in the Meta chrome, never replaced by it.
-  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<MetaChromePreview/);
+  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?\/>[\s\S]*?<\/MetaChromePreview>/);
   assert.match(workbench, /import\("\.\/canvas\/in-place-ad-editor"\)\.then\(\(mod\) => mod\.InPlaceAdEditor\)/);
-  assert.match(workbench, /ssr: false, loading: \(\) => <div className="studio-fabric-loading">Loading editor\.\.\.<\/div> \},\n\);\n\nconst GOAL_LABELS/);
+  assert.match(workbench, /const InPlaceAdEditor = dynamic/);
+  assert.match(workbench, /ssr: false, loading: \(\) => <div className="studio-fabric-loading">Loading editor\.\.\.<\/div>/);
   // The editor replaces the creative in pack state and arms autosave.
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
   assert.match(workbench, /showToast=\{studio\.showToast\}/);
-  // The interim static badge is gone from the workbench (it lives in the
-  // editor's no-regions fallback now).
   assert.doesNotMatch(workbench, /studio-clone-badge/);
+  assert.match(workbench, /studio-clone-warning-strip/);
+  assert.match(workbench, /cloneQaWarnings\(currentCreative\?\.canvas\.cloneQa\)/);
 });
 
 test("in-place editor styles exist with hover affordance and shimmer", () => {
@@ -77,6 +78,6 @@ test("in-place editor styles exist with hover affordance and shimmer", () => {
   assert.match(styles, /studio-inplace-shimmer/);
   assert.match(styles, /\.studio-inplace-undo\{position:absolute;top:10px;right:10px/);
   assert.match(styles, /\.studio-inplace-hint\{/);
-  // Fallback badge styles preserved for older creatives.
-  assert.match(styles, /\.studio-clone-badge\{/);
+  assert.match(styles, /\.studio-clone-warning-strip\{/);
+  assert.doesNotMatch(styles, /\.studio-clone-badge\{/);
 });

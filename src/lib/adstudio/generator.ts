@@ -103,7 +103,14 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     fallbackGoal: input.goal,
   });
   const galleryTemplate = galleryTemplateOrNull(template);
-  const formats = galleryTemplate ? [galleryTemplate.format] : input.firstAd ? [...FIRST_AD_FORMATS] : (input.creativeFormats ?? FALLBACK_FORMATS);
+  const hasTemplateClone = Boolean(input.firstAd?.templateCloneImage || input.firstAd?.templateCloneImagesByFormat);
+  const formats = galleryTemplate
+    ? hasTemplateClone
+      ? [...FIRST_AD_FORMATS]
+      : [galleryTemplate.format]
+    : input.firstAd
+      ? [...FIRST_AD_FORMATS]
+      : (input.creativeFormats ?? FALLBACK_FORMATS);
   const campaignId = deterministicUuid(`${input.workspaceId}:${offer.offerId}:${templateKey ?? "blank"}:${input.suburb}:${input.firstAd?.description ?? ""}`);
   const campaign: AdStudioCampaign = {
     campaignId,
@@ -179,7 +186,9 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       sourceImageDataUrl: input.sourceImagesByFormat?.[format] ?? sourceImageDataUrl,
       sourceImagesBySlot: input.sourceImagesBySlot ?? input.firstAd?.imageDataUrls,
       templateCloneImage: input.firstAd?.templateCloneImage,
+      templateCloneImagesByFormat: input.firstAd?.templateCloneImagesByFormat,
       templateCloneQa: input.firstAd?.templateCloneQa,
+      templateCloneQaByFormat: input.firstAd?.templateCloneQaByFormat,
       subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -974,19 +983,30 @@ function buildCreative(input: {
   sourceImageDataUrl?: string;
   sourceImagesBySlot?: Partial<Record<string, string>>;
   templateCloneImage?: string;
+  templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   templateCloneQa?: AdStudioCloneQa;
+  templateCloneQaByFormat?: Partial<Record<AdStudioFormat, AdStudioCloneQa>>;
   subheadline?: string;
 }): AdStudioCreative {
   const galleryTemplate = galleryTemplateOrNull(input.template);
   if (galleryTemplate) {
-    if (input.templateCloneImage) {
+    const cloneImage =
+      input.templateCloneImagesByFormat?.[input.format] ??
+      (input.format === "1:1" ? input.templateCloneImagesByFormat?.["4:5"] : undefined) ??
+      input.templateCloneImage;
+    const cloneQa =
+      input.templateCloneQaByFormat?.[input.format] ??
+      (input.format === "1:1" ? input.templateCloneQaByFormat?.["4:5"] : undefined) ??
+      input.templateCloneQa;
+    if (cloneImage) {
       return buildTemplateCloneCreative({
         creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}:clone`),
         campaignId: input.campaign.campaignId,
         variantId: input.variant.variantId,
         template: galleryTemplate,
-        cloneImage: input.templateCloneImage,
-        cloneQa: input.templateCloneQa,
+        format: input.format,
+        cloneImage,
+        cloneQa,
       });
     }
 
@@ -1025,18 +1045,20 @@ function buildTemplateCloneCreative(input: {
   campaignId: string;
   variantId: string;
   template: AdStudioGalleryTemplate;
+  format: AdStudioFormat;
   cloneImage: string;
   cloneQa?: AdStudioCloneQa;
 }): AdStudioCreative {
+  const size = CANVAS_SIZE[input.format];
   const creative: Omit<AdStudioCreative, "previewSvg"> = {
     creativeId: input.creativeId,
     campaignId: input.campaignId,
     variantId: input.variantId,
-    format: input.template.format,
+    format: input.format,
     source: "generative",
     canvas: {
-      width: input.template.canvas.width,
-      height: input.template.canvas.height,
+      width: size.width,
+      height: size.height,
       backgroundAssetId: null,
       cloneQa: input.cloneQa,
       objects: [
@@ -1048,8 +1070,8 @@ function buildTemplateCloneCreative(input: {
           assetId: input.cloneImage,
           x: 0,
           y: 0,
-          width: input.template.canvas.width,
-          height: input.template.canvas.height,
+          width: size.width,
+          height: size.height,
           imageAnchor: "center",
           locked: false,
         },
@@ -1057,7 +1079,7 @@ function buildTemplateCloneCreative(input: {
       fabricJson: null,
     },
     safeZones: {
-      metaStory: input.template.format === "9:16",
+      metaStory: input.format === "9:16",
       googleDemandGen: true,
     },
   };

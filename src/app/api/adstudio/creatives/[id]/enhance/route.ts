@@ -132,11 +132,52 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   // An upgrade that fails verification is discarded — the draft the user
   // already has stays current. This endpoint never makes the ad worse.
-  if (!lastImage || (qa && !qa.passed)) {
+  if (!lastImage) {
     return NextResponse.json(
       { error: "The quality upgrade did not verify — keeping the current version.", qa },
       { status: 502 },
     );
+  }
+
+  if (qa && !qa.passed) {
+    const { data: freshRow } = await context.supabase
+      .from("adstudio_creatives")
+      .select("canvas_json")
+      .eq("workspace_id", context.access.workspaceId)
+      .eq("id", id)
+      .maybeSingle();
+    const freshCanvas = (freshRow?.canvas_json ?? canvas) as AdStudioCreative["canvas"];
+    const freshObject = freshCanvas?.objects?.[0];
+    const freshImageRef = freshObject?.content || freshObject?.assetId || "";
+    if (freshImageRef !== currentImageRef) {
+      return NextResponse.json(
+        { error: "The creative changed while the upgrade rendered - keeping the newer version.", qa },
+        { status: 409 },
+      );
+    }
+
+    const nextCanvas: AdStudioCreative["canvas"] = {
+      ...freshCanvas,
+      cloneQa: qa,
+    };
+    const { error: updateError } = await context.supabase
+      .from("adstudio_creatives")
+      .update({ canvas_json: nextCanvas, updated_at: new Date().toISOString() })
+      .eq("workspace_id", context.access.workspaceId)
+      .eq("id", id);
+    if (updateError) {
+      return NextResponse.json({ error: `Upgrade QA could not be saved (${updateError.message}).` }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      creativeId: id,
+      image: currentImageRef,
+      qa,
+      renderHistory: freshCanvas.renderHistory ?? [],
+      keptCurrent: true,
+      model: lastImage.model,
+      provider: lastImage.provider,
+    });
   }
 
   const image = await persistCloneRender({

@@ -44,7 +44,7 @@ test("primary text and headline/description click through to the Text panel", ()
 });
 
 test("workbench wraps the in-place editor in MetaChromePreview for clone creatives only", () => {
-  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<MetaChromePreview/);
+  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?creative=\{currentCreative\}[\s\S]*?<\/MetaChromePreview>/);
   // Non-clone creatives keep the Fabric layer editor unchanged.
   assert.match(workbench, /<FabricAdEditor\s+brandKit=\{brandKit\}/);

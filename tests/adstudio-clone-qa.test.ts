@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import {
   cloneQaCorrectionPrompt,
   cloneQaPassed,
+  cloneQaWarnings,
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
 
@@ -52,6 +53,22 @@ test("correction prompt names each mismatch with the exact expected string", () 
   assert.doesNotMatch(prompt, /Book now.*EXACTLY/);
 });
 
+test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
+  assert.deepEqual(
+    cloneQaWarnings({
+      copyChecks: [
+        { key: "headline", expected: "just isted", rendered: "JUST LISTED", exact: false },
+        { key: "phone", expected: "0412 000 000", rendered: "", exact: false },
+        { key: "address", expected: "18 Smith St", rendered: "18 Smith St", exact: true },
+      ],
+    }),
+    [
+      'You typed "just isted" - the ad shows "JUST LISTED". Click the text on the ad to change it.',
+      '"Phone" may be missing from the ad - check the image.',
+    ],
+  );
+});
+
 test("clone route runs cascade + QA reroll and never ships an unverified clone silently", () => {
   const route = readFileSync("src/app/api/adstudio/generate-clone/route.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
@@ -97,10 +114,14 @@ test("clone QA verdict and regions persist on the clone creative", () => {
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
   assert.match(generator, /cloneQa: input\.cloneQa/);
-  assert.match(generator, /templateCloneQa: input\.firstAd\?\.templateCloneQa/);
-  // The server pipeline feeds its QA verdict into the pack build and throws a
-  // typed error carrying the report when QA never passes.
-  assert.match(generation, /templateCloneQa: qa/);
-  assert.match(generation, /class TemplateCampaignQaError extends Error/);
-  assert.match(generation, /readonly qa: AdStudioCloneQa/);
+  assert.match(generator, /templateCloneQaByFormat: input\.firstAd\?\.templateCloneQaByFormat/);
+  // The server pipeline feeds advisory QA into the pack build and never throws
+  // when the verdict is failed.
+  assert.match(generation, /templateCloneQa: primaryClone\.qa \?\? undefined/);
+  assert.match(generation, /templateCloneQaByFormat/);
+  assert.match(generation, /annotateCloneQa/);
+  assert.match(generation, /catch \(error\)[\s\S]*return null;/);
+  assert.doesNotMatch(generation, /qa && !qa\.passed[\s\S]*throw/);
+  assert.doesNotMatch(generation, new RegExp("TemplateCampaignQa" + "Error"));
+  assert.doesNotMatch(generation, /cloneQaCorrectionPrompt/);
 });

@@ -193,17 +193,12 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     showToast("Restored the previous render");
   }
 
-  // Older creatives without QA regions: nothing is safely editable in place,
-  // so fall back to the honest badge instead of dead hit-targets.
+  // Older creatives without QA regions: show the image without dead hit-targets.
   if (regions.length === 0) {
     return (
       <div className="studio-clone-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="AI-designed ad creative" />
-        <span className="studio-clone-badge">
-          <Sparkles aria-hidden size={13} />
-          AI-designed — the text is part of the image. Create a new ad to change it.
-        </span>
       </div>
     );
   }

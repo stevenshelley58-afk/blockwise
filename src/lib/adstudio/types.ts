@@ -41,7 +41,12 @@ export type FirstAdInput = {
   description: string;
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
+  /**
+   * Back-compat primary clone image stays 4:5. New template generations can also
+   * carry format-specific clone renders so Story owns a real 9:16 image.
+   */
   templateCloneImage?: string;
+  templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   templateCloneProvider?: string;
   templateCloneModel?: string;
   /**
@@ -56,6 +61,7 @@ export type FirstAdInput = {
   };
   /** Vision-QA verdict + editable-element regions for the clone image. */
   templateCloneQa?: AdStudioCloneQa;
+  templateCloneQaByFormat?: Partial<Record<AdStudioFormat, AdStudioCloneQa>>;
   /**
    * On-image copy typed by the customer, keyed by the template's copy-field
    * key (price, address, phone…). Rendered VERBATIM: these values override

@@ -15,6 +15,8 @@ import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/
 import { getActivePromptBundle } from "../operator/prompts/prompt-registry.ts";
 import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
 
+export { cloneQaWarnings } from "./clone-qa-warnings.ts";
+
 export type CloneQaInput = {
   workspaceId: string;
   userId: string;

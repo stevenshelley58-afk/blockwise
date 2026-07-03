@@ -84,7 +84,7 @@ export function deriveTemplateBrief(template: GalleryTemplateLike): TemplateClon
       };
     });
 
-  return {
+  const brief: TemplateCloneBrief = {
     templateId: template.id,
     name: template.name ?? template.id,
     aspectRatio: template.format ?? "4:5",
@@ -92,6 +92,22 @@ export function deriveTemplateBrief(template: GalleryTemplateLike): TemplateClon
     imageSlots,
     copyFields,
     brandHex: pickBrandHex(objs),
+  };
+  return applyTemplateBriefOverrides(brief);
+}
+
+function applyTemplateBriefOverrides(brief: TemplateCloneBrief): TemplateCloneBrief {
+  if (brief.templateId !== "meta-feed-020") return brief;
+  return {
+    ...brief,
+    clonePrompt: [
+      "Recreate the attached REFERENCE ad design (reference image 1) as closely as possible: the full-bleed property photo, sage left panel, dividers, circular agent mark, bottom colour swatches, typography, colours, and spacing.",
+      "Replace the property photo with the supplied customer property image.",
+      'Set the panel headline to "{headline}", price to "{price}", and address to "{address}" exactly.',
+      'The small contact strip at the bottom must show exactly "{phone}" and "{website_handle}" - do not keep, copy, or invent any other phone number, URL, handle, email, or contact detail from the reference.',
+      "Keep all text crisp, legible, and inside the same panel positions as the reference.",
+      "Render a clean, premium, photoreal {brandHex} Meta real-estate ad.",
+    ].join(" "),
   };
 }
 
