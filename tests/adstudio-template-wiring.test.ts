@@ -79,6 +79,7 @@ test("template clone output becomes the generated creative image instead of redr
   const template = AD_STUDIO_TEMPLATES[0];
   assert.ok(template, "a proof template must be installed");
   const cloneImage = "/api/adstudio/media?path=workspace_wiring%2Fadstudio%2Fclones%2Fclone.png";
+  const storyImage = "/api/adstudio/media?path=workspace_wiring%2Fadstudio%2Fclones%2Fclone-9x16.png";
 
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_wiring",
@@ -98,18 +99,30 @@ test("template clone output becomes the generated creative image instead of redr
       imageDataUrl: cloneImage,
       imageDataUrls: { property_photo: A, brand_logo: B },
       templateCloneImage: cloneImage,
+      templateCloneImagesByFormat: { "4:5": cloneImage, "9:16": storyImage },
       templateCloneProvider: "fal",
       templateCloneModel: "openai/gpt-image-2/edit",
       formats: ["9:16", "4:5", "1:1"],
     },
   });
 
-  const creative = pack.creatives[0];
-  assert.ok(creative);
-  assert.equal(creative.source, "generative");
-  assert.equal(creative.canvas.objects.length, 1);
   assert.deepEqual(
-    creative.canvas.objects[0],
+    pack.creatives.map((creative) => creative.format).sort(),
+    ["1:1", "4:5", "9:16"],
+  );
+
+  const feed = pack.creatives.find((creative) => creative.format === "4:5");
+  const story = pack.creatives.find((creative) => creative.format === "9:16");
+  const square = pack.creatives.find((creative) => creative.format === "1:1");
+  assert.ok(feed);
+  assert.ok(story);
+  assert.ok(square);
+  assert.equal(feed.source, "generative");
+  assert.equal(story.source, "generative");
+  assert.equal(square.source, "generative");
+  assert.equal(feed.canvas.objects.length, 1);
+  assert.deepEqual(
+    feed.canvas.objects[0],
     {
       objectId: "template_clone_image",
       type: "image",
@@ -124,6 +137,14 @@ test("template clone output becomes the generated creative image instead of redr
       locked: false,
     },
   );
-  assert.match(creative.previewSvg, /template_clone_image|workspace_wiring%2Fadstudio%2Fclones%2Fclone\.png/);
-  assert.equal(creative.canvas.objects.some((object) => object.type === "text"), false);
+  assert.equal(story.canvas.width, 1080);
+  assert.equal(story.canvas.height, 1920);
+  assert.equal(story.canvas.objects[0]?.content, storyImage);
+  assert.equal(story.canvas.objects[0]?.height, 1920);
+  assert.equal(square.canvas.width, 1080);
+  assert.equal(square.canvas.height, 1080);
+  assert.equal(square.canvas.objects[0]?.content, cloneImage);
+  assert.match(feed.previewSvg, /template_clone_image|workspace_wiring%2Fadstudio%2Fclones%2Fclone\.png/);
+  assert.match(story.previewSvg, /clone-9x16\.png/);
+  assert.equal(feed.canvas.objects.some((object) => object.type === "text"), false);
 });

@@ -7,6 +7,7 @@ import {
   resolveCloneCopy,
   type TemplateCloneBrief,
 } from "../src/lib/adstudio/reference-clone.ts";
+import { buildTemplateCloneRequestsByFormat } from "../src/lib/adstudio/generate-template-campaign.ts";
 
 const brief: TemplateCloneBrief = {
   templateId: "test-tpl",
@@ -60,6 +61,29 @@ test("copy is interpolated, defaulted, and truncated to maxLength", () => {
 test("brand hex override is honoured", () => {
   const req = buildCloneImageRequest(brief, { images: { hero_property_photo: "x" }, brandHex: "#ff0000" });
   assert.match(req.prompt, /colour #ff0000/);
+});
+
+test("template campaign builds feed and story clone requests with the same verbatim copy", () => {
+  const requests = buildTemplateCloneRequestsByFormat(brief, {
+    images: { hero_property_photo: "data:image/png;base64,HERO" },
+    copy: { headline: "just isted", cta: "Call now" },
+    brandHex: "#ff0000",
+  });
+
+  assert.equal(requests["4:5"].aspectRatio, "4:5");
+  assert.equal(requests["9:16"].aspectRatio, "9:16");
+  assert.match(requests["9:16"].prompt, /Recompose this exact ad design as a 9:16 vertical story/);
+  for (const request of [requests["4:5"], requests["9:16"]]) {
+    assert.match(request.prompt, /headline="just isted"/);
+    assert.match(request.prompt, /cta="Call now"/);
+    assert.match(request.prompt, /colour #ff0000/);
+  }
+});
+
+test("global clone negatives forbid leaking reference contact details", () => {
+  assert.match(GLOBAL_CLONE_NEGATIVES, /replace every phone number, URL, handle, and contact detail/i);
+  assert.match(GLOBAL_CLONE_NEGATIVES, /never keep the reference's contact details/i);
+  assert.match(GLOBAL_CLONE_NEGATIVES, /never invent new ones/i);
 });
 
 test("missing required image throws", () => {

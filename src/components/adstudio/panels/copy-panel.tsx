@@ -59,7 +59,7 @@ export function CopyPanel({
         title="Text"
         detail={
           cloneCreative
-            ? "This edits the feed text shown around the image. Text on the image itself is AI-designed — create a new ad to change it."
+            ? "This edits the feed text shown around the image. To change text on the image itself, click it on the ad preview."
             : "Click canvas text to edit that layer, or write and rewrite the ad copy here."
         }
       />

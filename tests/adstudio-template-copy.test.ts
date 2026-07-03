@@ -99,7 +99,7 @@ test("template mode wires brief-grounded copy through the server-side generation
   assert.match(generation, /copy: onImageCopy/);
   assert.match(generation, /copy: copyResult\.copy/);
   assert.ok(
-    generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildCloneImageRequest(brief"),
+    generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildTemplateCloneRequestsByFormat(brief"),
     "copy generation must run before the clone so the image carries the user's copy",
   );
 

@@ -66,6 +66,9 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (firstAd.templateCloneImage && !isAdStudioImageSrc(firstAd.templateCloneImage)) {
     return "Generated template clone is invalid. Generate the ad again.";
   }
+  for (const cloneImage of Object.values(firstAd.templateCloneImagesByFormat ?? {})) {
+    if (cloneImage && !isAdStudioImageSrc(cloneImage)) return "Generated template clone is invalid. Generate the ad again.";
+  }
   for (const slotImage of Object.values(firstAd.imageDataUrls ?? {})) {
     if (slotImage && !isAdStudioImageSrc(slotImage)) return "One of the selected template images is invalid. Replace it and try again.";
   }
@@ -295,13 +298,10 @@ export async function POST(request: NextRequest) {
         body,
         deadlineMs: SYNC_GENERATION_DEADLINE_MS,
         maxCloneAttempts: 1,
-        // Draft-then-upgrade: the sync path returns a fast draft as quickly
-        // as possible; the client immediately re-renders it at the quality
-        // tier in the background (creatives/[id]/enhance) and swaps it in
-        // when it verifies. Inline QA is skipped for the same reason — the
-        // enhance pass verifies the expected copy before replacing anything.
+        // Draft-then-upgrade: the sync path returns preview-tier renders as quickly
+        // as possible; the client can re-render them at the quality tier in
+        // the background without making the current ad worse.
         tier: "preview",
-        qaMode: "deferred",
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,

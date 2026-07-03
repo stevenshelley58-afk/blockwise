@@ -3,7 +3,6 @@ import * as Sentry from "@sentry/nextjs";
 
 import {
   runTemplateCampaignGeneration,
-  TemplateCampaignQaError,
   type CreateCampaignBody,
 } from "../src/lib/adstudio/generate-template-campaign.ts";
 import {
@@ -98,10 +97,9 @@ export const generateAdStudioTemplateCampaignTask = task({
       await refundReservedTrialCredit(reservation, supabase);
 
       const message = error instanceof Error ? error.message : "Ad generation failed.";
-      const qa = error instanceof TemplateCampaignQaError ? error.qa : null;
       await supabase
         .from("adstudio_creative_jobs")
-        .update({ status: "failed", error: message, qa, updated_at: now() })
+        .update({ status: "failed", error: message, qa: null, updated_at: now() })
         .eq("workspace_id", payload.workspaceId)
         .eq("id", payload.jobId);
 

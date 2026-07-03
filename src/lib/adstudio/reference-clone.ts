@@ -87,6 +87,7 @@ export function defaultClonePromptTemplate(brief: TemplateCloneBrief): string {
 export const GLOBAL_CLONE_NEGATIVES = [
   "do not invent or change any text beyond the provided copy",
   "do not distort, repaint, relight, or restructure the supplied property photo or agent face",
+  "replace every phone number, URL, handle, and contact detail in the reference with the supplied copy values; if a contact detail has no supplied value, omit it entirely - never keep the reference's contact details and never invent new ones",
   "no extra logos, watermarks, captions, borders, or platform UI",
   "no fabricated prices, sale results, awards, or claims",
   "no warped windows, rooflines, faces, hands, or text",
@@ -211,7 +212,8 @@ export function buildCloneImageRequest(brief: TemplateCloneBrief, inputs: CloneI
   const copy = resolveCloneCopy(brief, inputs.copy);
   const brandHex = (inputs.brandHex ?? brief.brandHex).trim();
 
-  const template = brief.clonePrompt ?? defaultClonePromptTemplate(brief);
+  const promptBrief = inputs.aspectRatio ? { ...brief, aspectRatio: inputs.aspectRatio } : brief;
+  const template = brief.clonePrompt ?? defaultClonePromptTemplate(promptBrief);
   const body = interpolate(template, { ...copy, brandHex });
   const legend = [
     "Reference image 1 = the finished ad design to clone exactly.",
