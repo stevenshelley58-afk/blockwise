@@ -676,12 +676,13 @@ function buildImagePrompt(
 }
 
 function buildOpenRouterImageContent(input: ImageProviderRequest): unknown {
-  const prompt = buildImagePrompt(input);
+  if (!input.referenceAssets.length) return buildImagePrompt(input);
 
-  if (!input.referenceAssets.length) return prompt;
-
+  // The references are attached as image_url parts below; repeating them in the
+  // text prompt would paste whole base64 data URLs as text and blow the model's
+  // context window (a 32k-context image model saw ~77k tokens of "prompt").
   return [
-    { type: "text", text: prompt },
+    { type: "text", text: buildImagePrompt(input, { includeReferenceList: false }) },
     ...input.referenceAssets.map((url) => ({
       type: "image_url",
       image_url: { url },
