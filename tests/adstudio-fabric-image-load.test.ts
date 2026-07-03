@@ -37,10 +37,18 @@ test("browser export renderer reuses the same image credential policy", () => {
   assert.match(renderer, /if \(options\?\.crossOrigin\) image\.crossOrigin = options\.crossOrigin/);
 });
 
-test("browser export renderer falls back to inline data when storage upload fails", () => {
+test("browser export renderer does not fall back to oversized inline data", () => {
   const renderer = readFileSync("src/components/adstudio/canvas/browser-creative-renderer.ts", "utf8");
 
-  assert.match(renderer, /try \{\s+return await uploadCreativeRenders\(pack, renders\);/);
-  assert.match(renderer, /falling back to inline render data/);
-  assert.match(renderer, /return renders;\s+\}/);
+  assert.match(renderer, /return uploadCreativeRenders\(pack, renders\);/);
+  assert.doesNotMatch(renderer, /falling back to inline render data/);
+});
+
+test("Ad Studio export lets the server package SVG fallbacks when raster renders fail", () => {
+  const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
+
+  assert.doesNotMatch(actions, /Creative render failed — please retry/);
+  assert.match(actions, /SVG fallback used for/);
+  assert.match(actions, /map\(stripFabricJson\)/);
+  assert.match(actions, /previewSvg: ""/);
 });

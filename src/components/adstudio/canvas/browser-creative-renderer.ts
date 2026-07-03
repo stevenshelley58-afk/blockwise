@@ -26,12 +26,7 @@ export async function renderCreativeExports(
   }
 
   if (!options.storeInWorkspace) return renders;
-  try {
-    return await uploadCreativeRenders(pack, renders);
-  } catch (error) {
-    console.warn("AdStudio export render storage failed; falling back to inline render data.", error);
-    return renders;
-  }
+  return uploadCreativeRenders(pack, renders);
 }
 
 async function renderCreative(
