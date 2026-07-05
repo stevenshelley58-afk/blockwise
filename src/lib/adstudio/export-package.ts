@@ -75,8 +75,6 @@ function buildExportFiles(
       .map((creative) => [creative.format, creative]),
   );
 
-  addCreative(files, "meta/feed_1x1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
-  addCreative(files, "meta/feed_1x1.jpg", creativesByFormat.get("1:1"), renderMap, "image/jpeg");
   addCreative(files, "meta/feed_4x5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
   addCreative(files, "meta/feed_4x5.jpg", creativesByFormat.get("4:5"), renderMap, "image/jpeg");
   addCreative(files, "meta/story_9x16.png", creativesByFormat.get("9:16"), renderMap, "image/png");
@@ -90,12 +88,10 @@ function buildExportFiles(
   }
   if (pack.campaign.platforms.includes("google_pmax")) {
     addCreative(files, "google-pmax/landscape_1_91.png", creativesByFormat.get("1.91:1"), renderMap, "image/png");
-    addCreative(files, "google-pmax/square_1_1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
     addCreative(files, "google-pmax/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
     files.push(jsonFile("google-pmax/copy.json", primaryCopy.googlePmax));
   }
   if (pack.campaign.platforms.includes("google_demand_gen")) {
-    addCreative(files, "demand-gen/square_1_1.png", creativesByFormat.get("1:1"), renderMap, "image/png");
     addCreative(files, "demand-gen/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
     addCreative(files, "demand-gen/vertical_9_16.png", creativesByFormat.get("9:16"), renderMap, "image/png");
     files.push(jsonFile("demand-gen/copy.json", primaryCopy.googleDemandGen));

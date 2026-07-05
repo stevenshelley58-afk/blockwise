@@ -70,10 +70,12 @@ type OfferCopySeed = {
   assetLongHeadline: string;
 };
 
-// 1.91:1 landscape is legacy-only: nothing generates it anymore (P2.3), but the
-// AdStudioFormat member stays so existing landscape creatives keep rendering.
-const FALLBACK_FORMATS: AdStudioFormat[] = ["1:1", "4:5", "9:16"];
-const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5", "1:1"];
+// 1.91:1 landscape and 1:1 square are legacy-only: nothing generates them
+// anymore (P2.3 cut landscape; square dropped 2026-07 — Meta crops 4:5 for
+// square placements). The AdStudioFormat members stay so existing creatives
+// keep rendering.
+const FALLBACK_FORMATS: AdStudioFormat[] = ["4:5", "9:16"];
+const FIRST_AD_FORMATS: AdStudioFormat[] = ["9:16", "4:5"];
 const CANVAS_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
   "1:1": { width: 1080, height: 1080 },
   "4:5": { width: 1080, height: 1350 },

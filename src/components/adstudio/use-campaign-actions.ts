@@ -74,7 +74,6 @@ type GenerateCampaignResponse = {
 const EXPORT_FORMAT_LABELS: Partial<Record<AdStudioFormat, string>> = {
   "9:16": "Story",
   "4:5": "Feed",
-  "1:1": "Square",
 };
 
 function exportFormatLabel(format: AdStudioFormat): string {
@@ -305,7 +304,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setPrimaryImage(input.templateCloneImage ?? packPrimaryImage(campaignPack) ?? input.imageDataUrl);
       s.setSaveState("saved");
       s.setSection("media");
-      s.showToast(input.mode === "template" ? "Generated template clone" : "Generated Story, Feed, and Square");
+      s.showToast(input.mode === "template" ? "Generated template clone" : "Generated Story and Feed");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
       // The background job already renders at the quality tier; only sync
       // drafts need the client-driven upgrade pass.

@@ -73,7 +73,7 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
     if (slotImage && !isAdStudioImageSrc(slotImage)) return "One of the selected template images is invalid. Replace it and try again.";
   }
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
-    return "First ad formats must be Story, Feed, and Square.";
+    return "First ad formats must be Story and Feed.";
   }
   if (firstAd.mode === "template" && !(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
     return "Selected template was not found.";

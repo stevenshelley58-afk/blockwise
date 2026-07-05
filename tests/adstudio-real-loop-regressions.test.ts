@@ -452,12 +452,13 @@ test("P2.3: legacy creative snapshot script guards renderer deletion", () => {
   assert.match(script, /SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test("P2.3: nothing generates the dangling 1.91:1 landscape format anymore", () => {
+test("P2.3: nothing generates the dangling 1.91:1 landscape or 1:1 square formats anymore", () => {
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
   const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
 
-  assert.match(generator, /const FALLBACK_FORMATS: AdStudioFormat\[\] = \["1:1", "4:5", "9:16"\];/);
-  assert.match(preview, /export type PreviewFormat = "story" \| "feed" \| "square";/);
+  assert.match(generator, /const FALLBACK_FORMATS: AdStudioFormat\[\] = \["4:5", "9:16"\];/);
+  assert.match(preview, /export type PreviewFormat = "story" \| "feed";/);
   assert.doesNotMatch(workbench, /landscape: "1\.91:1"/);
+  assert.doesNotMatch(workbench, /square: "1:1"/);
 });

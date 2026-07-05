@@ -9,7 +9,7 @@ import { labelForMetaCta, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 import type { CopyState } from "./use-copy";
 
-export type PreviewFormat = "story" | "feed" | "square";
+export type PreviewFormat = "story" | "feed";
 export type SelectedElement = "canvas" | "headline" | "primaryText" | "description" | "cta" | "image";
 
 export const FORMAT_META: Record<
@@ -18,7 +18,6 @@ export const FORMAT_META: Record<
 > = {
   story: { label: "Story", size: "1080x1920" },
   feed: { label: "Feed", size: "1080x1350" },
-  square: { label: "Square", size: "1080x1080" },
 };
 
 type PreviewControlsProps = {
@@ -33,7 +32,7 @@ export function PreviewControls({
   return (
     <div className="studio-preview-controls">
       <div className="studio-segment">
-        {(["story", "feed", "square"] as PreviewFormat[]).map((item) => (
+        {(["story", "feed"] as PreviewFormat[]).map((item) => (
           <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
             <span>{FORMAT_META[item].label}</span>
             <small>{FORMAT_META[item].size}</small>
