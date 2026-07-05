@@ -1,7 +1,12 @@
-# Runs the Ad Studio real-loop e2e against every successful Vercel Preview
-# deployment. This is the runtime gate the static CI cannot provide: it
-# creates a real ad, edits copy, saves, reloads, and exports through the
-# deployed app.
+# Runs the Ad Studio real-loop e2e — the runtime gate the static CI cannot
+# provide: it creates a real ad, edits copy, saves, reloads, and exports
+# through the deployed app.
+#
+# COST GATE (2026-07-05): every run generates a REAL ad with paid image/LLM
+# credits (~$0.30-0.60). It used to fire on every Preview deployment — dozens
+# of paid generations per dev day — which drained the OpenRouter/FAL balances.
+# It now runs only on Production deployments (once per main merge) and on
+# manual dispatch (pass the preview URL to test a branch before merging).
 #
 # ONE required repository secret (the job FAILS loudly when it is missing —
 # a silent skip is how runtime regressions shipped green for months):
@@ -15,21 +20,28 @@ name: AdStudio E2E (Vercel Preview)
 
 on:
   deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment URL to run the real loop against (e.g. a Vercel preview URL)"
+        required: true
+        type: string
 
 concurrency:
-  group: adstudio-e2e-${{ github.event.deployment.sha }}
+  group: adstudio-e2e-${{ github.event.deployment.sha || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   real-loop:
     name: Real-loop against preview
     if: >-
-      github.event.deployment_status.state == 'success' &&
-      contains(github.event.deployment_status.environment, 'Preview')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment_status.environment, 'Production'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}
@@ -44,7 +56,7 @@ jobs:
       - name: Checkout deployed commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.deployment.sha }}
+          ref: ${{ github.event.deployment.sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -65,7 +77,7 @@ jobs:
         env:
           # The spec's brand-kit approval scans a URL; the deployment's own
           # landing page is always fetchable and never an example.* host.
-          ADSTUDIO_E2E_BRAND_URL: ${{ github.event.deployment_status.environment_url }}
+          ADSTUDIO_E2E_BRAND_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url }}
         run: npx playwright test e2e/adstudio-real-loop.spec.ts --project=chromium
 
       # The DOM snapshot at the moment of failure, inlined into the job log —

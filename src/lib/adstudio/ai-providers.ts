@@ -27,6 +27,11 @@ type ProviderOptions = {
   quality?: string;
 };
 
+// Hard cap on completion tokens for copy/QA chat calls. Outputs are small
+// JSON packs; this bounds worst-case spend per call and keeps requests viable
+// on low OpenRouter balances (it reserves credits against the requested max).
+const MAX_COMPLETION_TOKENS = 4096;
+
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
@@ -565,6 +570,13 @@ async function postChatCompletion(input: {
       // Reasoning models (gpt-5*, o*) accept only the default temperature and
       // reject the request outright when any other value is sent.
       ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
+      // Without an explicit cap, OpenRouter reserves credits for the model's
+      // absolute max completion (65k+ tokens) — requests fail on low balances
+      // and a bad loop can drain the account. Copy/QA outputs are small JSON;
+      // 4096 is generous. Reasoning models only accept max_completion_tokens.
+      ...(supportsCustomTemperature(input.model)
+        ? { max_tokens: MAX_COMPLETION_TOKENS }
+        : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
     }),
   });
   const payload = (await response.json()) as {
