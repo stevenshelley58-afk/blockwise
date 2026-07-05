@@ -43,7 +43,7 @@ type RequirementBlocker = {
   target?: RequirementBlockerTarget;
 };
 
-const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5", "1:1"];
+const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5"];
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },

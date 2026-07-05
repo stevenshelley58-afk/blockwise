@@ -43,7 +43,7 @@ function buildTemplatePack(variantCount = 2) {
       description: "Open home Saturday, 18 Smith St Scarborough.",
       imageDataUrl: IMAGE,
       imageDataUrls: { primary_image: IMAGE },
-      formats: ["9:16", "4:5", "1:1"],
+      formats: ["9:16", "4:5"],
     },
   });
 }

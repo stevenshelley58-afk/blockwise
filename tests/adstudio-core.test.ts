@@ -301,7 +301,7 @@ test("first-ad generation uses the uploaded image as the full creative visual", 
       mode: "custom",
       description: "Open home this weekend with a renovated kitchen.",
       imageDataUrl: uploadedImage,
-      formats: ["9:16", "4:5", "1:1"],
+      formats: ["9:16", "4:5"],
     },
   });
   const story = pack.creatives.find((creative) => creative.format === "9:16");
@@ -350,7 +350,7 @@ test("template first-ad generation fails closed while the registry is reset", ()
           templateKey: "meta_002",
           description: "Agent-led property planning for local owners.",
           imageDataUrl: "data:image/png;base64,original",
-          formats: ["9:16", "4:5", "1:1"],
+          formats: ["9:16", "4:5"],
         },
       }),
     /Selected template was not found\./,
@@ -382,7 +382,7 @@ test("ad radar inspiration keeps the explicitly copied observed ad id", () => {
       observedAdId: "observed-ad-user-picked",
       description: "Use this competitor angle but make it our own.",
       imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
-      formats: ["9:16", "4:5", "1:1"],
+      formats: ["9:16", "4:5"],
     },
   });
 
@@ -530,7 +530,7 @@ test("stored creative export renders hydrate from workspace storage before packa
     platforms: ["meta"],
     variantCount: 1,
   });
-  const creative = pack.creatives.find((item) => item.format === "1:1");
+  const creative = pack.creatives.find((item) => item.format === "4:5");
   assert.ok(creative);
 
   const storagePath = "workspace_demo/adstudio/exports/campaign/render.png";
@@ -565,7 +565,7 @@ test("stored creative export renders hydrate from workspace storage before packa
 
   assert.match(hydrated?.[0]?.dataUrl ?? "", /^data:image\/png;base64,/);
   const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: hydrated });
-  assert.deepEqual([...exportPackage.files["meta/feed_1x1.png"]], [...storedBytes]);
+  assert.deepEqual([...exportPackage.files["meta/feed_4x5.png"]], [...storedBytes]);
 
   await assert.rejects(
     () =>

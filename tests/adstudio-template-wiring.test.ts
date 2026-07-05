@@ -46,7 +46,7 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
       description: "Two fresh listings.",
       imageDataUrl: A,
       imageDataUrls: { property_photo: A, brand_logo: B },
-      formats: ["9:16", "4:5", "1:1"],
+      formats: ["9:16", "4:5"],
     },
   });
 
@@ -102,24 +102,21 @@ test("template clone output becomes the generated creative image instead of redr
       templateCloneImagesByFormat: { "4:5": cloneImage, "9:16": storyImage },
       templateCloneProvider: "fal",
       templateCloneModel: "openai/gpt-image-2/edit",
-      formats: ["9:16", "4:5", "1:1"],
+      formats: ["9:16", "4:5"],
     },
   });
 
   assert.deepEqual(
     pack.creatives.map((creative) => creative.format).sort(),
-    ["1:1", "4:5", "9:16"],
+    ["4:5", "9:16"],
   );
 
   const feed = pack.creatives.find((creative) => creative.format === "4:5");
   const story = pack.creatives.find((creative) => creative.format === "9:16");
-  const square = pack.creatives.find((creative) => creative.format === "1:1");
   assert.ok(feed);
   assert.ok(story);
-  assert.ok(square);
   assert.equal(feed.source, "generative");
   assert.equal(story.source, "generative");
-  assert.equal(square.source, "generative");
   assert.equal(feed.canvas.objects.length, 1);
   assert.deepEqual(
     feed.canvas.objects[0],
@@ -141,9 +138,6 @@ test("template clone output becomes the generated creative image instead of redr
   assert.equal(story.canvas.height, 1920);
   assert.equal(story.canvas.objects[0]?.content, storyImage);
   assert.equal(story.canvas.objects[0]?.height, 1920);
-  assert.equal(square.canvas.width, 1080);
-  assert.equal(square.canvas.height, 1080);
-  assert.equal(square.canvas.objects[0]?.content, cloneImage);
   assert.match(feed.previewSvg, /template_clone_image|workspace_wiring%2Fadstudio%2Fclones%2Fclone\.png/);
   assert.match(story.previewSvg, /clone-9x16\.png/);
   assert.equal(feed.canvas.objects.some((object) => object.type === "text"), false);

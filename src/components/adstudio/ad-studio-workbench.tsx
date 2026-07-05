@@ -99,7 +99,6 @@ const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "templates";
 const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
   story: "9:16",
   feed: "4:5",
-  square: "1:1",
 };
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
@@ -460,7 +459,7 @@ export function AdStudioWorkbench({
           templateKey: template?.templateKey ?? template?.id,
           description: descriptionForTemplate(template),
           imageDataUrl: uploaded.src,
-          formats: ["9:16", "4:5", "1:1"],
+          formats: ["9:16", "4:5"],
         });
       } catch {
         autoDesignedRef.current = false;
@@ -1398,7 +1397,7 @@ export function AdStudioWorkbench({
 
         {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
           <div className="studio-mobile-format-tabs">
-            {(["story", "feed", "square"] as PreviewFormat[]).map((item) => (
+            {(["story", "feed"] as PreviewFormat[]).map((item) => (
               <button className={previewFormat === item ? "active" : ""} key={item} type="button" onClick={() => setPreviewFormat(item)}>
                 {FORMAT_META[item].label}
               </button>

@@ -20,7 +20,10 @@ export type AdStudioPlatform = z.infer<typeof adStudioPlatformSchema>;
 export type AdStudioFormat = z.infer<typeof adStudioFormatSchema>;
 export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 
-export const FIRST_AD_FORMATS = ["9:16", "4:5", "1:1"] as const;
+// Square (1:1) dropped from generation 2026-07: Meta crops 4:5 for square
+// placements. The "1:1" enum value stays in adStudioFormatSchema so existing
+// saved creatives keep parsing and rendering.
+export const FIRST_AD_FORMATS = ["9:16", "4:5"] as const;
 
 export type FirstAdInput = {
   /**
@@ -69,7 +72,7 @@ export type FirstAdInput = {
    * the fix for AI-invented prices and filler stats.
    */
   onImageCopy?: Partial<Record<string, string>>;
-  formats: ["9:16", "4:5", "1:1"];
+  formats: ["9:16", "4:5"];
 };
 
 export type AdStudioBrandKit = {
