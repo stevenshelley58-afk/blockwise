@@ -197,7 +197,7 @@ function TagRow({
         <span key={item} className={tone === "no" ? "no" : ""}>
           {item}
           <b role="button" aria-label={`Remove ${item}`} onClick={() => onRemove(item)}>
-            âœ•
+            ✕
           </b>
         </span>
       ))}
@@ -218,7 +218,7 @@ function TagRow({
         />
       ) : (
         <button type="button" className="addbtn" onClick={() => setAdding(true)}>
-          ï¼‹ Add phrase
+          ＋ Add phrase
         </button>
       )}
     </div>
@@ -432,7 +432,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
       if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
       setKit(json.brandKit);
       setScanUrl(json.brandKit.source.url.replace(/^https?:\/\//, ""));
-      flash("ok", "Scan complete â€” kit updated from your site.");
+      flash("ok", "Scan complete — kit updated from your site.");
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not scan the site.");
     } finally {
@@ -515,24 +515,24 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
 
       <div className="bs-top">
         <Link href="/ad-studio" className="back">
-          â€¹ Ad Studio
+          ‹ Ad Studio
         </Link>
         <h1>Brand Studio</h1>
-        <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "âœ“ Approved" : "Pending review"}</span>
+        <span className={`chip ${approved ? "good" : "warn"}`}>{approved ? "✓ Approved" : "Pending review"}</span>
         <div className="grow">
           {notice && <span className={`notice ${notice.tone}`}>{notice.text}</span>}
           <button className="btn sec" type="button" disabled={busy !== ""} onClick={() => void saveKit()}>
-            {busy === "save" ? "Savingâ€¦" : "Save draft"}
+            {busy === "save" ? "Saving…" : "Save draft"}
           </button>
           <button className="btn pri" type="button" disabled={busy !== ""} onClick={() => void saveKit("approved")}>
-            {busy === "approve" ? "Approvingâ€¦" : "âœ“ Approve kit"}
+            {busy === "approve" ? "Approving…" : "✓ Approve kit"}
           </button>
         </div>
       </div>
 
       <div className="bs-scroll">
         <div className="bs-hero">
-          <div className="kick">Brand kit Â· Real estate Â· {kit.identity.marketRegion ?? "AU"}</div>
+          <div className="kick">Brand kit · Real estate · {kit.identity.marketRegion ?? "AU"}</div>
           <h2>
             <input
               value={kit.identity.businessName}
@@ -549,7 +549,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
               <input value={scanUrl} aria-label="Website" onChange={(event) => setScanUrl(event.target.value)} />
             </span>
             <button type="button" className="go" disabled={busy !== ""} onClick={() => void scanSite()}>
-              {busy === "scan" ? "Scanningâ€¦" : "â†» Re-scan site"}
+              {busy === "scan" ? "Scanning…" : "↻ Re-scan site"}
             </button>
           </div>
         </div>
@@ -557,7 +557,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
         <div className="bs-logo-proof">
           <div className="lp">
             <div className="face" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}â˜… ${brandName.split(" ")[0]?.toLowerCase()}`}
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}★ ${brandName.split(" ")[0]?.toLowerCase()}`}
             </div>
             <small>
               <b>Primary</b>
@@ -566,7 +566,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
           </div>
           <div className="lp">
             <div className="face" style={{ background: "#001b3d", color: "#fff" }}>
-              {initial}â˜… {brandName.split(" ")[0]?.toLowerCase()}
+              {initial}★ {brandName.split(" ")[0]?.toLowerCase()}
             </div>
             <small>
               <b>Dark</b>
@@ -574,7 +574,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
             </small>
           </div>
           <div className="lp">
-            <div className="face photo">{initial}â˜…</div>
+            <div className="face photo">{initial}★</div>
             <small>
               <b>Mark</b>
               <em>on photo</em>
@@ -631,7 +631,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                   />
                 ))}
               </div>
-              <span className="subtle">Click a swatch to change it â€” the preview updates as you pick.</span>
+              <span className="subtle">Click a swatch to change it — the preview updates as you pick.</span>
             </section>
 
             <section className="bs-card">
@@ -641,7 +641,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                 <div className="rows">
                   <div>
                     <small>
-                      Headings Â·{" "}
+                      Headings ·{" "}
                       <input
                         className="font-name"
                         value={kit.typography.headingFont}
@@ -655,7 +655,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                   </div>
                   <div>
                     <small>
-                      Body Â·{" "}
+                      Body ·{" "}
                       <input
                         className="font-name"
                         value={kit.typography.bodyFont}
@@ -789,7 +789,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                       }))
                     }
                   >
-                    ï¼‹ Add disclaimer
+                    ＋ Add disclaimer
                   </button>
                 </div>
               </section>
@@ -802,7 +802,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
               <div className="minis">
                 <div className="mini-story">
                   <span className="bc" style={{ color: kit.colours.primary }}>
-                    {initial}â˜… {brandName.split(" ")[0]}
+                    {initial}★ {brandName.split(" ")[0]}
                   </span>
                   <h5>{headlineSample}</h5>
                   <span className="cta" style={{ color: kit.colours.primary }}>
@@ -822,7 +822,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                 </div>
               </div>
               <small>
-                Re-renders as you edit â€” voice line:
+                Re-renders as you edit — voice line:
                 <br />
                 <b>{voiceLine || "describe your voice above"}</b>
               </small>
