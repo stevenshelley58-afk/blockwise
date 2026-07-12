@@ -52,6 +52,38 @@ and follow `hermes/skills/adstudio-template-builder/SKILL.md`. Non-negotiable:
   make the gallery sample render as a real Meta ad. Photos fit slots via AI
   (vision + outpaint); `smart-crop.ts` rules are fallback only.
 
+## Mandatory UI workflow
+
+For every task affecting UI, UX, styling, layout, typography, responsive
+behaviour, accessibility, animation, or interaction:
+
+1. Explicitly invoke `$impeccable`.
+2. Select and state the relevant Impeccable commands before editing.
+3. Inspect the current interface in the browser before changing it.
+4. Reuse existing Blockwise design tokens, components, and visual patterns.
+5. Do not create a parallel design system or introduce a new visual language.
+6. Verify the final result in Chrome at desktop and mobile viewport sizes.
+7. Report:
+   - skills loaded
+   - Impeccable commands used
+   - routes inspected
+   - viewport sizes checked
+   - remaining visual or interaction issues
+
+For significant UI work, the minimum workflow is:
+`critique -> craft -> adapt -> harden -> polish`.
+
+For redesigns, use:
+`critique -> distill -> craft -> layout -> typeset -> adapt -> polish`.
+
+For visual audits, use `audit`, `critique`, `harden`, and `optimize`. Do not
+modify code until the audit is complete.
+
+For small UI improvements, use at least `polish` and `adapt`.
+
+Automatic skill selection is acceptable for routine work, but every meaningful
+UI or UX task must explicitly invoke `$impeccable` and name the commands used.
+
 ## Acceptance (every PR)
 
 - `npm run typecheck` and `npm run test` pass; update or delete stale tests
