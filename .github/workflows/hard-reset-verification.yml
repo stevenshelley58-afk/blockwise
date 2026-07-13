@@ -64,6 +64,9 @@ jobs:
       - name: Start local database
         run: supabase db start
 
+      - name: Verify non-empty creative revision migration
+        run: npm run test:db:adstudio-revision-backfill
+
       - name: Replay migrations and run pgTAP
         run: npm run test:db
 
