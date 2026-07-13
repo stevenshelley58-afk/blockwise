@@ -99,6 +99,13 @@ async function qualityGateFunction() {
   return fn as (input: unknown, dependencies: unknown) => Promise<unknown>;
 }
 
+async function verifiedPersistencePipelineFunction() {
+  const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
+  const fn = (module as Record<string, unknown>).runVerifiedClonePersistencePipeline;
+  assert.equal(typeof fn, "function", "verified clone persistence pipeline must be directly testable");
+  return fn as (input: unknown) => Promise<unknown>;
+}
+
 test("normalizeRenderedText preserves case and punctuation", () => {
   assert.notEqual(
     normalizeRenderedText("Open Home — Saturday, 10:30am!"),
@@ -421,6 +428,48 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
   assert.equal(qaCalls, 1);
 });
 
+test("one provider call failure still leaves room for two QA candidates", async () => {
+  const gate = await qualityGateFunction();
+  let providerCalls = 0;
+  let qaCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    providerCalls += 1;
+    if (providerCalls === 1) {
+      throw submittedProviderFailure("request rejected", false);
+    }
+    return {
+      assetUrl: `data:image/png;base64,candidate-${providerCalls}`,
+      seed: providerCalls,
+      model: "primary-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+  let fallbackCalls = 0;
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    throw submittedProviderFailure("fallback unavailable", true);
+  });
+
+  const result = await gate(qualityGateInput([primary, fallback]), {
+    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
+      ...input,
+      accounting: { executeAttempt, recordRun: async () => {} },
+    }),
+    review: async () => {
+      qaCalls += 1;
+      return qaCalls === 1
+        ? { ...passingQa, passed: false, defects: ["copy drift"] }
+        : passingQa;
+    },
+  });
+
+  assert.ok(result);
+  assert.equal(providerCalls, 3);
+  assert.equal(fallbackCalls, 0);
+  assert.equal(qaCalls, 2);
+});
+
 test("template quality gate evaluates at most two candidates and never persists failed or unavailable QA", async () => {
   const gate = await qualityGateFunction();
   let generateCalls = 0;
@@ -432,7 +481,12 @@ test("template quality gate evaluates at most two candidates and never persists 
   };
   const generate = async () => {
     generateCalls += 1;
-    return { assetUrl: "data:image/png;base64,b2s=", model: "image-model", provider: "primary" };
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      model: "image-model",
+      provider: "primary",
+      providerAttemptCount: 1,
+    };
   };
 
   await assert.rejects(() => gate(qualityGateInput([]), {
@@ -457,12 +511,51 @@ test("template quality gate evaluates at most two candidates and never persists 
   assert.equal(generateCalls, 1);
   assert.equal(reviewCalls, 1);
 
-  const generationSource = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
-  assert.ok(
-    generationSource.indexOf("const acceptedEntries = await Promise.all") <
-      generationSource.indexOf("persistCloneRender({"),
-    "persistence must remain after all formats pass the quality gate",
-  );
+});
+
+test("failed or unavailable QA cannot reach clone or campaign persistence", async () => {
+  const gate = await qualityGateFunction();
+  const pipeline = await verifiedPersistencePipelineFunction();
+  const failedQa = {
+    ...passingQa,
+    passed: false,
+    copyChecks: [{ key: "headline", expected: "JUST LISTED", rendered: "Just Listed", exact: false }],
+  };
+
+  for (const unavailable of [false, true]) {
+    let clonePersistenceCalls = 0;
+    let campaignPersistenceCalls = 0;
+
+    await assert.rejects(() => pipeline({
+      formats: ["4:5", "9:16"],
+      generateAccepted: (format: string) => gate(
+        { ...qualityGateInput([]), format },
+        {
+          generate: async () => ({
+            assetUrl: "data:image/png;base64,b2s=",
+            model: "image-model",
+            provider: "primary",
+            providerAttemptCount: 1,
+          }),
+          review: async () => {
+            if (unavailable) throw new Error("QA offline");
+            return failedQa;
+          },
+        },
+      ),
+      persistClone: async () => {
+        clonePersistenceCalls += 1;
+        return {};
+      },
+      buildCampaign: () => ({}),
+      persistCampaign: async () => {
+        campaignPersistenceCalls += 1;
+      },
+    }), unavailable ? /verification was unavailable/ : /did not pass verification/);
+
+    assert.equal(clonePersistenceCalls, 0);
+    assert.equal(campaignPersistenceCalls, 0);
+  }
 });
 
 test("post-commit audit failure is contained after durable accounting", async () => {

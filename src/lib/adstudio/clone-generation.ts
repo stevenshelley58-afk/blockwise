@@ -12,6 +12,7 @@ import {
 } from "../operator/prompts/model-profile-runtime.ts";
 import {
   executeAdStudioProviderAttempt,
+  ProviderRunPersistenceError,
   recordAdStudioProviderRun,
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
@@ -28,7 +29,23 @@ export async function resolveCloneProviders(tier: CloneTier): Promise<ImageProvi
   return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
 }
 
-export type CloneGenerationResult = { assetUrl: string; model: string; provider: string };
+export type CloneGenerationResult = {
+  assetUrl: string;
+  model: string;
+  provider: string;
+  providerAttemptCount: number;
+};
+
+export class CloneGenerationError extends Error {
+  readonly providerAttemptCount: number;
+
+  constructor(cause: unknown, providerAttemptCount: number) {
+    super(cause instanceof Error ? cause.message : "Clone generation is not configured.");
+    this.name = "CloneGenerationError";
+    this.providerAttemptCount = providerAttemptCount;
+    if (cause !== undefined) this.cause = cause;
+  }
+}
 
 export async function generateCloneWithCascade(input: {
   providers: ImageProviderAdapter[];
@@ -55,12 +72,14 @@ export async function generateCloneWithCascade(input: {
     warnings: [],
   };
   let lastError: unknown = null;
+  let providerAttemptCount = 0;
   const accounting = input.accounting ?? {
     executeAttempt: executeAdStudioProviderAttempt,
     recordRun: recordAdStudioProviderRun,
   };
 
   for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
+    providerAttemptCount += 1;
     let result: ImageProviderResponse | null = null;
     try {
       const execution = await accounting.executeAttempt<ImageProviderResponse>({
@@ -106,7 +125,12 @@ export async function generateCloneWithCascade(input: {
       output: result,
       status: "completed",
     });
-    return { assetUrl: result.assetUrl, model: result.model, provider: provider.providerName };
+    return {
+      assetUrl: result.assetUrl,
+      model: result.model,
+      provider: provider.providerName,
+      providerAttemptCount,
+    };
   }
 
   await accounting.recordRun({
@@ -127,7 +151,8 @@ export async function generateCloneWithCascade(input: {
     status: "failed",
     error: lastError,
   });
-  throw lastError instanceof Error ? lastError : new Error("Clone generation is not configured.");
+  if (lastError instanceof ProviderRunPersistenceError) throw lastError;
+  throw new CloneGenerationError(lastError, providerAttemptCount);
 }
 
 /** Persist a data: URL render to workspace storage; passthrough for other refs. */
