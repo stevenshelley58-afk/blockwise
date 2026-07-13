@@ -27,6 +27,13 @@ test("creative revision migration backfills every creative and installs an appen
   assert.match(sql, /count\(\*\)[\s\S]*unresolved[\s\S]*raise exception/i);
   assert.match(sql, /alter column active_revision_id set not null/i);
   assert.match(sql, /alter table public\.adstudio_creative_revisions enable row level security/i);
+  const backfillIndex = sql.indexOf("insert into public.adstudio_creative_revisions");
+  const constraintFlushIndex = sql.indexOf("set constraints all immediate");
+  const rlsEnableIndex = sql.indexOf(
+    "alter table public.adstudio_creative_revisions enable row level security",
+  );
+  assert.ok(backfillIndex < constraintFlushIndex, "the non-empty backfill runs before deferred checks are flushed");
+  assert.ok(constraintFlushIndex < rlsEnableIndex, "deferred checks are flushed before RLS DDL");
   assert.match(sql, /private\.adstudio_has_workspace_access\(workspace_id\)/i);
   assert.match(sql, /revoke (?:insert|update|delete)[\s\S]*adstudio_creative_revisions[\s\S]*authenticated/i);
   assert.doesNotMatch(sql, /drop table|truncate table/i);

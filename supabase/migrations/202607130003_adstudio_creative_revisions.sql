@@ -372,6 +372,11 @@ create trigger adstudio_preserve_creative_revision_history
 before delete on public.adstudio_creatives
 for each row execute function private.adstudio_preserve_creative_revision_history();
 
+-- The non-empty backfill queues checks for the initially-deferred revision
+-- foreign keys. PostgreSQL will not run ALTER TABLE while those trigger events
+-- are pending, so prove the backfill constraints now before enabling RLS.
+set constraints all immediate;
+
 alter table public.adstudio_creative_revisions enable row level security;
 alter table public.adstudio_creative_revision_mutations enable row level security;
 
