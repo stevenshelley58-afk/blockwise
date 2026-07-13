@@ -86,7 +86,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
       <form className="login-form" onSubmit={submit}>
         <label htmlFor="login-email">
           Email
-          <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+          <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" />
         </label>
         <label htmlFor="login-password">
           Password
