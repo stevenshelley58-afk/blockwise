@@ -434,6 +434,16 @@ async function readBoundedBody(body, maxBytes, declaredLength) {
   return Buffer.concat(chunks, total);
 }
 
+export function createPinnedLookup(address, family) {
+  return (_host, options, callback) => {
+    if (options?.all) {
+      callback(null, [{ address, family }]);
+      return;
+    }
+    callback(null, address, family);
+  };
+}
+
 async function defaultRemoteRequest({ url, address, family, timeoutMs }) {
   return new Promise((resolve, reject) => {
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
@@ -446,7 +456,7 @@ async function defaultRemoteRequest({ url, address, family, timeoutMs }) {
         method: "GET",
         headers: { Accept: "image/*", Host: url.host },
         servername: isIP(hostname) ? undefined : hostname,
-        lookup: (_host, _options, callback) => callback(null, address, family),
+        lookup: createPinnedLookup(address, family),
       },
       (response) => {
         resolve({
@@ -493,17 +503,62 @@ async function downloadRemoteAsset({ reference, remoteRequest, lookupHost, maxBy
   throw new Error("Remote asset exceeded the redirect limit.");
 }
 
-export function decodeBoundedDataImage(reference, maxBytes, decode = (value) => Buffer.from(value, "base64")) {
-  const match = reference.match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i);
-  if (!match) throw new Error("Asset data URL must be a base64 image.");
-  const encoded = match[2].replace(/\s+/g, "");
+function decodePercentEncodedBytes(encoded, maxBytes) {
+  let byteLength = 0;
+  for (let index = 0; index < encoded.length;) {
+    if (encoded[index] === "%") {
+      if (!/^[0-9a-f]{2}$/i.test(encoded.slice(index + 1, index + 3))) {
+        throw new Error("Asset data URL contains invalid percent encoding.");
+      }
+      byteLength += 1;
+      index += 3;
+    } else {
+      const codePoint = encoded.codePointAt(index);
+      const value = String.fromCodePoint(codePoint);
+      byteLength += Buffer.byteLength(value, "utf8");
+      index += value.length;
+    }
+    if (byteLength > maxBytes) throw new Error(`Asset exceeds ${maxBytes} byte limit.`);
+  }
+
+  const bytes = Buffer.allocUnsafe(byteLength);
+  let offset = 0;
+  for (let index = 0; index < encoded.length;) {
+    if (encoded[index] === "%") {
+      bytes[offset] = Number.parseInt(encoded.slice(index + 1, index + 3), 16);
+      offset += 1;
+      index += 3;
+    } else {
+      const codePoint = encoded.codePointAt(index);
+      const value = String.fromCodePoint(codePoint);
+      offset += bytes.write(value, offset, undefined, "utf8");
+      index += value.length;
+    }
+  }
+  return bytes;
+}
+
+export function decodeBoundedDataImage(reference, maxBytes, decodeBase64 = (value) => Buffer.from(value, "base64")) {
+  const match = reference.match(/^data:(image\/[a-z0-9.+-]+)((?:;[^,]*)?),(.*)$/is);
+  if (!match) throw new Error("Asset data URL must contain an image MIME type and payload.");
+  const parameters = match[2]
+    .split(";")
+    .slice(1)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  const payload = match[3];
+  if (!parameters.includes("base64")) {
+    return { mimeType: match[1], bytes: decodePercentEncodedBytes(payload, maxBytes) };
+  }
+
+  const encoded = payload.replace(/\s+/g, "");
   if (!/^(?:[a-z0-9+/]{4})*(?:[a-z0-9+/]{2}==|[a-z0-9+/]{3}=)?$/i.test(encoded)) {
     throw new Error("Asset data URL contains invalid base64.");
   }
   const padding = encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0;
   const decodedLength = (encoded.length / 4) * 3 - padding;
   if (decodedLength > maxBytes) throw new Error(`Asset exceeds ${maxBytes} byte limit.`);
-  return { mimeType: match[1], bytes: decode(encoded) };
+  return { mimeType: match[1], bytes: decodeBase64(encoded) };
 }
 
 async function assertPublicPathIsConfined(publicRoot, filePath) {
@@ -636,6 +691,13 @@ export async function resolveAssetReference({
   throw new Error(`Unsupported asset reference: ${reference}`);
 }
 
+function isRendererConsumedImageReference(reference) {
+  return (
+    typeof reference === "string" &&
+    (reference.startsWith("data:image/") || reference.startsWith("/") || /^https?:\/\//i.test(reference))
+  );
+}
+
 export async function resolveCanvasAssets({ canvas, workspaceId, ...resolverOptions }) {
   if (!Array.isArray(canvas?.objects)) throw new Error("Canvas objects must be an array before assets are resolved.");
   const assets = [];
@@ -645,12 +707,16 @@ export async function resolveCanvasAssets({ canvas, workspaceId, ...resolverOpti
     if (object?.type === "image") {
       reference = object.content ?? object.assetId;
       slot = "image";
-      if (typeof reference !== "string" || !reference.trim()) {
-        throw new Error(`Image asset is missing at object index ${objectIndex}.`);
+      if (!isRendererConsumedImageReference(reference)) {
+        // The owning SVG renderer draws a deterministic placeholder when an
+        // image source is absent or unsupported, so there are no external
+        // bytes to resolve.
+        continue;
       }
-    } else if (object?.type === "logo" && typeof object.assetId === "string" && object.assetId.trim()) {
+    } else if (object?.type === "logo") {
       reference = object.assetId;
       slot = "logo";
+      if (!isRendererConsumedImageReference(reference)) continue;
     } else {
       continue;
     }

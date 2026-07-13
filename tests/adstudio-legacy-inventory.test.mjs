@@ -366,6 +366,36 @@ test("data image byte cap is checked before invoking the base64 decoder", () => 
   assert.equal(decoded, false);
 });
 
+test("asset resolver hashes percent-encoded renderer-supported images", async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>';
+  const reference = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  const resolved = await inventory.resolveAssetReference({
+    reference,
+    workspaceId: "workspace-1",
+    objectIndex: 0,
+    objectId: "preview",
+    slot: "image",
+    maxBytes: 1024,
+  });
+
+  assert.equal(resolved.mimeType, "image/svg+xml");
+  assert.equal(resolved.byteLength, Buffer.byteLength(svg));
+  assert.equal(resolved.contentSha256, inventory.sha256Text(svg));
+});
+
+test("pinned lookup supports Node single-address and all-address callback shapes", () => {
+  const lookup = inventory.createPinnedLookup("93.184.216.34", 4);
+  lookup("public.example", {}, (error, address, family) => {
+    assert.equal(error, null);
+    assert.equal(address, "93.184.216.34");
+    assert.equal(family, 4);
+  });
+  lookup("public.example", { all: true }, (error, addresses) => {
+    assert.equal(error, null);
+    assert.deepEqual(addresses, [{ address: "93.184.216.34", family: 4 }]);
+  });
+});
+
 test("asset resolver rejects private storage paths outside the creative workspace", async () => {
   let downloaded = false;
 
@@ -719,7 +749,7 @@ test("remote asset resolver rejects a declared oversized response without readin
   assert.equal(streamRead, false);
 });
 
-test("canvas asset collection follows renderer-consumed image and logo slots and fails on missing images", async () => {
+test("canvas asset collection follows renderer-consumed image and logo slots and skips placeholder images", async () => {
   assert.equal(typeof inventory.resolveCanvasAssets, "function");
   const first = `data:image/png;base64,${Buffer.from("first").toString("base64")}`;
   const second = `data:image/jpeg;base64,${Buffer.from("second").toString("base64")}`;
@@ -743,12 +773,12 @@ test("canvas asset collection follows renderer-consumed image and logo slots and
     ],
   );
 
-  await assert.rejects(
-    inventory.resolveCanvasAssets({
+  assert.deepEqual(
+    await inventory.resolveCanvasAssets({
       canvas: { objects: [{ objectId: "photo", type: "image" }] },
       workspaceId: "workspace-1",
     }),
-    /image asset is missing/i,
+    [],
   );
 });
 
@@ -966,7 +996,11 @@ test("workspace inventory quarantines unknown canvases and dimension or asset fa
     ...graph.creatives[0],
     id: "creative-broken",
     width: 999,
-    canvas_json: { width: 1080, height: 1350, objects: [{ objectId: "photo", type: "image" }] },
+    canvas_json: {
+      width: 1080,
+      height: 1350,
+      objects: [{ objectId: "photo", type: "image", content: "data:image/png;base64,not-valid" }],
+    },
   };
   graph.creatives = [broken];
 
