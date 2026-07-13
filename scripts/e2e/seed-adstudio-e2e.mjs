@@ -8,11 +8,16 @@
 //   - owner membership
 // Brand-kit approval is exercised by the spec itself through the real UI.
 //
-// Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+// Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
+//      (preferred) or SUPABASE_SERVICE_ROLE_KEY,
 //      ADSTUDIO_E2E_EMAIL (default adstudio-e2e@blockwise.test),
 //      ADSTUDIO_E2E_PASSWORD (required, >= 16 chars).
 
 import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "../lib/supabase-server-credential.mjs";
 
 export const ADSTUDIO_E2E_WORKSPACE_ID = "00000000-0000-4000-8000-0000000000e2";
 
@@ -21,18 +26,18 @@ function cleanEnv(value) {
 }
 
 const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
-const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const serverCredential = resolveSupabaseServerCredential(process.env);
 const email = (cleanEnv(process.env.ADSTUDIO_E2E_EMAIL) ?? "adstudio-e2e@blockwise.test").toLowerCase();
 const password = cleanEnv(process.env.ADSTUDIO_E2E_PASSWORD);
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+if (!supabaseUrl || !serverCredential) {
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY.");
 }
 if (!password || password.length < 16) {
   throw new Error("Set ADSTUDIO_E2E_PASSWORD to a unique password of at least 16 characters.");
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
+const supabase = createSupabaseServerClient(createClient, supabaseUrl, process.env, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 

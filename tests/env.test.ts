@@ -47,6 +47,19 @@ test("recommended security environment keys cover Turnstile and Cloudflare gatew
   ]);
 });
 
+test("deployment readiness accepts secret-first or legacy Supabase server credentials", () => {
+  const base = Object.fromEntries(REQUIRED_ENV_KEYS.map((key) => [key, `${key.toLowerCase()}_value`])) as NodeJS.ProcessEnv;
+  delete base.SUPABASE_SERVICE_ROLE_KEY;
+
+  const secretOnly = getDeploymentReadiness({ ...base, SUPABASE_SECRET_KEY: "sb_secret_test" });
+  const missing = getDeploymentReadiness(base);
+
+  assert.equal(secretOnly.invalid.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
+  assert.equal(secretOnly.missing.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
+  assert.equal(missing.invalid.includes("SUPABASE_SERVICE_ROLE_KEY"), true);
+  assert.equal(missing.missing.includes("SUPABASE_SERVICE_ROLE_KEY"), true);
+});
+
 test("first-tester environment keys cover launch-critical runtime services", () => {
   assert.deepEqual(FIRST_TESTER_ENV_KEYS, [
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
@@ -109,6 +122,7 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
     "GOOGLE_ADS_ENABLED",
     "META_MONITOR_BUDGET_AUD",
     "NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA",
+    "SUPABASE_SECRET_KEY",
   ]) {
     assert.match(example, new RegExp(`^${key}=`, "m"));
   }

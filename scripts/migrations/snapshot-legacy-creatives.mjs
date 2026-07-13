@@ -17,6 +17,12 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import {
+  createSupabaseServerClient,
+  isLegacySupabaseJwt,
+  resolveSupabaseServerCredential,
+} from "../lib/supabase-server-credential.mjs";
+
 const BUCKET = "workspace-artifacts";
 const PAGE_SIZE = 1000;
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -24,13 +30,13 @@ const execFileAsync = promisify(execFile);
 
 export function requireEnv(env = process.env) {
   const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY;
-  if (!url || !serviceRoleKey) {
+  const credential = resolveSupabaseServerCredential(env);
+  if (!url || !credential) {
     throw new Error(
       "Missing env: set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY).",
     );
   }
-  return { url, serviceRoleKey };
+  return { url, serviceRoleKey: credential.value };
 }
 
 export function buildSupabaseStorageHeaders(serviceRoleKey) {
@@ -40,7 +46,7 @@ export function buildSupabaseStorageHeaders(serviceRoleKey) {
   const headers = { apikey: serviceRoleKey, Accept: "image/*" };
   // Current opaque secret keys authorize through `apikey` and are not JWTs.
   // The legacy service-role JWT still needs the matching Bearer header.
-  if (!serviceRoleKey.startsWith("sb_secret_")) {
+  if (isLegacySupabaseJwt(serviceRoleKey)) {
     headers.Authorization = `Bearer ${serviceRoleKey}`;
   }
   return headers;
@@ -1268,7 +1274,7 @@ async function main() {
   await assertIgnoredOutputPath({ repoRoot: REPO_ROOT, outputPath });
   const { url, serviceRoleKey } = requireEnv();
   const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(url, serviceRoleKey, {
+  const supabase = createSupabaseServerClient(createClient, url, process.env, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const storageDownload = async (storagePath) => {

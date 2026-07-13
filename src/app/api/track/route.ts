@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { classifyDevice, externalReferrerHost, isTrackablePath, normalizeTrackedPath } from "@/lib/analytics/events";
 import { dailyVisitorHash } from "@/lib/analytics/visitor";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { resolveSupabaseServerCredential } from "@/lib/supabase/credentials";
 
 export const runtime = "nodejs";
 
@@ -25,12 +26,12 @@ export async function POST(request: Request) {
     const device = classifyDevice(userAgent);
     if (device === "bot") return new NextResponse(null, { status: 204 });
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-    if (!serviceKey) return new NextResponse(null, { status: 204 });
+    const credential = resolveSupabaseServerCredential();
+    if (!credential) return new NextResponse(null, { status: 204 });
 
     const forwardedFor = request.headers.get("x-forwarded-for") ?? "";
     const ip = forwardedFor.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
-    const salt = createHash("sha256").update(`blockwise-page-analytics:${serviceKey}`).digest("hex");
+    const salt = createHash("sha256").update(`blockwise-page-analytics:${credential.value}`).digest("hex");
     const ownHost = request.headers.get("host")?.split(":")[0]?.replace(/^www\./, "").toLowerCase() ?? null;
 
     const supabase = createSupabaseServiceClient();

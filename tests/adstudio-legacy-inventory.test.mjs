@@ -107,7 +107,7 @@ test("module import has no CLI, credential, or network side effects", () => {
   assert.equal(result.stderr, "");
 });
 
-test("credential loader accepts the current Supabase secret key and prefers an explicit legacy service-role key", () => {
+test("credential loader accepts current Supabase secret keys and prefers them during legacy cutover", () => {
   assert.deepEqual(
     inventory.requireEnv({
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -127,7 +127,7 @@ test("credential loader accepts the current Supabase secret key and prefers an e
     }),
     {
       url: "https://example.supabase.co",
-      serviceRoleKey: "legacy-service-role",
+      serviceRoleKey: "sb_secret_current",
     },
   );
 
@@ -142,10 +142,11 @@ test("private Storage headers use opaque secret keys as apikey-only and legacy J
     apikey: "sb_secret_current",
     Accept: "image/*",
   });
-  assert.deepEqual(inventory.buildSupabaseStorageHeaders("eyJlegacy-service-role"), {
-    apikey: "eyJlegacy-service-role",
+  const legacyJwt = "eyJheader.eyJpayload.signature";
+  assert.deepEqual(inventory.buildSupabaseStorageHeaders(legacyJwt), {
+    apikey: legacyJwt,
     Accept: "image/*",
-    Authorization: "Bearer eyJlegacy-service-role",
+    Authorization: `Bearer ${legacyJwt}`,
   });
   assert.throws(() => inventory.buildSupabaseStorageHeaders(""), /secret or legacy service-role key/);
 });

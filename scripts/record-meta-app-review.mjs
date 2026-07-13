@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "./lib/supabase-server-credential.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -25,7 +29,7 @@ const baseUrl = trimTrailingSlash(
 );
 const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
 const supabaseAnonKey = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY);
-const supabaseServiceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
+const supabaseServerCredential = resolveSupabaseServerCredential(process.env);
 const supabaseJwtSecret = cleanEnv(process.env.SUPABASE_JWT_SECRET);
 const generatedPassword = process.env.META_REVIEW_TEST_PASSWORD || process.env.BLOCKWISE_DEV_PASSWORD || makePassword();
 const reviewEmail = process.env.META_REVIEW_TEST_EMAIL || process.env.BLOCKWISE_OPERATOR_EMAIL || "steven@blockwise.sale";
@@ -111,7 +115,7 @@ async function createSupabaseSession({ email, password }) {
     return data.session;
   }
 
-  if (!supabaseServiceRoleKey) {
+  if (!supabaseServerCredential) {
     throw new Error(`Unable to create test session: ${error?.message ?? "No session returned"}`);
   }
 
@@ -144,11 +148,11 @@ async function createMagicLinkSession(email) {
 }
 
 async function createMagicLinkTokenHash(email) {
-  if (!supabaseServiceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to create a browser auth link.");
+  if (!supabaseServerCredential) {
+    throw new Error("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY is required to create a browser auth link.");
   }
 
-  const admin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  const admin = createSupabaseServerClient(createClient, supabaseUrl, process.env, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -173,7 +177,7 @@ async function createMagicLinkTokenHash(email) {
 }
 
 async function createSignedServiceSession(email) {
-  const admin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  const admin = createSupabaseServerClient(createClient, supabaseUrl, process.env, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -49,6 +49,7 @@ const envSchema = z.object({
   HERMES_QUEUE_LOOP_INTERVAL_MS: z.coerce.number().int().positive().default(15_000),
   HERMES_QUEUE_DRY_RUN: booleanFromString.default(false),
   HERMES_SUPABASE_URL: z.string().url().optional(),
+  HERMES_SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   HERMES_SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   HERMES_RESEARCH_AD_CREATIVES_BUCKET: z.string().min(1).default("research-ad-creatives"),
   HERMES_RESEARCH_SCREENSHOTS_BUCKET: z.string().min(1).default("research-screenshots"),

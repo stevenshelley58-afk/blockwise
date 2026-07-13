@@ -1,21 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
-function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim() ?? "";
-}
+import {
+  cleanSupabaseEnv,
+  createSupabaseServerFetch,
+  resolveSupabaseServerCredential,
+  type SupabaseServerEnv,
+} from "./credentials.ts";
 
-export function createSupabaseServiceClient() {
-  const supabaseUrl = cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceRoleKey = cleanSupabaseEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+export function createSupabaseServiceClient(options: {
+  env?: SupabaseServerEnv;
+  fetchImpl?: typeof fetch;
+} = {}) {
+  const env = options.env ?? process.env;
+  const supabaseUrl = cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL);
+  const credential = resolveSupabaseServerCredential(env);
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !credential) {
     throw new Error("Supabase service-role environment is missing.");
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, credential.value, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    global: {
+      fetch: createSupabaseServerFetch(credential, options.fetchImpl),
     },
   });
 }
