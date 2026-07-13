@@ -149,7 +149,12 @@ export function buildTemplateCloneRequestsByFormat(
   };
 }
 
-async function generateQaAcceptedClone(input: {
+type CloneQualityGateDependencies = {
+  generate?: typeof generateCloneWithCascade;
+  review?: typeof runCloneQa;
+};
+
+export async function generateQaAcceptedClone(input: {
   format: TemplateCloneRenderFormat;
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;
@@ -160,47 +165,51 @@ async function generateQaAcceptedClone(input: {
   tier: "preview" | "final";
   maxAttempts: number;
   deadline: number;
-}): Promise<GeneratedCloneRender & { qa: AdStudioCloneQa }> {
+}, dependencies: CloneQualityGateDependencies = {}): Promise<GeneratedCloneRender & { qa: AdStudioCloneQa }> {
   let lastError: unknown = null;
   let lastQa: AdStudioCloneQa | null = null;
   let correctionPrompt = "";
-  const maxAttempts = Math.max(1, input.maxAttempts);
+  let qualityAttempt = 0;
+  const maxProviderRounds = Math.min(2, Math.max(1, input.maxAttempts));
+  const generate = dependencies.generate ?? generateCloneWithCascade;
+  const review = dependencies.review ?? runCloneQa;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    if (attempt > 1 && Date.now() >= input.deadline) break;
+  for (let providerRound = 1; providerRound <= maxProviderRounds; providerRound += 1) {
+    if (providerRound > 1 && Date.now() >= input.deadline) break;
     try {
-      const generated = await generateCloneWithCascade({
+      const generated = await generate({
         providers: input.providers,
         request: {
           ...input.request,
           prompt: correctionPrompt
             ? `${input.request.prompt}\n\n${correctionPrompt}`
             : input.request.prompt,
-          seed: (input.request.seed ?? 0) + attempt,
+          seed: (input.request.seed ?? 0) + providerRound,
         },
         workspaceId: input.workspaceId,
         userId: input.userId,
         correlationId: input.correlationId,
         tier: input.tier,
-        attempt,
+        attempt: providerRound,
       });
 
+      qualityAttempt += 1;
       let qa: AdStudioCloneQa;
       try {
-        qa = await runCloneQa({
+        qa = await review({
           workspaceId: input.workspaceId,
           userId: input.userId,
           correlationId: input.correlationId,
           imageUrl: generated.assetUrl,
           expectedCopy: input.expectedCopy,
-          attempt,
+          attempt: qualityAttempt,
         });
       } catch (error) {
         if (error instanceof ProviderRunPersistenceError) throw error;
         throw new TemplateCampaignQaError(input.format, null, error);
       }
 
-      if (qa.passed) return { ...generated, attempt, qa };
+      if (qa.passed) return { ...generated, attempt: qualityAttempt, qa };
       lastQa = qa;
       correctionPrompt = cloneQaCorrectionPrompt(qa);
     } catch (error) {
