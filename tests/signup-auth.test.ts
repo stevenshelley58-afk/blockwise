@@ -74,6 +74,13 @@ test("login page points new clients to signup", () => {
   assert.match(source, /Start free trial/i);
 });
 
+test("login form keeps email validation while identifying the account field to password managers", () => {
+  const source = readFileSync(loginFormPath, "utf8");
+
+  assert.match(source, /id="login-email"[\s\S]{0,200}type="email"[\s\S]{0,300}autoComplete="username"/i);
+  assert.match(source, /id="login-password"[\s\S]*type="password"[\s\S]*autoComplete="current-password"/i);
+});
+
 test("login and password reset pass Turnstile captcha tokens to Supabase auth", () => {
   const loginForm = readFileSync(loginFormPath, "utf8");
   const forgotPassword = readFileSync(forgotPasswordPagePath, "utf8");
