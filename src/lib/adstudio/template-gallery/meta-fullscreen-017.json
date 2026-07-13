@@ -1,0 +1,412 @@
+{
+  "id": "meta-fullscreen-017",
+  "templateKey": "meta-fullscreen-017",
+  "name": "New Listing Gallery Band",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-017",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-31"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_031.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_031.png",
+    "metaIndex": 31
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "New listing",
+    "primaryText": "A clean-lined home with space for everyday living.",
+    "description": "18 Wattle Lane, Scarborough WA 6019",
+    "cta": "View property"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-017.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-017.svg",
+    "alt": "New Listing Gallery Band, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_031.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-017-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#b9ae9c",
+        "locked": true,
+        "radius": 68
+      },
+      {
+        "objectId": "meta-fullscreen-017-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#c2b7a5",
+        "locked": true,
+        "radius": 62
+      },
+      {
+        "objectId": "meta-fullscreen-017-03-top_photo",
+        "type": "image",
+        "role": "top_photo",
+        "x": 114,
+        "y": 24,
+        "width": 852,
+        "height": 650,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-04-listing_band",
+        "type": "shape",
+        "role": "listing_band",
+        "x": 24,
+        "y": 670,
+        "width": 1032,
+        "height": 570,
+        "fill": "#5b5344",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-017-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "N E W\nL I S T I N G",
+        "customerSupplied": true,
+        "x": 240,
+        "y": 760,
+        "width": 600,
+        "height": 250,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 75,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.2,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-06-address",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 220,
+        "y": 1080,
+        "width": 640,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 22,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-07-bottom_photo",
+        "type": "image",
+        "role": "bottom_photo",
+        "x": 114,
+        "y": 1276,
+        "width": 852,
+        "height": 620,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-08-frame_line_left",
+        "type": "shape",
+        "role": "frame_line_left",
+        "x": 80,
+        "y": 120,
+        "width": 3,
+        "height": 1680,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-017-09-frame_line_right",
+        "type": "shape",
+        "role": "frame_line_right",
+        "x": 996,
+        "y": 120,
+        "width": 3,
+        "height": 1680,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-017-10-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 410,
+        "y": 1770,
+        "width": 260,
+        "height": 58,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#b9ae9c",
+          "rx": 68,
+          "ry": 68,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#c2b7a5",
+          "rx": 62,
+          "ry": 62,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 114,
+          "top": 24,
+          "width": 852,
+          "height": 650,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-03-top_photo",
+            "role": "top_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 670,
+          "width": 1032,
+          "height": 570,
+          "fill": "#5b5344",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-04-listing_band",
+            "role": "listing_band",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 240,
+          "top": 760,
+          "width": 600,
+          "height": 250,
+          "text": "N E W\nL I S T I N G",
+          "fontFamily": "Arial",
+          "fontSize": 75,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 220,
+          "top": 1080,
+          "width": 640,
+          "height": 42,
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Arial",
+          "fontSize": 22,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-06-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 114,
+          "top": 1276,
+          "width": 852,
+          "height": 620,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-07-bottom_photo",
+            "role": "bottom_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 80,
+          "top": 120,
+          "width": 3,
+          "height": 1680,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-08-frame_line_left",
+            "role": "frame_line_left",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 996,
+          "top": 120,
+          "width": 3,
+          "height": 1680,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-09-frame_line_right",
+            "role": "frame_line_right",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 410,
+          "top": 1770,
+          "width": 260,
+          "height": 58,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-10-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A clean-lined home with space for everyday living."
+    ],
+    "headlines": [
+      "New listing"
+    ],
+    "descriptions": [
+      "18 Wattle Lane, Scarborough WA 6019"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "View property",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

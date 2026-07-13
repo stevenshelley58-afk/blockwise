@@ -1,0 +1,467 @@
+{
+  "id": "meta-fullscreen-028",
+  "templateKey": "meta-fullscreen-028",
+  "name": "Buy or Rent Property Story",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "property_management-meta-fullscreen-028",
+  "audienceIntent": "Property owners who want clear, reliable management.",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "meta-fullscreen",
+    "blockwise",
+    "source-30"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_030.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_030.png",
+    "metaIndex": 30
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Are you looking to buy or rent a property?",
+    "primaryText": "Start with a shortlist built around your needs.",
+    "description": "Blockwise property search",
+    "cta": "Start searching"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-028.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-028.svg",
+    "alt": "Buy or Rent Property Story, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_030.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-028-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#4f5662",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-028-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-028-03-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#1f2d46",
+        "locked": true,
+        "opacity": 0.48,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-028-04-kicker",
+        "type": "text",
+        "role": "kicker",
+        "content": "REAL ESTATE",
+        "customerSupplied": false,
+        "x": 330,
+        "y": 92,
+        "width": 420,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 27,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-028-05-left_rule",
+        "type": "shape",
+        "role": "left_rule",
+        "x": 86,
+        "y": 780,
+        "width": 12,
+        "height": 730,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-028-06-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "ARE YOU LOOKING TO BUY OR RENT A PROPERTY?",
+        "customerSupplied": true,
+        "x": 140,
+        "y": 780,
+        "width": 690,
+        "height": 610,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 76,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.08,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-028-07-play_button",
+        "type": "shape",
+        "role": "play_button",
+        "x": 104,
+        "y": 1660,
+        "width": 126,
+        "height": 126,
+        "fill": "#29282a",
+        "locked": true,
+        "radius": 63,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-028-08-play_icon",
+        "type": "text",
+        "role": "play_icon",
+        "content": "▶",
+        "customerSupplied": false,
+        "x": 138,
+        "y": 1684,
+        "width": 58,
+        "height": 58,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 46,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-028-09-sound_button",
+        "type": "shape",
+        "role": "sound_button",
+        "x": 256,
+        "y": 1660,
+        "width": 126,
+        "height": 126,
+        "fill": "#29282a",
+        "locked": true,
+        "radius": 63,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-028-10-sound_icon",
+        "type": "text",
+        "role": "sound_icon",
+        "content": "♪",
+        "customerSupplied": false,
+        "x": 290,
+        "y": 1684,
+        "width": 58,
+        "height": 58,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 50,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-028-11-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 712,
+        "y": 1710,
+        "width": 260,
+        "height": 60,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#4f5662",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#1f2d46",
+          "opacity": 0.48,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-03-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 330,
+          "top": 92,
+          "width": 420,
+          "height": 42,
+          "text": "REAL ESTATE",
+          "fontFamily": "Arial",
+          "fontSize": 27,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-04-kicker",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 86,
+          "top": 780,
+          "width": 12,
+          "height": 730,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-05-left_rule",
+            "role": "left_rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 140,
+          "top": 780,
+          "width": 690,
+          "height": 610,
+          "text": "ARE YOU LOOKING TO BUY OR RENT A PROPERTY?",
+          "fontFamily": "Arial",
+          "fontSize": 76,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.08,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-06-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 104,
+          "top": 1660,
+          "width": 126,
+          "height": 126,
+          "fill": "#29282a",
+          "opacity": 0.9,
+          "rx": 63,
+          "ry": 63,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-07-play_button",
+            "role": "play_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 138,
+          "top": 1684,
+          "width": 58,
+          "height": 58,
+          "text": "▶",
+          "fontFamily": "Arial",
+          "fontSize": 46,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-08-play_icon",
+            "role": "play_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 256,
+          "top": 1660,
+          "width": 126,
+          "height": 126,
+          "fill": "#29282a",
+          "opacity": 0.9,
+          "rx": 63,
+          "ry": 63,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-09-sound_button",
+            "role": "sound_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 290,
+          "top": 1684,
+          "width": 58,
+          "height": 58,
+          "text": "♪",
+          "fontFamily": "Arial",
+          "fontSize": 50,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-10-sound_icon",
+            "role": "sound_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 712,
+          "top": 1710,
+          "width": 260,
+          "height": 60,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-028-11-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Start with a shortlist built around your needs."
+    ],
+    "headlines": [
+      "Are you looking to buy or rent a property?"
+    ],
+    "descriptions": [
+      "Blockwise property search"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Start searching",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

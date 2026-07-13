@@ -1,0 +1,514 @@
+{
+  "id": "meta-feed-043",
+  "templateKey": "meta-feed-043",
+  "name": "Buyer and Seller Market Guide",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "market_update_leads",
+  "offerId": "market_update-meta-feed-043",
+  "audienceIntent": "Owners and buyers tracking the local market before acting.",
+  "category": "market_update",
+  "tags": [
+    "market_update",
+    "meta-feed",
+    "blockwise",
+    "source-158"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_158.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_158.png",
+    "metaIndex": 158
+  },
+  "classification": {
+    "ad_type": "market_update",
+    "primary_intent": "market_update",
+    "property_or_agent_focus": "unknown"
+  },
+  "sampleCopy": {
+    "headline": "Buyer market vs seller market",
+    "primaryText": "Know the difference before you make your next move.",
+    "description": "Blockwise market guide",
+    "cta": "Get local advice"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-043.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-043.svg",
+    "alt": "Buyer and Seller Market Guide, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_158.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-043-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-feed-043-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#f4f4f4",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-043-03-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "REAL ESTATE MARKET TYPES",
+        "customerSupplied": false,
+        "x": 120,
+        "y": 118,
+        "width": 840,
+        "height": 66,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 54,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-04-subheading",
+        "type": "text",
+        "role": "subheading",
+        "content": "Know the difference before you act",
+        "customerSupplied": false,
+        "x": 160,
+        "y": 204,
+        "width": 760,
+        "height": 42,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-05-buyer_header",
+        "type": "shape",
+        "role": "buyer_header",
+        "x": 24,
+        "y": 342,
+        "width": 450,
+        "height": 88,
+        "fill": "#3f7773",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-043-06-buyer_label",
+        "type": "text",
+        "role": "buyer_label",
+        "content": "BUYER MARKET",
+        "customerSupplied": false,
+        "x": 66,
+        "y": 362,
+        "width": 360,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 31,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-07-versus",
+        "type": "text",
+        "role": "versus",
+        "content": "VS",
+        "customerSupplied": false,
+        "x": 486,
+        "y": 352,
+        "width": 108,
+        "height": 58,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 45,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-08-seller_header",
+        "type": "shape",
+        "role": "seller_header",
+        "x": 606,
+        "y": 342,
+        "width": 450,
+        "height": 88,
+        "fill": "#ad7d68",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-043-09-seller_label",
+        "type": "text",
+        "role": "seller_label",
+        "content": "SELLER MARKET",
+        "customerSupplied": false,
+        "x": 650,
+        "y": 362,
+        "width": 360,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 31,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-10-buyer_rows",
+        "type": "text",
+        "role": "buyer_rows",
+        "content": "MORE HOMES AVAILABLE\n\nPRICES STAY LOW\n\nBUYERS HAVE POWER\n\nSLOWER SALES PACE\n\nDISCOUNTS ARE COMMON\n\nLONGER TIME ON MARKET",
+        "customerSupplied": false,
+        "x": 58,
+        "y": 504,
+        "width": 436,
+        "height": 604,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.9,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-11-seller_rows",
+        "type": "text",
+        "role": "seller_rows",
+        "content": "FEWER HOMES FOR SALE\n\nPRICES CLIMB FAST\n\nSELLERS CALL THE SHOTS\n\nQUICK SALES HAPPEN\n\nBIDDING WARS BREAK OUT\n\nHOMES SELL IN DAYS",
+        "customerSupplied": false,
+        "x": 586,
+        "y": 504,
+        "width": 436,
+        "height": 604,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.9,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-043-12-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 420,
+        "y": 1212,
+        "width": 240,
+        "height": 58,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8dadd",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-043-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#f4f4f4",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-043-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 120,
+          "top": 118,
+          "width": 840,
+          "height": 66,
+          "text": "REAL ESTATE MARKET TYPES",
+          "fontFamily": "Arial",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-043-03-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 160,
+          "top": 204,
+          "width": 760,
+          "height": 42,
+          "text": "Know the difference before you act",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-043-04-subheading",
+            "role": "subheading",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 342,
+          "width": 450,
+          "height": 88,
+          "fill": "#3f7773",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-043-05-buyer_header",
+            "role": "buyer_header",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 66,
+          "top": 362,
+          "width": 360,
+          "height": 42,
+          "text": "BUYER MARKET",
+          "fontFamily": "Arial",
+          "fontSize": 31,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-043-06-buyer_label",
+            "role": "buyer_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 486,
+          "top": 352,
+          "width": 108,
+          "height": 58,
+          "text": "VS",
+          "fontFamily": "Arial",
+          "fontSize": 45,
+          "fontWeight": 900,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-043-07-versus",
+            "role": "versus",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 606,
+          "top": 342,
+          "width": 450,
+          "height": 88,
+          "fill": "#ad7d68",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-043-08-seller_header",
+            "role": "seller_header",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 650,
+          "top": 362,
+          "width": 360,
+          "height": 42,
+          "text": "SELLER MARKET",
+          "fontFamily": "Arial",
+          "fontSize": 31,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-043-09-seller_label",
+            "role": "seller_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 58,
+          "top": 504,
+          "width": 436,
+          "height": 604,
+          "text": "MORE HOMES AVAILABLE\n\nPRICES STAY LOW\n\nBUYERS HAVE POWER\n\nSLOWER SALES PACE\n\nDISCOUNTS ARE COMMON\n\nLONGER TIME ON MARKET",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.9,
+          "blockwise": {
+            "objectId": "meta-feed-043-10-buyer_rows",
+            "role": "buyer_rows",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 586,
+          "top": 504,
+          "width": 436,
+          "height": 604,
+          "text": "FEWER HOMES FOR SALE\n\nPRICES CLIMB FAST\n\nSELLERS CALL THE SHOTS\n\nQUICK SALES HAPPEN\n\nBIDDING WARS BREAK OUT\n\nHOMES SELL IN DAYS",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.9,
+          "blockwise": {
+            "objectId": "meta-feed-043-11-seller_rows",
+            "role": "seller_rows",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 420,
+          "top": 1212,
+          "width": 240,
+          "height": 58,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-043-12-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Know the difference before you make your next move."
+    ],
+    "headlines": [
+      "Buyer market vs seller market"
+    ],
+    "descriptions": [
+      "Blockwise market guide"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get local advice",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

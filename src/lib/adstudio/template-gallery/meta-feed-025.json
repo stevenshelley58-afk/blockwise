@@ -1,0 +1,532 @@
+{
+  "id": "meta-feed-025",
+  "templateKey": "meta-feed-025",
+  "name": "New List Editorial",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-feed-025",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-feed",
+    "blockwise",
+    "source-35"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_035.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_035.png",
+    "metaIndex": 35
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "New listing",
+    "primaryText": "A modern four-bedroom home with designer finishes.",
+    "description": "$1,245,000",
+    "cta": "See the listing"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-025.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-025.svg",
+    "alt": "New List Editorial, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_035.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-025-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8d8d4",
+        "locked": true,
+        "radius": 62
+      },
+      {
+        "objectId": "meta-feed-025-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#fbf9f5",
+        "locked": true,
+        "radius": 56
+      },
+      {
+        "objectId": "meta-feed-025-03-new_word",
+        "type": "text",
+        "role": "new_word",
+        "content": "NEW",
+        "customerSupplied": false,
+        "x": 58,
+        "y": 46,
+        "width": 320,
+        "height": 166,
+        "fill": "#75aeb9",
+        "fontFamily": "Arial",
+        "size": 126,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-04-top_photo_1",
+        "type": "image",
+        "role": "top_photo_1",
+        "x": 390,
+        "y": 54,
+        "width": 180,
+        "height": 142,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-05-top_photo_2",
+        "type": "image",
+        "role": "top_photo_2",
+        "x": 586,
+        "y": 54,
+        "width": 180,
+        "height": 142,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-06-top_photo_3",
+        "type": "image",
+        "role": "top_photo_3",
+        "x": 782,
+        "y": 54,
+        "width": 218,
+        "height": 142,
+        "imageAnchor": "right",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-07-hero_photo",
+        "type": "image",
+        "role": "hero_photo",
+        "x": 58,
+        "y": 232,
+        "width": 942,
+        "height": 740,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-08-sale_ring",
+        "type": "text",
+        "role": "sale_ring",
+        "content": "SALE  •  SALE  •  SALE",
+        "customerSupplied": false,
+        "x": 78,
+        "y": 286,
+        "width": 260,
+        "height": 72,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-09-price_badge",
+        "type": "shape",
+        "role": "price_badge",
+        "x": 520,
+        "y": 884,
+        "width": 438,
+        "height": 72,
+        "fill": "#75aeb9",
+        "locked": true,
+        "radius": 14
+      },
+      {
+        "objectId": "meta-feed-025-10-price",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 548,
+        "y": 900,
+        "width": 384,
+        "height": 44,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-11-description",
+        "type": "text",
+        "role": "description",
+        "content": "A modern four-bedroom home with designer finishes",
+        "customerSupplied": true,
+        "x": 58,
+        "y": 1002,
+        "width": 430,
+        "height": 116,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 27,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.22,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-12-list_word",
+        "type": "text",
+        "role": "list_word",
+        "content": "LIST",
+        "customerSupplied": false,
+        "x": 478,
+        "y": 986,
+        "width": 500,
+        "height": 188,
+        "fill": "#75aeb9",
+        "fontFamily": "Arial",
+        "size": 142,
+        "weight": 900,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-025-13-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 760,
+        "y": 1234,
+        "width": 220,
+        "height": 54,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8d8d4",
+          "rx": 62,
+          "ry": 62,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-025-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#fbf9f5",
+          "rx": 56,
+          "ry": 56,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-025-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 58,
+          "top": 46,
+          "width": 320,
+          "height": 166,
+          "text": "NEW",
+          "fontFamily": "Arial",
+          "fontSize": 126,
+          "fontWeight": 900,
+          "fill": "#75aeb9",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-025-03-new_word",
+            "role": "new_word",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 390,
+          "top": 54,
+          "width": 180,
+          "height": 142,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-025-04-top_photo_1",
+            "role": "top_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 586,
+          "top": 54,
+          "width": 180,
+          "height": 142,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-025-05-top_photo_2",
+            "role": "top_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 782,
+          "top": 54,
+          "width": 218,
+          "height": 142,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-025-06-top_photo_3",
+            "role": "top_photo_3",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 58,
+          "top": 232,
+          "width": 942,
+          "height": 740,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-025-07-hero_photo",
+            "role": "hero_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 78,
+          "top": 286,
+          "width": 260,
+          "height": 72,
+          "text": "SALE  •  SALE  •  SALE",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-025-08-sale_ring",
+            "role": "sale_ring",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 520,
+          "top": 884,
+          "width": 438,
+          "height": 72,
+          "fill": "#75aeb9",
+          "rx": 14,
+          "ry": 14,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-025-09-price_badge",
+            "role": "price_badge",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 548,
+          "top": 900,
+          "width": 384,
+          "height": 44,
+          "text": "$1,245,000",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-025-10-price",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 58,
+          "top": 1002,
+          "width": 430,
+          "height": 116,
+          "text": "A modern four-bedroom home with designer finishes",
+          "fontFamily": "Arial",
+          "fontSize": 27,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.22,
+          "blockwise": {
+            "objectId": "meta-feed-025-11-description",
+            "role": "description",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 478,
+          "top": 986,
+          "width": 500,
+          "height": 188,
+          "text": "LIST",
+          "fontFamily": "Arial",
+          "fontSize": 142,
+          "fontWeight": 900,
+          "fill": "#75aeb9",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-025-12-list_word",
+            "role": "list_word",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 760,
+          "top": 1234,
+          "width": 220,
+          "height": 54,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-025-13-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "A modern four-bedroom home with designer finishes."
+    ],
+    "headlines": [
+      "New listing"
+    ],
+    "descriptions": [
+      "$1,245,000"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "See the listing",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

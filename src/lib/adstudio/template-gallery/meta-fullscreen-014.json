@@ -1,0 +1,554 @@
+{
+  "id": "meta-fullscreen-014",
+  "templateKey": "meta-fullscreen-014",
+  "name": "Step Into Your Future Home",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-014",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-16"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_016.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_016.png",
+    "metaIndex": 16
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Step into your future dream home",
+    "primaryText": "A warm, welcoming home ready for its next chapter.",
+    "description": "Presented by Blockwise",
+    "cta": "Play property tour"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-014.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-014.svg",
+    "alt": "Step Into Your Future Home, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_016.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-014-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#86532f",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-014-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-03-warm_scrim",
+        "type": "shape",
+        "role": "warm_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#7d4a27",
+        "locked": true,
+        "opacity": 0.34,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-014-04-inner_border_top",
+        "type": "shape",
+        "role": "inner_border_top",
+        "x": 54,
+        "y": 54,
+        "width": 972,
+        "height": 4,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-05-inner_border_left",
+        "type": "shape",
+        "role": "inner_border_left",
+        "x": 54,
+        "y": 54,
+        "width": 4,
+        "height": 1778,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-06-inner_border_right",
+        "type": "shape",
+        "role": "inner_border_right",
+        "x": 1022,
+        "y": 54,
+        "width": 4,
+        "height": 1778,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-07-inner_border_bottom",
+        "type": "shape",
+        "role": "inner_border_bottom",
+        "x": 54,
+        "y": 1828,
+        "width": 972,
+        "height": 4,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-08-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 380,
+        "y": 116,
+        "width": 320,
+        "height": 76,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-09-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "STEP INTO YOUR FUTURE DREAM HOME",
+        "customerSupplied": true,
+        "x": 166,
+        "y": 760,
+        "width": 748,
+        "height": 340,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 86,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.05,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-10-play_button",
+        "type": "shape",
+        "role": "play_button",
+        "x": 86,
+        "y": 1684,
+        "width": 134,
+        "height": 134,
+        "fill": "#242328",
+        "locked": true,
+        "radius": 67,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-014-11-play_icon",
+        "type": "text",
+        "role": "play_icon",
+        "content": "▶",
+        "customerSupplied": false,
+        "x": 122,
+        "y": 1710,
+        "width": 62,
+        "height": 62,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 48,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-12-sound_button",
+        "type": "shape",
+        "role": "sound_button",
+        "x": 250,
+        "y": 1684,
+        "width": 134,
+        "height": 134,
+        "fill": "#242328",
+        "locked": true,
+        "radius": 67,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-014-13-sound_icon",
+        "type": "text",
+        "role": "sound_icon",
+        "content": "♪",
+        "customerSupplied": false,
+        "x": 286,
+        "y": 1708,
+        "width": 62,
+        "height": 62,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 52,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-14-website",
+        "type": "text",
+        "role": "website",
+        "content": "blockwise.au",
+        "customerSupplied": true,
+        "x": 548,
+        "y": 1736,
+        "width": 418,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#86532f",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#7d4a27",
+          "opacity": 0.34,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-03-warm_scrim",
+            "role": "warm_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 54,
+          "top": 54,
+          "width": 972,
+          "height": 4,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-04-inner_border_top",
+            "role": "inner_border_top",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 54,
+          "top": 54,
+          "width": 4,
+          "height": 1778,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-05-inner_border_left",
+            "role": "inner_border_left",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 1022,
+          "top": 54,
+          "width": 4,
+          "height": 1778,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-06-inner_border_right",
+            "role": "inner_border_right",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 54,
+          "top": 1828,
+          "width": 972,
+          "height": 4,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-07-inner_border_bottom",
+            "role": "inner_border_bottom",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 380,
+          "top": 116,
+          "width": 320,
+          "height": 76,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-08-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 166,
+          "top": 760,
+          "width": 748,
+          "height": 340,
+          "text": "STEP INTO YOUR FUTURE DREAM HOME",
+          "fontFamily": "Georgia",
+          "fontSize": 86,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-09-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 86,
+          "top": 1684,
+          "width": 134,
+          "height": 134,
+          "fill": "#242328",
+          "opacity": 0.9,
+          "rx": 67,
+          "ry": 67,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-10-play_button",
+            "role": "play_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 122,
+          "top": 1710,
+          "width": 62,
+          "height": 62,
+          "text": "▶",
+          "fontFamily": "Arial",
+          "fontSize": 48,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-11-play_icon",
+            "role": "play_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 250,
+          "top": 1684,
+          "width": 134,
+          "height": 134,
+          "fill": "#242328",
+          "opacity": 0.9,
+          "rx": 67,
+          "ry": 67,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-12-sound_button",
+            "role": "sound_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 286,
+          "top": 1708,
+          "width": 62,
+          "height": 62,
+          "text": "♪",
+          "fontFamily": "Arial",
+          "fontSize": 52,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-13-sound_icon",
+            "role": "sound_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 548,
+          "top": 1736,
+          "width": 418,
+          "height": 42,
+          "text": "blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-14-website",
+            "role": "website",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A warm, welcoming home ready for its next chapter."
+    ],
+    "headlines": [
+      "Step into your future dream home"
+    ],
+    "descriptions": [
+      "Presented by Blockwise"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Play property tour",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,497 @@
+{
+  "id": "meta-fullscreen-020",
+  "templateKey": "meta-fullscreen-020",
+  "name": "Real Estate Results Collage",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-fullscreen-020",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-fullscreen",
+    "blockwise",
+    "source-140"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_140.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_140.png",
+    "metaIndex": 140
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "Real estate",
+    "primaryText": "Local expertise. Clear advice. Proven results.",
+    "description": "Blockwise property specialists",
+    "cta": "Talk to us"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-020.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-020.svg",
+    "alt": "Real Estate Results Collage, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_140.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-020-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#74492f",
+        "locked": true,
+        "radius": 68
+      },
+      {
+        "objectId": "meta-fullscreen-020-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#74492f",
+        "locked": true,
+        "radius": 62
+      },
+      {
+        "objectId": "meta-fullscreen-020-03-hero_photo",
+        "type": "image",
+        "role": "hero_photo",
+        "x": 50,
+        "y": 50,
+        "width": 980,
+        "height": 500,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-04-detail_photo_1",
+        "type": "image",
+        "role": "detail_photo_1",
+        "x": 50,
+        "y": 594,
+        "width": 460,
+        "height": 284,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "REAL ESTATE",
+        "customerSupplied": true,
+        "x": 550,
+        "y": 594,
+        "width": 430,
+        "height": 174,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 70,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-06-tagline",
+        "type": "text",
+        "role": "tagline",
+        "content": "LOCAL EXPERTS. PROVEN RESULTS.",
+        "customerSupplied": false,
+        "x": 550,
+        "y": 786,
+        "width": 430,
+        "height": 62,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-07-body_copy",
+        "type": "text",
+        "role": "body_copy",
+        "content": "A focused plan for buying, selling or managing property in your local market.",
+        "customerSupplied": true,
+        "x": 550,
+        "y": 904,
+        "width": 430,
+        "height": 250,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 27,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.4,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-08-detail_photo_2",
+        "type": "image",
+        "role": "detail_photo_2",
+        "x": 50,
+        "y": 916,
+        "width": 460,
+        "height": 350,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-09-detail_photo_3",
+        "type": "image",
+        "role": "detail_photo_3",
+        "x": 50,
+        "y": 1304,
+        "width": 460,
+        "height": 350,
+        "imageAnchor": "right",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-10-detail_photo_4",
+        "type": "image",
+        "role": "detail_photo_4",
+        "x": 550,
+        "y": 1304,
+        "width": 430,
+        "height": 350,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-020-11-footer",
+        "type": "shape",
+        "role": "footer",
+        "x": 24,
+        "y": 1730,
+        "width": 1032,
+        "height": 166,
+        "fill": "#d7a27f",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-020-12-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "08 6118 2200        blockwise.au",
+        "customerSupplied": true,
+        "x": 92,
+        "y": 1784,
+        "width": 860,
+        "height": 44,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#74492f",
+          "rx": 68,
+          "ry": 68,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#74492f",
+          "rx": 62,
+          "ry": 62,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 50,
+          "top": 50,
+          "width": 980,
+          "height": 500,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-03-hero_photo",
+            "role": "hero_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 50,
+          "top": 594,
+          "width": 460,
+          "height": 284,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-04-detail_photo_1",
+            "role": "detail_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 550,
+          "top": 594,
+          "width": 430,
+          "height": 174,
+          "text": "REAL ESTATE",
+          "fontFamily": "Arial",
+          "fontSize": 70,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 550,
+          "top": 786,
+          "width": 430,
+          "height": 62,
+          "text": "LOCAL EXPERTS. PROVEN RESULTS.",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-06-tagline",
+            "role": "tagline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 550,
+          "top": 904,
+          "width": 430,
+          "height": 250,
+          "text": "A focused plan for buying, selling or managing property in your local market.",
+          "fontFamily": "Arial",
+          "fontSize": 27,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-07-body_copy",
+            "role": "body_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 50,
+          "top": 916,
+          "width": 460,
+          "height": 350,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-08-detail_photo_2",
+            "role": "detail_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 50,
+          "top": 1304,
+          "width": 460,
+          "height": 350,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-09-detail_photo_3",
+            "role": "detail_photo_3",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 550,
+          "top": 1304,
+          "width": 430,
+          "height": 350,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-10-detail_photo_4",
+            "role": "detail_photo_4",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 1730,
+          "width": 1032,
+          "height": 166,
+          "fill": "#d7a27f",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-11-footer",
+            "role": "footer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 92,
+          "top": 1784,
+          "width": 860,
+          "height": 44,
+          "text": "08 6118 2200        blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-020-12-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Local expertise. Clear advice. Proven results."
+    ],
+    "headlines": [
+      "Real estate"
+    ],
+    "descriptions": [
+      "Blockwise property specialists"
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Talk to us",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

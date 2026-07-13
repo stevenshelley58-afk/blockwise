@@ -1,0 +1,488 @@
+{
+  "id": "meta-fullscreen-021",
+  "templateKey": "meta-fullscreen-021",
+  "name": "Best Time to Invest",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-fullscreen-021",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-fullscreen",
+    "blockwise",
+    "source-237"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_237.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_237.png",
+    "metaIndex": 237
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "Best time to invest in your dream home",
+    "primaryText": "Build a property plan around your timing and goals.",
+    "description": "Blockwise property strategy",
+    "cta": "Start planning"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-021.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-021.svg",
+    "alt": "Best Time to Invest, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_237.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-021-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#b69758",
+        "locked": true,
+        "radius": 68
+      },
+      {
+        "objectId": "meta-fullscreen-021-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#daba75",
+        "locked": true,
+        "radius": 62
+      },
+      {
+        "objectId": "meta-fullscreen-021-03-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 408,
+        "y": 90,
+        "width": 264,
+        "height": 62,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-04-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "BEST TIME TO INVEST IN YOUR DREAM HOME",
+        "customerSupplied": true,
+        "x": 144,
+        "y": 218,
+        "width": 792,
+        "height": 210,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 61,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.03,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-05-hourglass_top",
+        "type": "shape",
+        "role": "hourglass_top",
+        "x": 326,
+        "y": 560,
+        "width": 428,
+        "height": 260,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 110,
+        "opacity": 0.86
+      },
+      {
+        "objectId": "meta-fullscreen-021-06-hourglass_neck",
+        "type": "shape",
+        "role": "hourglass_neck",
+        "x": 486,
+        "y": 810,
+        "width": 108,
+        "height": 250,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 46,
+        "opacity": 0.86
+      },
+      {
+        "objectId": "meta-fullscreen-021-07-hourglass_bottom",
+        "type": "shape",
+        "role": "hourglass_bottom",
+        "x": 326,
+        "y": 1042,
+        "width": 428,
+        "height": 280,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 110,
+        "opacity": 0.86
+      },
+      {
+        "objectId": "meta-fullscreen-021-08-sand_top",
+        "type": "shape",
+        "role": "sand_top",
+        "x": 382,
+        "y": 690,
+        "width": 316,
+        "height": 100,
+        "fill": "#daba75",
+        "locked": true,
+        "radius": 40
+      },
+      {
+        "objectId": "meta-fullscreen-021-09-sand_bottom",
+        "type": "shape",
+        "role": "sand_bottom",
+        "x": 382,
+        "y": 1170,
+        "width": 316,
+        "height": 110,
+        "fill": "#daba75",
+        "locked": true,
+        "radius": 40
+      },
+      {
+        "objectId": "meta-fullscreen-021-10-supporting_copy",
+        "type": "text",
+        "role": "supporting_copy",
+        "content": "YOUR TIMING. YOUR GOALS. A CLEAR PLAN.",
+        "customerSupplied": false,
+        "x": 140,
+        "y": 1430,
+        "width": 800,
+        "height": 94,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 34,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-11-cta_button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 300,
+        "y": 1608,
+        "width": 480,
+        "height": 94,
+        "fill": "#2f6387",
+        "locked": true,
+        "radius": 47
+      },
+      {
+        "objectId": "meta-fullscreen-021-12-cta",
+        "type": "text",
+        "role": "cta",
+        "content": "START PLANNING",
+        "customerSupplied": false,
+        "x": 338,
+        "y": 1634,
+        "width": 404,
+        "height": 44,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 29,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#b69758",
+          "rx": 68,
+          "ry": 68,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#daba75",
+          "rx": 62,
+          "ry": 62,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 408,
+          "top": 90,
+          "width": 264,
+          "height": 62,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-03-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 144,
+          "top": 218,
+          "width": 792,
+          "height": 210,
+          "text": "BEST TIME TO INVEST IN YOUR DREAM HOME",
+          "fontFamily": "Arial",
+          "fontSize": 61,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.03,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-04-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 326,
+          "top": 560,
+          "width": 428,
+          "height": 260,
+          "fill": "#ffffff",
+          "opacity": 0.86,
+          "rx": 110,
+          "ry": 110,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-05-hourglass_top",
+            "role": "hourglass_top",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 486,
+          "top": 810,
+          "width": 108,
+          "height": 250,
+          "fill": "#ffffff",
+          "opacity": 0.86,
+          "rx": 46,
+          "ry": 46,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-06-hourglass_neck",
+            "role": "hourglass_neck",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 326,
+          "top": 1042,
+          "width": 428,
+          "height": 280,
+          "fill": "#ffffff",
+          "opacity": 0.86,
+          "rx": 110,
+          "ry": 110,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-07-hourglass_bottom",
+            "role": "hourglass_bottom",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 382,
+          "top": 690,
+          "width": 316,
+          "height": 100,
+          "fill": "#daba75",
+          "rx": 40,
+          "ry": 40,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-08-sand_top",
+            "role": "sand_top",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 382,
+          "top": 1170,
+          "width": 316,
+          "height": 110,
+          "fill": "#daba75",
+          "rx": 40,
+          "ry": 40,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-09-sand_bottom",
+            "role": "sand_bottom",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 140,
+          "top": 1430,
+          "width": 800,
+          "height": 94,
+          "text": "YOUR TIMING. YOUR GOALS. A CLEAR PLAN.",
+          "fontFamily": "Arial",
+          "fontSize": 34,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-10-supporting_copy",
+            "role": "supporting_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 300,
+          "top": 1608,
+          "width": 480,
+          "height": 94,
+          "fill": "#2f6387",
+          "rx": 47,
+          "ry": 47,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-11-cta_button",
+            "role": "cta_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 338,
+          "top": 1634,
+          "width": 404,
+          "height": 44,
+          "text": "START PLANNING",
+          "fontFamily": "Arial",
+          "fontSize": 29,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-12-cta",
+            "role": "cta",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Build a property plan around your timing and goals."
+    ],
+    "headlines": [
+      "Best time to invest in your dream home"
+    ],
+    "descriptions": [
+      "Blockwise property strategy"
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Start planning",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

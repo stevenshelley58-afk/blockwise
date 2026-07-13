@@ -1,0 +1,549 @@
+{
+  "id": "meta-feed-028",
+  "templateKey": "meta-feed-028",
+  "name": "The Key to Your Home",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-feed-028",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-feed",
+    "blockwise",
+    "source-51"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_051.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_051.png",
+    "metaIndex": 51
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "The key to your dream home",
+    "primaryText": "A prime coastal location with space to grow.",
+    "description": "4 bedrooms • 2 bathrooms • 512 m²",
+    "cta": "Get the details"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-028.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-028.svg",
+    "alt": "The Key to Your Home, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_051.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-028-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d9dce1",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-feed-028-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-028-03-real_word",
+        "type": "text",
+        "role": "real_word",
+        "content": "REAL",
+        "customerSupplied": false,
+        "x": 94,
+        "y": 98,
+        "width": 892,
+        "height": 210,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 176,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-04-property_photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 24,
+        "y": 360,
+        "width": 1032,
+        "height": 490,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-05-photo_tint",
+        "type": "shape",
+        "role": "photo_tint",
+        "x": 24,
+        "y": 360,
+        "width": 1032,
+        "height": 490,
+        "fill": "#f4d87b",
+        "locked": true,
+        "opacity": 0.28
+      },
+      {
+        "objectId": "meta-feed-028-06-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "THE KEY TO YOUR DREAM HOME",
+        "customerSupplied": true,
+        "x": 142,
+        "y": 708,
+        "width": 796,
+        "height": 98,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 45,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-07-benefits",
+        "type": "text",
+        "role": "benefits",
+        "content": "PRIME LOCATION  |  COASTAL LIVING  |  READY TO MOVE",
+        "customerSupplied": false,
+        "x": 110,
+        "y": 830,
+        "width": 860,
+        "height": 40,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-08-facts_card",
+        "type": "shape",
+        "role": "facts_card",
+        "x": 74,
+        "y": 916,
+        "width": 932,
+        "height": 142,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-028-09-location",
+        "type": "text",
+        "role": "location",
+        "content": "LOCATION\n18 WATTLE LANE",
+        "customerSupplied": true,
+        "x": 110,
+        "y": 944,
+        "width": 250,
+        "height": 74,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 22,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-10-land",
+        "type": "text",
+        "role": "land",
+        "content": "512 m²\nWITH GARDEN",
+        "customerSupplied": true,
+        "x": 414,
+        "y": 944,
+        "width": 250,
+        "height": 74,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-11-price",
+        "type": "text",
+        "role": "price",
+        "content": "PRICE\n$1,245,000",
+        "customerSupplied": true,
+        "x": 706,
+        "y": 944,
+        "width": 250,
+        "height": 74,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-028-12-footer",
+        "type": "shape",
+        "role": "footer",
+        "x": 24,
+        "y": 1138,
+        "width": 1032,
+        "height": 144,
+        "fill": "#5f4a00",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-028-13-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "FOR MORE INFO: 08 6118 2200  |  blockwise.au",
+        "customerSupplied": true,
+        "x": 100,
+        "y": 1182,
+        "width": 880,
+        "height": 44,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d9dce1",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-028-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#ffffff",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-028-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 94,
+          "top": 98,
+          "width": 892,
+          "height": 210,
+          "text": "REAL",
+          "fontFamily": "Arial",
+          "fontSize": 176,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-03-real_word",
+            "role": "real_word",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 360,
+          "width": 1032,
+          "height": 490,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-028-04-property_photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 360,
+          "width": 1032,
+          "height": 490,
+          "fill": "#f4d87b",
+          "opacity": 0.28,
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-028-05-photo_tint",
+            "role": "photo_tint",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 142,
+          "top": 708,
+          "width": 796,
+          "height": 98,
+          "text": "THE KEY TO YOUR DREAM HOME",
+          "fontFamily": "Arial",
+          "fontSize": 45,
+          "fontWeight": 800,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-06-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 110,
+          "top": 830,
+          "width": 860,
+          "height": 40,
+          "text": "PRIME LOCATION  |  COASTAL LIVING  |  READY TO MOVE",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-07-benefits",
+            "role": "benefits",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 74,
+          "top": 916,
+          "width": 932,
+          "height": 142,
+          "fill": "#ffffff",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-028-08-facts_card",
+            "role": "facts_card",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 110,
+          "top": 944,
+          "width": 250,
+          "height": 74,
+          "text": "LOCATION\n18 WATTLE LANE",
+          "fontFamily": "Arial",
+          "fontSize": 22,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-09-location",
+            "role": "location",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 414,
+          "top": 944,
+          "width": 250,
+          "height": 74,
+          "text": "512 m²\nWITH GARDEN",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 800,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-10-land",
+            "role": "land",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 706,
+          "top": 944,
+          "width": 250,
+          "height": 74,
+          "text": "PRICE\n$1,245,000",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 800,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-11-price",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 1138,
+          "width": 1032,
+          "height": 144,
+          "fill": "#5f4a00",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-028-12-footer",
+            "role": "footer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 100,
+          "top": 1182,
+          "width": 880,
+          "height": 44,
+          "text": "FOR MORE INFO: 08 6118 2200  |  blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 700,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-028-13-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "A prime coastal location with space to grow."
+    ],
+    "headlines": [
+      "The key to your dream home"
+    ],
+    "descriptions": [
+      "4 bedrooms • 2 bathrooms • 512 m²"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get the details",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

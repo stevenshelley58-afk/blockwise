@@ -1,0 +1,789 @@
+{
+  "id": "meta-fullscreen-032",
+  "templateKey": "meta-fullscreen-032",
+  "name": "Split Market Report",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "market_update_leads",
+  "offerId": "market_update-meta-fullscreen-032",
+  "audienceIntent": "Owners and buyers tracking the local market before acting.",
+  "category": "market_update",
+  "tags": [
+    "market_update",
+    "meta-fullscreen",
+    "blockwise",
+    "source-242"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_242.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_242.png",
+    "metaIndex": 242
+  },
+  "classification": {
+    "ad_type": "market_update",
+    "primary_intent": "market_update",
+    "property_or_agent_focus": "agent"
+  },
+  "sampleCopy": {
+    "headline": "Market report",
+    "primaryText": "Four figures that explain the current local market.",
+    "description": "Blockwise monthly market update",
+    "cta": "Subscribe"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-032.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-032.svg",
+    "alt": "Split Market Report, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_242.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-032-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#111111",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-032-02-left_field",
+        "type": "shape",
+        "role": "left_field",
+        "x": 24,
+        "y": 24,
+        "width": 590,
+        "height": 1872,
+        "fill": "#030303",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-032-03-right_photo",
+        "type": "image",
+        "role": "right_photo",
+        "x": 614,
+        "y": 24,
+        "width": 442,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-04-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 98,
+        "y": 112,
+        "width": 300,
+        "height": 70,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "MARKET",
+        "customerSupplied": false,
+        "x": 98,
+        "y": 420,
+        "width": 430,
+        "height": 88,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 72,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-06-script_line",
+        "type": "text",
+        "role": "script_line",
+        "content": "report",
+        "customerSupplied": false,
+        "x": 98,
+        "y": 508,
+        "width": 430,
+        "height": 100,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 74,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-07-stat_border_1",
+        "type": "shape",
+        "role": "stat_border_1",
+        "x": 94,
+        "y": 716,
+        "width": 204,
+        "height": 268,
+        "fill": "#d9b06a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-08-stat_box_1",
+        "type": "shape",
+        "role": "stat_box_1",
+        "x": 98,
+        "y": 720,
+        "width": 196,
+        "height": 260,
+        "fill": "#030303",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-09-stat_1",
+        "type": "text",
+        "role": "stat_1",
+        "content": "435\nNEW LISTINGS",
+        "customerSupplied": true,
+        "x": 118,
+        "y": 790,
+        "width": 156,
+        "height": 116,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 33,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.4,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-10-stat_border_2",
+        "type": "shape",
+        "role": "stat_border_2",
+        "x": 326,
+        "y": 716,
+        "width": 204,
+        "height": 268,
+        "fill": "#d9b06a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-11-stat_box_2",
+        "type": "shape",
+        "role": "stat_box_2",
+        "x": 330,
+        "y": 720,
+        "width": 196,
+        "height": 260,
+        "fill": "#030303",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-12-stat_2",
+        "type": "text",
+        "role": "stat_2",
+        "content": "$1.8m\nAVERAGE PRICE",
+        "customerSupplied": true,
+        "x": 350,
+        "y": 790,
+        "width": 156,
+        "height": 116,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 31,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.4,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-13-stat_border_3",
+        "type": "shape",
+        "role": "stat_border_3",
+        "x": 94,
+        "y": 1014,
+        "width": 204,
+        "height": 268,
+        "fill": "#d9b06a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-14-stat_box_3",
+        "type": "shape",
+        "role": "stat_box_3",
+        "x": 98,
+        "y": 1018,
+        "width": 196,
+        "height": 260,
+        "fill": "#030303",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-15-stat_3",
+        "type": "text",
+        "role": "stat_3",
+        "content": "10 DAYS\nON MARKET",
+        "customerSupplied": true,
+        "x": 118,
+        "y": 1088,
+        "width": 156,
+        "height": 116,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 31,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.4,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-16-stat_border_4",
+        "type": "shape",
+        "role": "stat_border_4",
+        "x": 326,
+        "y": 1014,
+        "width": 204,
+        "height": 268,
+        "fill": "#d9b06a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-17-stat_box_4",
+        "type": "shape",
+        "role": "stat_box_4",
+        "x": 330,
+        "y": 1018,
+        "width": 196,
+        "height": 260,
+        "fill": "#030303",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-18-stat_4",
+        "type": "text",
+        "role": "stat_4",
+        "content": "385\nSOLD",
+        "customerSupplied": true,
+        "x": 350,
+        "y": 1088,
+        "width": 156,
+        "height": 116,
+        "fill": "#d9b06a",
+        "fontFamily": "Georgia",
+        "size": 33,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.4,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-19-subscribe_copy",
+        "type": "text",
+        "role": "subscribe_copy",
+        "content": "Subscribe to our monthly market update.",
+        "customerSupplied": true,
+        "x": 98,
+        "y": 1412,
+        "width": 420,
+        "height": 142,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 37,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.2,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-032-20-cta_button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 98,
+        "y": 1622,
+        "width": 360,
+        "height": 86,
+        "fill": "#d9b06a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-032-21-cta",
+        "type": "text",
+        "role": "cta",
+        "content": "BLOCKWISE.AU",
+        "customerSupplied": false,
+        "x": 132,
+        "y": 1646,
+        "width": 292,
+        "height": 40,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 27,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#111111",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 590,
+          "height": 1872,
+          "fill": "#030303",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-02-left_field",
+            "role": "left_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 614,
+          "top": 24,
+          "width": 442,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-03-right_photo",
+            "role": "right_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 98,
+          "top": 112,
+          "width": 300,
+          "height": 70,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-04-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 420,
+          "width": 430,
+          "height": 88,
+          "text": "MARKET",
+          "fontFamily": "Georgia",
+          "fontSize": 72,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 508,
+          "width": 430,
+          "height": 100,
+          "text": "report",
+          "fontFamily": "Georgia",
+          "fontSize": 74,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-06-script_line",
+            "role": "script_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 94,
+          "top": 716,
+          "width": 204,
+          "height": 268,
+          "fill": "#d9b06a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-07-stat_border_1",
+            "role": "stat_border_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 98,
+          "top": 720,
+          "width": 196,
+          "height": 260,
+          "fill": "#030303",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-08-stat_box_1",
+            "role": "stat_box_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 790,
+          "width": 156,
+          "height": 116,
+          "text": "435\nNEW LISTINGS",
+          "fontFamily": "Georgia",
+          "fontSize": 33,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "center",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-09-stat_1",
+            "role": "stat_1",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 326,
+          "top": 716,
+          "width": 204,
+          "height": 268,
+          "fill": "#d9b06a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-10-stat_border_2",
+            "role": "stat_border_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 330,
+          "top": 720,
+          "width": 196,
+          "height": 260,
+          "fill": "#030303",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-11-stat_box_2",
+            "role": "stat_box_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 350,
+          "top": 790,
+          "width": 156,
+          "height": 116,
+          "text": "$1.8m\nAVERAGE PRICE",
+          "fontFamily": "Georgia",
+          "fontSize": 31,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "center",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-12-stat_2",
+            "role": "stat_2",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 94,
+          "top": 1014,
+          "width": 204,
+          "height": 268,
+          "fill": "#d9b06a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-13-stat_border_3",
+            "role": "stat_border_3",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 98,
+          "top": 1018,
+          "width": 196,
+          "height": 260,
+          "fill": "#030303",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-14-stat_box_3",
+            "role": "stat_box_3",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 1088,
+          "width": 156,
+          "height": 116,
+          "text": "10 DAYS\nON MARKET",
+          "fontFamily": "Georgia",
+          "fontSize": 31,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "center",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-15-stat_3",
+            "role": "stat_3",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 326,
+          "top": 1014,
+          "width": 204,
+          "height": 268,
+          "fill": "#d9b06a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-16-stat_border_4",
+            "role": "stat_border_4",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 330,
+          "top": 1018,
+          "width": 196,
+          "height": 260,
+          "fill": "#030303",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-17-stat_box_4",
+            "role": "stat_box_4",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 350,
+          "top": 1088,
+          "width": 156,
+          "height": 116,
+          "text": "385\nSOLD",
+          "fontFamily": "Georgia",
+          "fontSize": 33,
+          "fontWeight": 400,
+          "fill": "#d9b06a",
+          "textAlign": "center",
+          "lineHeight": 1.4,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-18-stat_4",
+            "role": "stat_4",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 1412,
+          "width": 420,
+          "height": 142,
+          "text": "Subscribe to our monthly market update.",
+          "fontFamily": "Georgia",
+          "fontSize": 37,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-19-subscribe_copy",
+            "role": "subscribe_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 98,
+          "top": 1622,
+          "width": 360,
+          "height": 86,
+          "fill": "#d9b06a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-20-cta_button",
+            "role": "cta_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 132,
+          "top": 1646,
+          "width": 292,
+          "height": 40,
+          "text": "BLOCKWISE.AU",
+          "fontFamily": "Georgia",
+          "fontSize": 27,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-032-21-cta",
+            "role": "cta",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Four figures that explain the current local market."
+    ],
+    "headlines": [
+      "Market report"
+    ],
+    "descriptions": [
+      "Blockwise monthly market update"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Subscribe",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,478 @@
+{
+  "id": "meta-feed-044",
+  "templateKey": "meta-feed-044",
+  "name": "Ready Set Sell Tips",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "market_update_leads",
+  "offerId": "market_update-meta-feed-044",
+  "audienceIntent": "Owners and buyers tracking the local market before acting.",
+  "category": "market_update",
+  "tags": [
+    "market_update",
+    "meta-feed",
+    "blockwise",
+    "source-160"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_160.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_160.png",
+    "metaIndex": 160
+  },
+  "classification": {
+    "ad_type": "market_update",
+    "primary_intent": "market_update",
+    "property_or_agent_focus": "unknown"
+  },
+  "sampleCopy": {
+    "headline": "Ready, set, sell",
+    "primaryText": "Seven practical steps to prepare your home for sale.",
+    "description": "Blockwise seller guide",
+    "cta": "Read the tips"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-044.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-044.svg",
+    "alt": "Ready Set Sell Tips, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_160.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-044-01-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-02-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#11131a",
+        "locked": true,
+        "opacity": 0.48
+      },
+      {
+        "objectId": "meta-feed-044-03-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 60,
+        "y": 54,
+        "width": 240,
+        "height": 56,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-04-slide_count",
+        "type": "text",
+        "role": "slide_count",
+        "content": "1 / 7",
+        "customerSupplied": false,
+        "x": 870,
+        "y": 58,
+        "width": 140,
+        "height": 36,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-05-content_card",
+        "type": "shape",
+        "role": "content_card",
+        "x": 142,
+        "y": 282,
+        "width": 796,
+        "height": 746,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-044-06-kicker",
+        "type": "text",
+        "role": "kicker",
+        "content": "REAL ESTATE TIPS",
+        "customerSupplied": false,
+        "x": 220,
+        "y": 378,
+        "width": 640,
+        "height": 40,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-07-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Ready, Set, Sell: 7 Tips to Sell Your Home",
+        "customerSupplied": true,
+        "x": 220,
+        "y": 458,
+        "width": 640,
+        "height": 300,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 67,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.08,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-08-cta_button",
+        "type": "shape",
+        "role": "cta_button",
+        "x": 220,
+        "y": 824,
+        "width": 420,
+        "height": 92,
+        "fill": "#172544",
+        "locked": true,
+        "radius": 46
+      },
+      {
+        "objectId": "meta-feed-044-09-cta",
+        "type": "text",
+        "role": "cta",
+        "content": "SWIPE FOR THE TIPS",
+        "customerSupplied": false,
+        "x": 252,
+        "y": 850,
+        "width": 356,
+        "height": 42,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 27,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-10-share",
+        "type": "text",
+        "role": "share",
+        "content": "Share this post",
+        "customerSupplied": false,
+        "x": 72,
+        "y": 1260,
+        "width": 270,
+        "height": 38,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 24,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-044-11-save",
+        "type": "text",
+        "role": "save",
+        "content": "Save for later",
+        "customerSupplied": false,
+        "x": 742,
+        "y": 1260,
+        "width": 266,
+        "height": 38,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 24,
+        "weight": 400,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-044-01-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#11131a",
+          "opacity": 0.48,
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-044-02-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 60,
+          "top": 54,
+          "width": 240,
+          "height": 56,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-044-03-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 870,
+          "top": 58,
+          "width": 140,
+          "height": 36,
+          "text": "1 / 7",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-044-04-slide_count",
+            "role": "slide_count",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 142,
+          "top": 282,
+          "width": 796,
+          "height": 746,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-044-05-content_card",
+            "role": "content_card",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 220,
+          "top": 378,
+          "width": 640,
+          "height": 40,
+          "text": "REAL ESTATE TIPS",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-044-06-kicker",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 220,
+          "top": 458,
+          "width": 640,
+          "height": 300,
+          "text": "Ready, Set, Sell: 7 Tips to Sell Your Home",
+          "fontFamily": "Georgia",
+          "fontSize": 67,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.08,
+          "blockwise": {
+            "objectId": "meta-feed-044-07-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 220,
+          "top": 824,
+          "width": 420,
+          "height": 92,
+          "fill": "#172544",
+          "rx": 46,
+          "ry": 46,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-044-08-cta_button",
+            "role": "cta_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 252,
+          "top": 850,
+          "width": 356,
+          "height": 42,
+          "text": "SWIPE FOR THE TIPS",
+          "fontFamily": "Arial",
+          "fontSize": 27,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-044-09-cta",
+            "role": "cta",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 72,
+          "top": 1260,
+          "width": 270,
+          "height": 38,
+          "text": "Share this post",
+          "fontFamily": "Georgia",
+          "fontSize": 24,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-044-10-share",
+            "role": "share",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 742,
+          "top": 1260,
+          "width": 266,
+          "height": 38,
+          "text": "Save for later",
+          "fontFamily": "Georgia",
+          "fontSize": 24,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-044-11-save",
+            "role": "save",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Seven practical steps to prepare your home for sale."
+    ],
+    "headlines": [
+      "Ready, set, sell"
+    ],
+    "descriptions": [
+      "Blockwise seller guide"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Read the tips",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

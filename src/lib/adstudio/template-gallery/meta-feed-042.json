@@ -1,0 +1,364 @@
+{
+  "id": "meta-feed-042",
+  "templateKey": "meta-feed-042",
+  "name": "Villa for Rent",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "listing_nurture",
+  "offerId": "property_management-meta-feed-042",
+  "audienceIntent": "Property owners who want clear, reliable management.",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "meta-feed",
+    "blockwise",
+    "source-146"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_146.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_146.png",
+    "metaIndex": 146
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Villa for rent",
+    "primaryText": "A furnished coastal stay with flexible weekly terms.",
+    "description": "$1,000 per week",
+    "cta": "Check availability"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-042.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-042.svg",
+    "alt": "Villa for Rent, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_146.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-042-01-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-02-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#0d2f3c",
+        "locked": true,
+        "opacity": 0.26
+      },
+      {
+        "objectId": "meta-feed-042-03-inset_photo_1",
+        "type": "image",
+        "role": "inset_photo_1",
+        "x": 104,
+        "y": 74,
+        "width": 382,
+        "height": 272,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-04-inset_photo_2",
+        "type": "image",
+        "role": "inset_photo_2",
+        "x": 530,
+        "y": 74,
+        "width": 382,
+        "height": 272,
+        "imageAnchor": "right",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "VILLA FOR RENT",
+        "customerSupplied": true,
+        "x": 98,
+        "y": 640,
+        "width": 820,
+        "height": 244,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 110,
+        "weight": 300,
+        "align": "left",
+        "lineHeight": 1.05,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-06-features",
+        "type": "text",
+        "role": "features",
+        "content": "4 BEDROOMS\n2 BATHROOMS\nDOUBLE GARAGE",
+        "customerSupplied": true,
+        "x": 98,
+        "y": 1100,
+        "width": 360,
+        "height": 118,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.25,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-07-price",
+        "type": "text",
+        "role": "price",
+        "content": "$1,000 / WEEK",
+        "customerSupplied": true,
+        "x": 648,
+        "y": 1162,
+        "width": 330,
+        "height": 46,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-08-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 736,
+        "y": 1248,
+        "width": 240,
+        "height": 56,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "image",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-042-01-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "fill": "#0d2f3c",
+          "opacity": 0.26,
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-042-02-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 104,
+          "top": 74,
+          "width": 382,
+          "height": 272,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-042-03-inset_photo_1",
+            "role": "inset_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 530,
+          "top": 74,
+          "width": 382,
+          "height": 272,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-042-04-inset_photo_2",
+            "role": "inset_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 640,
+          "width": 820,
+          "height": 244,
+          "text": "VILLA FOR RENT",
+          "fontFamily": "Arial",
+          "fontSize": 110,
+          "fontWeight": 300,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-042-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 1100,
+          "width": 360,
+          "height": 118,
+          "text": "4 BEDROOMS\n2 BATHROOMS\nDOUBLE GARAGE",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 500,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.25,
+          "blockwise": {
+            "objectId": "meta-feed-042-06-features",
+            "role": "features",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 648,
+          "top": 1162,
+          "width": 330,
+          "height": 46,
+          "text": "$1,000 / WEEK",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-042-07-price",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 736,
+          "top": 1248,
+          "width": 240,
+          "height": 56,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-042-08-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "A furnished coastal stay with flexible weekly terms."
+    ],
+    "headlines": [
+      "Villa for rent"
+    ],
+    "descriptions": [
+      "$1,000 per week"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Check availability",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

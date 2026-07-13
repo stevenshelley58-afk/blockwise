@@ -1,0 +1,399 @@
+{
+  "id": "meta-feed-039",
+  "templateKey": "meta-feed-039",
+  "name": "Just Sold Agent Result",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "just_sold-meta-feed-039",
+  "audienceIntent": "Owners weighing a move after seeing a recent local result.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "meta-feed",
+    "blockwise",
+    "source-97"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_097.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_097.png",
+    "metaIndex": 97
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Just sold",
+    "primaryText": "A strong result for our sellers in Scarborough.",
+    "description": "18 Wattle Lane, Scarborough WA 6019",
+    "cta": "Sell with Blockwise"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-039.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-039.svg",
+    "alt": "Just Sold Agent Result, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_097.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-039-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-feed-039-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#f6f6f4",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-039-03-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "JUST SOLD",
+        "customerSupplied": true,
+        "x": 66,
+        "y": 80,
+        "width": 948,
+        "height": 188,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 142,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-039-04-agent_name",
+        "type": "text",
+        "role": "agent_name",
+        "content": "BLOCKWISE PROPERTY",
+        "customerSupplied": false,
+        "x": 250,
+        "y": 318,
+        "width": 580,
+        "height": 46,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 31,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-039-05-agent_title",
+        "type": "text",
+        "role": "agent_title",
+        "content": "Property specialists",
+        "customerSupplied": false,
+        "x": 300,
+        "y": 370,
+        "width": 480,
+        "height": 34,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 19,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-039-06-contact_line",
+        "type": "text",
+        "role": "contact_line",
+        "content": "blockwise.au          18 Wattle Lane, Scarborough          08 6118 2200",
+        "customerSupplied": true,
+        "x": 84,
+        "y": 444,
+        "width": 912,
+        "height": 34,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 19,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-039-07-divider",
+        "type": "shape",
+        "role": "divider",
+        "x": 24,
+        "y": 500,
+        "width": 1032,
+        "height": 3,
+        "fill": "#8f8f8c",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-039-08-property_photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 24,
+        "y": 554,
+        "width": 1032,
+        "height": 714,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-039-09-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 720,
+        "y": 1188,
+        "width": 260,
+        "height": 62,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8dadd",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-039-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#f6f6f4",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-039-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 66,
+          "top": 80,
+          "width": 948,
+          "height": 188,
+          "text": "JUST SOLD",
+          "fontFamily": "Arial",
+          "fontSize": 142,
+          "fontWeight": 900,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-039-03-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 250,
+          "top": 318,
+          "width": 580,
+          "height": 46,
+          "text": "BLOCKWISE PROPERTY",
+          "fontFamily": "Georgia",
+          "fontSize": 31,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-039-04-agent_name",
+            "role": "agent_name",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 300,
+          "top": 370,
+          "width": 480,
+          "height": 34,
+          "text": "Property specialists",
+          "fontFamily": "Arial",
+          "fontSize": 19,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-039-05-agent_title",
+            "role": "agent_title",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 84,
+          "top": 444,
+          "width": 912,
+          "height": 34,
+          "text": "blockwise.au          18 Wattle Lane, Scarborough          08 6118 2200",
+          "fontFamily": "Arial",
+          "fontSize": 19,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-039-06-contact_line",
+            "role": "contact_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 500,
+          "width": 1032,
+          "height": 3,
+          "fill": "#8f8f8c",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-039-07-divider",
+            "role": "divider",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 554,
+          "width": 1032,
+          "height": 714,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-039-08-property_photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 720,
+          "top": 1188,
+          "width": 260,
+          "height": 62,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-039-09-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "A strong result for our sellers in Scarborough."
+    ],
+    "headlines": [
+      "Just sold"
+    ],
+    "descriptions": [
+      "18 Wattle Lane, Scarborough WA 6019"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Sell with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

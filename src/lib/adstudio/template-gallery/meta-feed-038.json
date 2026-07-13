@@ -1,0 +1,468 @@
+{
+  "id": "meta-feed-038",
+  "templateKey": "meta-feed-038",
+  "name": "Just Sold New Chapter",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "just_sold-meta-feed-038",
+  "audienceIntent": "Owners weighing a move after seeing a recent local result.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "meta-feed",
+    "blockwise",
+    "source-55"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_055.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_055.png",
+    "metaIndex": 55
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Just sold",
+    "primaryText": "Another Scarborough home successfully sold.",
+    "description": "A new chapter starts here",
+    "cta": "Request an appraisal"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-038.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-038.svg",
+    "alt": "Just Sold New Chapter, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_055.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-038-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-feed-038-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-038-03-just_word",
+        "type": "text",
+        "role": "just_word",
+        "content": "Just",
+        "customerSupplied": false,
+        "x": 98,
+        "y": 90,
+        "width": 520,
+        "height": 270,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 188,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-04-chapter_line",
+        "type": "text",
+        "role": "chapter_line",
+        "content": "A NEW CHAPTER STARTS HERE",
+        "customerSupplied": false,
+        "x": 650,
+        "y": 170,
+        "width": 330,
+        "height": 78,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 25,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-05-property_photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 58,
+        "y": 366,
+        "width": 964,
+        "height": 594,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-06-brand_disc",
+        "type": "shape",
+        "role": "brand_disc",
+        "x": 112,
+        "y": 866,
+        "width": 242,
+        "height": 242,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 121
+      },
+      {
+        "objectId": "meta-feed-038-07-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 144,
+        "y": 950,
+        "width": 178,
+        "height": 54,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-08-sold_word",
+        "type": "text",
+        "role": "sold_word",
+        "content": "sold",
+        "customerSupplied": true,
+        "x": 514,
+        "y": 898,
+        "width": 430,
+        "height": 180,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 146,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-09-contact_prompt",
+        "type": "text",
+        "role": "contact_prompt",
+        "content": "contact Blockwise",
+        "customerSupplied": false,
+        "x": 118,
+        "y": 1168,
+        "width": 330,
+        "height": 46,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 31,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-038-10-contact_rule",
+        "type": "shape",
+        "role": "contact_rule",
+        "x": 500,
+        "y": 1160,
+        "width": 3,
+        "height": 90,
+        "fill": "#83766d",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-038-11-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "08 6118 2200\nhello@blockwise.au",
+        "customerSupplied": true,
+        "x": 570,
+        "y": 1150,
+        "width": 366,
+        "height": 90,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8dadd",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-038-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#f7f3ed",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-038-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 90,
+          "width": 520,
+          "height": 270,
+          "text": "Just",
+          "fontFamily": "Georgia",
+          "fontSize": 188,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-038-03-just_word",
+            "role": "just_word",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 650,
+          "top": 170,
+          "width": 330,
+          "height": 78,
+          "text": "A NEW CHAPTER STARTS HERE",
+          "fontFamily": "Arial",
+          "fontSize": 25,
+          "fontWeight": 800,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-038-04-chapter_line",
+            "role": "chapter_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 58,
+          "top": 366,
+          "width": 964,
+          "height": 594,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-038-05-property_photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 112,
+          "top": 866,
+          "width": 242,
+          "height": 242,
+          "fill": "#f7f3ed",
+          "rx": 121,
+          "ry": 121,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-038-06-brand_disc",
+            "role": "brand_disc",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 144,
+          "top": 950,
+          "width": 178,
+          "height": 54,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-038-07-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 514,
+          "top": 898,
+          "width": 430,
+          "height": 180,
+          "text": "sold",
+          "fontFamily": "Georgia",
+          "fontSize": 146,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-038-08-sold_word",
+            "role": "sold_word",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 1168,
+          "width": 330,
+          "height": 46,
+          "text": "contact Blockwise",
+          "fontFamily": "Georgia",
+          "fontSize": 31,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-038-09-contact_prompt",
+            "role": "contact_prompt",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 500,
+          "top": 1160,
+          "width": 3,
+          "height": 90,
+          "fill": "#83766d",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-038-10-contact_rule",
+            "role": "contact_rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 570,
+          "top": 1150,
+          "width": 366,
+          "height": 90,
+          "text": "08 6118 2200\nhello@blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-038-11-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Another Scarborough home successfully sold."
+    ],
+    "headlines": [
+      "Just sold"
+    ],
+    "descriptions": [
+      "A new chapter starts here"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request an appraisal",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,706 @@
+{
+  "id": "meta-fullscreen-012",
+  "templateKey": "meta-fullscreen-012",
+  "name": "Home for Sale Agent Sheet",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-012",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-9"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_009.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_009.png",
+    "metaIndex": 9
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Home for sale",
+    "primaryText": "A bright family home with flexible living spaces.",
+    "description": "$1,245,000",
+    "cta": "Request an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-012.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-012.svg",
+    "alt": "Home for Sale Agent Sheet, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_009.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-012-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 66
+      },
+      {
+        "objectId": "meta-fullscreen-012-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 60
+      },
+      {
+        "objectId": "meta-fullscreen-012-03-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 64,
+        "y": 68,
+        "width": 230,
+        "height": 54,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-04-phone",
+        "type": "text",
+        "role": "phone",
+        "content": "08 6118 2200",
+        "customerSupplied": true,
+        "x": 64,
+        "y": 128,
+        "width": 270,
+        "height": 34,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 21,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-05-offer_label",
+        "type": "text",
+        "role": "offer_label",
+        "content": "OFFERED AT",
+        "customerSupplied": false,
+        "x": 770,
+        "y": 70,
+        "width": 230,
+        "height": 32,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 21,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-06-price",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 716,
+        "y": 108,
+        "width": 284,
+        "height": 48,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 36,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-07-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "HOME FOR SALE",
+        "customerSupplied": true,
+        "x": 114,
+        "y": 184,
+        "width": 852,
+        "height": 100,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 66,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-08-hero_photo",
+        "type": "image",
+        "role": "hero_photo",
+        "x": 52,
+        "y": 308,
+        "width": 976,
+        "height": 632,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-09-features",
+        "type": "text",
+        "role": "features",
+        "content": "4 BEDROOMS\n2 BATHROOMS\nDOUBLE GARAGE\n512 m²",
+        "customerSupplied": false,
+        "x": 64,
+        "y": 1004,
+        "width": 250,
+        "height": 224,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.55,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-10-feature_rule_1",
+        "type": "shape",
+        "role": "feature_rule_1",
+        "x": 332,
+        "y": 1002,
+        "width": 3,
+        "height": 252,
+        "fill": "#a3a3a0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-012-11-overview",
+        "type": "text",
+        "role": "overview",
+        "content": "INVEST WITH CONFIDENCE\n\nA considered home with generous rooms, natural light and an easy-care garden.",
+        "customerSupplied": true,
+        "x": 370,
+        "y": 1008,
+        "width": 344,
+        "height": 232,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.3,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-12-feature_rule_2",
+        "type": "shape",
+        "role": "feature_rule_2",
+        "x": 734,
+        "y": 1002,
+        "width": 3,
+        "height": 252,
+        "fill": "#a3a3a0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-012-13-brand_disc",
+        "type": "shape",
+        "role": "brand_disc",
+        "x": 800,
+        "y": 1010,
+        "width": 150,
+        "height": 150,
+        "fill": "#f2f2f0",
+        "locked": true,
+        "radius": 75
+      },
+      {
+        "objectId": "meta-fullscreen-012-14-agent_brand",
+        "type": "logo",
+        "role": "agent_brand",
+        "x": 816,
+        "y": 1054,
+        "width": 118,
+        "height": 40,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-15-agent",
+        "type": "text",
+        "role": "agent",
+        "content": "BLOCKWISE\nPROPERTY",
+        "customerSupplied": false,
+        "x": 784,
+        "y": 1174,
+        "width": 182,
+        "height": 66,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 20,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-16-detail_photo_1",
+        "type": "image",
+        "role": "detail_photo_1",
+        "x": 52,
+        "y": 1304,
+        "width": 470,
+        "height": 450,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-17-detail_photo_2",
+        "type": "image",
+        "role": "detail_photo_2",
+        "x": 548,
+        "y": 1304,
+        "width": 480,
+        "height": 450,
+        "imageAnchor": "right",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-012-18-address",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 176,
+        "y": 1804,
+        "width": 728,
+        "height": 42,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#d8dadd",
+          "rx": 66,
+          "ry": 66,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#ffffff",
+          "rx": 60,
+          "ry": 60,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 64,
+          "top": 68,
+          "width": 230,
+          "height": 54,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-03-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 64,
+          "top": 128,
+          "width": 270,
+          "height": 34,
+          "text": "08 6118 2200",
+          "fontFamily": "Arial",
+          "fontSize": 21,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-04-phone",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 770,
+          "top": 70,
+          "width": 230,
+          "height": 32,
+          "text": "OFFERED AT",
+          "fontFamily": "Arial",
+          "fontSize": 21,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-05-offer_label",
+            "role": "offer_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 716,
+          "top": 108,
+          "width": 284,
+          "height": 48,
+          "text": "$1,245,000",
+          "fontFamily": "Arial",
+          "fontSize": 36,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-06-price",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 114,
+          "top": 184,
+          "width": 852,
+          "height": 100,
+          "text": "HOME FOR SALE",
+          "fontFamily": "Arial",
+          "fontSize": 66,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-07-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "image",
+          "left": 52,
+          "top": 308,
+          "width": 976,
+          "height": 632,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-08-hero_photo",
+            "role": "hero_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 64,
+          "top": 1004,
+          "width": 250,
+          "height": 224,
+          "text": "4 BEDROOMS\n2 BATHROOMS\nDOUBLE GARAGE\n512 m²",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.55,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-09-features",
+            "role": "features",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 332,
+          "top": 1002,
+          "width": 3,
+          "height": 252,
+          "fill": "#a3a3a0",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-10-feature_rule_1",
+            "role": "feature_rule_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 370,
+          "top": 1008,
+          "width": 344,
+          "height": 232,
+          "text": "INVEST WITH CONFIDENCE\n\nA considered home with generous rooms, natural light and an easy-care garden.",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.3,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-11-overview",
+            "role": "overview",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 734,
+          "top": 1002,
+          "width": 3,
+          "height": 252,
+          "fill": "#a3a3a0",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-12-feature_rule_2",
+            "role": "feature_rule_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 800,
+          "top": 1010,
+          "width": 150,
+          "height": 150,
+          "fill": "#f2f2f0",
+          "rx": 75,
+          "ry": 75,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-13-brand_disc",
+            "role": "brand_disc",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 816,
+          "top": 1054,
+          "width": 118,
+          "height": 40,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-14-agent_brand",
+            "role": "agent_brand",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 784,
+          "top": 1174,
+          "width": 182,
+          "height": 66,
+          "text": "BLOCKWISE\nPROPERTY",
+          "fontFamily": "Arial",
+          "fontSize": 20,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-15-agent",
+            "role": "agent",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 52,
+          "top": 1304,
+          "width": 470,
+          "height": 450,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-16-detail_photo_1",
+            "role": "detail_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 548,
+          "top": 1304,
+          "width": 480,
+          "height": 450,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-17-detail_photo_2",
+            "role": "detail_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 176,
+          "top": 1804,
+          "width": 728,
+          "height": 42,
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-012-18-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A bright family home with flexible living spaces."
+    ],
+    "headlines": [
+      "Home for sale"
+    ],
+    "descriptions": [
+      "$1,245,000"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request an inspection",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

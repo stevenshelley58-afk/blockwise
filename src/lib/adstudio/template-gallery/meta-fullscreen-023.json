@@ -1,0 +1,538 @@
+{
+  "id": "meta-fullscreen-023",
+  "templateKey": "meta-fullscreen-023",
+  "name": "Open House Pool Story",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "open_home_followup",
+  "offerId": "open_home-meta-fullscreen-023",
+  "audienceIntent": "People ready to inspect a property and decide what fits next.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "meta-fullscreen",
+    "blockwise",
+    "source-47"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_047.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_047.png",
+    "metaIndex": 47
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Open house",
+    "primaryText": "Visit our latest Scarborough listing this weekend.",
+    "description": "Saturday 18 July • 10:00 am",
+    "cta": "Get directions"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-023.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-023.svg",
+    "alt": "Open House Pool Story, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_047.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-023-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#303540",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-023-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-03-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#172544",
+        "locked": true,
+        "opacity": 0.28,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-023-04-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "OPEN HOUSE",
+        "customerSupplied": true,
+        "x": 96,
+        "y": 230,
+        "width": 740,
+        "height": 260,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 116,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.02,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-05-subheading",
+        "type": "text",
+        "role": "subheading",
+        "content": "VISIT OUR LATEST LISTING",
+        "customerSupplied": false,
+        "x": 380,
+        "y": 760,
+        "width": 550,
+        "height": 54,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 35,
+        "weight": 800,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-06-address_pill",
+        "type": "shape",
+        "role": "address_pill",
+        "x": 458,
+        "y": 850,
+        "width": 500,
+        "height": 86,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 22
+      },
+      {
+        "objectId": "meta-fullscreen-023-07-address",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough",
+        "customerSupplied": true,
+        "x": 494,
+        "y": 874,
+        "width": 428,
+        "height": 40,
+        "fill": "#485777",
+        "fontFamily": "Arial",
+        "size": 27,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-08-pointer_line",
+        "type": "shape",
+        "role": "pointer_line",
+        "x": 746,
+        "y": 940,
+        "width": 4,
+        "height": 350,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-023-09-pointer_dot",
+        "type": "shape",
+        "role": "pointer_dot",
+        "x": 734,
+        "y": 1284,
+        "width": 28,
+        "height": 28,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 14
+      },
+      {
+        "objectId": "meta-fullscreen-023-10-play_button",
+        "type": "shape",
+        "role": "play_button",
+        "x": 84,
+        "y": 1726,
+        "width": 126,
+        "height": 126,
+        "fill": "#29282a",
+        "locked": true,
+        "radius": 63,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-023-11-play_icon",
+        "type": "text",
+        "role": "play_icon",
+        "content": "▶",
+        "customerSupplied": false,
+        "x": 118,
+        "y": 1750,
+        "width": 58,
+        "height": 58,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 46,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-12-sound_button",
+        "type": "shape",
+        "role": "sound_button",
+        "x": 236,
+        "y": 1726,
+        "width": 126,
+        "height": 126,
+        "fill": "#29282a",
+        "locked": true,
+        "radius": 63,
+        "opacity": 0.9
+      },
+      {
+        "objectId": "meta-fullscreen-023-13-sound_icon",
+        "type": "text",
+        "role": "sound_icon",
+        "content": "♪",
+        "customerSupplied": false,
+        "x": 270,
+        "y": 1750,
+        "width": 58,
+        "height": 58,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 50,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#303540",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#172544",
+          "opacity": 0.28,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-03-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 96,
+          "top": 230,
+          "width": 740,
+          "height": 260,
+          "text": "OPEN HOUSE",
+          "fontFamily": "Arial",
+          "fontSize": 116,
+          "fontWeight": 900,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.02,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-04-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 380,
+          "top": 760,
+          "width": 550,
+          "height": 54,
+          "text": "VISIT OUR LATEST LISTING",
+          "fontFamily": "Arial",
+          "fontSize": 35,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-05-subheading",
+            "role": "subheading",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 458,
+          "top": 850,
+          "width": 500,
+          "height": 86,
+          "fill": "#ffffff",
+          "rx": 22,
+          "ry": 22,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-06-address_pill",
+            "role": "address_pill",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 494,
+          "top": 874,
+          "width": 428,
+          "height": 40,
+          "text": "18 Wattle Lane, Scarborough",
+          "fontFamily": "Arial",
+          "fontSize": 27,
+          "fontWeight": 600,
+          "fill": "#485777",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-07-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 746,
+          "top": 940,
+          "width": 4,
+          "height": 350,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-08-pointer_line",
+            "role": "pointer_line",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 734,
+          "top": 1284,
+          "width": 28,
+          "height": 28,
+          "fill": "#ffffff",
+          "rx": 14,
+          "ry": 14,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-09-pointer_dot",
+            "role": "pointer_dot",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 84,
+          "top": 1726,
+          "width": 126,
+          "height": 126,
+          "fill": "#29282a",
+          "opacity": 0.9,
+          "rx": 63,
+          "ry": 63,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-10-play_button",
+            "role": "play_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 1750,
+          "width": 58,
+          "height": 58,
+          "text": "▶",
+          "fontFamily": "Arial",
+          "fontSize": 46,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-11-play_icon",
+            "role": "play_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 236,
+          "top": 1726,
+          "width": 126,
+          "height": 126,
+          "fill": "#29282a",
+          "opacity": 0.9,
+          "rx": 63,
+          "ry": 63,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-12-sound_button",
+            "role": "sound_button",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 270,
+          "top": 1750,
+          "width": 58,
+          "height": 58,
+          "text": "♪",
+          "fontFamily": "Arial",
+          "fontSize": 50,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-13-sound_icon",
+            "role": "sound_icon",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Visit our latest Scarborough listing this weekend."
+    ],
+    "headlines": [
+      "Open house"
+    ],
+    "descriptions": [
+      "Saturday 18 July • 10:00 am"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Get directions",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

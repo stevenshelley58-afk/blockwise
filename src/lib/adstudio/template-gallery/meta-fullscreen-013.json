@@ -1,0 +1,561 @@
+{
+  "id": "meta-fullscreen-013",
+  "templateKey": "meta-fullscreen-013",
+  "name": "Modern Property Highlights",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-013",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-15"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_015.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_015.png",
+    "metaIndex": 15
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Modern property",
+    "primaryText": "A refined family home with a strong list of practical features.",
+    "description": "From $1,245,000",
+    "cta": "View highlights"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-013.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-013.svg",
+    "alt": "Modern Property Highlights, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_015.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-013-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#34373a",
+        "locked": true,
+        "radius": 66
+      },
+      {
+        "objectId": "meta-fullscreen-013-02-hero_photo",
+        "type": "image",
+        "role": "hero_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 728,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-03-details_field",
+        "type": "shape",
+        "role": "details_field",
+        "x": 24,
+        "y": 680,
+        "width": 1032,
+        "height": 1050,
+        "fill": "#34373a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-013-04-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 88,
+        "y": 806,
+        "width": 230,
+        "height": 54,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "MODERN PROPERTY",
+        "customerSupplied": true,
+        "x": 88,
+        "y": 930,
+        "width": 520,
+        "height": 150,
+        "fill": "#e2c77a",
+        "fontFamily": "Arial",
+        "size": 76,
+        "weight": 900,
+        "align": "left",
+        "lineHeight": 1.02,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-06-features_heading",
+        "type": "text",
+        "role": "features_heading",
+        "content": "PROPERTY HIGHLIGHTS",
+        "customerSupplied": false,
+        "x": 88,
+        "y": 1150,
+        "width": 420,
+        "height": 44,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-07-features",
+        "type": "text",
+        "role": "features",
+        "content": "✓ Four bedrooms\n✓ Double garage\n✓ Easy-care garden\n✓ Walk to the coast",
+        "customerSupplied": false,
+        "x": 88,
+        "y": 1222,
+        "width": 470,
+        "height": 220,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.45,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-08-detail_photo_1",
+        "type": "image",
+        "role": "detail_photo_1",
+        "x": 640,
+        "y": 718,
+        "width": 330,
+        "height": 292,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-09-detail_photo_2",
+        "type": "image",
+        "role": "detail_photo_2",
+        "x": 640,
+        "y": 1032,
+        "width": 330,
+        "height": 292,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-10-detail_photo_3",
+        "type": "image",
+        "role": "detail_photo_3",
+        "x": 640,
+        "y": 1346,
+        "width": 330,
+        "height": 292,
+        "imageAnchor": "right",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-11-price_banner",
+        "type": "shape",
+        "role": "price_banner",
+        "x": 88,
+        "y": 1512,
+        "width": 590,
+        "height": 112,
+        "fill": "#e2c77a",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-013-12-price",
+        "type": "text",
+        "role": "price",
+        "content": "FROM  $1,245,000",
+        "customerSupplied": true,
+        "x": 118,
+        "y": 1542,
+        "width": 530,
+        "height": 58,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 43,
+        "weight": 900,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-013-13-footer",
+        "type": "shape",
+        "role": "footer",
+        "x": 24,
+        "y": 1730,
+        "width": 1032,
+        "height": 166,
+        "fill": "#fff7e7",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-013-14-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "08 6118 2200        blockwise.au",
+        "customerSupplied": true,
+        "x": 88,
+        "y": 1782,
+        "width": 860,
+        "height": 44,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#34373a",
+          "rx": 66,
+          "ry": 66,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 728,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-02-hero_photo",
+            "role": "hero_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 680,
+          "width": 1032,
+          "height": 1050,
+          "fill": "#34373a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-03-details_field",
+            "role": "details_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 88,
+          "top": 806,
+          "width": 230,
+          "height": 54,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-04-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 88,
+          "top": 930,
+          "width": 520,
+          "height": 150,
+          "text": "MODERN PROPERTY",
+          "fontFamily": "Arial",
+          "fontSize": 76,
+          "fontWeight": 900,
+          "fill": "#e2c77a",
+          "textAlign": "left",
+          "lineHeight": 1.02,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 88,
+          "top": 1150,
+          "width": 420,
+          "height": 44,
+          "text": "PROPERTY HIGHLIGHTS",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-06-features_heading",
+            "role": "features_heading",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 88,
+          "top": 1222,
+          "width": 470,
+          "height": 220,
+          "text": "✓ Four bedrooms\n✓ Double garage\n✓ Easy-care garden\n✓ Walk to the coast",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.45,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-07-features",
+            "role": "features",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 640,
+          "top": 718,
+          "width": 330,
+          "height": 292,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-08-detail_photo_1",
+            "role": "detail_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 640,
+          "top": 1032,
+          "width": 330,
+          "height": 292,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-09-detail_photo_2",
+            "role": "detail_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "image",
+          "left": 640,
+          "top": 1346,
+          "width": 330,
+          "height": 292,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-10-detail_photo_3",
+            "role": "detail_photo_3",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 88,
+          "top": 1512,
+          "width": 590,
+          "height": 112,
+          "fill": "#e2c77a",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-11-price_banner",
+            "role": "price_banner",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 1542,
+          "width": 530,
+          "height": 58,
+          "text": "FROM  $1,245,000",
+          "fontFamily": "Arial",
+          "fontSize": 43,
+          "fontWeight": 900,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-12-price",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 1730,
+          "width": 1032,
+          "height": 166,
+          "fill": "#fff7e7",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-13-footer",
+            "role": "footer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 88,
+          "top": 1782,
+          "width": 860,
+          "height": 44,
+          "text": "08 6118 2200        blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-013-14-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A refined family home with a strong list of practical features."
+    ],
+    "headlines": [
+      "Modern property"
+    ],
+    "descriptions": [
+      "From $1,245,000"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "View highlights",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

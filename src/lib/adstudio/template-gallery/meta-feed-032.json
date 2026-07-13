@@ -1,0 +1,627 @@
+{
+  "id": "meta-feed-032",
+  "templateKey": "meta-feed-032",
+  "name": "Keys to Your Future",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-feed-032",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-feed",
+    "blockwise",
+    "source-107"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_107.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_107.png",
+    "metaIndex": 107
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "We've got the keys to your future",
+    "primaryText": "Unlock your next property move with a clear plan.",
+    "description": "Talk with Blockwise today",
+    "cta": "Get in touch"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-032.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-032.svg",
+    "alt": "Keys to Your Future, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_107.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-032-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 66
+      },
+      {
+        "objectId": "meta-feed-032-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 60
+      },
+      {
+        "objectId": "meta-feed-032-03-key_ring_outer",
+        "type": "shape",
+        "role": "key_ring_outer",
+        "x": 418,
+        "y": 184,
+        "width": 244,
+        "height": 244,
+        "fill": "#2b2926",
+        "locked": true,
+        "radius": 122
+      },
+      {
+        "objectId": "meta-feed-032-04-key_ring_inner",
+        "type": "shape",
+        "role": "key_ring_inner",
+        "x": 438,
+        "y": 204,
+        "width": 204,
+        "height": 204,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 102
+      },
+      {
+        "objectId": "meta-feed-032-05-key_head_1",
+        "type": "shape",
+        "role": "key_head_1",
+        "x": 330,
+        "y": 342,
+        "width": 126,
+        "height": 126,
+        "fill": "#2b2926",
+        "locked": true,
+        "radius": 63
+      },
+      {
+        "objectId": "meta-feed-032-06-key_hole_1",
+        "type": "shape",
+        "role": "key_hole_1",
+        "x": 352,
+        "y": 364,
+        "width": 82,
+        "height": 82,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 41
+      },
+      {
+        "objectId": "meta-feed-032-07-key_stem_1",
+        "type": "shape",
+        "role": "key_stem_1",
+        "x": 356,
+        "y": 438,
+        "width": 38,
+        "height": 236,
+        "fill": "#2b2926",
+        "locked": true,
+        "radius": 12
+      },
+      {
+        "objectId": "meta-feed-032-08-key_tooth_1",
+        "type": "shape",
+        "role": "key_tooth_1",
+        "x": 356,
+        "y": 632,
+        "width": 94,
+        "height": 32,
+        "fill": "#2b2926",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-09-key_head_2",
+        "type": "shape",
+        "role": "key_head_2",
+        "x": 520,
+        "y": 372,
+        "width": 116,
+        "height": 116,
+        "fill": "#2b2926",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-032-10-key_hole_2",
+        "type": "shape",
+        "role": "key_hole_2",
+        "x": 540,
+        "y": 392,
+        "width": 76,
+        "height": 76,
+        "fill": "#f7f3ed",
+        "locked": true,
+        "radius": 38
+      },
+      {
+        "objectId": "meta-feed-032-11-key_stem_2",
+        "type": "shape",
+        "role": "key_stem_2",
+        "x": 558,
+        "y": 464,
+        "width": 34,
+        "height": 212,
+        "fill": "#2b2926",
+        "locked": true,
+        "radius": 10
+      },
+      {
+        "objectId": "meta-feed-032-12-key_tooth_2",
+        "type": "shape",
+        "role": "key_tooth_2",
+        "x": 526,
+        "y": 634,
+        "width": 66,
+        "height": 30,
+        "fill": "#2b2926",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-13-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "We've got the keys to your future.",
+        "customerSupplied": true,
+        "x": 120,
+        "y": 704,
+        "width": 840,
+        "height": 220,
+        "fill": "#1f2429",
+        "fontFamily": "Georgia",
+        "size": 75,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.05,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-14-underline",
+        "type": "shape",
+        "role": "underline",
+        "x": 354,
+        "y": 952,
+        "width": 372,
+        "height": 4,
+        "fill": "#2b2926",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-15-supporting_copy",
+        "type": "text",
+        "role": "supporting_copy",
+        "content": "LET'S UNLOCK YOUR NEXT MOVE",
+        "customerSupplied": false,
+        "x": 180,
+        "y": 1080,
+        "width": 720,
+        "height": 44,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 700,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-16-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "08 6118 2200  |  BLOCKWISE.AU",
+        "customerSupplied": true,
+        "x": 190,
+        "y": 1134,
+        "width": 700,
+        "height": 42,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-17-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 410,
+        "y": 1226,
+        "width": 260,
+        "height": 58,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8dadd",
+          "rx": 66,
+          "ry": 66,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#f7f3ed",
+          "rx": 60,
+          "ry": 60,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 418,
+          "top": 184,
+          "width": 244,
+          "height": 244,
+          "fill": "#2b2926",
+          "rx": 122,
+          "ry": 122,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-03-key_ring_outer",
+            "role": "key_ring_outer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 438,
+          "top": 204,
+          "width": 204,
+          "height": 204,
+          "fill": "#f7f3ed",
+          "rx": 102,
+          "ry": 102,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-04-key_ring_inner",
+            "role": "key_ring_inner",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 330,
+          "top": 342,
+          "width": 126,
+          "height": 126,
+          "fill": "#2b2926",
+          "rx": 63,
+          "ry": 63,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-05-key_head_1",
+            "role": "key_head_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 352,
+          "top": 364,
+          "width": 82,
+          "height": 82,
+          "fill": "#f7f3ed",
+          "rx": 41,
+          "ry": 41,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-06-key_hole_1",
+            "role": "key_hole_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 356,
+          "top": 438,
+          "width": 38,
+          "height": 236,
+          "fill": "#2b2926",
+          "rx": 12,
+          "ry": 12,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-07-key_stem_1",
+            "role": "key_stem_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 356,
+          "top": 632,
+          "width": 94,
+          "height": 32,
+          "fill": "#2b2926",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-08-key_tooth_1",
+            "role": "key_tooth_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 520,
+          "top": 372,
+          "width": 116,
+          "height": 116,
+          "fill": "#2b2926",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-09-key_head_2",
+            "role": "key_head_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 540,
+          "top": 392,
+          "width": 76,
+          "height": 76,
+          "fill": "#f7f3ed",
+          "rx": 38,
+          "ry": 38,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-10-key_hole_2",
+            "role": "key_hole_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 558,
+          "top": 464,
+          "width": 34,
+          "height": 212,
+          "fill": "#2b2926",
+          "rx": 10,
+          "ry": 10,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-11-key_stem_2",
+            "role": "key_stem_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 526,
+          "top": 634,
+          "width": 66,
+          "height": 30,
+          "fill": "#2b2926",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-12-key_tooth_2",
+            "role": "key_tooth_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 120,
+          "top": 704,
+          "width": 840,
+          "height": 220,
+          "text": "We've got the keys to your future.",
+          "fontFamily": "Georgia",
+          "fontSize": 75,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.05,
+          "blockwise": {
+            "objectId": "meta-feed-032-13-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 354,
+          "top": 952,
+          "width": 372,
+          "height": 4,
+          "fill": "#2b2926",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-032-14-underline",
+            "role": "underline",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 180,
+          "top": 1080,
+          "width": 720,
+          "height": 44,
+          "text": "LET'S UNLOCK YOUR NEXT MOVE",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-032-15-supporting_copy",
+            "role": "supporting_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 190,
+          "top": 1134,
+          "width": 700,
+          "height": 42,
+          "text": "08 6118 2200  |  BLOCKWISE.AU",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-032-16-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 410,
+          "top": 1226,
+          "width": 260,
+          "height": 58,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-032-17-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Unlock your next property move with a clear plan."
+    ],
+    "headlines": [
+      "We've got the keys to your future"
+    ],
+    "descriptions": [
+      "Talk with Blockwise today"
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Get in touch",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

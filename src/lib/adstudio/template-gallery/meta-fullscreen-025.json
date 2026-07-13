@@ -1,0 +1,364 @@
+{
+  "id": "meta-fullscreen-025",
+  "templateKey": "meta-fullscreen-025",
+  "name": "Just Sold Interior Story",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "just_sold-meta-fullscreen-025",
+  "audienceIntent": "Owners weighing a move after seeing a recent local result.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "meta-fullscreen",
+    "blockwise",
+    "source-22"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_022.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_022.png",
+    "metaIndex": 22
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Just sold",
+    "primaryText": "Considering selling? Start with a clear local appraisal.",
+    "description": "18 Wattle Lane, Scarborough WA 6019",
+    "cta": "Message Blockwise"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-025.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-025.svg",
+    "alt": "Just Sold Interior Story, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_022.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-025-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#8c8f91",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-025-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-03-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#4f5558",
+        "locked": true,
+        "opacity": 0.2,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-025-04-left_rule",
+        "type": "shape",
+        "role": "left_rule",
+        "x": 140,
+        "y": 620,
+        "width": 10,
+        "height": 752,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-025-05-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "JUST SOLD!",
+        "customerSupplied": true,
+        "x": 210,
+        "y": 620,
+        "width": 630,
+        "height": 230,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 112,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 0.98,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-06-address",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane\nScarborough WA 6019",
+        "customerSupplied": true,
+        "x": 212,
+        "y": 920,
+        "width": 520,
+        "height": 120,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 35,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.2,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-07-body_copy",
+        "type": "text",
+        "role": "body_copy",
+        "content": "If you're considering selling, send Blockwise a message today.",
+        "customerSupplied": true,
+        "x": 212,
+        "y": 1120,
+        "width": 560,
+        "height": 170,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 38,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.18,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-08-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 696,
+        "y": 1708,
+        "width": 270,
+        "height": 64,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#8c8f91",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#4f5558",
+          "opacity": 0.2,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-03-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 140,
+          "top": 620,
+          "width": 10,
+          "height": 752,
+          "fill": "#ffffff",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-04-left_rule",
+            "role": "left_rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 210,
+          "top": 620,
+          "width": 630,
+          "height": 230,
+          "text": "JUST SOLD!",
+          "fontFamily": "Georgia",
+          "fontSize": 112,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 0.98,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-05-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 212,
+          "top": 920,
+          "width": 520,
+          "height": 120,
+          "text": "18 Wattle Lane\nScarborough WA 6019",
+          "fontFamily": "Arial",
+          "fontSize": 35,
+          "fontWeight": 500,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-06-address",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 212,
+          "top": 1120,
+          "width": 560,
+          "height": 170,
+          "text": "If you're considering selling, send Blockwise a message today.",
+          "fontFamily": "Arial",
+          "fontSize": 38,
+          "fontWeight": 500,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.18,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-07-body_copy",
+            "role": "body_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 696,
+          "top": 1708,
+          "width": 270,
+          "height": 64,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-08-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Considering selling? Start with a clear local appraisal."
+    ],
+    "headlines": [
+      "Just sold"
+    ],
+    "descriptions": [
+      "18 Wattle Lane, Scarborough WA 6019"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Message Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

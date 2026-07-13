@@ -1,0 +1,517 @@
+{
+  "id": "meta-feed-031",
+  "templateKey": "meta-feed-031",
+  "name": "Buying or Selling Agent Profile",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-feed-031",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-feed",
+    "blockwise",
+    "source-2"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_002.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_002.png",
+    "metaIndex": 2
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agent"
+  },
+  "sampleCopy": {
+    "headline": "Buying or selling a home?",
+    "primaryText": "Clear advice for your next property decision.",
+    "description": "Work with Blockwise",
+    "cta": "Talk to us"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-031.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-031.svg",
+    "alt": "Buying or Selling Agent Profile, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_002.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-031-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#d8dadd",
+        "locked": true,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-feed-031-02-background_shape",
+        "type": "shape",
+        "role": "background_shape",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1302,
+        "fill": "#ffffff",
+        "locked": true,
+        "radius": 58
+      },
+      {
+        "objectId": "meta-feed-031-03-kitchen_photo",
+        "type": "image",
+        "role": "kitchen_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 520,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-04-social_proof_disc",
+        "type": "shape",
+        "role": "social_proof_disc",
+        "x": 760,
+        "y": 446,
+        "width": 220,
+        "height": 220,
+        "fill": "#f5f1eb",
+        "locked": true,
+        "radius": 110
+      },
+      {
+        "objectId": "meta-feed-031-05-social_proof_value",
+        "type": "text",
+        "role": "social_proof_value",
+        "content": "253",
+        "customerSupplied": false,
+        "x": 802,
+        "y": 498,
+        "width": 136,
+        "height": 58,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 45,
+        "weight": 500,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-06-social_proof_label",
+        "type": "text",
+        "role": "social_proof_label",
+        "content": "HAPPY CLIENTS",
+        "customerSupplied": false,
+        "x": 794,
+        "y": 558,
+        "width": 152,
+        "height": 52,
+        "fill": "#82766d",
+        "fontFamily": "Arial",
+        "size": 18,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-07-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "BUYING OR SELLING A HOME?",
+        "customerSupplied": true,
+        "x": 98,
+        "y": 624,
+        "width": 760,
+        "height": 178,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 63,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.02,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-08-subheading",
+        "type": "text",
+        "role": "subheading",
+        "content": "LET'S WORK TOGETHER",
+        "customerSupplied": false,
+        "x": 98,
+        "y": 840,
+        "width": 620,
+        "height": 52,
+        "fill": "#9b8d83",
+        "fontFamily": "Arial",
+        "size": 32,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-09-body_copy",
+        "type": "text",
+        "role": "body_copy",
+        "content": "Property decisions can feel complicated. Blockwise gives you a clear plan, honest guidance and a practical next step.",
+        "customerSupplied": true,
+        "x": 98,
+        "y": 916,
+        "width": 690,
+        "height": 158,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 400,
+        "align": "left",
+        "lineHeight": 1.35,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-10-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 96,
+        "y": 1152,
+        "width": 250,
+        "height": 62,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-11-contact_label",
+        "type": "text",
+        "role": "contact_label",
+        "content": "CONTACT",
+        "customerSupplied": false,
+        "x": 430,
+        "y": 1148,
+        "width": 200,
+        "height": 34,
+        "fill": "#9b8d83",
+        "fontFamily": "Arial",
+        "size": 22,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-031-12-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "hello@blockwise.au\n08 6118 2200\nblockwise.au",
+        "customerSupplied": true,
+        "x": 430,
+        "y": 1190,
+        "width": 410,
+        "height": 104,
+        "fill": "#1f2429",
+        "fontFamily": "Arial",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.25,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#d8dadd",
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-031-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1302,
+          "fill": "#ffffff",
+          "rx": 58,
+          "ry": 58,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-031-02-background_shape",
+            "role": "background_shape",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 520,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-031-03-kitchen_photo",
+            "role": "kitchen_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 760,
+          "top": 446,
+          "width": 220,
+          "height": 220,
+          "fill": "#f5f1eb",
+          "rx": 110,
+          "ry": 110,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-031-04-social_proof_disc",
+            "role": "social_proof_disc",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 802,
+          "top": 498,
+          "width": 136,
+          "height": 58,
+          "text": "253",
+          "fontFamily": "Arial",
+          "fontSize": 45,
+          "fontWeight": 500,
+          "fill": "#1f2429",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-031-05-social_proof_value",
+            "role": "social_proof_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 794,
+          "top": 558,
+          "width": 152,
+          "height": 52,
+          "text": "HAPPY CLIENTS",
+          "fontFamily": "Arial",
+          "fontSize": 18,
+          "fontWeight": 600,
+          "fill": "#82766d",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-031-06-social_proof_label",
+            "role": "social_proof_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 624,
+          "width": 760,
+          "height": 178,
+          "text": "BUYING OR SELLING A HOME?",
+          "fontFamily": "Arial",
+          "fontSize": 63,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.02,
+          "blockwise": {
+            "objectId": "meta-feed-031-07-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 840,
+          "width": 620,
+          "height": 52,
+          "text": "LET'S WORK TOGETHER",
+          "fontFamily": "Arial",
+          "fontSize": 32,
+          "fontWeight": 500,
+          "fill": "#9b8d83",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-031-08-subheading",
+            "role": "subheading",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 98,
+          "top": 916,
+          "width": 690,
+          "height": 158,
+          "text": "Property decisions can feel complicated. Blockwise gives you a clear plan, honest guidance and a practical next step.",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 400,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.35,
+          "blockwise": {
+            "objectId": "meta-feed-031-09-body_copy",
+            "role": "body_copy",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 96,
+          "top": 1152,
+          "width": 250,
+          "height": 62,
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-031-10-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 430,
+          "top": 1148,
+          "width": 200,
+          "height": 34,
+          "text": "CONTACT",
+          "fontFamily": "Arial",
+          "fontSize": 22,
+          "fontWeight": 500,
+          "fill": "#9b8d83",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-031-11-contact_label",
+            "role": "contact_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 430,
+          "top": 1190,
+          "width": 410,
+          "height": 104,
+          "text": "hello@blockwise.au\n08 6118 2200\nblockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#1f2429",
+          "textAlign": "left",
+          "lineHeight": 1.25,
+          "blockwise": {
+            "objectId": "meta-feed-031-12-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Clear advice for your next property decision."
+    ],
+    "headlines": [
+      "Buying or selling a home?"
+    ],
+    "descriptions": [
+      "Work with Blockwise"
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Talk to us",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

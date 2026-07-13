@@ -1,0 +1,425 @@
+{
+  "id": "meta-fullscreen-024",
+  "templateKey": "meta-fullscreen-024",
+  "name": "Open House Dark Frame",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "open_home_followup",
+  "offerId": "open_home-meta-fullscreen-024",
+  "audienceIntent": "People ready to inspect a property and decide what fits next.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "meta-fullscreen",
+    "blockwise",
+    "source-138"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_138.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_138.png",
+    "metaIndex": 138
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Open house",
+    "primaryText": "A contemporary home open for inspection.",
+    "description": "Saturday 18 July • 11:00 am",
+    "cta": "Contact us"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-024.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-024.svg",
+    "alt": "Open House Dark Frame, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_138.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-024-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#363a3b",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-024-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-024-03-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#111515",
+        "locked": true,
+        "opacity": 0.56,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-024-04-poster_frame",
+        "type": "shape",
+        "role": "poster_frame",
+        "x": 96,
+        "y": 88,
+        "width": 888,
+        "height": 1660,
+        "fill": "#202323",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-024-05-property_photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 126,
+        "y": 118,
+        "width": 828,
+        "height": 960,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-024-06-brand_line",
+        "type": "text",
+        "role": "brand_line",
+        "content": "BLOCKWISE PROPERTY",
+        "customerSupplied": false,
+        "x": 132,
+        "y": 1110,
+        "width": 500,
+        "height": 36,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 21,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-024-07-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "OPEN HOUSE",
+        "customerSupplied": true,
+        "x": 126,
+        "y": 1182,
+        "width": 730,
+        "height": 246,
+        "fill": "#fff2db",
+        "fontFamily": "Arial",
+        "size": 112,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.03,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-024-08-contact_strip",
+        "type": "shape",
+        "role": "contact_strip",
+        "x": 126,
+        "y": 1518,
+        "width": 828,
+        "height": 92,
+        "fill": "#fff2db",
+        "locked": true,
+        "radius": 24
+      },
+      {
+        "objectId": "meta-fullscreen-024-09-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "CONTACT US              08 6118 2200",
+        "customerSupplied": true,
+        "x": 166,
+        "y": 1544,
+        "width": 748,
+        "height": 42,
+        "fill": "#202323",
+        "fontFamily": "Arial",
+        "size": 24,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-024-10-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 690,
+        "y": 1648,
+        "width": 230,
+        "height": 54,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#363a3b",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#111515",
+          "opacity": 0.56,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-03-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 96,
+          "top": 88,
+          "width": 888,
+          "height": 1660,
+          "fill": "#202323",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-04-poster_frame",
+            "role": "poster_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 126,
+          "top": 118,
+          "width": 828,
+          "height": 960,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-05-property_photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 132,
+          "top": 1110,
+          "width": 500,
+          "height": 36,
+          "text": "BLOCKWISE PROPERTY",
+          "fontFamily": "Arial",
+          "fontSize": 21,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-06-brand_line",
+            "role": "brand_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 126,
+          "top": 1182,
+          "width": 730,
+          "height": 246,
+          "text": "OPEN HOUSE",
+          "fontFamily": "Arial",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#fff2db",
+          "textAlign": "left",
+          "lineHeight": 1.03,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-07-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 126,
+          "top": 1518,
+          "width": 828,
+          "height": 92,
+          "fill": "#fff2db",
+          "rx": 24,
+          "ry": 24,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-08-contact_strip",
+            "role": "contact_strip",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 166,
+          "top": 1544,
+          "width": 748,
+          "height": 42,
+          "text": "CONTACT US              08 6118 2200",
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fill": "#202323",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-09-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 690,
+          "top": 1648,
+          "width": 230,
+          "height": 54,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-024-10-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A contemporary home open for inspection."
+    ],
+    "headlines": [
+      "Open house"
+    ],
+    "descriptions": [
+      "Saturday 18 July • 11:00 am"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Contact us",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

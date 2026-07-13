@@ -1,0 +1,763 @@
+{
+  "id": "meta-fullscreen-031",
+  "templateKey": "meta-fullscreen-031",
+  "name": "Dark Market Report Table",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "market_update_leads",
+  "offerId": "market_update-meta-fullscreen-031",
+  "audienceIntent": "Owners and buyers tracking the local market before acting.",
+  "category": "market_update",
+  "tags": [
+    "market_update",
+    "meta-fullscreen",
+    "blockwise",
+    "source-239"
+  ],
+  "promptHint": "Direct transcription of 02_stories_reels_9x16/meta_239.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_239.png",
+    "metaIndex": 239
+  },
+  "classification": {
+    "ad_type": "market_update",
+    "primary_intent": "market_update",
+    "property_or_agent_focus": "agent"
+  },
+  "sampleCopy": {
+    "headline": "Market report",
+    "primaryText": "A concise view of current local sales activity.",
+    "description": "Scarborough market snapshot",
+    "cta": "Request the report"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-031.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-031.svg",
+    "alt": "Dark Market Report Table, rebuilt as a Blockwise template from 02_stories_reels_9x16/meta_239.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-031-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1884,
+        "fill": "#111717",
+        "locked": true,
+        "radius": 70
+      },
+      {
+        "objectId": "meta-fullscreen-031-02-background_photo",
+        "type": "image",
+        "role": "background_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-03-background_scrim",
+        "type": "shape",
+        "role": "background_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1872,
+        "fill": "#020606",
+        "locked": true,
+        "opacity": 0.72,
+        "radius": 64
+      },
+      {
+        "objectId": "meta-fullscreen-031-04-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "MARKET",
+        "customerSupplied": false,
+        "x": 162,
+        "y": 600,
+        "width": 756,
+        "height": 112,
+        "fill": "#d0a968",
+        "fontFamily": "Georgia",
+        "size": 92,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-05-script_line",
+        "type": "text",
+        "role": "script_line",
+        "content": "report",
+        "customerSupplied": false,
+        "x": 200,
+        "y": 716,
+        "width": 680,
+        "height": 76,
+        "fill": "#d0a968",
+        "fontFamily": "Georgia",
+        "size": 52,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-06-row_1",
+        "type": "shape",
+        "role": "row_1",
+        "x": 156,
+        "y": 860,
+        "width": 768,
+        "height": 3,
+        "fill": "#8e744b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-031-07-stat_1_label",
+        "type": "text",
+        "role": "stat_1_label",
+        "content": "TIME ON MARKET",
+        "customerSupplied": false,
+        "x": 174,
+        "y": 812,
+        "width": 410,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-08-stat_1_value",
+        "type": "text",
+        "role": "stat_1_value",
+        "content": "10 DAYS",
+        "customerSupplied": true,
+        "x": 648,
+        "y": 812,
+        "width": 250,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-09-row_2",
+        "type": "shape",
+        "role": "row_2",
+        "x": 156,
+        "y": 1000,
+        "width": 768,
+        "height": 3,
+        "fill": "#8e744b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-031-10-stat_2_label",
+        "type": "text",
+        "role": "stat_2_label",
+        "content": "AVERAGE PRICE",
+        "customerSupplied": false,
+        "x": 174,
+        "y": 952,
+        "width": 410,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-11-stat_2_value",
+        "type": "text",
+        "role": "stat_2_value",
+        "content": "$834,000",
+        "customerSupplied": true,
+        "x": 648,
+        "y": 952,
+        "width": 250,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-12-row_3",
+        "type": "shape",
+        "role": "row_3",
+        "x": 156,
+        "y": 1140,
+        "width": 768,
+        "height": 3,
+        "fill": "#8e744b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-031-13-stat_3_label",
+        "type": "text",
+        "role": "stat_3_label",
+        "content": "NEW LISTINGS",
+        "customerSupplied": false,
+        "x": 174,
+        "y": 1092,
+        "width": 410,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-14-stat_3_value",
+        "type": "text",
+        "role": "stat_3_value",
+        "content": "174",
+        "customerSupplied": true,
+        "x": 648,
+        "y": 1092,
+        "width": 250,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-15-row_4",
+        "type": "shape",
+        "role": "row_4",
+        "x": 156,
+        "y": 1280,
+        "width": 768,
+        "height": 3,
+        "fill": "#8e744b",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-031-16-stat_4_label",
+        "type": "text",
+        "role": "stat_4_label",
+        "content": "SOLD LISTINGS",
+        "customerSupplied": false,
+        "x": 174,
+        "y": 1232,
+        "width": 410,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "left",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-17-stat_4_value",
+        "type": "text",
+        "role": "stat_4_value",
+        "content": "45",
+        "customerSupplied": true,
+        "x": 648,
+        "y": 1232,
+        "width": 250,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 26,
+        "weight": 700,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-18-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 370,
+        "y": 1642,
+        "width": 340,
+        "height": 78,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-031-19-report_line",
+        "type": "text",
+        "role": "report_line",
+        "content": "SCARBOROUGH  •  JULY 2026",
+        "customerSupplied": false,
+        "x": 250,
+        "y": 1742,
+        "width": 580,
+        "height": 42,
+        "fill": "#d0a968",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1884,
+          "fill": "#111717",
+          "rx": 70,
+          "ry": 70,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-02-background_photo",
+            "role": "background_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1872,
+          "fill": "#020606",
+          "opacity": 0.72,
+          "rx": 64,
+          "ry": 64,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-03-background_scrim",
+            "role": "background_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 162,
+          "top": 600,
+          "width": 756,
+          "height": 112,
+          "text": "MARKET",
+          "fontFamily": "Georgia",
+          "fontSize": 92,
+          "fontWeight": 400,
+          "fill": "#d0a968",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-04-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 200,
+          "top": 716,
+          "width": 680,
+          "height": 76,
+          "text": "report",
+          "fontFamily": "Georgia",
+          "fontSize": 52,
+          "fontWeight": 400,
+          "fill": "#d0a968",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-05-script_line",
+            "role": "script_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 156,
+          "top": 860,
+          "width": 768,
+          "height": 3,
+          "fill": "#8e744b",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-06-row_1",
+            "role": "row_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 174,
+          "top": 812,
+          "width": 410,
+          "height": 42,
+          "text": "TIME ON MARKET",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-07-stat_1_label",
+            "role": "stat_1_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 648,
+          "top": 812,
+          "width": 250,
+          "height": 42,
+          "text": "10 DAYS",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-08-stat_1_value",
+            "role": "stat_1_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 156,
+          "top": 1000,
+          "width": 768,
+          "height": 3,
+          "fill": "#8e744b",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-09-row_2",
+            "role": "row_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 174,
+          "top": 952,
+          "width": 410,
+          "height": 42,
+          "text": "AVERAGE PRICE",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-10-stat_2_label",
+            "role": "stat_2_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 648,
+          "top": 952,
+          "width": 250,
+          "height": 42,
+          "text": "$834,000",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-11-stat_2_value",
+            "role": "stat_2_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 156,
+          "top": 1140,
+          "width": 768,
+          "height": 3,
+          "fill": "#8e744b",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-12-row_3",
+            "role": "row_3",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 174,
+          "top": 1092,
+          "width": 410,
+          "height": 42,
+          "text": "NEW LISTINGS",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-13-stat_3_label",
+            "role": "stat_3_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 648,
+          "top": 1092,
+          "width": 250,
+          "height": 42,
+          "text": "174",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-14-stat_3_value",
+            "role": "stat_3_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 156,
+          "top": 1280,
+          "width": 768,
+          "height": 3,
+          "fill": "#8e744b",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-15-row_4",
+            "role": "row_4",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 174,
+          "top": 1232,
+          "width": 410,
+          "height": 42,
+          "text": "SOLD LISTINGS",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "left",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-16-stat_4_label",
+            "role": "stat_4_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 648,
+          "top": 1232,
+          "width": 250,
+          "height": 42,
+          "text": "45",
+          "fontFamily": "Arial",
+          "fontSize": 26,
+          "fontWeight": 700,
+          "fill": "#d0a968",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-17-stat_4_value",
+            "role": "stat_4_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        },
+        {
+          "type": "image",
+          "left": 370,
+          "top": 1642,
+          "width": 340,
+          "height": 78,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-18-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 250,
+          "top": 1742,
+          "width": 580,
+          "height": 42,
+          "text": "SCARBOROUGH  •  JULY 2026",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#d0a968",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-fullscreen-031-19-report_line",
+            "role": "report_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A concise view of current local sales activity."
+    ],
+    "headlines": [
+      "Market report"
+    ],
+    "descriptions": [
+      "Scarborough market snapshot"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the report",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

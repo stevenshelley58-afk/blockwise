@@ -1,0 +1,362 @@
+{
+  "id": "meta-feed-040",
+  "templateKey": "meta-feed-040",
+  "name": "Just Sold Signature Overlay",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "just_sold-meta-feed-040",
+  "audienceIntent": "Owners weighing a move after seeing a recent local result.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "meta-feed",
+    "blockwise",
+    "source-127"
+  ],
+  "promptHint": "Direct transcription of 01_feed_4x5_best/meta_127.png. Preserve its complete composition, image count, text hierarchy, spacing, panels and CTA treatment.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_127.png",
+    "metaIndex": 127
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Just sold",
+    "primaryText": "Sold in Scarborough with a clear campaign and strong buyer interest.",
+    "description": "Another Blockwise result",
+    "cta": "Request an appraisal"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-040.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-040.svg",
+    "alt": "Just Sold Signature Overlay, rebuilt as a Blockwise template from 01_feed_4x5_best/meta_127.png."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-040-01-outer_frame",
+        "type": "shape",
+        "role": "outer_frame",
+        "x": 18,
+        "y": 18,
+        "width": 1044,
+        "height": 1314,
+        "fill": "#8d969c",
+        "locked": true,
+        "radius": 66
+      },
+      {
+        "objectId": "meta-feed-040-02-property_photo",
+        "type": "image",
+        "role": "property_photo",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1180,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/blockwise-house.png",
+        "assetId": "/adstudio-samples/photos/blockwise-house.png",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-040-03-photo_scrim",
+        "type": "shape",
+        "role": "photo_scrim",
+        "x": 24,
+        "y": 24,
+        "width": 1032,
+        "height": 1180,
+        "fill": "#15243e",
+        "locked": true,
+        "opacity": 0.34,
+        "radius": 60
+      },
+      {
+        "objectId": "meta-feed-040-04-headline",
+        "type": "text",
+        "role": "headline",
+        "content": "Just Sold",
+        "customerSupplied": true,
+        "x": 118,
+        "y": 396,
+        "width": 844,
+        "height": 242,
+        "fill": "#ffffff",
+        "fontFamily": "Georgia",
+        "size": 146,
+        "weight": 400,
+        "align": "center",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-040-05-footer",
+        "type": "shape",
+        "role": "footer",
+        "x": 24,
+        "y": 1110,
+        "width": 1032,
+        "height": 214,
+        "fill": "#172544",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-040-06-brand_logo",
+        "type": "logo",
+        "role": "brand_logo",
+        "x": 72,
+        "y": 1160,
+        "width": 270,
+        "height": 66,
+        "content": "Blockwise",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-040-07-result_line",
+        "type": "text",
+        "role": "result_line",
+        "content": "SOLD IN SCARBOROUGH",
+        "customerSupplied": false,
+        "x": 390,
+        "y": 1152,
+        "width": 570,
+        "height": 44,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 28,
+        "weight": 800,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-040-08-contact",
+        "type": "text",
+        "role": "contact",
+        "content": "08 6118 2200  •  blockwise.au",
+        "customerSupplied": true,
+        "x": 390,
+        "y": 1212,
+        "width": 570,
+        "height": 38,
+        "fill": "#ffffff",
+        "fontFamily": "Arial",
+        "size": 23,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.15,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "type": "rect",
+          "left": 18,
+          "top": 18,
+          "width": 1044,
+          "height": 1314,
+          "fill": "#8d969c",
+          "rx": 66,
+          "ry": 66,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-040-01-outer_frame",
+            "role": "outer_frame",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1180,
+          "src": "/adstudio-samples/photos/blockwise-house.png",
+          "clip": "rect",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-040-02-property_photo",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 24,
+          "width": 1032,
+          "height": 1180,
+          "fill": "#15243e",
+          "opacity": 0.34,
+          "rx": 60,
+          "ry": 60,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-040-03-photo_scrim",
+            "role": "photo_scrim",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 118,
+          "top": 396,
+          "width": 844,
+          "height": 242,
+          "text": "Just Sold",
+          "fontFamily": "Georgia",
+          "fontSize": 146,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-040-04-headline",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          }
+        },
+        {
+          "type": "rect",
+          "left": 24,
+          "top": 1110,
+          "width": 1032,
+          "height": 214,
+          "fill": "#172544",
+          "rx": 0,
+          "ry": 0,
+          "selectable": false,
+          "blockwise": {
+            "objectId": "meta-feed-040-05-footer",
+            "role": "footer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "image",
+          "left": 72,
+          "top": 1160,
+          "width": 270,
+          "height": 66,
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous",
+          "blockwise": {
+            "objectId": "meta-feed-040-06-brand_logo",
+            "role": "brand_logo",
+            "type": "logo",
+            "locked": false,
+            "editableKind": "image"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 390,
+          "top": 1152,
+          "width": 570,
+          "height": 44,
+          "text": "SOLD IN SCARBOROUGH",
+          "fontFamily": "Arial",
+          "fontSize": 28,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-040-07-result_line",
+            "role": "result_line",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          }
+        },
+        {
+          "type": "textbox",
+          "left": 390,
+          "top": 1212,
+          "width": 570,
+          "height": 38,
+          "text": "08 6118 2200  •  blockwise.au",
+          "fontFamily": "Arial",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "right",
+          "lineHeight": 1.15,
+          "blockwise": {
+            "objectId": "meta-feed-040-08-contact",
+            "role": "contact",
+            "type": "text",
+            "locked": false,
+            "editableKind": "description"
+          }
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Sold in Scarborough with a clear campaign and strong buyer interest."
+    ],
+    "headlines": [
+      "Just sold"
+    ],
+    "descriptions": [
+      "Another Blockwise result"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request an appraisal",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}
