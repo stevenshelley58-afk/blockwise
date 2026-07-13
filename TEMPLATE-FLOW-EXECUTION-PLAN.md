@@ -1,12 +1,19 @@
-# AdStudio Template Flow — Execution Plan (fix → prod-ready → cleanup)
+# AdStudio Template Flow - Superseded Execution Plan
 
-Date: 2026-07-01. Companion to `TEMPLATE-FLOW-REVIEW.md` (the findings; this is the work).
+> This plan is retained as historical evidence for completed Phase 0, Phase 1,
+> and P2.1 work. `ADSTUDIO-COMPLETION-PLAN.md` is the only active plan for all
+> remaining AdStudio work. Where the two plans differ, the completion plan
+> governs. Do not start new work from the unfinished sections below.
 
-## Status ledger (updated 2026-07-02)
+# Historical plan (fix -> prod-ready -> cleanup)
+
+Companion to `TEMPLATE-FLOW-REVIEW.md` (the findings; this is the work).
+
+## Historical status ledger
 
 - **Phase 0: DONE** — P0.1–P0.7 all shipped on PR #154. Both migrations applied. Owner action outstanding: add the four e2e repository secrets (`ADSTUDIO_E2E_EMAIL`, `ADSTUDIO_E2E_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) to turn the new runtime gate green.
 - **Phase 1: DONE (5/5)** — P1.1 (cascade, fal retired), P1.2 (vision QA + regions + reroll), P1.3 (async generation: `runTemplateCampaignGeneration` + `adstudio.generate.template` trigger task + jobs API + dialog polling; sync fallback when trigger unconfigured; migration applied), P1.4 (targeted edit endpoint), P1.5 (one CTA module + publish gates). **Owner action: confirm the trigger task registers after CI deploys it (Deploy Trigger.dev tasks job) before relying on the async path — the sync fallback keeps generation working meanwhile.**
-- **Phase 2: P2.1 DONE** (in-place editor with region hit-targets, inline edits, undo). P2.2 in progress. **P2.3 PARTIALLY DONE (2026-07-02):** blank mode cut from the New Ad dialog (every new ad submits `mode:"template"`; Ad Radar starts map to the closest template), `1.91:1` removed from `FALLBACK_FORMATS`/preview maps (nothing generates landscape anymore), and `scripts/migrations/snapshot-legacy-creatives.mjs` shipped (idempotent, `--dry-run`, batches of 20; snapshots composited `canvas_json` rows to PNG in `workspace-artifacts` and sets `render_status:'legacy_snapshot'`). Still P2.3/P2.4 pending: the legacy compositor/Fabric renderer MUST stay (prod has 399 canvas-composited creatives across 47 campaigns, 0 clone creatives) — **renderer deletion (P2.4) is blocked until the snapshot script has been run against prod and its counts verified** (snapshot count == composited count). P2.5 pending.
+- **Phase 2: P2.1 DONE** (in-place editor with region hit-targets, inline edits, undo). P2.2 in progress. **P2.3 PARTIALLY DONE:** blank mode cut from the New Ad dialog (every new ad submits `mode:"template"`; Ad Radar starts map to the closest template), `1.91:1` removed from `FALLBACK_FORMATS`/preview maps (nothing generates landscape anymore), and `scripts/migrations/snapshot-legacy-creatives.mjs` shipped (idempotent, `--dry-run`, batches of 20; snapshots composited `canvas_json` rows to PNG in `workspace-artifacts` and sets `render_status:'legacy_snapshot'`). Still P2.3/P2.4 pending: the legacy compositor/Fabric renderer MUST stay (prod has 399 canvas-composited creatives across 47 campaigns, 0 clone creatives) — **renderer deletion (P2.4) is blocked until the snapshot script has been run against prod and its counts verified** (snapshot count == composited count). P2.5 pending.
 - Phases 3–5: not started.
 Audience: an executing agent. Every task states the files, the exact change, and an acceptance check. Do phases in order; tasks within a phase are ordered by dependency. Do not improvise beyond what is written; where a decision is marked **[DECISION]**, the recommended option is stated — confirm with the owner only if you must deviate.
 
@@ -31,7 +38,7 @@ Definition of prod-ready (release gate, checked at the end of Phase 3):
 
 ---
 
-## Phase 0 — Safety net & stop-the-bleeding (~1 week)
+## Phase 0 — Safety net & stop-the-bleeding
 
 ### P0.1 — Real-loop e2e in CI **(do first; everything else regresses without it)** [L]
 Files: `.github/workflows/hard-reset-verification.yml`, `e2e/adstudio-real-loop.spec.ts`, new `scripts/e2e/seed-adstudio-e2e.mjs`, repo secrets.
@@ -83,7 +90,7 @@ Accept: two concurrent identical POSTs (test with `Promise.all` in an integratio
 
 ---
 
-## Phase 1 — Clone pipeline hardened (~1–2 weeks)
+## Phase 1 — Clone pipeline hardened
 
 ### P1.1 — Provider cascade for clones; retire fal [M]
 Files: `src/app/api/adstudio/generate-clone/route.ts`, `src/lib/adstudio/reference-clone.ts`, `ai-providers.ts`, `model-registry.ts`, delete `fal-image-provider.ts`.
@@ -122,7 +129,7 @@ Accept: grep shows one `toMetaCta`; publish with a 130-char primary text is bloc
 
 ---
 
-## Phase 2 — Edit surface rebuild + old editor removal (~1–2 weeks)
+## Phase 2 — Edit surface rebuild + old editor removal
 
 ### P2.1 — In-place ad editor (Stitch UX) [L]
 Files: new `src/components/adstudio/canvas/in-place-ad-editor.tsx`, `ad-studio-workbench.tsx`.
@@ -151,7 +158,7 @@ Accept: workbench file <700 lines; e2e green; React StrictMode double-render pro
 
 ---
 
-## Phase 3 — Template factory & gallery (~1 week)
+## Phase 3 — Template factory & gallery
 
 ### P3.1 — Semi-automated template factory [L]
 Files: new `scripts/adstudio/build-template.mjs` (the path `template-brief.ts:4` already cites), rewrite `hermes/skills/adstudio-template-builder/SKILL.md`.
@@ -171,7 +178,7 @@ Accept: grep shows no `reviewStatus: "approved"` literal outside real approval c
 
 ---
 
-## Phase 4 — Prod-readiness hardening (~3–4 days)
+## Phase 4 — Prod-readiness hardening
 
 ### P4.1 — Error surfacing sweep [S]
 Files: `topbar.tsx:57`, `page.tsx:94,154`, `new-ad-dialog.tsx:1323`, `ad-studio-workbench.tsx:373`, `publish-panel.tsx:120`.
@@ -239,23 +246,21 @@ Some items are absorbed by earlier tasks (marked). This list is the checklist �
 
 ---
 
-## Sequencing & estimates
+## Historical sequencing
 
 ```
 P0.1 ──────────────┐                (everything shelters under CI e2e)
-P0.2 P0.3 P0.4 P0.5 P0.6 P0.7      Phase 0: ~1 week, parallelizable after P0.1
+P0.2 P0.3 P0.4 P0.5 P0.6 P0.7      Phase 0, parallelizable after P0.1
         │
-P1.1 → P1.2 → P1.3                 Phase 1: ~1–2 weeks (P1.4, P1.5 parallel after P1.2)
+P1.1 → P1.2 → P1.3                 Phase 1 (P1.4, P1.5 parallel after P1.2)
         │
-P2.1 → P2.2 → P2.3 → P2.4 → P2.5   Phase 2: ~1–2 weeks
+P2.1 → P2.2 → P2.3 → P2.4 → P2.5   Phase 2
         │
-P3.1 → P3.2 → P3.3                 Phase 3: ~1 week
+P3.1 → P3.2 → P3.3                 Phase 3
         │
-P4.1–P4.4                          Phase 4: ~3–4 days
+P4.1–P4.4                          Phase 4
         │
-Phase 5 checklist sweep            (mostly absorbed; final audit ~1 day)
+Phase 5 checklist sweep            (mostly absorbed; final audit)
 ```
-
-Total: roughly 5–7 weeks of focused work, shippable in slices — the product improves visibly at P0.3 (ads say what the user typed), P1.3 (no more timeouts), and P2.1 (in-place editing).
 
 Standing risks to watch: image-model text fidelity on long/unusual copy (mitigated by QA reroll + `maxLength` clamps); region-box accuracy on dense layouts (mitigate: minimum hit-target size, fall back to a field list popover when boxes overlap); legacy campaign rendering after P2.3 (snapshot script is the guard — run it before deleting the renderer, verify counts).
