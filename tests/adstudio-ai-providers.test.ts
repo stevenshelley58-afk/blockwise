@@ -467,6 +467,31 @@ test("a pre-aborted provider signal never dispatches", async () => {
   assert.equal(calls, 0);
 });
 
+test("reference acquisition failures remain unsubmitted and non-retryable", async () => {
+  let calls = 0;
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("missing", { status: 404 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    prompt: "Prepare this listing photo",
+    referenceAssets: ["https://assets.example/missing.png"],
+    aspectRatio: "4:5",
+    stylePreset: "locked_template_photo_prep",
+    requiresReferenceAssets: true,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 1);
+});
+
 test("priced OpenAI image candidate does not hide a second billable retry", async () => {
   let calls = 0;
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {

@@ -294,16 +294,25 @@ async function postOpenAiImageEdit(input: {
 }): Promise<Response> {
   const references = input.input.referenceAssets;
   if (!references.length) {
-    throw new Error("Reference-image edit requires at least one image.");
+    throw preflightError("Reference-image edit requires at least one image.");
   }
 
   const blobs: Blob[] = [];
-  for (const reference of references) {
-    blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
+  let maskBlob: Blob | null = null;
+  try {
+    for (const reference of references) {
+      blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
+    }
+    maskBlob = input.input.maskImage
+      ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
+      : null;
+  } catch (cause) {
+    throw new ProviderRequestError("Reference image could not be prepared for provider dispatch.", {
+      requestSubmitted: false,
+      retryable: false,
+      cause,
+    });
   }
-  const maskBlob = input.input.maskImage
-    ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
-    : null;
 
   const send = (size: string) => {
     const form = new FormData();

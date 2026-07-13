@@ -542,6 +542,31 @@ test("buildAdStudioExportPackage rejects missing raster renders instead of subst
   await assert.rejects(() => buildAdStudioExportPackage(pack), /raster render is missing/);
 });
 
+test("buildAdStudioExportPackage rejects parked Google visual platforms explicitly", async () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: { "https://northstar.example": sampleHtml },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta", "google_pmax", "google_demand_gen"],
+    variantCount: 1,
+  });
+
+  await assert.rejects(
+    () => buildAdStudioExportPackage(pack, { creativeRenders: completeCreativeRenders(pack) }),
+    /Google PMax and Demand Gen export is not enabled/,
+  );
+});
+
 test("stored creative export renders hydrate from workspace storage before packaging", async () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",
