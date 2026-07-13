@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { buildAdStudioExportPackage } from "@/lib/adstudio";
 import { hydrateStoredCreativeExportRenders } from "@/lib/adstudio/export-render-storage";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import type { AdStudioCampaignPack, CreativeExportRender } from "@/lib/adstudio";
+import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import type { CreativeExportRender } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,17 +21,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return access.response;
   }
 
-  const body = await request.json().catch(() => null) as {
-    campaignPack?: AdStudioCampaignPack;
-    creativeRenders?: CreativeExportRender[];
-  } | null;
-
-  if (!body?.campaignPack) {
-    return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
+  const authoritativePack = await loadAdStudioCampaignPack(
+    access.supabase,
+    access.access.workspaceId,
+    id,
+  );
+  if (!authoritativePack) {
+    return NextResponse.json(
+      { code: "campaign_not_found", error: "Campaign not found." },
+      { status: 404 },
+    );
   }
 
-  if (body.campaignPack.campaign.campaignId !== id) {
-    return NextResponse.json({ error: "Campaign ID does not match export payload." }, { status: 400 });
+  const containsFlatClone = authoritativePack.creatives.some(
+    (creative) =>
+      creative.canvas.objects.length === 1 &&
+      creative.canvas.objects[0]?.objectId === "template_clone_image",
+  );
+  if (containsFlatClone) {
+    return NextResponse.json(
+      {
+        code: "flat_clone_export_not_ready",
+        error: "This AI-designed ad cannot be exported until its approved revision files are ready.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const body = await request.json().catch(() => null) as {
+    creativeRenders?: CreativeExportRender[];
+  } | null;
+  if (!Array.isArray(body?.creativeRenders)) {
+    return NextResponse.json(
+      { code: "invalid_export_payload", error: "Creative renders are required." },
+      { status: 400 },
+    );
   }
 
   const creativeRenders = await hydrateStoredCreativeExportRenders(
@@ -38,9 +63,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     access.access.workspaceId,
     body.creativeRenders,
   );
-  const exportPackage = await buildAdStudioExportPackage(body.campaignPack, { creativeRenders });
+  const exportPackage = await buildAdStudioExportPackage(authoritativePack, { creativeRenders });
   const zipBlob = new Blob([new Uint8Array(exportPackage.zipBytes).buffer as ArrayBuffer], { type: "application/zip" });
-  const filename = `${slugFileName(body.campaignPack.campaign.name || "adstudio-campaign")}-creatives.zip`;
+  const filename = `${slugFileName(authoritativePack.campaign.name || "adstudio-campaign")}-creatives.zip`;
 
   return new NextResponse(zipBlob, {
     headers: {
