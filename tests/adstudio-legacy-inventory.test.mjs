@@ -43,6 +43,7 @@ function runCli(args, env = {}) {
       SUPABASE_URL: "",
       NEXT_PUBLIC_SUPABASE_URL: "",
       SUPABASE_SERVICE_ROLE_KEY: "",
+      SUPABASE_SECRET_KEY: "",
       ...env,
     },
   });
@@ -96,6 +97,7 @@ test("module import has no CLI, credential, or network side effects", () => {
         SUPABASE_URL: "",
         NEXT_PUBLIC_SUPABASE_URL: "",
         SUPABASE_SERVICE_ROLE_KEY: "",
+        SUPABASE_SECRET_KEY: "",
       },
     },
   );
@@ -103,6 +105,36 @@ test("module import has no CLI, credential, or network side effects", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, "");
   assert.equal(result.stderr, "");
+});
+
+test("credential loader accepts the current Supabase secret key and prefers an explicit legacy service-role key", () => {
+  assert.deepEqual(
+    inventory.requireEnv({
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SECRET_KEY: "sb_secret_current",
+    }),
+    {
+      url: "https://example.supabase.co",
+      serviceRoleKey: "sb_secret_current",
+    },
+  );
+
+  assert.deepEqual(
+    inventory.requireEnv({
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "legacy-service-role",
+      SUPABASE_SECRET_KEY: "sb_secret_current",
+    }),
+    {
+      url: "https://example.supabase.co",
+      serviceRoleKey: "legacy-service-role",
+    },
+  );
+
+  assert.throws(
+    () => inventory.requireEnv({ SUPABASE_URL: "https://example.supabase.co" }),
+    /SUPABASE_SECRET_KEY \(or SUPABASE_SERVICE_ROLE_KEY\)/,
+  );
 });
 
 test("classifier recognizes exact flat clones and unambiguous legacy composites", () => {
