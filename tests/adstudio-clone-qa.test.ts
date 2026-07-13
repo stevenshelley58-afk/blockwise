@@ -9,7 +9,11 @@ import {
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
 import { generateCloneWithCascade } from "../src/lib/adstudio/clone-generation.ts";
-import { ProviderRequestError, type ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
+import {
+  fetchProviderRequest,
+  ProviderRequestError,
+  type ImageProviderAdapter,
+} from "../src/lib/adstudio/providers.ts";
 import {
   buildProviderRunAttempt,
   type executeAdStudioProviderAttempt,
@@ -223,7 +227,12 @@ test("clone generation does not fallback after a non-retryable provider failure"
 test("clone generation invokes one fallback after a retryable provider failure", async () => {
   let fallbackCalls = 0;
   const primary = accountedImageProvider("primary", async () => {
-    throw submittedProviderFailure("rate limited", true);
+    await fetchProviderRequest(
+      async () => { throw new TypeError("connection reset"); },
+      "https://provider.example/generate",
+      { method: "POST" },
+    );
+    throw new Error("unreachable");
   });
   const fallback = accountedImageProvider("fallback", async () => {
     fallbackCalls += 1;
@@ -249,6 +258,35 @@ test("clone generation invokes one fallback after a retryable provider failure",
 
   assert.equal(result.provider, "fallback");
   assert.equal(fallbackCalls, 1);
+});
+
+test("clone generation does not fallback after a dispatched request is aborted", async () => {
+  let fallbackCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    await fetchProviderRequest(
+      async () => { throw new DOMException("cancelled", "AbortError"); },
+      "https://provider.example/generate",
+      { method: "POST" },
+    );
+    throw new Error("unreachable");
+  });
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    throw new Error("must not be called");
+  });
+
+  await assert.rejects(() => generateCloneWithCascade({
+    providers: [primary, fallback],
+    request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "aborted-clone",
+    tier: "preview",
+    attempt: 1,
+    accounting: { executeAttempt, recordRun: async () => {} },
+  }), /cancelled after dispatch/);
+
+  assert.equal(fallbackCalls, 0);
 });
 
 test("clone generation never invokes a second fallback candidate", async () => {

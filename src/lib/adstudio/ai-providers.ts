@@ -5,7 +5,7 @@ import type {
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import { createFalImageProvider } from "./fal-image-provider.ts";
 import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
-import { ProviderRequestError } from "./providers.ts";
+import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
   ImageProviderRequest,
@@ -198,7 +198,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
       // text-to-image /images/generations path (JSON), unchanged.
       const response = input.requiresReferenceAssets
         ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
-        : await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
+        : await fetchProviderRequest(fetchImpl, env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
             method: "POST",
             signal: input.signal,
             headers: {
@@ -319,7 +319,7 @@ async function postOpenAiImageEdit(input: {
     });
     if (maskBlob) form.set("mask", maskBlob, "mask.png");
     // No explicit Content-Type — fetch sets the multipart boundary itself.
-    return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
+    return fetchProviderRequest(input.fetchImpl, resolveOpenAiImageEditsUrl(input.env), {
       method: "POST",
       signal: input.input.signal,
       headers: {
@@ -398,7 +398,7 @@ function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapt
         .filter(Boolean)
         .join("\n\n");
       const url = input.imageUrl ? `${FAL_ANY_LLM_URL}/vision` : FAL_ANY_LLM_URL;
-      const response = await fetchImpl(url, {
+      const response = await fetchProviderRequest(fetchImpl, url, {
         method: "POST",
         signal: undefined,
         headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
@@ -454,7 +454,7 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
         throw preflightError("Reference-image repair requires at least one image.");
       }
 
-      const response = await fetchImpl(OPENROUTER_CHAT_URL, {
+      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_CHAT_URL, {
         method: "POST",
         signal: input.signal,
         headers: {
@@ -566,7 +566,7 @@ async function postChatCompletion(input: {
   includeModelInBody?: boolean;
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
-  const response = await input.fetchImpl(input.url, {
+  const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
     headers: {
       ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),

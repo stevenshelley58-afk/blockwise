@@ -9,7 +9,7 @@
 //
 // Proven against fal `openai/gpt-image-2/edit`.
 
-import { ProviderRequestError } from "./providers.ts";
+import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse, ProviderAccountingContext, ProviderUsage } from "./providers.ts";
 
 type EnvLike = Partial<Record<string, string>>;
@@ -86,7 +86,12 @@ export function createFalImageProvider(
         sync_mode: true,
       });
 
-      const submit = await fetchImpl(`${FAL_QUEUE_BASE}/${model}`, { method: "POST", headers, body, signal: input.signal });
+      const submit = await fetchProviderRequest(fetchImpl, `${FAL_QUEUE_BASE}/${model}`, {
+        method: "POST",
+        headers,
+        body,
+        signal: input.signal,
+      });
       const submitJson = (await submit.json().catch(() => ({}))) as {
         request_id?: string;
         status_url?: string;
@@ -115,7 +120,12 @@ export function createFalImageProvider(
           });
         }
         await new Promise((r) => setTimeout(r, pollMs));
-        const statusRes = await fetchImpl(submitJson.status_url, { headers, signal: input.signal });
+        const statusRes = await fetchProviderRequest(
+          fetchImpl,
+          submitJson.status_url,
+          { headers, signal: input.signal },
+          { providerRequestId: submitJson.request_id },
+        );
         const statusJson = (await statusRes.json().catch(() => ({}))) as { status?: string };
         if (!statusRes.ok) {
           throw new ProviderRequestError(`fal status request failed (${statusRes.status}).`, {
@@ -141,7 +151,12 @@ export function createFalImageProvider(
         }
       }
 
-      const result = await fetchImpl(submitJson.response_url, { headers, signal: input.signal });
+      const result = await fetchProviderRequest(
+        fetchImpl,
+        submitJson.response_url,
+        { headers, signal: input.signal },
+        { providerRequestId: submitJson.request_id },
+      );
       const resultJson = (await result.json().catch(() => ({}))) as {
         images?: Array<{ url?: string }>;
         cost?: number;

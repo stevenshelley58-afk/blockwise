@@ -93,6 +93,38 @@ export class ProviderRequestError extends Error {
   }
 }
 
+export async function fetchProviderRequest(
+  fetchImpl: typeof fetch,
+  input: Parameters<typeof fetch>[0],
+  init: RequestInit,
+  evidence: { providerRequestId?: string | null; usage?: ProviderUsage } = {},
+): Promise<Response> {
+  if (init.signal?.aborted) {
+    throw new ProviderRequestError("Provider request was cancelled before dispatch.", {
+      requestSubmitted: false,
+      retryable: false,
+      cause: init.signal.reason,
+    });
+  }
+
+  try {
+    return await fetchImpl(input, init);
+  } catch (cause) {
+    const aborted = init.signal?.aborted === true
+      || (typeof cause === "object" && cause !== null && "name" in cause && cause.name === "AbortError");
+    throw new ProviderRequestError(
+      aborted ? "Provider request was cancelled after dispatch." : "Provider transport failed after dispatch.",
+      {
+        requestSubmitted: true,
+        retryable: !aborted,
+        providerRequestId: evidence.providerRequestId,
+        usage: { ...evidence.usage, complete: false },
+        cause,
+      },
+    );
+  }
+}
+
 export type ImageProviderRequest = {
   prompt: string;
   negativePrompt?: string;

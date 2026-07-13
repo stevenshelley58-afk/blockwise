@@ -398,6 +398,75 @@ test("provider HTTP errors are retryable only for explicitly transient statuses"
   });
 });
 
+test("provider transport failures preserve ambiguous submission evidence and aborts never retry", async () => {
+  const transportProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      throw new TypeError("connection reset");
+    },
+  });
+
+  await assert.rejects(() => transportProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, true);
+    assert.deepEqual(error.usage, { complete: false });
+    return true;
+  });
+
+  const abortController = new AbortController();
+  const abortedProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      throw new DOMException("cancelled", "AbortError");
+    },
+  });
+  await assert.rejects(() => abortedProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+});
+
+test("a pre-aborted provider signal never dispatches", async () => {
+  let calls = 0;
+  const abortController = new AbortController();
+  abortController.abort();
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 0);
+});
+
 test("priced OpenAI image candidate does not hide a second billable retry", async () => {
   let calls = 0;
   const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
