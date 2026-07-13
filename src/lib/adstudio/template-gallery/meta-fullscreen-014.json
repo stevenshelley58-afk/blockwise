@@ -1,0 +1,407 @@
+{
+  "id": "meta-fullscreen-014",
+  "templateKey": "meta-fullscreen-014",
+  "name": "For sale 32",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-014",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-16"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 016 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_016.png",
+    "metaIndex": 16
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Made for the next chapter",
+    "primaryText": "A considered home, ready for a closer look.",
+    "description": "Freshly prepared for its next owner.",
+    "cta": "Book an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-014.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-014.svg",
+    "alt": "FOR SALE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-014-page-0-0",
+        "type": "shape",
+        "role": "page",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#ecf5f3",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-kicker-80-84",
+        "type": "text",
+        "role": "kicker",
+        "content": "FOR SALE",
+        "customerSupplied": false,
+        "x": 80,
+        "y": 84,
+        "width": 920,
+        "height": 28,
+        "fill": "#f0b76e",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-headline-80-138",
+        "type": "text",
+        "role": "headline",
+        "content": "Made for the next chapter",
+        "customerSupplied": true,
+        "x": 80,
+        "y": 138,
+        "width": 920,
+        "height": 166,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 74,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-property_photo-80-430",
+        "type": "image",
+        "role": "property_photo",
+        "x": 80,
+        "y": 430,
+        "width": 920,
+        "height": 760,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-stat_tile-80-1280",
+        "type": "shape",
+        "role": "stat_tile",
+        "x": 80,
+        "y": 1280,
+        "width": 420,
+        "height": 420,
+        "fill": "#22616d",
+        "radius": 16,
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-014-stat_value-126-1360",
+        "type": "text",
+        "role": "stat_value",
+        "content": "7.4%",
+        "customerSupplied": true,
+        "x": 126,
+        "y": 1360,
+        "width": 330,
+        "height": 84,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 64,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-stat_label-126-1480",
+        "type": "text",
+        "role": "stat_label",
+        "content": "annual price movement",
+        "customerSupplied": true,
+        "x": 126,
+        "y": 1480,
+        "width": 320,
+        "height": 80,
+        "fill": "#dfe8e2",
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-brand_logo-610-1680",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 610,
+        "y": 1680,
+        "width": 220,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-014-address-610-1740",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 610,
+        "y": 1740,
+        "width": 340,
+        "height": 86,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-page-0-0",
+            "role": "page",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ecf5f3"
+        },
+        {
+          "left": 80,
+          "top": 84,
+          "width": 920,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-kicker-80-84",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "FOR SALE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#f0b76e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 80,
+          "top": 138,
+          "width": 920,
+          "height": 166,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-headline-80-138",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Made for the next chapter",
+          "fontFamily": "Inter",
+          "fontSize": 74,
+          "fontWeight": 780,
+          "fill": "#18242b",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 80,
+          "top": 430,
+          "width": 920,
+          "height": 760,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-property_photo-80-430",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 80,
+          "top": 1280,
+          "width": 420,
+          "height": 420,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-stat_tile-80-1280",
+            "role": "stat_tile",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#22616d",
+          "rx": 16,
+          "ry": 16
+        },
+        {
+          "left": 126,
+          "top": 1360,
+          "width": 330,
+          "height": 84,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-stat_value-126-1360",
+            "role": "stat_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "7.4%",
+          "fontFamily": "Inter",
+          "fontSize": 64,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 126,
+          "top": 1480,
+          "width": 320,
+          "height": 80,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-stat_label-126-1480",
+            "role": "stat_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "annual price movement",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#dfe8e2",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 610,
+          "top": 1680,
+          "width": 220,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-brand_logo-610-1680",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 610,
+          "top": 1740,
+          "width": 340,
+          "height": 86,
+          "blockwise": {
+            "objectId": "meta-fullscreen-014-address-610-1740",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#18242b",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A considered home, ready for a closer look."
+    ],
+    "headlines": [
+      "Made for the next chapter"
+    ],
+    "descriptions": [
+      "Freshly prepared for its next owner."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

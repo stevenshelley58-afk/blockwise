@@ -1,0 +1,550 @@
+{
+  "id": "meta-feed-032",
+  "templateKey": "meta-feed-032",
+  "name": "Blockwise 12",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-feed-032",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-feed",
+    "blockwise",
+    "source-107"
+  ],
+  "promptHint": "Recreate the 01 feed 4x5 best meta 107 source ad as a Blockwise-branded 4:5 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_107.png",
+    "metaIndex": 107
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "Good advice starts nearby",
+    "primaryText": "Clear guidance for the move in front of you.",
+    "description": "Independent advice for the places people call home.",
+    "cta": "Meet the team"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-032.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-032.svg",
+    "alt": "BLOCKWISE 4:5 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-032-report_field-0-0",
+        "type": "shape",
+        "role": "report_field",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#f9f4eb",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-brand_logo-76-70",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 76,
+        "y": 70,
+        "width": 200,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-kicker-76-184",
+        "type": "text",
+        "role": "kicker",
+        "content": "BLOCKWISE",
+        "customerSupplied": false,
+        "x": 76,
+        "y": 184,
+        "width": 900,
+        "height": 28,
+        "fill": "#f4d6a5",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-headline-76-236",
+        "type": "text",
+        "role": "headline",
+        "content": "Good advice starts nearby",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 236,
+        "width": 860,
+        "height": 110,
+        "fill": "#2d251c",
+        "fontFamily": "Inter",
+        "size": 70,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-market_context_photo-720-70",
+        "type": "image",
+        "role": "market_context_photo",
+        "x": 720,
+        "y": 70,
+        "width": 284,
+        "height": 240,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-chart_base-76-620",
+        "type": "shape",
+        "role": "chart_base",
+        "x": 76,
+        "y": 620,
+        "width": 928,
+        "height": 420,
+        "fill": "#ffffff",
+        "radius": 18,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-bar_1-142-870",
+        "type": "shape",
+        "role": "bar_1",
+        "x": 142,
+        "y": 870,
+        "width": 90,
+        "height": 90,
+        "fill": "#8a6d4e",
+        "radius": 8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-bar_2-278-798",
+        "type": "shape",
+        "role": "bar_2",
+        "x": 278,
+        "y": 798,
+        "width": 90,
+        "height": 162,
+        "fill": "#8a6d4e",
+        "radius": 8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-bar_3-414-728",
+        "type": "shape",
+        "role": "bar_3",
+        "x": 414,
+        "y": 728,
+        "width": 90,
+        "height": 232,
+        "fill": "#f4d6a5",
+        "radius": 8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-bar_4-550-674",
+        "type": "shape",
+        "role": "bar_4",
+        "x": 550,
+        "y": 674,
+        "width": 90,
+        "height": 286,
+        "fill": "#8a6d4e",
+        "radius": 8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-bar_5-686-604",
+        "type": "shape",
+        "role": "bar_5",
+        "x": 686,
+        "y": 604,
+        "width": 90,
+        "height": 356,
+        "fill": "#f4d6a5",
+        "radius": 8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-032-stat_value-76-1110",
+        "type": "text",
+        "role": "stat_value",
+        "content": "7.4%",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1110,
+        "width": 300,
+        "height": 70,
+        "fill": "#2d251c",
+        "fontFamily": "Inter",
+        "size": 56,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-stat_label-380-1128",
+        "type": "text",
+        "role": "stat_label",
+        "content": "annual price movement",
+        "customerSupplied": true,
+        "x": 380,
+        "y": 1128,
+        "width": 480,
+        "height": 44,
+        "fill": "#2d251c",
+        "fontFamily": "Inter",
+        "size": 23,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-032-address-76-1230",
+        "type": "text",
+        "role": "address",
+        "content": "Scarborough, WA",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1230,
+        "width": 400,
+        "height": 36,
+        "fill": "#2d251c",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "blockwise": {
+            "objectId": "meta-feed-032-report_field-0-0",
+            "role": "report_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f9f4eb"
+        },
+        {
+          "left": 76,
+          "top": 70,
+          "width": 200,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-feed-032-brand_logo-76-70",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 76,
+          "top": 184,
+          "width": 900,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-feed-032-kicker-76-184",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "BLOCKWISE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#f4d6a5",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 236,
+          "width": 860,
+          "height": 110,
+          "blockwise": {
+            "objectId": "meta-feed-032-headline-76-236",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Good advice starts nearby",
+          "fontFamily": "Inter",
+          "fontSize": 70,
+          "fontWeight": 780,
+          "fill": "#2d251c",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 720,
+          "top": 70,
+          "width": 284,
+          "height": 240,
+          "blockwise": {
+            "objectId": "meta-feed-032-market_context_photo-720-70",
+            "role": "market_context_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 76,
+          "top": 620,
+          "width": 928,
+          "height": 420,
+          "blockwise": {
+            "objectId": "meta-feed-032-chart_base-76-620",
+            "role": "chart_base",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ffffff",
+          "rx": 18,
+          "ry": 18
+        },
+        {
+          "left": 142,
+          "top": 870,
+          "width": 90,
+          "height": 90,
+          "blockwise": {
+            "objectId": "meta-feed-032-bar_1-142-870",
+            "role": "bar_1",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#8a6d4e",
+          "rx": 8,
+          "ry": 8
+        },
+        {
+          "left": 278,
+          "top": 798,
+          "width": 90,
+          "height": 162,
+          "blockwise": {
+            "objectId": "meta-feed-032-bar_2-278-798",
+            "role": "bar_2",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#8a6d4e",
+          "rx": 8,
+          "ry": 8
+        },
+        {
+          "left": 414,
+          "top": 728,
+          "width": 90,
+          "height": 232,
+          "blockwise": {
+            "objectId": "meta-feed-032-bar_3-414-728",
+            "role": "bar_3",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f4d6a5",
+          "rx": 8,
+          "ry": 8
+        },
+        {
+          "left": 550,
+          "top": 674,
+          "width": 90,
+          "height": 286,
+          "blockwise": {
+            "objectId": "meta-feed-032-bar_4-550-674",
+            "role": "bar_4",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#8a6d4e",
+          "rx": 8,
+          "ry": 8
+        },
+        {
+          "left": 686,
+          "top": 604,
+          "width": 90,
+          "height": 356,
+          "blockwise": {
+            "objectId": "meta-feed-032-bar_5-686-604",
+            "role": "bar_5",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f4d6a5",
+          "rx": 8,
+          "ry": 8
+        },
+        {
+          "left": 76,
+          "top": 1110,
+          "width": 300,
+          "height": 70,
+          "blockwise": {
+            "objectId": "meta-feed-032-stat_value-76-1110",
+            "role": "stat_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "7.4%",
+          "fontFamily": "Inter",
+          "fontSize": 56,
+          "fontWeight": 780,
+          "fill": "#2d251c",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 380,
+          "top": 1128,
+          "width": 480,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-feed-032-stat_label-380-1128",
+            "role": "stat_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "annual price movement",
+          "fontFamily": "Inter",
+          "fontSize": 23,
+          "fontWeight": 600,
+          "fill": "#2d251c",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1230,
+          "width": 400,
+          "height": 36,
+          "blockwise": {
+            "objectId": "meta-feed-032-address-76-1230",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "Scarborough, WA",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#2d251c",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Clear guidance for the move in front of you."
+    ],
+    "headlines": [
+      "Good advice starts nearby"
+    ],
+    "descriptions": [
+      "Independent advice for the places people call home."
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

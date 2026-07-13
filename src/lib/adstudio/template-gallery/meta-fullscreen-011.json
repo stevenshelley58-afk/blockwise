@@ -1,0 +1,365 @@
+{
+  "id": "meta-fullscreen-011",
+  "templateKey": "meta-fullscreen-011",
+  "name": "For sale 29",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-011",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-7"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 007 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_007.png",
+    "metaIndex": 7
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Room to settle in",
+    "primaryText": "A considered home, ready for a closer look.",
+    "description": "Freshly prepared for its next owner.",
+    "cta": "Book an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-011.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-011.svg",
+    "alt": "FOR SALE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-011-property_photo-0-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1120,
+        "imageAnchor": "top",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-011-bottom_field-0-1120",
+        "type": "shape",
+        "role": "bottom_field",
+        "x": 0,
+        "y": 1120,
+        "width": 1080,
+        "height": 800,
+        "fill": "#292929",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-011-kicker-72-1210",
+        "type": "text",
+        "role": "kicker",
+        "content": "FOR SALE",
+        "customerSupplied": false,
+        "x": 72,
+        "y": 1210,
+        "width": 900,
+        "height": 28,
+        "fill": "#a9c6b7",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-011-headline-72-1268",
+        "type": "text",
+        "role": "headline",
+        "content": "Room to settle in",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1268,
+        "width": 860,
+        "height": 160,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 72,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.02,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-011-address-72-1508",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1508,
+        "width": 760,
+        "height": 68,
+        "fill": "#e5eee8",
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-011-rule-72-1640",
+        "type": "shape",
+        "role": "rule",
+        "x": 72,
+        "y": 1640,
+        "width": 400,
+        "height": 2,
+        "fill": "#a9c6b7",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-011-price-72-1696",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1696,
+        "width": 440,
+        "height": 48,
+        "fill": "#a9c6b7",
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-011-brand_logo-752-1770",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 752,
+        "y": 1770,
+        "width": 220,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1120,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-property_photo-0-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 0,
+          "top": 1120,
+          "width": 1080,
+          "height": 800,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-bottom_field-0-1120",
+            "role": "bottom_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#292929"
+        },
+        {
+          "left": 72,
+          "top": 1210,
+          "width": 900,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-kicker-72-1210",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "FOR SALE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#a9c6b7",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 72,
+          "top": 1268,
+          "width": 860,
+          "height": 160,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-headline-72-1268",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Room to settle in",
+          "fontFamily": "Inter",
+          "fontSize": 72,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.02
+        },
+        {
+          "left": 72,
+          "top": 1508,
+          "width": 760,
+          "height": 68,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-address-72-1508",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 600,
+          "fill": "#e5eee8",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 72,
+          "top": 1640,
+          "width": 400,
+          "height": 2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-rule-72-1640",
+            "role": "rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#a9c6b7"
+        },
+        {
+          "left": 72,
+          "top": 1696,
+          "width": 440,
+          "height": 48,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-price-72-1696",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 750,
+          "fill": "#a9c6b7",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 752,
+          "top": 1770,
+          "width": 220,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-011-brand_logo-752-1770",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A considered home, ready for a closer look."
+    ],
+    "headlines": [
+      "Room to settle in"
+    ],
+    "descriptions": [
+      "Freshly prepared for its next owner."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

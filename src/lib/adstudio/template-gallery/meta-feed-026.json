@@ -1,0 +1,465 @@
+{
+  "id": "meta-feed-026",
+  "templateKey": "meta-feed-026",
+  "name": "For sale 6",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-feed-026",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-feed",
+    "blockwise",
+    "source-37"
+  ],
+  "promptHint": "Recreate the 01 feed 4x5 best meta 037 source ad as a Blockwise-branded 4:5 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_037.png",
+    "metaIndex": 37
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "A better kind of address",
+    "primaryText": "A considered home, ready for a closer look.",
+    "description": "Freshly prepared for its next owner.",
+    "cta": "Book an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-026.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-026.svg",
+    "alt": "FOR SALE 4:5 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-026-page-0-0",
+        "type": "shape",
+        "role": "page",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "fill": "#f8f0e5",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-026-kicker-76-70",
+        "type": "text",
+        "role": "kicker",
+        "content": "FOR SALE",
+        "customerSupplied": false,
+        "x": 76,
+        "y": 70,
+        "width": 900,
+        "height": 28,
+        "fill": "#e7c77b",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-headline-76-122",
+        "type": "text",
+        "role": "headline",
+        "content": "A better kind of address",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 122,
+        "width": 900,
+        "height": 112,
+        "fill": "#271c1e",
+        "fontFamily": "Inter",
+        "size": 72,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-property_photo_1-76-330",
+        "type": "image",
+        "role": "property_photo_1",
+        "x": 76,
+        "y": 330,
+        "width": 440,
+        "height": 430,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-property_photo_2-564-330",
+        "type": "image",
+        "role": "property_photo_2",
+        "x": 564,
+        "y": 330,
+        "width": 440,
+        "height": 430,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillco.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillco.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-property_photo_3-76-790",
+        "type": "image",
+        "role": "property_photo_3",
+        "x": 76,
+        "y": 790,
+        "width": 440,
+        "height": 330,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-stat_tile-564-790",
+        "type": "shape",
+        "role": "stat_tile",
+        "x": 564,
+        "y": 790,
+        "width": 440,
+        "height": 330,
+        "fill": "#5b2730",
+        "radius": 12,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-026-stat_value-612-848",
+        "type": "text",
+        "role": "stat_value",
+        "content": "7.4%",
+        "customerSupplied": true,
+        "x": 612,
+        "y": 848,
+        "width": 344,
+        "height": 82,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 64,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-stat_label-612-958",
+        "type": "text",
+        "role": "stat_label",
+        "content": "annual price movement",
+        "customerSupplied": true,
+        "x": 612,
+        "y": 958,
+        "width": 300,
+        "height": 60,
+        "fill": "#dce7e1",
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-brand_logo-76-1200",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 76,
+        "y": 1200,
+        "width": 190,
+        "height": 42,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-026-phone-650-1200",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 650,
+        "y": 1200,
+        "width": 354,
+        "height": 32,
+        "fill": "#271c1e",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "blockwise": {
+            "objectId": "meta-feed-026-page-0-0",
+            "role": "page",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f8f0e5"
+        },
+        {
+          "left": 76,
+          "top": 70,
+          "width": 900,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-feed-026-kicker-76-70",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "FOR SALE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#e7c77b",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 122,
+          "width": 900,
+          "height": 112,
+          "blockwise": {
+            "objectId": "meta-feed-026-headline-76-122",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "A better kind of address",
+          "fontFamily": "Inter",
+          "fontSize": 72,
+          "fontWeight": 780,
+          "fill": "#271c1e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 330,
+          "width": 440,
+          "height": 430,
+          "blockwise": {
+            "objectId": "meta-feed-026-property_photo_1-76-330",
+            "role": "property_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 564,
+          "top": 330,
+          "width": 440,
+          "height": 430,
+          "blockwise": {
+            "objectId": "meta-feed-026-property_photo_2-564-330",
+            "role": "property_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillco.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 76,
+          "top": 790,
+          "width": 440,
+          "height": 330,
+          "blockwise": {
+            "objectId": "meta-feed-026-property_photo_3-76-790",
+            "role": "property_photo_3",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 564,
+          "top": 790,
+          "width": 440,
+          "height": 330,
+          "blockwise": {
+            "objectId": "meta-feed-026-stat_tile-564-790",
+            "role": "stat_tile",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#5b2730",
+          "rx": 12,
+          "ry": 12
+        },
+        {
+          "left": 612,
+          "top": 848,
+          "width": 344,
+          "height": 82,
+          "blockwise": {
+            "objectId": "meta-feed-026-stat_value-612-848",
+            "role": "stat_value",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "7.4%",
+          "fontFamily": "Inter",
+          "fontSize": 64,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 612,
+          "top": 958,
+          "width": 300,
+          "height": 60,
+          "blockwise": {
+            "objectId": "meta-feed-026-stat_label-612-958",
+            "role": "stat_label",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "annual price movement",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#dce7e1",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1200,
+          "width": 190,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-feed-026-brand_logo-76-1200",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 650,
+          "top": 1200,
+          "width": 354,
+          "height": 32,
+          "blockwise": {
+            "objectId": "meta-feed-026-phone-650-1200",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#271c1e",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "A considered home, ready for a closer look."
+    ],
+    "headlines": [
+      "A better kind of address"
+    ],
+    "descriptions": [
+      "Freshly prepared for its next owner."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

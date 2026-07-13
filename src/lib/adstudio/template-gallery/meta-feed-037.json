@@ -1,0 +1,407 @@
+{
+  "id": "meta-feed-037",
+  "templateKey": "meta-feed-037",
+  "name": "Open home 17",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "open_home_followup",
+  "offerId": "open_home-meta-feed-037",
+  "audienceIntent": "People ready to inspect a property and decide what fits next.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "meta-feed",
+    "blockwise",
+    "source-143"
+  ],
+  "promptHint": "Recreate the 01 feed 4x5 best meta 143 source ad as a Blockwise-branded 4:5 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_143.png",
+    "metaIndex": 143
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Walk through this weekend",
+    "primaryText": "Step inside, take your time, and picture the next move.",
+    "description": "Saturday 10:00–10:30",
+    "cta": "Get inspection details"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-037.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-037.svg",
+    "alt": "OPEN HOME 4:5 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-037-property_photo-0-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-card-72-164",
+        "type": "shape",
+        "role": "card",
+        "x": 72,
+        "y": 164,
+        "width": 620,
+        "height": 650,
+        "fill": "#ffffff",
+        "radius": 18,
+        "opacity": 0.96,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-037-kicker-128-224",
+        "type": "text",
+        "role": "kicker",
+        "content": "OPEN HOME",
+        "customerSupplied": false,
+        "x": 128,
+        "y": 224,
+        "width": 500,
+        "height": 30,
+        "fill": "#f0b76e",
+        "fontFamily": "Inter",
+        "size": 22,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-headline-128-292",
+        "type": "text",
+        "role": "headline",
+        "content": "Walk through this weekend",
+        "customerSupplied": true,
+        "x": 128,
+        "y": 292,
+        "width": 500,
+        "height": 180,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 66,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.05,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-card_rule-128-520",
+        "type": "shape",
+        "role": "card_rule",
+        "x": 128,
+        "y": 520,
+        "width": 460,
+        "height": 2,
+        "fill": "#d2e3e0",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-037-price-128-562",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 128,
+        "y": 562,
+        "width": 460,
+        "height": 44,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-address-128-640",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 128,
+        "y": 640,
+        "width": 460,
+        "height": 60,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 23,
+        "weight": 500,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-brand_logo-128-732",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 128,
+        "y": 732,
+        "width": 210,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-037-phone-380-740",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 380,
+        "y": 740,
+        "width": 260,
+        "height": 30,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 18,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1350,
+          "blockwise": {
+            "objectId": "meta-feed-037-property_photo-0-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 72,
+          "top": 164,
+          "width": 620,
+          "height": 650,
+          "blockwise": {
+            "objectId": "meta-feed-037-card-72-164",
+            "role": "card",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ffffff",
+          "rx": 18,
+          "ry": 18,
+          "opacity": 0.96
+        },
+        {
+          "left": 128,
+          "top": 224,
+          "width": 500,
+          "height": 30,
+          "blockwise": {
+            "objectId": "meta-feed-037-kicker-128-224",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "OPEN HOME",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": 800,
+          "fill": "#f0b76e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 128,
+          "top": 292,
+          "width": 500,
+          "height": 180,
+          "blockwise": {
+            "objectId": "meta-feed-037-headline-128-292",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Walk through this weekend",
+          "fontFamily": "Inter",
+          "fontSize": 66,
+          "fontWeight": 780,
+          "fill": "#18242b",
+          "textAlign": "left",
+          "lineHeight": 1.05
+        },
+        {
+          "left": 128,
+          "top": 520,
+          "width": 460,
+          "height": 2,
+          "blockwise": {
+            "objectId": "meta-feed-037-card_rule-128-520",
+            "role": "card_rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#d2e3e0"
+        },
+        {
+          "left": 128,
+          "top": 562,
+          "width": 460,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-feed-037-price-128-562",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#18242b",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 128,
+          "top": 640,
+          "width": 460,
+          "height": 60,
+          "blockwise": {
+            "objectId": "meta-feed-037-address-128-640",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 23,
+          "fontWeight": 500,
+          "fill": "#18242b",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 128,
+          "top": 732,
+          "width": 210,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-feed-037-brand_logo-128-732",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 380,
+          "top": 740,
+          "width": 260,
+          "height": 30,
+          "blockwise": {
+            "objectId": "meta-feed-037-phone-380-740",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": 600,
+          "fill": "#18242b",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Step inside, take your time, and picture the next move."
+    ],
+    "headlines": [
+      "Walk through this weekend"
+    ],
+    "descriptions": [
+      "Saturday 10:00–10:30"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Send inspection details",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

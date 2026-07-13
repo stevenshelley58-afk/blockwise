@@ -1,0 +1,396 @@
+{
+  "id": "meta-feed-042",
+  "templateKey": "meta-feed-042",
+  "name": "Property care 22",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "listing_nurture",
+  "offerId": "property_management-meta-feed-042",
+  "audienceIntent": "Property owners who want clear, reliable management.",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "meta-feed",
+    "blockwise",
+    "source-146"
+  ],
+  "promptHint": "Recreate the 01 feed 4x5 best meta 146 source ad as a Blockwise-branded 4:5 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_146.png",
+    "metaIndex": 146
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Good tenants. Clear updates.",
+    "primaryText": "Practical property management for owners who value the details.",
+    "description": "Leasing, inspections, and communication in one place.",
+    "cta": "Talk to management"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-042.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-042.svg",
+    "alt": "PROPERTY CARE 4:5 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-042-top_panel-0-0",
+        "type": "shape",
+        "role": "top_panel",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 470,
+        "fill": "#22616d",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-042-property_photo-0-470",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 470,
+        "width": 1080,
+        "height": 880,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-brand_logo-78-64",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 78,
+        "y": 64,
+        "width": 194,
+        "height": 42,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-kicker-78-144",
+        "type": "text",
+        "role": "kicker",
+        "content": "PROPERTY CARE",
+        "customerSupplied": false,
+        "x": 78,
+        "y": 144,
+        "width": 500,
+        "height": 28,
+        "fill": "#f0b76e",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-headline-78-204",
+        "type": "text",
+        "role": "headline",
+        "content": "Good tenants. Clear updates.",
+        "customerSupplied": true,
+        "x": 78,
+        "y": 204,
+        "width": 880,
+        "height": 118,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 70,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-badge-78-374",
+        "type": "shape",
+        "role": "badge",
+        "x": 78,
+        "y": 374,
+        "width": 242,
+        "height": 58,
+        "fill": "#f0b76e",
+        "radius": 29,
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-042-price-104-389",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 104,
+        "y": 389,
+        "width": 200,
+        "height": 28,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-address-76-1232",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1232,
+        "width": 660,
+        "height": 54,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-042-brand_logo-820-1240",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 820,
+        "y": 1240,
+        "width": 190,
+        "height": 42,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 470,
+          "blockwise": {
+            "objectId": "meta-feed-042-top_panel-0-0",
+            "role": "top_panel",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#22616d"
+        },
+        {
+          "left": 0,
+          "top": 470,
+          "width": 1080,
+          "height": 880,
+          "blockwise": {
+            "objectId": "meta-feed-042-property_photo-0-470",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 78,
+          "top": 64,
+          "width": 194,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-feed-042-brand_logo-78-64",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 78,
+          "top": 144,
+          "width": 500,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-feed-042-kicker-78-144",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "PROPERTY CARE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#f0b76e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 78,
+          "top": 204,
+          "width": 880,
+          "height": 118,
+          "blockwise": {
+            "objectId": "meta-feed-042-headline-78-204",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Good tenants. Clear updates.",
+          "fontFamily": "Inter",
+          "fontSize": 70,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 78,
+          "top": 374,
+          "width": 242,
+          "height": 58,
+          "blockwise": {
+            "objectId": "meta-feed-042-badge-78-374",
+            "role": "badge",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f0b76e",
+          "rx": 29,
+          "ry": 29
+        },
+        {
+          "left": 104,
+          "top": 389,
+          "width": 200,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-feed-042-price-104-389",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#18242b",
+          "textAlign": "center",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1232,
+          "width": 660,
+          "height": 54,
+          "blockwise": {
+            "objectId": "meta-feed-042-address-76-1232",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 820,
+          "top": 1240,
+          "width": 190,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-feed-042-brand_logo-820-1240",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Practical property management for owners who value the details."
+    ],
+    "headlines": [
+      "Good tenants. Clear updates."
+    ],
+    "descriptions": [
+      "Leasing, inspections, and communication in one place."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

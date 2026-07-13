@@ -1,0 +1,372 @@
+{
+  "id": "meta-fullscreen-017",
+  "templateKey": "meta-fullscreen-017",
+  "name": "For sale 35",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-017",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-31"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 031 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_031.png",
+    "metaIndex": 31
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Light, space, and breathing room",
+    "primaryText": "A considered home, ready for a closer look.",
+    "description": "Freshly prepared for its next owner.",
+    "cta": "Book an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-017.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-017.svg",
+    "alt": "FOR SALE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-017-property_photo-0-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-top_card-54-70",
+        "type": "shape",
+        "role": "top_card",
+        "x": 54,
+        "y": 70,
+        "width": 972,
+        "height": 410,
+        "fill": "#ffffff",
+        "radius": 14,
+        "opacity": 0.95,
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-017-brand_logo-92-112",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 92,
+        "y": 112,
+        "width": 200,
+        "height": 42,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-kicker-92-210",
+        "type": "text",
+        "role": "kicker",
+        "content": "FOR SALE",
+        "customerSupplied": false,
+        "x": 92,
+        "y": 210,
+        "width": 800,
+        "height": 28,
+        "fill": "#e07a5f",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-headline-92-258",
+        "type": "text",
+        "role": "headline",
+        "content": "Light, space, and breathing room",
+        "customerSupplied": true,
+        "x": 92,
+        "y": 258,
+        "width": 850,
+        "height": 150,
+        "fill": "#172a42",
+        "fontFamily": "Inter",
+        "size": 68,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-bottom_rule-72-1578",
+        "type": "shape",
+        "role": "bottom_rule",
+        "x": 72,
+        "y": 1578,
+        "width": 936,
+        "height": 2,
+        "fill": "#ffffff",
+        "opacity": 0.8,
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-017-address-72-1610",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1610,
+        "width": 800,
+        "height": 70,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 26,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-017-price-72-1730",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1730,
+        "width": 460,
+        "height": 44,
+        "fill": "#e07a5f",
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-property_photo-0-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 54,
+          "top": 70,
+          "width": 972,
+          "height": 410,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-top_card-54-70",
+            "role": "top_card",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ffffff",
+          "rx": 14,
+          "ry": 14,
+          "opacity": 0.95
+        },
+        {
+          "left": 92,
+          "top": 112,
+          "width": 200,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-brand_logo-92-112",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 92,
+          "top": 210,
+          "width": 800,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-kicker-92-210",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "FOR SALE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#e07a5f",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 92,
+          "top": 258,
+          "width": 850,
+          "height": 150,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-headline-92-258",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Light, space, and breathing room",
+          "fontFamily": "Inter",
+          "fontSize": 68,
+          "fontWeight": 780,
+          "fill": "#172a42",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 72,
+          "top": 1578,
+          "width": 936,
+          "height": 2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-bottom_rule-72-1578",
+            "role": "bottom_rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ffffff",
+          "opacity": 0.8
+        },
+        {
+          "left": 72,
+          "top": 1610,
+          "width": 800,
+          "height": 70,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-address-72-1610",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "fontWeight": 600,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 72,
+          "top": 1730,
+          "width": 460,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-017-price-72-1730",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 750,
+          "fill": "#e07a5f",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A considered home, ready for a closer look."
+    ],
+    "headlines": [
+      "Light, space, and breathing room"
+    ],
+    "descriptions": [
+      "Freshly prepared for its next owner."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

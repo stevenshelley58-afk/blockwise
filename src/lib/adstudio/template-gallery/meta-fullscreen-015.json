@@ -1,0 +1,300 @@
+{
+  "id": "meta-fullscreen-015",
+  "templateKey": "meta-fullscreen-015",
+  "name": "For sale 33",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "listing-meta-fullscreen-015",
+  "audienceIntent": "Buyers watching the suburb for a home with a little more room.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "meta-fullscreen",
+    "blockwise",
+    "source-23"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 023 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_023.png",
+    "metaIndex": 23
+  },
+  "classification": {
+    "ad_type": "listing",
+    "primary_intent": "listing",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Room to settle in",
+    "primaryText": "A considered home, ready for a closer look.",
+    "description": "Freshly prepared for its next owner.",
+    "cta": "Book an inspection"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-015.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-015.svg",
+    "alt": "FOR SALE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-015-property_photo-0-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1380,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillco.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillco.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-015-white_footer-0-1380",
+        "type": "shape",
+        "role": "white_footer",
+        "x": 0,
+        "y": 1380,
+        "width": 1080,
+        "height": 540,
+        "fill": "#ffffff",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-015-brand_logo-74-1460",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 74,
+        "y": 1460,
+        "width": 220,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-015-headline-74-1530",
+        "type": "text",
+        "role": "headline",
+        "content": "Room to settle in",
+        "customerSupplied": true,
+        "x": 74,
+        "y": 1530,
+        "width": 860,
+        "height": 128,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 64,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-015-price-74-1710",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 74,
+        "y": 1710,
+        "width": 420,
+        "height": 44,
+        "fill": "#f0b76e",
+        "fontFamily": "Inter",
+        "size": 32,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-015-address-580-1710",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 580,
+        "y": 1710,
+        "width": 420,
+        "height": 64,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 21,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1380,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-property_photo-0-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillco.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 0,
+          "top": 1380,
+          "width": 1080,
+          "height": 540,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-white_footer-0-1380",
+            "role": "white_footer",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#ffffff"
+        },
+        {
+          "left": 74,
+          "top": 1460,
+          "width": 220,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-brand_logo-74-1460",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 74,
+          "top": 1530,
+          "width": 860,
+          "height": 128,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-headline-74-1530",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Room to settle in",
+          "fontFamily": "Inter",
+          "fontSize": 64,
+          "fontWeight": 780,
+          "fill": "#18242b",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 74,
+          "top": 1710,
+          "width": 420,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-price-74-1710",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 750,
+          "fill": "#f0b76e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 580,
+          "top": 1710,
+          "width": 420,
+          "height": 64,
+          "blockwise": {
+            "objectId": "meta-fullscreen-015-address-580-1710",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 21,
+          "fontWeight": 600,
+          "fill": "#18242b",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A considered home, ready for a closer look."
+    ],
+    "headlines": [
+      "Room to settle in"
+    ],
+    "descriptions": [
+      "Freshly prepared for its next owner."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

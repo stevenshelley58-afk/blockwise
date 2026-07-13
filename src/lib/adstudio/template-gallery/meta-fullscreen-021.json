@@ -1,0 +1,405 @@
+{
+  "id": "meta-fullscreen-021",
+  "templateKey": "meta-fullscreen-021",
+  "name": "Blockwise 39",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-fullscreen-021",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-fullscreen",
+    "blockwise",
+    "source-237"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 237 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_237.png",
+    "metaIndex": 237
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agency"
+  },
+  "sampleCopy": {
+    "headline": "A steadier way to move",
+    "primaryText": "Clear guidance for the move in front of you.",
+    "description": "Independent advice for the places people call home.",
+    "cta": "Meet the team"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-021.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-021.svg",
+    "alt": "BLOCKWISE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-021-page-0-0",
+        "type": "shape",
+        "role": "page",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#f2f3ee",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-021-property_photo-76-96",
+        "type": "image",
+        "role": "property_photo",
+        "x": 76,
+        "y": 96,
+        "width": 928,
+        "height": 600,
+        "imageAnchor": "top",
+        "clip": "arch",
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-kicker-76-810",
+        "type": "text",
+        "role": "kicker",
+        "content": "BLOCKWISE",
+        "customerSupplied": false,
+        "x": 76,
+        "y": 810,
+        "width": 900,
+        "height": 28,
+        "fill": "#a9c6b7",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-headline-76-872",
+        "type": "text",
+        "role": "headline",
+        "content": "A steadier way to move",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 872,
+        "width": 900,
+        "height": 160,
+        "fill": "#202020",
+        "fontFamily": "Inter",
+        "size": 70,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-rule-76-1080",
+        "type": "shape",
+        "role": "rule",
+        "x": 76,
+        "y": 1080,
+        "width": 780,
+        "height": 2,
+        "fill": "#a9c6b7",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-021-detail-76-1150",
+        "type": "text",
+        "role": "detail",
+        "content": "Independent advice for the places people call home.",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1150,
+        "width": 840,
+        "height": 96,
+        "fill": "#202020",
+        "fontFamily": "Inter",
+        "size": 30,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-phone-76-1510",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1510,
+        "width": 400,
+        "height": 34,
+        "fill": "#202020",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-website_handle-76-1560",
+        "type": "text",
+        "role": "website_handle",
+        "content": "blockwise.sale",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1560,
+        "width": 400,
+        "height": 34,
+        "fill": "#202020",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-021-brand_logo-76-1760",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 76,
+        "y": 1760,
+        "width": 230,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-page-0-0",
+            "role": "page",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f2f3ee"
+        },
+        {
+          "left": 76,
+          "top": 96,
+          "width": 928,
+          "height": 600,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-property_photo-76-96",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
+          "crossOrigin": "anonymous",
+          "clip": "arch"
+        },
+        {
+          "left": 76,
+          "top": 810,
+          "width": 900,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-kicker-76-810",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "BLOCKWISE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#a9c6b7",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 872,
+          "width": 900,
+          "height": 160,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-headline-76-872",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "A steadier way to move",
+          "fontFamily": "Inter",
+          "fontSize": 70,
+          "fontWeight": 780,
+          "fill": "#202020",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1080,
+          "width": 780,
+          "height": 2,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-rule-76-1080",
+            "role": "rule",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#a9c6b7"
+        },
+        {
+          "left": 76,
+          "top": 1150,
+          "width": 840,
+          "height": 96,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-detail-76-1150",
+            "role": "detail",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "Independent advice for the places people call home.",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 600,
+          "fill": "#202020",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1510,
+          "width": 400,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-phone-76-1510",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#202020",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1560,
+          "width": 400,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-website_handle-76-1560",
+            "role": "website_handle",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "blockwise.sale",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#202020",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1760,
+          "width": 230,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-021-brand_logo-76-1760",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Clear guidance for the move in front of you."
+    ],
+    "headlines": [
+      "A steadier way to move"
+    ],
+    "descriptions": [
+      "Independent advice for the places people call home."
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

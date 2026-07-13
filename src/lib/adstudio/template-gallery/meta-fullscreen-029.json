@@ -1,0 +1,321 @@
+{
+  "id": "meta-fullscreen-029",
+  "templateKey": "meta-fullscreen-029",
+  "name": "Property care 47",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "property_management-meta-fullscreen-029",
+  "audienceIntent": "Property owners who want clear, reliable management.",
+  "category": "property_management",
+  "tags": [
+    "property_management",
+    "meta-fullscreen",
+    "blockwise",
+    "source-75"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 075 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_075.png",
+    "metaIndex": 75
+  },
+  "classification": {
+    "ad_type": "property_management",
+    "primary_intent": "property_management",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "A calmer way to own",
+    "primaryText": "Practical property management for owners who value the details.",
+    "description": "Leasing, inspections, and communication in one place.",
+    "cta": "Talk to management"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-029.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-029.svg",
+    "alt": "PROPERTY CARE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-029-collage_field-0-0",
+        "type": "shape",
+        "role": "collage_field",
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920,
+        "fill": "#1d4563",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-029-property_photo_1-60-96",
+        "type": "image",
+        "role": "property_photo_1",
+        "x": 60,
+        "y": 96,
+        "width": 300,
+        "height": 820,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-029-property_photo_2-390-286",
+        "type": "image",
+        "role": "property_photo_2",
+        "x": 390,
+        "y": 286,
+        "width": 300,
+        "height": 820,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillview.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillview.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-029-property_photo_3-720-476",
+        "type": "image",
+        "role": "property_photo_3",
+        "x": 720,
+        "y": 476,
+        "width": 300,
+        "height": 820,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-029-kicker-80-1390",
+        "type": "text",
+        "role": "kicker",
+        "content": "PROPERTY CARE",
+        "customerSupplied": false,
+        "x": 80,
+        "y": 1390,
+        "width": 860,
+        "height": 28,
+        "fill": "#e07a5f",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-029-headline-100-1450",
+        "type": "text",
+        "role": "headline",
+        "content": "A calmer way to own",
+        "customerSupplied": true,
+        "x": 100,
+        "y": 1450,
+        "width": 880,
+        "height": 140,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 64,
+        "weight": 780,
+        "align": "center",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-029-brand_logo-410-1760",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 410,
+        "y": 1760,
+        "width": 260,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 1080,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-collage_field-0-0",
+            "role": "collage_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#1d4563"
+        },
+        {
+          "left": 60,
+          "top": 96,
+          "width": 300,
+          "height": 820,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-property_photo_1-60-96",
+            "role": "property_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 390,
+          "top": 286,
+          "width": 300,
+          "height": 820,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-property_photo_2-390-286",
+            "role": "property_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillview.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 720,
+          "top": 476,
+          "width": 300,
+          "height": 820,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-property_photo_3-720-476",
+            "role": "property_photo_3",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 80,
+          "top": 1390,
+          "width": 860,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-kicker-80-1390",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "PROPERTY CARE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#e07a5f",
+          "textAlign": "center",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 100,
+          "top": 1450,
+          "width": 880,
+          "height": 140,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-headline-100-1450",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "A calmer way to own",
+          "fontFamily": "Inter",
+          "fontSize": 64,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "center",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 410,
+          "top": 1760,
+          "width": 260,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-029-brand_logo-410-1760",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Practical property management for owners who value the details."
+    ],
+    "headlines": [
+      "A calmer way to own"
+    ],
+    "descriptions": [
+      "Leasing, inspections, and communication in one place."
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,368 @@
+{
+  "id": "meta-fullscreen-023",
+  "templateKey": "meta-fullscreen-023",
+  "name": "Open home 41",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "open_home_followup",
+  "offerId": "open_home-meta-fullscreen-023",
+  "audienceIntent": "People ready to inspect a property and decide what fits next.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "meta-fullscreen",
+    "blockwise",
+    "source-47"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 047 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_047.png",
+    "metaIndex": 47
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Walk through this weekend",
+    "primaryText": "Step inside, take your time, and picture the next move.",
+    "description": "Saturday 10:00–10:30",
+    "cta": "Get inspection details"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-023.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-023.svg",
+    "alt": "OPEN HOME 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-023-left_strip-0-0",
+        "type": "shape",
+        "role": "left_strip",
+        "x": 0,
+        "y": 0,
+        "width": 238,
+        "height": 1920,
+        "fill": "#22616d",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-023-property_photo-238-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 238,
+        "y": 0,
+        "width": 842,
+        "height": 1920,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-brand_logo-64-80",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 64,
+        "y": 80,
+        "width": 112,
+        "height": 180,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-kicker-72-420",
+        "type": "text",
+        "role": "kicker",
+        "content": "OPEN HOME",
+        "customerSupplied": false,
+        "x": 72,
+        "y": 420,
+        "width": 110,
+        "height": 120,
+        "fill": "#f0b76e",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-headline-72-620",
+        "type": "text",
+        "role": "headline",
+        "content": "Walk through this weekend",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 620,
+        "width": 112,
+        "height": 560,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 54,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.04,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-date_pill-56-1480",
+        "type": "shape",
+        "role": "date_pill",
+        "x": 56,
+        "y": 1480,
+        "width": 128,
+        "height": 176,
+        "fill": "#f0b76e",
+        "radius": 64,
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-023-event_time-76-1530",
+        "type": "text",
+        "role": "event_time",
+        "content": "SAT 10:00–10:30",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1530,
+        "width": 88,
+        "height": 70,
+        "fill": "#18242b",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "center",
+        "lineHeight": 1.05,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-023-address-72-1720",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 72,
+        "y": 1720,
+        "width": 110,
+        "height": 120,
+        "fill": "#dce7e1",
+        "fontFamily": "Inter",
+        "size": 19,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.1,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 238,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-left_strip-0-0",
+            "role": "left_strip",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#22616d"
+        },
+        {
+          "left": 238,
+          "top": 0,
+          "width": 842,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-property_photo-238-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 64,
+          "top": 80,
+          "width": 112,
+          "height": 180,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-brand_logo-64-80",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 72,
+          "top": 420,
+          "width": 110,
+          "height": 120,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-kicker-72-420",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "OPEN HOME",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#f0b76e",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 72,
+          "top": 620,
+          "width": 112,
+          "height": 560,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-headline-72-620",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Walk through this weekend",
+          "fontFamily": "Inter",
+          "fontSize": 54,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.04
+        },
+        {
+          "left": 56,
+          "top": 1480,
+          "width": 128,
+          "height": 176,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-date_pill-56-1480",
+            "role": "date_pill",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f0b76e",
+          "rx": 64,
+          "ry": 64
+        },
+        {
+          "left": 76,
+          "top": 1530,
+          "width": 88,
+          "height": 70,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-event_time-76-1530",
+            "role": "event_time",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "SAT 10:00–10:30",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#18242b",
+          "textAlign": "center",
+          "lineHeight": 1.05
+        },
+        {
+          "left": 72,
+          "top": 1720,
+          "width": 110,
+          "height": 120,
+          "blockwise": {
+            "objectId": "meta-fullscreen-023-address-72-1720",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 19,
+          "fontWeight": 600,
+          "fill": "#dce7e1",
+          "textAlign": "left",
+          "lineHeight": 1.1
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Step inside, take your time, and picture the next move."
+    ],
+    "headlines": [
+      "Walk through this weekend"
+    ],
+    "descriptions": [
+      "Saturday 10:00–10:30"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Send inspection details",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

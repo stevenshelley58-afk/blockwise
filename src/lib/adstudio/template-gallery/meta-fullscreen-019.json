@@ -1,0 +1,378 @@
+{
+  "id": "meta-fullscreen-019",
+  "templateKey": "meta-fullscreen-019",
+  "name": "Blockwise 37",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "listing_nurture",
+  "offerId": "agency_brand-meta-fullscreen-019",
+  "audienceIntent": "Owners and buyers looking for practical local property advice.",
+  "category": "agency_brand",
+  "tags": [
+    "agency_brand",
+    "meta-fullscreen",
+    "blockwise",
+    "source-24"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 024 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_024.png",
+    "metaIndex": 24
+  },
+  "classification": {
+    "ad_type": "agency_brand",
+    "primary_intent": "agency_brand",
+    "property_or_agent_focus": "agent"
+  },
+  "sampleCopy": {
+    "headline": "Property, handled well",
+    "primaryText": "Clear guidance for the move in front of you.",
+    "description": "Independent advice for the places people call home.",
+    "cta": "Meet the team"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-019.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-019.svg",
+    "alt": "BLOCKWISE 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-019-property_photo-0-0",
+        "type": "image",
+        "role": "property_photo",
+        "x": 0,
+        "y": 0,
+        "width": 700,
+        "height": 1920,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-coastline.jpg",
+        "assetId": "/adstudio-samples/photos/ad-coastline.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-right_field-700-0",
+        "type": "shape",
+        "role": "right_field",
+        "x": 700,
+        "y": 0,
+        "width": 380,
+        "height": 1920,
+        "fill": "#1d2635",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-019-kicker-760-92",
+        "type": "text",
+        "role": "kicker",
+        "content": "BLOCKWISE",
+        "customerSupplied": false,
+        "x": 760,
+        "y": 92,
+        "width": 260,
+        "height": 28,
+        "fill": "#e9a957",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 800,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-headline-760-160",
+        "type": "text",
+        "role": "headline",
+        "content": "Property, handled well",
+        "customerSupplied": true,
+        "x": 760,
+        "y": 160,
+        "width": 250,
+        "height": 420,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 52,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.03,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-price-760-700",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 760,
+        "y": 700,
+        "width": 250,
+        "height": 40,
+        "fill": "#e9a957",
+        "fontFamily": "Inter",
+        "size": 28,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-address-760-790",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 760,
+        "y": 790,
+        "width": 250,
+        "height": 120,
+        "fill": "#dfe8e2",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-brand_logo-760-1580",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 760,
+        "y": 1580,
+        "width": 240,
+        "height": 44,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-019-phone-760-1710",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 760,
+        "y": 1710,
+        "width": 250,
+        "height": 34,
+        "fill": "#dfe8e2",
+        "fontFamily": "Inter",
+        "size": 18,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 700,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-property_photo-0-0",
+            "role": "property_photo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-coastline.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 700,
+          "top": 0,
+          "width": 380,
+          "height": 1920,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-right_field-700-0",
+            "role": "right_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#1d2635"
+        },
+        {
+          "left": 760,
+          "top": 92,
+          "width": 260,
+          "height": 28,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-kicker-760-92",
+            "role": "kicker",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "BLOCKWISE",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 800,
+          "fill": "#e9a957",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 760,
+          "top": 160,
+          "width": 250,
+          "height": 420,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-headline-760-160",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Property, handled well",
+          "fontFamily": "Inter",
+          "fontSize": 52,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.03
+        },
+        {
+          "left": 760,
+          "top": 700,
+          "width": 250,
+          "height": 40,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-price-760-700",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": 750,
+          "fill": "#e9a957",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 760,
+          "top": 790,
+          "width": 250,
+          "height": 120,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-address-760-790",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#dfe8e2",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 760,
+          "top": 1580,
+          "width": 240,
+          "height": 44,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-brand_logo-760-1580",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 760,
+          "top": 1710,
+          "width": 250,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-fullscreen-019-phone-760-1710",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": 600,
+          "fill": "#dfe8e2",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "Clear guidance for the move in front of you."
+    ],
+    "headlines": [
+      "Property, handled well"
+    ],
+    "descriptions": [
+      "Independent advice for the places people call home."
+    ],
+    "cta": "CONTACT_US",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,408 @@
+{
+  "id": "meta-fullscreen-025",
+  "templateKey": "meta-fullscreen-025",
+  "name": "Sold 43",
+  "placement": "meta_fullscreen",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "goal": "seller_leads",
+  "offerId": "just_sold-meta-fullscreen-025",
+  "audienceIntent": "Owners weighing a move after seeing a recent local result.",
+  "category": "just_sold",
+  "tags": [
+    "just_sold",
+    "meta-fullscreen",
+    "blockwise",
+    "source-22"
+  ],
+  "promptHint": "Recreate the 02 stories reels 9x16 meta 022 source ad as a Blockwise-branded 9:16 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_022.png",
+    "metaIndex": 22
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "just_sold",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "A strong result, locally",
+    "primaryText": "A focused campaign, a confident result, a happy owner.",
+    "description": "Sold in Scarborough",
+    "cta": "Talk about your property"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-fullscreen-025.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-fullscreen-025.svg",
+    "alt": "SOLD 9:16 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-fullscreen-025-property_photo_1-0-0",
+        "type": "image",
+        "role": "property_photo_1",
+        "x": 0,
+        "y": 0,
+        "width": 690,
+        "height": 980,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillco.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillco.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-property_photo_2-690-0",
+        "type": "image",
+        "role": "property_photo_2",
+        "x": 690,
+        "y": 0,
+        "width": 390,
+        "height": 980,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-northstar.jpg",
+        "assetId": "/adstudio-samples/photos/ad-northstar.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-copy_field-0-980",
+        "type": "shape",
+        "role": "copy_field",
+        "x": 0,
+        "y": 980,
+        "width": 1080,
+        "height": 940,
+        "fill": "#f2eee7",
+        "locked": true
+      },
+      {
+        "objectId": "meta-fullscreen-025-brand_logo-78-1064",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 78,
+        "y": 1064,
+        "width": 190,
+        "height": 42,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo.svg",
+        "assetId": "/brand/blockwise-logo.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-headline-78-1150",
+        "type": "text",
+        "role": "headline",
+        "content": "A strong result, locally",
+        "customerSupplied": true,
+        "x": 78,
+        "y": 1150,
+        "width": 900,
+        "height": 150,
+        "fill": "#18221f",
+        "fontFamily": "Inter",
+        "size": 70,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-address-78-1360",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 78,
+        "y": 1360,
+        "width": 820,
+        "height": 74,
+        "fill": "#18221f",
+        "fontFamily": "Inter",
+        "size": 25,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-price-78-1510",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 78,
+        "y": 1510,
+        "width": 500,
+        "height": 50,
+        "fill": "#d8b36a",
+        "fontFamily": "Inter",
+        "size": 36,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-phone-78-1720",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 78,
+        "y": 1720,
+        "width": 420,
+        "height": 34,
+        "fill": "#18221f",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-fullscreen-025-website_handle-600-1720",
+        "type": "text",
+        "role": "website_handle",
+        "content": "blockwise.sale",
+        "customerSupplied": true,
+        "x": 600,
+        "y": 1720,
+        "width": 360,
+        "height": 34,
+        "fill": "#18221f",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1920,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 690,
+          "height": 980,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-property_photo_1-0-0",
+            "role": "property_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillco.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 690,
+          "top": 0,
+          "width": 390,
+          "height": 980,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-property_photo_2-690-0",
+            "role": "property_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-northstar.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 0,
+          "top": 980,
+          "width": 1080,
+          "height": 940,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-copy_field-0-980",
+            "role": "copy_field",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#f2eee7"
+        },
+        {
+          "left": 78,
+          "top": 1064,
+          "width": 190,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-brand_logo-78-1064",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 78,
+          "top": 1150,
+          "width": 900,
+          "height": 150,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-headline-78-1150",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "A strong result, locally",
+          "fontFamily": "Inter",
+          "fontSize": 70,
+          "fontWeight": 780,
+          "fill": "#18221f",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 78,
+          "top": 1360,
+          "width": 820,
+          "height": 74,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-address-78-1360",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 25,
+          "fontWeight": 600,
+          "fill": "#18221f",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 78,
+          "top": 1510,
+          "width": 500,
+          "height": 50,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-price-78-1510",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 36,
+          "fontWeight": 750,
+          "fill": "#d8b36a",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 78,
+          "top": 1720,
+          "width": 420,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-phone-78-1720",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#18221f",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 600,
+          "top": 1720,
+          "width": 360,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-fullscreen-025-website_handle-600-1720",
+            "role": "website_handle",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "blockwise.sale",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#18221f",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story",
+      "reels"
+    ],
+    "instagramPositions": [
+      "story",
+      "reels"
+    ],
+    "primaryText": [
+      "A focused campaign, a confident result, a happy owner."
+    ],
+    "headlines": [
+      "A strong result, locally"
+    ],
+    "descriptions": [
+      "Sold in Scarborough"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Talk with Blockwise",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}

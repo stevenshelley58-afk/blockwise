@@ -1,0 +1,406 @@
+{
+  "id": "meta-feed-036",
+  "templateKey": "meta-feed-036",
+  "name": "Open home 16",
+  "placement": "meta_feed",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "goal": "open_home_followup",
+  "offerId": "open_home-meta-feed-036",
+  "audienceIntent": "People ready to inspect a property and decide what fits next.",
+  "category": "open_home",
+  "tags": [
+    "open_home",
+    "meta-feed",
+    "blockwise",
+    "source-103"
+  ],
+  "promptHint": "Recreate the 01 feed 4x5 best meta 103 source ad as a Blockwise-branded 4:5 creative. Preserve its distinct composition, image rhythm, type hierarchy, and information density. Replace source identity with the approved Blockwise logo and customer facts.",
+  "source": "builtin",
+  "status": "approved",
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_103.png",
+    "metaIndex": 103
+  },
+  "classification": {
+    "ad_type": "open_home",
+    "primary_intent": "open_home",
+    "property_or_agent_focus": "property"
+  },
+  "sampleCopy": {
+    "headline": "Your next inspection starts here",
+    "primaryText": "Step inside, take your time, and picture the next move.",
+    "description": "Saturday 10:00–10:30",
+    "cta": "Get inspection details"
+  },
+  "gallery": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-036.svg",
+    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-036.svg",
+    "alt": "OPEN HOME 4:5 real-estate ad with Blockwise branding and a distinct source-ad-inspired composition."
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "backgroundAssetId": null,
+    "objects": [
+      {
+        "objectId": "meta-feed-036-property_photo_1-0-0",
+        "type": "image",
+        "role": "property_photo_1",
+        "x": 0,
+        "y": 0,
+        "width": 540,
+        "height": 730,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/prop-modern.jpg",
+        "assetId": "/adstudio-samples/photos/prop-modern.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-property_photo_2-540-0",
+        "type": "image",
+        "role": "property_photo_2",
+        "x": 540,
+        "y": 0,
+        "width": 540,
+        "height": 730,
+        "imageAnchor": "center",
+        "clip": "rect",
+        "content": "/adstudio-samples/photos/ad-hillco.jpg",
+        "assetId": "/adstudio-samples/photos/ad-hillco.jpg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-lower_panel-0-730",
+        "type": "shape",
+        "role": "lower_panel",
+        "x": 0,
+        "y": 730,
+        "width": 1080,
+        "height": 620,
+        "fill": "#8a6d4e",
+        "locked": true
+      },
+      {
+        "objectId": "meta-feed-036-brand_logo-690-790",
+        "type": "image",
+        "role": "brand_logo",
+        "x": 690,
+        "y": 790,
+        "width": 210,
+        "height": 48,
+        "imageAnchor": "left",
+        "clip": "rect",
+        "content": "/brand/blockwise-logo-light.svg",
+        "assetId": "/brand/blockwise-logo-light.svg",
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-headline-74-874",
+        "type": "text",
+        "role": "headline",
+        "content": "Your next inspection starts here",
+        "customerSupplied": true,
+        "x": 74,
+        "y": 874,
+        "width": 860,
+        "height": 116,
+        "fill": "#ffffff",
+        "fontFamily": "Inter",
+        "size": 68,
+        "weight": 780,
+        "align": "left",
+        "lineHeight": 1.03,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-address-76-1030",
+        "type": "text",
+        "role": "address",
+        "content": "18 Wattle Lane, Scarborough WA 6019",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1030,
+        "width": 600,
+        "height": 64,
+        "fill": "#e8eee9",
+        "fontFamily": "Inter",
+        "size": 24,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-price-76-1148",
+        "type": "text",
+        "role": "price",
+        "content": "$1,245,000",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1148,
+        "width": 400,
+        "height": 42,
+        "fill": "#f4d6a5",
+        "fontFamily": "Inter",
+        "size": 34,
+        "weight": 750,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-phone-76-1240",
+        "type": "text",
+        "role": "phone",
+        "content": "+61 400 123 456",
+        "customerSupplied": true,
+        "x": 76,
+        "y": 1240,
+        "width": 420,
+        "height": 34,
+        "fill": "#e8eee9",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "left",
+        "lineHeight": 1.14,
+        "locked": false
+      },
+      {
+        "objectId": "meta-feed-036-website_handle-760-1240",
+        "type": "text",
+        "role": "website_handle",
+        "content": "blockwise.sale",
+        "customerSupplied": true,
+        "x": 760,
+        "y": 1240,
+        "width": 240,
+        "height": 34,
+        "fill": "#e8eee9",
+        "fontFamily": "Inter",
+        "size": 20,
+        "weight": 600,
+        "align": "right",
+        "lineHeight": 1.14,
+        "locked": false
+      }
+    ],
+    "fabricJson": {
+      "version": "blockwise-fabric-v1",
+      "width": 1080,
+      "height": 1350,
+      "objects": [
+        {
+          "left": 0,
+          "top": 0,
+          "width": 540,
+          "height": 730,
+          "blockwise": {
+            "objectId": "meta-feed-036-property_photo_1-0-0",
+            "role": "property_photo_1",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/prop-modern.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 540,
+          "top": 0,
+          "width": 540,
+          "height": 730,
+          "blockwise": {
+            "objectId": "meta-feed-036-property_photo_2-540-0",
+            "role": "property_photo_2",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/adstudio-samples/photos/ad-hillco.jpg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 0,
+          "top": 730,
+          "width": 1080,
+          "height": 620,
+          "blockwise": {
+            "objectId": "meta-feed-036-lower_panel-0-730",
+            "role": "lower_panel",
+            "type": "shape",
+            "locked": true,
+            "editableKind": "template"
+          },
+          "type": "rect",
+          "fill": "#8a6d4e"
+        },
+        {
+          "left": 690,
+          "top": 790,
+          "width": 210,
+          "height": 48,
+          "blockwise": {
+            "objectId": "meta-feed-036-brand_logo-690-790",
+            "role": "brand_logo",
+            "type": "image",
+            "locked": false,
+            "editableKind": "image"
+          },
+          "type": "image",
+          "src": "/brand/blockwise-logo-light.svg",
+          "crossOrigin": "anonymous"
+        },
+        {
+          "left": 74,
+          "top": 874,
+          "width": 860,
+          "height": 116,
+          "blockwise": {
+            "objectId": "meta-feed-036-headline-74-874",
+            "role": "headline",
+            "type": "text",
+            "locked": false,
+            "editableKind": "headline"
+          },
+          "type": "textbox",
+          "text": "Your next inspection starts here",
+          "fontFamily": "Inter",
+          "fontSize": 68,
+          "fontWeight": 780,
+          "fill": "#ffffff",
+          "textAlign": "left",
+          "lineHeight": 1.03
+        },
+        {
+          "left": 76,
+          "top": 1030,
+          "width": 600,
+          "height": 64,
+          "blockwise": {
+            "objectId": "meta-feed-036-address-76-1030",
+            "role": "address",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "18 Wattle Lane, Scarborough WA 6019",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": 600,
+          "fill": "#e8eee9",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1148,
+          "width": 400,
+          "height": 42,
+          "blockwise": {
+            "objectId": "meta-feed-036-price-76-1148",
+            "role": "price",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "$1,245,000",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 750,
+          "fill": "#f4d6a5",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 76,
+          "top": 1240,
+          "width": 420,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-feed-036-phone-76-1240",
+            "role": "phone",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "+61 400 123 456",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#e8eee9",
+          "textAlign": "left",
+          "lineHeight": 1.14
+        },
+        {
+          "left": 760,
+          "top": 1240,
+          "width": 240,
+          "height": 34,
+          "blockwise": {
+            "objectId": "meta-feed-036-website_handle-760-1240",
+            "role": "website_handle",
+            "type": "text",
+            "locked": false,
+            "editableKind": "template"
+          },
+          "type": "textbox",
+          "text": "blockwise.sale",
+          "fontFamily": "Inter",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fill": "#e8eee9",
+          "textAlign": "right",
+          "lineHeight": 1.14
+        }
+      ]
+    }
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Step inside, take your time, and picture the next move."
+    ],
+    "headlines": [
+      "Your next inspection starts here"
+    ],
+    "descriptions": [
+      "Saturday 10:00–10:30"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Send inspection details",
+      "questions": [
+        "What would you like to know?",
+        "Best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Thanks, we will be in touch",
+        "body": "A Blockwise property specialist will follow up shortly."
+      }
+    }
+  }
+}
