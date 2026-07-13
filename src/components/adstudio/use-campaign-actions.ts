@@ -388,18 +388,15 @@ export function useCampaignActions(s: CampaignActionsState) {
         })),
       );
 
-      await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, renders);
-
-      if (failedFormats.length === 0) {
-        setExportStatus(null);
-        s.showToast("Creative export downloaded");
-      } else {
-        s.showToast(
-          `Creative export downloaded; SVG fallback used for ${failedFormats
-            .map(exportFormatLabel)
-            .join(", ")} below`,
+      if (failedFormats.length > 0) {
+        throw new Error(
+          `Creative render failed for ${failedFormats.map(exportFormatLabel).join(", ")}. Please retry.`,
         );
       }
+
+      await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, renders);
+      setExportStatus(null);
+      s.showToast("Creative export downloaded");
     } catch (error) {
       s.showToast(getMessage(error));
     } finally {

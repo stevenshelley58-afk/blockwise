@@ -6,7 +6,6 @@ import {
   type CreativeExportRender,
 } from "./creative-export.ts";
 import { deterministicUuid } from "./id.ts";
-import { svgToBytes } from "./creative-svg.ts";
 
 type FileInput = {
   path: string;
@@ -123,20 +122,17 @@ function addCreative(
 ) {
   const render = findCreativeRender(renderMap, creative, mimeType);
 
-  if (creative && render) {
-    files.push({
-      path,
-      mimeType,
-      bytes: decodeCreativeRender(render, creative),
-    });
-    return;
+  if (!creative) {
+    throw new Error(`Required creative for ${path} is missing.`);
+  }
+  if (!render) {
+    throw new Error(`Required raster render is missing for ${creative.format} (${mimeType}).`);
   }
 
-  // Rasterization not yet implemented — SVG written with correct extension
   files.push({
-    path: path.replace(/\.(png|jpg|jpeg)$/i, ".svg"),
-    mimeType: "image/svg+xml",
-    bytes: svgToBytes(creative?.previewSvg ?? "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"),
+    path,
+    mimeType,
+    bytes: decodeCreativeRender(render, creative),
   });
 }
 

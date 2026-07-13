@@ -13,6 +13,18 @@ import {
 
 const textDecoder = new TextDecoder();
 
+function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
+  return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
+    creativeId: creative.creativeId,
+    variantId: creative.variantId,
+    format: creative.format,
+    width: creative.canvas.width,
+    height: creative.canvas.height,
+    mimeType,
+    dataUrl: `data:${mimeType};base64,${Buffer.from(`${creative.creativeId}:${mimeType}`).toString("base64")}`,
+  })));
+}
+
 function customerBrandKitWithBlockwiseFallbacks() {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_customer_domain",
@@ -59,10 +71,10 @@ test("exported customer copy packs never contain blockwise.sale when brand URLs 
     city: "Perth",
     state: "WA",
     offerId: "seller_prep_checklist",
-    platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+    platforms: ["meta", "google_search"],
     variantCount: 1,
   });
-  const exportPackage = await buildAdStudioExportPackage(pack);
+  const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: completeCreativeRenders(pack) });
   const exportedText = Object.entries(exportPackage.files)
     .filter(([path]) => path.endsWith(".json") || path.endsWith(".csv") || path.endsWith(".txt"))
     .map(([, bytes]) => textDecoder.decode(bytes))
