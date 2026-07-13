@@ -349,6 +349,21 @@ test("manifest contains exact private rows and complete public-safe hashes and a
       ai_run_id: "ai-run-gamma",
       ai_usage_ledger_id: null,
     }),
+    providerRun({
+      id: "run-delta",
+      workspace_id: "workspace-beta",
+      created_at: "2026-07-12T04:00:00.000Z",
+      provider_name: "deterministic_local",
+      provider_type: "local",
+      model_name: "rules-v1",
+      model_profile: "structured_json",
+      task_type: "adstudio.local",
+      status: "completed",
+      cost_estimate: "0",
+      usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 0, complete: true },
+      ai_run_id: null,
+      ai_usage_ledger_id: null,
+    }),
   ];
   const modelProfiles = baseline.resolveModelProfileEvidence([], resolveEffectiveModelProfile);
   const manifest = baseline.buildProviderBaselineManifest({
@@ -375,21 +390,23 @@ test("manifest contains exact private rows and complete public-safe hashes and a
   assert.equal(manifest.drift.detected, false);
   assert.equal(manifest.drift.firstPassSha256, manifest.drift.secondPassSha256);
   assert.equal(manifest.acceptanceEligible, true);
-  assert.equal(manifest.publicSummary.totalRuns, 3);
+  assert.equal(manifest.publicSummary.totalRuns, 4);
   assert.match(manifest.publicSummary.workspaceIdSetSha256, /^[a-f0-9]{64}$/);
   assert.match(manifest.publicSummary.globalRunIdSetSha256, /^[a-f0-9]{64}$/);
-  assert.deepEqual(manifest.publicSummary.workspaces.map((workspace: { runCount: number }) => workspace.runCount), [2, 1]);
+  assert.deepEqual(manifest.publicSummary.workspaces.map((workspace: { runCount: number }) => workspace.runCount), [2, 2]);
   assert.equal(manifest.publicSummary.workspaces.every((workspace: { pseudonym: string }) => /^workspace-[a-f0-9]{16}$/.test(workspace.pseudonym)), true);
   assert.equal(manifest.publicSummary.cost.positive.count, 1);
   assert.equal(manifest.publicSummary.cost.positive.sum, "1.25");
-  assert.equal(manifest.publicSummary.cost.zero.count, 1);
+  assert.equal(manifest.publicSummary.cost.zero.count, 2);
   assert.equal(manifest.publicSummary.cost.zero.sum, "0");
   assert.equal(manifest.publicSummary.cost.negative.count, 1);
   assert.equal(manifest.publicSummary.cost.negative.sum, "-0.1");
   assert.equal(manifest.publicSummary.anomalies.nonLocalTerminalNonZeroUsageZeroCostCount, 1);
-  assert.equal(manifest.publicSummary.anomalies.missingOrAllZeroUsageCount, 1);
-  assert.deepEqual(manifest.publicSummary.links.aiRun, { linkedCount: 2, missingCount: 1 });
-  assert.deepEqual(manifest.publicSummary.links.aiUsageLedger, { linkedCount: 2, missingCount: 1 });
+  assert.equal(manifest.publicSummary.anomalies.missingUsageCount, 1);
+  assert.equal(manifest.publicSummary.anomalies.allZeroUsageCount, 1);
+  assert.equal(manifest.publicSummary.anomalies.missingOrAllZeroUsageCount, 2);
+  assert.deepEqual(manifest.publicSummary.links.aiRun, { linkedCount: 2, missingCount: 2 });
+  assert.deepEqual(manifest.publicSummary.links.aiUsageLedger, { linkedCount: 2, missingCount: 2 });
   assert.equal(manifest.publicSummary.dimensionQuality.modelProfile.nullCount, 1);
   assert.equal(manifest.publicSummary.dimensionQuality.taskType.unknownCount, 1);
   assert.ok(manifest.publicSummary.grouped.taskType.some((group: { value: string; count: number }) => group.value === "adstudio.image" && group.count === 1));
