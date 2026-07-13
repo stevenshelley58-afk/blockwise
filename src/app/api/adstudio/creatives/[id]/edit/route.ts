@@ -6,7 +6,7 @@ import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } f
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
-  claimAdStudioCreativeRevisionMutation,
+  executeAdStudioCreativeRevisionMutation,
   releaseAdStudioCreativeRevisionMutation,
 } from "@/lib/adstudio/creative-revisions";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -85,17 +85,40 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     }))
     .digest("hex");
 
+  const releaseClaim = () => releaseAdStudioCreativeRevisionMutation(context.supabase, {
+    workspaceId: context.access.workspaceId,
+    creativeId: id,
+    mutationId,
+  }).catch(() => undefined);
+
+  let execution;
+  try {
+    execution = await executeAdStudioCreativeRevisionMutation(context.supabase, {
+      workspaceId: context.access.workspaceId,
+      creativeId: id,
+      expectedActiveRevisionId: expectedRevisionId,
+      mutationId,
+      requestHash,
+    }, async () => {
+
   const { data: row, error: loadError } = await context.supabase
     .from("adstudio_creatives")
     .select("id, campaign_id, variant_id, format, canvas_json, active_revision_id")
     .eq("workspace_id", context.access.workspaceId)
     .eq("id", id)
     .maybeSingle();
-  if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 });
-  if (!row) return NextResponse.json({ error: "Creative not found." }, { status: 404 });
+  if (loadError) {
+    await releaseClaim();
+    return NextResponse.json({ error: loadError.message }, { status: 500 });
+  }
+  if (!row) {
+    await releaseClaim();
+    return NextResponse.json({ error: "Creative not found." }, { status: 404 });
+  }
 
   const baseRevisionId = typeof row.active_revision_id === "string" ? row.active_revision_id : "";
   if (!baseRevisionId || baseRevisionId !== expectedRevisionId) {
+    await releaseClaim();
     return NextResponse.json(
       { code: "stale_revision", error: "This ad changed while you were editing. Reload and try again." },
       { status: 409 },
@@ -106,6 +129,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const cloneObject = canvas?.objects?.[0];
   const isClone = canvas?.objects?.length === 1 && cloneObject?.objectId === "template_clone_image";
   if (!isClone) {
+    await releaseClaim();
     return NextResponse.json(
       { error: "In-place edits are only available for AI-designed creatives." },
       { status: 400 },
@@ -115,12 +139,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const currentImageRef = cloneObject.content || cloneObject.assetId || "";
   const currentImage = await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef);
   if (!currentImage) {
+    await releaseClaim();
     return NextResponse.json({ error: "The current creative image could not be read." }, { status: 400 });
   }
   const newImage = newImageRef
     ? await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, newImageRef)
     : undefined;
   if (newImageRef && !newImage) {
+    await releaseClaim();
     return NextResponse.json({ error: "The replacement image could not be read." }, { status: 400 });
   }
 
@@ -142,54 +168,6 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     aspectRatio: String(row.format ?? "4:5"),
   });
   const providers = await resolveCloneProviders("preview");
-
-  let claim;
-  try {
-    claim = await claimAdStudioCreativeRevisionMutation(context.supabase, {
-      workspaceId: context.access.workspaceId,
-      creativeId: id,
-      expectedActiveRevisionId: expectedRevisionId,
-      mutationId,
-      requestHash,
-    });
-  } catch (error) {
-    return errorResponse(error, 500);
-  }
-  if (!claim.ok) {
-    const stale = claim.reason === "stale_revision";
-    const contentMismatch = claim.reason === "mutation_content_mismatch";
-    return NextResponse.json(
-      {
-        code: claim.reason,
-        error: stale
-          ? "This ad changed while you were editing. Reload and try again."
-          : contentMismatch
-            ? "This edit retry no longer matches the original request. Start the edit again."
-            : "Another edit is already updating this ad. Try again shortly.",
-      },
-      { status: 409 },
-    );
-  }
-  if (claim.state === "completed") {
-    const completedCanvas = claim.canvas as AdStudioCreative["canvas"];
-    const completedImage = completedCanvas.objects?.[0]?.content ?? completedCanvas.objects?.[0]?.assetId;
-    if (!completedImage) return NextResponse.json({ error: "The saved edit is incomplete." }, { status: 500 });
-    return NextResponse.json({
-      creativeId: id,
-      image: completedImage,
-      qa: completedCanvas.cloneQa,
-      renderHistory: completedCanvas.renderHistory ?? [],
-      revisionId: claim.revisionId,
-      revisionNumber: claim.revisionNumber,
-      replayed: true,
-    });
-  }
-
-  const releaseClaim = () => releaseAdStudioCreativeRevisionMutation(context.supabase, {
-    workspaceId: context.access.workspaceId,
-    creativeId: id,
-    mutationId,
-  }).catch(() => undefined);
 
   const correlationId = mutationId;
 
@@ -302,4 +280,43 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     model: lastImage.model,
     provider: lastImage.provider,
   });
+    });
+  } catch (error) {
+    return errorResponse(error, 500);
+  }
+
+  if (!execution.ok) {
+    const stale = execution.reason === "stale_revision";
+    const contentMismatch = execution.reason === "mutation_content_mismatch";
+    return NextResponse.json(
+      {
+        code: execution.reason,
+        error: stale
+          ? "This ad changed while you were editing. Reload and try again."
+          : contentMismatch
+            ? "This edit retry no longer matches the original request. Start the edit again."
+            : "Another edit is already updating this ad. Try again shortly.",
+      },
+      { status: 409 },
+    );
+  }
+  if (execution.state === "completed") {
+    const completedCanvas = execution.canvas as AdStudioCreative["canvas"];
+    const completedImage = completedCanvas.objects?.[0]?.content ?? completedCanvas.objects?.[0]?.assetId;
+    if (!completedImage) return NextResponse.json({ error: "The saved edit is incomplete." }, { status: 500 });
+    return NextResponse.json({
+      creativeId: id,
+      image: completedImage,
+      qa: completedCanvas.cloneQa,
+      renderHistory: completedCanvas.renderHistory ?? [],
+      revisionId: execution.revisionId,
+      revisionNumber: execution.revisionNumber,
+      replayed: true,
+    });
+  }
+  if (execution.state === "work_failed") {
+    await releaseClaim();
+    return errorResponse(execution.error, 500);
+  }
+  return execution.value;
 }

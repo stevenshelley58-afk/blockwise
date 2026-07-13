@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   appendAdStudioCreativeRevision,
   claimAdStudioCreativeRevisionMutation,
+  executeAdStudioCreativeRevisionMutation,
 } from "../src/lib/adstudio/creative-revisions.ts";
 
 const migrationPath = "supabase/migrations/202607130003_adstudio_creative_revisions.sql";
@@ -171,13 +172,13 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
 
   assert.match(route, /active_revision_id/);
   assert.match(route, /appendAdStudioCreativeRevision/);
-  assert.match(route, /claimAdStudioCreativeRevisionMutation/);
+  assert.match(route, /executeAdStudioCreativeRevisionMutation/);
   assert.match(route, /expectedRevisionId/);
   assert.match(route, /mutationId/);
   assert.match(route, /createHash\("sha256"\)/);
   assert.match(route, /requestHash/);
   assert.ok(
-    route.indexOf("claimAdStudioCreativeRevisionMutation") < route.indexOf("generateCloneWithCascade({"),
+    route.indexOf("executeAdStudioCreativeRevisionMutation") < route.indexOf("generateCloneWithCascade({"),
     "the route claims before paid provider dispatch",
   );
   assert.match(route, /reason === "stale_revision"/);
@@ -227,4 +228,45 @@ test("revision claim maps mutation content mismatch to a typed conflict", async 
   );
 
   assert.deepEqual(result, { ok: false, reason: "mutation_content_mismatch" });
+});
+
+test("a lost success response replays the completed revision without dispatching provider work", async () => {
+  let completed = false;
+  let providerDispatches = 0;
+  const client = {
+    async rpc() {
+      return completed
+        ? {
+            data: [{
+              state: "completed",
+              revision_id: "55555555-5555-4555-8555-555555555555",
+              revision_number: 2,
+              canvas_json: { objects: [{ content: "saved-edit.png" }] },
+            }],
+            error: null,
+          }
+        : { data: [{ state: "claimed" }], error: null };
+    },
+  };
+  const input = {
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    creativeId: "22222222-2222-4222-8222-222222222222",
+    expectedActiveRevisionId: "33333333-3333-4333-8333-333333333333",
+    mutationId: "44444444-4444-4444-8444-444444444444",
+    requestHash,
+  };
+
+  await executeAdStudioCreativeRevisionMutation(client, input, async () => {
+    providerDispatches += 1;
+    completed = true;
+    return { response: "lost after commit" };
+  });
+  const retry = await executeAdStudioCreativeRevisionMutation(client, input, async () => {
+    providerDispatches += 1;
+    return { response: "must not run" };
+  });
+
+  assert.equal(providerDispatches, 1);
+  assert.equal(retry.ok && retry.state, "completed");
+  assert.equal(retry.ok && retry.state === "completed" && retry.revisionId, "55555555-5555-4555-8555-555555555555");
 });

@@ -35,6 +35,11 @@ export type ClaimCreativeRevisionResult =
   | { ok: true; state: "completed"; revisionId: string; revisionNumber: number; canvas: unknown }
   | { ok: false; reason: "stale_revision" | "edit_in_progress" | "mutation_content_mismatch" };
 
+export type ExecuteCreativeRevisionMutationResult<T> =
+  | Exclude<ClaimCreativeRevisionResult, { ok: true; state: "claimed" }>
+  | { ok: true; state: "executed"; value: T }
+  | { ok: true; state: "work_failed"; error: unknown };
+
 export async function claimAdStudioCreativeRevisionMutation(
   supabase: RevisionRpcClient,
   input: ClaimCreativeRevisionInput,
@@ -75,6 +80,21 @@ export async function claimAdStudioCreativeRevisionMutation(
     revisionNumber: Number(row.revision_number),
     canvas: row.canvas_json,
   };
+}
+
+export async function executeAdStudioCreativeRevisionMutation<T>(
+  supabase: RevisionRpcClient,
+  input: ClaimCreativeRevisionInput,
+  work: () => Promise<T>,
+): Promise<ExecuteCreativeRevisionMutationResult<T>> {
+  const claim = await claimAdStudioCreativeRevisionMutation(supabase, input);
+  if (!claim.ok || claim.state === "completed") return claim;
+
+  try {
+    return { ok: true, state: "executed", value: await work() };
+  } catch (error) {
+    return { ok: true, state: "work_failed", error };
+  }
 }
 
 export async function releaseAdStudioCreativeRevisionMutation(
