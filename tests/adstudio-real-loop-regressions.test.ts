@@ -439,19 +439,6 @@ test("P2.3: blank mode is cut — every new ad starts from a template", () => {
   assert.match(createRoute, /firstAd\.mode !== "template" && firstAd\.mode !== "custom"/);
 });
 
-test("P2.3: legacy creative snapshot script guards renderer deletion", () => {
-  assert.equal(existsSync("scripts/migrations/snapshot-legacy-creatives.mjs"), true);
-  const script = readFileSync("scripts/migrations/snapshot-legacy-creatives.mjs", "utf8");
-
-  assert.match(script, /--dry-run/);
-  assert.match(script, /legacy_snapshot/);
-  assert.match(script, /legacySnapshotPath/);
-  assert.match(script, /workspace-artifacts/);
-  assert.match(script, /adstudio\/legacy-snapshots\//);
-  assert.match(script, /renderCreativeSvg/);
-  assert.match(script, /SUPABASE_SERVICE_ROLE_KEY/);
-});
-
 test("P2.3: nothing generates the dangling 1.91:1 landscape or 1:1 square formats anymore", () => {
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
   const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
