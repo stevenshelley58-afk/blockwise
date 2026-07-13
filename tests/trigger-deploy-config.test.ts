@@ -35,7 +35,6 @@ test("Trigger runbook lists required production task environment", () => {
   for (const key of [
     "TRIGGER_PROJECT_ID",
     "SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY",
     "META_APP_ID",
     "META_APP_SECRET",
     "TOKEN_ENCRYPTION_KEY",
@@ -43,5 +42,6 @@ test("Trigger runbook lists required production task environment", () => {
   ]) {
     assert.match(runbook, new RegExp(`- \`${key}\``), `expected ${key} in Trigger env runbook`);
   }
+  assert.match(runbook, /`SUPABASE_SECRET_KEY` \(preferred\) or legacy `SUPABASE_SERVICE_ROLE_KEY`/);
   assert.match(runbook, /`SENTRY_DSN` or `NEXT_PUBLIC_SENTRY_DSN`/);
 });

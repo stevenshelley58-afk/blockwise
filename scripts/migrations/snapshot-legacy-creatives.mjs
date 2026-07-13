@@ -27,7 +27,8 @@
 //   node scripts/migrations/snapshot-legacy-creatives.mjs --dry-run   # counts only
 //   node scripts/migrations/snapshot-legacy-creatives.mjs
 //
-// Env: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_SERVICE_ROLE_KEY.
+// Env: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_SECRET_KEY
+// (preferred) or SUPABASE_SERVICE_ROLE_KEY.
 // Requires Node >= 22.18 (imports the app's TypeScript renderer directly) and
 // Playwright chromium (devDependency; PLAYWRIGHT_BROWSERS_PATH works as usual).
 
@@ -39,6 +40,10 @@ import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 import { renderCreativeSvg } from "../../src/lib/adstudio/creative-svg.ts";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "../lib/supabase-server-credential.mjs";
 
 const BUCKET = "workspace-artifacts";
 const BATCH_SIZE = 20;
@@ -49,14 +54,14 @@ const dryRun = process.argv.includes("--dry-run");
 
 function requireEnv() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
+  const serverCredential = resolveSupabaseServerCredential(process.env);
+  if (!url || !serverCredential) {
     console.error(
-      "Missing env: set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.",
+      "Missing env: set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY.",
     );
     process.exit(1);
   }
-  return { url, serviceRoleKey };
+  return { url };
 }
 
 function isCompositedCanvas(canvas) {
@@ -229,8 +234,10 @@ async function snapshotRow(supabase, browser, row, brandCache) {
 }
 
 async function main() {
-  const { url, serviceRoleKey } = requireEnv();
-  const supabase = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+  const { url } = requireEnv();
+  const supabase = createSupabaseServerClient(createClient, url, process.env, {
+    auth: { persistSession: false },
+  });
 
   console.log(`Scanning adstudio_creatives (${dryRun ? "dry run" : "live run"})...`);
   const [pendingRows, alreadySnapshotted] = await Promise.all([

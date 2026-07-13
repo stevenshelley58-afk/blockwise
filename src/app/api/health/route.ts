@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDeploymentReadiness } from "@/lib/config/env";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { resolveSupabaseServerCredential } from "@/lib/supabase/credentials";
 
 export const runtime = "nodejs";
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
 async function getSupabaseReadiness(): Promise<SupabaseReadiness> {
   const checkedAt = new Date().toISOString();
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !resolveSupabaseServerCredential()) {
     return { ok: false, status: "configuration_incomplete", checkedAt };
   }
 

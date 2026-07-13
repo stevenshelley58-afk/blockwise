@@ -5,6 +5,10 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "../lib/supabase-server-credential.mjs";
 
 const EXA_URL = "https://api.exa.ai/search";
 const DEFAULT_DOMAINS = [
@@ -472,10 +476,9 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = { ...process.env, ...loadEnv(".env.local") };
   const url = clean(env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL);
-  const serviceKey = clean(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_KEY || env.SERVICE_ROLE_KEY);
-  if (!url || !serviceKey) throw new Error("Missing Supabase service credentials");
+  if (!url || !resolveSupabaseServerCredential(env)) throw new Error("Missing Supabase server credentials");
 
-  const research = createClient(url, serviceKey, {
+  const research = createSupabaseServerClient(createClient, url, env, {
     db: { schema: "research" },
     auth: { persistSession: false, autoRefreshToken: false },
   });

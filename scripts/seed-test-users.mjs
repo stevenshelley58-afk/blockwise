@@ -1,24 +1,28 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "./lib/supabase-server-credential.mjs";
 
 function cleanEnv(value) {
   return value?.replace(/^\uFEFF/, "").trim();
 }
 
 const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
-const serviceRoleKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const serverCredential = resolveSupabaseServerCredential(process.env);
 const password = cleanEnv(process.env.BLOCKWISE_DEV_PASSWORD);
 const operatorEmail = cleanEnv(process.env.BLOCKWISE_OPERATOR_EMAIL) || "steven@blockwise.sale";
 const operatorFullName = cleanEnv(process.env.BLOCKWISE_OPERATOR_FULL_NAME) || "Steven Shelley";
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+if (!supabaseUrl || !serverCredential) {
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY.");
 }
 
 if (!password || password.length < 16) {
   throw new Error("Set BLOCKWISE_DEV_PASSWORD to a unique password of at least 16 characters before seeding test users.");
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
+const supabase = createSupabaseServerClient(createClient, supabaseUrl, process.env, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,

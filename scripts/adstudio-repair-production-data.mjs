@@ -2,6 +2,10 @@
 
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseServerClient,
+  resolveSupabaseServerCredential,
+} from "./lib/supabase-server-credential.mjs";
 
 const EXECUTE = process.argv.includes("--execute");
 const DELETE_DEMO_KITS = process.argv.includes("--delete-demo-kits");
@@ -9,17 +13,14 @@ const WORKSPACE_ID = argValue("--workspace-id");
 const BUCKET = "workspace-artifacts";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ??
-  process.env.SUPABASE_SERVICE_KEY ??
-  process.env.SERVICE_ROLE_KEY;
+const serverCredential = resolveSupabaseServerCredential(process.env);
 
-if (!supabaseUrl || !serviceKey) {
-  console.error("Set SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before running.");
+if (!supabaseUrl || !serverCredential) {
+  console.error("Set SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY before running.");
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, serviceKey, {
+const supabase = createSupabaseServerClient(createClient, supabaseUrl, process.env, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
