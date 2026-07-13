@@ -91,6 +91,15 @@ resolve and record the then-active profile and fallback chain.
 The `$0.000` structured/vision values are unreconciled telemetry fields, not
 evidence that those calls are free.
 
+At capture, OpenRouter's public model catalog expressed
+`google/gemini-2.5-flash-image` pricing in token-denominated fields rather than
+as a fixed `$0.039` output-image charge. The persisted `$0.039` value is therefore
+a configured fallback estimate, not provider billing truth. Provider-reported
+`usage.cost` must be authoritative, with the exact runtime price and unit stored
+only as the fallback snapshot used for reconciliation. Source:
+<https://openrouter.ai/api/v1/models> and OpenRouter's
+[image-generation response contract](https://openrouter.ai/docs/guides/overview/multimodal/image-generation).
+
 ## Provider cost telemetry finding
 
 Recent clone image runs are recorded with zero estimated cost even when the
@@ -112,19 +121,36 @@ work.
 - `Hard Reset Verification` run `29196909095` succeeded on the exact source SHA,
   including its `Deploy trigger.dev tasks` job. Any subsequently changed task
   must still be deployed and registration-confirmed again.
+- That job registered Trigger.dev production version `20260712.1` with nine
+  detected tasks; deployment ID `yhy0q8l7` is retained in the GitHub job log.
+  The source task IDs are `adstudio.generate.template`,
+  `research.ad-radar.accuracy.weekly`, `sync-provider-reports`,
+  `publish.meta.execute`, `publish.meta.mutate`, `sync.meta.leads`,
+  `deliver.lead`, `sync.meta.leads.scheduled`, and
+  `check.meta.token-health.scheduled`.
 - `AdStudio E2E (Vercel Preview)` is active and the required password secret is
   present. Its latest historical automatic runs failed or skipped; the workflow
   is now deliberate/manual and must be dispatched against the matching Preview
   commit.
 - Supabase CLI is authenticated and linked to the Blockwise project.
-- Vercel CLI authentication succeeds, but no Blockwise project is visible in the
-  accessible personal or team scopes. GitHub deployment integration may still
-  produce Preview URLs; direct Vercel CLI release evidence remains an access gap
-  to resolve before runtime acceptance.
+- Vercel CLI is authenticated and linked to project
+  `prj_8gJyKjHN4miNOWK7ReA4vKDXxc4B`. The plan merge is deployed from committed
+  source `94a1500` as Ready production deployment
+  `dpl_7uHHyVrB3TqxwDD7VuLni6vcNCxE`; its build log identifies branch `main`
+  and commit `94a1500`. The production `/api/health` route returned HTTP 200
+  with `status=ready` after deployment.
+- The corresponding Ready plan Preview is deployment
+  `dpl_E6Y99PNANJ32eBFkyK2GWNT4KfpV`. GitHub reports the matching Vercel check
+  green on PR 171.
+- Vercel lists the required Supabase, Trigger.dev, OpenRouter, and OpenAI secret
+  names in their applicable Preview/Production environments. GitHub lists the
+  AdStudio E2E password and Trigger.dev deployment secret names. No secret value
+  was read or recorded.
 
-Per-workspace aggregate rows, the exact secured manifest SHA, provider-run
-sample IDs/window, and matching Preview/Production deployment IDs remain open
-Gate 0 evidence items; this baseline does not claim otherwise.
+Per-workspace aggregate rows, the exact secured manifest SHA, and provider-run
+sample IDs/window remain open Gate 0 evidence items. Behavior-changing Gate 0
+code must still receive its own matching Preview and Production deployment IDs;
+the documentation deployment above cannot satisfy that later evidence.
 
 ## Safety conclusion
 
