@@ -61,6 +61,7 @@ const PROFILE_VERSION_COLUMNS = [
 ].join(",");
 const SCHEMA = "adstudio-provider-run-baseline/v1";
 const QUERY_VERSION = "workspace-created-at-id-keyset-v1";
+const MODEL_PROFILE_QUERY_VERSION = "active-at-window-end-v1";
 const PAGE_SIZE = 1000;
 const DEFAULT_MAX_LATENCY_MS = 12_000;
 const TERMINAL_STATUSES = new Set(["completed", "failed", "blocked", "cancelled"]);
@@ -88,6 +89,13 @@ function assertIsoTimestamp(value, label) {
   return value;
 }
 
+function assertHexDigest(value, length, label) {
+  if (typeof value !== "string" || !new RegExp(`^[a-f0-9]{${length}}$`).test(value)) {
+    throw new Error(`${label} must be a lowercase ${length}-character hexadecimal digest.`);
+  }
+  return value;
+}
+
 export function requireEnv(env = process.env) {
   const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
   const credential = resolveSupabaseServerCredential(env);
@@ -108,7 +116,7 @@ export function parseCliArgs(args) {
     throw new Error(`Live execution flags are forbidden during Gate 0: ${liveFlags.join(", ")}`);
   }
   const unsupported = args.filter((argument, index) => argument !== "--dry-run" || args.indexOf(argument) !== index);
-  if (unsupported.length > 0) throw new Error(`Unsupported argument: ${unsupported.join(", ")}`);
+  if (unsupported.length > 0) throw new Error("Unsupported argument supplied to provider baseline capture.");
   return { dryRun: true };
 }
 
@@ -156,7 +164,7 @@ export async function loadProviderRunRows({ supabase, workspaceId, windowEnd, pa
       );
     }
     const { data, error } = await query;
-    if (error) throw new Error(`Unable to read provider-run evidence: ${error.message}`);
+    if (error) throw new Error("Unable to read provider-run evidence.");
     if (!Array.isArray(data)) throw new Error("Provider-run evidence query returned no data.");
     if (data.length === 0) break;
 
@@ -180,7 +188,7 @@ export async function listWorkspaceIds({ supabase, pageSize = PAGE_SIZE }) {
     let query = supabase.from("workspaces").select("id").order("id", { ascending: true }).limit(pageSize);
     if (cursor !== null) query = query.gt("id", cursor);
     const { data, error } = await query;
-    if (error) throw new Error(`Unable to enumerate workspaces: ${error.message}`);
+    if (error) throw new Error("Unable to enumerate workspaces.");
     if (!Array.isArray(data)) throw new Error("Workspace enumeration returned no data.");
     if (data.length === 0) break;
     const nextCursor = data.at(-1)?.id;
@@ -205,7 +213,7 @@ export async function loadActiveProfileVersionRows({ supabase, windowEnd }) {
     .or(`active_to.is.null,active_to.gte.${windowEnd}`)
     .order("active_from", { ascending: false })
     .order("id", { ascending: true });
-  if (error) throw new Error(`Unable to load active model profile versions: ${error.message}`);
+  if (error) throw new Error("Unable to load active model profile versions.");
   if (!Array.isArray(data)) throw new Error("Unable to load active model profile versions: query returned no data.");
   return data;
 }
@@ -241,7 +249,7 @@ function toPersistedVersion(row) {
     supportsStructuredOutput: row.supports_structured_output === true,
     maxContextTokens: finiteNonNegative(row.max_context_tokens, "context limit"),
     maxLatencyMs: DEFAULT_MAX_LATENCY_MS,
-    activeFrom: row.active_from,
+    activeFrom: assertIsoTimestamp(row.active_from, "Active model profile version active_from"),
   };
 }
 
@@ -483,12 +491,11 @@ function sortedNormalizedRows(rows, workspaceIds, windowEnd) {
   normalized.sort((left, right) =>
     String(left.workspace_id).localeCompare(String(right.workspace_id)) || compareRunKeys(left, right),
   );
-  for (let index = 1; index < normalized.length; index += 1) {
-    const previous = normalized[index - 1];
-    const current = normalized[index];
-    if (previous.workspace_id === current.workspace_id && compareRunKeys(previous, current) === 0) {
-      throw new Error("Provider-run evidence contains a duplicate run key.");
-    }
+  const runIds = new Set();
+  for (const row of normalized) {
+    const key = canonicalJson([row.workspace_id, row.id]);
+    if (runIds.has(key)) throw new Error("Provider-run evidence contains a duplicate run ID.");
+    runIds.add(key);
   }
   return normalized;
 }
@@ -504,15 +511,33 @@ export function buildProviderBaselineManifest({
   firstPassRows,
   secondPassRows,
   modelProfiles,
+  secondModelProfiles = modelProfiles,
 }) {
-  assertIsoTimestamp(capturedAtStart, "Capture start");
-  assertIsoTimestamp(capturedAtEnd, "Capture end");
+  const captureStart = assertIsoTimestamp(capturedAtStart, "Capture start");
+  const captureEnd = assertIsoTimestamp(capturedAtEnd, "Capture end");
   assertIsoTimestamp(windowEnd, "Window end");
+  if (Date.parse(captureEnd) < Date.parse(captureStart)) throw new Error("Capture end precedes capture start.");
+  if (typeof projectRef !== "string" || !projectRef.trim()) throw new Error("Supabase project reference is required.");
+  if (typeof sourceCommit !== "string" || !/^[a-f0-9]{40,64}$/.test(sourceCommit)) {
+    throw new Error("Source commit must be a lowercase Git object ID.");
+  }
+  assertHexDigest(toolSourceSha256, 64, "Tool source SHA-256");
+  if (!Array.isArray(workspaceIds) || workspaceIds.some((id) => typeof id !== "string" || !id)) {
+    throw new Error("Workspace evidence set contains an invalid ID.");
+  }
+  if (new Set(workspaceIds).size !== workspaceIds.length) {
+    throw new Error("Workspace evidence set contains a duplicate ID.");
+  }
+  if (!Array.isArray(modelProfiles) || !Array.isArray(secondModelProfiles)) {
+    throw new Error("Resolved model-profile evidence must be an array.");
+  }
   const sortedWorkspaces = [...new Set(workspaceIds)].sort();
   const firstRows = sortedNormalizedRows(firstPassRows, sortedWorkspaces, windowEnd);
   const secondRows = sortedNormalizedRows(secondPassRows, sortedWorkspaces, windowEnd);
   const firstPassSha256 = sha256Canonical(firstRows);
   const secondPassSha256 = sha256Canonical(secondRows);
+  const firstModelProfilesSha256 = sha256Canonical(modelProfiles);
+  const secondModelProfilesSha256 = sha256Canonical(secondModelProfiles);
   const queryDefinition = {
     version: QUERY_VERSION,
     table: "adstudio_provider_runs",
@@ -520,6 +545,14 @@ export function buildProviderBaselineManifest({
     window: { startInclusive: WINDOW_START, endExclusive: windowEnd },
     workspaceFilter: "workspace_id=eq.<enumerated-workspace>",
     order: ["created_at.asc", "id.asc"],
+  };
+  const modelProfileQueryDefinition = {
+    version: MODEL_PROFILE_QUERY_VERSION,
+    table: "model_profile_versions",
+    columns: PROFILE_VERSION_COLUMNS.split(","),
+    windowEndExclusive: windowEnd,
+    filters: ["active_from.lt.<window-end>", "active_to.is.null OR active_to.gte.<window-end>"],
+    order: ["active_from.desc", "id.asc"],
   };
   const privateEvidence = {
     workspaces: sortedWorkspaces.map((workspaceId) => {
@@ -532,10 +565,16 @@ export function buildProviderBaselineManifest({
     }),
   };
   const publicSummary = buildPublicSummary(firstRows, sortedWorkspaces);
-  const driftDetected = firstPassSha256 !== secondPassSha256;
+  const providerRunDriftDetected = firstPassSha256 !== secondPassSha256;
+  const modelProfileDriftDetected = firstModelProfilesSha256 !== secondModelProfilesSha256;
+  const driftDetected = providerRunDriftDetected || modelProfileDriftDetected;
   const withoutManifestHash = {
     schema: SCHEMA,
-    schemaSha256: sha256Canonical({ schema: SCHEMA, privateColumns: PROVIDER_RUN_COLUMNS }),
+    schemaSha256: sha256Canonical({
+      schema: SCHEMA,
+      providerRunColumns: PROVIDER_RUN_COLUMNS,
+      modelProfileVersionColumns: PROFILE_VERSION_COLUMNS.split(","),
+    }),
     preliminaryPreFence: true,
     projectRef,
     source: {
@@ -557,11 +596,19 @@ export function buildProviderBaselineManifest({
       detected: driftDetected,
       firstPassSha256,
       secondPassSha256,
+      providerRunsDetected: providerRunDriftDetected,
+      modelProfilesDetected: modelProfileDriftDetected,
+      firstModelProfilesSha256,
+      secondModelProfilesSha256,
     },
     acceptanceEligible: !driftDetected,
     modelProfiles: {
       resolution: "active-persisted-primary-with-committed-defaults-and-fallbacks",
-      sha256: sha256Canonical(modelProfiles),
+      query: {
+        ...modelProfileQueryDefinition,
+        sha256: sha256Canonical(modelProfileQueryDefinition),
+      },
+      sha256: firstModelProfilesSha256,
       profiles: modelProfiles,
     },
     publicSummary,
@@ -596,10 +643,12 @@ export async function runProviderBaseline({
     return rows;
   };
   const firstPassRows = await collectPass();
-  const profileRows = await loadProfiles({ supabase, windowEnd });
   if (typeof resolveProfiles !== "function") throw new Error("A runtime profile evidence resolver is required.");
-  const modelProfiles = resolveProfiles(profileRows);
+  const firstProfileRows = await loadProfiles({ supabase, windowEnd });
+  const modelProfiles = resolveProfiles(firstProfileRows);
   const secondPassRows = await collectPass();
+  const secondProfileRows = await loadProfiles({ supabase, windowEnd });
+  const secondModelProfiles = resolveProfiles(secondProfileRows);
   const capturedAtEnd = assertIsoTimestamp(now(), "Capture end");
   const manifest = buildProviderBaselineManifest({
     projectRef,
@@ -612,6 +661,7 @@ export async function runProviderBaseline({
     firstPassRows,
     secondPassRows,
     modelProfiles,
+    secondModelProfiles,
   });
   const written = await writeManifest({ repoRoot, outputPath, manifest });
   logger("Gate 0 provider-run baseline completed in production-read-only mode.");
@@ -621,6 +671,8 @@ export async function runProviderBaseline({
   logger(`Global run ID set SHA-256: ${manifest.publicSummary.globalRunIdSetSha256}`);
   logger(`First pass SHA-256: ${manifest.drift.firstPassSha256}`);
   logger(`Second pass SHA-256: ${manifest.drift.secondPassSha256}`);
+  logger(`First model-profile pass SHA-256: ${manifest.drift.firstModelProfilesSha256}`);
+  logger(`Second model-profile pass SHA-256: ${manifest.drift.secondModelProfilesSha256}`);
   logger(`Drift detected: ${manifest.drift.detected ? "yes" : "no"}`);
   logger(`Logical manifest SHA-256: ${manifest.manifestSha256}`);
   logger(`Written file SHA-256: ${written.fileSha256}`);
