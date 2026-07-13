@@ -1,5 +1,4 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { TextProviderAdapter } from "./providers.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -16,15 +15,6 @@ export type StyleDescriptor = {
   mood: string;
   lens: string;
   do_not_copy: true;
-};
-
-export type ExtractStyleProfileInput = {
-  // Temporary signed/public URL for the vision model.
-  // This URL is NEVER stored; only the content hash is kept.
-  imageUrl: string;
-  // SHA/MD5 hash of the image bytes — stored for cache hits and the similarity guard.
-  contentHash: string;
-  provider: TextProviderAdapter;
 };
 
 export type StyleProfileResult = {
@@ -47,60 +37,6 @@ type PersistStyleProfileResult = {
   decisionId: string;
   error: string | null;
 };
-
-const SYSTEM_PROMPT = `You are a visual style analyst for a real estate ad creative studio.
-You are shown a real estate advertisement image.
-Extract the VISUAL STYLE LANGUAGE — not the content — of the image.
-Return ONLY compact JSON with exactly these fields:
-{
-  "composition": "brief description of how the subject is framed and where elements sit",
-  "crop": "tight | medium | wide | aerial | detail",
-  "lighting": "brief description of light quality, direction, and hardness",
-  "time_of_day": "morning | midday | afternoon | golden_hour | dusk | overcast",
-  "palette": ["up to 4 dominant hex codes or plain colour names"],
-  "mood": "brief description of the emotional tone or atmosphere",
-  "lens": "wide | standard | telephoto | fisheye | drone",
-  "do_not_copy": true
-}
-Rules:
-- "do_not_copy" MUST be the literal boolean true.
-- Do NOT include brand names, agent names, phone numbers, addresses, prices, or any identifiable text.
-- Do NOT reproduce image content or describe the specific property.
-- Describe STYLE only: framing, light, palette, mood, lens character.
-- Output JSON only — no markdown, no prose outside the object.`;
-
-export async function extractStyleProfile(
-  input: ExtractStyleProfileInput,
-): Promise<StyleProfileResult> {
-  const response = await input.provider.generate({
-    system: SYSTEM_PROMPT,
-    // schemaName is required by TextProviderRequest; response JSON is parsed manually below.
-    schemaName: "metaLeadAdPack",
-    imageUrl: input.imageUrl,
-    messages: [
-      {
-        role: "user",
-        content:
-          "Extract the visual style descriptor from this real estate ad image. Return compact JSON only.",
-      },
-    ],
-  });
-
-  const raw =
-    response.json && typeof response.json === "object"
-      ? (response.json as Record<string, unknown>)
-      : {};
-  const model =
-    typeof response.providerMetadata?.model === "string"
-      ? response.providerMetadata.model
-      : "unknown";
-
-  return {
-    descriptor: coerceDescriptor(raw),
-    sourceContentHashes: [input.contentHash],
-    model,
-  };
-}
 
 // Write the style profile to research.ad_style_profiles and create the required
 // research.agent_decisions row. Returns both IDs on success.
@@ -171,24 +107,4 @@ export async function persistStyleProfile(
     decisionId: decisionRow.id,
     error: null,
   };
-}
-
-function coerceDescriptor(raw: Record<string, unknown>): StyleDescriptor {
-  return {
-    composition: stringify(raw.composition),
-    crop: stringify(raw.crop),
-    lighting: stringify(raw.lighting),
-    time_of_day: stringify(raw.time_of_day),
-    palette: Array.isArray(raw.palette) ? raw.palette.map(stringify) : [],
-    mood: stringify(raw.mood),
-    lens: stringify(raw.lens),
-    // Always enforce do_not_copy=true regardless of what the model returned.
-    do_not_copy: true,
-  };
-}
-
-function stringify(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return "";
-  return String(value);
 }

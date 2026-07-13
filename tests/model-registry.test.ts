@@ -50,6 +50,7 @@ test("image_generative is a distinct OpenAI-first profile defaulting to the best
 test("resolveEffectiveModelProfile applies a persisted override to image_generative", () => {
   const resolved = resolveEffectiveModelProfile("image_generative", [
     {
+      id: "11111111-1111-4111-8111-111111111111",
       profileKey: "image_generative",
       provider: "openrouter",
       model: "google/gemini-3-pro-image-preview",
@@ -64,6 +65,9 @@ test("resolveEffectiveModelProfile applies a persisted override to image_generat
 
   assert.equal(resolved.primary.provider, "openrouter");
   assert.equal(resolved.primary.model, "google/gemini-3-pro-image-preview");
+  assert.equal(resolved.primary.modelProfileVersionId, "11111111-1111-4111-8111-111111111111");
+  assert.equal(resolved.primary.pricingSnapshotId, "11111111-1111-4111-8111-111111111111");
+  assert.equal(resolved.primary.pricingSource, "persisted");
 });
 
 test("client-facing strategy profile uses the premium copywriting model", () => {
@@ -89,6 +93,7 @@ test("normalizeModelSlug stores OpenRouter model ids without the legacy openrout
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {
   const resolved = resolveEffectiveModelProfile("vision_classification", [
     {
+      id: "22222222-2222-4222-8222-222222222222",
       profileKey: "vision_classification",
       provider: "azure",
       model: "azure/gpt-4.1-mini-vision",
@@ -108,6 +113,7 @@ test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", (
 test("resolveEffectiveModelProfile prefers a saved model version over static defaults", () => {
   const resolved = resolveEffectiveModelProfile("cheap_draft_text", [
     {
+      id: "33333333-3333-4333-8333-333333333333",
       profileKey: "cheap_draft_text",
       provider: "openrouter",
       model: "openrouter/google/gemini-2.0-flash-001",
@@ -132,7 +138,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
     imageUnits: 2,
   });
 
-  assert.equal(cost, 0.45);
+  assert.equal(cost, 0.447);
 });
 
 test("resolveModelProfileForData removes public-only fallbacks for sensitive client data", () => {

@@ -13,7 +13,11 @@ import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle } from "../operator/prompts/prompt-registry.ts";
-import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  executeAdStudioProviderAttempt,
+  recordAdStudioProviderRun,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
 
 export { cloneQaWarnings } from "./clone-qa-warnings.ts";
 
@@ -110,6 +114,7 @@ export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" |
 export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
+  const mutationId = `${correlationId}:adstudio.clone_qa:${input.attempt}`;
   const bundle = await getActivePromptBundle(["adstudio.clone_qa.v1"]);
   const system = bundle["adstudio.clone_qa.v1"].body;
   const expectedList = Object.entries(input.expectedCopy)
@@ -127,34 +132,40 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
 
   const profile = await resolveRuntimeModelProfile("vision_classification");
   const candidates = modelCandidateAttempts(profile);
-  const attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }> = [];
+  const attempts: ProviderRunAttempt[] = [];
   let output: TextProviderResponse | null = null;
   let provider: TextProviderAdapter | null = null;
   let modelName = "unavailable";
   let lastError: unknown = null;
 
-  for (const candidate of candidates) {
+  for (const [attemptIndex, candidate] of candidates.entries()) {
     const candidateProvider = createTextProviderForCandidate(candidate);
-    attempts.push({ provider: candidateProvider.providerName, model: candidate.model, status: "attempted" });
     try {
-      output = await candidateProvider.generate({
-        system,
-        schemaName: "metaLeadAdPack",
-        imageUrl: input.imageUrl,
-        messages: [{ role: "user", content: user }],
+      const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+        workspaceId: input.workspaceId,
+        mutationId,
+        attemptIndex,
+        modelProfile: "vision_classification",
+        provider: candidateProvider,
+        execute: () => candidateProvider.generate({
+          system,
+          schemaName: "metaLeadAdPack",
+          imageUrl: input.imageUrl,
+          messages: [{ role: "user", content: user }],
+        }),
       });
+      attempts.push(execution.attempt);
+      if (!execution.ok) {
+        lastError = execution.error;
+        continue;
+      }
+      output = execution.output;
       provider = candidateProvider;
       modelName = String(output.providerMetadata.model ?? candidate.model);
-      attempts[attempts.length - 1] = { provider: candidateProvider.providerName, model: candidate.model, status: "completed" };
       break;
     } catch (error) {
       lastError = error;
-      attempts[attempts.length - 1] = {
-        provider: candidateProvider.providerName,
-        model: candidate.model,
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      };
+      break;
     }
   }
 
@@ -164,6 +175,7 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
     correlationId,
     taskType: "adstudio.clone_qa",
     modelProfile: "vision_classification",
+    mutationId,
     prompt,
     input: { expectedCopy: input.expectedCopy, attempt: input.attempt },
     attempts,

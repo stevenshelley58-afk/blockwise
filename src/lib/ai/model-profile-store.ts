@@ -10,12 +10,13 @@ import {
   validateModelProfileSelection,
 } from "./model-control-config.ts";
 import type { ModelControlViewData } from "./model-control-config.ts";
-import type { ModelProfileKey, PersistedModelProfileVersion } from "./model-registry.ts";
+import type { ModelProfileKey, ModelProvider, PersistedModelProfileVersion } from "./model-registry.ts";
 import { resolveEffectiveModelProfiles } from "./model-registry.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 type ModelProfileVersionRow = {
+  id: string;
   provider: string;
   model: string;
   input_usd_per_million_tokens: number | string;
@@ -57,13 +58,16 @@ export async function loadPersistedModelProfileVersions(
   const { data, error } = await supabase
     .from("model_profile_versions")
     .select(
-      "provider, model, input_usd_per_million_tokens, output_usd_per_million_tokens, image_usd_per_unit, supports_structured_output, max_context_tokens, model_profiles!inner(key)",
+      "id, provider, model, input_usd_per_million_tokens, output_usd_per_million_tokens, image_usd_per_unit, supports_structured_output, max_context_tokens, model_profiles!inner(key)",
     )
     .is("active_to", null)
     .order("active_from", { ascending: false });
 
-  if (error || !data) {
-    return [];
+  if (error) {
+    throw new Error(`Unable to load active model profile versions: ${error.message}`);
+  }
+  if (!data) {
+    throw new Error("Unable to load active model profile versions: query returned no data.");
   }
 
   return (data as ModelProfileVersionRow[]).flatMap((row) => {
@@ -73,22 +77,45 @@ export async function loadPersistedModelProfileVersions(
       return [];
     }
 
+    const provider = parsePersistedProvider(row.provider);
+    const inputPrice = parsePersistedPrice(row.input_usd_per_million_tokens, "input token price", row.id);
+    const outputPrice = parsePersistedPrice(row.output_usd_per_million_tokens, "output token price", row.id);
+    const imagePrice = parsePersistedPrice(row.image_usd_per_unit, "image unit price", row.id);
+
+    if (!row.id || !row.model.trim()) {
+      throw new Error("Active model profile version is missing its version id or model slug.");
+    }
+
     return [
       {
+        id: row.id,
         profileKey,
-        provider: ["openrouter", "azure", "google", "fal"].includes(row.provider)
-          ? (row.provider as "openrouter" | "azure" | "google" | "fal")
-          : "openai",
+        provider,
         model: row.model,
-        inputUsdPerMillionTokens: Number(row.input_usd_per_million_tokens),
-        outputUsdPerMillionTokens: Number(row.output_usd_per_million_tokens),
-        imageUsdPerUnit: Number(row.image_usd_per_unit),
+        inputUsdPerMillionTokens: inputPrice,
+        outputUsdPerMillionTokens: outputPrice,
+        imageUsdPerUnit: imagePrice,
         supportsStructuredOutput: row.supports_structured_output,
         maxContextTokens: row.max_context_tokens,
         maxLatencyMs: DEFAULT_MAX_LATENCY_MS,
       },
     ];
   });
+}
+
+function parsePersistedProvider(value: string): ModelProvider {
+  if (["openai", "openrouter", "azure", "google", "fal"].includes(value)) {
+    return value as ModelProvider;
+  }
+  throw new Error(`Active model profile version has unsupported provider: ${value || "(empty)"}.`);
+}
+
+function parsePersistedPrice(value: number | string, label: string, versionId: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`Active model profile version ${versionId || "(unknown)"} has invalid ${label}.`);
+  }
+  return parsed;
 }
 
 export async function saveModelProfileSelection(

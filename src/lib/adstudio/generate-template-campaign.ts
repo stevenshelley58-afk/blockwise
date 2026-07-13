@@ -31,6 +31,7 @@ import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
 import { getTemplateBrief } from "./template-brief.ts";
 import { resolveApprovedAdStudioTemplate, templatePromptHint } from "./template-resolver.ts";
 import { resolveAdStudioGenerationBrandKit } from "./trial-brand-kit.ts";
+import { ProviderRunPersistenceError } from "../operator/prompts/redact-prompt-run.ts";
 import type {
   AdStudioBrandKit,
   AdStudioCampaignPack,
@@ -162,6 +163,7 @@ async function generateCloneWithProviderRetries(input: {
       });
       return { ...generated, attempt };
     } catch (error) {
+      if (error instanceof ProviderRunPersistenceError) throw error;
       lastError = error;
       if (Date.now() >= input.deadline) break;
     }
@@ -181,6 +183,7 @@ async function annotateCloneQa(input: {
   try {
     return await runCloneQa(input);
   } catch (error) {
+    if (error instanceof ProviderRunPersistenceError) throw error;
     console.error("adstudio.clone_qa failed; shipping clone without QA annotation", error);
     return null;
   }

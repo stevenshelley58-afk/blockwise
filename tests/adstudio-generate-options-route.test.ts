@@ -7,6 +7,7 @@ const routeSource = () => readFileSync("src/app/api/adstudio/generate-options/ro
 test("generate-options route uses the operator image_generative profile", () => {
   const source = routeSource();
   assert.match(source, /resolveRuntimeModelProfile\("image_generative"\)/);
+  assert.doesNotMatch(source, /createOpenAiImageProvider\(\)/);
   // it must NOT silently reuse the fit/composite profile
   assert.doesNotMatch(source, /resolveRuntimeModelProfile\("image_final"\)/);
 });
@@ -29,4 +30,8 @@ test("generate-options records a traceable provider run", () => {
   const source = routeSource();
   assert.match(source, /recordAdStudioProviderRun\(/);
   assert.match(source, /modelProfile: "image_generative"/);
+  assert.match(source, /providerAttempts = generated\.attempts/);
+  assert.match(source, /generated\.fatalErrors\.length > 0/);
+  assert.match(source, /attempts: providerAttempts/);
+  assert.doesNotMatch(source, /attempts: \[\]/);
 });

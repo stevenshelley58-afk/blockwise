@@ -8,6 +8,56 @@ import {
   cloneQaWarnings,
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
+import { generateCloneWithCascade } from "../src/lib/adstudio/clone-generation.ts";
+import type { ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
+import {
+  buildProviderRunAttempt,
+  type executeAdStudioProviderAttempt,
+  ProviderRunPersistenceError,
+  runAuditAfterDurableAccounting,
+} from "../src/lib/operator/prompts/redact-prompt-run.ts";
+
+const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
+  try {
+    const output = await input.execute();
+    return {
+      ok: true as const,
+      output,
+      attempt: buildProviderRunAttempt({
+        attemptIndex: input.attemptIndex,
+        provider: input.provider,
+        modelProfile: input.modelProfile,
+        status: "completed",
+        output,
+      }),
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error,
+      attempt: buildProviderRunAttempt({
+        attemptIndex: input.attemptIndex,
+        provider: input.provider,
+        modelProfile: input.modelProfile,
+        status: "failed",
+        error,
+      }),
+    };
+  }
+}) as typeof executeAdStudioProviderAttempt;
+
+function accountedImageProvider(name: string, generate: ImageProviderAdapter["generate"]): ImageProviderAdapter {
+  return {
+    providerName: name,
+    providerType: "image_generation",
+    capabilities: { textToImage: true },
+    accounting: {
+      model: `${name}-model`,
+      pricing: { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 0, imageUsdPerUnit: 0.04 },
+    },
+    generate,
+  };
+}
 
 test("normalizeRenderedText is lenient on case/punctuation but not words", () => {
   assert.equal(
@@ -76,8 +126,9 @@ test("clone route runs cascade + QA reroll and never ships an unverified clone s
   // Provider cascade from the model-profile registry, not a single hardcoded vendor.
   assert.match(generation, /tier === "preview" \? "image_draft" : "image_final"/);
   assert.match(generation, /createImageProviderForCandidate/);
-  assert.match(generation, /createOpenAiImageProvider\(\)/);
+  assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
+  assert.match(generation, /output: result/);
   assert.match(route, /resolveCloneProviders\(tier\)/);
   assert.doesNotMatch(route, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
@@ -87,6 +138,61 @@ test("clone route runs cascade + QA reroll and never ships an unverified clone s
   assert.match(route, /cloneQaCorrectionPrompt/);
   assert.match(route, /status: 502/);
   assert.match(route, /runComplianceGate/);
+});
+
+test("durable accounting failure after provider success never dispatches a fallback", async () => {
+  let primaryCalls = 0;
+  let fallbackCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    primaryCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "primary-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    throw new Error("must not be called");
+  });
+
+  await assert.rejects(
+    () => generateCloneWithCascade({
+      providers: [primary, fallback],
+      request: {
+        prompt: "clone",
+        referenceAssets: [],
+        aspectRatio: "1:1",
+        stylePreset: "test",
+      },
+      workspaceId: "11111111-1111-4111-8111-111111111111",
+      userId: "22222222-2222-4222-8222-222222222222",
+      correlationId: "accounting-rpc-failure",
+      tier: "preview",
+      attempt: 1,
+      accounting: {
+        executeAttempt,
+        recordRun: async () => {
+          throw new ProviderRunPersistenceError("RPC transport failed");
+        },
+      },
+    }),
+    ProviderRunPersistenceError,
+  );
+
+  assert.equal(primaryCalls, 1);
+  assert.equal(fallbackCalls, 0);
+});
+
+test("post-commit audit failure is contained after durable accounting", async () => {
+  let calls = 0;
+  await runAuditAfterDurableAccounting(async () => {
+    calls += 1;
+    throw new Error("audit transport failed");
+  });
+  assert.equal(calls, 1);
 });
 
 test("targeted edit endpoint anchors on the current image and re-verifies the whole ad", () => {
@@ -121,7 +227,19 @@ test("clone QA verdict and regions persist on the clone creative", () => {
   assert.match(generation, /templateCloneQaByFormat/);
   assert.match(generation, /annotateCloneQa/);
   assert.match(generation, /catch \(error\)[\s\S]*return null;/);
+  assert.match(generation, /error instanceof ProviderRunPersistenceError\) throw error/);
+  assert.match(generation, /for \(let attempt[\s\S]*ProviderRunPersistenceError\) throw error/);
   assert.doesNotMatch(generation, /qa && !qa\.passed[\s\S]*throw/);
   assert.doesNotMatch(generation, new RegExp("TemplateCampaignQa" + "Error"));
   assert.doesNotMatch(generation, /cloneQaCorrectionPrompt/);
+});
+
+test("campaign enrichment cannot ship partial copy after accounting persistence fails", () => {
+  const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
+  const scoring = readFileSync("src/lib/adstudio/scoring.ts", "utf8");
+
+  assert.match(enrichment, /result\.reason instanceof ProviderRunPersistenceError/);
+  assert.match(enrichment, /if \(accountingError\) throw accountingError/);
+  assert.doesNotMatch(scoring, /Provider run persistence failed[\s\S]*console\.warn/);
+  assert.match(scoring, /if \(error instanceof ProviderRunPersistenceError\) throw error/);
 });
