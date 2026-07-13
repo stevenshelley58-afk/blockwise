@@ -1,0 +1,64 @@
+type RevisionRpcError = {
+  code?: string;
+  message?: string;
+};
+
+type RevisionRpcClient = {
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: RevisionRpcError | null }>;
+};
+
+type AppendCreativeRevisionInput = {
+  workspaceId: string;
+  creativeId: string;
+  expectedActiveRevisionId: string;
+  canvas: unknown;
+  renderStatus: string;
+  creationOperation: "targeted_edit";
+  mutationId: string;
+};
+
+export type AppendCreativeRevisionResult =
+  | { ok: true; revisionId: string; revisionNumber: number }
+  | { ok: false; reason: "stale_revision" };
+
+export async function appendAdStudioCreativeRevision(
+  supabase: RevisionRpcClient,
+  input: AppendCreativeRevisionInput,
+): Promise<AppendCreativeRevisionResult> {
+  const { data, error } = await supabase.rpc("adstudio_append_creative_revision", {
+    p_workspace_id: input.workspaceId,
+    p_creative_id: input.creativeId,
+    p_expected_active_revision_id: input.expectedActiveRevisionId,
+    p_canvas_json: input.canvas,
+    p_render_status: input.renderStatus,
+    p_creation_operation: input.creationOperation,
+    p_mutation_id: input.mutationId,
+  });
+
+  if (error) {
+    if (error.code === "40001" || error.message?.includes("ADSTUDIO_STALE_REVISION")) {
+      return { ok: false, reason: "stale_revision" };
+    }
+    throw new Error(error.message || "Creative revision could not be saved.");
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!isRevisionRow(row)) {
+    throw new Error("Creative revision RPC returned an invalid result.");
+  }
+
+  return {
+    ok: true,
+    revisionId: row.revision_id,
+    revisionNumber: row.revision_number,
+  };
+}
+
+function isRevisionRow(value: unknown): value is { revision_id: string; revision_number: number } {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.revision_id === "string" && Number.isInteger(row.revision_number);
+}

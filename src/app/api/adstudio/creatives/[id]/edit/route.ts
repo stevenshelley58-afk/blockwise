@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
+import { appendAdStudioCreativeRevision } from "@/lib/adstudio/creative-revisions";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildTargetedEditRequest } from "@/lib/adstudio/reference-clone";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
@@ -64,12 +65,20 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   const { data: row, error: loadError } = await context.supabase
     .from("adstudio_creatives")
-    .select("id, campaign_id, variant_id, format, canvas_json")
+    .select("id, campaign_id, variant_id, format, canvas_json, active_revision_id")
     .eq("workspace_id", context.access.workspaceId)
     .eq("id", id)
     .maybeSingle();
   if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 });
   if (!row) return NextResponse.json({ error: "Creative not found." }, { status: 404 });
+
+  const baseRevisionId = typeof row.active_revision_id === "string" ? row.active_revision_id : "";
+  if (!baseRevisionId) {
+    return NextResponse.json(
+      { code: "stale_revision", error: "This ad has no active revision. Reload and try again." },
+      { status: 409 },
+    );
+  }
 
   const canvas = row.canvas_json as AdStudioCreative["canvas"];
   const cloneObject = canvas?.objects?.[0];
@@ -177,13 +186,29 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     renderHistory,
   };
 
-  const { error: updateError } = await context.supabase
-    .from("adstudio_creatives")
-    .update({ canvas_json: nextCanvas, updated_at: new Date().toISOString() })
-    .eq("workspace_id", context.access.workspaceId)
-    .eq("id", id);
-  if (updateError) {
-    return NextResponse.json({ error: `Edit could not be saved (${updateError.message}).` }, { status: 500 });
+  let revision;
+  try {
+    revision = await appendAdStudioCreativeRevision(context.supabase, {
+      workspaceId: context.access.workspaceId,
+      creativeId: id,
+      expectedActiveRevisionId: baseRevisionId,
+      canvas: nextCanvas,
+      renderStatus: "rendered",
+      creationOperation: "targeted_edit",
+      mutationId: correlationId,
+    });
+  } catch (error) {
+    return errorResponse(error, 500);
+  }
+
+  if (!revision.ok) {
+    if (revision.reason === "stale_revision") {
+      return NextResponse.json(
+        { code: "stale_revision", error: "This ad changed while your edit was rendering. Reload and try again." },
+        { status: 409 },
+      );
+    }
+    throw new Error("Creative revision append failed without a recognized reason.");
   }
 
   return NextResponse.json({
@@ -191,6 +216,8 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     image,
     qa,
     renderHistory,
+    revisionId: revision.revisionId,
+    revisionNumber: revision.revisionNumber,
     model: lastImage.model,
     provider: lastImage.provider,
   });
