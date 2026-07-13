@@ -22,11 +22,37 @@ const providerRunColumns = [
   "provider_name",
   "provider_type",
   "model_name",
+  "model_profile_version_id",
+  "pricing_snapshot_id",
   "status",
   "cost_estimate",
+  "estimated_cost_usd",
+  "actual_cost_usd",
+  "billing_status",
   "usage_json",
   "ai_run_id",
   "ai_usage_ledger_id",
+];
+
+const providerAttemptColumns = [
+  "id",
+  "workspace_id",
+  "provider_run_id",
+  "attempt_index",
+  "provider_name",
+  "provider_type",
+  "model_name",
+  "model_profile",
+  "model_profile_version_id",
+  "pricing_snapshot_id",
+  "status",
+  "request_submitted",
+  "billing_status",
+  "usage_json",
+  "pricing_json",
+  "estimated_cost_usd",
+  "actual_cost_usd",
+  "created_at",
 ];
 
 type QueryCall = {
@@ -35,6 +61,7 @@ type QueryCall = {
   filters: Array<{ operator: string; column?: string; value: unknown }>;
   orders: Array<{ column: string; options: unknown }>;
   limit?: number;
+  range?: [number, number];
 };
 
 function queuedSupabase(pages: Record<string, unknown[][]>) {
@@ -78,6 +105,10 @@ function queuedSupabase(pages: Record<string, unknown[][]>) {
           call.limit = value;
           return query;
         },
+        range(from: number, to: number) {
+          call.range = [from, to];
+          return query;
+        },
         then<TResult1 = { data: unknown[]; error: null }, TResult2 = never>(
           onfulfilled?: ((value: { data: unknown[]; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
           onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
@@ -101,11 +132,67 @@ function providerRun(overrides: Record<string, unknown> = {}) {
     provider_name: "openai",
     provider_type: "image_generation",
     model_name: "gpt-image-2",
+    model_profile_version_id: "version-final",
+    pricing_snapshot_id: "version-final",
     status: "completed",
     cost_estimate: "1.2500",
-    usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: true },
+    estimated_cost_usd: "1.250000",
+    actual_cost_usd: "1.250000",
+    billing_status: "actual",
+    usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1 },
     ai_run_id: "ai-run-alpha",
     ai_usage_ledger_id: "ledger-alpha",
+    ...overrides,
+  };
+}
+
+function providerAttempt(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "attempt-alpha",
+    workspace_id: "workspace-alpha",
+    provider_run_id: "run-alpha",
+    attempt_index: 0,
+    provider_name: "openai",
+    provider_type: "image_generation",
+    model_name: "gpt-image-2",
+    model_profile: "image_final",
+    model_profile_version_id: "version-final",
+    pricing_snapshot_id: "version-final",
+    status: "completed",
+    request_submitted: true,
+    billing_status: "actual",
+    usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: true },
+    pricing_json: {
+      inputUsdPerMillionTokens: 5,
+      outputUsdPerMillionTokens: 30,
+      imageUsdPerUnit: 1.25,
+      currency: "USD",
+      inputTokenBasis: "per_million_tokens",
+      outputTokenBasis: "per_million_tokens",
+      imageBasis: "per_output_image",
+      source: "provider_reported",
+      snapshotId: "pricing-snapshot-public-alias",
+    },
+    estimated_cost_usd: "1.250000",
+    actual_cost_usd: "1.250000",
+    created_at: "2026-07-12T01:00:01.000Z",
+    ...overrides,
+  };
+}
+
+function modelProfileVersion(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "version-alpha",
+    provider: "openai",
+    model: "gpt-image-2",
+    input_usd_per_million_tokens: 5,
+    output_usd_per_million_tokens: 30,
+    image_usd_per_unit: 0.211,
+    supports_structured_output: false,
+    max_context_tokens: 16_000,
+    active_from: "2026-06-20T00:00:00.000Z",
+    active_to: null,
+    model_profiles: { key: "image_final" },
     ...overrides,
   };
 }
@@ -239,6 +326,29 @@ test("provider-run reads fail closed on cross-workspace, out-of-window, or non-a
   }
 });
 
+test("provider-attempt reads capture exact accounting fields with workspace and frozen-window scoping", async () => {
+  const first = providerAttempt();
+  const second = providerAttempt({ id: "attempt-beta", attempt_index: 1, created_at: "2026-07-12T01:00:02.000Z" });
+  const supabase = queuedSupabase({ adstudio_provider_run_attempts: [[first], [second], []] });
+  const windowEnd = "2026-07-13T00:00:00.000Z";
+
+  const rows = await baseline.loadProviderAttemptRows({
+    supabase: supabase as never,
+    workspaceId: "workspace-alpha",
+    windowEnd,
+    pageSize: 1,
+  });
+
+  assert.deepEqual(rows.map((row: { id: string }) => row.id), ["attempt-alpha", "attempt-beta"]);
+  assert.equal(supabase.calls.length, 3);
+  for (const call of supabase.calls) {
+    assert.equal(call.columns, providerAttemptColumns.join(","));
+    assert.deepEqual(call.orders.map(({ column }) => column), ["created_at", "id"]);
+    assert.ok(call.filters.some((filter) => filter.operator === "eq" && filter.column === "workspace_id" && filter.value === "workspace-alpha"));
+    assert.ok(call.filters.some((filter) => filter.operator === "lt" && filter.column === "created_at" && filter.value === windowEnd));
+  }
+});
+
 test("workspace IDs are enumerated fully in memory before provider-run passes", async () => {
   const supabase = queuedSupabase({
     workspaces: [[{ id: "workspace-beta" }], [{ id: "workspace-alpha" }], []],
@@ -293,76 +403,71 @@ test("profile resolution uses active persisted primaries and committed runtime d
 });
 
 test("profile-version query freezes runtime resolution at the same exclusive cutoff", async () => {
-  const supabase = queuedSupabase({ model_profile_versions: [[{
-    id: "version-alpha",
-    provider: "openai",
-    model: "gpt-image-2",
-    input_usd_per_million_tokens: 5,
-    output_usd_per_million_tokens: 30,
-    image_usd_per_unit: 0.211,
-    supports_structured_output: false,
-    max_context_tokens: 16_000,
-    active_from: "2026-06-20T00:00:00.000Z",
-    active_to: null,
-    model_profiles: { key: "image_final" },
-  }]] });
+  const supabase = queuedSupabase({ model_profile_versions: [
+    [modelProfileVersion()],
+    [modelProfileVersion({
+      id: "version-beta",
+      model: "gpt-5.5",
+      active_from: "2026-06-10T00:00:00.000Z",
+      model_profiles: { key: "structured_json" },
+    })],
+    [],
+  ] });
   const windowEnd = "2026-07-13T00:00:00.000Z";
 
-  await baseline.loadActiveProfileVersionRows({ supabase: supabase as never, windowEnd });
+  const rows = await baseline.loadActiveProfileVersionRows({ supabase: supabase as never, windowEnd, pageSize: 1 });
 
-  const [call] = supabase.calls;
-  assert.equal(call.table, "model_profile_versions");
-  assert.ok(call.filters.some((filter) => filter.operator === "lt" && filter.column === "active_from" && filter.value === windowEnd));
-  assert.equal(call.filters.some((filter) => filter.operator === "or" && String(filter.value).includes(`active_to.gte.${windowEnd}`)), true);
-  assert.deepEqual(call.orders.map(({ column }) => column), ["active_from", "id"]);
+  assert.deepEqual(rows.map((row: { id: string }) => row.id), ["version-alpha", "version-beta"]);
+  assert.equal(supabase.calls.length, 3);
+  assert.deepEqual(supabase.calls.map((call) => call.range), [[0, 0], [1, 1], [2, 2]]);
+  for (const call of supabase.calls) {
+    assert.equal(call.table, "model_profile_versions");
+    assert.ok(call.filters.some((filter) => filter.operator === "lt" && filter.column === "active_from" && filter.value === windowEnd));
+    assert.equal(call.filters.some((filter) => filter.operator === "or" && String(filter.value).includes(`active_to.gte.${windowEnd}`)), true);
+    assert.deepEqual(call.orders.map(({ column }) => column), ["active_from", "id"]);
+  }
 });
 
-test("manifest contains exact private rows and complete public-safe hashes and accounting aggregates", () => {
-  const rows = [
-    providerRun(),
-    providerRun({
-      id: "run-beta",
-      created_at: "2026-07-12T02:00:00.000Z",
-      provider_name: "openrouter",
-      provider_type: "text_generation",
-      model_name: "openai/gpt-5.5",
-      model_profile: "structured_json",
-      task_type: "adstudio.copy",
+test("profile-version pagination rejects duplicate rows", async () => {
+  const duplicate = modelProfileVersion();
+  const supabase = queuedSupabase({ model_profile_versions: [[duplicate], [duplicate], []] });
+  await assert.rejects(
+    baseline.loadActiveProfileVersionRows({
+      supabase: supabase as never,
+      windowEnd: "2026-07-13T00:00:00.000Z",
+      pageSize: 1,
+    }),
+    /duplicate|strictly ordered/i,
+  );
+});
+
+test("profile resolution rejects overlapping active versions for one profile", () => {
+  assert.throws(
+    () => baseline.resolveModelProfileEvidence([
+      modelProfileVersion(),
+      modelProfileVersion({ id: "version-overlap", active_from: "2026-06-21T00:00:00.000Z" }),
+    ], resolveEffectiveModelProfile),
+    /ambiguous active model profile/i,
+  );
+});
+
+test("manifest contains exact run and attempt evidence and reconciles a failed-but-billed cascade", () => {
+  const rows = [providerRun({ usage_json: { inputTokens: 100, outputTokens: 0, imageUnits: 1 } })];
+  const attempts = [
+    providerAttempt({
+      id: "attempt-failed-billed",
       status: "failed",
-      cost_estimate: "0.0000",
-      usage_json: { inputTokens: 5, outputTokens: 0, complete: true },
-      ai_run_id: null,
-      ai_usage_ledger_id: "ledger-beta",
+      usage_json: { inputTokens: 100, outputTokens: 0, imageUnits: 0, complete: true },
+      estimated_cost_usd: "0.250000",
+      actual_cost_usd: "0.250000",
     }),
-    providerRun({
-      id: "run-gamma",
-      workspace_id: "workspace-beta",
-      created_at: "2026-07-12T03:00:00.000Z",
-      provider_name: "deterministic_local",
-      provider_type: "local",
-      model_name: null,
-      model_profile: null,
-      task_type: "unknown",
-      status: "completed",
-      cost_estimate: "-0.1000",
-      usage_json: {},
-      ai_run_id: "ai-run-gamma",
-      ai_usage_ledger_id: null,
-    }),
-    providerRun({
-      id: "run-delta",
-      workspace_id: "workspace-beta",
-      created_at: "2026-07-12T04:00:00.000Z",
-      provider_name: "deterministic_local",
-      provider_type: "local",
-      model_name: "rules-v1",
-      model_profile: "structured_json",
-      task_type: "adstudio.local",
-      status: "completed",
-      cost_estimate: "0",
-      usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 0, complete: true },
-      ai_run_id: null,
-      ai_usage_ledger_id: null,
+    providerAttempt({
+      id: "attempt-success",
+      attempt_index: 1,
+      created_at: "2026-07-12T01:00:02.000Z",
+      usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: true },
+      estimated_cost_usd: "1.000000",
+      actual_cost_usd: "1.000000",
     }),
   ];
   const modelProfiles = baseline.resolveModelProfileEvidence([], resolveEffectiveModelProfile);
@@ -370,12 +475,16 @@ test("manifest contains exact private rows and complete public-safe hashes and a
     projectRef: "project-ref",
     sourceCommit: "f".repeat(40),
     toolSourceSha256: "a".repeat(64),
+    dependencyClosureSha256: "c".repeat(64),
+    dependencyClosure: [{ path: "provider-baseline.mjs", sha256: "a".repeat(64) }],
     capturedAtStart: "2026-07-13T00:00:00.000Z",
     capturedAtEnd: "2026-07-13T00:00:05.000Z",
     windowEnd: "2026-07-13T00:00:00.000Z",
-    workspaceIds: ["workspace-beta", "workspace-alpha"],
+    workspaceIds: ["workspace-alpha"],
     firstPassRows: rows,
     secondPassRows: rows,
+    firstPassAttempts: attempts,
+    secondPassAttempts: attempts,
     modelProfiles,
   });
 
@@ -384,43 +493,118 @@ test("manifest contains exact private rows and complete public-safe hashes and a
   assert.equal(manifest.capture.window.startInclusive, "1970-01-01T00:00:00.000Z");
   assert.equal(manifest.capture.window.endExclusive, "2026-07-13T00:00:00.000Z");
   assert.match(manifest.query.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(manifest.modelProfiles.query.pagination, "offset-range-until-empty");
   assert.equal(manifest.source.commit, "f".repeat(40));
   assert.match(manifest.source.commitSha256, /^[a-f0-9]{64}$/);
   assert.equal(manifest.source.toolSha256, "a".repeat(64));
+  assert.equal(manifest.source.dependencyClosureSha256, "c".repeat(64));
+  assert.deepEqual(manifest.source.dependencyClosure, [{ path: "provider-baseline.mjs", sha256: "a".repeat(64) }]);
   assert.equal(manifest.drift.detected, false);
   assert.equal(manifest.drift.firstPassSha256, manifest.drift.secondPassSha256);
   assert.equal(manifest.acceptanceEligible, true);
-  assert.equal(manifest.publicSummary.totalRuns, 4);
+  assert.equal(manifest.publicSummary.totalRuns, 1);
+  assert.equal(manifest.publicSummary.totalAttempts, 2);
   assert.match(manifest.publicSummary.workspaceIdSetSha256, /^[a-f0-9]{64}$/);
   assert.match(manifest.publicSummary.globalRunIdSetSha256, /^[a-f0-9]{64}$/);
-  assert.deepEqual(manifest.publicSummary.workspaces.map((workspace: { runCount: number }) => workspace.runCount), [2, 2]);
+  assert.match(manifest.publicSummary.globalAttemptIdSetSha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(manifest.publicSummary.workspaces.map((workspace: { runCount: number }) => workspace.runCount), [1]);
+  assert.deepEqual(manifest.publicSummary.workspaces.map((workspace: { attemptCount: number }) => workspace.attemptCount), [2]);
+  assert.match(manifest.publicSummary.workspaces[0].attemptIdSetSha256, /^[a-f0-9]{64}$/);
   assert.equal(manifest.publicSummary.workspaces.every((workspace: { pseudonym: string }) => /^workspace-[a-f0-9]{16}$/.test(workspace.pseudonym)), true);
   assert.equal(manifest.publicSummary.cost.positive.count, 1);
   assert.equal(manifest.publicSummary.cost.positive.sum, "1.25");
-  assert.equal(manifest.publicSummary.cost.zero.count, 2);
+  assert.equal(manifest.publicSummary.cost.zero.count, 0);
   assert.equal(manifest.publicSummary.cost.zero.sum, "0");
-  assert.equal(manifest.publicSummary.cost.negative.count, 1);
-  assert.equal(manifest.publicSummary.cost.negative.sum, "-0.1");
-  assert.equal(manifest.publicSummary.anomalies.nonLocalTerminalNonZeroUsageZeroCostCount, 1);
-  assert.equal(manifest.publicSummary.anomalies.missingUsageCount, 1);
-  assert.equal(manifest.publicSummary.anomalies.allZeroUsageCount, 1);
-  assert.equal(manifest.publicSummary.anomalies.missingOrAllZeroUsageCount, 2);
-  assert.deepEqual(manifest.publicSummary.links.aiRun, { linkedCount: 2, missingCount: 2 });
-  assert.deepEqual(manifest.publicSummary.links.aiUsageLedger, { linkedCount: 2, missingCount: 2 });
-  assert.equal(manifest.publicSummary.dimensionQuality.modelProfile.nullCount, 1);
-  assert.equal(manifest.publicSummary.dimensionQuality.taskType.unknownCount, 1);
+  assert.equal(manifest.publicSummary.cost.negative.count, 0);
+  assert.equal(manifest.publicSummary.cost.negative.sum, "0");
+  assert.equal(manifest.publicSummary.attemptAccounting.failedBilledCount, 1);
+  assert.equal(manifest.publicSummary.attemptAccounting.failedBilledCostUsd, "0.25");
+  assert.equal(manifest.publicSummary.attemptAccounting.estimatedCostUsd, "1.25");
+  assert.equal(manifest.publicSummary.attemptAccounting.actualCostUsd, "1.25");
+  assert.equal(manifest.publicSummary.attemptAccounting.runMismatchCount, 0);
+  assert.deepEqual(manifest.publicSummary.links.aiRun, { linkedCount: 1, missingCount: 0 });
+  assert.deepEqual(manifest.publicSummary.links.aiUsageLedger, { linkedCount: 1, missingCount: 0 });
+  assert.equal(manifest.publicSummary.dimensionQuality.modelProfile.nullCount, 0);
+  assert.equal(manifest.publicSummary.dimensionQuality.taskType.unknownCount, 0);
   assert.ok(manifest.publicSummary.grouped.taskType.some((group: { value: string; count: number }) => group.value === "adstudio.image" && group.count === 1));
   assert.ok(manifest.publicSummary.grouped.providerModel.some((group: { providerName: string; modelName: string; count: number }) => group.providerName === "openai" && group.modelName === "gpt-image-2" && group.count === 1));
   assert.match(manifest.manifestSha256, /^[a-f0-9]{64}$/);
 
   assert.deepEqual(manifest.privateEvidence.workspaces.map((workspace: { workspaceId: string }) => workspace.workspaceId), [
     "workspace-alpha",
-    "workspace-beta",
   ]);
   assert.deepEqual(Object.keys(manifest.privateEvidence.workspaces[0].rows[0]), providerRunColumns);
+  assert.deepEqual(Object.keys(manifest.privateEvidence.workspaces[0].attempts[0]), providerAttemptColumns);
+  assert.equal(manifest.privateEvidence.workspaces[0].attempts[0].actual_cost_usd, "0.250000");
   assert.equal(JSON.stringify(manifest.privateEvidence).includes("workspace-alpha"), true);
   assert.equal(JSON.stringify(manifest.publicSummary).includes("workspace-alpha"), false);
   assert.equal(JSON.stringify(manifest.publicSummary).includes("run-alpha"), false);
+});
+
+test("accounting anomalies independently block otherwise drift-free evidence", () => {
+  const build = (run: Record<string, unknown>, attempts: Array<Record<string, unknown>>) => {
+    const modelProfiles = baseline.resolveModelProfileEvidence([], resolveEffectiveModelProfile);
+    return baseline.buildProviderBaselineManifest({
+      projectRef: "project-ref",
+      sourceCommit: "f".repeat(40),
+      toolSourceSha256: "a".repeat(64),
+      dependencyClosureSha256: "c".repeat(64),
+      dependencyClosure: [{ path: "provider-baseline.mjs", sha256: "a".repeat(64) }],
+      capturedAtStart: "2026-07-13T00:00:00.000Z",
+      capturedAtEnd: "2026-07-13T00:00:05.000Z",
+      windowEnd: "2026-07-13T00:00:00.000Z",
+      workspaceIds: ["workspace-alpha"],
+      firstPassRows: [run],
+      secondPassRows: [run],
+      firstPassAttempts: attempts,
+      secondPassAttempts: attempts,
+      modelProfiles,
+    });
+  };
+  const cases = [
+    {
+      name: "negative cost",
+      run: providerRun({ estimated_cost_usd: "-0.1", actual_cost_usd: "-0.1" }),
+      attempts: [providerAttempt({ estimated_cost_usd: "-0.1", actual_cost_usd: "-0.1" })],
+    },
+    {
+      name: "unreconciled cost",
+      run: providerRun({ billing_status: "unreconciled", estimated_cost_usd: "0", actual_cost_usd: null }),
+      attempts: [providerAttempt({ billing_status: "unreconciled", estimated_cost_usd: "0", actual_cost_usd: null })],
+    },
+    {
+      name: "nonlocal charged-zero cost",
+      run: providerRun({ cost_estimate: "0", estimated_cost_usd: "0", actual_cost_usd: "0" }),
+      attempts: [providerAttempt({ estimated_cost_usd: "0", actual_cost_usd: "0" })],
+    },
+    {
+      name: "missing run usage",
+      run: providerRun({ usage_json: { inputTokens: 0, outputTokens: 0 } }),
+      attempts: [providerAttempt()],
+    },
+    {
+      name: "incomplete attempt usage",
+      run: providerRun(),
+      attempts: [providerAttempt({ usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: false } })],
+    },
+    {
+      name: "all-zero nonlocal usage",
+      run: providerRun({ usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 0 } }),
+      attempts: [providerAttempt({ usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 0, complete: true } })],
+    },
+    {
+      name: "run-attempt aggregate mismatch",
+      run: providerRun({ actual_cost_usd: "9.99" }),
+      attempts: [providerAttempt()],
+    },
+  ];
+
+  for (const fixture of cases) {
+    const manifest = build(fixture.run, fixture.attempts);
+    assert.equal(manifest.drift.detected, false, fixture.name);
+    assert.equal(manifest.acceptanceEligible, false, fixture.name);
+    assert.ok(manifest.publicSummary.anomalies.blockingCount > 0, fixture.name);
+  }
 });
 
 test("runner uses one in-memory workspace set, two passes with one cutoff, fails closed on drift, and never logs IDs", async () => {
@@ -441,6 +625,8 @@ test("runner uses one in-memory workspace set, two passes with one cutoff, fails
     projectRef: "project-ref",
     sourceCommit: "f".repeat(40),
     toolSourceSha256: "a".repeat(64),
+    dependencyClosureSha256: "c".repeat(64),
+    dependencyClosure: [{ path: "provider-baseline.mjs", sha256: "a".repeat(64) }],
     now: () => times.shift(),
     listWorkspaces: async () => {
       workspaceEnumerations += 1;
@@ -452,6 +638,7 @@ test("runner uses one in-memory workspace set, two passes with one cutoff, fails
       const sourceRows = pass <= 1 ? firstRows : secondRows;
       return sourceRows.filter((row) => row.workspace_id === workspaceId);
     },
+    loadAttempts: async () => [],
     loadProfiles: async () => [],
     resolveProfiles: () => [],
     writeManifest: async ({ manifest, outputPath }: { manifest: Record<string, unknown>; outputPath: string }) => {
@@ -513,9 +700,12 @@ test("tool provenance requires a tracked clean executable that exactly matches H
   t.after(() => rm(root, { recursive: true, force: true }));
   runGit(root, ["init", "--quiet"]);
   const toolPath = path.join(root, "provider-baseline.mjs");
-  const source = "export const evidenceVersion = 1;\n";
+  const dependencyPath = path.join(root, "dependency.mjs");
+  const source = "import \"./dependency.mjs\";\nexport const evidenceVersion = 1;\n";
+  const dependencySource = "export const dependencyVersion = 1;\n";
   await writeFile(toolPath, source, "utf8");
-  runGit(root, ["add", "provider-baseline.mjs"]);
+  await writeFile(dependencyPath, dependencySource, "utf8");
+  runGit(root, ["add", "provider-baseline.mjs", "dependency.mjs"]);
   runGit(root, [
     "-c",
     "user.name=AdStudio Test",
@@ -530,6 +720,18 @@ test("tool provenance requires a tracked clean executable that exactly matches H
   const evidence = await baseline.collectVerifiedToolEvidence({ repoRoot: root, scriptPath: toolPath });
   assert.match(evidence.sourceCommit, /^[a-f0-9]{40,64}$/);
   assert.equal(evidence.toolSourceSha256, createHash("sha256").update(source).digest("hex"));
+  assert.match(evidence.dependencyClosureSha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(evidence.dependencyClosure.map((file: { path: string }) => file.path), [
+    "dependency.mjs",
+    "provider-baseline.mjs",
+  ]);
+
+  await writeFile(dependencyPath, `${dependencySource}// dirty\n`, "utf8");
+  await assert.rejects(
+    baseline.collectVerifiedToolEvidence({ repoRoot: root, scriptPath: toolPath }),
+    /dependency closure must be tracked and match HEAD/i,
+  );
+  await writeFile(dependencyPath, dependencySource, "utf8");
 
   await writeFile(toolPath, `${source}// dirty\n`, "utf8");
   await assert.rejects(
@@ -554,6 +756,7 @@ test("executable is strictly read-only and carries no forbidden payload fields o
   assert.doesNotMatch(source, /input_json|output_json|error_json|correlation_id|mutation_id|payload_hash|provider_request|outbox/i);
   assert.doesNotMatch(source, /generateImage|createTextProvider|fetch\s*\(/i);
   assert.deepEqual(baseline.PROVIDER_RUN_COLUMNS, providerRunColumns);
+  assert.deepEqual(baseline.PROVIDER_ATTEMPT_COLUMNS, providerAttemptColumns);
   assert.equal(
     baseline.MANIFEST_PATH,
     path.join(repoRoot, "artifacts", "adstudio", "evidence", "provider-runs-manifest.json"),

@@ -32,11 +32,36 @@ export const PROVIDER_RUN_COLUMNS = Object.freeze([
   "provider_name",
   "provider_type",
   "model_name",
+  "model_profile_version_id",
+  "pricing_snapshot_id",
   "status",
   "cost_estimate",
+  "estimated_cost_usd",
+  "actual_cost_usd",
+  "billing_status",
   "usage_json",
   "ai_run_id",
   "ai_usage_ledger_id",
+]);
+export const PROVIDER_ATTEMPT_COLUMNS = Object.freeze([
+  "id",
+  "workspace_id",
+  "provider_run_id",
+  "attempt_index",
+  "provider_name",
+  "provider_type",
+  "model_name",
+  "model_profile",
+  "model_profile_version_id",
+  "pricing_snapshot_id",
+  "status",
+  "request_submitted",
+  "billing_status",
+  "usage_json",
+  "pricing_json",
+  "estimated_cost_usd",
+  "actual_cost_usd",
+  "created_at",
 ]);
 export const PROFILE_KEYS = Object.freeze([
   "image_draft",
@@ -180,6 +205,63 @@ export async function loadProviderRunRows({ supabase, workspaceId, windowEnd, pa
   return rows;
 }
 
+function normalizeProviderAttempt(row, { workspaceId, windowEnd }) {
+  const normalized = Object.fromEntries(PROVIDER_ATTEMPT_COLUMNS.map((column) => [column, row?.[column] ?? null]));
+  if (typeof normalized.id !== "string" || !normalized.id) {
+    throw new Error("Provider-attempt row is missing its ID.");
+  }
+  if (typeof normalized.provider_run_id !== "string" || !normalized.provider_run_id) {
+    throw new Error("Provider-attempt row is missing its provider-run ID.");
+  }
+  if (normalized.workspace_id !== workspaceId) {
+    throw new Error("Provider-attempt row escaped the requested workspace scope.");
+  }
+  assertIsoTimestamp(normalized.created_at, "Provider-attempt created_at");
+  const createdAtMillis = Date.parse(normalized.created_at);
+  if (createdAtMillis < Date.parse(WINDOW_START) || createdAtMillis >= Date.parse(windowEnd)) {
+    throw new Error("Provider-attempt row escaped the frozen capture window.");
+  }
+  return normalized;
+}
+
+export async function loadProviderAttemptRows({ supabase, workspaceId, windowEnd, pageSize = PAGE_SIZE }) {
+  assertIsoTimestamp(windowEnd, "Window end");
+  if (typeof workspaceId !== "string" || !workspaceId) throw new Error("Workspace ID is required.");
+  if (!Number.isSafeInteger(pageSize) || pageSize <= 0) throw new Error("Page size must be a positive integer.");
+
+  const rows = [];
+  let cursor = null;
+  while (true) {
+    let query = supabase
+      .from("adstudio_provider_run_attempts")
+      .select(PROVIDER_ATTEMPT_COLUMNS.join(","))
+      .eq("workspace_id", workspaceId)
+      .gte("created_at", WINDOW_START)
+      .lt("created_at", windowEnd)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(pageSize);
+    if (cursor) {
+      query = query.or(
+        `created_at.gt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.gt.${cursor.id})`,
+      );
+    }
+    const { data, error } = await query;
+    if (error) throw new Error("Unable to read provider-attempt evidence.");
+    if (!Array.isArray(data)) throw new Error("Provider-attempt evidence query returned no data.");
+    if (data.length === 0) break;
+    for (const candidate of data) {
+      const row = normalizeProviderAttempt(candidate, { workspaceId, windowEnd });
+      if (cursor && compareRunKeys(row, cursor) <= 0) {
+        throw new Error("Provider-attempt pages are not strictly ordered by created_at and ID.");
+      }
+      rows.push(row);
+      cursor = row;
+    }
+  }
+  return rows;
+}
+
 export async function listWorkspaceIds({ supabase, pageSize = PAGE_SIZE }) {
   if (!Number.isSafeInteger(pageSize) || pageSize <= 0) throw new Error("Page size must be a positive integer.");
   const workspaceIds = [];
@@ -204,18 +286,44 @@ export async function listWorkspaceIds({ supabase, pageSize = PAGE_SIZE }) {
   return [...new Set(workspaceIds)].sort();
 }
 
-export async function loadActiveProfileVersionRows({ supabase, windowEnd }) {
+function compareProfileVersionKeys(left, right) {
+  const activeOrder = Date.parse(right.active_from) - Date.parse(left.active_from);
+  return activeOrder || String(left.id).localeCompare(String(right.id));
+}
+
+export async function loadActiveProfileVersionRows({ supabase, windowEnd, pageSize = PAGE_SIZE }) {
   assertIsoTimestamp(windowEnd, "Window end");
-  const { data, error } = await supabase
-    .from("model_profile_versions")
-    .select(PROFILE_VERSION_COLUMNS)
-    .lt("active_from", windowEnd)
-    .or(`active_to.is.null,active_to.gte.${windowEnd}`)
-    .order("active_from", { ascending: false })
-    .order("id", { ascending: true });
-  if (error) throw new Error("Unable to load active model profile versions.");
-  if (!Array.isArray(data)) throw new Error("Unable to load active model profile versions: query returned no data.");
-  return data;
+  if (!Number.isSafeInteger(pageSize) || pageSize <= 0) throw new Error("Page size must be a positive integer.");
+  const rows = [];
+  const ids = new Set();
+  let offset = 0;
+  let cursor = null;
+  while (true) {
+    const { data, error } = await supabase
+      .from("model_profile_versions")
+      .select(PROFILE_VERSION_COLUMNS)
+      .lt("active_from", windowEnd)
+      .or(`active_to.is.null,active_to.gte.${windowEnd}`)
+      .order("active_from", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error("Unable to load active model profile versions.");
+    if (!Array.isArray(data)) throw new Error("Unable to load active model profile versions: query returned no data.");
+    if (data.length === 0) break;
+    for (const row of data) {
+      if (typeof row?.id !== "string" || !row.id) throw new Error("Active model profile version is missing its ID.");
+      assertIsoTimestamp(row.active_from, "Active model profile version active_from");
+      if (ids.has(row.id)) throw new Error("Active model profile query returned a duplicate version ID.");
+      if (cursor && compareProfileVersionKeys(cursor, row) >= 0) {
+        throw new Error("Active model profile pages are not strictly ordered by active_from and ID.");
+      }
+      ids.add(row.id);
+      rows.push(row);
+      cursor = row;
+    }
+    offset += data.length;
+  }
+  return rows;
 }
 
 function joinedProfileKey(value) {
@@ -281,6 +389,13 @@ export function resolveModelProfileEvidence(versionRows, resolveProfile) {
     .sort((left, right) =>
       String(right.activeFrom).localeCompare(String(left.activeFrom)) || String(left.id).localeCompare(String(right.id)),
     );
+  const profileKeys = new Set();
+  for (const version of persisted) {
+    if (profileKeys.has(version.profileKey)) {
+      throw new Error(`Ambiguous active model profile versions exist for ${version.profileKey}.`);
+    }
+    profileKeys.add(version.profileKey);
+  }
 
   return PROFILE_KEYS.map((profileKey) => {
     const active = persisted.find((version) => version.profileKey === profileKey) ?? null;
@@ -500,16 +615,233 @@ function sortedNormalizedRows(rows, workspaceIds, windowEnd) {
   return normalized;
 }
 
+function sortedNormalizedAttempts(attempts, workspaceIds, windowEnd, providerRuns) {
+  const workspaceSet = new Set(workspaceIds);
+  const providerRunKeys = new Set(providerRuns.map((row) => canonicalJson([row.workspace_id, row.id])));
+  const ids = new Set();
+  const indexes = new Set();
+  const normalized = attempts.map((attempt) => {
+    if (!workspaceSet.has(attempt.workspace_id)) {
+      throw new Error("Provider-attempt evidence references an unenumerated workspace.");
+    }
+    const row = normalizeProviderAttempt(attempt, { workspaceId: attempt.workspace_id, windowEnd });
+    if (!providerRunKeys.has(canonicalJson([row.workspace_id, row.provider_run_id]))) {
+      throw new Error("Provider-attempt evidence references an uncaptured provider run.");
+    }
+    const idKey = canonicalJson([row.workspace_id, row.id]);
+    if (ids.has(idKey)) throw new Error("Provider-attempt evidence contains a duplicate attempt ID.");
+    ids.add(idKey);
+    const indexKey = canonicalJson([row.workspace_id, row.provider_run_id, row.attempt_index]);
+    if (indexes.has(indexKey)) throw new Error("Provider-attempt evidence contains a duplicate attempt index.");
+    indexes.add(indexKey);
+    return row;
+  });
+  return normalized.sort((left, right) =>
+    String(left.workspace_id).localeCompare(String(right.workspace_id)) || compareRunKeys(left, right),
+  );
+}
+
+function decimalsEqual(left, right) {
+  const parsedLeft = decimalFrom(left);
+  const parsedRight = decimalFrom(right);
+  return Boolean(parsedLeft && parsedRight && formatDecimal(parsedLeft) === formatDecimal(parsedRight));
+}
+
+function usageTotals(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const totals = {};
+  for (const key of ["inputTokens", "outputTokens", "imageUnits"]) {
+    const number = Number(value[key]);
+    if (!Number.isFinite(number) || number < 0) return null;
+    totals[key] = number;
+  }
+  return totals;
+}
+
+function summarizeAttemptAccounting(providerRuns, attempts) {
+  const grouped = new Map();
+  for (const attempt of attempts) {
+    const key = canonicalJson([attempt.workspace_id, attempt.provider_run_id]);
+    const values = grouped.get(key) ?? [];
+    values.push(attempt);
+    grouped.set(key, values);
+  }
+  let failedBilledCount = 0;
+  let runMismatchCount = 0;
+  let estimatedCost = { coefficient: 0n, scale: 0 };
+  let actualCost = { coefficient: 0n, scale: 0 };
+  let failedBilledCost = { coefficient: 0n, scale: 0 };
+  for (const attempt of attempts) {
+    const parsedEstimated = decimalFrom(attempt.estimated_cost_usd);
+    const parsedActual = decimalFrom(attempt.actual_cost_usd);
+    if (parsedEstimated) estimatedCost = addDecimal(estimatedCost, parsedEstimated);
+    if (attempt.billing_status === "actual" && parsedActual) actualCost = addDecimal(actualCost, parsedActual);
+    const cost = attempt.billing_status === "actual" ? attempt.actual_cost_usd : attempt.estimated_cost_usd;
+    const parsed = decimalFrom(cost);
+    if (attempt.status === "failed" && attempt.request_submitted === true && parsed?.coefficient > 0n) {
+      failedBilledCount += 1;
+      failedBilledCost = addDecimal(failedBilledCost, parsed);
+    }
+  }
+  for (const run of providerRuns) {
+    const runAttempts = grouped.get(canonicalJson([run.workspace_id, run.id])) ?? [];
+    if (runAttempts.length === 0) continue;
+    let estimated = { coefficient: 0n, scale: 0 };
+    let actual = { coefficient: 0n, scale: 0 };
+    let actualCount = 0;
+    let incompleteActual = false;
+    const usage = { inputTokens: 0, outputTokens: 0, imageUnits: 0 };
+    let valid = true;
+    for (const attempt of runAttempts) {
+      const parsedEstimated = decimalFrom(attempt.estimated_cost_usd);
+      const attemptUsage = usageTotals(attempt.usage_json);
+      if (!parsedEstimated || !attemptUsage) {
+        valid = false;
+        continue;
+      }
+      estimated = addDecimal(estimated, parsedEstimated);
+      for (const key of Object.keys(usage)) usage[key] += attemptUsage[key];
+      if (["estimated", "unreconciled"].includes(attempt.billing_status)) incompleteActual = true;
+      if (attempt.billing_status === "actual") {
+        const parsedActual = decimalFrom(attempt.actual_cost_usd);
+        if (!parsedActual) valid = false;
+        else {
+          actual = addDecimal(actual, parsedActual);
+          actualCount += 1;
+        }
+      }
+    }
+    const expectedBilling = runAttempts.some((attempt) => attempt.billing_status === "unreconciled")
+      ? "unreconciled"
+      : runAttempts.some((attempt) => attempt.billing_status === "estimated")
+        ? "estimated"
+        : runAttempts.some((attempt) => attempt.billing_status === "actual")
+          ? "actual"
+          : "unbilled";
+    const expectedActual = incompleteActual || actualCount === 0 ? null : formatDecimal(actual);
+    const runUsage = usageTotals(run.usage_json);
+    const usageMatches = runUsage && Object.keys(usage).every((key) => runUsage[key] === usage[key]);
+    if (
+      !valid ||
+      !decimalsEqual(run.estimated_cost_usd, formatDecimal(estimated)) ||
+      (expectedActual === null ? run.actual_cost_usd !== null : !decimalsEqual(run.actual_cost_usd, expectedActual)) ||
+      run.billing_status !== expectedBilling ||
+      !usageMatches
+    ) {
+      runMismatchCount += 1;
+    }
+  }
+  return {
+    failedBilledCount,
+    failedBilledCostUsd: formatDecimal(failedBilledCost),
+    estimatedCostUsd: formatDecimal(estimatedCost),
+    actualCostUsd: formatDecimal(actualCost),
+    runMismatchCount,
+  };
+}
+
+function pricingEvidenceComplete(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  for (const key of ["inputUsdPerMillionTokens", "outputUsdPerMillionTokens", "imageUsdPerUnit"]) {
+    const number = Number(value[key]);
+    if (!Number.isFinite(number) || number < 0) return false;
+  }
+  return value.currency === "USD" &&
+    typeof value.inputTokenBasis === "string" &&
+    typeof value.outputTokenBasis === "string" &&
+    typeof value.imageBasis === "string" &&
+    typeof value.source === "string";
+}
+
+function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
+  const validBillingStatuses = new Set(["actual", "estimated", "unbilled", "unreconciled"]);
+  let negativeCostCount = 0;
+  let unknownCostCount = 0;
+  let nonLocalChargedZeroCount = 0;
+  let missingUsageCount = 0;
+  let incompleteUsageCount = 0;
+  let allZeroNonLocalUsageCount = 0;
+  let missingPricingCount = 0;
+  const attemptsByRun = new Map();
+  for (const attempt of attempts) {
+    const key = canonicalJson([attempt.workspace_id, attempt.provider_run_id]);
+    attemptsByRun.set(key, (attemptsByRun.get(key) ?? 0) + 1);
+  }
+  let runsMissingAttemptsCount = 0;
+
+  const inspectCost = (record, { attempt = false } = {}) => {
+    const estimated = decimalFrom(record.estimated_cost_usd);
+    const actual = record.actual_cost_usd === null ? null : decimalFrom(record.actual_cost_usd);
+    const legacy = attempt ? null : decimalFrom(record.cost_estimate);
+    if ([estimated, actual, legacy].some((value) => value?.coefficient < 0n)) negativeCostCount += 1;
+    const billingKnown = validBillingStatuses.has(record.billing_status);
+    if (!estimated || !billingKnown || record.billing_status === "unreconciled" || (record.billing_status === "actual" && !actual)) {
+      unknownCostCount += 1;
+    }
+    const chargedCost = record.billing_status === "actual" ? actual : record.billing_status === "estimated" ? estimated : null;
+    const nonLocal = record.provider_name !== "deterministic_local" && record.provider_type !== "local";
+    if (nonLocal && chargedCost?.coefficient === 0n) nonLocalChargedZeroCount += 1;
+  };
+
+  for (const run of providerRuns) {
+    inspectCost(run);
+    const nonLocal = run.provider_name !== "deterministic_local" && run.provider_type !== "local";
+    const runUsage = usageTotals(run.usage_json);
+    if (!runUsage) missingUsageCount += 1;
+    else if (nonLocal && Object.values(runUsage).every((value) => value === 0)) allZeroNonLocalUsageCount += 1;
+    if (
+      nonLocal &&
+      ["actual", "estimated"].includes(run.billing_status) &&
+      !attemptsByRun.has(canonicalJson([run.workspace_id, run.id]))
+    ) {
+      runsMissingAttemptsCount += 1;
+    }
+  }
+  for (const attempt of attempts) {
+    inspectCost(attempt, { attempt: true });
+    const attemptUsage = usageTotals(attempt.usage_json);
+    if (!attemptUsage) missingUsageCount += 1;
+    else if (
+      attempt.provider_name !== "deterministic_local" &&
+      attempt.provider_type !== "local" &&
+      Object.values(attemptUsage).every((value) => value === 0)
+    ) {
+      allZeroNonLocalUsageCount += 1;
+    }
+    if (attempt.usage_json?.complete !== true) incompleteUsageCount += 1;
+    if (!pricingEvidenceComplete(attempt.pricing_json)) missingPricingCount += 1;
+  }
+  const blockingCount = negativeCostCount + unknownCostCount + nonLocalChargedZeroCount + missingUsageCount +
+    incompleteUsageCount + allZeroNonLocalUsageCount + missingPricingCount + runsMissingAttemptsCount +
+    attemptAccounting.runMismatchCount;
+  return {
+    negativeCostCount,
+    unknownCostCount,
+    nonLocalChargedZeroCount,
+    missingUsageCount,
+    incompleteUsageCount,
+    allZeroNonLocalUsageCount,
+    missingPricingCount,
+    runsMissingAttemptsCount,
+    runAttemptMismatchCount: attemptAccounting.runMismatchCount,
+    blockingCount,
+  };
+}
+
 export function buildProviderBaselineManifest({
   projectRef,
   sourceCommit,
   toolSourceSha256,
+  dependencyClosureSha256,
+  dependencyClosure,
   capturedAtStart,
   capturedAtEnd,
   windowEnd,
   workspaceIds,
   firstPassRows,
   secondPassRows,
+  firstPassAttempts = [],
+  secondPassAttempts = [],
   modelProfiles,
   secondModelProfiles = modelProfiles,
 }) {
@@ -522,6 +854,16 @@ export function buildProviderBaselineManifest({
     throw new Error("Source commit must be a lowercase Git object ID.");
   }
   assertHexDigest(toolSourceSha256, 64, "Tool source SHA-256");
+  assertHexDigest(dependencyClosureSha256, 64, "Dependency closure SHA-256");
+  if (
+    !Array.isArray(dependencyClosure) ||
+    dependencyClosure.length === 0 ||
+    dependencyClosure.some((file) =>
+      !file || typeof file.path !== "string" || !file.path || !/^[a-f0-9]{64}$/.test(file.sha256)
+    )
+  ) {
+    throw new Error("Dependency closure evidence is invalid.");
+  }
   if (!Array.isArray(workspaceIds) || workspaceIds.some((id) => typeof id !== "string" || !id)) {
     throw new Error("Workspace evidence set contains an invalid ID.");
   }
@@ -534,14 +876,24 @@ export function buildProviderBaselineManifest({
   const sortedWorkspaces = [...new Set(workspaceIds)].sort();
   const firstRows = sortedNormalizedRows(firstPassRows, sortedWorkspaces, windowEnd);
   const secondRows = sortedNormalizedRows(secondPassRows, sortedWorkspaces, windowEnd);
-  const firstPassSha256 = sha256Canonical(firstRows);
-  const secondPassSha256 = sha256Canonical(secondRows);
+  const firstAttempts = sortedNormalizedAttempts(firstPassAttempts, sortedWorkspaces, windowEnd, firstRows);
+  const secondAttempts = sortedNormalizedAttempts(secondPassAttempts, sortedWorkspaces, windowEnd, secondRows);
+  const firstPassSha256 = sha256Canonical({ providerRuns: firstRows, providerAttempts: firstAttempts });
+  const secondPassSha256 = sha256Canonical({ providerRuns: secondRows, providerAttempts: secondAttempts });
   const firstModelProfilesSha256 = sha256Canonical(modelProfiles);
   const secondModelProfilesSha256 = sha256Canonical(secondModelProfiles);
   const queryDefinition = {
     version: QUERY_VERSION,
     table: "adstudio_provider_runs",
     columns: PROVIDER_RUN_COLUMNS,
+    window: { startInclusive: WINDOW_START, endExclusive: windowEnd },
+    workspaceFilter: "workspace_id=eq.<enumerated-workspace>",
+    order: ["created_at.asc", "id.asc"],
+  };
+  const attemptQueryDefinition = {
+    version: QUERY_VERSION,
+    table: "adstudio_provider_run_attempts",
+    columns: PROVIDER_ATTEMPT_COLUMNS,
     window: { startInclusive: WINDOW_START, endExclusive: windowEnd },
     workspaceFilter: "workspace_id=eq.<enumerated-workspace>",
     order: ["created_at.asc", "id.asc"],
@@ -553,6 +905,7 @@ export function buildProviderBaselineManifest({
     windowEndExclusive: windowEnd,
     filters: ["active_from.lt.<window-end>", "active_to.is.null OR active_to.gte.<window-end>"],
     order: ["active_from.desc", "id.asc"],
+    pagination: "offset-range-until-empty",
   };
   const privateEvidence = {
     workspaces: sortedWorkspaces.map((workspaceId) => {
@@ -561,10 +914,36 @@ export function buildProviderBaselineManifest({
         workspaceId,
         runIdSetSha256: sha256Canonical(workspaceRows.map((row) => row.id).sort()),
         rows: workspaceRows,
+        attempts: firstAttempts.filter((attempt) => attempt.workspace_id === workspaceId),
       };
     }),
   };
-  const publicSummary = buildPublicSummary(firstRows, sortedWorkspaces);
+  const basePublicSummary = buildPublicSummary(firstRows, sortedWorkspaces);
+  const globalAttemptIds = firstAttempts
+    .map((attempt) => [attempt.workspace_id, attempt.id])
+    .sort((left, right) => canonicalJson(left).localeCompare(canonicalJson(right)));
+  const workspaceSummaries = basePublicSummary.workspaces.map((summary, index) => {
+    const workspaceId = sortedWorkspaces[index];
+    const attemptIds = firstAttempts
+      .filter((attempt) => attempt.workspace_id === workspaceId)
+      .map((attempt) => attempt.id)
+      .sort();
+    return {
+      ...summary,
+      attemptCount: attemptIds.length,
+      attemptIdSetSha256: sha256Canonical(attemptIds),
+    };
+  });
+  const attemptAccounting = summarizeAttemptAccounting(firstRows, firstAttempts);
+  const blockingAnomalies = buildBlockingAnomalies(firstRows, firstAttempts, attemptAccounting);
+  const publicSummary = {
+    ...basePublicSummary,
+    workspaces: workspaceSummaries,
+    totalAttempts: firstAttempts.length,
+    globalAttemptIdSetSha256: sha256Canonical(globalAttemptIds),
+    attemptAccounting,
+    anomalies: { ...basePublicSummary.anomalies, ...blockingAnomalies },
+  };
   const providerRunDriftDetected = firstPassSha256 !== secondPassSha256;
   const modelProfileDriftDetected = firstModelProfilesSha256 !== secondModelProfilesSha256;
   const driftDetected = providerRunDriftDetected || modelProfileDriftDetected;
@@ -573,6 +952,7 @@ export function buildProviderBaselineManifest({
     schemaSha256: sha256Canonical({
       schema: SCHEMA,
       providerRunColumns: PROVIDER_RUN_COLUMNS,
+      providerAttemptColumns: PROVIDER_ATTEMPT_COLUMNS,
       modelProfileVersionColumns: PROFILE_VERSION_COLUMNS.split(","),
     }),
     preliminaryPreFence: true,
@@ -581,6 +961,8 @@ export function buildProviderBaselineManifest({
       commit: sourceCommit,
       commitSha256: sha256Text(sourceCommit),
       toolSha256: toolSourceSha256,
+      dependencyClosureSha256,
+      dependencyClosure,
     },
     capture: {
       capturedAtStart,
@@ -592,6 +974,11 @@ export function buildProviderBaselineManifest({
       columnsSha256: sha256Canonical(PROVIDER_RUN_COLUMNS),
       sha256: sha256Canonical(queryDefinition),
     },
+    attemptQuery: {
+      ...attemptQueryDefinition,
+      columnsSha256: sha256Canonical(PROVIDER_ATTEMPT_COLUMNS),
+      sha256: sha256Canonical(attemptQueryDefinition),
+    },
     drift: {
       detected: driftDetected,
       firstPassSha256,
@@ -601,7 +988,7 @@ export function buildProviderBaselineManifest({
       firstModelProfilesSha256,
       secondModelProfilesSha256,
     },
-    acceptanceEligible: !driftDetected,
+    acceptanceEligible: !driftDetected && blockingAnomalies.blockingCount === 0,
     modelProfiles: {
       resolution: "active-persisted-primary-with-committed-defaults-and-fallbacks",
       query: {
@@ -624,9 +1011,12 @@ export async function runProviderBaseline({
   projectRef,
   sourceCommit,
   toolSourceSha256,
+  dependencyClosureSha256,
+  dependencyClosure,
   now = () => new Date().toISOString(),
   listWorkspaces = listWorkspaceIds,
   loadRows = loadProviderRunRows,
+  loadAttempts = loadProviderAttemptRows,
   loadProfiles = loadActiveProfileVersionRows,
   resolveProfiles,
   writeManifest = legacyWriteSecureManifest,
@@ -637,16 +1027,18 @@ export async function runProviderBaseline({
   const workspaceIds = [...new Set(await listWorkspaces({ supabase }))].sort();
   const collectPass = async () => {
     const rows = [];
+    const attempts = [];
     for (const workspaceId of workspaceIds) {
       rows.push(...await loadRows({ supabase, workspaceId, windowEnd }));
+      attempts.push(...await loadAttempts({ supabase, workspaceId, windowEnd }));
     }
-    return rows;
+    return { rows, attempts };
   };
-  const firstPassRows = await collectPass();
+  const firstPass = await collectPass();
   if (typeof resolveProfiles !== "function") throw new Error("A runtime profile evidence resolver is required.");
   const firstProfileRows = await loadProfiles({ supabase, windowEnd });
   const modelProfiles = resolveProfiles(firstProfileRows);
-  const secondPassRows = await collectPass();
+  const secondPass = await collectPass();
   const secondProfileRows = await loadProfiles({ supabase, windowEnd });
   const secondModelProfiles = resolveProfiles(secondProfileRows);
   const capturedAtEnd = assertIsoTimestamp(now(), "Capture end");
@@ -654,12 +1046,16 @@ export async function runProviderBaseline({
     projectRef,
     sourceCommit,
     toolSourceSha256,
+    dependencyClosureSha256,
+    dependencyClosure,
     capturedAtStart,
     capturedAtEnd,
     windowEnd,
     workspaceIds,
-    firstPassRows,
-    secondPassRows,
+    firstPassRows: firstPass.rows,
+    secondPassRows: secondPass.rows,
+    firstPassAttempts: firstPass.attempts,
+    secondPassAttempts: secondPass.attempts,
     modelProfiles,
     secondModelProfiles,
   });
@@ -688,33 +1084,80 @@ function repoRelativePath(repoRoot, target) {
   return relative.split(path.sep).join("/");
 }
 
+function localImportSpecifiers(source) {
+  const specifiers = new Set();
+  const patterns = [
+    /\bimport\s+(?!type\b)[^"'()]*?\sfrom\s*["']([^"']+)["']/gsu,
+    /\bimport\s*["']([^"']+)["']/gu,
+    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/gu,
+    /\bexport\s+[^"']*?\sfrom\s*["']([^"']+)["']/gsu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      if (match[1]?.startsWith(".")) specifiers.add(match[1]);
+    }
+  }
+  return [...specifiers];
+}
+
+async function collectLocalDependencyPaths({ repoRoot, scriptPath }) {
+  const pending = [path.resolve(scriptPath)];
+  const visited = new Set();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    const relative = repoRelativePath(repoRoot, current);
+    if (visited.has(relative)) continue;
+    visited.add(relative);
+    const source = await readFile(current, "utf8");
+    for (const specifier of localImportSpecifiers(source)) {
+      const dependency = path.resolve(path.dirname(current), specifier);
+      repoRelativePath(repoRoot, dependency);
+      pending.push(dependency);
+    }
+  }
+  return [...visited].sort();
+}
+
+async function assertTrackedFileMatchesHead(repoRoot, relative) {
+  await execFileAsync("git", ["ls-files", "--error-unmatch", "--", relative], { cwd: repoRoot, windowsHide: true });
+  await execFileAsync("git", ["diff", "--quiet", "HEAD", "--", relative], { cwd: repoRoot, windowsHide: true });
+  const { stdout: workingBlob } = await execFileAsync("git", ["hash-object", `--path=${relative}`, relative], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  const { stdout: committedBlob } = await execFileAsync("git", ["rev-parse", `HEAD:${relative}`], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (workingBlob.trim() !== committedBlob.trim()) throw new Error("source mismatch");
+}
+
 export async function collectVerifiedToolEvidence({ repoRoot, scriptPath }) {
-  const relative = repoRelativePath(repoRoot, scriptPath);
+  let dependencyPaths;
   try {
-    await execFileAsync("git", ["ls-files", "--error-unmatch", "--", relative], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["diff", "--quiet", "HEAD", "--", relative], { cwd: repoRoot, windowsHide: true });
-    const { stdout: workingBlob } = await execFileAsync("git", ["hash-object", `--path=${relative}`, relative], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    const { stdout: committedBlob } = await execFileAsync("git", ["rev-parse", `HEAD:${relative}`], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    if (workingBlob.trim() !== committedBlob.trim()) throw new Error("source mismatch");
+    dependencyPaths = await collectLocalDependencyPaths({ repoRoot, scriptPath });
+    for (const relative of dependencyPaths) await assertTrackedFileMatchesHead(repoRoot, relative);
   } catch {
-    throw new Error("Provider baseline tool must be tracked and match HEAD before evidence capture.");
+    throw new Error("Provider baseline dependency closure must be tracked and match HEAD before evidence capture.");
   }
   const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
     cwd: repoRoot,
     encoding: "utf8",
     windowsHide: true,
   });
+  const dependencyClosure = await Promise.all(dependencyPaths.map(async (relative) => ({
+    path: relative,
+    sha256: sha256Bytes(await readFile(path.resolve(repoRoot, relative))),
+  })));
+  const scriptRelative = repoRelativePath(repoRoot, scriptPath);
+  const scriptEvidence = dependencyClosure.find((file) => file.path === scriptRelative);
   return {
     sourceCommit: stdout.trim(),
-    toolSourceSha256: sha256Bytes(await readFile(scriptPath)),
+    toolSourceSha256: scriptEvidence.sha256,
+    dependencyClosureSha256: sha256Canonical(dependencyClosure),
+    dependencyClosure,
   };
 }
 
