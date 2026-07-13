@@ -33,6 +33,19 @@ export function requireEnv(env = process.env) {
   return { url, serviceRoleKey };
 }
 
+export function buildSupabaseStorageHeaders(serviceRoleKey) {
+  if (typeof serviceRoleKey !== "string" || !serviceRoleKey) {
+    throw new Error("A Supabase secret or legacy service-role key is required.");
+  }
+  const headers = { apikey: serviceRoleKey, Accept: "image/*" };
+  // Current opaque secret keys authorize through `apikey` and are not JWTs.
+  // The legacy service-role JWT still needs the matching Bearer header.
+  if (!serviceRoleKey.startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${serviceRoleKey}`;
+  }
+  return headers;
+}
+
 export function classifyProposedRenderKind(canvas) {
   const objects = canvas?.objects;
   if (!Array.isArray(objects)) return { kind: "unknown", reason: "objects_not_array" };
@@ -1197,7 +1210,7 @@ async function main() {
     const response = await fetch(`${url.replace(/\/$/, "")}/storage/v1/object/authenticated/${BUCKET}/${encodedPath}`, {
       method: "GET",
       redirect: "manual",
-      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, Accept: "image/*" },
+      headers: buildSupabaseStorageHeaders(serviceRoleKey),
     });
     if (response.status >= 300 && response.status < 400) throw new Error("Private workspace asset redirect is forbidden.");
     if (!response.ok || !response.body) throw new Error("Private workspace asset download failed.");

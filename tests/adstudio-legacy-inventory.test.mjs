@@ -137,6 +137,19 @@ test("credential loader accepts the current Supabase secret key and prefers an e
   );
 });
 
+test("private Storage headers use opaque secret keys as apikey-only and legacy JWTs as Bearer credentials", () => {
+  assert.deepEqual(inventory.buildSupabaseStorageHeaders("sb_secret_current"), {
+    apikey: "sb_secret_current",
+    Accept: "image/*",
+  });
+  assert.deepEqual(inventory.buildSupabaseStorageHeaders("eyJlegacy-service-role"), {
+    apikey: "eyJlegacy-service-role",
+    Accept: "image/*",
+    Authorization: "Bearer eyJlegacy-service-role",
+  });
+  assert.throws(() => inventory.buildSupabaseStorageHeaders(""), /secret or legacy service-role key/);
+});
+
 test("classifier recognizes exact flat clones and unambiguous legacy composites", () => {
   assert.equal(typeof inventory.classifyProposedRenderKind, "function");
   assert.deepEqual(
