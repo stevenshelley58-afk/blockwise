@@ -173,7 +173,10 @@ export async function generateQaAcceptedClone(input: {
   let qualityAttempt = 0;
   let providerCallCount = 0;
   let generationAttempt = 0;
-  const maxProviderCalls = Math.min(4, Math.max(1, input.maxAttempts) * 2);
+  // This is a frozen product budget, independent of the caller's legacy
+  // provider-round hint. A one-round synchronous caller must still get two
+  // QA-reviewed candidates when early provider failures consume fewer calls.
+  const maxProviderCalls = 4;
   const maxQualityAttempts = 2;
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const review = dependencies.review ?? runCloneQa;
