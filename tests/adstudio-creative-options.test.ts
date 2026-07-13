@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { clampOptionCount, generateCreativeOptions } from "../src/lib/adstudio/creative-options.ts";
-import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "../src/lib/adstudio/providers.ts";
+import {
+  ProviderRequestError,
+  type ImageProviderAdapter,
+  type ImageProviderRequest,
+  type ImageProviderResponse,
+} from "../src/lib/adstudio/providers.ts";
 import {
   buildProviderRunAttempt,
   type executeAdStudioProviderAttempt,
@@ -65,6 +70,12 @@ const executionContext = {
   executeAttempt,
 };
 
+function submittedProviderFailure(message: string, retryable: boolean): ProviderRequestError {
+  const error = new ProviderRequestError(message, { requestSubmitted: true });
+  Object.defineProperty(error, "retryable", { value: retryable, enumerable: true });
+  return error;
+}
+
 test("clampOptionCount clamps to 1..4 and defaults to 3", () => {
   assert.equal(clampOptionCount(undefined), 3);
   assert.equal(clampOptionCount(Number.NaN), 3);
@@ -96,7 +107,7 @@ test("generateCreativeOptions fans out N options with distinct seeds", async () 
 
 test("generateCreativeOptions cascades to the next provider when one fails", async () => {
   const failing = imageProvider("openai", () => {
-    throw new Error("rate limited");
+    throw submittedProviderFailure("rate limited", true);
   });
   const working = imageProvider("openrouter", (seed) => ({
     assetUrl: "data:image/png;base64,ok",
@@ -117,6 +128,55 @@ test("generateCreativeOptions cascades to the next provider when one fails", asy
   assert.ok(result.options.every((o) => o.provider === "openrouter"));
   assert.ok(result.attempts.some((a) => a.provider === "openai" && a.status === "failed"));
   assert.ok(result.attempts.some((a) => a.provider === "openrouter" && a.status === "completed"));
+});
+
+test("generateCreativeOptions does not fallback after a non-retryable provider failure", async () => {
+  let fallbackCalls = 0;
+  const failing = imageProvider("openai", () => {
+    throw submittedProviderFailure("invalid request", false);
+  });
+  const fallback = imageProvider("openrouter", (seed) => {
+    fallbackCalls += 1;
+    return { assetUrl: "data:image/png;base64,ok", seed, model: "fallback", providerMetadata: {} };
+  });
+
+  const result = await generateCreativeOptions({
+    providers: [failing, fallback],
+    imageInput: baseInput,
+    copyText: "clean copy",
+    count: 1,
+    ...executionContext,
+  });
+
+  assert.equal(fallbackCalls, 0);
+  assert.equal(result.options.length, 0);
+  assert.equal(result.attempts.length, 1);
+});
+
+test("generateCreativeOptions never invokes a second fallback candidate", async () => {
+  let thirdProviderCalls = 0;
+  const first = imageProvider("primary", () => {
+    throw submittedProviderFailure("primary unavailable", true);
+  });
+  const fallback = imageProvider("fallback", () => {
+    throw submittedProviderFailure("fallback unavailable", true);
+  });
+  const forbiddenThird = imageProvider("third", (seed) => {
+    thirdProviderCalls += 1;
+    return { assetUrl: "data:image/png;base64,unexpected", seed, model: "third", providerMetadata: {} };
+  });
+
+  const result = await generateCreativeOptions({
+    providers: [first, fallback, forbiddenThird],
+    imageInput: baseInput,
+    copyText: "clean copy",
+    count: 1,
+    ...executionContext,
+  });
+
+  assert.equal(thirdProviderCalls, 0);
+  assert.equal(result.options.length, 0);
+  assert.equal(result.attempts.length, 2);
 });
 
 test("generateCreativeOptions returns no options when every provider fails (but still reports attempts + compliance)", async () => {
@@ -228,7 +288,7 @@ test("generateCreativeOptions waits for sibling lanes and preserves their attemp
 test("generateCreativeOptions preserves an earlier paid failure when the next reservation fails", async () => {
   let fallbackCalls = 0;
   const submittedFailure = imageProvider("openai", () => {
-    throw new Error("provider rejected submitted request");
+    throw submittedProviderFailure("provider rejected submitted request", true);
   });
   const fallback = imageProvider("openrouter", (seed) => {
     fallbackCalls += 1;

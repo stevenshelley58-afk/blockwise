@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AssembledPrompt } from "../operator/prompts/assemble-prompt.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptSection } from "../operator/prompts/prompt-registry.ts";
 import {
   executeAdStudioProviderAttempt,
@@ -124,6 +128,7 @@ export async function scoreCampaignPackVariantsWithAi(input: {
         break;
       }
       lastError = execution.error;
+      if (!isRetryableProviderFailure(execution.error)) break;
     }
 
     if (!output || !provider) {

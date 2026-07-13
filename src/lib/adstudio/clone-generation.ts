@@ -5,7 +5,11 @@
 import { createImageProviderForCandidate } from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
 import {
   executeAdStudioProviderAttempt,
   recordAdStudioProviderRun,
@@ -56,7 +60,7 @@ export async function generateCloneWithCascade(input: {
     recordRun: recordAdStudioProviderRun,
   };
 
-  for (const [attemptIndex, provider] of input.providers.entries()) {
+  for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
     let result: ImageProviderResponse | null = null;
     try {
       const execution = await accounting.executeAttempt<ImageProviderResponse>({
@@ -74,6 +78,7 @@ export async function generateCloneWithCascade(input: {
       attempts.push(execution.attempt);
       if (!execution.ok) {
         lastError = execution.error;
+        if (!isRetryableProviderFailure(execution.error)) break;
         continue;
       }
       result = execution.output;

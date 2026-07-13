@@ -9,7 +9,7 @@ import {
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
 import { generateCloneWithCascade } from "../src/lib/adstudio/clone-generation.ts";
-import type { ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
+import { ProviderRequestError, type ImageProviderAdapter } from "../src/lib/adstudio/providers.ts";
 import {
   buildProviderRunAttempt,
   type executeAdStudioProviderAttempt,
@@ -57,6 +57,12 @@ function accountedImageProvider(name: string, generate: ImageProviderAdapter["ge
     },
     generate,
   };
+}
+
+function submittedProviderFailure(message: string, retryable: boolean): ProviderRequestError {
+  const error = new ProviderRequestError(message, { requestSubmitted: true });
+  Object.defineProperty(error, "retryable", { value: retryable, enumerable: true });
+  return error;
 }
 
 test("normalizeRenderedText is lenient on case/punctuation but not words", () => {
@@ -184,6 +190,97 @@ test("durable accounting failure after provider success never dispatches a fallb
 
   assert.equal(primaryCalls, 1);
   assert.equal(fallbackCalls, 0);
+});
+
+test("clone generation does not fallback after a non-retryable provider failure", async () => {
+  let fallbackCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    throw submittedProviderFailure("invalid request", false);
+  });
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "fallback-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+
+  await assert.rejects(() => generateCloneWithCascade({
+    providers: [primary, fallback],
+    request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "non-retryable-clone",
+    tier: "preview",
+    attempt: 1,
+    accounting: { executeAttempt, recordRun: async () => {} },
+  }), /invalid request/);
+
+  assert.equal(fallbackCalls, 0);
+});
+
+test("clone generation invokes one fallback after a retryable provider failure", async () => {
+  let fallbackCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    throw submittedProviderFailure("rate limited", true);
+  });
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "fallback-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+
+  const result = await generateCloneWithCascade({
+    providers: [primary, fallback],
+    request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "retryable-clone",
+    tier: "preview",
+    attempt: 1,
+    accounting: { executeAttempt, recordRun: async () => {} },
+  });
+
+  assert.equal(result.provider, "fallback");
+  assert.equal(fallbackCalls, 1);
+});
+
+test("clone generation never invokes a second fallback candidate", async () => {
+  let thirdProviderCalls = 0;
+  const failedProvider = (name: string) => accountedImageProvider(name, async () => {
+    throw submittedProviderFailure(`${name} unavailable`, true);
+  });
+  const forbiddenThird = accountedImageProvider("third", async () => {
+    thirdProviderCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "third-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+
+  await assert.rejects(() => generateCloneWithCascade({
+    providers: [failedProvider("primary"), failedProvider("fallback"), forbiddenThird],
+    request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "bounded-clone",
+    tier: "preview",
+    attempt: 1,
+    accounting: { executeAttempt, recordRun: async () => {} },
+  }), /fallback unavailable/);
+
+  assert.equal(thirdProviderCalls, 0);
 });
 
 test("post-commit audit failure is contained after durable accounting", async () => {

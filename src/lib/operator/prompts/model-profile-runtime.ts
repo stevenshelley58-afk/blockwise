@@ -32,5 +32,12 @@ export function resolveRuntimeProfileFromVersions(
 }
 
 export function modelCandidateAttempts(profile: RuntimeModelProfile): ModelCandidate[] {
-  return [profile.primary, ...profile.fallbacks];
+  return [profile.primary, ...profile.fallbacks.slice(0, 1)];
+}
+
+export function isRetryableProviderFailure(error: unknown): boolean {
+  return typeof error === "object"
+    && error !== null
+    && "retryable" in error
+    && error.retryable === true;
 }

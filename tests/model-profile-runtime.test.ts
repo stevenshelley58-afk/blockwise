@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { loadPersistedModelProfileVersions } from "../src/lib/ai/model-profile-store.ts";
-import { resolveRuntimeProfileFromVersions } from "../src/lib/operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeProfileFromVersions,
+} from "../src/lib/operator/prompts/model-profile-runtime.ts";
 
 function modelVersionClient(result: { data: unknown; error: { message: string } | null }) {
   const query = {
@@ -66,4 +70,20 @@ test("runtime profiles distinguish declared defaults from persisted version and 
   assert.equal(persisted.primary.modelProfileVersionId, "22222222-2222-4222-8222-222222222222");
   assert.equal(persisted.primary.pricingSnapshotId, "22222222-2222-4222-8222-222222222222");
   assert.equal(persisted.primary.imageUsdPerUnit, 0.039);
+});
+
+test("runtime model attempts expose one primary and at most one declared fallback", () => {
+  const profile = resolveRuntimeProfileFromVersions("image_final", []);
+
+  assert.equal(profile.fallbacks.length, 2, "the registry may retain additional recovery choices");
+  assert.deepEqual(
+    modelCandidateAttempts(profile).map((candidate) => candidate.model),
+    [profile.primary.model, profile.fallbacks[0].model],
+  );
+});
+
+test("provider fallback requires an explicit retryable discriminator", () => {
+  assert.equal(isRetryableProviderFailure(new Error("generic failure")), false);
+  assert.equal(isRetryableProviderFailure({ retryable: false }), false);
+  assert.equal(isRetryableProviderFailure({ retryable: true }), true);
 });

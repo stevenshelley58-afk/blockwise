@@ -4,7 +4,11 @@ import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle, type PromptKey } from "../operator/prompts/prompt-registry.ts";
 import {
   executeAdStudioProviderAttempt,
@@ -399,8 +403,10 @@ async function generateCopyWithProfile(
       };
     }
 
-      // A configured model just failed — tell the owner their chosen model is down.
-      // De-duped by stage+toModel, so a burst of requests sends one alert.
+    if (!isRetryableProviderFailure(execution.error)) break;
+
+    // A configured model just failed — tell the owner their chosen model is down.
+    // De-duped by stage+toModel, so a burst of requests sends one alert.
     const toModel = candidates[index + 1]?.model;
     if (toModel) {
       void emitModelFallbackAlert({

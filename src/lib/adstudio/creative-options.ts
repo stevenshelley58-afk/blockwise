@@ -17,6 +17,7 @@ import {
   executeAdStudioProviderAttempt,
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
+import { isRetryableProviderFailure } from "../operator/prompts/model-profile-runtime.ts";
 
 export type CreativeOptionAttempt = ProviderRunAttempt & { option: number };
 
@@ -69,7 +70,7 @@ export async function generateCreativeOptions(
   const settled = await Promise.allSettled(
     Array.from({ length: input.count }, (_unused, index) =>
       generateOneOption(
-        input.providers,
+        input.providers.slice(0, 2),
         input.imageInput,
         baseSeed + index + 1,
         index,
@@ -137,6 +138,9 @@ async function generateOneOption(
         seed: result.seed ?? seed,
         usage: result.usage,
       }, attempts, fatalError: null };
+    }
+    if (!isRetryableProviderFailure(execution.error)) {
+      return { option: null, attempts, fatalError: null };
     }
   }
 
