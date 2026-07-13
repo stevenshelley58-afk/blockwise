@@ -12,7 +12,11 @@ test("in-place editor posts targeted edits to the creative edit endpoint", () =>
   // Text and image edits use the endpoint's exact contract keys.
   assert.match(editor, /\{ newValue: value \}/);
   assert.match(editor, /\{ newImage: dataUrl \}/);
-  assert.match(editor, /fieldKey, \.\.\.payload/);
+  assert.match(editor, /fieldKey,[\s\S]*\.\.\.payload/);
+  assert.match(editor, /expectedRevisionId: creative\.activeRevisionId/);
+  assert.match(editor, /mutationId/);
+  assert.match(editor, /crypto\.randomUUID\(\)/);
+  assert.match(editor, /retryMutationRef/);
   // Failures keep the old image and surface the server error, never silently ship.
   assert.match(editor, /data\.error \|\| "The edit did not render correctly\. Try again\."/);
 });
@@ -33,6 +37,7 @@ test("successful edit swaps image, QA verdict and render history on the creative
   assert.match(editor, /content: data\.image, assetId: data\.image/);
   assert.match(editor, /cloneQa: data\.qa \?\? creative\.canvas\.cloneQa/);
   assert.match(editor, /renderHistory: data\.renderHistory \?\? creative\.canvas\.renderHistory/);
+  assert.match(editor, /activeRevisionId: data\.revisionId/);
   assert.match(editor, /onCreativeChange\(next\)/);
   assert.match(editor, /showToast\("Updated"\)/);
 });

@@ -1,10 +1,12 @@
-import { randomUUID } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
 import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
-import { appendAdStudioCreativeRevision } from "@/lib/adstudio/creative-revisions";
+import {
+  appendAdStudioCreativeRevision,
+  claimAdStudioCreativeRevisionMutation,
+  releaseAdStudioCreativeRevisionMutation,
+} from "@/lib/adstudio/creative-revisions";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { buildTargetedEditRequest } from "@/lib/adstudio/reference-clone";
 import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
@@ -26,11 +28,14 @@ type TargetedEditBody = {
   newValue?: string;
   /** Replacement image (media path or data URL) for an image edit. */
   newImage?: string;
+  expectedRevisionId?: string;
+  mutationId?: string;
 };
 
 // The edit loop runs on the fast tier — attempts stay cheap and quick.
 const MAX_ATTEMPTS = 2;
 const RENDER_HISTORY_LIMIT = 10;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest, routeContext: RouteContext) {
   const { id } = await Promise.resolve(routeContext.params);
@@ -53,6 +58,8 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const fieldKey = body.fieldKey?.trim();
   const newValue = body.newValue?.trim() ?? "";
   const newImageRef = body.newImage?.trim();
+  const expectedRevisionId = body.expectedRevisionId?.trim() ?? "";
+  const mutationId = body.mutationId?.trim() ?? "";
   if (!fieldKey) {
     return NextResponse.json({ error: "fieldKey is required." }, { status: 400 });
   }
@@ -61,6 +68,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
   if (newValue.length > 200) {
     return NextResponse.json({ error: "Keep the new text to 200 characters or less." }, { status: 400 });
+  }
+  if (!UUID_PATTERN.test(expectedRevisionId) || !UUID_PATTERN.test(mutationId)) {
+    return NextResponse.json({ error: "Reload the ad before editing it." }, { status: 400 });
   }
 
   const { data: row, error: loadError } = await context.supabase
@@ -73,9 +83,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   if (!row) return NextResponse.json({ error: "Creative not found." }, { status: 404 });
 
   const baseRevisionId = typeof row.active_revision_id === "string" ? row.active_revision_id : "";
-  if (!baseRevisionId) {
+  if (!baseRevisionId || baseRevisionId !== expectedRevisionId) {
     return NextResponse.json(
-      { code: "stale_revision", error: "This ad has no active revision. Reload and try again." },
+      { code: "stale_revision", error: "This ad changed while you were editing. Reload and try again." },
       { status: 409 },
     );
   }
@@ -119,9 +129,53 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     newImage,
     aspectRatio: String(row.format ?? "4:5"),
   });
-
   const providers = await resolveCloneProviders("preview");
-  const correlationId = randomUUID();
+
+  let claim;
+  try {
+    claim = await claimAdStudioCreativeRevisionMutation(context.supabase, {
+      workspaceId: context.access.workspaceId,
+      creativeId: id,
+      expectedActiveRevisionId: expectedRevisionId,
+      mutationId,
+    });
+  } catch (error) {
+    return errorResponse(error, 500);
+  }
+  if (!claim.ok) {
+    const stale = claim.reason === "stale_revision";
+    return NextResponse.json(
+      {
+        code: claim.reason,
+        error: stale
+          ? "This ad changed while you were editing. Reload and try again."
+          : "Another edit is already updating this ad. Try again shortly.",
+      },
+      { status: 409 },
+    );
+  }
+  if (claim.state === "completed") {
+    const completedCanvas = claim.canvas as AdStudioCreative["canvas"];
+    const completedImage = completedCanvas.objects?.[0]?.content ?? completedCanvas.objects?.[0]?.assetId;
+    if (!completedImage) return NextResponse.json({ error: "The saved edit is incomplete." }, { status: 500 });
+    return NextResponse.json({
+      creativeId: id,
+      image: completedImage,
+      qa: completedCanvas.cloneQa,
+      renderHistory: completedCanvas.renderHistory ?? [],
+      revisionId: claim.revisionId,
+      revisionNumber: claim.revisionNumber,
+      replayed: true,
+    });
+  }
+
+  const releaseClaim = () => releaseAdStudioCreativeRevisionMutation(context.supabase, {
+    workspaceId: context.access.workspaceId,
+    creativeId: id,
+    mutationId,
+  }).catch(() => undefined);
+
+  const correlationId = mutationId;
 
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
@@ -158,22 +212,30 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       correction = cloneQaCorrectionPrompt(qa);
     }
   } catch (error) {
+    await releaseClaim();
     return errorResponse(error, 502);
   }
 
   if (!lastImage || (qa && !qa.passed)) {
+    await releaseClaim();
     return NextResponse.json(
       { error: "The edit did not render correctly. Try again.", qa },
       { status: 502 },
     );
   }
 
-  const image = await persistCloneRender({
-    supabase: context.supabase,
-    workspaceId: context.access.workspaceId,
-    assetUrl: lastImage.assetUrl,
-    fileNameSeed: `${correlationId}-edit`,
-  });
+  let image: string;
+  try {
+    image = await persistCloneRender({
+      supabase: context.supabase,
+      workspaceId: context.access.workspaceId,
+      assetUrl: lastImage.assetUrl,
+      fileNameSeed: `${correlationId}-edit`,
+    });
+  } catch (error) {
+    await releaseClaim();
+    return errorResponse(error, 500);
+  }
 
   // Previous render goes to history (undo); the new render becomes current.
   const renderHistory = [...(canvas.renderHistory ?? []), currentImageRef]
@@ -191,18 +253,20 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     revision = await appendAdStudioCreativeRevision(context.supabase, {
       workspaceId: context.access.workspaceId,
       creativeId: id,
-      expectedActiveRevisionId: baseRevisionId,
+      expectedActiveRevisionId: expectedRevisionId,
       canvas: nextCanvas,
       renderStatus: "rendered",
       creationOperation: "targeted_edit",
-      mutationId: correlationId,
+      mutationId,
     });
   } catch (error) {
+    await releaseClaim();
     return errorResponse(error, 500);
   }
 
   if (!revision.ok) {
     if (revision.reason === "stale_revision") {
+      await releaseClaim();
       return NextResponse.json(
         { code: "stale_revision", error: "This ad changed while your edit was rendering. Reload and try again." },
         { status: 409 },

@@ -16,6 +16,7 @@ type EditResponse = {
   image?: string;
   qa?: AdStudioCreative["canvas"]["cloneQa"];
   renderHistory?: string[];
+  revisionId?: string;
   error?: string;
 };
 
@@ -63,6 +64,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingImageKeyRef = useRef<string | null>(null);
   const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
 
   const cloneObject = creative.canvas.objects[0];
   const src = cloneObject?.content ?? cloneObject?.assetId ?? "";
@@ -85,22 +87,42 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
 
   const submitEdit = useCallback(
     async (fieldKey: string, payload: { newValue?: string; newImage?: string }) => {
+      if (!creative.activeRevisionId) {
+        showToast("This ad changed. Reload it before editing.");
+        return;
+      }
+      const signature = JSON.stringify({
+        creativeId: creative.creativeId,
+        expectedRevisionId: creative.activeRevisionId,
+        fieldKey,
+        payload,
+      });
+      const mutationId = retryMutationRef.current?.signature === signature
+        ? retryMutationRef.current.mutationId
+        : crypto.randomUUID();
+      retryMutationRef.current = { signature, mutationId };
       setPendingKey(fieldKey);
       setEditingKey(null);
       try {
         const response = await fetch(`/api/adstudio/creatives/${creative.creativeId}/edit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fieldKey, ...payload }),
+          body: JSON.stringify({
+            fieldKey,
+            ...payload,
+            expectedRevisionId: creative.activeRevisionId,
+            mutationId,
+          }),
         });
         const data = (await response.json().catch(() => ({}))) as EditResponse;
-        if (!response.ok || !data.image) {
+        if (!response.ok || !data.image || !data.revisionId) {
           // Keep the old image; the failure is surfaced, never silently shipped.
           showToast(data.error || "The edit did not render correctly. Try again.");
           return;
         }
         const next: AdStudioCreative = {
           ...creative,
+          activeRevisionId: data.revisionId,
           canvas: {
             ...creative.canvas,
             objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
@@ -108,6 +130,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
             renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
           },
         };
+        retryMutationRef.current = null;
         onCreativeChange(next);
         showToast("Updated");
       } catch {
