@@ -229,11 +229,13 @@ $$;
 
 select extensions.dblink_connect(
   'cost_concurrency_1',
-  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database() || ' user=postgres password=postgres'
+  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database()
+    || ' user=' || current_user || ' password=' || current_user
 );
 select extensions.dblink_connect(
   'cost_concurrency_2',
-  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database() || ' user=postgres password=postgres'
+  'host=' || host(inet_server_addr()) || ' port=5432 dbname=' || current_database()
+    || ' user=' || current_user || ' password=' || current_user
 );
 select ok(extensions.dblink_send_query('cost_concurrency_1', 'select public._cost_test_finalize_concurrent()') = 1, 'first concurrent finalizer sent');
 select ok(extensions.dblink_send_query('cost_concurrency_2', 'select public._cost_test_finalize_concurrent()') = 1, 'second concurrent finalizer sent');
