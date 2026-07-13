@@ -238,8 +238,8 @@ function providerAttempt(overrides: Record<string, unknown> = {}) {
       inputTokenBasis: "per_million_tokens",
       outputTokenBasis: "per_million_tokens",
       imageBasis: "per_output_image",
-      source: "provider_reported",
-      snapshotId: "pricing-snapshot-public-alias",
+      source: "persisted",
+      snapshotId: "version-final",
     },
     estimated_cost_usd: "1.250000",
     actual_cost_usd: "1.250000",
@@ -737,6 +737,39 @@ test("accounting anomalies independently block otherwise drift-free evidence", (
       })],
     },
     {
+      name: "noncanonical frozen pricing basis",
+      anomaly: "missingPricingCount",
+      run: providerRun(),
+      attempts: [providerAttempt({
+        pricing_json: {
+          ...providerAttempt().pricing_json,
+          inputTokenBasis: "per_token",
+        },
+      })],
+    },
+    {
+      name: "non-runtime frozen pricing source",
+      anomaly: "missingPricingCount",
+      run: providerRun(),
+      attempts: [providerAttempt({
+        pricing_json: {
+          ...providerAttempt().pricing_json,
+          source: "provider_reported",
+        },
+      })],
+    },
+    {
+      name: "frozen pricing snapshot identity mismatch",
+      anomaly: "missingPricingCount",
+      run: providerRun(),
+      attempts: [providerAttempt({
+        pricing_json: {
+          ...providerAttempt().pricing_json,
+          snapshotId: "version-other",
+        },
+      })],
+    },
+    {
       name: "completed actual-billed attempt without provider submission",
       anomaly: "attemptSemanticsMismatchCount",
       run: providerRun(),
@@ -753,6 +786,20 @@ test("accounting anomalies independently block otherwise drift-free evidence", (
       assert.ok(manifest.publicSummary.anomalies[fixture.anomaly] > 0, fixture.name);
     }
   }
+
+  const defaultPricing = build(
+    providerRun({ model_profile_version_id: null, pricing_snapshot_id: null }),
+    [providerAttempt({
+      model_profile_version_id: null,
+      pricing_snapshot_id: null,
+      pricing_json: {
+        ...providerAttempt().pricing_json,
+        source: "default",
+        snapshotId: null,
+      },
+    })],
+  );
+  assert.equal(defaultPricing.acceptanceEligible, true, "default pricing uses coherent null snapshot identity");
 });
 
 test("runner uses one in-memory workspace set, two passes with one cutoff, fails closed on drift, and never logs IDs", async () => {

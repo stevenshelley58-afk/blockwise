@@ -692,7 +692,10 @@ function usageTotals(value) {
 }
 
 function expectedAttemptEstimatedCost(attempt) {
-  if (attempt.usage_json?.complete !== true || !pricingEvidenceComplete(attempt.pricing_json)) return null;
+  if (
+    attempt.usage_json?.complete !== true ||
+    !pricingEvidenceComplete(attempt.pricing_json, attempt.pricing_snapshot_id)
+  ) return null;
   const usage = ["inputTokens", "outputTokens", "imageUnits"].map((key) => decimalFrom(attempt.usage_json[key]));
   const pricing = ["inputUsdPerMillionTokens", "outputUsdPerMillionTokens", "imageUsdPerUnit"]
     .map((key) => decimalFrom(attempt.pricing_json[key]));
@@ -785,17 +788,21 @@ function summarizeAttemptAccounting(providerRuns, attempts) {
   };
 }
 
-function pricingEvidenceComplete(value) {
+function pricingEvidenceComplete(value, pricingSnapshotId) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const attemptSnapshotValid = pricingSnapshotId === null || (typeof pricingSnapshotId === "string" && pricingSnapshotId.length > 0);
+  const evidenceSnapshotValid = value.snapshotId === null || (typeof value.snapshotId === "string" && value.snapshotId.length > 0);
+  if (!attemptSnapshotValid || !evidenceSnapshotValid || value.snapshotId !== pricingSnapshotId) return false;
   for (const key of ["inputUsdPerMillionTokens", "outputUsdPerMillionTokens", "imageUsdPerUnit"]) {
     const price = decimalFrom(value[key]);
     if (!price || price.coefficient < 0n) return false;
   }
   return value.currency === "USD" &&
-    typeof value.inputTokenBasis === "string" &&
-    typeof value.outputTokenBasis === "string" &&
-    typeof value.imageBasis === "string" &&
-    typeof value.source === "string";
+    value.inputTokenBasis === "per_million_tokens" &&
+    value.outputTokenBasis === "per_million_tokens" &&
+    value.imageBasis === "per_output_image" &&
+    ((value.source === "persisted" && value.snapshotId !== null) ||
+      (value.source === "default" && value.snapshotId === null));
 }
 
 function attemptSemanticsCoherent(attempt) {
@@ -876,7 +883,7 @@ function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
       allZeroNonLocalUsageCount += 1;
     }
     if (attempt.usage_json?.complete !== true) incompleteUsageCount += 1;
-    if (!pricingEvidenceComplete(attempt.pricing_json)) missingPricingCount += 1;
+    if (!pricingEvidenceComplete(attempt.pricing_json, attempt.pricing_snapshot_id)) missingPricingCount += 1;
     if (!attemptSemanticsCoherent(attempt)) attemptSemanticsMismatchCount += 1;
     const expectedEstimatedCost = expectedAttemptEstimatedCost(attempt);
     const recordedEstimatedCost = decimalFrom(attempt.estimated_cost_usd);
