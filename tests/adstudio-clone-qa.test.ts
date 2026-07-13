@@ -67,10 +67,21 @@ function submittedProviderFailure(message: string, retryable: boolean): Provider
   return new ProviderRequestError(message, { requestSubmitted: true, retryable });
 }
 
-test("normalizeRenderedText is lenient on case/punctuation but not words", () => {
-  assert.equal(
+test("normalizeRenderedText preserves case and punctuation", () => {
+  assert.notEqual(
     normalizeRenderedText("Open Home — Saturday, 10:30am!"),
-    normalizeRenderedText("open home saturday 10:30am"),
+    normalizeRenderedText("open home — Saturday, 10:30am!"),
+  );
+  assert.notEqual(
+    normalizeRenderedText("Open Home — Saturday, 10:30am!"),
+    normalizeRenderedText("Open Home Saturday, 10:30am"),
+  );
+});
+
+test("normalizeRenderedText only normalizes Unicode and layout whitespace", () => {
+  assert.equal(
+    normalizeRenderedText("Cafe\u0301\r\nOpen   Home"),
+    normalizeRenderedText("Café Open Home"),
   );
   assert.notEqual(
     normalizeRenderedText("18 Smith St Scarborough"),
@@ -348,23 +359,27 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   assert.match(route, /status: 502/);
 });
 
-test("clone QA verdict and regions persist on the clone creative", () => {
+test("template generation accepts only QA-passing clone renders", () => {
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
   assert.match(generator, /cloneQa: input\.cloneQa/);
   assert.match(generator, /templateCloneQaByFormat: input\.firstAd\?\.templateCloneQaByFormat/);
-  // The server pipeline feeds advisory QA into the pack build and never throws
-  // when the verdict is failed.
+  // Generation may persist only after every format receives a passing verdict.
   assert.match(generation, /templateCloneQa: primaryClone\.qa \?\? undefined/);
   assert.match(generation, /templateCloneQaByFormat/);
-  assert.match(generation, /annotateCloneQa/);
-  assert.match(generation, /catch \(error\)[\s\S]*return null;/);
+  assert.match(generation, /cloneQaCorrectionPrompt/);
+  assert.match(generation, /if \(qa\.passed\)/);
+  assert.match(generation, /throw new TemplateCampaignQaError/);
   assert.match(generation, /error instanceof ProviderRunPersistenceError\) throw error/);
-  assert.match(generation, /for \(let attempt[\s\S]*ProviderRunPersistenceError\) throw error/);
-  assert.doesNotMatch(generation, /qa && !qa\.passed[\s\S]*throw/);
-  assert.doesNotMatch(generation, new RegExp("TemplateCampaignQa" + "Error"));
-  assert.doesNotMatch(generation, /cloneQaCorrectionPrompt/);
+  assert.doesNotMatch(generation, /shipping clone without QA annotation/);
+  assert.doesNotMatch(generation, /QA annotates each result but never blocks shipping/);
+});
+
+test("clone QA derives exactness from rendered copy instead of trusting the model flag", () => {
+  const source = readFileSync("src/lib/adstudio/clone-qa.ts", "utf8");
+  assert.doesNotMatch(source, /reported\?\.exact === true\s*\|\|/);
+  assert.match(source, /normalizeRenderedText\(rendered\) === normalizeRenderedText\(expected\)/);
 });
 
 test("campaign enrichment cannot ship partial copy after accounting persistence fails", () => {

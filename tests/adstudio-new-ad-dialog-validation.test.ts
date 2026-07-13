@@ -110,12 +110,13 @@ test("selected template generation submits the brief and the server clones async
   assert.match(actions, /\/api\/adstudio\/jobs\//);
   assert.match(actions, /\/api\/adstudio\/campaigns\/\$\{/);
 
-  // The server pipeline still runs the cascade, advisory QA, and persisted renders.
+  // The server pipeline runs the cascade, blocking QA, and persisted renders.
   assert.match(generation, /generateCloneWithCascade/);
   assert.match(generation, /runCloneQa/);
   assert.match(generation, /buildTemplateCloneRequestsByFormat/);
   assert.match(generation, /STORY_RECOMPOSE_PROMPT/);
-  assert.doesNotMatch(generation, /cloneQaCorrectionPrompt/);
+  assert.match(generation, /cloneQaCorrectionPrompt/);
+  assert.match(generation, /TemplateCampaignQaError/);
   assert.match(generation, /persistCloneRender/);
   assert.match(generation, /persistAdStudioCampaignPack/);
 });

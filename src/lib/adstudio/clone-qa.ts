@@ -36,12 +36,15 @@ export type CloneQaInput = {
   attempt: number;
 };
 
-/** Normalize for lenient comparison: case, whitespace, and punctuation-insensitive. */
+/**
+ * Normalize representation-only differences while preserving the customer's
+ * exact characters. Case and punctuation are content, not layout.
+ */
 export function normalizeRenderedText(value: string): string {
   return value
-    .toLowerCase()
-    .replace(/["'’‘“”.,!?;:\-–—()]/g, " ")
-    .replace(/\s+/g, " ")
+    .normalize("NFC")
+    .replace(/\r\n?|\n/g, " ")
+    .replace(/\s+/gu, " ")
     .trim();
 }
 
@@ -77,7 +80,7 @@ function parseCopyChecks(
   raw: unknown,
   expectedCopy: Record<string, string>,
 ): AdStudioCloneQa["copyChecks"] {
-  const byKey = new Map<string, { rendered: string; exact: boolean }>();
+  const byKey = new Map<string, { rendered: string }>();
   if (Array.isArray(raw)) {
     for (const entry of raw) {
       if (!entry || typeof entry !== "object") continue;
@@ -86,7 +89,6 @@ function parseCopyChecks(
       if (!key) continue;
       byKey.set(key, {
         rendered: typeof item.rendered === "string" ? item.rendered : "",
-        exact: item.exact === true,
       });
     }
   }
@@ -95,9 +97,7 @@ function parseCopyChecks(
   return Object.entries(expectedCopy).map(([key, expected]) => {
     const reported = byKey.get(key);
     const rendered = reported?.rendered ?? "";
-    const exact =
-      reported?.exact === true ||
-      (rendered.length > 0 && normalizeRenderedText(rendered) === normalizeRenderedText(expected));
+    const exact = rendered.length > 0 && normalizeRenderedText(rendered) === normalizeRenderedText(expected);
     return { key, expected, rendered, exact };
   });
 }

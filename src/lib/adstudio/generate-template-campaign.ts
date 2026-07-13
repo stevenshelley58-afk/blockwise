@@ -4,9 +4,8 @@
 //
 // Order matters and is the product: brand kit -> slot images -> brief-grounded
 // copy (on-image fields + feed copy in one pass) -> reference clone renders
-// (feed + story) -> QA annotation for edit regions and warnings -> deterministic
-// pack build -> provided-copy application -> one transactional persist. QA is
-// advisory: the user always gets the generated ad and can edit it in place.
+// (feed + story) -> blocking QA with one guided correction -> deterministic
+// pack build -> provided-copy application -> one transactional persist.
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
@@ -16,7 +15,7 @@ import {
   resolveCloneProviders,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
-import { runCloneQa } from "./clone-qa.ts";
+import { cloneQaCorrectionPrompt, runCloneQa } from "./clone-qa.ts";
 import { generateAdStudioTemplateCopy } from "./copy-generation.ts";
 import { generateAdStudioCampaignPack } from "./generator.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
@@ -111,8 +110,25 @@ type GeneratedCloneRender = CloneGenerationResult & {
 
 type PersistedCloneRender = GeneratedCloneRender & {
   image: string;
-  qa: AdStudioCloneQa | null;
+  qa: AdStudioCloneQa;
 };
+
+export class TemplateCampaignQaError extends Error {
+  readonly format: TemplateCloneRenderFormat;
+  readonly qa: AdStudioCloneQa | null;
+
+  constructor(format: TemplateCloneRenderFormat, qa: AdStudioCloneQa | null, cause?: unknown) {
+    super(
+      qa
+        ? `${format} creative did not pass verification after bounded attempts.`
+        : `${format} creative verification was unavailable. Nothing was saved.`,
+    );
+    this.name = "TemplateCampaignQaError";
+    this.format = format;
+    this.qa = qa;
+    if (cause !== undefined) this.cause = cause;
+  }
+}
 
 export function buildTemplateCloneRequestsByFormat(
   brief: TemplateCloneBrief,
@@ -133,17 +149,21 @@ export function buildTemplateCloneRequestsByFormat(
   };
 }
 
-async function generateCloneWithProviderRetries(input: {
+async function generateQaAcceptedClone(input: {
+  format: TemplateCloneRenderFormat;
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;
+  expectedCopy: Record<string, string>;
   workspaceId: string;
   userId: string;
   correlationId: string;
   tier: "preview" | "final";
   maxAttempts: number;
   deadline: number;
-}): Promise<GeneratedCloneRender> {
+}): Promise<GeneratedCloneRender & { qa: AdStudioCloneQa }> {
   let lastError: unknown = null;
+  let lastQa: AdStudioCloneQa | null = null;
+  let correctionPrompt = "";
   const maxAttempts = Math.max(1, input.maxAttempts);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -153,6 +173,9 @@ async function generateCloneWithProviderRetries(input: {
         providers: input.providers,
         request: {
           ...input.request,
+          prompt: correctionPrompt
+            ? `${input.request.prompt}\n\n${correctionPrompt}`
+            : input.request.prompt,
           seed: (input.request.seed ?? 0) + attempt,
         },
         workspaceId: input.workspaceId,
@@ -161,32 +184,34 @@ async function generateCloneWithProviderRetries(input: {
         tier: input.tier,
         attempt,
       });
-      return { ...generated, attempt };
+
+      let qa: AdStudioCloneQa;
+      try {
+        qa = await runCloneQa({
+          workspaceId: input.workspaceId,
+          userId: input.userId,
+          correlationId: input.correlationId,
+          imageUrl: generated.assetUrl,
+          expectedCopy: input.expectedCopy,
+          attempt,
+        });
+      } catch (error) {
+        if (error instanceof ProviderRunPersistenceError) throw error;
+        throw new TemplateCampaignQaError(input.format, null, error);
+      }
+
+      if (qa.passed) return { ...generated, attempt, qa };
+      lastQa = qa;
+      correctionPrompt = cloneQaCorrectionPrompt(qa);
     } catch (error) {
-      if (error instanceof ProviderRunPersistenceError) throw error;
+      if (error instanceof ProviderRunPersistenceError || error instanceof TemplateCampaignQaError) throw error;
       lastError = error;
       if (Date.now() >= input.deadline) break;
     }
   }
 
+  if (lastQa) throw new TemplateCampaignQaError(input.format, lastQa);
   throw lastError instanceof Error ? lastError : new Error("Clone generation failed. Try again.");
-}
-
-async function annotateCloneQa(input: {
-  workspaceId: string;
-  userId: string;
-  correlationId: string;
-  imageUrl: string;
-  expectedCopy: Record<string, string>;
-  attempt: number;
-}): Promise<AdStudioCloneQa | null> {
-  try {
-    return await runCloneQa(input);
-  } catch (error) {
-    if (error instanceof ProviderRunPersistenceError) throw error;
-    console.error("adstudio.clone_qa failed; shipping clone without QA annotation", error);
-    return null;
-  }
 }
 
 export async function runTemplateCampaignGeneration(
@@ -294,8 +319,8 @@ export async function runTemplateCampaignGeneration(
 
   // Gallery samples are SVGs, which no image provider accepts; rasterize to
   // a PNG data URL before the clone requests are built. The image lane runs
-  // one native feed render and one recomposed 9:16 story render in parallel;
-  // QA annotates each result but never blocks shipping.
+  // one native feed render and one recomposed 9:16 story render in parallel.
+  // Every format must pass blocking QA before any render or campaign is saved.
   const referenceImage = await ensureRasterReferenceImage(
     new URL(brief.referenceImage, input.origin).toString(),
   );
@@ -311,11 +336,13 @@ export async function runTemplateCampaignGeneration(
   const maxAttempts = Math.max(1, input.maxCloneAttempts);
   const cloneFormats = Object.keys(cloneRequestsByFormat) as TemplateCloneRenderFormat[];
 
-  const generatedEntries = await Promise.all(
+  const acceptedEntries = await Promise.all(
     cloneFormats.map(async (format) => {
-      const generated = await generateCloneWithProviderRetries({
+      const generated = await generateQaAcceptedClone({
+        format,
         providers,
         request: cloneRequestsByFormat[format],
+        expectedCopy,
         workspaceId: input.workspaceId,
         userId: input.userId,
         correlationId,
@@ -326,34 +353,21 @@ export async function runTemplateCampaignGeneration(
       return [format, generated] as const;
     }),
   );
-  const generatedByFormat = Object.fromEntries(generatedEntries) as Record<TemplateCloneRenderFormat, GeneratedCloneRender>;
-
-  const qaEntries = await Promise.all(
-    cloneFormats.map(async (format) => {
-      const generated = generatedByFormat[format];
-      const qa = await annotateCloneQa({
-        workspaceId: input.workspaceId,
-        userId: input.userId,
-        correlationId,
-        imageUrl: generated.assetUrl,
-        expectedCopy,
-        attempt: generated.attempt,
-      });
-      return [format, qa] as const;
-    }),
-  );
-  const qaByFormat = Object.fromEntries(qaEntries) as Record<TemplateCloneRenderFormat, AdStudioCloneQa | null>;
+  const acceptedByFormat = Object.fromEntries(acceptedEntries) as Record<
+    TemplateCloneRenderFormat,
+    GeneratedCloneRender & { qa: AdStudioCloneQa }
+  >;
 
   const persistedEntries = await Promise.all(
     cloneFormats.map(async (format) => {
-      const generated = generatedByFormat[format];
+      const generated = acceptedByFormat[format];
       const image = await persistCloneRender({
         supabase,
         workspaceId: input.workspaceId,
         assetUrl: generated.assetUrl,
         fileNameSeed: `${correlationId}-clone-${format.replace(":", "x")}`,
       });
-      return [format, { ...generated, image, qa: qaByFormat[format] }] as const;
+      return [format, { ...generated, image }] as const;
     }),
   );
   const cloneRendersByFormat = Object.fromEntries(persistedEntries) as Record<TemplateCloneRenderFormat, PersistedCloneRender>;
