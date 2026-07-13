@@ -122,6 +122,74 @@ function queuedSupabase(pages: Record<string, unknown[][]>) {
   };
 }
 
+function profileSupabaseWithConcurrentInsert(before: Array<Record<string, unknown>>, after: Array<Record<string, unknown>>) {
+  const calls: QueryCall[] = [];
+  let request = 0;
+  return {
+    calls,
+    from(table: string) {
+      const call: QueryCall = { table, filters: [], orders: [] };
+      calls.push(call);
+      const query = {
+        select(columns: string) {
+          call.columns = columns;
+          return query;
+        },
+        gt(column: string, value: unknown) {
+          call.filters.push({ operator: "gt", column, value });
+          return query;
+        },
+        lt(column: string, value: unknown) {
+          call.filters.push({ operator: "lt", column, value });
+          return query;
+        },
+        or(value: string) {
+          call.filters.push({ operator: "or", value });
+          return query;
+        },
+        order(column: string, options: unknown) {
+          call.orders.push({ column, options });
+          return query;
+        },
+        limit(value: number) {
+          call.limit = value;
+          return query;
+        },
+        range(from: number, to: number) {
+          call.range = [from, to];
+          return query;
+        },
+        then<TResult1 = { data: unknown[]; error: null }, TResult2 = never>(
+          onfulfilled?: ((value: { data: unknown[]; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+          onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+        ) {
+          const source = [...(request++ === 0 ? before : after)].sort((left, right) =>
+            String(right.active_from).localeCompare(String(left.active_from)) ||
+            String(right.id).localeCompare(String(left.id)),
+          );
+          const compositeCursor = call.filters
+            .filter((filter) => filter.operator === "or")
+            .map((filter) => String(filter.value).match(/^active_from\.lt\.(.*),and\(active_from\.eq\.(.*),id\.lt\.(.*)\)$/))
+            .find(Boolean);
+          const idCursor = call.filters.find((filter) => filter.operator === "gt" && filter.column === "id")?.value;
+          let data = compositeCursor
+            ? source.filter((row) =>
+                String(row.active_from) < compositeCursor[1] ||
+                (String(row.active_from) === compositeCursor[2] && String(row.id) < compositeCursor[3]),
+              )
+            : idCursor === undefined
+              ? source
+              : source.filter((row) => String(row.id) > String(idCursor));
+          if (call.range) data = data.slice(call.range[0], call.range[1] + 1);
+          else if (call.limit !== undefined) data = data.slice(0, call.limit);
+          return Promise.resolve({ data, error: null }).then(onfulfilled, onrejected);
+        },
+      };
+      return query;
+    },
+  };
+}
+
 function providerRun(overrides: Record<string, unknown> = {}) {
   return {
     id: "run-alpha",
@@ -419,16 +487,53 @@ test("profile-version query freezes runtime resolution at the same exclusive cut
 
   assert.deepEqual(rows.map((row: { id: string }) => row.id), ["version-alpha", "version-beta"]);
   assert.equal(supabase.calls.length, 3);
-  assert.deepEqual(supabase.calls.map((call) => call.range), [[0, 0], [1, 1], [2, 2]]);
+  assert.equal(supabase.calls.every((call) => call.range === undefined && call.limit === 1), true);
+  assert.deepEqual(
+    supabase.calls.map((call) => call.filters.find((filter) =>
+      filter.operator === "or" && String(filter.value).startsWith("active_from.lt.")
+    )?.value ?? null),
+    [
+      null,
+      "active_from.lt.2026-06-20T00:00:00.000Z,and(active_from.eq.2026-06-20T00:00:00.000Z,id.lt.version-alpha)",
+      "active_from.lt.2026-06-10T00:00:00.000Z,and(active_from.eq.2026-06-10T00:00:00.000Z,id.lt.version-beta)",
+    ],
+  );
   for (const call of supabase.calls) {
     assert.equal(call.table, "model_profile_versions");
     assert.ok(call.filters.some((filter) => filter.operator === "lt" && filter.column === "active_from" && filter.value === windowEnd));
     assert.equal(call.filters.some((filter) => filter.operator === "or" && String(filter.value).includes(`active_to.gte.${windowEnd}`)), true);
     assert.deepEqual(call.orders.map(({ column }) => column), ["active_from", "id"]);
+    assert.deepEqual(call.orders.map(({ options }) => options), [{ ascending: false }, { ascending: false }]);
   }
 });
 
-test("profile-version pagination rejects duplicate rows", async () => {
+test("profile-version composite keyset does not shift or skip when a row is inserted before the cursor", async () => {
+  const beta = modelProfileVersion({ id: "version-beta" });
+  const alpha = modelProfileVersion({
+    id: "version-alpha",
+    model_profiles: { key: "structured_json" },
+  });
+  const insertedBeforeCursor = modelProfileVersion({
+    id: "version-gamma",
+    model_profiles: { key: "vision_classification" },
+  });
+  const supabase = profileSupabaseWithConcurrentInsert([beta, alpha], [insertedBeforeCursor, beta, alpha]);
+
+  const rows = await baseline.loadActiveProfileVersionRows({
+    supabase: supabase as never,
+    windowEnd: "2026-07-13T00:00:00.000Z",
+    pageSize: 1,
+  });
+
+  assert.deepEqual(rows.map((row: { id: string }) => row.id), ["version-beta", "version-alpha"]);
+  assert.equal(supabase.calls.every((call) => call.range === undefined && call.limit === 1), true);
+  assert.equal(supabase.calls[1].filters.some((filter) =>
+    filter.operator === "or" &&
+    filter.value === "active_from.lt.2026-06-20T00:00:00.000Z,and(active_from.eq.2026-06-20T00:00:00.000Z,id.lt.version-beta)"
+  ), true);
+});
+
+test("profile-version keyset pagination rejects a non-advancing duplicate page", async () => {
   const duplicate = modelProfileVersion();
   const supabase = queuedSupabase({ model_profile_versions: [[duplicate], [duplicate], []] });
   await assert.rejects(
@@ -437,8 +542,12 @@ test("profile-version pagination rejects duplicate rows", async () => {
       windowEnd: "2026-07-13T00:00:00.000Z",
       pageSize: 1,
     }),
-    /duplicate|strictly ordered/i,
+    /duplicate|did not advance/i,
   );
+  assert.equal(supabase.calls[1].filters.some((filter) =>
+    filter.operator === "or" &&
+    filter.value === `active_from.lt.${duplicate.active_from},and(active_from.eq.${duplicate.active_from},id.lt.${duplicate.id})`
+  ), true);
 });
 
 test("profile resolution rejects overlapping active versions for one profile", () => {
@@ -452,12 +561,12 @@ test("profile resolution rejects overlapping active versions for one profile", (
 });
 
 test("manifest contains exact run and attempt evidence and reconciles a failed-but-billed cascade", () => {
-  const rows = [providerRun({ usage_json: { inputTokens: 100, outputTokens: 0, imageUnits: 1 } })];
+  const rows = [providerRun({ usage_json: { inputTokens: 50_000, outputTokens: 0, imageUnits: 1 } })];
   const attempts = [
     providerAttempt({
       id: "attempt-failed-billed",
       status: "failed",
-      usage_json: { inputTokens: 100, outputTokens: 0, imageUnits: 0, complete: true },
+      usage_json: { inputTokens: 50_000, outputTokens: 0, imageUnits: 0, complete: true },
       estimated_cost_usd: "0.250000",
       actual_cost_usd: "0.250000",
     }),
@@ -466,6 +575,7 @@ test("manifest contains exact run and attempt evidence and reconciles a failed-b
       attempt_index: 1,
       created_at: "2026-07-12T01:00:02.000Z",
       usage_json: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: true },
+      pricing_json: { ...providerAttempt().pricing_json, imageUsdPerUnit: 1 },
       estimated_cost_usd: "1.000000",
       actual_cost_usd: "1.000000",
     }),
@@ -493,7 +603,7 @@ test("manifest contains exact run and attempt evidence and reconciles a failed-b
   assert.equal(manifest.capture.window.startInclusive, "1970-01-01T00:00:00.000Z");
   assert.equal(manifest.capture.window.endExclusive, "2026-07-13T00:00:00.000Z");
   assert.match(manifest.query.sha256, /^[a-f0-9]{64}$/);
-  assert.equal(manifest.modelProfiles.query.pagination, "offset-range-until-empty");
+  assert.equal(manifest.modelProfiles.query.pagination, "active-from-id-descending-keyset-until-empty");
   assert.equal(manifest.source.commit, "f".repeat(40));
   assert.match(manifest.source.commitSha256, /^[a-f0-9]{64}$/);
   assert.equal(manifest.source.toolSha256, "a".repeat(64));
@@ -522,6 +632,13 @@ test("manifest contains exact run and attempt evidence and reconciles a failed-b
   assert.equal(manifest.publicSummary.attemptAccounting.estimatedCostUsd, "1.25");
   assert.equal(manifest.publicSummary.attemptAccounting.actualCostUsd, "1.25");
   assert.equal(manifest.publicSummary.attemptAccounting.runMismatchCount, 0);
+  assert.deepEqual(manifest.publicSummary.attemptAccountingPolicy, {
+    arithmetic: "exact-base-10",
+    formula: "inputTokens*inputUsdPerMillionTokens/1000000 + outputTokens*outputUsdPerMillionTokens/1000000 + imageUnits*imageUsdPerUnit",
+    rounding: "half-away-from-zero-to-6-decimal-places",
+    comparison: "exact-after-rounding",
+    toleranceUsd: "0",
+  });
   assert.deepEqual(manifest.publicSummary.links.aiRun, { linkedCount: 1, missingCount: 0 });
   assert.deepEqual(manifest.publicSummary.links.aiUsageLedger, { linkedCount: 1, missingCount: 0 });
   assert.equal(manifest.publicSummary.dimensionQuality.modelProfile.nullCount, 0);
@@ -597,6 +714,34 @@ test("accounting anomalies independently block otherwise drift-free evidence", (
       run: providerRun({ actual_cost_usd: "9.99" }),
       attempts: [providerAttempt()],
     },
+    {
+      name: "frozen pricing mismatch",
+      anomaly: "pricingMismatchCount",
+      run: providerRun(),
+      attempts: [providerAttempt({
+        pricing_json: {
+          ...providerAttempt().pricing_json,
+          imageUsdPerUnit: 9.99,
+        },
+      })],
+    },
+    {
+      name: "empty frozen pricing scalar",
+      anomaly: "missingPricingCount",
+      run: providerRun(),
+      attempts: [providerAttempt({
+        pricing_json: {
+          ...providerAttempt().pricing_json,
+          imageUsdPerUnit: "",
+        },
+      })],
+    },
+    {
+      name: "completed actual-billed attempt without provider submission",
+      anomaly: "attemptSemanticsMismatchCount",
+      run: providerRun(),
+      attempts: [providerAttempt({ request_submitted: false })],
+    },
   ];
 
   for (const fixture of cases) {
@@ -604,6 +749,9 @@ test("accounting anomalies independently block otherwise drift-free evidence", (
     assert.equal(manifest.drift.detected, false, fixture.name);
     assert.equal(manifest.acceptanceEligible, false, fixture.name);
     assert.ok(manifest.publicSummary.anomalies.blockingCount > 0, fixture.name);
+    if (fixture.anomaly) {
+      assert.ok(manifest.publicSummary.anomalies[fixture.anomaly] > 0, fixture.name);
+    }
   }
 });
 

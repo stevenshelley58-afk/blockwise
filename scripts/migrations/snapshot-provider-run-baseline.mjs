@@ -86,9 +86,17 @@ const PROFILE_VERSION_COLUMNS = [
 ].join(",");
 const SCHEMA = "adstudio-provider-run-baseline/v1";
 const QUERY_VERSION = "workspace-created-at-id-keyset-v1";
-const MODEL_PROFILE_QUERY_VERSION = "active-at-window-end-v1";
+const MODEL_PROFILE_QUERY_VERSION = "active-at-window-end-active-from-id-desc-keyset-v2";
 const PAGE_SIZE = 1000;
 const DEFAULT_MAX_LATENCY_MS = 12_000;
+const COST_DECIMAL_PLACES = 6;
+const ATTEMPT_ACCOUNTING_POLICY = Object.freeze({
+  arithmetic: "exact-base-10",
+  formula: "inputTokens*inputUsdPerMillionTokens/1000000 + outputTokens*outputUsdPerMillionTokens/1000000 + imageUnits*imageUsdPerUnit",
+  rounding: "half-away-from-zero-to-6-decimal-places",
+  comparison: "exact-after-rounding",
+  toleranceUsd: "0",
+});
 const TERMINAL_STATUSES = new Set(["completed", "failed", "blocked", "cancelled"]);
 const UNKNOWN_SENTINELS = new Set(["unknown", "unset", "n/a", "other"]);
 const execFileAsync = promisify(execFile);
@@ -286,27 +294,27 @@ export async function listWorkspaceIds({ supabase, pageSize = PAGE_SIZE }) {
   return [...new Set(workspaceIds)].sort();
 }
 
-function compareProfileVersionKeys(left, right) {
-  const activeOrder = Date.parse(right.active_from) - Date.parse(left.active_from);
-  return activeOrder || String(left.id).localeCompare(String(right.id));
-}
-
 export async function loadActiveProfileVersionRows({ supabase, windowEnd, pageSize = PAGE_SIZE }) {
   assertIsoTimestamp(windowEnd, "Window end");
   if (!Number.isSafeInteger(pageSize) || pageSize <= 0) throw new Error("Page size must be a positive integer.");
   const rows = [];
   const ids = new Set();
-  let offset = 0;
   let cursor = null;
   while (true) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("model_profile_versions")
       .select(PROFILE_VERSION_COLUMNS)
       .lt("active_from", windowEnd)
       .or(`active_to.is.null,active_to.gte.${windowEnd}`)
       .order("active_from", { ascending: false })
-      .order("id", { ascending: true })
-      .range(offset, offset + pageSize - 1);
+      .order("id", { ascending: false })
+      .limit(pageSize);
+    if (cursor !== null) {
+      query = query.or(
+        `active_from.lt.${cursor.active_from},and(active_from.eq.${cursor.active_from},id.lt.${cursor.id})`,
+      );
+    }
+    const { data, error } = await query;
     if (error) throw new Error("Unable to load active model profile versions.");
     if (!Array.isArray(data)) throw new Error("Unable to load active model profile versions: query returned no data.");
     if (data.length === 0) break;
@@ -314,14 +322,19 @@ export async function loadActiveProfileVersionRows({ supabase, windowEnd, pageSi
       if (typeof row?.id !== "string" || !row.id) throw new Error("Active model profile version is missing its ID.");
       assertIsoTimestamp(row.active_from, "Active model profile version active_from");
       if (ids.has(row.id)) throw new Error("Active model profile query returned a duplicate version ID.");
-      if (cursor && compareProfileVersionKeys(cursor, row) >= 0) {
-        throw new Error("Active model profile pages are not strictly ordered by active_from and ID.");
+      if (
+        cursor !== null &&
+        !(
+          Date.parse(row.active_from) < Date.parse(cursor.active_from) ||
+          (Date.parse(row.active_from) === Date.parse(cursor.active_from) && row.id.localeCompare(cursor.id) < 0)
+        )
+      ) {
+        throw new Error("Active model profile keyset pagination did not advance by active_from and ID.");
       }
       ids.add(row.id);
       rows.push(row);
-      cursor = row;
+      cursor = { active_from: row.active_from, id: row.id };
     }
-    offset += data.length;
   }
   return rows;
 }
@@ -445,6 +458,26 @@ function addDecimal(left, right) {
       right.coefficient * 10n ** BigInt(scale - right.scale),
     scale,
   };
+}
+
+function multiplyDecimal(left, right) {
+  return {
+    coefficient: left.coefficient * right.coefficient,
+    scale: left.scale + right.scale,
+  };
+}
+
+function divideDecimalByMillion(value) {
+  return { coefficient: value.coefficient, scale: value.scale + 6 };
+}
+
+function roundDecimal(value, decimalPlaces) {
+  if (value.scale <= decimalPlaces) return value;
+  const divisor = 10n ** BigInt(value.scale - decimalPlaces);
+  let coefficient = value.coefficient / divisor;
+  const remainder = value.coefficient < 0n ? -(value.coefficient % divisor) : value.coefficient % divisor;
+  if (remainder * 2n >= divisor) coefficient += value.coefficient < 0n ? -1n : 1n;
+  return { coefficient, scale: decimalPlaces };
 }
 
 function formatDecimal(decimal) {
@@ -658,6 +691,18 @@ function usageTotals(value) {
   return totals;
 }
 
+function expectedAttemptEstimatedCost(attempt) {
+  if (attempt.usage_json?.complete !== true || !pricingEvidenceComplete(attempt.pricing_json)) return null;
+  const usage = ["inputTokens", "outputTokens", "imageUnits"].map((key) => decimalFrom(attempt.usage_json[key]));
+  const pricing = ["inputUsdPerMillionTokens", "outputUsdPerMillionTokens", "imageUsdPerUnit"]
+    .map((key) => decimalFrom(attempt.pricing_json[key]));
+  if ([...usage, ...pricing].some((value) => !value || value.coefficient < 0n)) return null;
+  const inputCost = divideDecimalByMillion(multiplyDecimal(usage[0], pricing[0]));
+  const outputCost = divideDecimalByMillion(multiplyDecimal(usage[1], pricing[1]));
+  const imageCost = multiplyDecimal(usage[2], pricing[2]);
+  return roundDecimal(addDecimal(addDecimal(inputCost, outputCost), imageCost), COST_DECIMAL_PLACES);
+}
+
 function summarizeAttemptAccounting(providerRuns, attempts) {
   const grouped = new Map();
   for (const attempt of attempts) {
@@ -743,14 +788,34 @@ function summarizeAttemptAccounting(providerRuns, attempts) {
 function pricingEvidenceComplete(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   for (const key of ["inputUsdPerMillionTokens", "outputUsdPerMillionTokens", "imageUsdPerUnit"]) {
-    const number = Number(value[key]);
-    if (!Number.isFinite(number) || number < 0) return false;
+    const price = decimalFrom(value[key]);
+    if (!price || price.coefficient < 0n) return false;
   }
   return value.currency === "USD" &&
     typeof value.inputTokenBasis === "string" &&
     typeof value.outputTokenBasis === "string" &&
     typeof value.imageBasis === "string" &&
     typeof value.source === "string";
+}
+
+function attemptSemanticsCoherent(attempt) {
+  if (!["completed", "failed"].includes(attempt.status) || typeof attempt.request_submitted !== "boolean") return false;
+  if (attempt.status === "completed" && attempt.request_submitted !== true) return false;
+  const estimated = decimalFrom(attempt.estimated_cost_usd);
+  const actual = decimalFrom(attempt.actual_cost_usd);
+  const actualMissing = attempt.actual_cost_usd === null || attempt.actual_cost_usd === undefined || attempt.actual_cost_usd === "";
+  switch (attempt.billing_status) {
+    case "actual":
+      return attempt.request_submitted === true && Boolean(actual);
+    case "estimated":
+      return attempt.request_submitted === true && attempt.usage_json?.complete === true && actualMissing;
+    case "unbilled":
+      return attempt.request_submitted === false && estimated?.coefficient === 0n && actualMissing;
+    case "unreconciled":
+      return attempt.request_submitted === true && estimated?.coefficient === 0n && actualMissing;
+    default:
+      return false;
+  }
 }
 
 function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
@@ -762,6 +827,8 @@ function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
   let incompleteUsageCount = 0;
   let allZeroNonLocalUsageCount = 0;
   let missingPricingCount = 0;
+  let pricingMismatchCount = 0;
+  let attemptSemanticsMismatchCount = 0;
   const attemptsByRun = new Map();
   for (const attempt of attempts) {
     const key = canonicalJson([attempt.workspace_id, attempt.provider_run_id]);
@@ -810,9 +877,20 @@ function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
     }
     if (attempt.usage_json?.complete !== true) incompleteUsageCount += 1;
     if (!pricingEvidenceComplete(attempt.pricing_json)) missingPricingCount += 1;
+    if (!attemptSemanticsCoherent(attempt)) attemptSemanticsMismatchCount += 1;
+    const expectedEstimatedCost = expectedAttemptEstimatedCost(attempt);
+    const recordedEstimatedCost = decimalFrom(attempt.estimated_cost_usd);
+    if (
+      expectedEstimatedCost &&
+      recordedEstimatedCost &&
+      formatDecimal(roundDecimal(recordedEstimatedCost, COST_DECIMAL_PLACES)) !== formatDecimal(expectedEstimatedCost)
+    ) {
+      pricingMismatchCount += 1;
+    }
   }
   const blockingCount = negativeCostCount + unknownCostCount + nonLocalChargedZeroCount + missingUsageCount +
-    incompleteUsageCount + allZeroNonLocalUsageCount + missingPricingCount + runsMissingAttemptsCount +
+    incompleteUsageCount + allZeroNonLocalUsageCount + missingPricingCount + pricingMismatchCount +
+    attemptSemanticsMismatchCount + runsMissingAttemptsCount +
     attemptAccounting.runMismatchCount;
   return {
     negativeCostCount,
@@ -822,6 +900,8 @@ function buildBlockingAnomalies(providerRuns, attempts, attemptAccounting) {
     incompleteUsageCount,
     allZeroNonLocalUsageCount,
     missingPricingCount,
+    pricingMismatchCount,
+    attemptSemanticsMismatchCount,
     runsMissingAttemptsCount,
     runAttemptMismatchCount: attemptAccounting.runMismatchCount,
     blockingCount,
@@ -904,8 +984,8 @@ export function buildProviderBaselineManifest({
     columns: PROFILE_VERSION_COLUMNS.split(","),
     windowEndExclusive: windowEnd,
     filters: ["active_from.lt.<window-end>", "active_to.is.null OR active_to.gte.<window-end>"],
-    order: ["active_from.desc", "id.asc"],
-    pagination: "offset-range-until-empty",
+    order: ["active_from.desc", "id.desc"],
+    pagination: "active-from-id-descending-keyset-until-empty",
   };
   const privateEvidence = {
     workspaces: sortedWorkspaces.map((workspaceId) => {
@@ -942,6 +1022,7 @@ export function buildProviderBaselineManifest({
     totalAttempts: firstAttempts.length,
     globalAttemptIdSetSha256: sha256Canonical(globalAttemptIds),
     attemptAccounting,
+    attemptAccountingPolicy: ATTEMPT_ACCOUNTING_POLICY,
     anomalies: { ...basePublicSummary.anomalies, ...blockingAnomalies },
   };
   const providerRunDriftDetected = firstPassSha256 !== secondPassSha256;
