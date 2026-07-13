@@ -36,9 +36,94 @@ export type TextProviderRequest = {
 export type TextProviderResponse = {
   json: unknown;
   rawText: string;
-  usage: Record<string, number>;
+  usage: ProviderUsage;
   providerMetadata: Record<string, unknown>;
 };
+
+export type ProviderUsage = {
+  inputTokens?: number;
+  outputTokens?: number;
+  imageUnits?: number;
+  actualCostUsd?: number;
+  providerRequestId?: string;
+  complete?: boolean;
+};
+
+export type ProviderPricingSnapshot = {
+  inputUsdPerMillionTokens: number;
+  outputUsdPerMillionTokens: number;
+  imageUsdPerUnit: number;
+  currency?: "USD";
+  inputTokenBasis?: "per_million_tokens";
+  outputTokenBasis?: "per_million_tokens";
+  imageBasis?: "per_output_image";
+  source?: "persisted" | "default";
+  snapshotId?: string | null;
+};
+
+export type ProviderAccountingContext = {
+  model: string;
+  modelProfileVersionId?: string | null;
+  pricingSnapshotId?: string | null;
+  pricing: ProviderPricingSnapshot;
+};
+
+export class ProviderRequestError extends Error {
+  readonly requestSubmitted: boolean;
+  readonly retryable: boolean;
+  readonly usage?: ProviderUsage;
+  readonly providerRequestId?: string | null;
+
+  constructor(
+    message: string,
+    options: {
+      requestSubmitted: boolean;
+      retryable: boolean;
+      usage?: ProviderUsage;
+      providerRequestId?: string | null;
+      cause?: unknown;
+    },
+  ) {
+    super(message, { cause: options.cause });
+    this.name = "ProviderRequestError";
+    this.requestSubmitted = options.requestSubmitted;
+    this.retryable = options.retryable;
+    this.usage = options.usage;
+    this.providerRequestId = options.providerRequestId;
+  }
+}
+
+export async function fetchProviderRequest(
+  fetchImpl: typeof fetch,
+  input: Parameters<typeof fetch>[0],
+  init: RequestInit,
+  evidence: { providerRequestId?: string | null; usage?: ProviderUsage } = {},
+): Promise<Response> {
+  if (init.signal?.aborted) {
+    throw new ProviderRequestError("Provider request was cancelled before dispatch.", {
+      requestSubmitted: false,
+      retryable: false,
+      cause: init.signal.reason,
+    });
+  }
+
+  try {
+    return await fetchImpl(input, init);
+  } catch (cause) {
+    const aborted = init.signal?.aborted === true
+      || (typeof cause === "object" && cause !== null && "name" in cause && cause.name === "AbortError");
+    throw new ProviderRequestError(
+      aborted ? "Provider request was cancelled after dispatch." : "Provider transport failed after dispatch.",
+      {
+        requestSubmitted: true,
+        retryable: !aborted,
+        providerRequestId: evidence.providerRequestId,
+        usage: { ...evidence.usage, complete: false },
+        cause,
+      },
+    );
+  }
+}
 
 export type ImageProviderRequest = {
   prompt: string;
@@ -63,6 +148,7 @@ export type ImageProviderResponse = {
   assetUrl: string;
   seed: number;
   model: string;
+  usage: ProviderUsage;
   providerMetadata: Record<string, unknown>;
 };
 
@@ -80,6 +166,7 @@ export type TextProviderAdapter = {
   providerName: string;
   providerType: "text_generation";
   capabilities: ProviderCapabilities;
+  accounting?: ProviderAccountingContext;
   generate(input: TextProviderRequest): Promise<TextProviderResponse>;
 };
 
@@ -87,6 +174,7 @@ export type ImageProviderAdapter = {
   providerName: string;
   providerType: "image_generation";
   capabilities: ProviderCapabilities;
+  accounting?: ProviderAccountingContext;
   generate(input: ImageProviderRequest): Promise<ImageProviderResponse>;
 };
 
@@ -201,7 +289,7 @@ export function createDeterministicTextProvider(): TextProviderAdapter {
       return {
         json,
         rawText: JSON.stringify(json),
-        usage: { inputTokens: prompt.length, outputTokens: JSON.stringify(json).length },
+        usage: { inputTokens: prompt.length, outputTokens: JSON.stringify(json).length, complete: true },
         providerMetadata: { deterministic: true },
       };
     },
@@ -221,6 +309,7 @@ export function createDeterministicImageProvider(): ImageProviderAdapter {
         assetUrl: `asset://generated/${slugify(input.stylePreset)}-${input.aspectRatio.replace(":", "x")}.svg`,
         seed: input.seed ?? 1,
         model: "deterministic-svg",
+        usage: { imageUnits: 1, complete: true },
         providerMetadata: { prompt: input.prompt },
       };
     },

@@ -17,6 +17,18 @@ import {
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
 import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
 
+function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
+  return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
+    creativeId: creative.creativeId,
+    variantId: creative.variantId,
+    format: creative.format,
+    width: creative.canvas.width,
+    height: creative.canvas.height,
+    mimeType,
+    dataUrl: `data:${mimeType};base64,${Buffer.from(`${creative.creativeId}:${mimeType}`).toString("base64")}`,
+  })));
+}
+
 const sampleHtml = `
   <html>
     <head>
@@ -495,19 +507,64 @@ test("buildAdStudioExportPackage emits the required manifest and file paths", as
     city: "Perth",
     state: "WA",
     offerId: "seller_prep_checklist",
-    platforms: ["meta", "google_search", "google_pmax", "google_demand_gen"],
+    platforms: ["meta", "google_search"],
     variantCount: 2,
   });
-  const exportPackage = await buildAdStudioExportPackage(pack);
+  const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: completeCreativeRenders(pack) });
 
   assert.equal(exportPackage.manifest.campaignId, pack.campaign.campaignId);
   assert.ok(exportPackage.files["manifest.json"]);
   assert.ok(exportPackage.files["meta/copy.json"]);
   assert.ok(exportPackage.files["google-search/responsive_search_ads.csv"]);
-  assert.ok(exportPackage.files["google-pmax/copy.json"]);
-  assert.ok(exportPackage.files["demand-gen/copy.json"]);
   assert.ok(exportPackage.files["compliance/compliance_report.pdf"].byteLength > 40);
   assert.ok(exportPackage.zipBytes.byteLength > 100);
+});
+
+test("buildAdStudioExportPackage rejects missing raster renders instead of substituting SVG", async () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: { "https://northstar.example": sampleHtml },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+  });
+
+  await assert.rejects(() => buildAdStudioExportPackage(pack), /raster render is missing/);
+});
+
+test("buildAdStudioExportPackage rejects parked Google visual platforms explicitly", async () => {
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: { "https://northstar.example": sampleHtml },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta", "google_pmax", "google_demand_gen"],
+    variantCount: 1,
+  });
+
+  await assert.rejects(
+    () => buildAdStudioExportPackage(pack, { creativeRenders: completeCreativeRenders(pack) }),
+    /Google PMax and Demand Gen export is not enabled/,
+  );
 });
 
 test("stored creative export renders hydrate from workspace storage before packaging", async () => {
@@ -564,7 +621,12 @@ test("stored creative export renders hydrate from workspace storage before packa
   );
 
   assert.match(hydrated?.[0]?.dataUrl ?? "", /^data:image\/png;base64,/);
-  const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: hydrated });
+  const otherRenders = completeCreativeRenders(pack).filter(
+    (render) => !(render.creativeId === creative.creativeId && render.mimeType === "image/png"),
+  );
+  const exportPackage = await buildAdStudioExportPackage(pack, {
+    creativeRenders: [...otherRenders, ...(hydrated ?? [])],
+  });
   assert.deepEqual([...exportPackage.files["meta/feed_4x5.png"]], [...storedBytes]);
 
   await assert.rejects(

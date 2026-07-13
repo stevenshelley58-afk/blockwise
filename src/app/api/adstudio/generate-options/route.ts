@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createImageProviderForCandidate, createOpenAiImageProvider } from "@/lib/adstudio/ai-providers";
+import { createImageProviderForCandidate } from "@/lib/adstudio/ai-providers";
 import { clampOptionCount, generateCreativeOptions } from "@/lib/adstudio/creative-options";
 import { dataUrlToUploadBytes } from "@/lib/adstudio/generated-media";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -12,7 +12,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { assembleImagePrompt } from "@/lib/operator/prompts/assemble-prompt";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "@/lib/operator/prompts/model-profile-runtime";
 import { getActivePromptBundle, type PromptKey } from "@/lib/operator/prompts/prompt-registry";
-import { recordAdStudioProviderRun } from "@/lib/operator/prompts/redact-prompt-run";
+import { recordAdStudioProviderRun, type ProviderRunAttempt } from "@/lib/operator/prompts/redact-prompt-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
 
   const startedAt = Date.now();
   const correlationId = randomUUID();
+  const mutationId = `${correlationId}:adstudio.image`;
   const aspectRatio = body.aspectRatio ?? "1:1";
   const stylePreset = body.stylePreset ?? "real_estate_photography";
   const copyText = typeof body.copyText === "string" ? body.copyText : "";
@@ -111,23 +112,38 @@ export async function POST(request: NextRequest) {
     requiresReferenceAssets: referenceAssets.length > 0,
     seed: 0,
   };
+  let providerAttempts: ProviderRunAttempt[] = [];
+  let finalizationStarted = false;
 
   try {
     const profile = await resolveRuntimeModelProfile("image_generative");
-    const providers: ImageProviderAdapter[] = [
-      ...modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate)),
-      createOpenAiImageProvider(),
-    ];
+    const providers: ImageProviderAdapter[] = modelCandidateAttempts(profile).map((candidate) =>
+      createImageProviderForCandidate(candidate),
+    );
 
-    const generated = await generateCreativeOptions({ providers, imageInput, copyText, count });
+    const generated = await generateCreativeOptions({
+      providers,
+      imageInput,
+      copyText,
+      count,
+      workspaceId: context.access.workspaceId,
+      mutationId,
+    });
+    providerAttempts = generated.attempts;
+
+    if (generated.fatalErrors.length > 0) {
+      throw generated.fatalErrors[0];
+    }
 
     if (generated.options.length === 0) {
+      finalizationStarted = true;
       await recordAdStudioProviderRun({
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
         taskType: "adstudio.image",
         modelProfile: "image_generative",
+        mutationId,
         prompt: assembled,
         input: { prompt: body.prompt, brand: body.brand, aspectRatio, stylePreset, optionCount: count },
         attempts: generated.attempts,
@@ -154,12 +170,14 @@ export async function POST(request: NextRequest) {
       ),
     );
 
+    finalizationStarted = true;
     await recordAdStudioProviderRun({
       workspaceId: context.access.workspaceId,
       userId: context.access.userId,
       correlationId,
       taskType: "adstudio.image",
       modelProfile: "image_generative",
+      mutationId,
       prompt: assembled,
       input: { prompt: body.prompt, brand: body.brand, aspectRatio, stylePreset, optionCount: count },
       attempts: generated.attempts,
@@ -171,6 +189,7 @@ export async function POST(request: NextRequest) {
         assetUrl: generated.options[0].assetUrl,
         seed: generated.options[0].seed,
         model: generated.options[0].model,
+        usage: generated.options[0].usage,
         providerMetadata: { provider: generated.options[0].provider, optionCount: generated.options.length },
       },
       status: "completed",
@@ -187,23 +206,31 @@ export async function POST(request: NextRequest) {
       compliance: { pass: generated.compliance.pass, issues: generated.compliance.issues },
     });
   } catch (error) {
-    await recordAdStudioProviderRun({
-      workspaceId: context.access.workspaceId,
-      userId: context.access.userId,
-      correlationId,
-      taskType: "adstudio.image",
-      modelProfile: "image_generative",
-      prompt: assembled,
-      input: { prompt: body.prompt, brand: body.brand, aspectRatio, stylePreset, optionCount: count },
-      attempts: [],
-      latencyMs: Date.now() - startedAt,
-      providerName: "unavailable",
-      providerType: "image_generation",
-      modelName: "unavailable",
-      output: null,
-      status: "failed",
-      error,
-    });
+    if (!finalizationStarted) {
+      finalizationStarted = true;
+      try {
+        await recordAdStudioProviderRun({
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          correlationId,
+          taskType: "adstudio.image",
+          modelProfile: "image_generative",
+          mutationId,
+          prompt: assembled,
+          input: { prompt: body.prompt, brand: body.brand, aspectRatio, stylePreset, optionCount: count },
+          attempts: providerAttempts,
+          latencyMs: Date.now() - startedAt,
+          providerName: "unavailable",
+          providerType: "image_generation",
+          modelName: "unavailable",
+          output: null,
+          status: "failed",
+          error,
+        });
+      } catch (accountingError) {
+        return errorResponse(accountingError, 500);
+      }
+    }
     return errorResponse(error, 500);
   }
 }

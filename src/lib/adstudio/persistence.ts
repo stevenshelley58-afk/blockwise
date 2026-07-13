@@ -178,6 +178,24 @@ export async function persistAdStudioCampaignPack(
     },
   });
 
+  if (!result.error && compactCreatives.length > 0) {
+    const revisions = await supabase
+      .from("adstudio_creatives")
+      .select("id, active_revision_id")
+      .eq("workspace_id", pack.campaign.workspaceId)
+      .in("id", compactCreatives.map((creative) => creative.creativeId));
+    if (!revisions.error) {
+      const activeByCreative = new Map(
+        (revisions.data ?? []).flatMap((row) =>
+          typeof row.active_revision_id === "string" ? [[String(row.id), row.active_revision_id] as const] : [],
+        ),
+      );
+      for (const creative of pack.creatives) {
+        creative.activeRevisionId = activeByCreative.get(creative.creativeId) ?? creative.activeRevisionId;
+      }
+    }
+  }
+
   return { data: result.data, error: result.error ? { message: result.error.message } : null };
 }
 
@@ -288,6 +306,7 @@ function rowToCreative(row: Record<string, unknown>): AdStudioCreative {
 
   return {
     creativeId: String(row.id),
+    activeRevisionId: typeof row.active_revision_id === "string" ? row.active_revision_id : undefined,
     campaignId: String(row.campaign_id),
     variantId: String(row.variant_id),
     format: row.format as AdStudioCreative["format"],

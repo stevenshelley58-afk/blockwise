@@ -44,11 +44,12 @@ test("browser export renderer does not fall back to oversized inline data", () =
   assert.doesNotMatch(renderer, /falling back to inline render data/);
 });
 
-test("Ad Studio export lets the server package SVG fallbacks when raster renders fail", () => {
+test("Ad Studio export blocks when any required raster render fails", () => {
   const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
 
   assert.doesNotMatch(actions, /Creative render failed — please retry/);
-  assert.match(actions, /SVG fallback used for/);
+  assert.match(actions, /Creative render failed/);
+  assert.doesNotMatch(actions, /SVG fallback used for/);
   assert.match(actions, /map\(stripFabricJson\)/);
   assert.match(actions, /previewSvg: ""/);
 });

@@ -631,10 +631,12 @@ the runbook, and record the production commit/deployment.
 
 Resolve the active production model profile and price immediately before each
 batch. At the Gate 0 baseline, both active image profiles resolve through
-OpenRouter to `google/gemini-2.5-flash-image` at $0.039 per output image; direct
-OpenAI final fallback remains materially more expensive. Budgets include copy,
-vision, retries, fallbacks, failed-but-billed attempts, and input-image costs as
-recorded and reconciled by provider runs.
+OpenRouter to `google/gemini-2.5-flash-image` with a configured $0.039-per-image
+fallback estimate; this is not provider billing truth. Direct OpenAI final
+fallback remains materially more expensive. Provider-reported actual cost wins;
+the exact dispatched runtime price and unit are the fallback snapshot. Budgets
+include copy, vision, retries, fallbacks, failed-but-billed attempts, and
+input-image costs as recorded and reconciled by provider runs.
 
 - static gate before paid work
 - 120-second abort per provider invocation and five-minute terminal deadline per

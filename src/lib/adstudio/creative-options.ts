@@ -13,14 +13,13 @@
 
 import { runComplianceGate, type ComplianceGateResult } from "./creative-qa.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
+import {
+  executeAdStudioProviderAttempt,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
+import { isRetryableProviderFailure } from "../operator/prompts/model-profile-runtime.ts";
 
-export type CreativeOptionAttempt = {
-  option: number;
-  provider: string;
-  model: string;
-  status: "completed" | "failed";
-  error?: string;
-};
+export type CreativeOptionAttempt = ProviderRunAttempt & { option: number };
 
 export type CreativeOption = {
   index: number;
@@ -28,11 +27,13 @@ export type CreativeOption = {
   model: string;
   provider: string;
   seed: number;
+  usage: ImageProviderResponse["usage"];
 };
 
 export type CreativeOptionsResult = {
   options: CreativeOption[];
   attempts: CreativeOptionAttempt[];
+  fatalErrors: unknown[];
   /** Re-run compliance gate on the copy these options carry (the WS7 re-trigger). */
   compliance: ComplianceGateResult;
 };
@@ -44,6 +45,9 @@ export type GenerateCreativeOptionsInput = {
   /** Copy text the options will carry, re-checked for AU compliance. */
   copyText: string;
   count: number;
+  workspaceId: string;
+  mutationId: string;
+  executeAttempt?: typeof executeAdStudioProviderAttempt;
 };
 
 const MIN_OPTIONS = 1;
@@ -63,19 +67,33 @@ export async function generateCreativeOptions(
   input: GenerateCreativeOptionsInput,
 ): Promise<CreativeOptionsResult> {
   const baseSeed = input.imageInput.seed ?? 0;
-  const attempts: CreativeOptionAttempt[] = [];
-
-  const settled = await Promise.all(
+  const settled = await Promise.allSettled(
     Array.from({ length: input.count }, (_unused, index) =>
-      generateOneOption(input.providers, input.imageInput, baseSeed + index + 1, index, attempts),
+      generateOneOption(
+        input.providers.slice(0, 2),
+        input.imageInput,
+        baseSeed + index + 1,
+        index,
+        input.workspaceId,
+        input.mutationId,
+        input.executeAttempt ?? executeAdStudioProviderAttempt,
+      ),
     ),
   );
-
-  const options = settled.filter((option): option is CreativeOption => option !== null);
+  const lanes = settled
+    .filter((result): result is PromiseFulfilledResult<CreativeOptionLaneResult> => result.status === "fulfilled")
+    .map((result) => result.value);
+  const options = lanes.flatMap((lane) => lane.option ? [lane.option] : []);
+  const attempts = lanes.flatMap((lane) => lane.attempts);
+  const fatalErrors = [
+    ...lanes.flatMap((lane) => lane.fatalError ? [lane.fatalError] : []),
+    ...settled.flatMap((result) => result.status === "rejected" ? [result.reason] : []),
+  ];
 
   return {
     options,
     attempts,
+    fatalErrors,
     compliance: runComplianceGate(input.copyText),
   };
 }
@@ -85,36 +103,52 @@ async function generateOneOption(
   imageInput: ImageProviderRequest,
   seed: number,
   index: number,
-  attempts: CreativeOptionAttempt[],
-): Promise<CreativeOption | null> {
-  let lastError: unknown = null;
-
-  for (const provider of providers) {
+  workspaceId: string,
+  mutationId: string,
+  executeAttempt: typeof executeAdStudioProviderAttempt,
+): Promise<CreativeOptionLaneResult> {
+  const attempts: CreativeOptionAttempt[] = [];
+  for (const [providerIndex, provider] of providers.entries()) {
+    const attemptIndex = index * providers.length + providerIndex;
+    let execution;
     try {
-      const result: ImageProviderResponse = await provider.generate({ ...imageInput, seed });
-      if (!result.assetUrl) {
-        throw new Error("Provider returned no image.");
-      }
-      attempts.push({ option: index, provider: provider.providerName, model: result.model, status: "completed" });
-      return {
+      execution = await executeAttempt<ImageProviderResponse>({
+        workspaceId,
+        mutationId,
+        attemptIndex,
+        modelProfile: "image_generative",
+        provider,
+        execute: async () => {
+          const result = await provider.generate({ ...imageInput, seed });
+          if (!result.assetUrl) throw new Error("Provider returned no image.");
+          return result;
+        },
+      });
+    } catch (fatalError) {
+      return { option: null, attempts, fatalError };
+    }
+    attempts.push({ option: index, ...execution.attempt });
+    if (execution.ok) {
+      const result = execution.output;
+      return { option: {
         index,
         assetUrl: result.assetUrl,
         model: result.model,
         provider: provider.providerName,
         seed: result.seed ?? seed,
-      };
-    } catch (error) {
-      lastError = error;
-      attempts.push({
-        option: index,
-        provider: provider.providerName,
-        model: "unavailable",
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      });
+        usage: result.usage,
+      }, attempts, fatalError: null };
+    }
+    if (!isRetryableProviderFailure(execution.error)) {
+      return { option: null, attempts, fatalError: null };
     }
   }
 
-  void lastError;
-  return null;
+  return { option: null, attempts, fatalError: null };
 }
+
+type CreativeOptionLaneResult = {
+  option: CreativeOption | null;
+  attempts: CreativeOptionAttempt[];
+  fatalError: unknown | null;
+};

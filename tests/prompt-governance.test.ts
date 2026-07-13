@@ -21,6 +21,8 @@ import {
 } from "../src/lib/operator/prompts/prompt-registry.ts";
 import { runPromptTest } from "../src/lib/operator/prompts/prompt-test-runner.ts";
 import {
+  buildProviderRunAttempt,
+  buildProviderRunPayloadHash,
   buildRedactedProviderRunInput,
   estimateAdStudioProviderRunCostUsd,
   redactRecord,
@@ -291,7 +293,7 @@ test("provider run redaction removes raw prompts and uploaded image base64", asy
   assert.equal(serialized.includes("0400 000 000"), false);
 });
 
-test("provider run cost estimation uses model profile image pricing", async () => {
+test("provider run accounting prefers actual cost and exact runtime pricing without requiring output", async () => {
   const bundle = await getActivePromptBundle(imageKeys, undefined, null);
   const prompt = assembleImagePrompt({
     bundle,
@@ -309,24 +311,130 @@ test("provider run cost estimation uses model profile image pricing", async () =
     prompt,
     input: { prompt: "Create a bright local real estate background." },
     attempts: [
-      { provider: "openai", model: "gpt-image-1-mini", status: "completed" },
-      { provider: "openai", model: "gpt-image-1-mini", status: "completed" },
-      { provider: "openrouter", model: "google/gemini-3.1-flash-image-preview", status: "completed" },
-      { provider: "openrouter", model: "google/gemini-3.1-flash-image-preview", status: "completed" },
+      {
+        attemptIndex: 0,
+        provider: "openrouter",
+        providerType: "image_generation",
+        model: "google/gemini-2.5-flash-image",
+        modelProfile: "image_draft",
+        modelProfileVersionId: "11111111-1111-4111-8111-111111111111",
+        pricingSnapshotId: "11111111-1111-4111-8111-111111111111",
+        status: "completed",
+        requestSubmitted: true,
+        billingStatus: "actual",
+        providerRequestId: "or-image-1",
+        usage: { inputTokens: 900, outputTokens: 1, imageUnits: 1, complete: true },
+        pricing: { inputUsdPerMillionTokens: 0.3, outputUsdPerMillionTokens: 0, imageUsdPerUnit: 0.039 },
+        estimatedCostUsd: 0.03927,
+        actualCostUsd: 0.039,
+      },
+      {
+        attemptIndex: 1,
+        provider: "openai",
+        providerType: "image_generation",
+        model: "gpt-image-2",
+        modelProfile: "image_draft",
+        modelProfileVersionId: null,
+        pricingSnapshotId: null,
+        status: "completed",
+        requestSubmitted: true,
+        billingStatus: "estimated",
+        providerRequestId: "oa-image-1",
+        usage: { inputTokens: 0, outputTokens: 0, imageUnits: 1, complete: true },
+        pricing: { inputUsdPerMillionTokens: 5, outputUsdPerMillionTokens: 30, imageUsdPerUnit: 0.211 },
+        estimatedCostUsd: 0.211,
+        actualCostUsd: null,
+      },
     ],
     providerName: "mixed",
     providerType: "image_generation",
     modelName: "gpt-image-1-mini",
-    output: {
-      assetUrl: "https://cdn.example/image.png",
-      seed: 1,
-      model: "gpt-image-1-mini",
-      providerMetadata: { provider: "openai" },
-    },
+    output: null,
     status: "completed",
   });
 
-  assert.equal(cost, 0.16);
+  assert.equal(cost, 0.25);
+});
+
+test("provider run accounting preserves sub-cent actual cost and marks uncertain submitted failures", async () => {
+  const module = (await import("../src/lib/operator/prompts/redact-prompt-run.ts")) as unknown as {
+    buildProviderRunAccounting?: (attempts: Array<Record<string, unknown>>) => {
+      estimatedCostUsd: number;
+      actualCostUsd: number | null;
+      preferredCostUsd: number;
+      billingStatus: string;
+    };
+  };
+  assert.equal(typeof module.buildProviderRunAccounting, "function");
+
+  const result = module.buildProviderRunAccounting!([
+    {
+      billingStatus: "actual",
+      actualCostUsd: 0.000321,
+      estimatedCostUsd: 0.0004,
+      usage: { inputTokens: 12, outputTokens: 4, imageUnits: 0, complete: true },
+    },
+    {
+      billingStatus: "unreconciled",
+      actualCostUsd: null,
+      estimatedCostUsd: 0,
+      requestSubmitted: true,
+      usage: { inputTokens: 0, outputTokens: 0, imageUnits: 0, complete: false },
+    },
+  ]);
+
+  assert.equal(result.estimatedCostUsd, 0.0004);
+  assert.equal(result.actualCostUsd, null);
+  assert.equal(result.preferredCostUsd, 0.000321);
+  assert.equal(result.billingStatus, "unreconciled");
+});
+
+test("provider run payload hash is stable across persistence retry timestamps", () => {
+  const first = buildProviderRunPayloadHash(
+    { task_type: "adstudio.image", completed_at: "2026-07-13T00:00:00.000Z" },
+    [],
+  );
+  const retry = buildProviderRunPayloadHash(
+    { task_type: "adstudio.image", completed_at: "2026-07-13T00:00:05.000Z" },
+    [],
+  );
+
+  assert.equal(first, retry);
+});
+
+test("missing provider usage is unreconciled instead of a zero-cost estimate", () => {
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    modelProfile: "image_draft",
+    status: "completed",
+    provider: {
+      providerName: "openai",
+      providerType: "image_generation",
+      capabilities: { textToImage: true },
+      accounting: {
+        model: "gpt-image-2",
+        pricing: {
+          inputUsdPerMillionTokens: 5,
+          outputUsdPerMillionTokens: 30,
+          imageUsdPerUnit: 0.211,
+        },
+      },
+      async generate() {
+        throw new Error("not called");
+      },
+    },
+    output: {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "gpt-image-2",
+      usage: { imageUnits: 1, complete: false },
+      providerMetadata: {},
+    },
+  });
+
+  assert.equal(attempt.billingStatus, "unreconciled");
+  assert.equal(attempt.estimatedCostUsd, 0);
+  assert.equal(attempt.actualCostUsd, null);
 });
 
 test("redactRecord flags unsafe targeting and unsupported claims", () => {

@@ -11,9 +11,17 @@ import { randomUUID } from "node:crypto";
 import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle } from "../operator/prompts/prompt-registry.ts";
-import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  executeAdStudioProviderAttempt,
+  recordAdStudioProviderRun,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
 
 export { cloneQaWarnings } from "./clone-qa-warnings.ts";
 
@@ -28,12 +36,15 @@ export type CloneQaInput = {
   attempt: number;
 };
 
-/** Normalize for lenient comparison: case, whitespace, and punctuation-insensitive. */
+/**
+ * Normalize representation-only differences while preserving the customer's
+ * exact characters. Case and punctuation are content, not layout.
+ */
 export function normalizeRenderedText(value: string): string {
   return value
-    .toLowerCase()
-    .replace(/["'’‘“”.,!?;:\-–—()]/g, " ")
-    .replace(/\s+/g, " ")
+    .normalize("NFC")
+    .replace(/\r\n?|\n/g, " ")
+    .replace(/\s+/gu, " ")
     .trim();
 }
 
@@ -69,7 +80,7 @@ function parseCopyChecks(
   raw: unknown,
   expectedCopy: Record<string, string>,
 ): AdStudioCloneQa["copyChecks"] {
-  const byKey = new Map<string, { rendered: string; exact: boolean }>();
+  const byKey = new Map<string, { rendered: string }>();
   if (Array.isArray(raw)) {
     for (const entry of raw) {
       if (!entry || typeof entry !== "object") continue;
@@ -78,7 +89,6 @@ function parseCopyChecks(
       if (!key) continue;
       byKey.set(key, {
         rendered: typeof item.rendered === "string" ? item.rendered : "",
-        exact: item.exact === true,
       });
     }
   }
@@ -87,9 +97,7 @@ function parseCopyChecks(
   return Object.entries(expectedCopy).map(([key, expected]) => {
     const reported = byKey.get(key);
     const rendered = reported?.rendered ?? "";
-    const exact =
-      reported?.exact === true ||
-      (rendered.length > 0 && normalizeRenderedText(rendered) === normalizeRenderedText(expected));
+    const exact = rendered.length > 0 && normalizeRenderedText(rendered) === normalizeRenderedText(expected);
     return { key, expected, rendered, exact };
   });
 }
@@ -110,6 +118,7 @@ export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" |
 export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
+  const mutationId = `${correlationId}:adstudio.clone_qa:${input.attempt}`;
   const bundle = await getActivePromptBundle(["adstudio.clone_qa.v1"]);
   const system = bundle["adstudio.clone_qa.v1"].body;
   const expectedList = Object.entries(input.expectedCopy)
@@ -127,34 +136,41 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
 
   const profile = await resolveRuntimeModelProfile("vision_classification");
   const candidates = modelCandidateAttempts(profile);
-  const attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }> = [];
+  const attempts: ProviderRunAttempt[] = [];
   let output: TextProviderResponse | null = null;
   let provider: TextProviderAdapter | null = null;
   let modelName = "unavailable";
   let lastError: unknown = null;
 
-  for (const candidate of candidates) {
+  for (const [attemptIndex, candidate] of candidates.entries()) {
     const candidateProvider = createTextProviderForCandidate(candidate);
-    attempts.push({ provider: candidateProvider.providerName, model: candidate.model, status: "attempted" });
     try {
-      output = await candidateProvider.generate({
-        system,
-        schemaName: "metaLeadAdPack",
-        imageUrl: input.imageUrl,
-        messages: [{ role: "user", content: user }],
+      const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+        workspaceId: input.workspaceId,
+        mutationId,
+        attemptIndex,
+        modelProfile: "vision_classification",
+        provider: candidateProvider,
+        execute: () => candidateProvider.generate({
+          system,
+          schemaName: "metaLeadAdPack",
+          imageUrl: input.imageUrl,
+          messages: [{ role: "user", content: user }],
+        }),
       });
+      attempts.push(execution.attempt);
+      if (!execution.ok) {
+        lastError = execution.error;
+        if (!isRetryableProviderFailure(execution.error)) break;
+        continue;
+      }
+      output = execution.output;
       provider = candidateProvider;
       modelName = String(output.providerMetadata.model ?? candidate.model);
-      attempts[attempts.length - 1] = { provider: candidateProvider.providerName, model: candidate.model, status: "completed" };
       break;
     } catch (error) {
       lastError = error;
-      attempts[attempts.length - 1] = {
-        provider: candidateProvider.providerName,
-        model: candidate.model,
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      };
+      break;
     }
   }
 
@@ -164,6 +180,7 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
     correlationId,
     taskType: "adstudio.clone_qa",
     modelProfile: "vision_classification",
+    mutationId,
     prompt,
     input: { expectedCopy: input.expectedCopy, attempt: input.attempt },
     attempts,

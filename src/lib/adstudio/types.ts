@@ -261,6 +261,8 @@ export type AdStudioCloneQa = {
 
 export type AdStudioCreative = {
   creativeId: string;
+  /** Server-issued compare-and-swap base for immutable targeted edits. */
+  activeRevisionId?: string;
   campaignId: string;
   variantId: string;
   format: AdStudioFormat;

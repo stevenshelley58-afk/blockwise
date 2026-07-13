@@ -2,11 +2,20 @@
 // cascade with provider-run logging. Used by generate-clone (full clones) and
 // the targeted in-place edit endpoint.
 
-import { createImageProviderForCandidate, createOpenAiImageProvider } from "./ai-providers.ts";
+import { createImageProviderForCandidate } from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
-import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
-import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
+import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
+import {
+  executeAdStudioProviderAttempt,
+  ProviderRunPersistenceError,
+  recordAdStudioProviderRun,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
 
 export type CloneTier = "preview" | "final";
 
@@ -14,15 +23,29 @@ export function cloneTierProfile(tier: CloneTier): "image_draft" | "image_final"
   return tier === "preview" ? "image_draft" : "image_final";
 }
 
-/** Ordered providers for the tier: profile candidates, then a direct-OpenAI last resort. */
+/** Ordered providers for the tier, each pinned to its runtime profile pricing. */
 export async function resolveCloneProviders(tier: CloneTier): Promise<ImageProviderAdapter[]> {
   const profile = await resolveRuntimeModelProfile(cloneTierProfile(tier));
-  const providers = modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
-  providers.push(createOpenAiImageProvider());
-  return providers;
+  return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
 }
 
-export type CloneGenerationResult = { assetUrl: string; model: string; provider: string };
+export type CloneGenerationResult = {
+  assetUrl: string;
+  model: string;
+  provider: string;
+  providerAttemptCount: number;
+};
+
+export class CloneGenerationError extends Error {
+  readonly providerAttemptCount: number;
+
+  constructor(cause: unknown, providerAttemptCount: number) {
+    super(cause instanceof Error ? cause.message : "Clone generation is not configured.");
+    this.name = "CloneGenerationError";
+    this.providerAttemptCount = providerAttemptCount;
+    if (cause !== undefined) this.cause = cause;
+  }
+}
 
 export async function generateCloneWithCascade(input: {
   providers: ImageProviderAdapter[];
@@ -32,9 +55,14 @@ export async function generateCloneWithCascade(input: {
   correlationId: string;
   tier: CloneTier;
   attempt: number;
+  accounting?: {
+    executeAttempt: typeof executeAdStudioProviderAttempt;
+    recordRun: typeof recordAdStudioProviderRun;
+  };
 }): Promise<CloneGenerationResult> {
   const startedAt = Date.now();
-  const attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }> = [];
+  const mutationId = `${input.correlationId}:adstudio.clone:${input.tier}:${input.attempt}:${input.request.aspectRatio}`;
+  const attempts: ProviderRunAttempt[] = [];
   const prompt = {
     system: "",
     user: input.request.prompt,
@@ -44,47 +72,74 @@ export async function generateCloneWithCascade(input: {
     warnings: [],
   };
   let lastError: unknown = null;
+  let providerAttemptCount = 0;
+  const accounting = input.accounting ?? {
+    executeAttempt: executeAdStudioProviderAttempt,
+    recordRun: recordAdStudioProviderRun,
+  };
 
-  for (const provider of input.providers) {
-    attempts.push({ provider: provider.providerName, model: "unknown", status: "attempted" });
+  for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
+    providerAttemptCount += 1;
+    let result: ImageProviderResponse | null = null;
     try {
-      const result = await provider.generate(input.request);
-      if (!result.assetUrl) throw new Error("Provider returned no image.");
-      attempts[attempts.length - 1] = { provider: provider.providerName, model: result.model, status: "completed" };
-      await recordAdStudioProviderRun({
+      const execution = await accounting.executeAttempt<ImageProviderResponse>({
         workspaceId: input.workspaceId,
-        userId: input.userId,
-        correlationId: input.correlationId,
-        taskType: "adstudio.clone",
+        mutationId,
+        attemptIndex,
         modelProfile: cloneTierProfile(input.tier),
-        prompt,
-        input: { tier: input.tier, attempt: input.attempt, aspectRatio: input.request.aspectRatio },
-        attempts,
-        latencyMs: Date.now() - startedAt,
-        providerName: provider.providerName,
-        providerType: "image_generation",
-        modelName: result.model,
-        output: null,
-        status: "completed",
+        provider,
+        execute: async () => {
+          const result = await provider.generate(input.request);
+          if (!result.assetUrl) throw new Error("Provider returned no image.");
+          return result;
+        },
       });
-      return { assetUrl: result.assetUrl, model: result.model, provider: provider.providerName };
+      attempts.push(execution.attempt);
+      if (!execution.ok) {
+        lastError = execution.error;
+        if (!isRetryableProviderFailure(execution.error)) break;
+        continue;
+      }
+      result = execution.output;
     } catch (error) {
       lastError = error;
-      attempts[attempts.length - 1] = {
-        provider: provider.providerName,
-        model: "unavailable",
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      };
+      break;
     }
+    if (!result) continue;
+    // A durable finalization failure is not a provider failure and must never
+    // enter the fallback loop or be retried with a different payload.
+    await accounting.recordRun({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      correlationId: input.correlationId,
+      taskType: "adstudio.clone",
+      modelProfile: cloneTierProfile(input.tier),
+      mutationId,
+      prompt,
+      input: { tier: input.tier, attempt: input.attempt, aspectRatio: input.request.aspectRatio },
+      attempts,
+      latencyMs: Date.now() - startedAt,
+      providerName: provider.providerName,
+      providerType: "image_generation",
+      modelName: result.model,
+      output: result,
+      status: "completed",
+    });
+    return {
+      assetUrl: result.assetUrl,
+      model: result.model,
+      provider: provider.providerName,
+      providerAttemptCount,
+    };
   }
 
-  await recordAdStudioProviderRun({
+  await accounting.recordRun({
     workspaceId: input.workspaceId,
     userId: input.userId,
     correlationId: input.correlationId,
     taskType: "adstudio.clone",
     modelProfile: cloneTierProfile(input.tier),
+    mutationId,
     prompt,
     input: { tier: input.tier, attempt: input.attempt, aspectRatio: input.request.aspectRatio },
     attempts,
@@ -96,7 +151,8 @@ export async function generateCloneWithCascade(input: {
     status: "failed",
     error: lastError,
   });
-  throw lastError instanceof Error ? lastError : new Error("Clone generation is not configured.");
+  if (lastError instanceof ProviderRunPersistenceError) throw lastError;
+  throw new CloneGenerationError(lastError, providerAttemptCount);
 }
 
 /** Persist a data: URL render to workspace storage; passthrough for other refs. */

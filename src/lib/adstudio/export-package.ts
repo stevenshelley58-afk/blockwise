@@ -6,7 +6,6 @@ import {
   type CreativeExportRender,
 } from "./creative-export.ts";
 import { deterministicUuid } from "./id.ts";
-import { svgToBytes } from "./creative-svg.ts";
 
 type FileInput = {
   path: string;
@@ -67,6 +66,9 @@ function buildExportFiles(
   if (!primaryCopy) {
     throw new Error("Campaign pack has no copy packs to export.");
   }
+  if (pack.campaign.platforms.some((platform) => platform === "google_pmax" || platform === "google_demand_gen")) {
+    throw new Error("Google PMax and Demand Gen export is not enabled for the Meta-only pilot.");
+  }
 
   const exportVariantId = primaryCopy.variantId;
   const creativesByFormat = new Map(
@@ -85,16 +87,6 @@ function buildExportFiles(
     files.push(textFile("google-search/responsive_search_ads.csv", googleSearchCsv(primaryCopy.googleSearch)));
     files.push(textFile("google-search/keywords.csv", primaryCopy.googleSearch.keywords.join("\n")));
     files.push(textFile("google-search/negative_keywords.csv", primaryCopy.googleSearch.negativeKeywords.join("\n")));
-  }
-  if (pack.campaign.platforms.includes("google_pmax")) {
-    addCreative(files, "google-pmax/landscape_1_91.png", creativesByFormat.get("1.91:1"), renderMap, "image/png");
-    addCreative(files, "google-pmax/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
-    files.push(jsonFile("google-pmax/copy.json", primaryCopy.googlePmax));
-  }
-  if (pack.campaign.platforms.includes("google_demand_gen")) {
-    addCreative(files, "demand-gen/portrait_4_5.png", creativesByFormat.get("4:5"), renderMap, "image/png");
-    addCreative(files, "demand-gen/vertical_9_16.png", creativesByFormat.get("9:16"), renderMap, "image/png");
-    files.push(jsonFile("demand-gen/copy.json", primaryCopy.googleDemandGen));
   }
   files.push(jsonFile("landing-page/landing_copy.json", primaryCopy.landingPage));
   files.push(textFile("follow-up/sms_sequence.txt", primaryCopy.followUp.sms.join("\n\n")));
@@ -123,20 +115,17 @@ function addCreative(
 ) {
   const render = findCreativeRender(renderMap, creative, mimeType);
 
-  if (creative && render) {
-    files.push({
-      path,
-      mimeType,
-      bytes: decodeCreativeRender(render, creative),
-    });
-    return;
+  if (!creative) {
+    throw new Error(`Required creative for ${path} is missing.`);
+  }
+  if (!render) {
+    throw new Error(`Required raster render is missing for ${creative.format} (${mimeType}).`);
   }
 
-  // Rasterization not yet implemented — SVG written with correct extension
   files.push({
-    path: path.replace(/\.(png|jpg|jpeg)$/i, ".svg"),
-    mimeType: "image/svg+xml",
-    bytes: svgToBytes(creative?.previewSvg ?? "<svg xmlns=\"http://www.w3.org/2000/svg\"/>"),
+    path,
+    mimeType,
+    bytes: decodeCreativeRender(render, creative),
   });
 }
 

@@ -1,18 +1,88 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  createAzureOpenAiTextProvider,
-  createOpenAiImageProvider,
-  createOpenRouterImageProvider,
-  createOpenRouterTextProvider,
+  createImageProviderForCandidate,
+  createTextProviderForCandidate,
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
+import { ProviderRequestError } from "../src/lib/adstudio/providers.ts";
+import { buildProviderRunAttempt } from "../src/lib/operator/prompts/redact-prompt-run.ts";
+import type { ModelCandidate, ModelProvider } from "../src/lib/ai/model-registry.ts";
 
-test("createOpenRouterTextProvider posts structured prompts and parses JSON responses", async () => {
+function candidate(provider: ModelProvider, model: string): ModelCandidate {
+  return {
+    provider,
+    model,
+    modelProfileVersionId: "11111111-1111-4111-8111-111111111111",
+    pricingSnapshotId: "11111111-1111-4111-8111-111111111111",
+    pricingSource: "persisted",
+    inputUsdPerMillionTokens: 0.3,
+    outputUsdPerMillionTokens: 2.5,
+    imageUsdPerUnit: 0.039,
+    supportsStructuredOutput: true,
+    maxContextTokens: 65_536,
+    maxLatencyMs: 30_000,
+  };
+}
+
+test("production exports expose only explicitly priced provider candidates", () => {
+  const adapters = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
+  const publicApi = readFileSync("src/lib/adstudio/index.ts", "utf8");
+  const falAdapter = readFileSync("src/lib/adstudio/fal-image-provider.ts", "utf8");
+  const styleProfile = readFileSync("src/lib/adstudio/style-profile.ts", "utf8");
+
+  assert.doesNotMatch(adapters, /export function create(?:OpenAi|OpenRouter|AzureOpenAi|GoogleAi|Fal)(?:Text|Image|Vision)Provider/);
+  assert.doesNotMatch(publicApi, /createOpenAi(?:Text|Image|Vision)Provider|createOpenRouter(?:Text|Image)Provider/);
+  assert.match(falAdapter, /createFalImageProvider\(\s*accounting: ProviderAccountingContext/);
+  assert.doesNotMatch(styleProfile, /\.generate\(/);
+});
+
+test("candidate adapters retain exact runtime version, price, currency, and billing basis", () => {
+  const provider = createImageProviderForCandidate({
+    provider: "openrouter",
+    model: "google/gemini-2.5-flash-image",
+    modelProfileVersionId: "11111111-1111-4111-8111-111111111111",
+    pricingSnapshotId: "11111111-1111-4111-8111-111111111111",
+    pricingSource: "persisted",
+    inputUsdPerMillionTokens: 0.3,
+    outputUsdPerMillionTokens: 2.5,
+    imageUsdPerUnit: 0.039,
+    supportsStructuredOutput: false,
+    maxContextTokens: 65_536,
+    maxLatencyMs: 30_000,
+  });
+
+  assert.equal(provider.accounting?.pricingSnapshotId, "11111111-1111-4111-8111-111111111111");
+  assert.deepEqual(provider.accounting?.pricing, {
+    inputUsdPerMillionTokens: 0.3,
+    outputUsdPerMillionTokens: 2.5,
+    imageUsdPerUnit: 0.039,
+    currency: "USD",
+    inputTokenBasis: "per_million_tokens",
+    outputTokenBasis: "per_million_tokens",
+    imageBasis: "per_output_image",
+    source: "persisted",
+    snapshotId: "11111111-1111-4111-8111-111111111111",
+  });
+});
+
+test("candidate adapters reject missing or invalid explicit pricing before dispatch", () => {
+  assert.throws(
+    () => createImageProviderForCandidate({ ...candidate("openai", "gpt-image-2"), imageUsdPerUnit: -1 }),
+    /non-negative imageUsdPerUnit/,
+  );
+  assert.throws(
+    () => createImageProviderForCandidate(candidate("openai", "   ")),
+    /must declare a model/,
+  );
+});
+
+test("priced OpenRouter candidate posts structured prompts and parses JSON responses", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createOpenRouterTextProvider({
+  const provider = createTextProviderForCandidate(candidate("openrouter", "openai/gpt-5.5"), {
     env: {
       OPENROUTER_API_KEY: "or_test",
       NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
@@ -23,7 +93,7 @@ test("createOpenRouterTextProvider posts structured prompts and parses JSON resp
       return new Response(
         JSON.stringify({
           choices: [{ message: { content: JSON.stringify({ platform: "meta", primaryText: ["ok"] }) } }],
-          usage: { prompt_tokens: 12, completion_tokens: 4 },
+          usage: { prompt_tokens: 12, completion_tokens: 4, cost: 0.000321 },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
@@ -40,12 +110,13 @@ test("createOpenRouterTextProvider posts structured prompts and parses JSON resp
   assert.equal((calls[0].init.headers as Record<string, string>).Authorization, "Bearer or_test");
   assert.deepEqual(output.json, { platform: "meta", primaryText: ["ok"] });
   assert.equal(output.usage.inputTokens, 12);
+  assert.equal(output.usage.actualCostUsd, 0.000321);
   assert.equal(output.providerMetadata.model, "openai/gpt-5.5");
 });
 
-test("createAzureOpenAiTextProvider posts structured multimodal prompts to the deployment endpoint", async () => {
+test("priced Azure candidate posts structured multimodal prompts to the deployment endpoint", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createAzureOpenAiTextProvider({
+  const provider = createTextProviderForCandidate(candidate("azure", "gpt-4.1-mini-vision"), {
     env: {
       AZURE_OPENAI_API_KEY: "az_test",
       AZURE_OPENAI_ENDPOINT: "https://blockwise-openai.openai.azure.com/",
@@ -111,9 +182,9 @@ test("resolveAzureOpenAiChatUrl supports explicit URLs and deployment URLs", () 
   );
 });
 
-test("createOpenRouterImageProvider attaches references as image parts, never as prompt text", async () => {
+test("priced OpenRouter image candidate attaches references as image parts, never as prompt text", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createOpenRouterImageProvider({
+  const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
     env: {
       OPENROUTER_API_KEY: "or_test",
       NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
@@ -125,7 +196,7 @@ test("createOpenRouterImageProvider attaches references as image parts, never as
       return new Response(
         JSON.stringify({
           choices: [{ message: { images: [{ image_url: { url: "data:image/png;base64,b3V0" } }] } }],
-          usage: { prompt_tokens: 900, completion_tokens: 1 },
+          usage: { prompt_tokens: 900, completion_tokens: 1, cost: 0.039 },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
@@ -158,11 +229,13 @@ test("createOpenRouterImageProvider attaches references as image parts, never as
     references,
   );
   assert.equal(output.assetUrl, "data:image/png;base64,b3V0");
+  assert.equal(output.usage.imageUnits, 1);
+  assert.equal(output.usage.actualCostUsd, 0.039);
 });
 
-test("createOpenAiImageProvider defaults client creative generation to GPT Image 2", async () => {
+test("priced OpenAI image candidate uses GPT Image 2", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createOpenAiImageProvider({
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: {
       OPENAI_API_KEY: "oa_test",
     },
@@ -190,20 +263,269 @@ test("createOpenAiImageProvider defaults client creative generation to GPT Image
   assert.equal(body.model, "gpt-image-2");
   assert.equal(body.quality, "high");
   assert.equal(output.model, "gpt-image-2");
+  assert.equal(output.usage?.complete, false);
+  assert.equal(output.usage?.inputTokens, undefined);
 });
 
-test("createOpenAiImageProvider exposes reference-capable image capabilities", () => {
-  const provider = createOpenAiImageProvider({ env: { OPENAI_API_KEY: "oa_test" } });
+test("OpenAI 2xx response without an image preserves submitted billing evidence", async () => {
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      id: "oa-image-request-1",
+      data: [],
+      usage: { input_tokens: 800, output_tokens: 20, cost: 0.047 },
+    }), { status: 200 }),
+  });
+
+  let caught: unknown;
+  try {
+    await provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught instanceof ProviderRequestError);
+  assert.equal(caught.requestSubmitted, true);
+  assert.equal(caught.retryable, false);
+  assert.equal(caught.providerRequestId, "oa-image-request-1");
+  assert.deepEqual(caught.usage, {
+    imageUnits: 0,
+    providerRequestId: "oa-image-request-1",
+    complete: true,
+    inputTokens: 800,
+    outputTokens: 20,
+    actualCostUsd: 0.047,
+  });
+
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    provider,
+    modelProfile: "image_final",
+    status: "failed",
+    error: caught,
+  });
+  assert.equal(attempt.providerRequestId, "oa-image-request-1");
+  assert.equal(attempt.billingStatus, "actual");
+  assert.equal(attempt.actualCostUsd, 0.047);
+});
+
+test("OpenRouter 2xx response without an image preserves submitted billing evidence", async () => {
+  const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
+    env: { OPENROUTER_API_KEY: "or_test" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      id: "or-image-request-1",
+      choices: [{ message: { content: "No image generated" } }],
+      usage: { prompt_tokens: 700, completion_tokens: 15, cost: 0.039 },
+    }), { status: 200 }),
+  });
+
+  let caught: unknown;
+  try {
+    await provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught instanceof ProviderRequestError);
+  assert.equal(caught.requestSubmitted, true);
+  assert.equal(caught.retryable, false);
+  assert.equal(caught.providerRequestId, "or-image-request-1");
+  assert.deepEqual(caught.usage, {
+    imageUnits: 0,
+    providerRequestId: "or-image-request-1",
+    complete: true,
+    inputTokens: 700,
+    outputTokens: 15,
+    actualCostUsd: 0.039,
+  });
+
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    provider,
+    modelProfile: "image_final",
+    status: "failed",
+    error: caught,
+  });
+  assert.equal(attempt.providerRequestId, "or-image-request-1");
+  assert.equal(attempt.billingStatus, "actual");
+  assert.equal(attempt.actualCostUsd, 0.039);
+});
+
+test("provider HTTP errors are retryable only for explicitly transient statuses", async () => {
+  for (const [status, retryable] of [[400, false], [401, false], [408, true], [409, true], [425, true], [429, true], [500, true]] as const) {
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async () => new Response(JSON.stringify({ error: { message: `status ${status}` } }), { status }),
+    });
+
+    await assert.rejects(() => provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    }), (error: unknown) => {
+      assert.ok(error instanceof ProviderRequestError);
+      assert.equal(error.requestSubmitted, true);
+      assert.equal(error.retryable, retryable, `status ${status}`);
+      return true;
+    });
+  }
+
+  const nonJsonProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => new Response("overloaded", { status: 503 }),
+  });
+  await assert.rejects(() => nonJsonProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, true);
+    return true;
+  });
+});
+
+test("provider transport failures preserve ambiguous submission evidence and aborts never retry", async () => {
+  const transportProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      throw new TypeError("connection reset");
+    },
+  });
+
+  await assert.rejects(() => transportProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, true);
+    assert.deepEqual(error.usage, { complete: false });
+    return true;
+  });
+
+  const abortController = new AbortController();
+  const abortedProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      throw new DOMException("cancelled", "AbortError");
+    },
+  });
+  await assert.rejects(() => abortedProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+});
+
+test("a pre-aborted provider signal never dispatches", async () => {
+  let calls = 0;
+  const abortController = new AbortController();
+  abortController.abort();
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+    signal: abortController.signal,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 0);
+});
+
+test("reference acquisition failures remain unsubmitted and non-retryable", async () => {
+  let calls = 0;
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response("missing", { status: 404 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    prompt: "Prepare this listing photo",
+    referenceAssets: ["https://assets.example/missing.png"],
+    aspectRatio: "4:5",
+    stylePreset: "locked_template_photo_prep",
+    requiresReferenceAssets: true,
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, false);
+    assert.equal(error.retryable, false);
+    return true;
+  });
+  assert.equal(calls, 1);
+});
+
+test("priced OpenAI image candidate does not hide a second billable retry", async () => {
+  let calls = 0;
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ error: { message: "invalid size" } }), { status: 400 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate({
+    prompt: "Prepare this listing photo",
+    referenceAssets: ["data:image/png;base64,aW1hZ2U="],
+    aspectRatio: "4:5",
+    stylePreset: "locked_template_photo_prep",
+    requiresReferenceAssets: true,
+  }), /invalid size/);
+  assert.equal(calls, 1);
+});
+
+test("priced OpenAI image candidate exposes reference-capable image capabilities", () => {
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+  });
 
   assert.equal(provider.capabilities.imageToImage, true);
   assert.equal(provider.capabilities.inpainting, true);
   assert.equal(provider.capabilities.multiReference, true);
 });
 
-test("createOpenAiImageProvider sends locked-template reference work to images/edits", async () => {
+test("priced OpenAI image candidate sends locked-template reference work to images/edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const abortController = new AbortController();
-  const provider = createOpenAiImageProvider({
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), init: init ?? {} });
@@ -245,9 +567,9 @@ test("createOpenAiImageProvider sends locked-template reference work to images/e
   assert.equal(output.providerMetadata.mode, "edit");
 });
 
-test("createOpenAiImageProvider attaches a mask when one is supplied", async () => {
+test("priced OpenAI image candidate attaches a mask when one is supplied", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createOpenAiImageProvider({
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), init: init ?? {} });
@@ -268,9 +590,9 @@ test("createOpenAiImageProvider attaches a mask when one is supplied", async () 
   assert.ok(body.get("mask"), "mask must be attached when provided");
 });
 
-test("createOpenAiImageProvider honours quality tier and the Cloudflare gateway for edits", async () => {
+test("priced OpenAI image candidate honours quality tier and the Cloudflare gateway for edits", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createOpenAiImageProvider({
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: {
       OPENAI_API_KEY: "oa_test",
       BLOCKWISE_OPENAI_IMAGE_QUALITY: "medium",

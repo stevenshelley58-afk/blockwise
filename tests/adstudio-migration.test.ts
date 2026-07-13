@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const migrationPath = "supabase/migrations/202605270003_adstudio.sql";
 const alignmentMigrationPath = "supabase/migrations/202605270004_adstudio_live_schema_alignment.sql";
 const traceabilityMigrationPath = "supabase/migrations/202606050002_adstudio_provider_run_traceability.sql";
 const traceEdgesMigrationPath = "supabase/migrations/202606050004_traceability_edges.sql";
+const providerCostMigrationPath = "supabase/migrations/202607130001_adstudio_provider_cost_accounting.sql";
+const providerCostDbTestPath = "supabase/tests/adstudio_provider_cost_accounting.test.sql";
 
 const workspaceTables = [
   "adstudio_brand_kits",
@@ -142,4 +144,48 @@ test("traceability edge migration adds correlation ids across approvals artifact
   assert.match(sql, /lead_source_attribution_trace_idx/i);
   assert.match(sql, /lead_delivery_attempts_trace_idx/i);
   assert.match(sql, /lead_export_audits_trace_idx/i);
+});
+
+test("provider cost migration installs precise attempt accounting and atomic service-role RPC", () => {
+  assert.equal(existsSync(providerCostMigrationPath), true);
+  const sql = readFileSync(providerCostMigrationPath, "utf8");
+
+  assert.match(sql, /create table public\.adstudio_provider_run_attempts/i);
+  assert.match(sql, /estimated_cost_usd numeric\(14,\s*6\)/i);
+  assert.match(sql, /actual_cost_usd numeric\(14,\s*6\)/i);
+  assert.match(sql, /billing_status text[^;]*check[^;]*unreconciled/is);
+  assert.match(sql, /foreign key \(workspace_id, provider_run_id\)[\s\S]*references public\.adstudio_provider_runs \(workspace_id, id\)/i);
+  assert.match(sql, /unique \(workspace_id, mutation_id\)/i);
+  assert.match(sql, /alter table public\.adstudio_provider_run_attempts enable row level security/i);
+  assert.match(sql, /private\.adstudio_has_workspace_access\(workspace_id\)/i);
+  assert.match(sql, /create (?:or replace )?function public\.adstudio_record_provider_run/i);
+  assert.match(sql, /security definer/i);
+  assert.match(sql, /set search_path = ''/i);
+  assert.match(sql, /revoke all on function public\.adstudio_record_provider_run[\s\S]*from public, anon, authenticated/i);
+  assert.match(sql, /grant execute on function public\.adstudio_record_provider_run[\s\S]*to service_role/i);
+  assert.match(sql, /insert into public\.ai_runs[\s\S]*insert into public\.ai_usage_ledger[\s\S]*insert into public\.adstudio_provider_runs[\s\S]*insert into public\.adstudio_provider_run_attempts/i);
+  assert.match(sql, /payload_hash[\s\S]*idempot/i);
+  assert.match(sql, /adstudio_provider_attempt_outbox/i);
+  assert.match(sql, /'acquired', true/i);
+  assert.match(sql, /'acquired', false/i);
+  assert.match(sql, /pg_advisory_xact_lock/i);
+  assert.match(sql, /SQL owns aggregate truth/i);
+  assert.match(sql, /create or replace function public\.adstudio_mark_provider_attempt_submitted/i);
+  assert.match(sql, /create or replace function public\.adstudio_cancel_provider_attempt/i);
+  assert.match(sql, /create or replace function public\.adstudio_recover_provider_run/i);
+  assert.match(sql, /Dispatch outcome requires reconciliation/i);
+  assert.match(sql, /Legacy money fields are estimates only/i);
+  assert.match(sql, /alter column billing_status set not null/i);
+  assert.match(sql, /Provider run identity does not match normalized attempts/i);
+  assert.match(sql, /ai_usage_ledger_workspace_ai_run_fk/i);
+  assert.match(sql, /adstudio_provider_runs_workspace_ai_run_fk/i);
+  assert.match(sql, /adstudio_provider_runs_workspace_ledger_fk/i);
+  assert.doesNotMatch(sql, /grant select on public\.adstudio_provider_attempt_outbox to authenticated/i);
+  assert.equal(existsSync(providerCostDbTestPath), true);
+  const dbTest = readFileSync(providerCostDbTestPath, "utf8");
+  assert.match(dbTest, /dblink_send_query[\s\S]*concurrent finalizers create one provider run/i);
+  assert.match(dbTest, /SQL derives the aggregate from normalized attempts/i);
+  assert.match(dbTest, /post-dispatch recovery materializes missing usage as unreconciled/i);
+  assert.match(dbTest, /top-level run identity cannot disagree with its normalized attempt/i);
+  assert.match(dbTest, /attempt RLS hides rows from an authenticated non-member/i);
 });

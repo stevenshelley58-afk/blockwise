@@ -230,13 +230,14 @@
           "height": 1350,
           "fill": "#5d6b65e6",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-panel", "role": "panel_scrim", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": { "objectId": "meta-feed-020-panel", "role": "panel_scrim", "type": "shape", "locked": true, "editableKind": "template" }
         },
         {
           "type": "textbox",
           "left": 88,
           "top": 126,
           "width": 448,
+          "height": 244,
           "text": "JUST LISTED",
           "fontFamily": "Inter",
           "fontSize": 118,
@@ -254,13 +255,14 @@
           "height": 2,
           "fill": "#f1f1ee",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-rule-top", "role": "divider_top", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": { "objectId": "meta-feed-020-rule-top", "role": "divider_top", "type": "shape", "locked": true, "editableKind": "template" }
         },
         {
           "type": "textbox",
           "left": 88,
           "top": 412,
           "width": 448,
+          "height": 60,
           "text": "$750,000",
           "fontFamily": "Inter",
           "fontSize": 52,
@@ -278,13 +280,14 @@
           "height": 2,
           "fill": "#f1f1ee",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-rule-bottom", "role": "divider_bottom", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": { "objectId": "meta-feed-020-rule-bottom", "role": "divider_bottom", "type": "shape", "locked": true, "editableKind": "template" }
         },
         {
           "type": "textbox",
           "left": 88,
           "top": 516,
           "width": 448,
+          "height": 66,
           "text": "123 ANYWHERE ST., ANY CITY, ST 12345",
           "fontFamily": "Inter",
           "fontSize": 25,
@@ -301,6 +304,7 @@
           "width": 100,
           "height": 100,
           "src": "/adstudio-samples/photos/agent-1.jpg",
+          "clip": "circle",
           "crossOrigin": "anonymous",
           "blockwise": { "objectId": "meta-feed-020-logo", "role": "brand_logo", "type": "image", "locked": false, "editableKind": "image" }
         },
@@ -309,6 +313,7 @@
           "left": 88,
           "top": 1122,
           "width": 448,
+          "height": 40,
           "text": "+123-456-7890",
           "fontFamily": "Inter",
           "fontSize": 27,
@@ -323,6 +328,7 @@
           "left": 88,
           "top": 1168,
           "width": 448,
+          "height": 40,
           "text": "@reallygreatsite",
           "fontFamily": "Inter",
           "fontSize": 27,
@@ -340,7 +346,7 @@
           "height": 150,
           "fill": "#ded3c0",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-swatch-light", "role": "swatch_light", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": { "objectId": "meta-feed-020-swatch-light", "role": "swatch_light", "type": "shape", "locked": true, "editableKind": "template" }
         },
         {
           "type": "rect",
@@ -350,7 +356,7 @@
           "height": 60,
           "fill": "#ad9b83",
           "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-swatch-dark", "role": "swatch_dark", "type": "rect", "locked": true, "editableKind": "template" }
+          "blockwise": { "objectId": "meta-feed-020-swatch-dark", "role": "swatch_dark", "type": "shape", "locked": true, "editableKind": "template" }
         }
       ]
     }

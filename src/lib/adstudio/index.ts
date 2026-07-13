@@ -53,11 +53,8 @@ export {
   type AdStudioTemplatePlacement,
 } from "./templates.ts";
 export {
-  createOpenAiImageProvider,
-  createOpenAiTextProvider,
-  createOpenAiVisionProvider,
-  createOpenRouterImageProvider,
-  createOpenRouterTextProvider,
+  createImageProviderForCandidate,
+  createTextProviderForCandidate,
 } from "./ai-providers.ts";
 export {
   approveAdStudioBrandKitForUse,

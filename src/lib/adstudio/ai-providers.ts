@@ -5,16 +5,16 @@ import type {
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import { createFalImageProvider } from "./fal-image-provider.ts";
 import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
+import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
   ImageProviderRequest,
   ImageProviderResponse,
+  ProviderAccountingContext,
+  ProviderUsage,
   TextProviderAdapter,
   TextProviderRequest,
   TextProviderResponse,
-  VisionProviderAdapter,
-  VisionProviderRequest,
-  VisionProviderResponse,
 } from "./providers.ts";
 
 type EnvLike = Partial<Record<string, string>>;
@@ -40,7 +40,7 @@ const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
 // best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
 
-export function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENROUTER_TEXT_MODEL ?? "openai/gpt-5.5";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -58,7 +58,7 @@ export function createOpenRouterTextProvider(options: ProviderOptions = {}): Tex
       const apiKey = env.OPENROUTER_API_KEY;
 
       if (!apiKey) {
-        throw new Error("OPENROUTER_API_KEY is not configured.");
+        throw preflightError("OPENROUTER_API_KEY is not configured.");
       }
 
       return postChatCompletion({
@@ -76,7 +76,7 @@ export function createOpenRouterTextProvider(options: ProviderOptions = {}): Tex
   };
 }
 
-export function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENAI_TEXT_MODEL ?? "gpt-5.5";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -93,7 +93,7 @@ export function createOpenAiTextProvider(options: ProviderOptions = {}): TextPro
       const apiKey = env.OPENAI_API_KEY;
 
       if (!apiKey) {
-        throw new Error("OPENAI_API_KEY is not configured.");
+        throw preflightError("OPENAI_API_KEY is not configured.");
       }
 
       return postChatCompletion({
@@ -108,7 +108,7 @@ export function createOpenAiTextProvider(options: ProviderOptions = {}): TextPro
   };
 }
 
-export function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const deployment =
     options.model ??
@@ -131,10 +131,10 @@ export function createAzureOpenAiTextProvider(options: ProviderOptions = {}): Te
       const apiKey = env.AZURE_OPENAI_API_KEY;
 
       if (!apiKey) {
-        throw new Error("AZURE_OPENAI_API_KEY is not configured.");
+        throw preflightError("AZURE_OPENAI_API_KEY is not configured.");
       }
       if (!deployment && !env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) {
-        throw new Error("AZURE_OPENAI_DEPLOYMENT is not configured.");
+        throw preflightError("AZURE_OPENAI_DEPLOYMENT is not configured.");
       }
 
       return postChatCompletion({
@@ -168,7 +168,7 @@ export function resolveAzureOpenAiChatUrl(env: EnvLike, deployment: string): str
   return `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
 }
 
-export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
+function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
   const quality = options.quality ?? env.BLOCKWISE_OPENAI_IMAGE_QUALITY ?? DEFAULT_OPENAI_IMAGE_QUALITY;
@@ -190,7 +190,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       const apiKey = env.OPENAI_API_KEY;
 
       if (!apiKey) {
-        throw new Error("OPENAI_API_KEY is not configured.");
+        throw preflightError("OPENAI_API_KEY is not configured.");
       }
 
 
@@ -198,7 +198,7 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
       // text-to-image /images/generations path (JSON), unchanged.
       const response = input.requiresReferenceAssets
         ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
-        : await fetchImpl(env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
+        : await fetchProviderRequest(fetchImpl, env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
             method: "POST",
             signal: input.signal,
             headers: {
@@ -215,21 +215,49 @@ export function createOpenAiImageProvider(options: ProviderOptions = {}): ImageP
             }),
           });
 
-      const payload = (await response.json()) as {
+      const payload = (await response.json().catch(() => ({}))) as {
+        id?: string;
         data?: Array<{ url?: string; b64_json?: string }>;
+        usage?: {
+          input_tokens?: number;
+          output_tokens?: number;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          cost?: number;
+        };
         error?: { message?: string };
       };
 
       if (!response.ok) {
-        throw new Error(payload.error?.message ?? `Provider image request failed with ${response.status}.`);
+        throw submittedHttpError(payload.error?.message ?? `Provider image request failed with ${response.status}.`, response.status, {
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
+        });
       }
 
       const first = payload.data?.[0];
+      const assetUrl = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
+      if (!assetUrl) {
+        throw submittedError("OpenAI returned no image.", {
+          retryable: false,
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, {
+            imageUnits: 0,
+            providerRequestId: payload.id,
+            complete: true,
+          }),
+        });
+      }
 
       return {
-        assetUrl: first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : ""),
+        assetUrl,
         seed: input.seed ?? 0,
         model,
+        usage: usageFromProviderPayload(payload.usage, {
+          imageUnits: 1,
+          providerRequestId: payload.id,
+          complete: true,
+        }),
         providerMetadata: {
           provider: "openai",
           referenceAssets: input.referenceAssets.length,
@@ -266,16 +294,25 @@ async function postOpenAiImageEdit(input: {
 }): Promise<Response> {
   const references = input.input.referenceAssets;
   if (!references.length) {
-    throw new Error("Reference-image edit requires at least one image.");
+    throw preflightError("Reference-image edit requires at least one image.");
   }
 
   const blobs: Blob[] = [];
-  for (const reference of references) {
-    blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
+  let maskBlob: Blob | null = null;
+  try {
+    for (const reference of references) {
+      blobs.push(await imageReferenceToBlob(reference, input.fetchImpl, input.input.signal));
+    }
+    maskBlob = input.input.maskImage
+      ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
+      : null;
+  } catch (cause) {
+    throw new ProviderRequestError("Reference image could not be prepared for provider dispatch.", {
+      requestSubmitted: false,
+      retryable: false,
+      cause,
+    });
   }
-  const maskBlob = input.input.maskImage
-    ? await imageReferenceToBlob(input.input.maskImage, input.fetchImpl, input.input.signal)
-    : null;
 
   const send = (size: string) => {
     const form = new FormData();
@@ -291,7 +328,7 @@ async function postOpenAiImageEdit(input: {
     });
     if (maskBlob) form.set("mask", maskBlob, "mask.png");
     // No explicit Content-Type — fetch sets the multipart boundary itself.
-    return input.fetchImpl(resolveOpenAiImageEditsUrl(input.env), {
+    return fetchProviderRequest(input.fetchImpl, resolveOpenAiImageEditsUrl(input.env), {
       method: "POST",
       signal: input.input.signal,
       headers: {
@@ -302,17 +339,11 @@ async function postOpenAiImageEdit(input: {
     });
   };
 
-  const response = await send(imageSizeForAspect(input.input.aspectRatio));
-  if (response.ok) return response;
+  return send(imageSizeForAspect(input.input.aspectRatio));
 
   // Supported size sets differ per model generation (e.g. gpt-image-1-mini
   // rejects 1024x1280 while gpt-image-2 accepts it). On that specific error,
   // retry once with "auto" — the model picks the nearest size to the inputs.
-  const failure = (await response.clone().json().catch(() => null)) as { error?: { message?: string } } | null;
-  if (/invalid size/i.test(failure?.error?.message ?? "")) {
-    return send("auto");
-  }
-  return response;
 }
 
 // Resolves a reference (data: URL or http(s) URL) to a Blob for multipart upload.
@@ -335,7 +366,7 @@ async function imageReferenceToBlob(reference: string, fetchImpl: typeof fetch, 
 // OpenAI-compatible endpoint, so the standard chat-completion path applies.
 const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
-export function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-2.5-flash";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -346,7 +377,7 @@ export function createGoogleAiTextProvider(options: ProviderOptions = {}): TextP
     capabilities: { structuredJson: true, visionInput: true },
     async generate(input) {
       const apiKey = env.GOOGLE_AI_API_KEY;
-      if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not configured.");
+      if (!apiKey) throw preflightError("GOOGLE_AI_API_KEY is not configured.");
       return postChatCompletion({ url: GOOGLE_AI_CHAT_URL, apiKey, model, input, fetchImpl });
     },
   };
@@ -358,7 +389,7 @@ export function createGoogleAiTextProvider(options: ProviderOptions = {}): TextP
 // verbatim in the provider-run attempts and is fixed with one SQL update.
 const FAL_ANY_LLM_URL = "https://fal.run/fal-ai/any-llm";
 
-export function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
+function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_FAL_TEXT_MODEL ?? "google/gemini-flash-1.5";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -369,14 +400,14 @@ export function createFalTextProvider(options: ProviderOptions = {}): TextProvid
     capabilities: { structuredJson: true, visionInput: true },
     async generate(input) {
       const apiKey = env.FAL_KEY ?? env.FAL_API_KEY;
-      if (!apiKey) throw new Error("FAL_KEY is not configured.");
+      if (!apiKey) throw preflightError("FAL_KEY is not configured.");
 
       const userText = input.messages
         .map((message) => (typeof message.content === "string" ? message.content : ""))
         .filter(Boolean)
         .join("\n\n");
       const url = input.imageUrl ? `${FAL_ANY_LLM_URL}/vision` : FAL_ANY_LLM_URL;
-      const response = await fetchImpl(url, {
+      const response = await fetchProviderRequest(fetchImpl, url, {
         method: "POST",
         signal: undefined,
         headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
@@ -389,26 +420,27 @@ export function createFalTextProvider(options: ProviderOptions = {}): TextProvid
       });
       const payload = (await response.json().catch(() => ({}))) as { output?: string; error?: string; detail?: unknown };
       if (!response.ok) {
-        throw new Error(
+        throw submittedHttpError(
           typeof payload.error === "string"
             ? payload.error
             : `fal any-llm request failed (${response.status}): ${JSON.stringify(payload.detail ?? payload).slice(0, 200)}`,
+          response.status,
         );
       }
       const rawText = (payload.output ?? "").trim();
-      if (!rawText) throw new Error("fal any-llm returned no output.");
+      if (!rawText) throw submittedError("fal any-llm returned no output.", { retryable: false });
 
       return {
         json: parseJson(rawText),
         rawText,
-        usage: { inputTokens: 0, outputTokens: 0 },
+        usage: { inputTokens: 0, outputTokens: 0, complete: false },
         providerMetadata: { model, schemaName: input.schemaName },
       };
     },
   };
 }
 
-export function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
+function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -425,13 +457,13 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
       const apiKey = env.OPENROUTER_API_KEY;
 
       if (!apiKey) {
-        throw new Error("OPENROUTER_API_KEY is not configured.");
+        throw preflightError("OPENROUTER_API_KEY is not configured.");
       }
       if (input.requiresReferenceAssets && input.referenceAssets.length === 0) {
-        throw new Error("Reference-image repair requires at least one image.");
+        throw preflightError("Reference-image repair requires at least one image.");
       }
 
-      const response = await fetchImpl(OPENROUTER_CHAT_URL, {
+      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_CHAT_URL, {
         method: "POST",
         signal: input.signal,
         headers: {
@@ -451,28 +483,48 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
           ],
         }),
       });
-      const payload = (await response.json()) as {
+      const payload = (await response.json().catch(() => ({}))) as {
+        id?: string;
         choices?: Array<{
           message?: {
             content?: unknown;
             images?: Array<{ image_url?: { url?: string }; url?: string }>;
           };
         }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number };
+        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
         error?: { message?: string };
       };
 
       if (!response.ok) {
-        throw new Error(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`);
+        throw submittedHttpError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, response.status, {
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
+        });
       }
 
       const message = payload.choices?.[0]?.message;
       const assetUrl = message?.images?.[0]?.image_url?.url ?? message?.images?.[0]?.url ?? extractImageUrl(message?.content);
+      if (!assetUrl) {
+        throw submittedError("OpenRouter returned no image.", {
+          retryable: false,
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, {
+            imageUnits: 0,
+            providerRequestId: payload.id,
+            complete: true,
+          }),
+        });
+      }
 
       return {
-        assetUrl: assetUrl ?? "",
+        assetUrl,
         seed: input.seed ?? 0,
         model,
+        usage: usageFromProviderPayload(payload.usage, {
+          imageUnits: 1,
+          providerRequestId: payload.id,
+          complete: true,
+        }),
         providerMetadata: {
           provider: "openrouter",
           referenceAssets: input.referenceAssets.length,
@@ -484,65 +536,32 @@ export function createOpenRouterImageProvider(options: ProviderOptions = {}): Im
   };
 }
 
-export function createOpenAiVisionProvider(options: ProviderOptions = {}): VisionProviderAdapter {
-  const textProvider = createOpenAiTextProvider(options);
-
-  return {
-    providerName: "openai",
-    providerType: "vision_analysis",
-    capabilities: {
-      visionInput: true,
-      screenshotAnalysis: true,
-      ocr: true,
-      structuredJson: true,
-    },
-    async analyse(input: VisionProviderRequest): Promise<VisionProviderResponse> {
-      const output = await textProvider.generate({
-        system: "Return compact JSON for the requested visual analysis task.",
-        schemaName: "metaLeadAdPack",
-        messages: [
-          {
-            role: "user",
-            content: JSON.stringify({
-              task: input.task,
-              images: input.images,
-            }),
-          },
-        ],
-      });
-
-      return {
-        json: output.json,
-        confidence: 0.8,
-      };
-    },
-  };
-}
-
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
+  let provider: TextProviderAdapter;
   if (candidate.provider === "openrouter") {
-    return createOpenRouterTextProvider({ ...options, model: candidate.model });
+    provider = createOpenRouterTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "azure") {
+    provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "google") {
+    provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "fal") {
+    provider = createFalTextProvider({ ...options, model: candidate.model });
+  } else {
+    provider = createOpenAiTextProvider({ ...options, model: candidate.model });
   }
-  if (candidate.provider === "azure") {
-    return createAzureOpenAiTextProvider({ ...options, model: candidate.model });
-  }
-  if (candidate.provider === "google") {
-    return createGoogleAiTextProvider({ ...options, model: candidate.model });
-  }
-  if (candidate.provider === "fal") {
-    return createFalTextProvider({ ...options, model: candidate.model });
-  }
-  return createOpenAiTextProvider({ ...options, model: candidate.model });
+  return withAccounting(provider, candidate);
 }
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
+  let provider: ImageProviderAdapter;
   if (candidate.provider === "openrouter") {
-    return createOpenRouterImageProvider({ ...options, model: candidate.model });
+    provider = createOpenRouterImageProvider({ ...options, model: candidate.model });
+  } else if (candidate.provider === "fal") {
+    provider = createFalImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
+  } else {
+    provider = createOpenAiImageProvider({ ...options, model: candidate.model });
   }
-  if (candidate.provider === "fal") {
-    return createFalImageProvider({ model: candidate.model });
-  }
-  return createOpenAiImageProvider({ ...options, model: candidate.model });
+  return withAccounting(provider, candidate);
 }
 
 async function postChatCompletion(input: {
@@ -556,7 +575,7 @@ async function postChatCompletion(input: {
   includeModelInBody?: boolean;
 }): Promise<TextProviderResponse> {
   const includeModelInBody = input.includeModelInBody ?? true;
-  const response = await input.fetchImpl(input.url, {
+  const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
     headers: {
       ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
@@ -579,14 +598,18 @@ async function postChatCompletion(input: {
         : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
     }),
   });
-  const payload = (await response.json()) as {
+  const payload = (await response.json().catch(() => ({}))) as {
+    id?: string;
     choices?: Array<{ message?: { content?: string | null } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
+    usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
     error?: { message?: string };
   };
 
   if (!response.ok) {
-    throw new Error(payload.error?.message ?? `Provider request failed with ${response.status}.`);
+    throw submittedHttpError(payload.error?.message ?? `Provider request failed with ${response.status}.`, response.status, {
+      providerRequestId: payload.id,
+      usage: usageFromProviderPayload(payload.usage, { complete: false }),
+    });
   }
 
   const rawText = payload.choices?.[0]?.message?.content?.trim() ?? "{}";
@@ -594,15 +617,112 @@ async function postChatCompletion(input: {
   return {
     json: parseJson(rawText),
     rawText,
-    usage: {
-      inputTokens: payload.usage?.prompt_tokens ?? 0,
-      outputTokens: payload.usage?.completion_tokens ?? 0,
-    },
+    usage: usageFromProviderPayload(payload.usage, {
+      providerRequestId: payload.id,
+      complete: true,
+    }),
     providerMetadata: {
       model: input.model,
       schemaName: input.input.schemaName,
     },
   };
+}
+
+function withAccounting<T extends TextProviderAdapter | ImageProviderAdapter>(
+  provider: T,
+  candidate: ModelCandidate,
+): T {
+  return { ...provider, accounting: accountingForCandidate(candidate) };
+}
+
+function accountingForCandidate(candidate: ModelCandidate): ProviderAccountingContext {
+  if (!candidate.model.trim()) {
+    throw new Error("A priced provider candidate must declare a model.");
+  }
+  for (const [field, value] of Object.entries({
+    inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
+    outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
+    imageUsdPerUnit: candidate.imageUsdPerUnit,
+  })) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`A priced provider candidate requires a non-negative ${field}.`);
+    }
+  }
+
+  return {
+    model: candidate.model,
+    modelProfileVersionId: candidate.modelProfileVersionId ?? null,
+    pricingSnapshotId: candidate.pricingSnapshotId ?? null,
+    pricing: {
+      inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
+      outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
+      imageUsdPerUnit: candidate.imageUsdPerUnit,
+      currency: "USD",
+      inputTokenBasis: "per_million_tokens",
+      outputTokenBasis: "per_million_tokens",
+      imageBasis: "per_output_image",
+      source: candidate.pricingSource ?? "default",
+      snapshotId: candidate.pricingSnapshotId ?? null,
+    },
+  };
+
+}
+
+function usageFromProviderPayload(
+  usage: {
+    input_tokens?: number;
+    output_tokens?: number;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    cost?: number;
+  } | undefined,
+  defaults: ProviderUsage,
+): ProviderUsage {
+  const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
+  const outputTokens = usage?.output_tokens ?? usage?.completion_tokens;
+  const hasCompleteTokenUsage = Number.isFinite(inputTokens) && Number.isFinite(outputTokens);
+  return {
+    ...defaults,
+    ...(Number.isFinite(inputTokens) ? { inputTokens: Number(inputTokens) } : {}),
+    ...(Number.isFinite(outputTokens) ? { outputTokens: Number(outputTokens) } : {}),
+    complete: defaults.complete === true && hasCompleteTokenUsage,
+    ...(Number.isFinite(usage?.cost) ? { actualCostUsd: Number(usage?.cost) } : {}),
+  };
+}
+
+function preflightError(message: string): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: false, retryable: false });
+}
+
+function submittedError(
+  message: string,
+  options: {
+    retryable: boolean;
+    usage?: ProviderUsage;
+    providerRequestId?: string | null;
+    cause?: unknown;
+  },
+): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: true, ...options });
+}
+
+function submittedHttpError(
+  message: string,
+  status: number,
+  options: {
+    usage?: ProviderUsage;
+    providerRequestId?: string | null;
+    cause?: unknown;
+  } = {},
+): ProviderRequestError {
+  return submittedError(message, {
+    ...options,
+    retryable: isRetryableProviderStatus(status),
+  });
+}
+
+function isRetryableProviderStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
 function supportsCustomTemperature(model: string): boolean {

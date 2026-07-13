@@ -1,9 +1,13 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { buildAdStudioExportPackage } from "@/lib/adstudio";
 import { hydrateStoredCreativeExportRenders } from "@/lib/adstudio/export-render-storage";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import type { AdStudioCampaignPack, CreativeExportRender } from "@/lib/adstudio";
+import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import {
+  handleAdStudioExportDownload,
+  type ExportDownloadDependencies,
+} from "../download-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,44 +16,36 @@ type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
 };
 
-export async function POST(request: NextRequest, context: RouteContext) {
+type AuthorizedRequest = Extract<
+  Awaited<ReturnType<typeof requireAdStudioRequest>>,
+  { ok: true }
+>;
+type AdStudioRequestStore = AuthorizedRequest["supabase"];
+
+const dependencies: ExportDownloadDependencies<AdStudioRequestStore> = {
+  authorize: async (request) => {
+    const access = await requireAdStudioRequest(request as NextRequest);
+    if (!access.ok) return { ok: false, response: access.response };
+    return {
+      ok: true,
+      store: access.supabase,
+      workspaceId: access.access.workspaceId,
+    };
+  },
+  loadCampaign: loadAdStudioCampaignPack,
+  hydrateRenders: async (store, workspaceId, renders) => {
+    const hydrated = await hydrateStoredCreativeExportRenders(store, workspaceId, renders);
+    if (!hydrated) throw new Error("Creative renders could not be prepared for export.");
+    return hydrated;
+  },
+  buildPackage: buildAdStudioExportPackage,
+};
+
+export async function POST(request: NextRequest, context: RouteContext): Promise<Response> {
   const { id } = await Promise.resolve(context.params);
-  const access = await requireAdStudioRequest(request);
-
-  if (!access.ok) {
-    return access.response;
-  }
-
-  const body = await request.json().catch(() => null) as {
-    campaignPack?: AdStudioCampaignPack;
-    creativeRenders?: CreativeExportRender[];
-  } | null;
-
-  if (!body?.campaignPack) {
-    return NextResponse.json({ error: "campaignPack is required." }, { status: 400 });
-  }
-
-  if (body.campaignPack.campaign.campaignId !== id) {
-    return NextResponse.json({ error: "Campaign ID does not match export payload." }, { status: 400 });
-  }
-
-  const creativeRenders = await hydrateStoredCreativeExportRenders(
-    access.supabase,
-    access.access.workspaceId,
-    body.creativeRenders,
-  );
-  const exportPackage = await buildAdStudioExportPackage(body.campaignPack, { creativeRenders });
-  const zipBlob = new Blob([new Uint8Array(exportPackage.zipBytes).buffer as ArrayBuffer], { type: "application/zip" });
-  const filename = `${slugFileName(body.campaignPack.campaign.name || "adstudio-campaign")}-creatives.zip`;
-
-  return new NextResponse(zipBlob, {
-    headers: {
-      "content-type": "application/zip",
-      "content-disposition": `attachment; filename="${filename}"`,
-    },
+  return handleAdStudioExportDownload({
+    request,
+    campaignId: id,
+    dependencies,
   });
-}
-
-function slugFileName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "adstudio-campaign";
 }

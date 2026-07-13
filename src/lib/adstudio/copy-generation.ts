@@ -1,17 +1,21 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  createAzureOpenAiTextProvider,
-  createOpenAiTextProvider,
-  createOpenRouterTextProvider,
-  createTextProviderForCandidate,
-} from "./ai-providers.ts";
+import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
-import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
+import {
+  isRetryableProviderFailure,
+  modelCandidateAttempts,
+  resolveRuntimeModelProfile,
+} from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle, type PromptKey } from "../operator/prompts/prompt-registry.ts";
-import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  executeAdStudioProviderAttempt,
+  ProviderRunPersistenceError,
+  recordAdStudioProviderRun,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
 
 export type AdStudioCopyFields = {
   primaryText: string;
@@ -64,7 +68,7 @@ type CopyGenerationResult = {
   output: TextProviderResponse;
   provider: TextProviderAdapter;
   modelName: string;
-  attempts: Array<{ provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string }>;
+  attempts: ProviderRunAttempt[];
 };
 
 const IMAGE_GROUNDING_INSTRUCTION =
@@ -92,6 +96,7 @@ export async function generateAdStudioCopy(
 ): Promise<AdStudioCopyGenerationResponse> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
+  const mutationId = `${correlationId}:adstudio.copy`;
   const bundle = await getActivePromptBundle(COPY_PROMPT_KEYS);
   const assembled = assembleMetaCopyPrompt({
     bundle,
@@ -108,19 +113,25 @@ export async function generateAdStudioCopy(
     imageUrl ? IMAGE_GROUNDING_INSTRUCTION : "",
   ].filter(Boolean).join("\n\n");
   let generation: CopyGenerationResult | null = null;
+  let finalizationStarted = false;
 
   try {
-    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl);
+    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl, {
+      workspaceId: input.workspaceId,
+      mutationId,
+    });
     const output = generation.output;
     const json = (output.json ?? {}) as Record<string, unknown>;
     const current = input.copy ?? {};
 
+    finalizationStarted = true;
     await recordAdStudioProviderRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
       modelProfile: "structured_json",
+      mutationId,
       prompt: assembled,
       input: generationLogInput(input),
       attempts: generation.attempts,
@@ -146,12 +157,17 @@ export async function generateAdStudioCopy(
       source: "ai",
     };
   } catch (error) {
+    if (finalizationStarted) throw error;
+    const terminalError = error instanceof CopyCascadeError && error.cause instanceof ProviderRunPersistenceError
+      ? error.cause
+      : error;
     await recordAdStudioProviderRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
       modelProfile: "structured_json",
+      mutationId,
       prompt: assembled,
       input: generationLogInput(input),
       attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
@@ -161,9 +177,9 @@ export async function generateAdStudioCopy(
       modelName: generation?.modelName ?? "unavailable",
       output: null,
       status: "failed",
-      error,
+      error: terminalError,
     });
-    throw error;
+    throw terminalError;
   }
 }
 
@@ -213,6 +229,7 @@ export async function generateAdStudioTemplateCopy(
 ): Promise<AdStudioTemplateCopyResponse> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
+  const mutationId = `${correlationId}:adstudio.template_copy`;
   const bundle = await getActivePromptBundle(COPY_PROMPT_KEYS);
   const assembled = assembleMetaCopyPrompt({
     bundle,
@@ -237,9 +254,13 @@ export async function generateAdStudioTemplateCopy(
     .filter(Boolean)
     .join("\n\n");
   let generation: CopyGenerationResult | null = null;
+  let finalizationStarted = false;
 
   try {
-    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl);
+    generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl, {
+      workspaceId: input.workspaceId,
+      mutationId,
+    });
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
     const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
     const onImage: Record<string, string> = {};
@@ -252,12 +273,14 @@ export async function generateAdStudioTemplateCopy(
         field.maxLength && value.length > field.maxLength ? value.slice(0, field.maxLength).trimEnd() : value;
     }
 
+    finalizationStarted = true;
     await recordAdStudioProviderRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
       modelProfile: "structured_json",
+      mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
       attempts: generation.attempts,
@@ -280,12 +303,17 @@ export async function generateAdStudioTemplateCopy(
       source: "ai",
     };
   } catch (error) {
+    if (finalizationStarted) throw error;
+    const terminalError = error instanceof CopyCascadeError && error.cause instanceof ProviderRunPersistenceError
+      ? error.cause
+      : error;
     await recordAdStudioProviderRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
       modelProfile: "structured_json",
+      mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
       attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
@@ -295,9 +323,9 @@ export async function generateAdStudioTemplateCopy(
       modelName: generation?.modelName ?? "unavailable",
       output: null,
       status: "failed",
-      error,
+      error: terminalError,
     });
-    throw error;
+    throw terminalError;
   }
 }
 
@@ -309,25 +337,6 @@ function generationLogInput(input: AdStudioCopyGenerationInput) {
     copy: input.copy,
     assistAction: input.assistAction,
   };
-}
-
-function pickProvider(): TextProviderAdapter | null {
-  if (hasAzureOpenAiEnv(process.env)) return createAzureOpenAiTextProvider();
-  if (process.env.OPENAI_API_KEY) return createOpenAiTextProvider();
-  if (process.env.OPENROUTER_API_KEY) return createOpenRouterTextProvider();
-  return null;
-}
-
-function hasAzureOpenAiEnv(env: NodeJS.ProcessEnv): boolean {
-  return Boolean(
-    env.AZURE_OPENAI_API_KEY &&
-      (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL ||
-        (env.AZURE_OPENAI_ENDPOINT &&
-          (env.AZURE_OPENAI_DEPLOYMENT ||
-            env.AZURE_OPENAI_CHAT_DEPLOYMENT ||
-            env.AZURE_OPENAI_TEXT_DEPLOYMENT ||
-            env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT))),
-  );
 }
 
 function clamp(value: unknown, limit: number, fallback: string): string {
@@ -354,78 +363,58 @@ async function generateCopyWithProfile(
   system: string,
   user: string,
   imageUrl?: string,
+  reservation?: { workspaceId: string; mutationId: string },
 ): Promise<CopyGenerationResult> {
   const profile = await resolveRuntimeModelProfile("structured_json");
   const candidates = modelCandidateAttempts(profile);
-  const legacyProvider = pickProvider();
   const attempts: CopyGenerationResult["attempts"] = [];
-  let lastError: unknown = null;
 
   for (const [index, candidate] of candidates.entries()) {
     const provider = createTextProviderForCandidate(candidate);
-    attempts.push({ provider: provider.providerName, model: candidate.model, status: "attempted" });
-
+    if (!reservation) {
+      throw new Error("Provider accounting reservation context is required.");
+    }
+    let execution;
     try {
-      const output = await provider.generate({
-        system,
-        schemaName: "metaLeadAdPack",
-        messages: [{ role: "user", content: user }],
-        imageUrl,
+      execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+        workspaceId: reservation.workspaceId,
+        mutationId: reservation.mutationId,
+        attemptIndex: index,
+        modelProfile: "structured_json",
+        provider,
+        execute: () => provider.generate({
+          system,
+          schemaName: "metaLeadAdPack",
+          messages: [{ role: "user", content: user }],
+          imageUrl,
+        }),
       });
-      attempts[attempts.length - 1] = { provider: provider.providerName, model: candidate.model, status: "completed" };
+    } catch (error) {
+      throw new CopyCascadeError(error instanceof Error ? error.message : String(error), attempts, { cause: error });
+    }
+    attempts.push(execution.attempt);
+    if (execution.ok) {
+      const output = execution.output;
       return {
         output,
         provider,
         modelName: String(output.providerMetadata.model ?? candidate.model),
         attempts,
       };
-    } catch (error) {
-      lastError = error;
-      attempts[attempts.length - 1] = {
-        provider: provider.providerName,
-        model: candidate.model,
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      };
-
-      // A configured model just failed — tell the owner their chosen model is down.
-      // De-duped by stage+toModel, so a burst of requests sends one alert.
-      const toModel = candidates[index + 1]?.model ?? (legacyProvider ? "env_default" : undefined);
-      if (toModel) {
-        void emitModelFallbackAlert({
-          stage: "adstudio.copy",
-          fromModel: candidate.model,
-          toModel,
-          reason: error instanceof Error ? error.message : String(error),
-        });
-      }
     }
-  }
 
-  if (legacyProvider) {
-    attempts.push({ provider: legacyProvider.providerName, model: "env_default", status: "attempted" });
-    try {
-      const output = await legacyProvider.generate({
-        system,
-        schemaName: "metaLeadAdPack",
-        messages: [{ role: "user", content: user }],
-        imageUrl,
+    if (!isRetryableProviderFailure(execution.error)) break;
+
+    // A configured model just failed — tell the owner their chosen model is down.
+    // De-duped by stage+toModel, so a burst of requests sends one alert.
+    const toModel = candidates[index + 1]?.model;
+    if (toModel) {
+      void emitModelFallbackAlert({
+        stage: "adstudio.copy",
+        fromModel: candidate.model,
+        toModel,
+        reason: execution.error instanceof Error ? execution.error.message : String(execution.error),
       });
-      attempts[attempts.length - 1] = { provider: legacyProvider.providerName, model: "env_default", status: "completed" };
-      return {
-        output,
-        provider: legacyProvider,
-        modelName: String(output.providerMetadata.model ?? "env_default"),
-        attempts,
-      };
-    } catch (error) {
-      lastError = error;
-      attempts[attempts.length - 1] = {
-        provider: legacyProvider.providerName,
-        model: "env_default",
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      };
     }
   }
 
@@ -451,8 +440,8 @@ async function generateCopyWithProfile(
 class CopyCascadeError extends Error {
   readonly attempts: CopyGenerationResult["attempts"];
 
-  constructor(message: string, attempts: CopyGenerationResult["attempts"]) {
-    super(message);
+  constructor(message: string, attempts: CopyGenerationResult["attempts"], options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "CopyCascadeError";
     this.attempts = attempts;
   }
