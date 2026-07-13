@@ -1,3 +1,5 @@
+import { resolveSupabaseServerCredential } from "../supabase/credentials.ts";
+
 export const REQUIRED_ENV_KEYS = [
   "NEXT_PUBLIC_APP_URL",
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -46,12 +48,17 @@ const PLACEHOLDER_ENV_PATTERNS = [
 ] as const;
 
 export function getMissingEnvKeys(env: NodeJS.ProcessEnv = process.env): string[] {
-  return REQUIRED_ENV_KEYS.filter((key) => !env[key]);
+  return REQUIRED_ENV_KEYS.filter((key) => {
+    if (key === "SUPABASE_SERVICE_ROLE_KEY") return !resolveSupabaseServerCredential(env);
+    return !env[key];
+  });
 }
 
 export function getInvalidEnvKeys(env: NodeJS.ProcessEnv = process.env): string[] {
   return REQUIRED_ENV_KEYS.filter((key) => {
-    const value = env[key]?.trim();
+    const value = key === "SUPABASE_SERVICE_ROLE_KEY"
+      ? resolveSupabaseServerCredential(env)?.value
+      : env[key]?.trim();
 
     return !value || PLACEHOLDER_ENV_PATTERNS.some((pattern) => pattern.test(value));
   });
@@ -62,7 +69,10 @@ export function getMissingRecommendedSecurityEnvKeys(env: NodeJS.ProcessEnv = pr
 }
 
 export function getInvalidFirstTesterEnvKeys(env: NodeJS.ProcessEnv = process.env): string[] {
-  return uniqueStrings([...REQUIRED_ENV_KEYS, ...FIRST_TESTER_ENV_KEYS]).filter((key) => isMissingOrPlaceholder(env[key]));
+  return uniqueStrings([
+    ...getInvalidEnvKeys(env),
+    ...FIRST_TESTER_ENV_KEYS.filter((key) => isMissingOrPlaceholder(env[key])),
+  ]);
 }
 
 export function getProviderReadiness(

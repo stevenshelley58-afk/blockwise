@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "../lib/supabase-server-credential.mjs";
 
 const SOURCE = "exa_roster_search";
 const NOW = () => new Date().toISOString();
@@ -355,10 +356,15 @@ async function ensureServiceArea(research, stats, input, dryRun) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = { ...process.env, ...loadEnv(".env.local") };
-  const research = createClient(clean(env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL), clean(env.SUPABASE_SERVICE_ROLE_KEY), {
+  const research = createSupabaseServerClient(
+    createClient,
+    clean(env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL),
+    env,
+    {
     db: { schema: "research" },
     auth: { persistSession: false, autoRefreshToken: false },
-  });
+    },
+  );
 
   const rows = await fetchAll(
     () =>

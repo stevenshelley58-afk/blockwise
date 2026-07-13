@@ -22,7 +22,8 @@ Do not print real secret values in logs or docs.
 | `HERMES_ESCALATION_MODEL` | Hermes/OpenRouter | Escalation model slug. |
 | `OPENROUTER_API_KEY` | OpenRouter client | Required for LLM-backed page resolution, classification, audits, and investigations. |
 | `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
+| `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
 
 ## Hermes Gateway And Models
 
@@ -76,6 +77,7 @@ Do not print real secret values in logs or docs.
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `HERMES_SUPABASE_URL` | `SUPABASE_URL` | Supervisor accepts either variable, but compose sets both. |
+| `HERMES_SUPABASE_SECRET_KEY` | `SUPABASE_SECRET_KEY` | Preferred opaque server credential. Sent as `apikey` only. |
 | `HERMES_SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE_KEY` | Supervisor accepts either variable, but compose sets both. |
 | `HERMES_RESEARCH_AD_CREATIVES_BUCKET` | `research-ad-creatives` | Stored creative media bucket. |
 | `HERMES_RESEARCH_SCREENSHOTS_BUCKET` | `research-screenshots` | Screenshot bucket. |

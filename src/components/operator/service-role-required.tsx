@@ -5,6 +5,7 @@ export function ServiceRoleRequired() {
       <h2>Operator data is unavailable</h2>
       <p>
         Supabase service-role access is not configured for this deployment. Add
+        <code> SUPABASE_SECRET_KEY </code> (preferred) or legacy
         <code> SUPABASE_SERVICE_ROLE_KEY </code>
         before using operator data views.
       </p>

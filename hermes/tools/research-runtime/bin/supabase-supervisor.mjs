@@ -34,6 +34,7 @@ import {
   summariseBenchmarkItems,
 } from "./apify-capture.mjs";
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
+import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
 
 const DEFAULT_POSTCODES = ["ALL"];
 const LOCATION_AD_SEARCH_JOB_TYPE = "blockwise-location-ad-search";
@@ -69,7 +70,12 @@ const required = (name, fallback) => {
 const uniqueCsv = (value, fallback) => [...new Set((value ? value.split(",") : fallback).map((part) => part.trim()).filter(Boolean))];
 
 const supabaseUrl = required("HERMES_SUPABASE_URL", env.SUPABASE_URL).replace(/\/+$/u, "");
-const serviceRoleKey = required("HERMES_SUPABASE_SERVICE_ROLE_KEY", env.SUPABASE_SERVICE_ROLE_KEY);
+const supabaseCredential = resolveHermesSupabaseCredential(env);
+if (!supabaseCredential) {
+  throw new Error(
+    "Missing HERMES_SUPABASE_SECRET_KEY/SUPABASE_SECRET_KEY or legacy Supabase service-role key",
+  );
+}
 const mode = env.HERMES_RESEARCH_MODE === "build" ? "build" : "maintain";
 const workerId = env.HERMES_QUEUE_WORKER_ID || `hermes-research-${randomUUID()}`;
 const intervalMs = positiveInt("HERMES_QUEUE_LOOP_INTERVAL_MS", 60_000);
@@ -312,14 +318,12 @@ function log(message, metadata = {}, level = "info") {
 async function rest(schema, path, init = {}) {
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+    headers: hermesSupabaseHeaders(supabaseCredential, {
       "Accept-Profile": schema,
       "Content-Profile": schema,
       "Content-Type": "application/json",
       ...(init.headers || {}),
-    },
+    }),
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`${init.method || "GET"} ${schema}.${path} failed ${response.status}: ${text.slice(0, 700)}`);
@@ -329,11 +333,9 @@ async function rest(schema, path, init = {}) {
 async function storage(path, init = {}) {
   const response = await fetch(`${supabaseUrl}/storage/v1/${path}`, {
     ...init,
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+    headers: hermesSupabaseHeaders(supabaseCredential, {
       ...(init.headers || {}),
-    },
+    }),
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`${init.method || "GET"} storage.${path} failed ${response.status}: ${text.slice(0, 700)}`);
@@ -5614,12 +5616,10 @@ async function uploadStorageObject(bucket, objectPath, buffer, contentType) {
   const encodedObjectPath = objectPath.split("/").map(encode).join("/");
   const response = await fetch(`${supabaseUrl}/storage/v1/object/${encode(bucket)}/${encodedObjectPath}`, {
     method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+    headers: hermesSupabaseHeaders(supabaseCredential, {
       "Content-Type": contentType,
       "x-upsert": "true",
-    },
+    }),
     body: buffer,
   });
   const text = await response.text();
