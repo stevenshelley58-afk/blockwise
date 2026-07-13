@@ -71,9 +71,7 @@ const executionContext = {
 };
 
 function submittedProviderFailure(message: string, retryable: boolean): ProviderRequestError {
-  const error = new ProviderRequestError(message, { requestSubmitted: true });
-  Object.defineProperty(error, "retryable", { value: retryable, enumerable: true });
-  return error;
+  return new ProviderRequestError(message, { requestSubmitted: true, retryable });
 }
 
 test("clampOptionCount clamps to 1..4 and defaults to 3", () => {

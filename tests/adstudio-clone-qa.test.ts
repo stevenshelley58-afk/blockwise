@@ -60,9 +60,7 @@ function accountedImageProvider(name: string, generate: ImageProviderAdapter["ge
 }
 
 function submittedProviderFailure(message: string, retryable: boolean): ProviderRequestError {
-  const error = new ProviderRequestError(message, { requestSubmitted: true });
-  Object.defineProperty(error, "retryable", { value: retryable, enumerable: true });
-  return error;
+  return new ProviderRequestError(message, { requestSubmitted: true, retryable });
 }
 
 test("normalizeRenderedText is lenient on case/punctuation but not words", () => {
