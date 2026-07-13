@@ -59,6 +59,7 @@ create table public.adstudio_creative_revision_mutations (
   workspace_id uuid not null,
   creative_id uuid not null,
   base_revision_id uuid not null,
+  request_hash text not null check (request_hash ~ '^[0-9a-f]{64}$'),
   status text not null check (status in ('claimed', 'completed', 'failed')),
   result_revision_id uuid,
   claimed_at timestamptz not null default now(),
@@ -218,12 +219,83 @@ declare
   expected_render_status text;
   next_revision_number integer;
   next_revision_id uuid;
+  old_mutation_status text;
+  old_mutation_result_revision_id uuid;
+  new_mutation_status text;
+  new_mutation_base_revision_id uuid;
+  new_mutation_result_revision_id uuid;
 begin
   if new.canvas_json is not distinct from old.canvas_json
     and new.render_status is not distinct from old.render_status
     and new.active_revision_id is not distinct from old.active_revision_id
     and new.pending_revision_mutation_id is not distinct from old.pending_revision_mutation_id then
     return new;
+  end if;
+
+  -- The pending pointer may move only when mutation state written by the RPCs
+  -- proves a claim, release, takeover, or finalize transition in this transaction.
+  if new.pending_revision_mutation_id is distinct from old.pending_revision_mutation_id then
+    if old.pending_revision_mutation_id is not null then
+      select m.status, m.result_revision_id
+      into old_mutation_status, old_mutation_result_revision_id
+      from public.adstudio_creative_revision_mutations m
+      where m.workspace_id = old.workspace_id
+        and m.creative_id = old.id
+        and m.id = old.pending_revision_mutation_id;
+    end if;
+
+    if new.pending_revision_mutation_id is not null then
+      select m.status, m.base_revision_id, m.result_revision_id
+      into new_mutation_status, new_mutation_base_revision_id, new_mutation_result_revision_id
+      from public.adstudio_creative_revision_mutations m
+      where m.workspace_id = old.workspace_id
+        and m.creative_id = old.id
+        and m.id = new.pending_revision_mutation_id;
+
+      if not found
+        or new_mutation_status <> 'claimed'
+        or new_mutation_base_revision_id is distinct from old.active_revision_id
+        or new_mutation_result_revision_id is not null
+        or new.canvas_json is distinct from old.canvas_json
+        or new.render_status is distinct from old.render_status
+        or new.active_revision_id is distinct from old.active_revision_id
+        or (
+          old.pending_revision_mutation_id is not null
+          and old_mutation_status is distinct from 'failed'
+        ) then
+        raise exception using
+          errcode = '23514',
+          message = 'Invalid creative revision claim transition.';
+      end if;
+      return new;
+    end if;
+
+    if old_mutation_status = 'failed' then
+      if new.canvas_json is distinct from old.canvas_json
+        or new.render_status is distinct from old.render_status
+        or new.active_revision_id is distinct from old.active_revision_id then
+        raise exception using
+          errcode = '23514',
+          message = 'Invalid creative revision release transition.';
+      end if;
+      return new;
+    end if;
+
+    if old_mutation_status is distinct from 'completed'
+      or old_mutation_result_revision_id is distinct from new.active_revision_id then
+      raise exception using
+        errcode = '23514',
+        message = 'An active creative revision claim cannot be cleared directly.';
+    end if;
+  elsif old.pending_revision_mutation_id is not null
+    and (
+      new.canvas_json is distinct from old.canvas_json
+      or new.render_status is distinct from old.render_status
+      or new.active_revision_id is distinct from old.active_revision_id
+    ) then
+    raise exception using
+      errcode = '55P03',
+      message = 'ADSTUDIO_EDIT_IN_PROGRESS';
   end if;
 
   if new.active_revision_id is distinct from old.active_revision_id then
@@ -328,7 +400,8 @@ create or replace function public.adstudio_claim_creative_revision_mutation(
   p_workspace_id uuid,
   p_creative_id uuid,
   p_expected_active_revision_id uuid,
-  p_mutation_id uuid
+  p_mutation_id uuid,
+  p_request_hash text
 ) returns table (
   state text,
   revision_id uuid,
@@ -348,7 +421,9 @@ begin
     and not private.has_workspace_role(p_workspace_id, array['owner', 'admin', 'operator', 'member']::text[]) then
     raise exception using errcode = '42501', message = 'Workspace access is not allowed.';
   end if;
-  if p_expected_active_revision_id is null or p_mutation_id is null then
+  if p_expected_active_revision_id is null
+    or p_mutation_id is null
+    or p_request_hash !~ '^[0-9a-f]{64}$' then
     raise exception using errcode = '22023', message = 'Invalid creative revision claim.';
   end if;
 
@@ -370,6 +445,9 @@ begin
   if found then
     if mutation_row.base_revision_id is distinct from p_expected_active_revision_id then
       raise exception using errcode = '22023', message = 'Mutation ID was already used for a different base revision.';
+    end if;
+    if mutation_row.request_hash is distinct from p_request_hash then
+      raise exception using errcode = '22023', message = 'ADSTUDIO_MUTATION_CONTENT_MISMATCH';
     end if;
     if mutation_row.status = 'completed' then
       return query
@@ -404,10 +482,11 @@ begin
   end if;
 
   insert into public.adstudio_creative_revision_mutations (
-    id, workspace_id, creative_id, base_revision_id, status, claimed_at, claim_expires_at, updated_at
+    id, workspace_id, creative_id, base_revision_id, request_hash,
+    status, claimed_at, claim_expires_at, updated_at
   ) values (
     p_mutation_id, p_workspace_id, p_creative_id, p_expected_active_revision_id,
-    'claimed', now(), now() + interval '2 minutes', now()
+    p_request_hash, 'claimed', now(), now() + interval '2 minutes', now()
   )
   on conflict (workspace_id, creative_id, id) do update set
     status = 'claimed',
@@ -449,13 +528,13 @@ begin
   if not found then return; end if;
 
   if pending_id = p_mutation_id then
-    update public.adstudio_creatives
-    set pending_revision_mutation_id = null, updated_at = now()
-    where workspace_id = p_workspace_id and id = p_creative_id;
     update public.adstudio_creative_revision_mutations
     set status = 'failed', updated_at = now()
     where workspace_id = p_workspace_id and creative_id = p_creative_id
       and id = p_mutation_id and status = 'claimed';
+    update public.adstudio_creatives
+    set pending_revision_mutation_id = null, updated_at = now()
+    where workspace_id = p_workspace_id and id = p_creative_id;
   end if;
 end
 $function$;
@@ -467,7 +546,8 @@ create or replace function public.adstudio_append_creative_revision(
   p_canvas_json jsonb,
   p_render_status text,
   p_creation_operation text,
-  p_mutation_id uuid
+  p_mutation_id uuid,
+  p_request_hash text
 ) returns table (
   revision_id uuid,
   revision_number integer
@@ -497,6 +577,7 @@ begin
 
   if p_expected_active_revision_id is null
     or p_mutation_id is null
+    or p_request_hash !~ '^[0-9a-f]{64}$'
     or jsonb_typeof(p_canvas_json) <> 'object'
     or p_creation_operation <> 'targeted_edit' then
     raise exception using
@@ -519,7 +600,7 @@ begin
       message = 'Creative was not found in this workspace.';
   end if;
 
-  select m.status, m.base_revision_id, m.result_revision_id
+  select m.status, m.base_revision_id, m.request_hash, m.result_revision_id
   into mutation_row
   from public.adstudio_creative_revision_mutations m
   where m.workspace_id = p_workspace_id
@@ -531,6 +612,9 @@ begin
   end if;
   if mutation_row.base_revision_id is distinct from p_expected_active_revision_id then
     raise exception using errcode = '22023', message = 'Mutation claim base revision does not match.';
+  end if;
+  if mutation_row.request_hash is distinct from p_request_hash then
+    raise exception using errcode = '22023', message = 'ADSTUDIO_MUTATION_CONTENT_MISMATCH';
   end if;
 
   if mutation_row.status = 'completed' then
@@ -604,15 +688,6 @@ begin
     case when is_service_role then null else auth.uid() end
   );
 
-  update public.adstudio_creatives
-  set canvas_json = p_canvas_json,
-      render_status = p_render_status,
-      active_revision_id = new_revision_id,
-      pending_revision_mutation_id = null,
-      updated_at = now()
-  where workspace_id = p_workspace_id
-    and id = p_creative_id;
-
   update public.adstudio_creative_revision_mutations
   set status = 'completed',
       result_revision_id = new_revision_id,
@@ -622,13 +697,22 @@ begin
     and creative_id = p_creative_id
     and id = p_mutation_id;
 
+  update public.adstudio_creatives
+  set canvas_json = p_canvas_json,
+      render_status = p_render_status,
+      active_revision_id = new_revision_id,
+      pending_revision_mutation_id = null,
+      updated_at = now()
+  where workspace_id = p_workspace_id
+    and id = p_creative_id;
+
   return query select new_revision_id, next_revision_number;
 end
 $function$;
 
-revoke all on function public.adstudio_claim_creative_revision_mutation(uuid, uuid, uuid, uuid)
+revoke all on function public.adstudio_claim_creative_revision_mutation(uuid, uuid, uuid, uuid, text)
   from public, anon;
-grant execute on function public.adstudio_claim_creative_revision_mutation(uuid, uuid, uuid, uuid)
+grant execute on function public.adstudio_claim_creative_revision_mutation(uuid, uuid, uuid, uuid, text)
   to authenticated, service_role;
 revoke all on function public.adstudio_release_creative_revision_mutation(uuid, uuid, uuid)
   from public, anon;
@@ -636,10 +720,10 @@ grant execute on function public.adstudio_release_creative_revision_mutation(uui
   to authenticated, service_role;
 
 revoke all on function public.adstudio_append_creative_revision(
-  uuid, uuid, uuid, jsonb, text, text, uuid
+  uuid, uuid, uuid, jsonb, text, text, uuid, text
 ) from public, anon;
 grant execute on function public.adstudio_append_creative_revision(
-  uuid, uuid, uuid, jsonb, text, text, uuid
+  uuid, uuid, uuid, jsonb, text, text, uuid, text
 ) to authenticated, service_role;
 
 comment on table public.adstudio_creative_revisions is

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } from "@/lib/adstudio/clone-generation";
@@ -72,6 +74,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   if (!UUID_PATTERN.test(expectedRevisionId) || !UUID_PATTERN.test(mutationId)) {
     return NextResponse.json({ error: "Reload the ad before editing it." }, { status: 400 });
   }
+  const requestHash = createHash("sha256")
+    .update(JSON.stringify({
+      workspaceId: context.access.workspaceId,
+      creativeId: id,
+      baseRevisionId: expectedRevisionId,
+      fieldKey,
+      newValue: newValue || null,
+      newImage: newImageRef || null,
+    }))
+    .digest("hex");
 
   const { data: row, error: loadError } = await context.supabase
     .from("adstudio_creatives")
@@ -138,18 +150,22 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       creativeId: id,
       expectedActiveRevisionId: expectedRevisionId,
       mutationId,
+      requestHash,
     });
   } catch (error) {
     return errorResponse(error, 500);
   }
   if (!claim.ok) {
     const stale = claim.reason === "stale_revision";
+    const contentMismatch = claim.reason === "mutation_content_mismatch";
     return NextResponse.json(
       {
         code: claim.reason,
         error: stale
           ? "This ad changed while you were editing. Reload and try again."
-          : "Another edit is already updating this ad. Try again shortly.",
+          : contentMismatch
+            ? "This edit retry no longer matches the original request. Start the edit again."
+            : "Another edit is already updating this ad. Try again shortly.",
       },
       { status: 409 },
     );
@@ -258,6 +274,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       renderStatus: "rendered",
       creationOperation: "targeted_edit",
       mutationId,
+      requestHash,
     });
   } catch (error) {
     await releaseClaim();

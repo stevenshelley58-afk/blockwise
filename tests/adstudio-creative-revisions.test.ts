@@ -10,6 +10,7 @@ import {
 const migrationPath = "supabase/migrations/202607130003_adstudio_creative_revisions.sql";
 const dbTestPath = "supabase/tests/adstudio_creative_revisions.test.sql";
 const routePath = "src/app/api/adstudio/creatives/[id]/edit/route.ts";
+const requestHash = "a".repeat(64);
 
 test("creative revision migration backfills every creative and installs an append-only CAS path", () => {
   assert.equal(existsSync(migrationPath), true);
@@ -18,6 +19,7 @@ test("creative revision migration backfills every creative and installs an appen
 
   assert.match(sql, /create table public\.adstudio_creative_revisions/i);
   assert.match(sql, /create table public\.adstudio_creative_revision_mutations/i);
+  assert.match(sql, /request_hash text not null/i);
   assert.match(sql, /alter table public\.adstudio_creatives[\s\S]*add column active_revision_id uuid/i);
   assert.match(sql, /lock table public\.adstudio_creatives/i);
   assert.match(sql, /insert into public\.adstudio_creative_revisions[\s\S]*migration_backfill/i);
@@ -67,6 +69,7 @@ test("revision claim helper maps stale and in-flight claims without dispatching 
         creativeId: "22222222-2222-4222-8222-222222222222",
         expectedActiveRevisionId: "33333333-3333-4333-8333-333333333333",
         mutationId: "44444444-4444-4444-8444-444444444444",
+        requestHash,
       },
     );
     assert.deepEqual(result, { ok: false, reason: index === 0 ? "stale_revision" : "edit_in_progress" });
@@ -88,6 +91,7 @@ test("revision helper maps a stale CAS result to a typed conflict", async () => 
     renderStatus: "rendered",
     creationOperation: "targeted_edit",
     mutationId: "44444444-4444-4444-8444-444444444444",
+    requestHash,
   });
 
   assert.deepEqual(result, { ok: false, reason: "stale_revision" });
@@ -113,6 +117,7 @@ test("revision helper sends workspace-scoped CAS arguments and returns the appen
     renderStatus: "rendered",
     creationOperation: "targeted_edit",
     mutationId: "44444444-4444-4444-8444-444444444444",
+    requestHash,
   });
 
   assert.equal(calls[0]?.name, "adstudio_append_creative_revision");
@@ -145,6 +150,7 @@ test("concurrent duplicate appends resolve to the same completed revision", asyn
     renderStatus: "rendered",
     creationOperation: "targeted_edit" as const,
     mutationId: "44444444-4444-4444-8444-444444444444",
+    requestHash,
   };
 
   const results = await Promise.all([
@@ -168,6 +174,8 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
   assert.match(route, /claimAdStudioCreativeRevisionMutation/);
   assert.match(route, /expectedRevisionId/);
   assert.match(route, /mutationId/);
+  assert.match(route, /createHash\("sha256"\)/);
+  assert.match(route, /requestHash/);
   assert.ok(
     route.indexOf("claimAdStudioCreativeRevisionMutation") < route.indexOf("generateCloneWithCascade({"),
     "the route claims before paid provider dispatch",
@@ -176,4 +184,47 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
   assert.match(route, /code: "stale_revision"/);
   assert.match(route, /status: 409/);
   assert.doesNotMatch(route, /\.from\("adstudio_creatives"\)[\s\S]{0,300}\.update\(\{ canvas_json:/);
+});
+
+test("revision claim binds a mutation ID to one canonical request hash", async () => {
+  const calls: Array<Record<string, unknown>> = [];
+  await claimAdStudioCreativeRevisionMutation(
+    {
+      async rpc(_name, args) {
+        calls.push(args);
+        return { data: [{ state: "claimed" }], error: null };
+      },
+    },
+    {
+      workspaceId: "11111111-1111-4111-8111-111111111111",
+      creativeId: "22222222-2222-4222-8222-222222222222",
+      expectedActiveRevisionId: "33333333-3333-4333-8333-333333333333",
+      mutationId: "44444444-4444-4444-8444-444444444444",
+      requestHash,
+    },
+  );
+
+  assert.equal(calls[0]?.p_request_hash, requestHash);
+});
+
+test("revision claim maps mutation content mismatch to a typed conflict", async () => {
+  const result = await claimAdStudioCreativeRevisionMutation(
+    {
+      async rpc() {
+        return {
+          data: null,
+          error: { code: "22023", message: "ADSTUDIO_MUTATION_CONTENT_MISMATCH" },
+        };
+      },
+    },
+    {
+      workspaceId: "11111111-1111-4111-8111-111111111111",
+      creativeId: "22222222-2222-4222-8222-222222222222",
+      expectedActiveRevisionId: "33333333-3333-4333-8333-333333333333",
+      mutationId: "44444444-4444-4444-8444-444444444444",
+      requestHash,
+    },
+  );
+
+  assert.deepEqual(result, { ok: false, reason: "mutation_content_mismatch" });
 });

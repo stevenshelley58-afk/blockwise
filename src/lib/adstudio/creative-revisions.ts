@@ -18,11 +18,12 @@ type AppendCreativeRevisionInput = {
   renderStatus: string;
   creationOperation: "targeted_edit";
   mutationId: string;
+  requestHash: string;
 };
 
 type ClaimCreativeRevisionInput = Pick<
   AppendCreativeRevisionInput,
-  "workspaceId" | "creativeId" | "expectedActiveRevisionId" | "mutationId"
+  "workspaceId" | "creativeId" | "expectedActiveRevisionId" | "mutationId" | "requestHash"
 >;
 
 export type AppendCreativeRevisionResult =
@@ -32,7 +33,7 @@ export type AppendCreativeRevisionResult =
 export type ClaimCreativeRevisionResult =
   | { ok: true; state: "claimed" }
   | { ok: true; state: "completed"; revisionId: string; revisionNumber: number; canvas: unknown }
-  | { ok: false; reason: "stale_revision" | "edit_in_progress" };
+  | { ok: false; reason: "stale_revision" | "edit_in_progress" | "mutation_content_mismatch" };
 
 export async function claimAdStudioCreativeRevisionMutation(
   supabase: RevisionRpcClient,
@@ -43,6 +44,7 @@ export async function claimAdStudioCreativeRevisionMutation(
     p_creative_id: input.creativeId,
     p_expected_active_revision_id: input.expectedActiveRevisionId,
     p_mutation_id: input.mutationId,
+    p_request_hash: input.requestHash,
   });
 
   if (error) {
@@ -51,6 +53,9 @@ export async function claimAdStudioCreativeRevisionMutation(
     }
     if (error.code === "55P03" || error.message?.includes("ADSTUDIO_EDIT_IN_PROGRESS")) {
       return { ok: false, reason: "edit_in_progress" };
+    }
+    if (error.message?.includes("ADSTUDIO_MUTATION_CONTENT_MISMATCH")) {
+      return { ok: false, reason: "mutation_content_mismatch" };
     }
     throw new Error(error.message || "Creative edit could not be claimed.");
   }
@@ -96,6 +101,7 @@ export async function appendAdStudioCreativeRevision(
     p_render_status: input.renderStatus,
     p_creation_operation: input.creationOperation,
     p_mutation_id: input.mutationId,
+    p_request_hash: input.requestHash,
   });
 
   if (error) {

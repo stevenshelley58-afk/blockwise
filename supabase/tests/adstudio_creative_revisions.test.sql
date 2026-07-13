@@ -2,22 +2,28 @@ create extension if not exists pgtap with schema extensions;
 
 begin;
 
-select plan(33);
+select plan(42);
 
 select has_table('public', 'adstudio_creative_revisions', 'creative revisions table exists');
 select has_table('public', 'adstudio_creative_revision_mutations', 'creative revision mutation claims exist');
 select has_column('public', 'adstudio_creatives', 'active_revision_id', 'creatives point to an active revision');
+select has_column(
+  'public',
+  'adstudio_creative_revision_mutations',
+  'request_hash',
+  'mutation claims bind to a canonical request hash'
+);
 select col_not_null('public', 'adstudio_creatives', 'active_revision_id', 'active revision is required');
 select has_function(
   'public',
   'adstudio_append_creative_revision',
-  array['uuid', 'uuid', 'uuid', 'jsonb', 'text', 'text', 'uuid'],
+  array['uuid', 'uuid', 'uuid', 'jsonb', 'text', 'text', 'uuid', 'text'],
   'the compare-and-swap append function exists'
 );
 select has_function(
   'public',
   'adstudio_claim_creative_revision_mutation',
-  array['uuid', 'uuid', 'uuid', 'uuid'],
+  array['uuid', 'uuid', 'uuid', 'uuid', 'text'],
   'the pre-dispatch revision claim function exists'
 );
 
@@ -147,7 +153,8 @@ select is(
       'a1000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
       (select active_revision_id from revision_test_base),
-      'a6000000-0000-4000-8000-000000000001'
+      'a6000000-0000-4000-8000-000000000001',
+      repeat('a', 64)
     )
   ),
   'claimed',
@@ -163,7 +170,8 @@ from public.adstudio_append_creative_revision(
   '{"version":"edited","objects":[]}'::jsonb,
   'rendered',
   'targeted_edit',
-  'a6000000-0000-4000-8000-000000000001'
+  'a6000000-0000-4000-8000-000000000001',
+  repeat('a', 64)
 );
 
 select is(
@@ -219,7 +227,8 @@ select is(
       '{"version":"edited","objects":[]}'::jsonb,
       'rendered',
       'targeted_edit',
-      'a6000000-0000-4000-8000-000000000001'
+      'a6000000-0000-4000-8000-000000000001',
+      repeat('a', 64)
     )
   ),
   (select revision_id::text from revision_test_append),
@@ -232,7 +241,8 @@ select is(
       'a1000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
       (select active_revision_id from revision_test_base),
-      'a6000000-0000-4000-8000-000000000001'
+      'a6000000-0000-4000-8000-000000000001',
+      repeat('a', 64)
     )
   ),
   'completed',
@@ -245,11 +255,35 @@ select is(
       'a1000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
       (select active_revision_id from revision_test_base),
-      'a6000000-0000-4000-8000-000000000001'
+      'a6000000-0000-4000-8000-000000000001',
+      repeat('a', 64)
     )
   ),
   (select revision_id::text from revision_test_append),
   'a completed retry returns the exact winning revision'
+);
+select is(
+  (
+    select request_hash
+    from public.adstudio_creative_revision_mutations
+    where id = 'a6000000-0000-4000-8000-000000000001'
+  ),
+  repeat('a', 64),
+  'the claim stores the canonical request hash'
+);
+select throws_ok(
+  $$
+    select * from public.adstudio_claim_creative_revision_mutation(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      (select active_revision_id from revision_test_base),
+      'a6000000-0000-4000-8000-000000000001',
+      repeat('f', 64)
+    )
+  $$,
+  '22023',
+  'ADSTUDIO_MUTATION_CONTENT_MISMATCH',
+  'the same mutation ID cannot replay different request content'
 );
 
 select throws_ok(
@@ -259,7 +293,8 @@ select throws_ok(
         'a1000000-0000-4000-8000-000000000001',
         'a5000000-0000-4000-8000-000000000001',
         %L::uuid,
-        'a6000000-0000-4000-8000-000000000002'
+        'a6000000-0000-4000-8000-000000000002',
+        repeat('b', 64)
       )
     $sql$,
     (select active_revision_id from revision_test_base)
@@ -287,7 +322,8 @@ select throws_ok(
       '{"version":"cross-workspace","objects":[]}'::jsonb,
       'rendered',
       'targeted_edit',
-      'a6000000-0000-4000-8000-000000000003'
+      'a6000000-0000-4000-8000-000000000003',
+      repeat('c', 64)
     )
   $$,
   'P0002',
@@ -334,6 +370,77 @@ select is(
   3,
   'direct DML preserves both prior revisions and appends one snapshot'
 );
+select is(
+  (
+    select state
+    from public.adstudio_claim_creative_revision_mutation(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      (
+        select active_revision_id from public.adstudio_creatives
+        where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+          and id = 'a5000000-0000-4000-8000-000000000001'
+      ),
+      'a6000000-0000-4000-8000-000000000005',
+      repeat('e', 64)
+    )
+  ),
+  'claimed',
+  'an authenticated edit obtains the guarded pending claim'
+);
+select throws_ok(
+  $$
+    update public.adstudio_creatives
+    set canvas_json = '{"version":"campaign-race","objects":[]}'::jsonb
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  $$,
+  '55P03',
+  'ADSTUDIO_EDIT_IN_PROGRESS',
+  'ordinary version writes cannot race an active paid edit'
+);
+select throws_ok(
+  $$
+    update public.adstudio_creatives
+    set pending_revision_mutation_id = null
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  $$,
+  '23514',
+  'An active creative revision claim cannot be cleared directly.',
+  'authenticated direct DML cannot clear an active claim'
+);
+select throws_ok(
+  $$
+    update public.adstudio_creatives
+    set pending_revision_mutation_id = 'a6000000-0000-4000-8000-000000000006'
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  $$,
+  '23514',
+  'Invalid creative revision claim transition.',
+  'authenticated direct DML cannot replace an active claim'
+);
+select lives_ok(
+  $$
+    select public.adstudio_release_creative_revision_mutation(
+      'a1000000-0000-4000-8000-000000000001',
+      'a5000000-0000-4000-8000-000000000001',
+      'a6000000-0000-4000-8000-000000000005'
+    )
+  $$,
+  'the validated release transition clears the claim'
+);
+select is(
+  (
+    select pending_revision_mutation_id::text
+    from public.adstudio_creatives
+    where workspace_id = 'a1000000-0000-4000-8000-000000000001'
+      and id = 'a5000000-0000-4000-8000-000000000001'
+  ),
+  null,
+  'the release RPC leaves no pending claim'
+);
 select throws_ok(
   format(
     $sql$
@@ -365,7 +472,8 @@ select throws_ok(
       'b1000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
       'a5000000-0000-4000-8000-000000000001',
-      'a6000000-0000-4000-8000-000000000004'
+      'a6000000-0000-4000-8000-000000000004',
+      repeat('d', 64)
     )
   $$,
   '42501',
