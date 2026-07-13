@@ -8,6 +8,8 @@ import {
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
+import { ProviderRequestError } from "../src/lib/adstudio/providers.ts";
+import { buildProviderRunAttempt } from "../src/lib/operator/prompts/redact-prompt-run.ts";
 import type { ModelCandidate, ModelProvider } from "../src/lib/ai/model-registry.ts";
 
 function candidate(provider: ModelProvider, model: string): ModelCandidate {
@@ -263,6 +265,137 @@ test("priced OpenAI image candidate uses GPT Image 2", async () => {
   assert.equal(output.model, "gpt-image-2");
   assert.equal(output.usage?.complete, false);
   assert.equal(output.usage?.inputTokens, undefined);
+});
+
+test("OpenAI 2xx response without an image preserves submitted billing evidence", async () => {
+  const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      id: "oa-image-request-1",
+      data: [],
+      usage: { input_tokens: 800, output_tokens: 20, cost: 0.047 },
+    }), { status: 200 }),
+  });
+
+  let caught: unknown;
+  try {
+    await provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught instanceof ProviderRequestError);
+  assert.equal(caught.requestSubmitted, true);
+  assert.equal(caught.retryable, false);
+  assert.equal(caught.providerRequestId, "oa-image-request-1");
+  assert.deepEqual(caught.usage, {
+    imageUnits: 0,
+    providerRequestId: "oa-image-request-1",
+    complete: true,
+    inputTokens: 800,
+    outputTokens: 20,
+    actualCostUsd: 0.047,
+  });
+
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    provider,
+    modelProfile: "image_final",
+    status: "failed",
+    error: caught,
+  });
+  assert.equal(attempt.providerRequestId, "oa-image-request-1");
+  assert.equal(attempt.billingStatus, "actual");
+  assert.equal(attempt.actualCostUsd, 0.047);
+});
+
+test("OpenRouter 2xx response without an image preserves submitted billing evidence", async () => {
+  const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
+    env: { OPENROUTER_API_KEY: "or_test" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      id: "or-image-request-1",
+      choices: [{ message: { content: "No image generated" } }],
+      usage: { prompt_tokens: 700, completion_tokens: 15, cost: 0.039 },
+    }), { status: 200 }),
+  });
+
+  let caught: unknown;
+  try {
+    await provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught instanceof ProviderRequestError);
+  assert.equal(caught.requestSubmitted, true);
+  assert.equal(caught.retryable, false);
+  assert.equal(caught.providerRequestId, "or-image-request-1");
+  assert.deepEqual(caught.usage, {
+    imageUnits: 0,
+    providerRequestId: "or-image-request-1",
+    complete: true,
+    inputTokens: 700,
+    outputTokens: 15,
+    actualCostUsd: 0.039,
+  });
+
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    provider,
+    modelProfile: "image_final",
+    status: "failed",
+    error: caught,
+  });
+  assert.equal(attempt.providerRequestId, "or-image-request-1");
+  assert.equal(attempt.billingStatus, "actual");
+  assert.equal(attempt.actualCostUsd, 0.039);
+});
+
+test("provider HTTP errors are retryable only for explicitly transient statuses", async () => {
+  for (const [status, retryable] of [[400, false], [401, false], [408, true], [409, true], [425, true], [429, true], [500, true]] as const) {
+    const provider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+      env: { OPENAI_API_KEY: "oa_test" },
+      fetchImpl: async () => new Response(JSON.stringify({ error: { message: `status ${status}` } }), { status }),
+    });
+
+    await assert.rejects(() => provider.generate({
+      prompt: "Premium local real estate appraisal creative",
+      referenceAssets: [],
+      aspectRatio: "1:1",
+      stylePreset: "real_estate_photography",
+    }), (error: unknown) => {
+      assert.ok(error instanceof ProviderRequestError);
+      assert.equal(error.requestSubmitted, true);
+      assert.equal(error.retryable, retryable, `status ${status}`);
+      return true;
+    });
+  }
+
+  const nonJsonProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => new Response("overloaded", { status: 503 }),
+  });
+  await assert.rejects(() => nonJsonProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, true);
+    return true;
+  });
 });
 
 test("priced OpenAI image candidate does not hide a second billable retry", async () => {

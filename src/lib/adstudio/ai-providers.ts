@@ -215,7 +215,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
             }),
           });
 
-      const payload = (await response.json()) as {
+      const payload = (await response.json().catch(() => ({}))) as {
         id?: string;
         data?: Array<{ url?: string; b64_json?: string }>;
         usage?: {
@@ -229,16 +229,28 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
       };
 
       if (!response.ok) {
-        throw submittedError(payload.error?.message ?? `Provider image request failed with ${response.status}.`, {
+        throw submittedHttpError(payload.error?.message ?? `Provider image request failed with ${response.status}.`, response.status, {
           providerRequestId: payload.id,
           usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
         });
       }
 
       const first = payload.data?.[0];
+      const assetUrl = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : undefined);
+      if (!assetUrl) {
+        throw submittedError("OpenAI returned no image.", {
+          retryable: false,
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, {
+            imageUnits: 0,
+            providerRequestId: payload.id,
+            complete: true,
+          }),
+        });
+      }
 
       return {
-        assetUrl: first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : ""),
+        assetUrl,
         seed: input.seed ?? 0,
         model,
         usage: usageFromProviderPayload(payload.usage, {
@@ -399,14 +411,15 @@ function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapt
       });
       const payload = (await response.json().catch(() => ({}))) as { output?: string; error?: string; detail?: unknown };
       if (!response.ok) {
-        throw submittedError(
+        throw submittedHttpError(
           typeof payload.error === "string"
             ? payload.error
             : `fal any-llm request failed (${response.status}): ${JSON.stringify(payload.detail ?? payload).slice(0, 200)}`,
+          response.status,
         );
       }
       const rawText = (payload.output ?? "").trim();
-      if (!rawText) throw submittedError("fal any-llm returned no output.");
+      if (!rawText) throw submittedError("fal any-llm returned no output.", { retryable: false });
 
       return {
         json: parseJson(rawText),
@@ -461,7 +474,7 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
           ],
         }),
       });
-      const payload = (await response.json()) as {
+      const payload = (await response.json().catch(() => ({}))) as {
         id?: string;
         choices?: Array<{
           message?: {
@@ -474,7 +487,7 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
       };
 
       if (!response.ok) {
-        throw submittedError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, {
+        throw submittedHttpError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, response.status, {
           providerRequestId: payload.id,
           usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
         });
@@ -482,9 +495,20 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
 
       const message = payload.choices?.[0]?.message;
       const assetUrl = message?.images?.[0]?.image_url?.url ?? message?.images?.[0]?.url ?? extractImageUrl(message?.content);
+      if (!assetUrl) {
+        throw submittedError("OpenRouter returned no image.", {
+          retryable: false,
+          providerRequestId: payload.id,
+          usage: usageFromProviderPayload(payload.usage, {
+            imageUnits: 0,
+            providerRequestId: payload.id,
+            complete: true,
+          }),
+        });
+      }
 
       return {
-        assetUrl: assetUrl ?? "",
+        assetUrl,
         seed: input.seed ?? 0,
         model,
         usage: usageFromProviderPayload(payload.usage, {
@@ -565,7 +589,7 @@ async function postChatCompletion(input: {
         : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
     }),
   });
-  const payload = (await response.json()) as {
+  const payload = (await response.json().catch(() => ({}))) as {
     id?: string;
     choices?: Array<{ message?: { content?: string | null } }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
@@ -573,7 +597,7 @@ async function postChatCompletion(input: {
   };
 
   if (!response.ok) {
-    throw submittedError(payload.error?.message ?? `Provider request failed with ${response.status}.`, {
+    throw submittedHttpError(payload.error?.message ?? `Provider request failed with ${response.status}.`, response.status, {
       providerRequestId: payload.id,
       usage: usageFromProviderPayload(payload.usage, { complete: false }),
     });
@@ -658,18 +682,38 @@ function usageFromProviderPayload(
 }
 
 function preflightError(message: string): ProviderRequestError {
-  return new ProviderRequestError(message, { requestSubmitted: false });
+  return new ProviderRequestError(message, { requestSubmitted: false, retryable: false });
 }
 
 function submittedError(
   message: string,
+  options: {
+    retryable: boolean;
+    usage?: ProviderUsage;
+    providerRequestId?: string | null;
+    cause?: unknown;
+  },
+): ProviderRequestError {
+  return new ProviderRequestError(message, { requestSubmitted: true, ...options });
+}
+
+function submittedHttpError(
+  message: string,
+  status: number,
   options: {
     usage?: ProviderUsage;
     providerRequestId?: string | null;
     cause?: unknown;
   } = {},
 ): ProviderRequestError {
-  return new ProviderRequestError(message, { requestSubmitted: true, ...options });
+  return submittedError(message, {
+    ...options,
+    retryable: isRetryableProviderStatus(status),
+  });
+}
+
+function isRetryableProviderStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
 }
 
 function supportsCustomTemperature(model: string): boolean {

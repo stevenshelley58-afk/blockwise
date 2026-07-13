@@ -70,6 +70,7 @@ export type ProviderAccountingContext = {
 
 export class ProviderRequestError extends Error {
   readonly requestSubmitted: boolean;
+  readonly retryable: boolean;
   readonly usage?: ProviderUsage;
   readonly providerRequestId?: string | null;
 
@@ -77,6 +78,7 @@ export class ProviderRequestError extends Error {
     message: string,
     options: {
       requestSubmitted: boolean;
+      retryable: boolean;
       usage?: ProviderUsage;
       providerRequestId?: string | null;
       cause?: unknown;
@@ -85,6 +87,7 @@ export class ProviderRequestError extends Error {
     super(message, { cause: options.cause });
     this.name = "ProviderRequestError";
     this.requestSubmitted = options.requestSubmitted;
+    this.retryable = options.retryable;
     this.usage = options.usage;
     this.providerRequestId = options.providerRequestId;
   }
