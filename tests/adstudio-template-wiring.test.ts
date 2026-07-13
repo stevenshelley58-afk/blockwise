@@ -46,6 +46,13 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
       description: "Two fresh listings.",
       imageDataUrl: A,
       imageDataUrls: { property_photo: A, brand_logo: B },
+      onImageCopy: {
+        headline: "Fresh coastal listing",
+        price: "$1,245,000",
+        address: "18 Wattle Lane, Scarborough WA 6019",
+        phone: "+61 400 123 456",
+        website_handle: "blockwise.sale",
+      },
       formats: ["9:16", "4:5"],
     },
   });
@@ -57,8 +64,11 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
   const obj = (role: string) => creative.canvas.objects.find((o) => o.role === role);
   assert.equal(obj("property_photo")?.content, A);
   assert.equal(obj("brand_logo")?.content, B);
-  assert.ok((obj("headline")?.content ?? "").length > 0, "headline copy wired");
-  assert.ok((obj("price")?.content ?? "").length > 0, "price copy wired");
+  assert.equal(obj("headline")?.content, "Fresh coastal listing");
+  assert.equal(obj("price")?.content, "$1,245,000");
+  assert.equal(obj("address")?.content, "18 Wattle Lane, Scarborough WA 6019");
+  assert.equal(obj("phone")?.content, "+61 400 123 456");
+  assert.equal(obj("website_handle")?.content, "blockwise.sale");
 
   // fabric mirror: same wiring by role (editor reads this)
   const design = getCreativeDesignJson(creative);
@@ -66,7 +76,11 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
   const fab = (role: string) => design.objects.find((o) => o.blockwise?.role === role);
   assert.equal(fab("property_photo")?.src, A);
   assert.equal(fab("brand_logo")?.src, B);
-  assert.ok((fab("headline")?.text ?? "").length > 0);
+  assert.equal(fab("headline")?.text, "Fresh coastal listing");
+  assert.equal(fab("price")?.text, "$1,245,000");
+  assert.equal(fab("address")?.text, "18 Wattle Lane, Scarborough WA 6019");
+  assert.equal(fab("phone")?.text, "+61 400 123 456");
+  assert.equal(fab("website_handle")?.text, "blockwise.sale");
 
   // edit round-trip: editing the fabric headline syncs back to objects + preview
   const edited = { ...design, objects: design.objects.map((o) => (o.blockwise?.role === "headline" ? { ...o, text: "EDITED HEADLINE" } : o)) };

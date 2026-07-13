@@ -1,5 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
+
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 // Vision models can only read images they can actually fetch. Uploaded Ad Studio
@@ -19,8 +21,12 @@ export async function resolveAdStudioImageForModel(
   ref: string | undefined,
 ): Promise<string | undefined> {
   if (!ref) return undefined;
-  if (ref.startsWith("data:image/")) return ref;
-  if (/^https?:\/\//i.test(ref)) return ref;
+  if (ref.startsWith("data:image/")) {
+    return /^data:image\/svg/i.test(ref) ? ensureRasterReferenceImage(ref) : ref;
+  }
+  if (/^https?:\/\//i.test(ref)) {
+    return /\.svg(?:$|[?#])/i.test(ref) ? ensureRasterReferenceImage(ref) : ref;
+  }
 
   const storagePath = mediaProxyPath(ref);
   if (!storagePath) return undefined;
@@ -31,7 +37,8 @@ export async function resolveAdStudioImageForModel(
 
   const buffer = Buffer.from(await data.arrayBuffer());
   const contentType = data.type || "image/jpeg";
-  return `data:${contentType};base64,${buffer.toString("base64")}`;
+  const dataUrl = `data:${contentType};base64,${buffer.toString("base64")}`;
+  return /^image\/svg/i.test(contentType) ? ensureRasterReferenceImage(dataUrl) : dataUrl;
 }
 
 function mediaProxyPath(ref: string): string | undefined {

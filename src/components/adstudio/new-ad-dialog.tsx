@@ -14,6 +14,7 @@ import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
 import {
   DEFAULT_IMAGE_SLOT,
   customerCopyFieldsForTemplate,
+  defaultImageForTemplateSlot,
   imageRequirementsForTemplate,
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
@@ -371,11 +372,11 @@ export function NewAdDialog({
   );
   const imageDataUrls = useMemo(
     () => imageRequirements.reduce<Record<string, string>>((values, slot) => {
-      const src = imageDataUrlsBySlot[slot.id];
+      const src = imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit);
       if (src) values[slot.id] = src;
       return values;
     }, {}),
-    [imageDataUrlsBySlot, imageRequirements],
+    [brandKit, imageDataUrlsBySlot, imageRequirements],
   );
   const missingCopyLabels = useMemo(
     () => customerCopyFields.filter((field) => !onImageCopy[field.key]?.trim()).map((field) => field.label),
@@ -992,9 +993,9 @@ export function NewAdDialog({
                       label={imageRequirements.length > 1 ? slot.label : "Upload one image"}
                       actionText={uploadActionText(slot, imageRequirements.length)}
                       helperText="JPG, PNG, or WebP / up to 8 MB"
-                      previewUrl={imageDataUrlsBySlot[slot.id] ?? ""}
+                      previewUrl={imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit)}
                       previewAlt=""
-                      fileName={imageNamesBySlot[slot.id] ?? ""}
+                      fileName={imageNamesBySlot[slot.id] ?? (defaultImageForTemplateSlot(slot, brandKit) ? "Brand Studio logo" : "")}
                       acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
                       maxBytes={AD_IMAGE_MAX_BYTES}
                       typeError="Use a JPG, PNG, or WebP image."
