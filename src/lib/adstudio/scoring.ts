@@ -5,7 +5,12 @@ import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AssembledPrompt } from "../operator/prompts/assemble-prompt.ts";
 import { modelCandidateAttempts, resolveRuntimeModelProfile } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptSection } from "../operator/prompts/prompt-registry.ts";
-import { recordAdStudioProviderRun } from "../operator/prompts/redact-prompt-run.ts";
+import {
+  executeAdStudioProviderAttempt,
+  ProviderRunPersistenceError,
+  recordAdStudioProviderRun,
+  type ProviderRunAttempt,
+} from "../operator/prompts/redact-prompt-run.ts";
 import type { AdStudioCampaignPack, AdStudioVariantScore } from "./types.ts";
 
 export type VariantScoreInput = {
@@ -45,7 +50,7 @@ function clamp(value: number, min: number, max: number): number {
 // One batched structured-JSON call scores every variant's enriched copy.
 // Any failure falls back silently to the deterministic scores already on the pack.
 
-type JudgeAttempt = { provider: string; model: string; status: "attempted" | "failed" | "completed"; error?: string };
+type JudgeAttempt = ProviderRunAttempt;
 
 type JudgedVariantScore = {
   dimensions: {
@@ -70,16 +75,18 @@ export async function scoreCampaignPackVariantsWithAi(input: {
 
   const startedAt = Date.now();
   const correlationId = randomUUID();
+  const mutationId = `${correlationId}:adstudio.scoring`;
   let prompt: AssembledPrompt | null = null;
   const attempts: JudgeAttempt[] = [];
   let provider: TextProviderAdapter | null = null;
   let modelName = "unavailable";
   let output: TextProviderResponse | null = null;
+  let finalizationStarted = false;
 
   try {
     const section = await getActivePromptSection("adstudio.scoring.system");
     const user = buildScoringUserPrompt(pack);
-    prompt = {
+    const assembledPrompt: AssembledPrompt = {
       system: section.body,
       user,
       fullPrompt: `${section.body}\n\n${user}`,
@@ -90,45 +97,47 @@ export async function scoreCampaignPackVariantsWithAi(input: {
           ? [`${section.key} used bundled fallback${section.fallbackReason ? ` (${section.fallbackReason})` : ""}.`]
           : [],
     };
+    prompt = assembledPrompt;
 
     const profile = await resolveRuntimeModelProfile("structured_json");
     let lastError: unknown = null;
 
-    for (const candidate of modelCandidateAttempts(profile)) {
+    for (const [attemptIndex, candidate] of modelCandidateAttempts(profile).entries()) {
       const candidateProvider = createTextProviderForCandidate(candidate);
-      attempts.push({ provider: candidateProvider.providerName, model: candidate.model, status: "attempted" });
-
-      try {
-        output = await candidateProvider.generate({
-          system: prompt.system,
+      const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+        workspaceId: input.workspaceId,
+        mutationId,
+        attemptIndex,
+        modelProfile: "structured_json",
+        provider: candidateProvider,
+        execute: () => candidateProvider.generate({
+          system: assembledPrompt.system,
           schemaName: "metaLeadAdPack",
-          messages: [{ role: "user", content: prompt.user }],
-        });
+          messages: [{ role: "user", content: assembledPrompt.user }],
+        }),
+      });
+      attempts.push(execution.attempt);
+      if (execution.ok) {
+        output = execution.output;
         provider = candidateProvider;
         modelName = String(output.providerMetadata.model ?? candidate.model);
-        attempts[attempts.length - 1] = { provider: candidateProvider.providerName, model: candidate.model, status: "completed" };
         break;
-      } catch (error) {
-        lastError = error;
-        attempts[attempts.length - 1] = {
-          provider: candidateProvider.providerName,
-          model: candidate.model,
-          status: "failed",
-          error: error instanceof Error ? error.message : String(error),
-        };
       }
+      lastError = execution.error;
     }
 
     if (!output || !provider) {
       throw lastError ?? new Error("Creative scoring is not configured.");
     }
 
+    finalizationStarted = true;
     await recordAdStudioProviderRun({
       workspaceId: input.workspaceId,
       userId: input.userId,
       correlationId,
       taskType: "adstudio.scoring",
       modelProfile: "structured_json",
+      mutationId,
       prompt,
       input: { campaignId: pack.campaign.campaignId, variantCount: pack.variants.length },
       attempts,
@@ -159,29 +168,28 @@ export async function scoreCampaignPackVariantsWithAi(input: {
       }),
     };
   } catch (error) {
+    if (finalizationStarted) throw error;
     if (prompt) {
-      try {
-        await recordAdStudioProviderRun({
-          workspaceId: input.workspaceId,
-          userId: input.userId,
-          correlationId,
-          taskType: "adstudio.scoring",
-          modelProfile: "structured_json",
-          prompt,
-          input: { campaignId: pack.campaign.campaignId, variantCount: pack.variants.length },
-          attempts,
-          latencyMs: Date.now() - startedAt,
-          providerName: provider?.providerName ?? "unavailable",
-          providerType: "text_generation",
-          modelName,
-          output: null,
-          status: "failed",
-          error,
-        });
-      } catch {
-        // Recording must never break generation.
-      }
+      await recordAdStudioProviderRun({
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        correlationId,
+        taskType: "adstudio.scoring",
+        modelProfile: "structured_json",
+        mutationId,
+        prompt,
+        input: { campaignId: pack.campaign.campaignId, variantCount: pack.variants.length },
+        attempts,
+        latencyMs: Date.now() - startedAt,
+        providerName: provider?.providerName ?? "unavailable",
+        providerType: "text_generation",
+        modelName,
+        output: null,
+        status: "failed",
+        error,
+      });
     }
+    if (error instanceof ProviderRunPersistenceError) throw error;
     return pack;
   }
 }

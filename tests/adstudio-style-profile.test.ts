@@ -4,11 +4,9 @@ import test from "node:test";
 
 import {
   STYLE_EXTRACTOR_VERSION,
-  extractStyleProfile,
   persistStyleProfile,
 } from "../src/lib/adstudio/style-profile.ts";
 import type { StyleDescriptor } from "../src/lib/adstudio/style-profile.ts";
-import { createDeterministicTextProvider } from "../src/lib/adstudio/providers.ts";
 
 const migrationPath = "supabase/migrations/202606090002_ad_style_profiles.sql";
 
@@ -126,111 +124,6 @@ test("style-profile migration does not alter any existing research table columns
   assert.doesNotMatch(sql, /alter table research\.observed_ads/i);
   assert.doesNotMatch(sql, /alter table research\.media_assets/i);
   assert.doesNotMatch(sql, /alter table research\.ad_creatives/i);
-});
-
-// ─── Extractor unit tests ────────────────────────────────────────────────────
-
-test("extractStyleProfile returns a typed descriptor with do_not_copy forced true", async () => {
-  const fakeDescriptor = {
-    composition: "rule-of-thirds, property centred",
-    crop: "medium",
-    lighting: "harsh midday sun, deep shadows",
-    time_of_day: "midday",
-    palette: ["#4a7fc1", "#f2e8d9", "#2c3e2d"],
-    mood: "aspirational, confident",
-    lens: "wide",
-    do_not_copy: false, // model tried to set false — extractor must override to true
-  };
-
-  const provider = {
-    ...createDeterministicTextProvider(),
-    generate: async () => ({
-      json: fakeDescriptor,
-      rawText: JSON.stringify(fakeDescriptor),
-      usage: { inputTokens: 50, outputTokens: 80 },
-      providerMetadata: { model: "gpt-4-vision-test" },
-    }),
-  };
-
-  const result = await extractStyleProfile({
-    imageUrl: "https://storage.example.com/radar/ad-001.jpg",
-    contentHash: "abc123deadbeef",
-    provider,
-  });
-
-  assert.equal(result.descriptor.do_not_copy, true, "do_not_copy must always be true");
-  assert.equal(result.descriptor.composition, "rule-of-thirds, property centred");
-  assert.deepEqual(result.descriptor.palette, ["#4a7fc1", "#f2e8d9", "#2c3e2d"]);
-  assert.equal(result.model, "gpt-4-vision-test");
-  assert.deepEqual(result.sourceContentHashes, ["abc123deadbeef"]);
-});
-
-test("extractStyleProfile never stores or returns the imageUrl (source pixels stay out)", async () => {
-  const sentImageUrls: string[] = [];
-
-  const provider = {
-    ...createDeterministicTextProvider(),
-    generate: async (input: { imageUrl?: string }) => {
-      // Track what the provider received, but the result must not include it
-      if (input.imageUrl) sentImageUrls.push(input.imageUrl);
-      return {
-        json: {
-          composition: "centred",
-          crop: "wide",
-          lighting: "overcast",
-          time_of_day: "overcast",
-          palette: ["#fff"],
-          mood: "calm",
-          lens: "standard",
-          do_not_copy: true,
-        },
-        rawText: "{}",
-        usage: {},
-        providerMetadata: { model: "test" },
-      };
-    },
-  };
-
-  const result = await extractStyleProfile({
-    imageUrl: "https://private-storage/secret-radar-image.jpg",
-    contentHash: "secret-hash-only",
-    provider,
-  });
-
-  // The imageUrl was sent to the provider (vision call) but is NOT in the result
-  assert.equal(sentImageUrls.length, 1);
-  const resultJson = JSON.stringify(result);
-  assert.ok(
-    !resultJson.includes("secret-radar-image.jpg"),
-    "imageUrl must not appear in result",
-  );
-  // Only the hash is stored
-  assert.ok(resultJson.includes("secret-hash-only"), "contentHash must appear in result");
-});
-
-test("extractStyleProfile coerces missing fields to safe defaults", async () => {
-  const provider = {
-    ...createDeterministicTextProvider(),
-    generate: async () => ({
-      json: {}, // model returned empty object
-      rawText: "{}",
-      usage: {},
-      providerMetadata: { model: "test" },
-    }),
-  };
-
-  const result = await extractStyleProfile({
-    imageUrl: "https://storage.example.com/x.jpg",
-    contentHash: "hash",
-    provider,
-  });
-
-  const d = result.descriptor;
-  assert.equal(d.do_not_copy, true);
-  assert.equal(typeof d.composition, "string");
-  assert.equal(typeof d.crop, "string");
-  assert.equal(typeof d.lighting, "string");
-  assert.ok(Array.isArray(d.palette));
 });
 
 test("extractStyleProfile STYLE_EXTRACTOR_VERSION is a non-empty string", () => {

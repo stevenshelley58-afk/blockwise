@@ -1,6 +1,11 @@
 import { loadPersistedModelProfileVersions } from "../../ai/model-profile-store.ts";
-import type { ModelCandidate, ModelProfileKey, ResolvedModelProfile } from "../../ai/model-registry.ts";
-import { resolveEffectiveModelProfile, resolveModelProfile } from "../../ai/model-registry.ts";
+import type {
+  ModelCandidate,
+  ModelProfileKey,
+  PersistedModelProfileVersion,
+  ResolvedModelProfile,
+} from "../../ai/model-registry.ts";
+import { resolveEffectiveModelProfile } from "../../ai/model-registry.ts";
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
 
 export type RuntimeModelProfile = ResolvedModelProfile & {
@@ -9,20 +14,21 @@ export type RuntimeModelProfile = ResolvedModelProfile & {
 };
 
 export async function resolveRuntimeModelProfile(profileKey: ModelProfileKey): Promise<RuntimeModelProfile> {
-  try {
-    const serviceSupabase = createSupabaseServiceClient();
-    const versions = await loadPersistedModelProfileVersions(serviceSupabase as never);
-    return {
-      ...resolveEffectiveModelProfile(profileKey, versions),
-      source: "persisted",
-    };
-  } catch (error) {
-    return {
-      ...resolveModelProfile(profileKey),
-      source: "default",
-      warning: error instanceof Error ? error.message : "Unable to load persisted model profile.",
-    };
-  }
+  const serviceSupabase = createSupabaseServiceClient();
+  const versions = await loadPersistedModelProfileVersions(serviceSupabase as never);
+  return resolveRuntimeProfileFromVersions(profileKey, versions);
+}
+
+export function resolveRuntimeProfileFromVersions(
+  profileKey: ModelProfileKey,
+  versions: PersistedModelProfileVersion[],
+): RuntimeModelProfile {
+  const hasPersistedVersion = versions.some((version) => version.profileKey === profileKey);
+  return {
+    ...resolveEffectiveModelProfile(profileKey, versions),
+    source: hasPersistedVersion ? "persisted" : "default",
+    ...(!hasPersistedVersion ? { warning: `No active persisted version exists for ${profileKey}; using the declared default.` } : {}),
+  };
 }
 
 export function modelCandidateAttempts(profile: RuntimeModelProfile): ModelCandidate[] {

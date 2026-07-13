@@ -5,6 +5,7 @@ import { syncCreativeWithCopyAndImage } from "./creative-design-json.ts";
 import { findPackCopySimilarityWarnings } from "./creative-qa.ts";
 import { toMetaCta } from "./readiness.ts";
 import { scoreCampaignPackVariantsWithAi } from "./scoring.ts";
+import { ProviderRunPersistenceError } from "../operator/prompts/redact-prompt-run.ts";
 import type {
   AdStudioCampaignPack,
   AdStudioCampaignVariant,
@@ -26,6 +27,7 @@ export async function enrichCampaignPackCopyWithAi(input: {
   let pack = input.pack;
   let changed = false;
   let firstError: unknown = null;
+  let accountingError: ProviderRunPersistenceError | null = null;
 
   const enrichable = pack.variants
     .map((variant) => ({
@@ -72,7 +74,12 @@ export async function enrichCampaignPackCopyWithAi(input: {
     } else if (firstError === null) {
       firstError = result.reason;
     }
+    if (result.status === "rejected" && result.reason instanceof ProviderRunPersistenceError) {
+      accountingError ??= result.reason;
+    }
   });
+
+  if (accountingError) throw accountingError;
 
   // Surface a real failure instead of silently shipping the unwritten template copy.
   if (!changed) {
@@ -92,8 +99,8 @@ export async function enrichCampaignPackCopyWithAi(input: {
     similarityWarnings: similarityWarnings.length ? similarityWarnings : undefined,
   };
 
-  // LLM-judge scoring of the enriched copy (one batched call); falls back
-  // silently to the deterministic scores when the call fails.
+  // LLM-judge scoring may fall back to deterministic scores after a provider
+  // failure, but durable-accounting failures propagate and block shipment.
   return scoreCampaignPackVariantsWithAi({
     pack: enriched,
     workspaceId: input.workspaceId,

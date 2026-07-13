@@ -8,7 +8,7 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   const triggerWrapper = readFileSync("scripts/run-trigger-with-project-ref.mjs", "utf8");
 
   assert.match(workflow, /trigger-deploy:/);
-  assert.match(workflow, /needs:\s*contracts/);
+  assert.match(workflow, /needs:\s*\n\s*- contracts\s*\n\s*- database-contracts/);
   assert.match(workflow, /if:\s*github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /TRIGGER_ACCESS_TOKEN:\s*\$\{\{ secrets\.TRIGGER_ACCESS_TOKEN \}\}/);
   assert.match(workflow, /TRIGGER_PROJECT_ID:\s*\$\{\{ secrets\.TRIGGER_PROJECT_ID \}\}/);
@@ -25,6 +25,19 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(triggerWrapper, /"--yes", triggerCliPackage/);
   assert.match(triggerWrapper, /"--project-ref", projectRef/);
   assert.match(triggerWrapper, /TRIGGER_PROJECT_ID or TRIGGER_PROJECT_REF is required to deploy or run Trigger\.dev tasks\./);
+});
+
+test("GitHub replays migrations and runs pgTAP before release jobs", () => {
+  const workflow = readFileSync(".github/workflows/hard-reset-verification.yml", "utf8");
+  const packageJson = readFileSync("package.json", "utf8");
+
+  assert.match(workflow, /database-contracts:/);
+  assert.match(workflow, /uses:\s*supabase\/setup-cli@v2/);
+  assert.match(workflow, /version:\s*2\.108\.0/);
+  assert.match(workflow, /run:\s*supabase db start/);
+  assert.match(workflow, /run:\s*npm run test:db/);
+  assert.match(workflow, /if:\s*always\(\)[\s\S]*run:\s*supabase stop --no-backup/);
+  assert.match(packageJson, /"test:db":\s*"supabase db reset --local && supabase test db"/);
 });
 
 test("Trigger runbook lists required production task environment", () => {

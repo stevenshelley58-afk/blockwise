@@ -46,11 +46,38 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
           TOKEN_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
 
+  database-contracts:
+    name: Database migration and pgTAP checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.108.0
+          github-token: ${{ github.token }}
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Replay migrations and run pgTAP
+        run: npm run test:db
+
+      - name: Stop local database
+        if: always()
+        run: supabase stop --no-backup
+
   trigger-deploy:
     name: Deploy Trigger.dev tasks
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: contracts
+    needs:
+      - contracts
+      - database-contracts
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     env:
       TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}

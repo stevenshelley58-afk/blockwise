@@ -18,6 +18,9 @@ export type ModelProfileKey =
 export type ModelCandidate = {
   provider: ModelProvider;
   model: string;
+  modelProfileVersionId?: string | null;
+  pricingSnapshotId?: string | null;
+  pricingSource?: "persisted" | "default";
   inputUsdPerMillionTokens: number;
   outputUsdPerMillionTokens: number;
   imageUsdPerUnit: number;
@@ -51,6 +54,7 @@ export type ResolvedModelProfile = {
 };
 
 export type PersistedModelProfileVersion = {
+  id: string;
   profileKey: ModelProfileKey;
   provider: ModelProvider;
   model: string;
@@ -401,6 +405,9 @@ export function resolveEffectiveModelProfile(
   const primary: ModelCandidate = {
     provider: override.provider,
     model: normalizeModelSlug(override.provider, override.model),
+    modelProfileVersionId: override.id,
+    pricingSnapshotId: override.id,
+    pricingSource: "persisted",
     inputUsdPerMillionTokens: override.inputUsdPerMillionTokens,
     outputUsdPerMillionTokens: override.outputUsdPerMillionTokens,
     imageUsdPerUnit: override.imageUsdPerUnit,
@@ -458,7 +465,7 @@ export function estimateRunCostUsd(candidate: ModelCandidate, usage: UsageEstima
   const outputCost = (usage.outputTokens / 1_000_000) * candidate.outputUsdPerMillionTokens;
   const imageCost = (usage.imageUnits ?? 0) * candidate.imageUsdPerUnit;
 
-  return Math.round((inputCost + outputCost + imageCost + Number.EPSILON) * 100) / 100;
+  return inputCost + outputCost + imageCost;
 }
 
 export function shouldBlockForCostPolicy(
