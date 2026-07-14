@@ -1,0 +1,115 @@
+{
+  "id": "meta-feed-018",
+  "name": "5 Costly Mistakes When Buying a Home",
+  "goal": "buyer_leads",
+  "offerId": "5-costly-mistakes-buying-home",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Educate home buyers about common mistakes to avoid and generate buyer leads.",
+  "category": "buyer_education",
+  "tags": [
+    "buyer",
+    "education",
+    "mistakes",
+    "lead generation",
+    "real estate"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-018-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-018-sample.png",
+    "alt": "Sample buyer education ad with one interior image, a numbered headline, supporting line, and handle.",
+    "contentHash": "36447def29a0b8d0c4262f52299ca1b08401f2203a7f0d1d0278b2cd068c6a68",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_property_image",
+        "label": "Main Property Image",
+        "required": true,
+        "aspect": "portrait",
+        "description": "A high-quality photo of a stylish room or home interior, ideally with natural light and modern decor."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline_number",
+        "label": "Headline Number",
+        "maxLength": 2,
+        "sample": "5",
+        "required": true
+      },
+      {
+        "key": "headline_main",
+        "label": "Headline Main",
+        "maxLength": 30,
+        "sample": "SMART FIRST STEPS",
+        "required": true
+      },
+      {
+        "key": "headline_sub",
+        "label": "Headline Sub",
+        "maxLength": 35,
+        "sample": "Before Buying a Home",
+        "required": true
+      },
+      {
+        "key": "contact_handle",
+        "label": "Contact Handle",
+        "maxLength": 30,
+        "sample": "@homeguide.example",
+        "required": false
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_018.png",
+    "contentHash": "e67bfaec28cce6e1ea7cbddc6ed9e377533388484dce7d4cb98fa214c05f16f8"
+  },
+  "classification": {
+    "ad_type": "social_post",
+    "primary_intent": "education",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

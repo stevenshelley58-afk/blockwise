@@ -1,0 +1,130 @@
+{
+  "id": "meta-feed-165",
+  "name": "Japandi Apartment Rental Ad",
+  "goal": "buyer_leads",
+  "offerId": "japandi_apartment_2024",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "People looking to rent a stylish, modern apartment",
+  "category": "property_listing",
+  "tags": [
+    "apartment",
+    "rental",
+    "Japandi",
+    "modern",
+    "interior",
+    "two bedroom"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-165-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-165-sample.png",
+    "alt": "Sample apartment rental ad with a warm interior photo, weekly price, three features, and contact website.",
+    "contentHash": "8d60c203de0b052f3dbeb5ccd567cc6df757277bb726f5b665120f51393ee98f",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_image",
+        "label": "Main Apartment Photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "A stylish, inviting photo of the apartment interior, preferably with Japandi decor elements."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 30,
+        "sample": "CALM CITY APARTMENT",
+        "required": true
+      },
+      {
+        "key": "price_info",
+        "label": "Starting Price",
+        "maxLength": 30,
+        "sample": "FROM $680 / WEEK",
+        "required": true
+      },
+      {
+        "key": "feature_1",
+        "label": "Feature 1",
+        "maxLength": 20,
+        "sample": "QUIET LOUNGE",
+        "required": true
+      },
+      {
+        "key": "feature_2",
+        "label": "Feature 2",
+        "maxLength": 20,
+        "sample": "2 BEDROOMS",
+        "required": true
+      },
+      {
+        "key": "feature_3",
+        "label": "Feature 3",
+        "maxLength": 20,
+        "sample": "CITY VIEWS",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website or Contact Info",
+        "maxLength": 50,
+        "sample": "CEDARCOAST.EXAMPLE",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_165.png",
+    "contentHash": "5c69e93a6b2d9ce1bd86dce78f6c0ef6d1bcd84506bde6066dd9b6eeb901b123"
+  },
+  "classification": {
+    "ad_type": "image_text_overlay",
+    "primary_intent": "generate_rental_inquiries",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

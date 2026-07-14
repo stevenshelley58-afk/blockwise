@@ -9,6 +9,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import sharp from "sharp";
 
 import { createTextProviderForCandidate } from "../../src/lib/adstudio/ai-providers.ts";
+import { validateProviderJsonOutput } from "../../src/lib/adstudio/providers.ts";
 import { buildCloneImageRequest } from "../../src/lib/adstudio/reference-clone.ts";
 
 const root = process.cwd();
@@ -39,13 +40,17 @@ async function analyseSource() {
       "Image fields: key, label, required, aspect (landscape|portrait|square), description.",
       "Text fields: key, label, maxLength, sample, required. Preserve visible sample copy exactly.",
       "Also return name, goal, offerId, audienceIntent, category, tags, and classification with ad_type, primary_intent, property_or_agent_focus.",
+      "goal must be exactly one of: seller_leads, appraisal_bookings, buyer_leads, market_update_leads, downsizer_leads, investor_leads, open_home_followup, listing_nurture.",
+      "The top-level JSON keys must be exactly: name, goal, offerId, audienceIntent, category, tags, inputs, classification.",
+      "inputs must be an object with images and text arrays. classification must be an object with ad_type, primary_intent, and property_or_agent_focus.",
     ].join(" "),
     messages: [{ role: "user", content: "Extract the customer input contract from this source ad." }],
-    schemaName: "metaLeadAdPack",
+    schemaName: "adStudioTemplateAnalysis",
     imageUrl,
   });
-  const extracted = response.json;
-  if (!extracted || typeof extracted !== "object") throw new Error("The vision model did not return a template analysis.");
+  const validated = validateProviderJsonOutput({ rawText: response.rawText, schemaName: "adStudioTemplateAnalysis" });
+  if (!validated.ok) throw new Error(`The vision model did not return a valid template analysis: ${validated.error}`);
+  const extracted = validated.value;
 
   const template = {
     id,
@@ -149,9 +154,12 @@ function generateImageWithCurl(request) {
       curlArgs.push("--form", `image[]=@${path};type=image/png`);
     });
     curlArgs.push("https://api.openai.com/v1/images/edits");
-    const result = spawnSync("curl.exe", curlArgs, { timeout: 180_000, stdio: ["ignore", "inherit", "inherit"] });
+    const result = spawnSync("curl.exe", curlArgs, { timeout: 600_000, stdio: ["ignore", "inherit", "inherit"] });
     const payload = existsSync(responsePath) ? JSON.parse(readFileSync(responsePath, "utf8")) : {};
-    if (result.status !== 0) throw new Error(payload.error?.message ?? `Image request failed (${result.status}).`);
+    if (result.status !== 0) {
+      const detail = result.error?.message ?? result.signal ?? result.status;
+      throw new Error(payload.error?.message ?? `Image request failed (${detail}).`);
+    }
     const first = payload.data?.[0];
     const assetUrl = first?.url ?? (first?.b64_json ? `data:image/png;base64,${first.b64_json}` : "");
     if (!assetUrl) throw new Error("OpenAI returned no image.");

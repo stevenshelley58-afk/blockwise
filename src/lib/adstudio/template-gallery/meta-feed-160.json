@@ -1,0 +1,128 @@
+{
+  "id": "meta-feed-160",
+  "name": "Seller Tips Swipe Card",
+  "goal": "seller_leads",
+  "offerId": "ready-set-sell-tips",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners interested in selling quickly",
+  "category": "real_estate_tips",
+  "tags": [
+    "seller_tips",
+    "home_selling",
+    "real_estate",
+    "fast_sale"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-160-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-160-sample.png",
+    "alt": "Seller education sample with a fictional kitchen photo, clear advice headline, and swipe prompt.",
+    "contentHash": "f9742a8a8de22cd7fe896034666cc82393ea55434b6f0dd56054cb73e2967c4c",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background Property Photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of a modern kitchen or living space to use as the background."
+      }
+    ],
+    "text": [
+      {
+        "key": "profile_handle",
+        "label": "Profile Handle",
+        "maxLength": 30,
+        "sample": "@cedarcoast.example",
+        "required": true
+      },
+      {
+        "key": "header",
+        "label": "Header",
+        "maxLength": 25,
+        "sample": "SELLER NOTES",
+        "required": true
+      },
+      {
+        "key": "main_title",
+        "label": "Main Title",
+        "maxLength": 60,
+        "sample": "Ready, Set, Sell: 5 Steps for a Smoother Sale",
+        "required": true
+      },
+      {
+        "key": "cta_button",
+        "label": "Call to Action Button",
+        "maxLength": 30,
+        "sample": "SWIPE FOR 5 STEPS",
+        "required": true
+      },
+      {
+        "key": "share_prompt",
+        "label": "Share Prompt",
+        "maxLength": 25,
+        "sample": "Share this guide",
+        "required": false
+      },
+      {
+        "key": "save_prompt",
+        "label": "Save Prompt",
+        "maxLength": 25,
+        "sample": "Save for later",
+        "required": false
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_160.png",
+    "contentHash": "bf822ee54607bafdb6aad3907a99fccfb6a348a48b846d3e64e3193e35562866"
+  },
+  "classification": {
+    "ad_type": "social_post",
+    "primary_intent": "educational_content",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

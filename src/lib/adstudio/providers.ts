@@ -1,8 +1,10 @@
 import {
+  adStudioTemplateAnalysisSchema,
   googleAssetPackSchema,
   googleSearchPackSchema,
   metaLeadAdPackSchema,
   type GoogleAssetPack,
+  type AdStudioTemplateAnalysis,
   type GoogleSearchPack,
   type MetaLeadAdPack,
 } from "./types.ts";
@@ -185,12 +187,12 @@ export type VisionProviderAdapter = {
   analyse(input: VisionProviderRequest): Promise<VisionProviderResponse>;
 };
 
-export type ProviderSchemaName = "metaLeadAdPack" | "googleSearchPack" | "googleAssetPack";
+export type ProviderSchemaName = "metaLeadAdPack" | "googleSearchPack" | "googleAssetPack" | "adStudioTemplateAnalysis";
 
 export type ProviderValidationResult =
   | {
       ok: true;
-      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack;
+      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack | AdStudioTemplateAnalysis;
       repaired: boolean;
       error?: never;
     }
@@ -204,7 +206,7 @@ export type ProviderValidationResult =
 type ParsedProviderValidationResult =
   | {
       ok: true;
-      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack;
+      value: MetaLeadAdPack | GoogleSearchPack | GoogleAssetPack | AdStudioTemplateAnalysis;
       error?: never;
     }
   | {
@@ -354,7 +356,9 @@ function parseAndValidate(rawText: string, schemaName: ProviderSchemaName): Pars
       ? metaLeadAdPackSchema
       : schemaName === "googleSearchPack"
         ? googleSearchPackSchema
-        : googleAssetPackSchema;
+        : schemaName === "googleAssetPack"
+          ? googleAssetPackSchema
+          : adStudioTemplateAnalysisSchema;
   const result = schema.safeParse(parsed);
 
   if (!result.success) {

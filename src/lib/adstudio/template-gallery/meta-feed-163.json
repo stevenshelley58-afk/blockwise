@@ -1,0 +1,101 @@
+{
+  "id": "meta-feed-163",
+  "name": "Home Buying Process Q&A Engagement",
+  "goal": "buyer_leads",
+  "offerId": "home-buyer-questions-001",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Potential buyers seeking information or clarity about the home buying process",
+  "category": "engagement",
+  "tags": [
+    "home buying",
+    "questions",
+    "engagement",
+    "buyer leads",
+    "real estate"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-163-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-163-sample.png",
+    "alt": "Sample agent question post with a friendly portrait, one home-buyer prompt, and a comment call to action.",
+    "contentHash": "4cd35561f6f138b87c766570b5bf079d1ddec21a88b97066b039dd9cc2df2374",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "agent_photo",
+        "label": "Agent Photo",
+        "required": true,
+        "aspect": "square",
+        "description": "A clear, friendly headshot of the agent to personalize the ad."
+      }
+    ],
+    "text": [
+      {
+        "key": "main_question",
+        "label": "Main Question",
+        "maxLength": 100,
+        "sample": "What would make your first home search feel clearer?",
+        "required": true
+      },
+      {
+        "key": "cta_text",
+        "label": "Call to Action",
+        "maxLength": 60,
+        "sample": "Share your question below",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_163.png",
+    "contentHash": "e68fdf0593a884a5ee9661eea428a717e8623a9d7667dfbb0cdb993250715503"
+  },
+  "classification": {
+    "ad_type": "social_engagement",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "agent"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
