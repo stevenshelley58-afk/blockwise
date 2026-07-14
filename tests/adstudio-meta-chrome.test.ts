@@ -76,6 +76,14 @@ test("meta chrome styles match the light Meta feed unit and keep app UI off the 
   assert.match(workbench, /studio-metachrome-edit-hint/);
 });
 
+test("meta chrome enforces the selected placement ratio instead of inheriting the raster ratio", () => {
+  assert.match(styles, /\.studio-metachrome-media \.studio-inplace-frame,\.studio-metachrome-media \.studio-clone-stage\{[^}]*aspect-ratio:4\/5[^}]*overflow:hidden/);
+  assert.match(styles, /\.studio-metachrome-media \.studio-inplace-frame img,\.studio-metachrome-media \.studio-clone-stage img\{[^}]*height:100%[^}]*object-fit:cover/);
+  assert.match(styles, /\.studio-metachrome-story\{[^}]*aspect-ratio:9\/16[^}]*overflow:hidden/);
+  assert.match(styles, /\.studio-metachrome-story \.studio-inplace-frame,\.studio-metachrome-story \.studio-clone-stage\{[^}]*width:100%[^}]*height:100%/);
+  assert.match(styles, /\.studio-metachrome-story \.studio-inplace-frame img,\.studio-metachrome-story \.studio-clone-stage img\{[^}]*width:100%[^}]*height:100%[^}]*object-fit:cover/);
+});
+
 test("feed chrome uses advertiser domain resolution and a setup nudge, never a Blockwise fallback", () => {
   assert.match(preview, /resolveAdvertiserDomain\(\{ brandKit, finalUrls: \[destinationUrl\] \}\)/);
   assert.match(preview, /studio-metachrome-nudge/);
