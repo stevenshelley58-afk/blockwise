@@ -47,6 +47,7 @@ export default function LegalLayout({ children }: Readonly<{ children: React.Rea
           <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
         </nav>
         <span className="footer-fine">© {new Date().getFullYear()} Blockwise</span>
+        <span className="footer-fine">Blockwise is operated by SHELLEY, STEVEN JOHN.</span>
       </footer>
     </main>
   );

@@ -169,6 +169,25 @@ test("legal pages rely on root title template and define page canonicals", () =>
   }
 });
 
+test("public pages identify the legal operator in server-rendered content", () => {
+  const legalName = "SHELLEY, STEVEN JOHN";
+  const publicPages = [
+    "src/app/page.tsx",
+    "src/app/pricing/page.tsx",
+    "src/app/(legal)/privacy/page.tsx",
+    "src/app/(legal)/terms/page.tsx",
+    "src/app/(legal)/layout.tsx",
+  ];
+
+  for (const file of publicPages) {
+    assert.match(
+      readFileSync(file, "utf8"),
+      new RegExp(legalName),
+      `${file} must identify the legal operator`,
+    );
+  }
+});
+
 test("robots and 404 keep protected routes out of search and anonymous visitors on public home", () => {
   const robots = readFileSync("src/app/robots.ts", "utf8");
   const notFound = readFileSync("src/app/not-found.tsx", "utf8");

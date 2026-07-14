@@ -197,6 +197,7 @@ export default function PricingPage() {
               The ad platform for real estate teams. Create, approve, export and track property
               campaigns from one place.
             </p>
+            <p>Blockwise is operated by SHELLEY, STEVEN JOHN.</p>
             <p className="lp-footer-contact">
               <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
             </p>

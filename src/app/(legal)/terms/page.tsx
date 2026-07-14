@@ -21,6 +21,7 @@ export default function TermsOfServicePage() {
         <strong> www.blockwise.sale</strong> website (collectively, the &ldquo;Service&rdquo;). By
         signing in or otherwise using the Service, you agree to these terms.
       </p>
+      <p>Blockwise is operated by SHELLEY, STEVEN JOHN.</p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>1. The Service</h2>
       <p>

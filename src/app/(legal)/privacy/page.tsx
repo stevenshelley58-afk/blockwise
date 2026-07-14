@@ -19,9 +19,10 @@ export default function PrivacyPolicyPage() {
 
       <p>
         Blockwise (&ldquo;Blockwise&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a B2B real estate
-        advertising workflow tool operated from Australia. This policy explains what personal data we
-        collect, why we collect it, how we store and use it, and how you can request a copy or have it
-        deleted. It applies to <strong>www.blockwise.sale</strong> and to the Blockwise application at
+        advertising workflow tool operated from Australia. Blockwise is operated by SHELLEY, STEVEN JOHN.
+        This policy explains what personal data we collect, why we collect it, how we store and use it,
+        and how you can request a copy or have it deleted. It applies to
+        <strong> www.blockwise.sale</strong> and to the Blockwise application at
         <strong> app.blockwise.sale</strong>.
       </p>
 
