@@ -4,7 +4,6 @@ import {
   Activity,
   BarChart3,
   Bot,
-  ClipboardCheck,
   Database,
   FileSearch,
   LayoutGrid,
@@ -64,7 +63,6 @@ const operatorNavItems: NavItem[] = [
   { href: "/ad-studio", label: "Ad Studio", icon: Star },
   { href: "/property-check", label: "Property Check", icon: FileSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/workforce", label: "Workforce", icon: Bot },
   { href: "/model-control", label: "Model Control", icon: Settings2 },
@@ -79,7 +77,6 @@ const selfServeNavItems: NavItem[] = [
   { href: "/ad-studio", label: "Ad Studio", icon: Star },
   { href: "/property-check", label: "Property Check", icon: FileSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/ad-studio/brand", label: "Brand Pack", icon: UserRound, section: "Set up" },
   { href: "/settings", label: "Settings", icon: Settings, section: "Set up" },
 ];
@@ -88,7 +85,6 @@ const monitorNavItems: NavItem[] = [
   { href: "/results", label: "Results", icon: LineChart },
   { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -109,9 +105,9 @@ export function isItemActive(pathname: string, href: string) {
   return pathname.startsWith(`${path}/`);
 }
 
-export function SidebarNav({ variant, showApprovals = true }: { variant: SidebarVariant; showApprovals?: boolean }) {
+export function SidebarNav({ variant }: { variant: SidebarVariant }) {
   const pathname = usePathname() ?? "";
-  const navItems = navByVariant[variant].filter((item) => showApprovals || item.href !== "/approvals");
+  const navItems = navByVariant[variant];
 
   let lastSection: string | undefined;
 

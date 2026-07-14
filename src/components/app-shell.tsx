@@ -159,7 +159,6 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
   const workspaceName = isOperator ? "Operator Console" : workspace?.name ?? "Workspace";
   const accountName = profile?.full_name ?? user.email ?? "Signed in";
   const roleLabel = isOperator ? "operator" : primaryMembership?.role ?? "member";
-  const showApprovals = isOperator || primaryMembership?.role === "owner" || primaryMembership?.role === "admin";
   const initialTrialStatus = await loadInitialTrialStatus(supabase, workspace?.id, workspaceMode, isOperator);
 
   return (
@@ -169,7 +168,7 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
           <BlockwiseLogo />
         </Link>
         {variant === "operator" ? <p className="sidebar-kicker">Operator</p> : null}
-        <SidebarNav variant={variant} showApprovals={showApprovals} />
+        <SidebarNav variant={variant} />
         {variant === "operator" ? (
           <div className="sidebar-footer" aria-label="Runtime status">
             <a className="sidebar-engine" href="https://hermes.blockwise.sale" target="_blank" rel="noreferrer">
@@ -200,7 +199,6 @@ export async function AppShell({ children, requiredAccess = "authenticated" }: A
       </div>
       <MobileBottomNav
         variant={variant}
-        showApprovals={showApprovals}
         account={{
           email: user.email ?? "",
           name: accountName,

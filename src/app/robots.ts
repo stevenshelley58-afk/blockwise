@@ -24,7 +24,6 @@ export default function robots(): MetadataRoute.Robots {
           "/onboarding",
           "/ad-radar",
           "/self-serve",
-          "/approvals",
           "/operator",
           "/workforce",
           "/model-control",

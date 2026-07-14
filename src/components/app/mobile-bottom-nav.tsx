@@ -10,7 +10,6 @@ import { isItemActive, navByVariant, type NavItem, type SidebarVariant } from "@
 
 type MobileBottomNavProps = {
   variant: SidebarVariant;
-  showApprovals?: boolean;
   account: {
     email: string;
     name: string;
@@ -25,7 +24,7 @@ type MobileNavItem = NavItem & {
 const primaryHrefsByVariant: Record<SidebarVariant, string[]> = {
   monitor: ["/results", "/ad-radar", "/leads", "/settings"],
   self_serve: ["/ad-studio", "/ad-radar", "/results", "/leads"],
-  operator: ["/operator", "/operator/email", "/operator/research", "/approvals"],
+  operator: ["/operator", "/operator/email", "/operator/research"],
 };
 
 const mobileLabels: Record<string, string> = {
@@ -34,8 +33,8 @@ const mobileLabels: Record<string, string> = {
   "/model-control": "Model",
 };
 
-function mobileItemsForVariant(variant: SidebarVariant, showApprovals: boolean): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
-  const allItems = navByVariant[variant].filter((item) => showApprovals || item.href !== "/approvals");
+function mobileItemsForVariant(variant: SidebarVariant): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
+  const allItems = navByVariant[variant];
   const primaryHrefs = primaryHrefsByVariant[variant];
   const primaryItems = primaryHrefs
     .map((href) => allItems.find((item) => item.href === href))
@@ -47,12 +46,12 @@ function mobileItemsForVariant(variant: SidebarVariant, showApprovals: boolean):
   return { primaryItems, overflowItems };
 }
 
-export function MobileBottomNav({ variant, showApprovals = true, account }: MobileBottomNavProps) {
+export function MobileBottomNav({ variant, account }: MobileBottomNavProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { primaryItems, overflowItems } = useMemo(() => mobileItemsForVariant(variant, showApprovals), [showApprovals, variant]);
+  const { primaryItems, overflowItems } = useMemo(() => mobileItemsForVariant(variant), [variant]);
 
   useEffect(() => {
     if (!moreOpen) return;
