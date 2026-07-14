@@ -24,6 +24,7 @@ import {
   buildProviderRunAttempt,
   buildProviderRunPayloadHash,
   buildRedactedProviderRunInput,
+  deriveProviderRunIdentity,
   estimateAdStudioProviderRunCostUsd,
   redactRecord,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
@@ -400,6 +401,52 @@ test("provider run payload hash is stable across persistence retry timestamps", 
   );
 
   assert.equal(first, retry);
+});
+
+test("provider run identity derives the model profile from the normalized attempt", () => {
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    modelProfile: "image_final",
+    status: "completed",
+    provider: {
+      providerName: "openai",
+      providerType: "image_generation",
+      capabilities: { textToImage: true },
+      accounting: {
+        model: "gpt-image-2",
+        pricing: {
+          inputUsdPerMillionTokens: 5,
+          outputUsdPerMillionTokens: 30,
+          imageUsdPerUnit: 0.211,
+        },
+      },
+      async generate() {
+        throw new Error("not called");
+      },
+    },
+    output: {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "gpt-image-2",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    },
+  });
+
+  const identity = deriveProviderRunIdentity(
+    {
+      providerName: "untrusted-provider",
+      providerType: "text_generation",
+      modelName: "untrusted-model",
+      modelProfile: "image_draft",
+    },
+    [attempt],
+  );
+
+  assert.equal(identity.providerName, "openai");
+  assert.equal(identity.providerType, "image_generation");
+  assert.equal(identity.modelName, "gpt-image-2");
+  assert.equal(identity.modelProfile, "image_final");
 });
 
 test("missing provider usage is unreconciled instead of a zero-cost estimate", () => {

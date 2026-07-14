@@ -381,7 +381,7 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
     correlation_id: input.correlationId ?? null,
     prompt_version_id: input.prompt.promptVersions.find((version) => version.id)?.id ?? null,
     task_type: input.taskType,
-    model_profile: input.modelProfile,
+    model_profile: identity.modelProfile,
     model_profile_version_id: identity.modelProfileVersionId,
     pricing_snapshot_id: identity.pricingSnapshotId,
     provider_name: identity.providerName,
@@ -688,13 +688,14 @@ function lastAttempt(attempts: ProviderRunAttempt[]): ProviderRunAttempt | null 
   return attempts.length > 0 ? attempts[attempts.length - 1] : null;
 }
 
-function deriveProviderRunIdentity(
-  input: Pick<ProviderRunLogInput, "providerName" | "providerType" | "modelName">,
+export function deriveProviderRunIdentity(
+  input: Pick<ProviderRunLogInput, "providerName" | "providerType" | "modelName" | "modelProfile">,
   attempts: ProviderRunAttempt[],
 ): {
   providerName: string;
   providerType: ProviderRunLogInput["providerType"];
   modelName: string;
+  modelProfile: ModelProfileKey;
   modelProfileVersionId: string | null;
   pricingSnapshotId: string | null;
 } {
@@ -705,6 +706,7 @@ function deriveProviderRunIdentity(
       providerName: input.providerName,
       providerType: input.providerType,
       modelName: input.modelName,
+      modelProfile: input.modelProfile,
       modelProfileVersionId: null,
       pricingSnapshotId: null,
     };
@@ -713,6 +715,7 @@ function deriveProviderRunIdentity(
     providerName: representative.provider,
     providerType: representative.providerType,
     modelName: representative.model,
+    modelProfile: representative.modelProfile,
     modelProfileVersionId: representative.modelProfileVersionId,
     pricingSnapshotId: representative.pricingSnapshotId,
   };
