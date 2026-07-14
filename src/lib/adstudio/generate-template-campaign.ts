@@ -12,6 +12,7 @@ import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
 import {
   CloneGenerationError,
   generateCloneWithCascade,
+  normalizeCloneRenderAspect,
   persistCloneRender,
   resolveCloneProviders,
   type CloneGenerationResult,
@@ -94,7 +95,7 @@ export type RunTemplateCampaignGenerationResult = {
 const PRIMARY_CLONE_FORMAT = "4:5" as const;
 const STORY_CLONE_FORMAT = "9:16" as const;
 const STORY_RECOMPOSE_PROMPT =
-  "Recompose this exact ad design as a 9:16 vertical story: same panel, colours, typography, photo, and copy; extend the background naturally to fill the taller frame; keep all text inside the central safe area (top and bottom 250px free of text).";
+  "Recompose this exact ad design as a 9:16 vertical story: same panel, colours, typography, photo, and copy; extend the background naturally to fill the taller frame; keep all essential content and text inside the central 80% width, with the top and bottom 250px free of text.";
 
 type TemplateCloneRenderFormat = typeof PRIMARY_CLONE_FORMAT | typeof STORY_CLONE_FORMAT;
 
@@ -146,6 +147,7 @@ export function buildTemplateCloneRequestsByFormat(
 type CloneQualityGateDependencies = {
   generate?: typeof generateCloneWithCascade;
   review?: typeof runCloneQa;
+  normalize?: typeof normalizeCloneRenderAspect;
 };
 
 export async function generateQaAcceptedClone(input: {
@@ -172,6 +174,7 @@ export async function generateQaAcceptedClone(input: {
   const maxQualityAttempts = 2;
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const review = dependencies.review ?? runCloneQa;
+  const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;
 
   while (providerCallCount < maxProviderCalls && qualityAttempt < maxQualityAttempts) {
     if (generationAttempt > 0 && Date.now() >= input.deadline) break;
@@ -193,6 +196,13 @@ export async function generateQaAcceptedClone(input: {
         attempt: generationAttempt,
       });
 
+      let exactAssetUrl: string;
+      try {
+        exactAssetUrl = await normalize(generated.assetUrl, input.format);
+      } catch (error) {
+        throw new TemplateCampaignQaError(input.format, null, error);
+      }
+
       providerCallCount += generated.providerAttemptCount;
       qualityAttempt += 1;
       let qa: AdStudioCloneQa;
@@ -201,7 +211,7 @@ export async function generateQaAcceptedClone(input: {
           workspaceId: input.workspaceId,
           userId: input.userId,
           correlationId: input.correlationId,
-          imageUrl: generated.assetUrl,
+          imageUrl: exactAssetUrl,
           expectedCopy: input.expectedCopy,
           format: input.format,
           attempt: qualityAttempt,
@@ -211,7 +221,7 @@ export async function generateQaAcceptedClone(input: {
         throw new TemplateCampaignQaError(input.format, null, error);
       }
 
-      if (qa.passed) return { ...generated, attempt: qualityAttempt, qa };
+      if (qa.passed) return { ...generated, assetUrl: exactAssetUrl, attempt: qualityAttempt, qa };
       lastQa = qa;
       correctionPrompt = cloneQaCorrectionPrompt(qa);
     } catch (error) {

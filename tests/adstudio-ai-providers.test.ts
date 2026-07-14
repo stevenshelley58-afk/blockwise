@@ -588,6 +588,7 @@ test("priced OpenAI image candidate attaches a mask when one is supplied", async
 
   const body = calls[0].init.body as FormData;
   assert.ok(body.get("mask"), "mask must be attached when provided");
+  assert.equal(body.get("size"), "1024x1536");
 });
 
 test("priced OpenAI image candidate honours quality tier and the Cloudflare gateway for edits", async () => {

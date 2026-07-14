@@ -9,7 +9,10 @@ import {
   cloneQaWarnings,
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
-import { generateCloneWithCascade } from "../src/lib/adstudio/clone-generation.ts";
+import {
+  generateCloneWithCascade,
+  normalizeCloneRenderAspect,
+} from "../src/lib/adstudio/clone-generation.ts";
 import {
   fetchProviderRequest,
   ProviderRequestError,
@@ -27,6 +30,33 @@ test("parallel clone formats receive distinct QA mutation identities", () => {
   assert.notEqual(
     cloneQaMutationId(correlationId, "4:5", 1),
     cloneQaMutationId(correlationId, "9:16", 1),
+  );
+});
+
+test("provider-native portrait renders are cropped to exact Meta placement ratios", async () => {
+  const { default: sharp } = await import("sharp");
+  const nativePortrait = await sharp({
+    create: {
+      width: 96,
+      height: 144,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const source = `data:image/png;base64,${nativePortrait.toString("base64")}`;
+
+  const story = await normalizeCloneRenderAspect(source, "9:16");
+  const feed = await normalizeCloneRenderAspect(source, "4:5");
+  const storyMetadata = await sharp(Buffer.from(story.split(",")[1], "base64")).metadata();
+  const feedMetadata = await sharp(Buffer.from(feed.split(",")[1], "base64")).metadata();
+
+  assert.deepEqual(
+    { width: storyMetadata.width, height: storyMetadata.height },
+    { width: 864, height: 1536 },
+  );
+  assert.deepEqual(
+    { width: feedMetadata.width, height: feedMetadata.height },
+    { width: 1024, height: 1280 },
   );
 });
 
@@ -104,7 +134,11 @@ async function qualityGateFunction() {
   const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
   const fn = (module as Record<string, unknown>).generateQaAcceptedClone;
   assert.equal(typeof fn, "function", "quality-attempt state machine must be directly testable");
-  return fn as (input: unknown, dependencies: unknown) => Promise<unknown>;
+  const gate = fn as (input: unknown, dependencies: Record<string, unknown>) => Promise<unknown>;
+  return (input: unknown, dependencies: Record<string, unknown>) => gate(input, {
+    normalize: async (assetUrl: string) => assetUrl,
+    ...dependencies,
+  });
 }
 
 async function verifiedPersistencePipelineFunction() {

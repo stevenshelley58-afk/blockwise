@@ -42,6 +42,51 @@ export class CloneGenerationError extends Error {
   }
 }
 
+const EXACT_CLONE_SIZES: Record<string, { width: number; height: number }> = {
+  "9:16": { width: 864, height: 1536 },
+  "4:5": { width: 1024, height: 1280 },
+  "1:1": { width: 1024, height: 1024 },
+  "1.91:1": { width: 1200, height: 628 },
+};
+
+/**
+ * Provider-native image canvases do not always match Meta placement ratios.
+ * Crop the finished render centrally to the exact requested ratio before it
+ * reaches QA, persistence, or the editor, so the ad is never stretched later.
+ */
+export async function normalizeCloneRenderAspect(
+  assetUrl: string,
+  aspectRatio: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const target = EXACT_CLONE_SIZES[aspectRatio];
+  if (!target) return assetUrl;
+
+  let bytes: Uint8Array;
+  if (assetUrl.startsWith("data:image/")) {
+    bytes = dataUrlToUploadBytes(assetUrl).bytes;
+  } else {
+    const response = await fetchImpl(assetUrl);
+    if (!response.ok) throw new Error(`Generated image could not be prepared (${response.status}).`);
+    bytes = new Uint8Array(await response.arrayBuffer());
+  }
+
+  const { default: sharp } = await import("sharp");
+  const image = sharp(bytes);
+  const metadata = await image.metadata();
+  if (!metadata.width || !metadata.height) throw new Error("Generated image dimensions could not be read.");
+
+  const sourceRatio = metadata.width / metadata.height;
+  const targetRatio = target.width / target.height;
+  if (Math.abs(sourceRatio - targetRatio) < 0.001) return assetUrl;
+
+  const png = await image
+    .resize(target.width, target.height, { fit: "cover", position: "centre" })
+    .png()
+    .toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
 export async function generateCloneWithCascade(input: {
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;

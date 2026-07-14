@@ -7,7 +7,7 @@ import {
   outpaintTargetForAspect,
 } from "../src/lib/adstudio/outpaint-layout.ts";
 
-test("outpaintTargetForAspect maps Ad Studio ratios to gpt-image-2-valid sizes", () => {
+test("outpaintTargetForAspect maps Ad Studio ratios to canonical layout sizes", () => {
   assert.deepEqual(outpaintTargetForAspect("9:16"), { width: 1024, height: 1792 });
   assert.deepEqual(outpaintTargetForAspect("1.91:1"), { width: 1792, height: 1024 });
   assert.deepEqual(outpaintTargetForAspect("4:5"), { width: 1024, height: 1280 });
@@ -16,7 +16,7 @@ test("outpaintTargetForAspect maps Ad Studio ratios to gpt-image-2-valid sizes",
   assert.deepEqual(outpaintTargetForAspect("3:2"), { width: 1024, height: 1024 });
 });
 
-test("formatImageSize matches the OpenAI size string", () => {
+test("formatImageSize serializes a canonical layout size", () => {
   assert.equal(formatImageSize({ width: 1024, height: 1792 }), "1024x1792");
   // every preset edge is a multiple of 16 (a gpt-image-2 constraint)
   for (const ratio of ["9:16", "1.91:1", "4:5", "1:1"]) {

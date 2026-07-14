@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
-import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } from "@/lib/adstudio/clone-generation";
+import {
+  generateCloneWithCascade,
+  normalizeCloneRenderAspect,
+  persistCloneRender,
+  resolveCloneProviders,
+} from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
@@ -189,13 +194,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         correlationId,
         attempt,
       });
-      lastImage = generated;
+      const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
+      lastImage = { ...generated, assetUrl: exactAssetUrl };
 
       qa = await runCloneQa({
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
-        imageUrl: generated.assetUrl,
+        imageUrl: exactAssetUrl,
         expectedCopy,
         format: String(row.format ?? "4:5"),
         attempt,

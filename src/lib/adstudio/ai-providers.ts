@@ -4,7 +4,6 @@ import type {
 
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import { createFalImageProvider } from "./fal-image-provider.ts";
-import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
@@ -844,5 +843,10 @@ function extractImageUrl(content: unknown): string | undefined {
 }
 
 function imageSizeForAspect(aspectRatio: string): string {
-  return formatImageSize(outpaintTargetForAspect(aspectRatio));
+  // OpenAI's image endpoints accept only these native canvases. AdStudio's
+  // exact placement ratio remains in the prompt and the clone pipeline crops
+  // the returned native canvas to that ratio before QA and persistence.
+  if (aspectRatio === "1:1") return "1024x1024";
+  if (aspectRatio === "1.91:1") return "1536x1024";
+  return "1024x1536";
 }
