@@ -1,9 +1,9 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { MapPin, Search, Users } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
-import type { AdRadarLocationPrediction } from "@/lib/research/ad-radar-google-locations";
+import type { AdRadarSearchSuggestion } from "@/lib/research/ad-radar-search-suggestions";
 
 type AdRadarLocationFormProps = {
   action?: string;
@@ -21,8 +21,7 @@ type AdRadarLocationFormProps = {
 };
 
 type AutocompletePayload = {
-  predictions?: AdRadarLocationPrediction[];
-  source?: "google" | "local" | "none";
+  suggestions?: AdRadarSearchSuggestion[];
 };
 
 type GuessPayload = {
@@ -51,8 +50,7 @@ export function AdRadarLocationForm({
   const [note, setNote] = useState(initialNote);
   const [placeholderText, setPlaceholderText] = useState(placeholder);
   const [fallbackSearchTerm, setFallbackSearchTerm] = useState(emptySearchTerm ?? initialValue);
-  const [suggestions, setSuggestions] = useState<AdRadarLocationPrediction[]>([]);
-  const [suggestionSource, setSuggestionSource] = useState<AutocompletePayload["source"]>("none");
+  const [suggestions, setSuggestions] = useState<AdRadarSearchSuggestion[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
   const [sessionToken] = useState(createSessionToken);
@@ -107,24 +105,21 @@ export function AdRadarLocationForm({
 
     if (!isFocused || query.length < 2) {
       setSuggestions([]);
-      setSuggestionSource("none");
       return;
     }
 
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams({ q: query, session: sessionToken });
-      void fetch(`/api/research/locations/autocomplete?${params.toString()}`, { signal: controller.signal })
+      void fetch(`/api/research/ad-radar/suggestions?${params.toString()}`, { signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
         .then((payload: AutocompletePayload | null) => {
           if (controller.signal.aborted) return;
-          setSuggestions(payload?.predictions ?? []);
-          setSuggestionSource(payload?.source ?? "none");
+          setSuggestions(payload?.suggestions ?? []);
         })
         .catch(() => {
           if (!controller.signal.aborted) {
             setSuggestions([]);
-            setSuggestionSource("none");
           }
         });
     }, 120);
@@ -158,7 +153,7 @@ export function AdRadarLocationForm({
     }
   }
 
-  function chooseSuggestion(suggestion: AdRadarLocationPrediction) {
+  function chooseSuggestion(suggestion: AdRadarSearchSuggestion) {
     userEditedRef.current = true;
     setValue(suggestion.searchTerm);
     setSuggestions([]);
@@ -207,7 +202,9 @@ export function AdRadarLocationForm({
             role="combobox"
             aria-autocomplete="list"
             aria-controls={`${listId}-list`}
+            aria-describedby={`${listId}-scope${note ? ` ${listId}-note` : ""}`}
             aria-expanded={showSuggestions}
+            aria-activedescendant={activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined}
             onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
             onChange={(event) => onChange(event.target.value)}
             onFocus={() => setIsFocused(true)}
@@ -228,20 +225,32 @@ export function AdRadarLocationForm({
             <button
               aria-selected={index === activeIndex}
               className={isLanding ? "lp-location-option" : "research-location-option"}
-              key={`${suggestion.source}:${suggestion.placeId ?? suggestion.searchTerm}`}
+              id={`${listId}-option-${index}`}
+              key={suggestion.id}
               onClick={() => chooseSuggestion(suggestion)}
               role="option"
               type="button"
             >
-              <strong>{suggestion.mainText}</strong>
-              {suggestion.secondaryText ? <span>{suggestion.secondaryText}</span> : null}
+              <span className="ad-radar-suggestion-icon" aria-hidden>
+                {suggestion.kind === "location" ? <MapPin size={15} /> : <Users size={15} />}
+              </span>
+              <span className="ad-radar-suggestion-copy">
+                <strong>{suggestion.mainText}</strong>
+                <span>{suggestion.secondaryText}</span>
+              </span>
+              <span className="ad-radar-suggestion-kind">{suggestion.kind === "location" ? "Place" : "Advertiser"}</span>
             </button>
           ))}
-          {suggestionSource === "google" ? <span className={isLanding ? "lp-location-powered" : "research-location-powered"}>Powered by Google</span> : null}
+          {suggestions.some((suggestion) => suggestion.source === "google") ? (
+            <span className={isLanding ? "lp-location-powered" : "research-location-powered"}>Location suggestions powered by Google</span>
+          ) : null}
         </div>
       ) : null}
 
-      {note ? <p className={isLanding ? "lp-radar-note" : "research-location-note"}>{note}</p> : null}
+      <p id={`${listId}-scope`} className={isLanding ? "lp-search-scope" : "research-search-scope"}>
+        Predictive search for postcode, suburb, agency or agent
+      </p>
+      {note ? <p id={`${listId}-note`} className={isLanding ? "lp-radar-note" : "research-location-note"}>{note}</p> : null}
       <button className={isLanding ? "lp-btn lp-btn-primary lp-btn-wide" : "button"} disabled={isSubmitting} type="submit">
         <Search size={14} aria-hidden />
         {isSubmitting ? "Scanning..." : buttonLabel}

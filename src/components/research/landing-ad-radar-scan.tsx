@@ -37,7 +37,8 @@ export function LandingAdRadarScan({
       initialNote={initialNote}
       initialValue=""
       onSearch={openScan}
-      placeholder={initialValue || placeholder}
+      inputLabel="Search Ad Radar"
+      placeholder={placeholder}
       surface="landing"
       useBestGuess={useBestGuess}
       useBestGuessAsPlaceholder
