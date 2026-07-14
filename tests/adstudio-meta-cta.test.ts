@@ -20,7 +20,6 @@ test("no divergent CTA keyword maps remain", () => {
   for (const file of [
     "src/components/adstudio/use-copy.ts",
     "src/lib/adstudio/readiness.ts",
-    "src/lib/adstudio/generator.ts",
   ]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /normalised\.includes\("download"\)|\/download\|checklist/, `${file} must delegate CTA mapping to meta-cta.ts`);

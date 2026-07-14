@@ -1,9 +1,8 @@
 import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
-import { generateAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
+import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
-import { getAdStudioDemoBundle } from "@/lib/adstudio/demo-data";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
-import { isExampleBrandKitSourceUrl, persistAdStudioCampaignPack, rowToBrandKit } from "@/lib/adstudio/persistence";
+import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -25,11 +24,11 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
   const params = searchParams ? await searchParams : {};
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   const requestedCampaignId = stringParam(params.campaignId);
-  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId, access.userId);
+  const liveBundle = await loadLiveAdStudioBundle(supabase, access.workspaceId, requestedCampaignId);
 
   // Softened gate: an extracted-but-unapproved kit lets the user straight into the
   // workbench as a "Draft brand" (publish stays blocked until approval).
-  const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId, access.userId) : null;
+  const draftBundle = !liveBundle ? await buildDraftBrandBundle(supabase, access.workspaceId) : null;
 
   const starterBundle = !liveBundle && !draftBundle
     ? await buildStarterBundle({
@@ -37,11 +36,11 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         workspaceId: access.workspaceId,
         workspaceName: access.workspaceName,
         region: access.region,
-        userId: access.userId,
       })
     : null;
   const isSample = liveBundle === null && draftBundle === null && starterBundle === null;
-  const bundle = liveBundle ?? draftBundle ?? starterBundle ?? getAdStudioDemoBundle();
+  const bundle = liveBundle ?? draftBundle ?? starterBundle;
+  if (!bundle) throw new Error("Ad Studio could not prepare an empty workspace.");
   const showBrandSetupPrompt = !isSample && isStarterFallbackBrandKit(bundle.brandKit);
 
   return (
@@ -66,7 +65,6 @@ async function buildStarterBundle(input: {
   workspaceId: string;
   workspaceName?: string;
   region?: string;
-  userId: string;
 }) {
   const brandKit = buildTrialFallbackBrandKit({
     workspaceId: input.workspaceId,
@@ -79,24 +77,12 @@ async function buildStarterBundle(input: {
     lockedFields: Array.from(new Set([...brandKit.lockedFields, "starter_brand"])),
   };
   const offers = listOfferTemplates();
-  const generatedCampaignPack = generateAdStudioCampaignPack({
-    workspaceId: input.workspaceId,
-    brandKit: { ...starterBrandKit, reviewStatus: "approved" },
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: input.region ?? "WA",
-    offerId: offers[0]?.offerId ?? "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 3,
-  });
-  const campaignPack = { ...generatedCampaignPack, brandKit: starterBrandKit };
-  await persistAdStudioCampaignPack(input.supabase, campaignPack, input.userId).catch(() => null);
+  const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId: input.workspaceId, brandKit: starterBrandKit });
   return {
     brandKit: starterBrandKit,
     campaignPack,
     offers,
-    performance: getAdStudioDemoBundle().performance,
+    performance: EMPTY_PERFORMANCE,
     isLive: false,
   };
 }
@@ -114,7 +100,6 @@ function isStarterFallbackBrandKit(brandKit: AdStudioBrandKit): boolean {
 async function buildDraftBrandBundle(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
   workspaceId: string,
-  userId: string,
 ) {
   try {
     const { data } = await supabase
@@ -136,31 +121,24 @@ async function buildDraftBrandBundle(
     if (brandKit.reviewStatus === "approved") return null;
 
     const offers = listOfferTemplates();
-    const generatedCampaignPack = generateAdStudioCampaignPack({
-      workspaceId,
-      // The generator requires an approved kit; seeding a preview pack from a
-      // draft kit reuses the same pattern as loadLiveAdStudioBundle. The kit
-      // shown in the UI keeps its real draft status.
-      brandKit: { ...brandKit, reviewStatus: "approved" },
-      goal: "seller_leads",
-      suburb: "Scarborough",
-      city: "Perth",
-      state: brandKit.identity.marketRegion ?? "WA",
-      offerId: offers[0]?.offerId ?? "seller_prep_checklist",
-      platforms: ["meta"],
-      variantCount: 3,
-    });
-    const campaignPack = { ...generatedCampaignPack, brandKit };
-    await persistAdStudioCampaignPack(supabase, campaignPack, userId).catch(() => null);
+    const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId, brandKit });
 
     return {
       brandKit,
       campaignPack,
       offers,
-      performance: getAdStudioDemoBundle().performance,
+      performance: EMPTY_PERFORMANCE,
       isLive: true,
     };
   } catch {
     return null;
   }
 }
+
+const EMPTY_PERFORMANCE = {
+  leads: 0,
+  costPerLeadAud: 0,
+  bookedAppraisals: 0,
+  bestFormat: "4:5",
+  recommendations: ["Choose a sample to create your first ad."],
+};

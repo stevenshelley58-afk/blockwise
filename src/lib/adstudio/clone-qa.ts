@@ -125,8 +125,8 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
   const mutationId = cloneQaMutationId(correlationId, input.format, input.attempt);
-  const bundle = await getActivePromptBundle(["adstudio.clone_qa.v1"]);
-  const system = bundle["adstudio.clone_qa.v1"].body;
+  const bundle = await getActivePromptBundle(["adstudio.clone_qa"]);
+  const system = bundle["adstudio.clone_qa"].body;
   const expectedList = Object.entries(input.expectedCopy)
     .map(([key, value]) => `- ${key}: "${value}"`)
     .join("\n");

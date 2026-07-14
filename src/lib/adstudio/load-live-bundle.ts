@@ -1,8 +1,9 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { generateAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
+import { createEmptyAdStudioCampaignPack, listOfferTemplates } from "./index.ts";
+import { isFinishedCloneCreative } from "./clone-creative.ts";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "./assets.ts";
-import { isExampleBrandKitSourceUrl, persistAdStudioCampaignPack, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
+import { isExampleBrandKitSourceUrl, rowToBrandKit, rowToCampaignPack } from "./persistence.ts";
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioOfferTemplate } from "./types.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -47,7 +48,6 @@ export async function loadLiveAdStudioBundle(
   supabase: SupabaseServerClient,
   workspaceId: string,
   requestedCampaignId?: string | null,
-  userId?: string,
 ): Promise<AdStudioBundle | null> {
   if (!workspaceId) return null;
 
@@ -100,7 +100,12 @@ export async function loadLiveAdStudioBundle(
         });
 
         // A reconstructed pack must have at least one variant + copy pack to render.
-        if (campaignPack.variants.length > 0 && campaignPack.copyPacks.length > 0) {
+        if (
+          campaignPack.variants.length > 0
+          && campaignPack.copyPacks.length > 0
+          && campaignPack.creatives.length > 0
+          && campaignPack.creatives.every(isFinishedCloneCreative)
+        ) {
           return { brandKit, campaignPack, offers, performance: EMPTY_PERFORMANCE, isLive: true };
         }
       }
@@ -123,20 +128,7 @@ export async function loadLiveAdStudioBundle(
         rowToBrandKit(latestBrandKitRow),
         await loadAdStudioBrandAssetRows(supabase, workspaceId, String(latestBrandKitRow.id)),
       );
-      const campaignPack = generateAdStudioCampaignPack({
-        workspaceId,
-        brandKit: { ...brandKit, reviewStatus: "approved" },
-        goal: "seller_leads",
-        suburb: "Scarborough",
-        city: "Perth",
-        state: brandKit.identity.marketRegion ?? "WA",
-        offerId: offers[0]?.offerId ?? "seller_prep_checklist",
-        platforms: ["meta"],
-        variantCount: 5,
-      });
-      if (userId) {
-        await persistAdStudioCampaignPack(supabase, campaignPack, userId).catch(() => null);
-      }
+      const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId, brandKit });
 
       return { brandKit, campaignPack, offers, performance: EMPTY_PERFORMANCE, isLive: true };
     }

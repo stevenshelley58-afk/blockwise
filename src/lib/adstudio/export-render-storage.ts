@@ -1,45 +1,6 @@
 import type { CreativeExportRender } from "./creative-export.ts";
 import type { AdStudioCampaignPack } from "./types.ts";
 
-export async function hydrateStoredCreativeExportRenders(
-  supabase: any,
-  workspaceId: string,
-  renders: CreativeExportRender[] | undefined,
-): Promise<CreativeExportRender[] | undefined> {
-  if (!renders?.length) return renders;
-
-  const hydrated: CreativeExportRender[] = [];
-  for (const render of renders) {
-    if (render.dataUrl) {
-      hydrated.push(render);
-      continue;
-    }
-
-    const storagePath = render.storagePath?.trim();
-    if (!storagePath) {
-      hydrated.push(render);
-      continue;
-    }
-
-    if (!isWorkspaceStoragePath(storagePath, workspaceId)) {
-      throw new Error("Creative export render was not found.");
-    }
-
-    const { data, error } = await supabase.storage.from("workspace-artifacts").download(storagePath);
-    if (error || !data) {
-      throw new Error("Creative export render was not found.");
-    }
-
-    const bytes = Buffer.from(await data.arrayBuffer());
-    hydrated.push({
-      ...render,
-      dataUrl: `data:${render.mimeType};base64,${bytes.toString("base64")}`,
-    });
-  }
-
-  return hydrated;
-}
-
 function isWorkspaceStoragePath(path: string, workspaceId: string): boolean {
   return Boolean(workspaceId) && path.startsWith(`${workspaceId}/`) && !path.includes("..");
 }
@@ -58,9 +19,7 @@ export async function renderStoredFlatCloneExports(
       : null;
     if (!clone) continue;
 
-    // Draft compaction from older clients can leave an empty `content` value
-    // while the authoritative storage reference is still present in `assetId`.
-    // Treat blank strings as absent so export always follows the saved clone.
+    // The storage reference can be held in either clone field after autosave.
     const storagePath = cloneStoragePath(clone.content?.trim() || clone.assetId?.trim() || "");
     if (!storagePath || !isWorkspaceStoragePath(storagePath, workspaceId)) {
       throw new Error("The approved clone render was not found.");

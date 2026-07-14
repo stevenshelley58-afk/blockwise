@@ -31,12 +31,9 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
-import { resolveAdvertiserDomain } from "@/lib/adstudio/advertiser-domain";
 import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
-import { repairCreativeTextLayout, syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
-import { ANGLES } from "./angles";
-import { AdPreview, FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
+import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
 import { initialOfferLabelForPack, labelForSelectedTemplate } from "./template-offer-state";
@@ -215,27 +212,7 @@ function commitVariantEdits(input: {
         },
       };
     }),
-    creatives: input.pack.creatives.map((creative) =>
-      creative.variantId === input.variantId ? syncCreativeWithCopyAndImage(creative, input.copy, input.primaryImage) : creative,
-    ),
-  };
-}
-
-function applyImageToVariantFormats(input: {
-  pack: AdStudioCampaignPack;
-  variantId: string | undefined;
-  copy: CopyState;
-  formats: AdStudioFormat[];
-  image: string;
-}): AdStudioCampaignPack {
-  if (!input.variantId || input.formats.length === 0 || !input.image) return input.pack;
-  const formats = new Set(input.formats);
-  return {
-    ...input.pack,
-    creatives: input.pack.creatives.map((creative) => {
-      if (creative.variantId !== input.variantId) return creative;
-      return formats.has(creative.format) ? syncCreativeWithCopyAndImage(creative, input.copy, input.image) : creative;
-    }),
+    creatives: input.pack.creatives,
   };
 }
 
@@ -263,17 +240,12 @@ export function AdStudioWorkbench({
   isSample = false,
   showBrandSetupPrompt = false,
 }: AdStudioWorkbenchProps) {
-  const [pack, setPack] = useState(() => ({
-    ...initialPack,
-    creatives: initialPack.creatives.map(repairCreativeTextLayout),
-  }));
+  const [pack, setPack] = useState(initialPack);
   const searchParams = useSearchParams();
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
-  const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
-  const zoom = previewFormat === "feed" ? 58 : 68;
   const [selectedElement, setSelectedElement] = useState<SelectedElement>("canvas");
   const [campaignGoal, setCampaignGoal] = useState(() => initialCampaignGoal(initialPack));
   const [offerLabel, setOfferLabel] = useState(() => initialOfferLabel(initialPack, offers));
@@ -384,14 +356,6 @@ export function AdStudioWorkbench({
     }
     if (!uploaded) return;
     if (pack.variants.length > 0 && selectedVariant?.variantId) {
-      const updatedPack = applyImageToVariantFormats({
-        pack,
-        variantId: selectedVariant.variantId,
-        copy,
-        formats: currentVariantFormats,
-        image: uploaded.src,
-      });
-      setPack(updatedPack);
       studio.setSaveState("saving");
     }
   }
@@ -471,7 +435,7 @@ export function AdStudioWorkbench({
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
   // Campaign readiness checklist lives in the publish panel.
-  const { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
+  const { generateFirstAd, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus } = useCampaignActions({
     pack,
     brandKit,
     offers,
@@ -493,7 +457,6 @@ export function AdStudioWorkbench({
     setBusyMessage: studio.setBusyMessage,
     setGeneration,
     setSection: studio.setSection,
-    setSelectedAngleId,
     showToast: studio.showToast,
   });
 
@@ -556,8 +519,6 @@ export function AdStudioWorkbench({
     }
   }
 
-  const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
-
   useEffect(() => {
     const templateKey = searchParams.get("template");
     if (!templateKey || linkedSamplePromptedRef.current) return;
@@ -593,7 +554,6 @@ export function AdStudioWorkbench({
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time; no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
-  const previewDomain = resolveAdvertiserDomain({ brandKit, finalUrls: [destinationUrl], copyPacks: pack.copyPacks }).host;
   const campaignName = pack.campaign.name || "Ad draft";
   const selectedVariant = pack.variants[selectedVariantIndex] ?? pack.variants[0];
   const editorFormat = PREVIEW_TO_AD_FORMAT[previewFormat];
@@ -614,17 +574,6 @@ export function AdStudioWorkbench({
     [currentCreative?.canvas.cloneQa],
   );
   const showCloneWarnings = cloneWarningKey.length > 0 && cloneWarnings.length > 0 && !dismissedCloneWarningKeys.has(cloneWarningKey);
-  const currentVariantFormats = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          pack.creatives
-            .filter((creative) => creative.variantId === selectedVariant?.variantId)
-            .map((creative) => creative.format),
-        ),
-      ),
-    [pack.creatives, selectedVariant?.variantId],
-  );
 
   const getVariantPrimaryImage = useCallback((variantId: string | undefined, sourcePack: AdStudioCampaignPack = pack) => {
     return primaryImageForVariant(sourcePack, variantId, editorFormat);
@@ -637,12 +586,12 @@ export function AdStudioWorkbench({
       return {
         ...variant,
         displayName: `Ad ${index + 1}`,
-      // M5: use the variant's own angle field as the label, not an index-offset into ANGLES
-        angleLabel: variant.angle || selectedAngle.variantLabel,
+      // Use the cloned ad's own angle field as its label.
+        angleLabel: variant.angle || "Cloned sample",
         image: variantImage?.src ?? (isSample && MEDIA_ASSETS.some((item) => item.src === primaryImage) ? MEDIA_ASSETS[index % MEDIA_ASSETS.length].src : primaryImage),
       };
     });
-  }, [getVariantPrimaryImage, initialPack.variants, pack.variants, primaryImage, selectedAngle.variantLabel, selectedVariantIndex]);
+  }, [getVariantPrimaryImage, initialPack.variants, pack.variants, primaryImage, selectedVariantIndex]);
 
   function selectVariant(index: number) {
     const nextPack = commitVariantEdits({
@@ -688,21 +637,6 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
-  const { setSection, setMobileTab } = studio;
-  const handleCanvasElementSelect = useCallback((element: SelectedElement) => {
-    setSelectedElement(element);
-    if (element === "image") {
-      setSection("media");
-      setMobileTab("media");
-      return;
-    }
-    const textField = copyFieldForSelectedElement(element);
-    if (textField) {
-      setSection("text");
-      setMobileTab("text");
-    }
-  }, [setMobileTab, setSection]);
-
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
       studio.setSection("media");
@@ -712,23 +646,6 @@ export function AdStudioWorkbench({
     const field = copyFieldForSelectedElement(selectedElement);
     if (!field) return;
     await patchCopyField(field, patchActionForSelectedElement(selectedElement), copyContext, primaryImage);
-  }
-
-  // Adds another generated ad idea from the current defaults.
-  function addVariant() {
-    generateVariantsForAngle(selectedAngle, campaignGoal);
-  }
-
-  function regenerateVariantPack(index: number) {
-    const confirmed = window.confirm(
-      "Regenerate this ad pack?\n\nThis uses one ad credit and replaces all generated ads in this pack, not just this tile.",
-    );
-
-    if (!confirmed) return;
-
-    const variant = pack.variants[index];
-    const angle = variant ? (ANGLES.find((a) => a.id === variant.angle) ?? selectedAngle) : selectedAngle;
-    void generateVariantsForAngle(angle);
   }
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
@@ -814,24 +731,21 @@ export function AdStudioWorkbench({
     );
   }
 
-  function renderFallbackPreview() {
+  function renderEmptyPreview() {
     return (
-      <AdPreview
-        brand={brand}
-        domain={previewDomain}
-        initials={initials}
-        copy={copy}
-        image={primaryImage}
-        format={previewFormat}
-        zoom={zoom}
-        selectedElement={selectedElement}
-        setSelectedElement={handleCanvasElementSelect}
-      />
+      <div className="studio-empty">
+        <div className="studio-empty-ic"><LayoutGrid aria-hidden size={22} /></div>
+        <strong>No ad created yet</strong>
+        <p>Choose a sample, add its requested images and text, then clone it.</p>
+        <button className="studio-btn accent" type="button" onClick={() => openSamplePicker()}>
+          Choose a sample
+        </button>
+      </div>
     );
   }
 
   function renderCreativeEditor() {
-    if (!currentCreative) return renderFallbackPreview();
+    if (!currentCreative) return renderEmptyPreview();
 
     // AI-designed clone: one flat image with the copy baked into the pixels.
     // The layer editor would silently no-op on it, so edit in place instead —
@@ -886,9 +800,7 @@ export function AdStudioWorkbench({
       );
     }
 
-    // Historical layered records stay readable, but they do not expose a
-    // second editor or a second ad-creation system.
-    return renderFallbackPreview();
+    return renderEmptyPreview();
   }
 
   function renderHomePanel() {
@@ -1188,7 +1100,7 @@ export function AdStudioWorkbench({
                 pending={generation}
                 onRetryPending={() => {
                   setGeneration(null);
-                  addVariant();
+                  openSamplePicker();
                 }}
                 onDismissPending={() => setGeneration(null)}
                 onEditCopy={(index) => {
@@ -1202,7 +1114,6 @@ export function AdStudioWorkbench({
                   studio.setSection("media");
                   openFilePicker();
                 }}
-                onRegenerate={regenerateVariantPack}
               />
             </section>
           </>
@@ -1234,7 +1145,7 @@ export function AdStudioWorkbench({
         {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
           <>
             <div className="studio-mobile-preview-wrap">
-              {isMobileViewport ? renderCreativeEditor() : renderFallbackPreview()}
+              {renderCreativeEditor()}
             </div>
             <div className="studio-mobile-panel">{renderPanel()}</div>
           </>
@@ -1277,7 +1188,7 @@ export function AdStudioWorkbench({
               pending={generation}
               onRetryPending={() => {
                 setGeneration(null);
-                addVariant();
+                openSamplePicker();
               }}
               onDismissPending={() => setGeneration(null)}
               compact

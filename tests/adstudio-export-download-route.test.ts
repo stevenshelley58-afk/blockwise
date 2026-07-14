@@ -12,7 +12,7 @@ const workspaceId = "11111111-1111-4111-8111-111111111111";
 const campaignId = "campaign-1";
 const store = { source: "workspace-store" };
 
-function campaignPack(objects: Array<{ objectId: string }>): AdStudioCampaignPack {
+function campaignPack(objects: Array<{ objectId: string; content?: string }>): AdStudioCampaignPack {
   return {
     campaign: { campaignId, name: "Authoritative campaign" },
     creatives: [{ canvas: { objects } }],
@@ -33,8 +33,7 @@ function dependencies(
 ): ExportDownloadDependencies<typeof store> {
   return {
     authorize: async () => ({ ok: true, store, workspaceId }),
-    loadCampaign: async () => campaignPack([{ objectId: "legacy_image" }]),
-    hydrateRenders: async (_store, _workspaceId, renders) => renders,
+    loadCampaign: async () => campaignPack([{ objectId: "template_clone_image" }]),
     renderFlatClones: async () => [],
     buildPackage: async () => ({ zipBytes: new Uint8Array([80, 75]) }),
     ...overrides,
@@ -94,7 +93,6 @@ test("download handler scopes authoritative campaign load to authorized workspac
 
 test("authoritative flat clone exports approved server-side renders without trusting the request body", async () => {
   let bodyReads = 0;
-  let hydrationCalls = 0;
   let flatRenderCalls = 0;
   let packageCalls = 0;
   const approvedRenders = [{ creativeId: "approved-clone" }] as unknown as CreativeExportRender[];
@@ -106,11 +104,7 @@ test("authoritative flat clone exports approved server-side renders without trus
     ),
     campaignId,
     dependencies: dependencies({
-      loadCampaign: async () => campaignPack([{ objectId: "template_clone_image" }]),
-      hydrateRenders: async () => {
-        hydrationCalls += 1;
-        return [];
-      },
+      loadCampaign: async () => campaignPack([{ objectId: "template_clone_image", content: "/api/adstudio/media?path=workspace/clone.png" }]),
       renderFlatClones: async (_store, receivedWorkspaceId, receivedPack) => {
         flatRenderCalls += 1;
         assert.equal(receivedWorkspaceId, workspaceId);
@@ -127,68 +121,31 @@ test("authoritative flat clone exports approved server-side renders without trus
 
   assert.equal(response.status, 200);
   assert.equal(bodyReads, 0);
-  assert.equal(hydrationCalls, 0);
   assert.equal(flatRenderCalls, 1);
   assert.equal(packageCalls, 1);
   assert.equal(packagedRenders, approvedRenders);
 });
 
-test("legacy export ignores client campaign data and packages the authoritative campaign", async () => {
-  const authoritative = campaignPack([{ objectId: "legacy_image" }]);
-  const maliciousClientPack = campaignPack([{ objectId: "template_clone_image" }]);
-  const renders = [{ creativeId: "creative-1" }] as unknown as CreativeExportRender[];
-  let packagedCampaign: AdStudioCampaignPack | null = null;
-  let hydratedRenders: CreativeExportRender[] | null = null;
-
+test("non-clone campaigns cannot enter the export path", async () => {
+  let bodyReads = 0;
+  let packageCalls = 0;
   const response = await handleAdStudioExportDownload({
-    request: requestBody({ campaignPack: maliciousClientPack, creativeRenders: renders }),
+    request: requestBody({}, () => { bodyReads += 1; }),
     campaignId,
     dependencies: dependencies({
-      loadCampaign: async () => authoritative,
-      hydrateRenders: async (_store, receivedWorkspaceId, receivedRenders) => {
-        assert.equal(receivedWorkspaceId, workspaceId);
-        hydratedRenders = receivedRenders;
-        return receivedRenders;
-      },
-      buildPackage: async (pack) => {
-        packagedCampaign = pack;
-        return { zipBytes: new Uint8Array([80, 75]) };
+      loadCampaign: async () => campaignPack([{ objectId: "layered_image" }]),
+      buildPackage: async () => {
+        packageCalls += 1;
+        return { zipBytes: new Uint8Array() };
       },
     }),
   });
 
-  assert.equal(response.status, 200);
-  assert.equal(packagedCampaign, authoritative);
-  assert.notEqual(packagedCampaign, maliciousClientPack);
-  assert.equal(hydratedRenders, renders);
-  assert.match(response.headers.get("content-disposition") ?? "", /authoritative-campaign-creatives\.zip/);
-});
-
-test("malformed legacy payload returns stable 400 without hydration or packaging", async () => {
-  for (const body of [null, {}, { creativeRenders: "not-an-array" }]) {
-    let hydrationCalls = 0;
-    let packageCalls = 0;
-    const response = await handleAdStudioExportDownload({
-      request: requestBody(body),
-      campaignId,
-      dependencies: dependencies({
-        hydrateRenders: async () => {
-          hydrationCalls += 1;
-          return [];
-        },
-        buildPackage: async () => {
-          packageCalls += 1;
-          return { zipBytes: new Uint8Array() };
-        },
-      }),
-    });
-
-    assert.equal(response.status, 400);
-    assert.deepEqual(await responseJson(response), {
-      code: "invalid_export_payload",
-      error: "Creative renders are required.",
-    });
-    assert.equal(hydrationCalls, 0);
-    assert.equal(packageCalls, 0);
-  }
+  assert.equal(response.status, 409);
+  assert.deepEqual(await responseJson(response), {
+    code: "clone_required",
+    error: "Create this ad from a sample before exporting.",
+  });
+  assert.equal(bodyReads, 0);
+  assert.equal(packageCalls, 0);
 });

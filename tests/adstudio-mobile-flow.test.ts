@@ -66,7 +66,8 @@ test("mobile preview uses the same creative editor surface as desktop", () => {
   assert.match(workbench, /const MOBILE_WORKBENCH_QUERY = "\(max-width: 900px\)";/);
   assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<InPlaceAdEditor/);
   assert.match(workbench, /!isMobileViewport \? renderCreativeEditor\(\) : null/);
-  assert.match(workbench, /isMobileViewport \? renderCreativeEditor\(\) : renderFallbackPreview\(\)/);
+  assert.match(workbench, /studio-mobile-preview-wrap[\s\S]*\{renderCreativeEditor\(\)\}/);
+  assert.doesNotMatch(workbench, /renderFallbackPreview/);
   assert.match(styles, /studio-mobile-preview-wrap/);
 });
 

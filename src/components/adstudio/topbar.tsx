@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Archive, Cloud, Copy, MoreHorizontal, Share2, Trash2 } from "lucide-react";
+import { Archive, Cloud, MoreHorizontal, Share2, Trash2 } from "lucide-react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 
@@ -68,21 +68,6 @@ export function TopBar({
 
   async function flushDraft() {
     await onSave();
-  }
-
-  async function handleDuplicate() {
-    setShowMore(false);
-    try {
-      await flushDraft();
-      const res = await fetch(`/api/adstudio/campaigns/${campaignId}/duplicate`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed");
-      const json = (await res.json().catch(() => ({}))) as { duplicate?: { location?: string } };
-      const location = res.headers.get("Location") ?? json.duplicate?.location;
-      showToast("Ad duplicated");
-      if (location) window.location.href = location;
-    } catch {
-      showToast("Could not duplicate campaign");
-    }
   }
 
   function handleSaveFromMenu() {
@@ -188,10 +173,6 @@ export function TopBar({
           <button className="studio-mobile-menu-save" type="button" role="menuitem" onClick={handleSaveFromMenu}>
             <Cloud aria-hidden size={16} />
             Save draft
-          </button>
-          <button type="button" role="menuitem" onClick={handleDuplicate}>
-            <Copy aria-hidden size={16} />
-            Duplicate campaign
           </button>
           <button type="button" role="menuitem" onClick={handleShare}>
             <Share2 aria-hidden size={16} />

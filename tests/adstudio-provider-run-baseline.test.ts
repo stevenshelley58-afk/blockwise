@@ -944,7 +944,7 @@ test("executable is strictly read-only and carries no forbidden payload fields o
   const source = await readFile(scriptPath, "utf8");
   assert.match(source, /supabase-server-credential\.mjs/);
   assert.match(source, /createSupabaseServerClient/);
-  assert.match(source, /snapshot-legacy-creatives\.mjs/);
+  assert.match(source, /secure-manifest\.mjs/);
   assert.doesNotMatch(source, /\.from\([^)]*\)[\s\S]{0,500}\.(?:insert|update|upsert|delete)\s*\(/);
   assert.doesNotMatch(source, /\.(?:rpc|upload|remove)\s*\(/);
   assert.doesNotMatch(source, /input_json|output_json|error_json|correlation_id|mutation_id|payload_hash|provider_request|outbox/i);

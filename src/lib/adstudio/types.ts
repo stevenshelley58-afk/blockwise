@@ -218,9 +218,6 @@ export type AdStudioCanvasObject = {
   locked: boolean;
 };
 
-/** Active clones use `clone`; `legacy` keeps old saved placeholder records readable. */
-export type AdStudioCreativeSource = "clone" | "legacy";
-
 /** A normalized 0-1 bounding box for an editable element on a clone image. */
 export type AdStudioCloneRegion = {
   key: string;
@@ -246,13 +243,11 @@ export type AdStudioCreative = {
   campaignId: string;
   variantId: string;
   format: AdStudioFormat;
-  source?: AdStudioCreativeSource;
   canvas: {
     width: number;
     height: number;
     backgroundAssetId: string | null;
     objects: AdStudioCanvasObject[];
-    fabricJson?: Record<string, unknown> | null;
     /** Present on AI-cloned creatives: QA verdict + editable-element regions. */
     cloneQa?: AdStudioCloneQa;
     /** Previous renders (media paths, newest last) for undo on clone edits. */

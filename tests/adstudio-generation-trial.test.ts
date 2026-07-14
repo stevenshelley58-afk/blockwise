@@ -74,19 +74,15 @@ test("campaign-pack persistence is transactional and surfaces errors", () => {
   assert.match(source, /Demo brand kits cannot be used for saved campaigns\./);
 });
 
-test("first-session seeded campaign packs are persisted without reserving trial credits", () => {
+test("first-session state stays empty and unpersisted until a sample is cloned", () => {
   const page = read(adStudioPage);
   const loader = read(liveBundle);
 
-  assert.match(page, /persistAdStudioCampaignPack/);
-  assert.match(page, /buildStarterBundle\(\{[\s\S]*userId:\s*access\.userId/);
-  assert.match(page, /await persistAdStudioCampaignPack\(input\.supabase,\s*campaignPack,\s*input\.userId\)/);
-  assert.match(page, /buildDraftBrandBundle\(supabase,\s*access\.workspaceId,\s*access\.userId\)/);
-  assert.match(page, /await persistAdStudioCampaignPack\(supabase,\s*campaignPack,\s*userId\)/);
+  assert.match(page, /createEmptyAdStudioCampaignPack/);
+  assert.doesNotMatch(page, /persistAdStudioCampaignPack/);
   assert.doesNotMatch(page, /reserveAdStudioGenerationCredit/);
-  assert.match(loader, /persistAdStudioCampaignPack/);
-  assert.match(loader, /userId\?:\s*string/);
-  assert.match(loader, /await persistAdStudioCampaignPack\(supabase,\s*campaignPack,\s*userId\)/);
+  assert.match(loader, /createEmptyAdStudioCampaignPack/);
+  assert.doesNotMatch(loader, /persistAdStudioCampaignPack/);
 });
 
 test("draft route self-heals missing seeded campaigns instead of returning 404", () => {

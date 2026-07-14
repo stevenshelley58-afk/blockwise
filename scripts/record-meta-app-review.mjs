@@ -419,7 +419,6 @@ function buildReviewCampaignPack({ workspaceId, privacyPolicyUrl }) {
           locked: false,
         },
       ],
-      fabricJson: null,
     },
     safeZones: {
       metaStory: false,

@@ -4,16 +4,16 @@ import test from "node:test";
 import {
   buildAdStudioExportPackage,
   extractBrandKitFromWebsite,
-  generateAdStudioCampaignPack,
 } from "../src/lib/adstudio/index.ts";
 import {
   ADVERTISER_DOMAIN_PLACEHOLDER,
   resolveAdvertiserDomain,
 } from "../src/lib/adstudio/advertiser-domain.ts";
+import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 
 const textDecoder = new TextDecoder();
 
-function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
+function completeCreativeRenders(pack: ReturnType<typeof buildCloneTestPack>) {
   return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
     creativeId: creative.creativeId,
     variantId: creative.variantId,
@@ -63,17 +63,8 @@ test("advertiser domain resolution never falls back to Blockwise for customer pr
 });
 
 test("exported customer copy packs never contain blockwise.sale when brand URLs are missing", async () => {
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_customer_domain",
-    brandKit: customerBrandKitWithBlockwiseFallbacks(),
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta", "google_search"],
-    variantCount: 1,
-  });
+  const fixture = buildCloneTestPack("workspace_customer_domain");
+  const pack = { ...fixture, brandKit: customerBrandKitWithBlockwiseFallbacks() };
   const exportPackage = await buildAdStudioExportPackage(pack, { creativeRenders: completeCreativeRenders(pack) });
   const exportedText = Object.entries(exportPackage.files)
     .filter(([path]) => path.endsWith(".json") || path.endsWith(".csv") || path.endsWith(".txt"))

@@ -4,17 +4,13 @@ import { useRef, useState } from "react";
 
 import type { AdStudioBrandKit, AdStudioCampaignPack, AdStudioFormat, AdStudioGoal, AdStudioOfferTemplate, FirstAdInput } from "@/lib/adstudio";
 import { mergeDraftResponsePack } from "@/lib/adstudio/client-pack";
+import { isFinishedCloneCreative } from "@/lib/adstudio/clone-creative";
 import { findCopyLimitViolations } from "@/lib/adstudio/readiness";
-import { syncCreativeWithCopyAndImage } from "@/lib/adstudio/creative-design-json.ts";
 
-import type { AngleCard } from "./angles";
-import { renderCreativeExports } from "./canvas/browser-creative-renderer";
 import { offerIdForLabel } from "./template-offer-state";
 import type { CopyState } from "./use-copy";
 import { seedCopy, toMetaCta } from "./use-copy";
 import type { StudioSection } from "./use-ad-studio";
-
-const EXPORT_RENDER_TIMEOUT_MS = 45_000;
 
 /** Staged generation progress shown as skeleton variant cards + honest phase labels. */
 export type GenerationProgress = {
@@ -22,14 +18,6 @@ export type GenerationProgress = {
   count: number;
   error: string | null;
 };
-
-// Phases mirror what the server actually does in order: build the campaign pack,
-// Enrich copy with provider generation (the long step), then score each variant.
-const GENERATION_PHASES: Array<{ label: string; atMs: number }> = [
-  { label: "Building your campaign...", atMs: 0 },
-  { label: "Writing copy...", atMs: 3_500 },
-  { label: "Scoring each ad...", atMs: 16_000 },
-];
 
 // Async template generation (202 + job polling). Stages mirror the server-side
 // pipeline order in runTemplateCampaignGeneration and rotate by elapsed time.
@@ -47,16 +35,6 @@ type CampaignJobStatus = {
   error: string | null;
   campaign_id: string | null;
 };
-
-function startGenerationPhases(
-  setGeneration: (progress: GenerationProgress | null) => void,
-  count: number,
-): () => void {
-  const timers = GENERATION_PHASES.map((phase) =>
-    window.setTimeout(() => setGeneration({ phase: phase.label, count, error: null }), phase.atMs),
-  );
-  return () => timers.forEach((timer) => window.clearTimeout(timer));
-}
 
 /** Per-format export progress so one slow/failed format never blocks the rest. */
 export type ExportFormatStatus = {
@@ -111,7 +89,6 @@ export type CampaignActionsState = {
   setCopy: (copy: CopyState) => void;
   setPrimaryImage: (src: string) => void;
   setOfferLabel: (label: string) => void;
-  setSelectedAngleId: (id: string) => void;
   setSaveState: (state: "saved" | "saving" | "error") => void;
   setSaveError: (err: string) => void;
   setBusy: (busy: boolean) => void;
@@ -198,53 +175,8 @@ export function useCampaignActions(s: CampaignActionsState) {
           googleDemandGen: destinationUrl ? { ...cp.googleDemandGen, finalUrl: destinationUrl } : cp.googleDemandGen,
         };
       }),
-      creatives: sourcePack.creatives.map((creative) =>
-        creative.variantId === variantId ? syncCreativeWithCopyAndImage(creative, copy, primaryImage) : creative,
-      ),
+      creatives: sourcePack.creatives,
     };
-  }
-
-  async function generateVariantsForAngle(angle: AngleCard, goalOverride?: string) {
-    if (generateInFlightRef.current) return;
-    generateInFlightRef.current = true;
-    const preservedImage = s.primaryImage;
-    s.setSelectedAngleId(angle.id);
-    const stopPhases = startGenerationPhases(s.setGeneration, 3);
-    s.setOfferLabel(angle.name === "Free Appraisal" ? "Free appraisal" : angle.name);
-
-    try {
-      const m = parseMarket();
-      const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>("/api/adstudio/campaigns", {
-        goal: goalOverride ?? angle.goal,
-        campaignGoal: s.campaignGoal,
-        suburb: m.suburb,
-        city: m.city,
-        state: m.state,
-        offerId: s.offers.some((o) => o.offerId === angle.offerId) ? angle.offerId : s.offers[0]?.offerId,
-        platforms: ["meta"],
-        variantCount: 3,
-        sourceImageDataUrl: preservedImage,
-      });
-
-      stopPhases();
-      s.setGeneration(null);
-      s.setPack(payload.campaignPack);
-      s.setSelectedVariantIndex(0);
-      s.setCopy(seedCopy(payload.campaignPack));
-      s.setPrimaryImage(preservedImage);
-      s.setSaveState("saved");
-      s.showToast("Generated 3 ads");
-      window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
-    } catch (error) {
-      stopPhases();
-      // Keep the skeleton slots visible as error tiles so the failure is
-      // attached to the ads that did not arrive, with a retry path.
-      s.setGeneration({ phase: "Generation failed", count: 3, error: getMessage(error) });
-      s.showToast(getMessage(error));
-    } finally {
-      stopPhases();
-      generateInFlightRef.current = false;
-    }
   }
 
   async function generateFirstAd(input: FirstAdInput): Promise<void> {
@@ -253,7 +185,7 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
     generateInFlightRef.current = true;
     const expectedCount = 1;
-    const stopPhases = startGenerationPhases(s.setGeneration, expectedCount);
+    s.setGeneration({ phase: "Cloning your sample...", count: expectedCount, error: null });
 
     try {
       const m = parseMarket();
@@ -262,19 +194,9 @@ export function useCampaignActions(s: CampaignActionsState) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           firstAd: input,
-          goal: goalFromLabel(s.campaignGoal, s.pack.campaign.goal),
-          offerId: offerIdForLabel({
-            label: s.offerLabel,
-            offers: s.offers,
-            fallback: s.pack.campaign.offerId,
-            pack: s.pack,
-          }),
           suburb: m.suburb,
           city: m.city,
           state: m.state,
-          platforms: ["meta"],
-          creativeFormats: input.formats,
-          variantCount: 3,
         }),
       });
       const payload = (await response.json().catch(() => null)) as
@@ -286,7 +208,6 @@ export function useCampaignActions(s: CampaignActionsState) {
       if (response.status === 202 && payload?.jobId) {
         // Async generation: the server runs copy → clone → QA → persist in a
         // background job; poll it and keep the staged-progress skeletons alive.
-        stopPhases();
         campaignPack = await waitForTemplateCampaignJob(String(payload.jobId), (phase) =>
           s.setGeneration({ phase, count: expectedCount, error: null }),
         );
@@ -295,7 +216,6 @@ export function useCampaignActions(s: CampaignActionsState) {
         campaignPack = payload.campaignPack;
       }
 
-      stopPhases();
       s.setGeneration(null);
       s.setPack(campaignPack);
       s.setSelectedVariantIndex(0);
@@ -306,13 +226,11 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.showToast("Your ad is ready to edit");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
     } catch (error) {
-      stopPhases();
       // The New Ad dialog shows this error inline, so clear the skeletons.
       s.setGeneration(null);
       s.showToast(getMessage(error));
       throw error;
     } finally {
-      stopPhases();
       generateInFlightRef.current = false;
     }
   }
@@ -336,6 +254,10 @@ export function useCampaignActions(s: CampaignActionsState) {
         primaryImage: options.primaryImageOverride,
         offerLabel: options.offerLabelOverride,
       });
+      if (currentPack.creatives.length === 0 || !currentPack.creatives.every(isFinishedCloneCreative)) {
+        s.setSaveState("saved");
+        return true;
+      }
       const draftPack = compactPackForDraft(currentPack, options.variantIdOverride ?? currentVariant?.variantId);
       const payload = await postJson<{ campaignPack: AdStudioCampaignPack }>(
         `/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`,
@@ -374,30 +296,10 @@ export function useCampaignActions(s: CampaignActionsState) {
       const formats = exportableFormats(exportPack);
       if (formats.length === 0) throw new Error("Export failed — please retry.");
 
-      if (isFlatClonePack(exportPack)) {
-        await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, []);
-        setExportStatus(null);
-        s.showToast("Creative export downloaded");
-        return;
+      if (!exportPack.creatives.every(isFinishedCloneCreative)) {
+        throw new Error("Create an ad from a sample before exporting.");
       }
-
-      setExportStatus(formats.map((format) => ({ format, label: exportFormatLabel(format), state: "rendering" })));
-      const { renders, failedFormats } = await renderFormatsIndependently(exportPack, formats);
-      setExportStatus(
-        formats.map((format) => ({
-          format,
-          label: exportFormatLabel(format),
-          state: failedFormats.includes(format) ? "failed" : "done",
-        })),
-      );
-
-      if (failedFormats.length > 0) {
-        throw new Error(
-          `Creative render failed for ${failedFormats.map(exportFormatLabel).join(", ")}. Please retry.`,
-        );
-      }
-
-      await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, renders);
+      await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack);
       setExportStatus(null);
       s.showToast("Creative export downloaded");
     } catch (error) {
@@ -419,15 +321,14 @@ export function useCampaignActions(s: CampaignActionsState) {
     try {
       const currentPack = buildCurrentPack();
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
-      const { renders, failedFormats } = await renderFormatsIndependently(exportPack, [format]);
-      if (failedFormats.length > 0 || renders.length === 0) {
+      const formatPack = { ...exportPack, creatives: exportPack.creatives.filter((creative) => creative.format === format) };
+      if (formatPack.creatives.length === 0 || !formatPack.creatives.every(isFinishedCloneCreative)) {
         throw new Error(`${exportFormatLabel(format)} render failed — please retry.`);
       }
       await downloadExportZip(
         currentPack.campaign.campaignId,
         currentPack.campaign.name,
-        exportPack,
-        renders,
+        formatPack,
         exportFormatLabel(format),
       );
       setExportStatus((current) => {
@@ -451,6 +352,7 @@ export function useCampaignActions(s: CampaignActionsState) {
     if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return false;
     try {
       const currentPack = buildCurrentPack({});
+      if (currentPack.creatives.length === 0 || !currentPack.creatives.every(isFinishedCloneCreative)) return false;
       const draftPack = compactPackForDraft(currentPack, currentVariant?.variantId);
       const body = new Blob([JSON.stringify({ campaignPack: draftPack })], { type: "application/json" });
       return navigator.sendBeacon(`/api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft`, body);
@@ -459,7 +361,7 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  return { generateFirstAd, generateVariantsForAngle, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus };
+  return { generateFirstAd, saveDraft, flushDraftBeacon, exportCreatives, retryExportFormat, exportStatus };
 }
 
 /**
@@ -527,50 +429,16 @@ function exportableFormats(pack: AdStudioCampaignPack): AdStudioFormat[] {
   return Array.from(new Set(formats));
 }
 
-function isFlatClonePack(pack: AdStudioCampaignPack): boolean {
-  return pack.creatives.length > 0 && pack.creatives.every(
-    (creative) => creative.canvas.objects.length === 1
-      && creative.canvas.objects[0]?.objectId === "template_clone_image",
-  );
-}
-
-/** Each format renders with its own timeout, so one stall delivers the rest. */
-async function renderFormatsIndependently(pack: AdStudioCampaignPack, formats: AdStudioFormat[]) {
-  const results = await Promise.allSettled(
-    formats.map((format) =>
-      withTimeout(
-        renderCreativeExports(
-          { ...pack, creatives: pack.creatives.filter((creative) => creative.format === format) },
-          { storeInWorkspace: true },
-        ),
-        EXPORT_RENDER_TIMEOUT_MS,
-      ),
-    ),
-  );
-
-  const renders: Awaited<ReturnType<typeof renderCreativeExports>> = [];
-  const failedFormats: AdStudioFormat[] = [];
-  results.forEach((result, index) => {
-    if (result.status === "fulfilled" && result.value.length > 0) {
-      renders.push(...result.value);
-    } else {
-      failedFormats.push(formats[index]);
-    }
-  });
-  return { renders, failedFormats };
-}
-
 async function downloadExportZip(
   campaignId: string,
   campaignName: string,
   exportPack: AdStudioCampaignPack,
-  creativeRenders: Awaited<ReturnType<typeof renderCreativeExports>>,
   fileSuffix?: string,
 ) {
   const response = await fetch(`/api/adstudio/export-packages/${campaignId}/download`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ campaignPack: exportPack, creativeRenders }),
+    body: JSON.stringify({ campaignPack: exportPack, creativeRenders: [] }),
   });
 
   if (!response.ok) {
@@ -587,15 +455,6 @@ async function downloadExportZip(
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => reject(new Error("Creative render timed out.")), timeoutMs);
-    promise
-      .then(resolve, reject)
-      .finally(() => window.clearTimeout(timeout));
-  });
 }
 
 function goalFromLabel(label: string, fallback: AdStudioGoal): AdStudioGoal {
@@ -632,7 +491,7 @@ function packForVariant(pack: AdStudioCampaignPack, variantId: string | undefine
     ...pack,
     variants: pack.variants.filter((variant) => variant.variantId === variantId),
     copyPacks: pack.copyPacks.filter((copyPack) => copyPack.variantId === variantId),
-    creatives: pack.creatives.filter((creative) => creative.variantId === variantId).map(stripFabricJson),
+    creatives: pack.creatives.filter((creative) => creative.variantId === variantId),
   };
 }
 
@@ -641,19 +500,8 @@ function stripRenderState(creative: AdStudioCampaignPack["creatives"][number]): 
     ...creative,
     canvas: {
       ...creative.canvas,
-      fabricJson: null,
     },
     previewSvg: "",
-  };
-}
-
-function stripFabricJson(creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] {
-  return {
-    ...creative,
-    canvas: {
-      ...creative.canvas,
-      fabricJson: null,
-    },
   };
 }
 
