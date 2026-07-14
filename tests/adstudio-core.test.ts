@@ -289,50 +289,6 @@ test("creative layout repair fixes existing overlapped generated canvases", () =
   assert.ok(subhead.y >= headline.y + (headline.height ?? 0) + 18);
 });
 
-test("first-ad generation uses the uploaded image as the full creative visual", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-  const uploadedImage = "data:image/png;base64,iVBORw0KGgo=";
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 3,
-    firstAd: {
-      mode: "custom",
-      description: "Open home this weekend with a renovated kitchen.",
-      imageDataUrl: uploadedImage,
-      formats: ["9:16", "4:5"],
-    },
-  });
-  const story = pack.creatives.find((creative) => creative.format === "9:16");
-  assert.ok(story);
-
-  const image = story.canvas.objects.find((object) => object.role === "primary_image");
-  const subhead = story.canvas.objects.find((object) => object.role === "subheadline");
-  assert.deepEqual(
-    { content: image?.content, x: image?.x, y: image?.y, width: image?.width, height: image?.height },
-    { content: uploadedImage, x: 0, y: 0, width: story.canvas.width, height: story.canvas.height },
-  );
-  assert.equal(pack.campaign.offerId, "open_home_followup");
-  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Open-home follow-up guide");
-  assert.equal(subhead?.content, pack.copyPacks[0]?.landingPage.subheadline);
-  assert.doesNotMatch(String(subhead?.content ?? ""), /seller prep checklist/i);
-  assert.ok(story.canvas.objects.findIndex((object) => object.role === "primary_image") < story.canvas.objects.findIndex((object) => object.role === "headline"));
-  assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
-});
-
 test("template first-ad generation fails closed while the registry is reset", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",
@@ -357,9 +313,8 @@ test("template first-ad generation fails closed while the registry is reset", ()
         platforms: ["meta"],
         variantCount: 1,
         firstAd: {
-          mode: "template",
-          source: "template_library",
-          templateKey: "meta_002",
+          source: "gallery",
+          templateId: "meta_002",
           description: "Agent-led property planning for local owners.",
           imageDataUrl: "data:image/png;base64,original",
           formats: ["9:16", "4:5"],
@@ -367,39 +322,6 @@ test("template first-ad generation fails closed while the registry is reset", ()
       }),
     /Selected template was not found\./,
   );
-});
-
-test("ad radar inspiration keeps the explicitly copied observed ad id", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    firstAd: {
-      mode: "custom",
-      source: "ad_radar",
-      observedAdId: "observed-ad-user-picked",
-      description: "Use this competitor angle but make it our own.",
-      imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
-      formats: ["9:16", "4:5"],
-    },
-  });
-
-  assert.equal(pack.campaign.templateKey, null);
-  assert.equal(pack.campaign.sourceObservedAdId, "observed-ad-user-picked");
 });
 
 test("scoreAdStudioVariant weights offer clarity, relevance, intent, brand fit, compliance, and hierarchy", () => {

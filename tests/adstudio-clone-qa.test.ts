@@ -177,8 +177,8 @@ test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
   );
 });
 
-test("clone route runs cascade + QA reroll and never ships an unverified clone silently", () => {
-  const route = readFileSync("src/app/api/adstudio/generate-clone/route.ts", "utf8");
+test("template campaign generation runs cascade + QA and never ships an unverified clone silently", () => {
+  const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
   // Provider cascade from the model-profile registry, not a single hardcoded vendor.
@@ -187,15 +187,14 @@ test("clone route runs cascade + QA reroll and never ships an unverified clone s
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(route, /resolveCloneProviders\(tier\)/);
-  assert.doesNotMatch(route, /createFalImageProvider|fal-image-provider|FAL_KEY/);
+  assert.match(pipeline, /resolveCloneProviders\(tier\)/);
+  assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // Every generation is QA'd; failures reroll with a correction, and a clone
   // that still fails returns 502 with the report instead of shipping.
-  assert.match(route, /runCloneQa/);
-  assert.match(route, /cloneQaCorrectionPrompt/);
-  assert.match(route, /status: 502/);
-  assert.match(route, /runComplianceGate/);
+  assert.match(pipeline, /runCloneQa/);
+  assert.match(pipeline, /cloneQaCorrectionPrompt/);
+  assert.match(pipeline, /TemplateCampaignQaError/);
 });
 
 test("durable accounting failure after provider success never dispatches a fallback", async () => {
@@ -573,7 +572,7 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
 
   // The anchor is the CURRENT creative image, never the template sample.
   assert.match(builder, /buildTargetedEditRequest/);
-  assert.match(builder, /exactly identical to reference image 1/);
+  assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
   assert.match(route, /resolveCloneProviders\("preview"\)/);
 

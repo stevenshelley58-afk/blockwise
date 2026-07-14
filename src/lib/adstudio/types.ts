@@ -26,17 +26,10 @@ export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 export const FIRST_AD_FORMATS = ["9:16", "4:5"] as const;
 
 export type FirstAdInput = {
-  /**
-   * "custom" mode is legacy (P2.3 cut blank mode): the New Ad dialog only ever
-   * submits "template" now, but the API keeps accepting "custom" for existing
-   * consumers and legacy canvas-composited campaigns.
-   */
-  mode: "template" | "custom";
-  source?: "blank" | "template_library" | "ad_radar" | "saved_ad";
-  templateId?: string;
+  source?: "gallery" | "ad_radar" | "saved_ad";
+  templateId: string;
   savedAdId?: string;
   observedAdId?: string;
-  templateKey?: string;
   hooks?: string[];
   referenceCta?: string;
   referenceAdType?: string;
@@ -44,10 +37,7 @@ export type FirstAdInput = {
   description: string;
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
-  /**
-   * Back-compat primary clone image stays 4:5. New template generations can also
-   * carry format-specific clone renders so Story owns a real 9:16 image.
-   */
+  /** Clone renders produced after the request is validated. */
   templateCloneImage?: string;
   templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   templateCloneProvider?: string;

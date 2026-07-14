@@ -64,11 +64,10 @@ test("mobile preview uses the same creative editor surface as desktop", () => {
   const styles = read("src/components/adstudio/styles.ts");
 
   assert.match(workbench, /const MOBILE_WORKBENCH_QUERY = "\(max-width: 900px\)";/);
-  assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<FabricAdEditor/);
+  assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<InPlaceAdEditor/);
   assert.match(workbench, /!isMobileViewport \? renderCreativeEditor\(\) : null/);
   assert.match(workbench, /isMobileViewport \? renderCreativeEditor\(\) : renderFallbackPreview\(\)/);
-  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-editor/);
-  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-shell\[data-format="4:5"\]\{width:min\(475px,100%\)\}/);
+  assert.match(styles, /studio-mobile-preview-wrap/);
 });
 
 test("mobile overflow exposes save draft", () => {

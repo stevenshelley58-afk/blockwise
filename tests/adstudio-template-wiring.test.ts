@@ -1,12 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import {
-  AD_STUDIO_TEMPLATES,
-  extractBrandKitFromWebsite,
-  generateAdStudioCampaignPack,
-} from "../src/lib/adstudio/index.ts";
-import { getCreativeDesignJson, saveCreativeDesignJson } from "../src/lib/adstudio/creative-design-json.ts";
+import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite, generateAdStudioCampaignPack } from "../src/lib/adstudio/index.ts";
 
 function brandKit() {
   return {
@@ -14,21 +10,37 @@ function brandKit() {
       workspaceId: "workspace_wiring",
       websiteUrl: "https://wire.example",
       marketCountry: "AU",
-      htmlByUrl: { "https://wire.example": "<html><head><title>Wire Realty</title></head><body></body></html>" },
+      htmlByUrl: { "https://wire.example": "<title>Wire Realty</title>" },
     }),
     reviewStatus: "approved" as const,
   };
 }
 
-const A = "data:image/png;base64,AAAAprimary";
-const B = "data:image/png;base64,BBBBsecondary";
-
-test("every template slot wires end-to-end: multi-image + copy reach objects AND fabric, and edits round-trip", () => {
-  const template = AD_STUDIO_TEMPLATES[0];
-  assert.ok(template, "a proof template must be installed");
-  const imageSlots = template.canvas.objects.filter((o) => o.type === "image");
-  assert.ok(imageSlots.length >= 2, "proof template should have multiple image slots");
-
+test("a selected template cannot be opened as layers before a clone exists", () => {
+  const template = AD_STUDIO_TEMPLATES[0]!;
+  assert.throws(() => generateAdStudioCampaignPack({
+    workspaceId: "workspace_wiring",
+    brandKit: brandKit(),
+    goal: template.goal,
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: template.offerId,
+    platforms: ["meta"],
+    variantCount: 1,
+    firstAd: {
+      source: "gallery",
+      templateId: template.id,
+      description: "Listing launch",
+      imageDataUrl: "data:image/png;base64,PHOTO",
+      formats: ["9:16", "4:5"],
+    },
+  }), /must be cloned before it can be opened or edited/);
+});
+test("the finished clone is one flat creative, ready for image-anchored editing", () => {
+  const template = AD_STUDIO_TEMPLATES[0]!;
+  const feed = "/api/adstudio/media?path=clone-feed.png";
+  const story = "/api/adstudio/media?path=clone-story.png";
   const pack = generateAdStudioCampaignPack({
     workspaceId: "workspace_wiring",
     brandKit: brandKit(),
@@ -40,119 +52,27 @@ test("every template slot wires end-to-end: multi-image + copy reach objects AND
     platforms: ["meta"],
     variantCount: 1,
     firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey,
-      description: "Two fresh listings.",
-      imageDataUrl: A,
-      imageDataUrls: { property_photo: A, brand_logo: B },
-      onImageCopy: {
-        headline: "Fresh coastal listing",
-        price: "$1,245,000",
-        address: "18 Wattle Lane, Scarborough WA 6019",
-        phone: "+61 400 123 456",
-        website_handle: "blockwise.sale",
-      },
+      source: "gallery",
+      templateId: template.id,
+      description: "Listing launch",
+      imageDataUrl: feed,
+      templateCloneImage: feed,
+      templateCloneImagesByFormat: { "4:5": feed, "9:16": story },
       formats: ["9:16", "4:5"],
     },
   });
-
-  const creative = pack.creatives[0];
-  assert.ok(creative);
-
-  // canvas.objects: each image slot got its OWN image; text slots got copy
-  const obj = (role: string) => creative.canvas.objects.find((o) => o.role === role);
-  assert.equal(obj("property_photo")?.content, A);
-  assert.equal(obj("brand_logo")?.content, B);
-  assert.equal(obj("headline")?.content, "Fresh coastal listing");
-  assert.equal(obj("price")?.content, "$1,245,000");
-  assert.equal(obj("address")?.content, "18 Wattle Lane, Scarborough WA 6019");
-  assert.equal(obj("phone")?.content, "+61 400 123 456");
-  assert.equal(obj("website_handle")?.content, "blockwise.sale");
-
-  // fabric mirror: same wiring by role (editor reads this)
-  const design = getCreativeDesignJson(creative);
-  assert.ok(design);
-  const fab = (role: string) => design.objects.find((o) => o.blockwise?.role === role);
-  assert.equal(fab("property_photo")?.src, A);
-  assert.equal(fab("brand_logo")?.src, B);
-  assert.equal(fab("headline")?.text, "Fresh coastal listing");
-  assert.equal(fab("price")?.text, "$1,245,000");
-  assert.equal(fab("address")?.text, "18 Wattle Lane, Scarborough WA 6019");
-  assert.equal(fab("phone")?.text, "+61 400 123 456");
-  assert.equal(fab("website_handle")?.text, "blockwise.sale");
-
-  // edit round-trip: editing the fabric headline syncs back to objects + preview
-  const edited = { ...design, objects: design.objects.map((o) => (o.blockwise?.role === "headline" ? { ...o, text: "EDITED HEADLINE" } : o)) };
-  const saved = saveCreativeDesignJson(creative, edited);
-  assert.equal(saved.canvas.objects.find((o) => o.role === "headline")?.content, "EDITED HEADLINE");
-  assert.match(saved.previewSvg, /EDITED[\s\S]*HEADLINE/);
+  assert.deepEqual(pack.creatives.map((creative) => creative.format).sort(), ["4:5", "9:16"]);
+  for (const creative of pack.creatives) {
+    assert.equal(creative.canvas.objects.length, 1);
+    assert.equal(creative.canvas.objects[0]?.objectId, "template_clone_image");
+    assert.equal(creative.canvas.objects.some((object) => object.type === "text"), false);
+    assert.equal(creative.canvas.fabricJson, null);
+  }
 });
 
-test("template clone output becomes the generated creative image instead of redrawn template layers", () => {
-  const template = AD_STUDIO_TEMPLATES[0];
-  assert.ok(template, "a proof template must be installed");
-  const cloneImage = "/api/adstudio/media?path=workspace_wiring%2Fadstudio%2Fclones%2Fclone.png";
-  const storyImage = "/api/adstudio/media?path=workspace_wiring%2Fadstudio%2Fclones%2Fclone-9x16.png";
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_wiring",
-    brandKit: brandKit(),
-    goal: template.goal,
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: template.offerId,
-    platforms: ["meta"],
-    variantCount: 1,
-    firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey,
-      description: "Two fresh listings.",
-      imageDataUrl: cloneImage,
-      imageDataUrls: { property_photo: A, brand_logo: B },
-      templateCloneImage: cloneImage,
-      templateCloneImagesByFormat: { "4:5": cloneImage, "9:16": storyImage },
-      templateCloneProvider: "fal",
-      templateCloneModel: "openai/gpt-image-2/edit",
-      formats: ["9:16", "4:5"],
-    },
-  });
-
-  assert.deepEqual(
-    pack.creatives.map((creative) => creative.format).sort(),
-    ["4:5", "9:16"],
-  );
-
-  const feed = pack.creatives.find((creative) => creative.format === "4:5");
-  const story = pack.creatives.find((creative) => creative.format === "9:16");
-  assert.ok(feed);
-  assert.ok(story);
-  assert.equal(feed.source, "generative");
-  assert.equal(story.source, "generative");
-  assert.equal(feed.canvas.objects.length, 1);
-  assert.deepEqual(
-    feed.canvas.objects[0],
-    {
-      objectId: "template_clone_image",
-      type: "image",
-      role: "primary_image",
-      content: cloneImage,
-      assetId: cloneImage,
-      x: 0,
-      y: 0,
-      width: template.canvas.width,
-      height: template.canvas.height,
-      imageAnchor: "center",
-      locked: false,
-    },
-  );
-  assert.equal(story.canvas.width, 1080);
-  assert.equal(story.canvas.height, 1920);
-  assert.equal(story.canvas.objects[0]?.content, storyImage);
-  assert.equal(story.canvas.objects[0]?.height, 1920);
-  assert.match(feed.previewSvg, /template_clone_image|workspace_wiring%2Fadstudio%2Fclones%2Fclone\.png/);
-  assert.match(story.previewSvg, /clone-9x16\.png/);
-  assert.equal(feed.canvas.objects.some((object) => object.type === "text"), false);
+test("the active workbench has one post-clone editor and no Fabric editor", () => {
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  assert.match(workbench, /<InPlaceAdEditor/);
+  assert.doesNotMatch(workbench, /FabricAdEditor|fabric-ad-editor/);
+  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\)/);
 });

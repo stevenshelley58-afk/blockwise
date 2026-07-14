@@ -1,25 +1,18 @@
 import { tasks } from "@trigger.dev/sdk/v3";
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  buildAdStudioLiveResult,
-  generateAdStudioCampaignPack,
-} from "@/lib/adstudio";
+import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   refundReservedTrialCredit,
   reserveAdStudioGenerationCredit,
   type AdStudioGenerationTrialReservation,
 } from "@/lib/adstudio/generation-trial";
-import { applyProvidedCopyToCampaignPack, enrichCampaignPackCopyWithAi } from "@/lib/adstudio/campaign-copy-enrichment";
 import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
-import { compactAdStudioCampaignPackForTransport, persistAdStudioCampaignPack } from "@/lib/adstudio/persistence";
-import { resolveAdStudioImageForModel } from "@/lib/adstudio/resolve-image-for-model";
-import { resolveApprovedAdStudioTemplate, templatePromptHint } from "@/lib/adstudio/template-resolver";
-import { resolveAdStudioGenerationBrandKit } from "@/lib/adstudio/trial-brand-kit";
+import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
@@ -58,8 +51,7 @@ function isAdStudioImageSrc(value: string | undefined): boolean {
 }
 
 function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
-  if (!firstAd) return null;
-  if (firstAd.mode !== "template" && firstAd.mode !== "custom") return "Invalid first ad start mode.";
+  if (!firstAd) return "Choose an ad sample and add your assets before generating.";
   if (!firstAd.description?.trim()) return "Add a short description so Blockwise knows what to write. Include the property, suburb, offer, or key selling point.";
   if (firstAd.description.length > 500) return "Keep the short description to 500 characters or less.";
   if (!isAdStudioImageSrc(firstAd.imageDataUrl)) return "Add a required image before generating the ad. Upload a file, choose from library, or generate an image.";
@@ -75,9 +67,7 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
   if (JSON.stringify(firstAd.formats) !== JSON.stringify(FIRST_AD_FORMATS)) {
     return "First ad formats must be Story and Feed.";
   }
-  if (firstAd.mode === "template" && !(firstAd.templateKey?.trim() || firstAd.templateId?.trim())) {
-    return "Selected template was not found.";
-  }
+  if (!firstAd.templateId?.trim()) return "Selected sample was not found.";
   if (firstAd.copy) {
     const fields = [firstAd.copy.primaryText, firstAd.copy.headline, firstAd.copy.description, firstAd.copy.cta];
     if (fields.some((field) => typeof field !== "string" || field.length > 500)) {
@@ -197,13 +187,6 @@ export async function POST(request: NextRequest) {
     if (firstAdError) {
       return NextResponse.json({ error: firstAdError }, { status: 400 });
     }
-    const resolvedTemplate = body.firstAd?.mode === "template"
-      ? await resolveApprovedAdStudioTemplate({
-          templateKey: body.firstAd.templateKey,
-          templateId: body.firstAd.templateId,
-        })
-      : null;
-
     const trialGate = await reserveAdStudioGenerationCredit({
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,
@@ -216,11 +199,11 @@ export async function POST(request: NextRequest) {
 
     trialReservation = trialGate.reservation;
 
-    // New-style template request (no pre-generated clone from the dialog): the
+    // Copy, clone, QA, and persistence run as one server-owned operation. The
     // whole copy → clone → QA → persist pipeline runs server-side. Normally as
     // a trigger.dev job (202 + polling — kills the 120s ceiling); inline only
     // when trigger is not configured or ADSTUDIO_SYNC_GENERATE=1 (local/dev).
-    if (body.firstAd?.mode === "template" && !body.firstAd.templateCloneImage) {
+    {
       const origin = request.nextUrl.origin;
 
       if (process.env.TRIGGER_SECRET_KEY && !triggerAuthBroken && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
@@ -232,7 +215,7 @@ export async function POST(request: NextRequest) {
             created_by: context.access.userId,
             status: "queued",
             kind: "template_campaign",
-            headline: body.firstAd.description.slice(0, 200),
+            headline: body.firstAd!.description.slice(0, 200),
             // The task refunds the reservation on failure; the route cannot —
             // it has already returned 202 by then.
             payload: {
@@ -316,96 +299,11 @@ export async function POST(request: NextRequest) {
           campaignPack: liveResult.data,
           data: liveResult.data,
           persistence: liveResult.persistence,
-          photoPrep: { status: "skipped", readyFormats: [], pendingFormats: [] },
         },
         { status: 201 },
       );
     }
 
-    const brandKitResult = await resolveAdStudioGenerationBrandKit({
-      supabase: context.supabase,
-      workspaceId: context.access.workspaceId,
-      workspaceName: context.access.workspaceName,
-      region: context.access.region,
-      userId: context.access.userId,
-      submittedBrandKit: body.brandKit,
-      isTrialWorkspace: trialReservation.isTrialWorkspace,
-    });
-
-    if (!brandKitResult.ok) {
-      await refundReservedTrialCredit(trialReservation);
-      return NextResponse.json({ error: brandKitResult.error }, { status: brandKitResult.status });
-    }
-
-    const sourceImageRef = body.sourceImageDataUrl ?? body.firstAd?.imageDataUrl;
-    const sourceImageUrl = await resolveAdStudioImageForModel(
-      context.supabase,
-      context.access.workspaceId,
-      sourceImageRef,
-    );
-
-    let pack = generateAdStudioCampaignPack({
-      workspaceId: context.access.workspaceId,
-      brandKit: brandKitResult.brandKit,
-      goal: resolvedTemplate?.goal ?? body.goal ?? "seller_leads",
-      suburb: body.suburb ?? "Scarborough",
-      city: body.city ?? "Perth",
-      state: body.state ?? "WA",
-      offerId: resolvedTemplate?.offerId ?? body.offerId ?? "seller_prep_checklist",
-      // Google Ads parked for Meta-only v1 (see src/lib/config/feature-flags.ts). Was: ["meta", "google_search", "google_pmax", "google_demand_gen"]
-      platforms: body.platforms ?? ["meta"],
-      creativeFormats: body.creativeFormats,
-      variantCount: body.variantCount ?? 5,
-      firstAd: body.firstAd,
-      sourceImageDataUrl: body.sourceImageDataUrl,
-      sourceImagesBySlot: body.firstAd?.imageDataUrls,
-    });
-    // Template mode: the dialog already generated brief-grounded copy in one
-    // pass with the clone (see /api/adstudio/copy templateFields mode), so the
-    // pack's offer-library defaults are replaced with it here. Running full AI
-    // enrichment on template ads was a past regression: it overwrote curated
-    // copy with generic AI text and collapsed CTAs down to "Learn more".
-    if (body.firstAd?.mode === "template") {
-      if (body.firstAd.copy) {
-        pack = applyProvidedCopyToCampaignPack(pack, body.firstAd.copy);
-      }
-    } else {
-      pack = await enrichCampaignPackCopyWithAi({
-        pack,
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        brief: body.firstAd?.description,
-        templateName: resolvedTemplate?.name,
-        templateHint: templatePromptHint(resolvedTemplate),
-        sourceImageUrl,
-      });
-    }
-    const persisted = await persistAdStudioCampaignPack(context.supabase, pack, context.access.userId);
-
-    // A generation the user cannot get back after reload is a failure, not a
-    // success with a buried warning. The RPC is transactional, so nothing
-    // partial was written; refund the credit and let the client retry.
-    if (persisted.error) {
-      await refundReservedTrialCredit(trialReservation);
-      return NextResponse.json(
-        { error: `Your ad was generated but could not be saved (${persisted.error.message}). Please try again.` },
-        { status: 500 },
-      );
-    }
-
-    const liveResult = buildAdStudioLiveResult({
-      data: compactAdStudioCampaignPackForTransport(pack),
-    });
-
-    return NextResponse.json(
-      {
-        campaignPack: liveResult.data,
-        data: liveResult.data,
-        persistence: liveResult.persistence,
-        photoPrep: { status: "skipped", readyFormats: [], pendingFormats: [] },
-      },
-      { status: 201 },
-    );
   } catch (error) {
     await refundReservedTrialCredit(trialReservation);
     return errorResponse(error, 400);

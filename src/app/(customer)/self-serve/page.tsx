@@ -13,7 +13,7 @@ import "./self-serve.css";
 export const dynamic = "force-dynamic";
 
 type TemplateWithThumbnail = AdStudioTemplate & {
-  gallery: NonNullable<AdStudioTemplate["gallery"]>;
+  sample: AdStudioTemplate["sample"];
 };
 
 // The gallery holds only eye-approved templates now (the look-alike set was
@@ -26,12 +26,12 @@ const FEATURED_TEMPLATE_CARDS = [
 function hasTemplateThumbnail(
   template: AdStudioTemplate | undefined,
 ): template is TemplateWithThumbnail {
-  return Boolean(template?.gallery?.thumbnailSrc);
+  return Boolean(template?.sample?.thumbnailSrc);
 }
 
 function templateHref(template: AdStudioTemplate) {
   return `/ad-studio?first=1&template=${encodeURIComponent(
-    template.templateKey ?? template.id,
+    template.id,
   )}`;
 }
 
@@ -207,7 +207,7 @@ export default async function SelfServeHome() {
                   <span className="bwh-template-image">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={template.gallery.thumbnailSrc}
+                      src={template.sample.thumbnailSrc}
                       alt=""
                       loading="lazy"
                     />

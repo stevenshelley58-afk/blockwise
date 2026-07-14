@@ -252,7 +252,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       throw new Error("A generation is already running - wait for it to finish.");
     }
     generateInFlightRef.current = true;
-    const expectedCount = input.mode === "template" ? 1 : 3;
+    const expectedCount = 1;
     const stopPhases = startGenerationPhases(s.setGeneration, expectedCount);
 
     try {
@@ -304,7 +304,7 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setPrimaryImage(input.templateCloneImage ?? packPrimaryImage(campaignPack) ?? input.imageDataUrl);
       s.setSaveState("saved");
       s.setSection("media");
-      s.showToast(input.mode === "template" ? "Generated template clone" : "Generated Story and Feed");
+      s.showToast("Your ad is ready to edit");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
       // The background job already renders at the quality tier; only sync
       // drafts need the client-driven upgrade pass.

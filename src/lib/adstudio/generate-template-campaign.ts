@@ -25,11 +25,10 @@ import {
   buildCloneImageRequest,
   resolveCloneCopy,
   type CloneInputs,
-  type TemplateCloneBrief,
 } from "./reference-clone.ts";
 import { resolveAdStudioImageForModel } from "./resolve-image-for-model.ts";
-import { getTemplateBrief } from "./template-brief.ts";
-import { resolveApprovedAdStudioTemplate, templatePromptHint } from "./template-resolver.ts";
+import { resolveApprovedAdStudioTemplate } from "./template-resolver.ts";
+import type { AdStudioTemplate } from "./templates.ts";
 import { resolveAdStudioGenerationBrandKit } from "./trial-brand-kit.ts";
 import { ProviderRunPersistenceError } from "../operator/prompts/redact-prompt-run.ts";
 import type {
@@ -132,11 +131,11 @@ export class TemplateCampaignQaError extends Error {
 }
 
 export function buildTemplateCloneRequestsByFormat(
-  brief: TemplateCloneBrief,
+  template: AdStudioTemplate,
   inputs: CloneInputs,
 ): Record<TemplateCloneRenderFormat, ImageProviderRequest> {
-  const primary = buildCloneImageRequest(brief, inputs);
-  const storyBase = buildCloneImageRequest(brief, {
+  const primary = buildCloneImageRequest(template, inputs);
+  const storyBase = buildCloneImageRequest(template, {
     ...inputs,
     aspectRatio: STORY_CLONE_FORMAT,
   });
@@ -274,21 +273,14 @@ export async function runTemplateCampaignGeneration(
   const { body } = input;
   const firstAd = body.firstAd;
 
-  if (!firstAd || firstAd.mode !== "template") {
-    throw new Error("Template campaign generation requires a template first ad.");
-  }
+  if (!firstAd) throw new Error("Ad generation requires a selected sample and customer assets.");
   if (!firstAd.description?.trim()) {
     throw new Error("Add a short description so Blockwise knows what to write.");
   }
 
   const template = await resolveApprovedAdStudioTemplate({
-    templateKey: firstAd.templateKey,
     templateId: firstAd.templateId,
   });
-  const brief = getTemplateBrief(template.id);
-  if (!brief) {
-    throw new Error(`Selected template "${template.id}" has no clone brief.`);
-  }
 
   const brandKitResult = await resolveAdStudioGenerationBrandKit({
     supabase,
@@ -305,38 +297,36 @@ export async function runTemplateCampaignGeneration(
   const brandKit = brandKitResult.brandKit;
 
   // Resolve each supplied customer image (keyed by slot role or object id, the
-  // same contract as the generate-clone route) to a model-consumable reference.
+  // same contract as customer generation) to a model-consumable reference.
   const suppliedImages = firstAd.imageDataUrls ?? {};
   const resolvedImages: Record<string, string> = {};
-  for (const slot of brief.imageSlots) {
-    const brandLogo = /logo/i.test(slot.role)
+  for (const slot of template.inputs.images) {
+    const brandLogo = /logo/i.test(slot.key)
       ? brandKit.logos.primaryLogoUrl ?? brandKit.logos.darkLogoUrl ?? brandKit.logos.lightLogoUrl ?? brandKit.logos.faviconUrl
       : undefined;
-    const ref = suppliedImages[slot.role]
-      ?? (slot.objectId ? suppliedImages[slot.objectId] : undefined)
-      ?? brandLogo;
+    const ref = suppliedImages[slot.key] ?? brandLogo;
     if (!ref?.trim()) continue;
     const resolved = await resolveAdStudioImageForModel(supabase, input.workspaceId, ref.trim());
     if (!resolved) {
-      throw new Error(`Image for "${slot.role}" could not be read.`);
+      throw new Error(`Image for "${slot.label}" could not be read.`);
     }
-    resolvedImages[slot.role] = resolved;
+    resolvedImages[slot.key] = resolved;
   }
 
   // Single-image submissions may arrive only as firstAd.imageDataUrl.
-  const primarySlot = brief.imageSlots.find((slot) => slot.required) ?? brief.imageSlots[0];
-  if (primarySlot && !resolvedImages[primarySlot.role] && firstAd.imageDataUrl?.trim()) {
+  const primarySlot = template.inputs.images.find((slot) => slot.required) ?? template.inputs.images[0];
+  if (primarySlot && !resolvedImages[primarySlot.key] && firstAd.imageDataUrl?.trim()) {
     const resolved = await resolveAdStudioImageForModel(supabase, input.workspaceId, firstAd.imageDataUrl.trim());
-    if (resolved) resolvedImages[primarySlot.role] = resolved;
+    if (resolved) resolvedImages[primarySlot.key] = resolved;
   }
 
-  const missingSlot = brief.imageSlots.find((slot) => slot.required && !resolvedImages[slot.role]);
+  const missingSlot = template.inputs.images.find((slot) => slot.required && !resolvedImages[slot.key]);
   if (missingSlot) {
-    throw new Error(`Missing required image: ${missingSlot.role}`);
+    throw new Error(`Missing required image: ${missingSlot.label}`);
   }
 
   const correlationId = randomUUID();
-  const sourceImageUrl = primarySlot ? resolvedImages[primarySlot.role] : Object.values(resolvedImages)[0];
+  const sourceImageUrl = primarySlot ? resolvedImages[primarySlot.key] : Object.values(resolvedImages)[0];
 
   // One structured copy pass writes the on-image field values AND the Meta feed
   // copy from the user's brief, so the baked-in text and the feed text tell one
@@ -346,17 +336,17 @@ export async function runTemplateCampaignGeneration(
     userId: input.userId,
     correlationId,
     description: firstAd.description,
-    fields: brief.copyFields.map((field) => ({
+    fields: template.inputs.text.map((field) => ({
       key: field.key,
       label: field.label,
       maxLength: field.maxLength,
-      sample: field.default,
+      sample: field.sample,
     })),
     sourceImageUrl,
     context: {
       goal: template.goal,
       templateName: template.name,
-      templateHint: templatePromptHint(template),
+      templateHint: template.audienceIntent,
       businessName: brandKit.identity.tradingName ?? brandKit.identity.businessName,
       voice: brandKit.tone.voice,
       preferredPhrases: brandKit.tone.preferredPhrases,
@@ -368,7 +358,7 @@ export async function runTemplateCampaignGeneration(
   // model's suggestions VERBATIM — the copy model must never invent facts the
   // customer supplies. QA then verifies these exact strings on the render.
   const customerOnImage: Record<string, string> = {};
-  for (const field of brief.copyFields) {
+  for (const field of template.inputs.text) {
     const provided = firstAd.onImageCopy?.[field.key]?.trim();
     if (provided) customerOnImage[field.key] = provided;
   }
@@ -379,10 +369,10 @@ export async function runTemplateCampaignGeneration(
   // one native feed render and one recomposed 9:16 story render in parallel.
   // Every format must pass blocking QA before any render or campaign is saved.
   const referenceImage = await ensureRasterReferenceImage(
-    new URL(brief.referenceImage, input.origin).toString(),
+    new URL(template.sample.imageSrc, input.origin).toString(),
   );
-  const expectedCopy = resolveCloneCopy(brief, onImageCopy);
-  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(brief, {
+  const expectedCopy = resolveCloneCopy(template, onImageCopy);
+  const cloneRequestsByFormat = buildTemplateCloneRequestsByFormat(template, {
     referenceImage,
     images: resolvedImages,
     copy: onImageCopy,
@@ -429,7 +419,7 @@ export async function runTemplateCampaignGeneration(
     city: body.city ?? "Perth",
     state: body.state ?? "WA",
     offerId: template.offerId ?? body.offerId ?? "seller_prep_checklist",
-    // Google Ads parked for Meta-only v1 (see src/lib/config/feature-flags.ts).
+    // Google Ads remain parked while this product creates Meta ads only.
     platforms: body.platforms ?? ["meta"],
     creativeFormats: body.creativeFormats,
     variantCount: body.variantCount ?? 5,

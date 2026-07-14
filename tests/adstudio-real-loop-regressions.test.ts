@@ -186,7 +186,7 @@ test("campaign creation uses shared copy enrichment without changing copy route 
 
   assert.match(copyRoute, /generateAdStudioCopy/);
   assert.match(copyRoute, /NextResponse\.json\(result\)/);
-  assert.match(createRoute, /enrichCampaignPackCopyWithAi/);
+  assert.match(createRoute, /runTemplateCampaignGeneration/);
   for (const term of [
     "loadCachedPhotoAssets" + "ForTemplate",
     "fallbackPhotoAssets" + "ForTemplate",
@@ -330,82 +330,37 @@ test("Ad Radar use action opens the template popout in Ad Studio", () => {
   assert.match(workbench, /Choose a template, then add your own photo\./);
   assert.doesNotMatch(workbench, /setNewAdStep\("radar"\)/);
   assert.match(workbench, /<NewAdDialog/);
-  assert.match(types, /source\?: "blank" \| "template_library" \| "ad_radar" \| "saved_ad"/);
+  assert.match(types, /source\?: "gallery" \| "ad_radar" \| "saved_ad"/);
   assert.match(types, /savedAdId\?: string/);
   assert.match(types, /observedAdId\?: string/);
-  assert.match(types, /templateKey\?: string/);
+  assert.match(types, /templateId: string/);
   assert.match(types, /hooks\?: string\[\]/);
 });
 
-test("Ad Studio template picker uses the local self-contained gallery", () => {
+test("Ad Studio template picker uses the one local sample gallery", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
-  const route = readFileSync("src/app/api/adstudio/template-library/route.ts", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
 
-  assert.match(workbench, /fetch\(`\/api\/adstudio\/template-library\?workspaceId=\$\{encodeURIComponent\(workspaceId\)\}`/);
-  assert.match(workbench, /setTemplateLibrary\(payload\.templates\)/);
   assert.match(workbench, /builtInAdStudioTemplates/);
-  assert.match(route, /export async function GET/);
-  assert.match(route, /export async function PATCH/);
-  assert.match(route, /source: "self_contained_gallery"/);
-  assert.match(route, /status: 405/);
-  assert.doesNotMatch(route, /createSupabaseServiceClient\(\)\.schema\("research"\)/);
-  for (const removedSource of [
-    ["v", "ad", "template", "library"].join("_"),
-    ["ad", "template", "candidates"].join("_"),
-  ]) {
-    assert.equal(route.includes(`from("${removedSource}")`), false);
-  }
-  assert.match(templates, /mapAdStudioLibraryTemplate/);
   assert.match(templates, /RAW_ADSTUDIO_GALLERY_TEMPLATES\.map\(validateGalleryTemplate\)/);
+  assert.match(templates, /sample: AdStudioTemplateSample/);
+  assert.match(templates, /inputs:/);
+  assert.doesNotMatch(templates, /^\s*(canvas|fabricJson|templateKey|promptHint)[?:]/m);
   assert.match(templates, /RESOLVABLE_AD_STUDIO_TEMPLATES[\s\S]*status === "approved"/);
   assert.match(templates, /resolveAdStudioTemplate[\s\S]*template\.id === templateId/);
-  assert.match(templates, /builtInAdStudioTemplates[\s\S]*return \[\.\.\.AD_STUDIO_TEMPLATES\]/);
-  for (const term of ["fallback", "gold", "extracted", "creative" + "Skeleton"]) {
-    assert.equal(templates.includes(term), false, `templates.ts must not contain ${term}`);
-  }
-  assert.match(templates, /sampleCopy\?: AdStudioTemplateSampleCopy/);
-  assert.match(dialog, /No templates in this category yet\. Pick another category, reuse a previous ad, or use saved Ad Radar inspiration\./);
-  assert.match(dialog, /Saved Ad Radar inspiration/);
-  assert.match(dialog, /Previous ads/);
-  assert.match(dialog, /Ad Radar/);
-  assert.doesNotMatch(dialog, /isBuiltInAdStudioTemplate/);
-  assert.match(dialog, /mode: "template"/);
-  assert.match(dialog, /source = radarInspiration \? "ad_radar" : "template_library"/);
-  assert.match(dialog, /templateKey: selectedTemplate\.templateKey \?\? selectedTemplate\.id/);
-  assert.match(createRoute, /resolveApprovedAdStudioTemplate/);
-  assert.match(createRoute, /resolvedTemplate/);
-  assert.match(createRoute, /photoPrep: \{ status: "skipped"/);
-  for (const term of [
-    "loadCachedPhotoAssets" + "ForTemplate",
-    "fallbackPhotoAssets" + "ForTemplate",
-    "queueAdStudioTemplate" + "PhotoPrep",
-    "preparedPhotoUrls" + "ByFormat",
-  ]) {
-    assert.equal(createRoute.includes(term), false, `campaign route must not contain ${term}`);
-  }
-  assert.doesNotMatch(createRoute, /AD_STUDIO_TEMPLATES\.some/);
+  assert.match(dialog, /templateId: selectedTemplate\.id/);
+  assert.doesNotMatch(dialog, /mode: "template"|template_library|templateKey/);
+  assert.match(createRoute, /runTemplateCampaignGeneration/);
+  assert.doesNotMatch(createRoute, /generateAdStudioCampaignPack\(\{/);
   assert.doesNotMatch(generator, /resolvedTemplate\?: AdStudioTemplate \| null/);
   assert.match(generator, /function resolveTemplateForGeneration/);
   assert.match(generator, /Selected template was not found\./);
-  assert.match(generator, /templateKey/);
   assert.match(generator, /templateSnapshot/);
   assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);
-  for (const term of [
-    "Template" + "Design",
-    "render" + "Design",
-    "resolveTemplate" + "DesignForFormat",
-    "buildArchetypeCreative",
-    "layout-archetypes",
-    "compositionForTemplate",
-  ]) {
-    assert.equal(generator.includes(term), false, `generator.ts must not contain ${term}`);
-  }
-  assert.equal(existsSync("src/lib/adstudio/layout-archetypes.ts"), false);
-  assert.equal(existsSync("src/lib/adstudio/creative/composition-to-creative.ts"), false);
+  assert.match(generator, /must be cloned before it can be opened or edited/);
 });
 
 test("Ad Radar longest-running sort reaches the authenticated search route", () => {
@@ -421,25 +376,24 @@ test("Ad Radar longest-running sort reaches the authenticated search route", () 
   assert.match(search, /adRunningMs/);
 });
 
-test("P2.3: blank mode is cut — every new ad starts from a template", () => {
+test("every new ad starts from a sample", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
 
   // No blank affordance and no isBlank branching anywhere in the dialog.
   assert.equal(dialog.includes("Start blank"), false, "dialog must not offer Start blank");
   assert.equal(dialog.includes("isBlank"), false, "dialog must not branch on isBlank");
   assert.equal(dialog.includes('chooseTemplate("")'), false, "dialog must not select an empty template id");
-  // The dialog only ever submits template mode; "custom" stays server-side legacy.
-  assert.doesNotMatch(dialog, /mode: "custom"/);
-  assert.match(dialog, /mode: "template"/);
+  assert.doesNotMatch(dialog, /mode: "custom"|mode: "template"|templateKey/);
+  assert.match(dialog, /templateId: selectedTemplate\.id/);
   // Ad Radar starts map to a template so they carry a template id.
   assert.match(dialog, /function templateForRadarAd/);
   assert.match(dialog, /templateForRadarAd\(templates, ad\)/);
-  // The API keeps accepting legacy custom mode for existing consumers.
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
-  assert.match(createRoute, /firstAd\.mode !== "template" && firstAd\.mode !== "custom"/);
+  assert.match(createRoute, /if \(!firstAd\.templateId\?\.trim\(\)\)/);
+  assert.doesNotMatch(createRoute, /firstAd\.mode|templateKey/);
 });
 
-test("P2.3: nothing generates the dangling 1.91:1 landscape or 1:1 square formats anymore", () => {
+test("generation uses only the supported Story and Feed formats", () => {
   const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
   const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");

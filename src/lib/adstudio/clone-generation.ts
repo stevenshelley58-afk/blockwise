@@ -1,5 +1,5 @@
 // Shared clone-generation plumbing: tiered provider resolution + first-success
-// cascade with provider-run logging. Used by generate-clone (full clones) and
+// cascade with provider-run logging. Used by full-ad clones and
 // the targeted in-place edit endpoint.
 
 import { createImageProviderForCandidate } from "./ai-providers.ts";

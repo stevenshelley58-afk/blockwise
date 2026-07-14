@@ -9,13 +9,13 @@ function placeholderDataUrl(): string {
 }
 
 export function templatePreviewSvg(template: AdStudioTemplate, _brandKit: AdStudioBrandKit): string {
-  if (!template.gallery?.sampleImageSrc || !template.dimensions) return PLACEHOLDER_PREVIEW_SVG;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${template.dimensions.width} ${template.dimensions.height}" width="${template.dimensions.width}" height="${template.dimensions.height}"><image href="${escapeSvg(template.gallery.sampleImageSrc)}" x="0" y="0" width="${template.dimensions.width}" height="${template.dimensions.height}" preserveAspectRatio="xMidYMid slice"/></svg>`;
+  if (!template.sample?.imageSrc || !template.dimensions) return PLACEHOLDER_PREVIEW_SVG;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${template.dimensions.width} ${template.dimensions.height}" width="${template.dimensions.width}" height="${template.dimensions.height}"><image href="${escapeSvg(template.sample.imageSrc)}" x="0" y="0" width="${template.dimensions.width}" height="${template.dimensions.height}" preserveAspectRatio="xMidYMid slice"/></svg>`;
 }
 
 export function templatePreviewDataUrl(template: AdStudioTemplate, _brandKit: AdStudioBrandKit): string {
-  if (!template.gallery?.thumbnailSrc) return placeholderDataUrl();
-  return template.gallery.thumbnailSrc;
+  if (!template.sample?.thumbnailSrc) return placeholderDataUrl();
+  return template.sample.thumbnailSrc;
 }
 
 function escapeSvg(value: string): string {

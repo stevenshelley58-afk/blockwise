@@ -22,7 +22,7 @@ test("campaign generation route uses the trial reservation helper", () => {
   assert.match(source, /@\/lib\/adstudio\/generation-trial/);
   assert.match(source, /reserveAdStudioGenerationCredit/);
   assert.match(source, /refundReservedTrialCredit/);
-  assert.match(source, /resolveAdStudioGenerationBrandKit/);
+  assert.match(read("src/lib/adstudio/generate-template-campaign.ts"), /resolveAdStudioGenerationBrandKit/);
 });
 
 test("generation success response keeps the existing fields without a trial block", () => {

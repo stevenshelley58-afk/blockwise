@@ -1,384 +1,128 @@
 {
   "id": "meta-feed-020",
-  "templateKey": "meta-feed-020",
   "name": "Just Listed Sage Panel",
-  "placement": "meta_feed",
-  "format": "4:5",
-  "dimensions": { "width": 1080, "height": 1350 },
   "goal": "seller_leads",
   "offerId": "just-listed-double",
-  "audienceIntent": "Buyers watching the suburb for fresh stock; owners gauging local prices before selling.",
-  "category": "listing",
-  "tags": ["listing", "just-listed", "price", "meta-feed"],
-  "promptHint": "Interior photo with a near-opaque sage panel on the left carrying JUST LISTED, price, address, and agent contact details.",
   "source": "builtin",
   "status": "approved",
-  "sourceAd": { "file": "01_feed_4x5_best/meta_061.png", "metaIndex": 61 },
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Buyers watching the suburb for fresh stock; owners gauging local prices before selling.",
+  "category": "listing",
+  "tags": [
+    "listing",
+    "just-listed",
+    "price",
+    "meta-feed"
+  ],
+  "sample": {
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-020-sample.png",
+    "imageSrc": "/adstudio-samples/meta/meta-feed-020-sample.png",
+    "alt": "Sample just-listed ad with a sage panel, property image, price, address, and agency contact details.",
+    "contentHash": "0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property image",
+        "required": true,
+        "aspect": "portrait",
+        "description": "the customer's property image"
+      },
+      {
+        "key": "brand_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 24,
+        "sample": "JUST LISTED",
+        "required": true
+      },
+      {
+        "key": "price",
+        "label": "Price",
+        "maxLength": 24,
+        "sample": "Offers from $895,000",
+        "required": true
+      },
+      {
+        "key": "address",
+        "label": "Address",
+        "maxLength": 54,
+        "sample": "18 Tallow Lane, Scarborough WA",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 24,
+        "sample": "08 6102 1840",
+        "required": true
+      },
+      {
+        "key": "website_handle",
+        "label": "Website or handle",
+        "maxLength": 40,
+        "sample": "harbourandkey.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_061.png",
+    "contentHash": "86e3bed929d7cdad06e487f758db7a7476e2452c43b4ffe78a1046b488ef43f1"
+  },
   "classification": {
     "ad_type": "listing",
     "primary_intent": "listing",
     "property_or_agent_focus": "property"
   },
-  "sampleCopy": {
-    "headline": "Just listed",
-    "primaryText": "Fresh to market - inspect before the weekend crowd does.",
-    "cta": "Learn More"
-  },
-  "gallery": {
-    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-020.png",
-    "sampleImageSrc": "/adstudio-samples/meta/meta-feed-020.png",
-    "alt": "Just-listed ad with a sage panel over an interior photo showing price, address, and agent contact details."
-  },
-  "canvas": {
-    "width": 1080,
-    "height": 1350,
-    "backgroundAssetId": null,
-    "objects": [
-      {
-        "objectId": "meta-feed-020-photo",
-        "type": "image",
-        "role": "property_photo",
-        "x": 0,
-        "y": 0,
-        "width": 1080,
-        "height": 1350,
-        "imageAnchor": "center",
-        "fill": null,
-        "locked": false,
-        "content": "/adstudio-samples/photos/prop-modern.jpg",
-        "assetId": "/adstudio-samples/photos/prop-modern.jpg"
-      },
-      {
-        "objectId": "meta-feed-020-panel",
-        "type": "shape",
-        "role": "panel_scrim",
-        "x": 0,
-        "y": 0,
-        "width": 586,
-        "height": 1350,
-        "fill": "#5d6b65e6",
-        "locked": true
-      },
-      {
-        "objectId": "meta-feed-020-headline",
-        "type": "text",
-        "role": "headline",
-        "content": "JUST LISTED",
-        "customerSupplied": true,
-        "x": 88,
-        "y": 126,
-        "width": 448,
-        "height": 244,
-        "fill": "#ffffff",
-        "locked": false,
-        "fontFamily": "Inter",
-        "size": 118,
-        "weight": 800,
-        "align": "left",
-        "lineHeight": 1.0
-      },
-      {
-        "objectId": "meta-feed-020-rule-top",
-        "type": "shape",
-        "role": "divider_top",
-        "x": 88,
-        "y": 388,
-        "width": 448,
-        "height": 2,
-        "fill": "#f1f1ee",
-        "locked": true
-      },
-      {
-        "objectId": "meta-feed-020-price",
-        "type": "text",
-        "role": "price",
-        "content": "$750,000",
-        "customerSupplied": true,
-        "x": 88,
-        "y": 412,
-        "width": 448,
-        "height": 60,
-        "fill": "#ffffff",
-        "locked": false,
-        "fontFamily": "Inter",
-        "size": 52,
-        "weight": 400,
-        "align": "left",
-        "lineHeight": 1.0
-      },
-      {
-        "objectId": "meta-feed-020-rule-bottom",
-        "type": "shape",
-        "role": "divider_bottom",
-        "x": 88,
-        "y": 493,
-        "width": 448,
-        "height": 2,
-        "fill": "#f1f1ee",
-        "locked": true
-      },
-      {
-        "objectId": "meta-feed-020-address",
-        "type": "text",
-        "role": "address",
-        "content": "123 ANYWHERE ST., ANY CITY, ST 12345",
-        "customerSupplied": true,
-        "x": 88,
-        "y": 516,
-        "width": 448,
-        "height": 66,
-        "fill": "#e7e9e6",
-        "locked": false,
-        "fontFamily": "Inter",
-        "size": 25,
-        "weight": 500,
-        "align": "left",
-        "lineHeight": 1.24
-      },
-      {
-        "objectId": "meta-feed-020-logo",
-        "type": "image",
-        "role": "brand_logo",
-        "x": 164,
-        "y": 985,
-        "width": 100,
-        "height": 100,
-        "clip": "circle",
-        "imageAnchor": "center",
-        "fill": null,
-        "locked": false,
-        "content": "/adstudio-samples/photos/agent-1.jpg",
-        "assetId": "/adstudio-samples/photos/agent-1.jpg"
-      },
-      {
-        "objectId": "meta-feed-020-phone",
-        "type": "text",
-        "role": "phone",
-        "content": "+123-456-7890",
-        "customerSupplied": true,
-        "x": 88,
-        "y": 1122,
-        "width": 448,
-        "height": 40,
-        "fill": "#e7e9e6",
-        "locked": false,
-        "fontFamily": "Inter",
-        "size": 27,
-        "weight": 500,
-        "align": "left",
-        "lineHeight": 1.1
-      },
-      {
-        "objectId": "meta-feed-020-handle",
-        "type": "text",
-        "role": "website_handle",
-        "content": "@reallygreatsite",
-        "customerSupplied": true,
-        "x": 88,
-        "y": 1168,
-        "width": 448,
-        "height": 40,
-        "fill": "#e7e9e6",
-        "locked": false,
-        "fontFamily": "Inter",
-        "size": 27,
-        "weight": 500,
-        "align": "left",
-        "lineHeight": 1.1
-      },
-      {
-        "objectId": "meta-feed-020-swatch-light",
-        "type": "shape",
-        "role": "swatch_light",
-        "x": 804,
-        "y": 1140,
-        "width": 276,
-        "height": 150,
-        "fill": "#ded3c0",
-        "locked": true
-      },
-      {
-        "objectId": "meta-feed-020-swatch-dark",
-        "type": "shape",
-        "role": "swatch_dark",
-        "x": 930,
-        "y": 1290,
-        "width": 150,
-        "height": 60,
-        "fill": "#ad9b83",
-        "locked": true
-      }
-    ],
-    "fabricJson": {
-      "version": "blockwise-fabric-v1",
-      "objects": [
-        {
-          "type": "image",
-          "left": 0,
-          "top": 0,
-          "width": 1080,
-          "height": 1350,
-          "src": "/adstudio-samples/photos/prop-modern.jpg",
-          "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-020-photo", "role": "property_photo", "type": "image", "locked": false, "editableKind": "image" }
-        },
-        {
-          "type": "rect",
-          "left": 0,
-          "top": 0,
-          "width": 586,
-          "height": 1350,
-          "fill": "#5d6b65e6",
-          "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-panel", "role": "panel_scrim", "type": "shape", "locked": true, "editableKind": "template" }
-        },
-        {
-          "type": "textbox",
-          "left": 88,
-          "top": 126,
-          "width": 448,
-          "height": 244,
-          "text": "JUST LISTED",
-          "fontFamily": "Inter",
-          "fontSize": 118,
-          "fontWeight": 800,
-          "fill": "#ffffff",
-          "textAlign": "left",
-          "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-020-headline", "role": "headline", "type": "text", "locked": false, "editableKind": "headline" }
-        },
-        {
-          "type": "rect",
-          "left": 88,
-          "top": 388,
-          "width": 448,
-          "height": 2,
-          "fill": "#f1f1ee",
-          "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-rule-top", "role": "divider_top", "type": "shape", "locked": true, "editableKind": "template" }
-        },
-        {
-          "type": "textbox",
-          "left": 88,
-          "top": 412,
-          "width": 448,
-          "height": 60,
-          "text": "$750,000",
-          "fontFamily": "Inter",
-          "fontSize": 52,
-          "fontWeight": 400,
-          "fill": "#ffffff",
-          "textAlign": "left",
-          "lineHeight": 1.0,
-          "blockwise": { "objectId": "meta-feed-020-price", "role": "price", "type": "text", "locked": false, "editableKind": "description" }
-        },
-        {
-          "type": "rect",
-          "left": 88,
-          "top": 493,
-          "width": 448,
-          "height": 2,
-          "fill": "#f1f1ee",
-          "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-rule-bottom", "role": "divider_bottom", "type": "shape", "locked": true, "editableKind": "template" }
-        },
-        {
-          "type": "textbox",
-          "left": 88,
-          "top": 516,
-          "width": 448,
-          "height": 66,
-          "text": "123 ANYWHERE ST., ANY CITY, ST 12345",
-          "fontFamily": "Inter",
-          "fontSize": 25,
-          "fontWeight": 500,
-          "fill": "#e7e9e6",
-          "textAlign": "left",
-          "lineHeight": 1.24,
-          "blockwise": { "objectId": "meta-feed-020-address", "role": "address", "type": "text", "locked": false, "editableKind": "description" }
-        },
-        {
-          "type": "image",
-          "left": 164,
-          "top": 985,
-          "width": 100,
-          "height": 100,
-          "src": "/adstudio-samples/photos/agent-1.jpg",
-          "clip": "circle",
-          "crossOrigin": "anonymous",
-          "blockwise": { "objectId": "meta-feed-020-logo", "role": "brand_logo", "type": "image", "locked": false, "editableKind": "image" }
-        },
-        {
-          "type": "textbox",
-          "left": 88,
-          "top": 1122,
-          "width": 448,
-          "height": 40,
-          "text": "+123-456-7890",
-          "fontFamily": "Inter",
-          "fontSize": 27,
-          "fontWeight": 500,
-          "fill": "#e7e9e6",
-          "textAlign": "left",
-          "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-020-phone", "role": "phone", "type": "text", "locked": false, "editableKind": "description" }
-        },
-        {
-          "type": "textbox",
-          "left": 88,
-          "top": 1168,
-          "width": 448,
-          "height": 40,
-          "text": "@reallygreatsite",
-          "fontFamily": "Inter",
-          "fontSize": 27,
-          "fontWeight": 500,
-          "fill": "#e7e9e6",
-          "textAlign": "left",
-          "lineHeight": 1.1,
-          "blockwise": { "objectId": "meta-feed-020-handle", "role": "website_handle", "type": "text", "locked": false, "editableKind": "description" }
-        },
-        {
-          "type": "rect",
-          "left": 804,
-          "top": 1140,
-          "width": 276,
-          "height": 150,
-          "fill": "#ded3c0",
-          "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-swatch-light", "role": "swatch_light", "type": "shape", "locked": true, "editableKind": "template" }
-        },
-        {
-          "type": "rect",
-          "left": 930,
-          "top": 1290,
-          "width": 150,
-          "height": 60,
-          "fill": "#ad9b83",
-          "selectable": false,
-          "blockwise": { "objectId": "meta-feed-020-swatch-dark", "role": "swatch_dark", "type": "shape", "locked": true, "editableKind": "template" }
-        }
-      ]
-    }
-  },
   "meta": {
     "platform": "meta",
     "objective": "OUTCOME_LEADS",
     "specialAdCategory": "housing",
-    "publisherPlatforms": ["facebook", "instagram"],
-    "facebookPositions": ["feed"],
-    "instagramPositions": ["stream"],
-    "primaryText": ["Fresh to market - inspect before the weekend crowd does."],
-    "headlines": ["Just listed"],
-    "descriptions": ["JUST LISTED"],
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Fresh to market. Ask for the property details and inspection times."
+    ],
+    "headlines": [
+      "Just listed"
+    ],
+    "descriptions": [
+      "Request the property details"
+    ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Book an inspection",
-      "questions": ["When suits for an inspection?", "Best contact number?"],
+      "headline": "Request the property details",
+      "questions": [
+        "When would you like to inspect?",
+        "What is your best contact number?"
+      ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
-        "title": "You are booked in",
-        "body": "We will confirm your inspection time shortly."
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
       }
     }
   }

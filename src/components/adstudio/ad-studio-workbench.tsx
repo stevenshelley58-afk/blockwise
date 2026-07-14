@@ -103,11 +103,6 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
 
-const FabricAdEditor = dynamic(
-  () => import("./canvas/fabric-ad-editor").then((mod) => mod.FabricAdEditor),
-  { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
-);
-
 const InPlaceAdEditor = dynamic(
   () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
   { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
@@ -275,7 +270,6 @@ export function AdStudioWorkbench({
   }));
   const searchParams = useSearchParams();
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
-  const [templateLibrary, setTemplateLibrary] = useState<AdStudioTemplate[]>(visibleBuiltInTemplates);
   const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -349,7 +343,7 @@ export function AdStudioWorkbench({
     preferredPhrases: brandKit.tone.preferredPhrases,
     neverSay: brandKit.tone.avoid,
   };
-  const adTemplates = templateLibrary.length > 0 ? templateLibrary : visibleBuiltInTemplates;
+  const adTemplates = visibleBuiltInTemplates;
 
   useEffect(() => {
     const query = window.matchMedia(MOBILE_WORKBENCH_QUERY);
@@ -361,8 +355,7 @@ export function AdStudioWorkbench({
 
   function selectTemplate(templateId?: string) {
     const template = templateId ? adTemplates.find((item) => item.id === templateId) : undefined;
-    const key = template?.templateKey ?? template?.id ?? templateId;
-    setActiveTemplateKey(key);
+    setActiveTemplateKey(template?.id ?? templateId);
     if (template) {
       setCampaignGoal(GOAL_LABELS[template.goal] ?? campaignGoal);
       setOfferLabel(labelForSelectedTemplate(template));
@@ -373,41 +366,6 @@ export function AdStudioWorkbench({
     studio.setMobileTab("media");
     studio.showToast(template ? `${template.name} selected. Add a property photo.` : "Blank ad selected. Add a property photo.");
   }
-
-  function selectedTemplateForGeneration(): AdStudioTemplate | undefined {
-    if (!activeTemplateKey) return undefined;
-    return adTemplates.find((template) => template.id === activeTemplateKey || template.templateKey === activeTemplateKey);
-  }
-
-  function descriptionForTemplate(template: AdStudioTemplate | undefined): string {
-    if (template?.sampleCopy?.headline && template.sampleCopy.primaryText) {
-      return `${template.sampleCopy.headline}. ${template.sampleCopy.primaryText}`.slice(0, 500);
-    }
-    if (template?.promptHint) return template.promptHint.slice(0, 500);
-    return `Create a ${offerLabel} ad for ${market}.`.slice(0, 500);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadTemplateLibrary() {
-      try {
-        const response = await fetch(`/api/adstudio/template-library?workspaceId=${encodeURIComponent(workspaceId)}`, {
-          cache: "no-store",
-        });
-        const payload = (await response.json().catch(() => ({}))) as { templates?: AdStudioTemplate[] };
-        if (!response.ok || !Array.isArray(payload.templates) || payload.templates.length === 0) return;
-        if (!cancelled) setTemplateLibrary(payload.templates);
-      } catch {
-        if (!cancelled) setTemplateLibrary(visibleBuiltInTemplates);
-      }
-    }
-
-    void loadTemplateLibrary();
-    return () => {
-      cancelled = true;
-    };
-  }, [visibleBuiltInTemplates, workspaceId]);
 
   const initialMedia = useMemo(
     () => primaryImageForVariant(initialPack, initialPack.variants[0]?.variantId, PREVIEW_TO_AD_FORMAT.story),
@@ -433,12 +391,6 @@ export function AdStudioWorkbench({
     },
   );
 
-  // Magic moment: the first time a new user adds a photo to an untouched ad, write
-  // copy grounded in that photo straight away, so uploading visibly produces an ad
-  // instead of just a toast. Gated to first-run + copy still untouched + once per
-  // session, so it can never overwrite copy someone has already written or generated.
-  const seededCopyRef = useRef(copy);
-  const autoDesignedRef = useRef(false);
   async function handleUploadImage(file: File | null | undefined) {
     let uploaded: { src: string; label: string } | undefined;
     try {
@@ -447,25 +399,6 @@ export function AdStudioWorkbench({
       return; // replaceImage already surfaced the failure to the user
     }
     if (!uploaded) return;
-    const shouldGenerateFromUpload = (firstRun || pack.variants.length === 0) && !autoDesignedRef.current;
-    if (shouldGenerateFromUpload) {
-      const template = selectedTemplateForGeneration();
-      autoDesignedRef.current = true;
-      try {
-        await handleGenerateFirstAd({
-          mode: template ? "template" : "custom",
-          source: template ? "template_library" : "blank",
-          templateId: template?.id,
-          templateKey: template?.templateKey ?? template?.id,
-          description: descriptionForTemplate(template),
-          imageDataUrl: uploaded.src,
-          formats: ["9:16", "4:5"],
-        });
-      } catch {
-        autoDesignedRef.current = false;
-      }
-      return;
-    }
     if (pack.variants.length > 0 && selectedVariant?.variantId) {
       const updatedPack = applyImageToVariantFormats({
         pack,
@@ -476,24 +409,6 @@ export function AdStudioWorkbench({
       });
       setPack(updatedPack);
       studio.setSaveState("saving");
-    }
-    const copyUntouched =
-      copy.primaryText === seededCopyRef.current.primaryText &&
-      copy.headline === seededCopyRef.current.headline &&
-      copy.description === seededCopyRef.current.description &&
-      copy.cta === seededCopyRef.current.cta;
-    // Fire on a fresh, untouched ad (first run or no variants yet); never clobber written copy.
-    const isNewAd = firstRun || pack.variants.length === 0;
-    if (autoDesignedRef.current || generating || !isNewAd || !copyUntouched) return;
-    autoDesignedRef.current = true;
-    studio.setSection("text");
-    setSelectedElement("headline");
-    studio.setBusy(true);
-    studio.setBusyMessage("Designing your ad from your photo...");
-    try {
-      await generateCopy("ai", copyContext, uploaded.src);
-    } finally {
-      studio.setBusy(false);
     }
   }
 
@@ -670,10 +585,7 @@ export function AdStudioWorkbench({
     const templateKey = searchParams.get("template");
     if (!templateKey || linkedTemplatePromptedRef.current) return;
 
-    const linkedTemplate = adTemplates.find(
-      (template) =>
-        template.id === templateKey || template.templateKey === templateKey,
-    );
+    const linkedTemplate = adTemplates.find((template) => template.id === templateKey);
     if (!linkedTemplate) return;
 
     linkedTemplatePromptedRef.current = true;
@@ -839,14 +751,14 @@ export function AdStudioWorkbench({
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
     const generated = await generateFirstAd(input);
-    setActiveTemplateKey(input.templateKey ?? input.templateId);
+    setActiveTemplateKey(input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
     studio.setMobileTab("media");
     // Draft-then-upgrade: the sync path returns a fast draft; quietly
     // re-render it at the quality tier and swap in when it verifies. The
     // background job already renders at full quality — no second pass.
-    if (input.mode === "template" && generated && !generated.viaBackgroundJob) {
+    if (generated && !generated.viaBackgroundJob) {
       void upgradeCloneQuality(generated.campaignPack);
     }
   }
@@ -1052,21 +964,9 @@ export function AdStudioWorkbench({
       );
     }
 
-    return (
-      <FabricAdEditor
-        brandKit={brandKit}
-        copy={copy}
-        creative={currentCreative}
-        imageSrc={primaryImage}
-        selectedElement={selectedElement}
-        onCopyChange={updateCopy}
-        onCreativeChange={updateCreative}
-        onImageChange={setPrimaryImage}
-        onPatchSelectedLayer={patchSelectedLayer}
-        onRequestImageReplace={openFilePicker}
-        onSelectedElementChange={handleCanvasElementSelect}
-      />
-    );
+    // Historical layered records stay readable, but they do not expose a
+    // second editor or a second ad-creation system.
+    return renderFallbackPreview();
   }
 
   function renderHomePanel() {

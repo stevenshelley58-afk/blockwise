@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Radar, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Radar, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -22,20 +22,14 @@ import {
 type StartStep = "source" | "template" | "reuse" | "radar";
 type Step = "source" | "brief";
 type ExploreTab = "templates" | "myads" | "research";
-type TemplateFilter = "all" | "new" | "listings" | "appraisals" | "market" | "sold";
-type MediaSourceMode = "details" | "library" | "generate";
+type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
+type MediaSourceMode = "details" | "library";
 type ImageLibraryAsset = {
   src: string;
   label: string;
   type?: string;
   ratio?: string;
   role?: string;
-};
-type GeneratedImageOption = {
-  image: string;
-  model?: string;
-  provider?: string;
-  index?: number;
 };
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
@@ -48,7 +42,6 @@ const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5"];
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
-  { id: "new", label: "New" },
   { id: "listings", label: "Listings" },
   { id: "appraisals", label: "Appraisals" },
   { id: "market", label: "Market updates" },
@@ -109,12 +102,8 @@ function templateCategory(goal: string | null | undefined): "listings" | "apprai
   }
 }
 
-function isNewTemplate(template: AdStudioTemplate): boolean {
-  return template.source === "operator" || template.source === "radar";
-}
-
 /**
- * Ad Radar starts build on a real template (blank mode was cut in P2.3): the
+ * Ad Radar starts build on a real sample: the
  * saved ad's intent picks the closest template category so every radar
  * submission carries a template id and goes down the single template path.
  */
@@ -132,7 +121,6 @@ function templateForRadarAd(templates: AdStudioTemplate[], ad: RadarAd): AdStudi
 
   return (
     (category ? templates.find((template) => templateCategory(template.goal) === category) : undefined) ??
-    templates.find((template) => template.source === "radar") ??
     templates[0]
   );
 }
@@ -157,7 +145,7 @@ function TemplateChoiceCard({
   brandKit: AdStudioBrandKit;
   onSelect: (id: string) => void;
 }) {
-  const isFullscreen = template.placement === "meta_fullscreen" || template.format === "9:16";
+  const isFullscreen = template.format === "9:16";
   const placementLabel = isFullscreen ? "Fullscreen ad" : "Feed ad";
 
   return (
@@ -172,7 +160,6 @@ function TemplateChoiceCard({
           <strong>{template.name}</strong>
           <small>{placementLabel}</small>
         </span>
-        {isNewTemplate(template) ? <span className="studio-explore-new-badge">NEW</span> : null}
       </span>
       <TemplateAdPreview template={template} brandKit={brandKit} />
       <span className="studio-explore-card-action">
@@ -189,7 +176,7 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
   const brandName = brandNameForPreview(brandKit);
   const brandInitial = initialForBrand(brandName);
   const domain = domainForPreview(brandKit);
-  const isFullscreen = template.placement === "meta_fullscreen" || template.format === "9:16";
+  const isFullscreen = template.format === "9:16";
 
   if (isFullscreen) {
     return (
@@ -246,24 +233,10 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
 }
 
 function templateAdCopy(template: AdStudioTemplate): TemplateAdCopy {
-  const headline =
-    cleanText(template.editableText?.headline) ||
-    cleanText(template.sampleCopy?.headline) ||
-    cleanText(template.meta?.headlines[0]) ||
-    template.name;
-  const primaryText =
-    cleanText(template.editableText?.primaryText) ||
-    cleanText(template.sampleCopy?.primaryText) ||
-    cleanText(template.meta?.primaryText[0]) ||
-    template.promptHint;
-  const description =
-    cleanText(template.editableText?.description) ||
-    cleanText(template.sampleCopy?.description) ||
-    cleanText(template.meta?.descriptions[0]);
-  const cta =
-    cleanText(template.editableText?.ctaLabel) ||
-    cleanText(template.sampleCopy?.cta) ||
-    metaCtaLabel(template.editableText?.cta ?? template.meta?.cta);
+  const headline = cleanText(template.meta.headlines[0]) || template.name;
+  const primaryText = cleanText(template.meta.primaryText[0]) || template.audienceIntent;
+  const description = cleanText(template.meta.descriptions[0]);
+  const cta = metaCtaLabel(template.meta.cta);
 
   return { headline, primaryText, description, cta };
 }
@@ -324,7 +297,7 @@ export function NewAdDialog({
   const [tab, setTab] = useState<ExploreTab>("templates");
   const [filter, setFilter] = useState<TemplateFilter>("all");
   // undefined = nothing chosen yet. Every new ad starts from a template (Ad
-  // Radar starts map to the closest template) — blank mode was cut in P2.3.
+  // Radar starts map to the closest sample so every request has a clone anchor.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
@@ -333,17 +306,12 @@ export function NewAdDialog({
   const [activeImageSlotId, setActiveImageSlotId] = useState(DEFAULT_IMAGE_SLOT.id);
   const [mediaSourceMode, setMediaSourceMode] = useState<MediaSourceMode>("details");
   const [dialogMediaAssets, setDialogMediaAssets] = useState<ImageLibraryAsset[]>([]);
-  const [generatorPrompt, setGeneratorPrompt] = useState("");
-  const [generatorReference, setGeneratorReference] = useState<ImageLibraryAsset | null>(null);
-  const [generatedImageOptions, setGeneratedImageOptions] = useState<GeneratedImageOption[]>([]);
   const [sourceNote, setSourceNote] = useState("");
   const [radarInspiration, setRadarInspiration] = useState<RadarInspiration | null>(null);
   const [error, setError] = useState("");
   const [showRequirementsAlert, setShowRequirementsAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingReference, setUploadingReference] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
   const [reuseAds, setReuseAds] = useState<ReuseAd[] | null>(null);
@@ -379,7 +347,7 @@ export function NewAdDialog({
     [brandKit, imageDataUrlsBySlot, imageRequirements],
   );
   const missingCopyLabels = useMemo(
-    () => customerCopyFields.filter((field) => !onImageCopy[field.key]?.trim()).map((field) => field.label),
+    () => customerCopyFields.filter((field) => field.required && !onImageCopy[field.key]?.trim()).map((field) => field.label),
     [customerCopyFields, onImageCopy],
   );
   const requirementBlockers = buildRequirementBlockers({
@@ -435,16 +403,11 @@ export function NewAdDialog({
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
     setMediaSourceMode("details");
-    setGeneratorPrompt("");
-    setGeneratorReference(null);
-    setGeneratedImageOptions([]);
     setSourceNote("");
     setRadarInspiration(null);
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
-    setUploadingReference(false);
-    setGeneratingImage(false);
     setReuseAds(null);
     setReuseError("");
     setRadarAds(null);
@@ -536,7 +499,6 @@ export function NewAdDialog({
 
   const visibleTemplates = templates.filter((template) => {
     if (filter === "all") return true;
-    if (filter === "new") return isNewTemplate(template);
     return templateCategory(template.goal) === filter;
   });
 
@@ -661,101 +623,8 @@ export function NewAdDialog({
     setError("");
   }
 
-  function openGenerator(slotId: string) {
-    setActiveImageSlotId(slotId);
-    setMediaSourceMode("generate");
-    setGeneratorPrompt("");
-    setGeneratorReference(null);
-    setGeneratedImageOptions([]);
-    setError("");
-  }
-
   function selectLibraryImage(asset: ImageLibraryAsset) {
     setSlotImage(activeImageSlot.id, asset.src, asset.label);
-    setMediaSourceMode("details");
-    setError("");
-  }
-
-  async function selectGeneratorReference(file: File) {
-    setError("");
-    setUploadingReference(true);
-    try {
-      const uploaded = await uploadAdStudioMedia({
-        file,
-        workspaceId,
-        brandKitId: brandKit.brandKitId,
-      });
-      const asset = { src: uploaded.src, label: file.name, type: "Reference image", ratio: "Just now", role: "property" };
-      setGeneratorReference(asset);
-      rememberLibraryAsset(asset);
-    } catch (caught) {
-      setGeneratorReference(null);
-      setError(caught instanceof Error ? caught.message : "Could not upload that sample image.");
-    } finally {
-      setUploadingReference(false);
-    }
-  }
-
-  async function generateImageForAd() {
-    const prompt = generatorPrompt.trim();
-    if (!prompt) {
-      setError("Add a prompt for the image.");
-      return;
-    }
-
-    setGeneratingImage(true);
-    setGeneratedImageOptions([]);
-    setError("");
-    try {
-      const response = await fetch("/api/adstudio/generate-options", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          copyText: description.trim() || prompt,
-          sourceImage: generatorReference?.src,
-          aspectRatio: "4:5",
-          stylePreset: "real_estate_photography",
-          brandKitId: brandKit.brandKitId,
-          optionCount: 1,
-          brand: {
-            palette: [
-              brandKit.colours.primary,
-              brandKit.colours.secondary,
-              brandKit.colours.accent,
-              brandKit.colours.background,
-              brandKit.colours.text,
-            ],
-            styleTags: brandKit.visualStyle.styleTags,
-            imageTreatment: brandKit.visualStyle.imageTreatment,
-          },
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        options?: GeneratedImageOption[];
-        compliance?: { pass?: boolean; issues?: string[] };
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error || "Could not generate that image.");
-      if (payload.compliance?.pass === false) {
-        throw new Error(payload.compliance.issues?.[0] || "Adjust the image prompt and try again.");
-      }
-
-      const options = (payload.options ?? []).filter((option) => Boolean(option.image));
-      if (options.length === 0) throw new Error("No generated image was returned.");
-      setGeneratedImageOptions(options);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not generate that image.");
-    } finally {
-      setGeneratingImage(false);
-    }
-  }
-
-  function useGeneratedImage(option: GeneratedImageOption) {
-    const label = option.index === undefined ? "Generated image" : `Generated image ${option.index + 1}`;
-    setSlotImage(activeImageSlot.id, option.image, label);
-    rememberLibraryAsset({ src: option.image, label, type: "AI generated", ratio: "Image", role: "background" });
-    void registerGeneratedImageAsAsset(brandKit.brandKitId, option.image);
     setMediaSourceMode("details");
     setError("");
   }
@@ -783,16 +652,10 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     try {
-      const source = radarInspiration ? "ad_radar" : "template_library";
-      // Template mode: copy, clone, and QA all run server-side in one async
-      // generation job (see runTemplateCampaignGeneration) — the dialog only
-      // submits the brief and images, and onGenerate polls until it finishes.
-      // The dialog only ever submits mode "template"; "custom" is legacy-only.
+      const source = radarInspiration ? "ad_radar" : "gallery";
       await onGenerate({
-        mode: "template",
         source,
         templateId: selectedTemplate.id,
-        templateKey: selectedTemplate.templateKey ?? selectedTemplate.id,
         savedAdId: radarInspiration?.savedId,
         observedAdId: radarInspiration?.observedAdId,
         hooks: radarInspiration?.hooks,
@@ -822,16 +685,12 @@ export function NewAdDialog({
       ? "Templates"
       : mediaSourceMode === "library"
         ? "Choose from library"
-        : mediaSourceMode === "generate"
-          ? "Generate image"
-          : `${selectedTemplate?.name ?? "Template"} - add your details`;
+        : `${selectedTemplate?.name ?? "Template"} - add your details`;
 
   const footHint =
     mediaSourceMode === "library"
       ? `Select an image for ${activeImageSlot.label}.`
-      : mediaSourceMode === "generate"
-        ? `Generate an image for ${activeImageSlot.label}.`
-        : "Blockwise will clone the selected Meta template with your image.";
+      : "Blockwise will recreate the selected sample with your images and text.";
   const showFooter = step === "brief";
 
   return (
@@ -854,7 +713,7 @@ export function NewAdDialog({
           <div className="studio-newad-titleblock">
             <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
-            {mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
+            {mediaSourceMode === "library" ? (
               <p>{activeImageSlot.label}</p>
             ) : null}
           </div>
@@ -1014,10 +873,6 @@ export function NewAdDialog({
                         <ImageIcon aria-hidden size={16} />
                         Choose from library
                       </button>
-                      <button type="button" onClick={() => openGenerator(slot.id)}>
-                        <Sparkles aria-hidden size={16} />
-                        Generate image
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -1081,59 +936,6 @@ export function NewAdDialog({
             </div>
           )}
 
-          {step === "brief" && mediaSourceMode === "generate" && (
-            <div className="studio-newad-generator">
-              <AssetUploadDropzone
-                className="studio-newad-upload"
-                label="Upload sample image"
-                actionText="Upload sample image"
-                helperText="Optional JPG, PNG, or WebP reference / up to 8 MB"
-                previewUrl={generatorReference?.src ?? ""}
-                previewAlt=""
-                fileName={generatorReference?.label ?? ""}
-                acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                maxBytes={AD_IMAGE_MAX_BYTES}
-                typeError="Use a JPG, PNG, or WebP image."
-                sizeError="Use an image under 8 MB."
-                onFileAccepted={selectGeneratorReference}
-                onFileRejected={setError}
-                onClear={() => {
-                  setGeneratorReference(null);
-                  setError("");
-                }}
-              />
-              <label className="studio-newad-field">
-                <span>Image prompt</span>
-                <textarea
-                  value={generatorPrompt}
-                  maxLength={500}
-                  rows={4}
-                  onChange={(event) => setGeneratorPrompt(event.target.value)}
-                  placeholder="Example: Bright editorial real estate background with warm natural light, clean living room styling, space for ad text."
-                />
-                <small>{generatorPrompt.length}/500</small>
-              </label>
-              <button
-                className="studio-btn accent studio-newad-generate-image"
-                type="button"
-                disabled={generatingImage || uploadingReference}
-                onClick={() => void generateImageForAd()}
-              >
-                <Sparkles aria-hidden size={16} />
-                {uploadingReference ? "Uploading sample" : generatingImage ? "Generating image" : "Generate image"}
-              </button>
-              {generatedImageOptions.length > 0 && (
-                <div className="studio-newad-generated-grid">
-                  {generatedImageOptions.map((option) => (
-                    <button key={option.image} type="button" onClick={() => useGeneratedImage(option)}>
-                      <img src={option.image} alt="" />
-                      <span>Use generated image</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {showFooter && (
@@ -1160,7 +962,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting ? "Cloning template" : "Generate ad"}
+                {uploadingImage ? "Uploading" : submitting ? "Creating ad" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}
@@ -1295,7 +1097,7 @@ function buildRequirementBlockers(input: {
       target: "images",
       message:
         input.missingImageLabels.length === 1
-          ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file, choose from library, or generate an image.`
+          ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file or choose one from your library.`
           : `Add the required images before generating the ad: ${input.missingImageLabels.join(", ")}.`,
     });
   }
@@ -1328,34 +1130,10 @@ function dedupeImageLibraryAssets(assets: ImageLibraryAsset[]): ImageLibraryAsse
   });
 }
 
-async function registerGeneratedImageAsAsset(brandKitId: string, src: string) {
-  const storagePath = storagePathFromMediaSrc(src);
-  if (!brandKitId || !storagePath) return;
-  await fetch(`/api/adstudio/brand-kits/${brandKitId}/assets`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      assetType: "listing_image",
-      storagePath,
-      source: "ai_generated",
-    }),
-  }).catch(() => {});
-}
-
-function storagePathFromMediaSrc(src: string): string | null {
-  try {
-    const url = new URL(src, window.location.origin);
-    if (url.pathname !== "/api/adstudio/media") return null;
-    return url.searchParams.get("path")?.trim() || null;
-  } catch {
-    return null;
-  }
-}
-
 const EXPLORE_STYLES = `
 .studio-explore{display:grid;gap:14px}
 .studio-explore-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;border-radius:12px;background:var(--line-soft);padding:3px}
-.studio-explore-tabs button{min-width:0;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:background-color .15s,color .15s,box-shadow .15s}
+.studio-explore-tabs button{min-width:0;min-height:44px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:background-color .15s,color .15s,box-shadow .15s}
 .studio-explore-tabs button:hover{color:var(--ink)}
 .studio-explore-tabs button.on{background:#fff;color:#001b3d;box-shadow:var(--st-sh-1)}
 .studio-explore-tabs button i{font-style:normal;font-size:11px;font-weight:800;min-width:21px;height:19px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:#fff;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -1363,7 +1141,7 @@ const EXPLORE_STYLES = `
 .studio-explore-filterbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .studio-explore-filter{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .studio-explore-filter span{font-size:12px;font-weight:700;color:var(--muted)}
-.studio-explore-filter select{min-height:38px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
+.studio-explore-filter select{min-height:44px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
 .studio-explore-filter select:focus{outline:2px solid var(--accent);outline-offset:2px}
 .studio-explore-count{flex:0 0 auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
@@ -1377,7 +1155,6 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-card-head>span:first-child{display:grid;gap:2px;min-width:0}
 .studio-explore-card-head strong{font-size:13.5px;font-weight:760;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-explore-card-head small{font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.1}
-.studio-explore-new-badge{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:0;background:#d9f66a;color:#1c2b08;border-radius:999px;padding:3px 8px}
 .studio-explore-card-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;border-top:1px solid var(--line-soft);padding:11px 12px;color:#001b3d;font-size:13px;font-weight:760}
 .studio-explore-card-action svg{flex:0 0 auto}
 .studio-template-ad{display:block;min-width:0}
@@ -1432,29 +1209,24 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-image-slot-head small{font-size:12px;color:var(--muted);line-height:1.35}
 .studio-newad-image-slot-head em{font-style:normal;font-size:11px;font-weight:750;color:#47627d;background:#eef4fb;border-radius:999px;padding:3px 8px;white-space:nowrap}
 .studio-newad-media-actions{display:flex;gap:8px;flex-wrap:wrap}
-.studio-newad-media-actions button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
+.studio-newad-media-actions button{min-height:44px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-media-actions button:hover{background:var(--accent-tint);border-color:#cfe0f3;color:var(--accent)}
-.studio-newad-library,.studio-newad-generator{display:grid;gap:14px}
+.studio-newad-library{display:grid;gap:14px}
 .studio-newad-library-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .studio-newad-library-grid button{min-width:0;border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;text-align:left;display:grid;gap:8px;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-library-grid button:hover{box-shadow:var(--st-sh-lift)}
 .studio-newad-library-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
-.studio-newad-library-grid span,.studio-newad-generated-grid span{display:grid;gap:2px;min-width:0}
+.studio-newad-library-grid span{display:grid;gap:2px;min-width:0}
 .studio-newad-library-grid strong{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-newad-library-grid small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-newad-generate-image{justify-self:start;min-height:40px}
-.studio-newad-generated-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.studio-newad-generated-grid button{border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;display:grid;gap:8px;text-align:left;box-shadow:var(--st-sh-1);cursor:pointer;color:var(--ink);font-weight:650;font-size:12.5px}
-.studio-newad-generated-grid button:hover{box-shadow:var(--st-sh-lift)}
-.studio-newad-generated-grid img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-thumb{height:210px}
   .studio-explore-thumb--sample{height:286px}
-  .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-newad-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
-  .studio-explore-tabs button{min-height:38px;font-size:11.5px;padding:0 5px;gap:4px}
+  .studio-explore-tabs button{min-height:44px;font-size:11.5px;padding:0 5px;gap:4px}
   .studio-explore-tabs button i{min-width:18px;height:18px;padding:0 5px;font-size:10px}
   .studio-explore-filterbar{gap:8px}
   .studio-explore-filter{flex:1}
@@ -1462,7 +1234,7 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-grid{grid-template-columns:1fr}
   .studio-explore-thumb{height:220px}
   .studio-explore-thumb--sample{height:320px}
-  .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:1fr}
+  .studio-newad-library-grid{grid-template-columns:1fr}
 }
 `;
 // NewAdDialog: Templates pop-up with Templates, Previous, and Ad Radar tabs.
