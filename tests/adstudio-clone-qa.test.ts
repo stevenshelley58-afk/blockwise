@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 import {
+  applyDeterministicTextEditQa,
   cloneQaCorrectionPrompt,
   cloneQaMutationId,
   cloneQaPassed,
@@ -211,6 +212,31 @@ test("post-clone text edits typeset exact copy only inside the selected region",
     }
   }
   assert.ok(lightPixels > 30, "the exact-copy finalizer paints readable high-contrast text in the region");
+});
+
+test("deterministic text edits update QA without another model review", () => {
+  const previous = {
+    passed: true,
+    attempts: 2,
+    checkedAt: "2026-07-14T00:00:00.000Z",
+    copyChecks: [
+      { key: "headline", expected: "JUST LISTED", rendered: "JUST LISTED", exact: true },
+      { key: "suburb", expected: "Spearwood", rendered: "Spearwood", exact: true },
+    ],
+    defects: [],
+    regions: [],
+    model: "vision-model",
+  };
+
+  const next = applyDeterministicTextEditQa(previous, "headline", "OPEN SATURDAY");
+
+  assert.equal(next.passed, true);
+  assert.equal(next.attempts, 1);
+  assert.equal(next.model, "deterministic-text-renderer");
+  assert.deepEqual(next.copyChecks, [
+    { key: "headline", expected: "OPEN SATURDAY", rendered: "OPEN SATURDAY", exact: true },
+    { key: "suburb", expected: "Spearwood", rendered: "Spearwood", exact: true },
+  ]);
 });
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
@@ -770,7 +796,7 @@ test("post-commit audit failure is contained after durable accounting", async ()
   assert.equal(calls, 1);
 });
 
-test("targeted edit endpoint anchors on the current image and re-verifies the whole ad", () => {
+test("targeted edit endpoint renders verified text directly and model-edits image replacements", () => {
   const route = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
   const builder = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
 
@@ -778,6 +804,11 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   assert.match(builder, /buildTargetedEditRequest/);
   assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
+  assert.match(route, /canRenderTextDirectly/);
+  assert.match(route, /selectedRegion\.box\.width > 0/);
+  assert.match(route, /selectedRegion\.box\.height > 0/);
+  assert.match(route, /applyDeterministicTextEditQa/);
+  assert.match(route, /renderExactCloneTextEdit\(currentImage, newValue/);
   assert.match(route, /resolveCloneProviders\(\)/);
   assert.match(route, /maxDuration = 300/);
 
@@ -787,7 +818,6 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   assert.match(route, /expectedCopy\[fieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
   assert.match(route, /compositeCloneRegionEdit/);
-  assert.match(route, /renderExactCloneTextEdit/);
   assert.match(route, /capabilities\.inpainting/);
 
   // Undo history and a real failure mode.
