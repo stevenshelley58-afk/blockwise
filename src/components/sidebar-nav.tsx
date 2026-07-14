@@ -8,7 +8,6 @@ import {
   FileSearch,
   LayoutGrid,
   LineChart,
-  Link as LinkIcon,
   Mail,
   Settings,
   Settings2,
@@ -78,9 +77,8 @@ const selfServeNavItems: NavItem[] = [
   { href: "/ad-studio", label: "Ad Studio", icon: Star },
   { href: "/property-check", label: "Property Check", icon: FileSearch },
   { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/ad-studio/brand", label: "Identity", icon: UserRound, section: "Set up" },
-  { href: "/settings#connections", label: "Integrations", icon: LinkIcon, section: "Set up" },
-  { href: "/settings", label: "Workspace", icon: Settings, section: "Set up" },
+  { href: "/ad-studio/brand", label: "Brand Pack", icon: UserRound, section: "Set up" },
+  { href: "/settings", label: "Settings", icon: Settings, section: "Set up" },
 ];
 
 const monitorNavItems: NavItem[] = [
