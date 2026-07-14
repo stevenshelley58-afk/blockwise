@@ -275,41 +275,6 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
       supportsImageOutput: true,
     }),
   ],
-  image_generative: [
-    createOpenRouterOption({
-      model: "openai/gpt-5.4-image-2",
-      label: "GPT-5.4 Image 2",
-      inputUsdPerMillionTokens: 8,
-      outputUsdPerMillionTokens: 15,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 400_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3-pro-image-preview",
-      label: "Google Nano Banana Pro",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      imageUsdPerUnit: 2,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3.1-flash-image-preview",
-      label: "Google Nano Banana 2",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-  ],
   compliance_review: [
     createOpenRouterOption({
       model: "google/gemini-2.0-flash-001",
@@ -362,8 +327,8 @@ const PROFILE_SECTION_MAP: Array<{
   {
     key: "creative",
     label: "Creative",
-    description: "Draft, client-ready, and fully generative image generation profiles.",
-    profileKeys: ["image_draft", "image_final", "image_generative"],
+    description: "Draft and client-ready image generation profiles for cloning and targeted edits.",
+    profileKeys: ["image_draft", "image_final"],
   },
   {
     key: "compliance",

@@ -66,7 +66,6 @@ export const PROVIDER_ATTEMPT_COLUMNS = Object.freeze([
 export const PROFILE_KEYS = Object.freeze([
   "image_draft",
   "image_final",
-  "image_generative",
   "structured_json",
   "vision_classification",
 ]);

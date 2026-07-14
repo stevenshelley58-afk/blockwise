@@ -17,7 +17,7 @@ const FALLBACK_BRIEF_GUIDANCE: TemplateBriefGuidance = {
 };
 
 export function briefGuidanceForTemplate(
-  template: Pick<AdStudioTemplate, "goal" | "name" | "offerId" | "promptHint" | "sampleCopy"> | undefined,
+  template: Pick<AdStudioTemplate, "goal" | "name" | "offerId"> | undefined,
 ): TemplateBriefGuidance {
   if (!template) return FALLBACK_BRIEF_GUIDANCE;
 
@@ -38,7 +38,7 @@ export function briefGuidanceForTemplate(
 }
 
 function briefCategoryForTemplate(
-  template: Pick<AdStudioTemplate, "goal" | "offerId" | "promptHint">,
+  template: Pick<AdStudioTemplate, "goal" | "offerId">,
 ): BriefCategory {
   switch (template.goal) {
     case "market_update_leads":
@@ -57,8 +57,7 @@ function briefCategoryForTemplate(
   }
 
   const offer = template.offerId.toLowerCase();
-  const hint = template.promptHint.toLowerCase();
-  const text = `${offer} ${hint}`;
+  const text = offer;
 
   if (/market[_ -]?update|suburb[_ -]?market[_ -]?report|suburb report|median|stat/u.test(text)) {
     return "market";

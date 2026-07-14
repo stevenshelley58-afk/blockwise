@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   estimateRunCostUsd,
-  isModelProfileKey,
   normalizeModelSlug,
   resolveEffectiveModelProfile,
   resolveModelProfile,
@@ -30,44 +29,6 @@ test("vision_classification defaults to the best vision-capable model", () => {
   assert.equal(resolved.primary.provider, "openai");
   assert.equal(resolved.primary.model, "gpt-5.5");
   assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
-});
-
-test("image_generative is a distinct OpenAI-first profile defaulting to the best image model", () => {
-  assert.equal(isModelProfileKey("image_generative"), true);
-
-  const resolved = resolveModelProfile("image_generative");
-  assert.equal(resolved.profile.key, "image_generative");
-  assert.equal(resolved.primary.provider, "openai");
-  assert.equal(resolved.primary.model, "gpt-image-2");
-  assert.deepEqual(
-    resolved.fallbacks.map((candidate) => candidate.model),
-    ["gpt-image-1.5"],
-  );
-  // distinct from the fit/extend profile so the operator can tune it separately
-  assert.notEqual(resolved.profile.maxRunCostUsd, resolveModelProfile("image_final").profile.maxRunCostUsd);
-});
-
-test("resolveEffectiveModelProfile applies a persisted override to image_generative", () => {
-  const resolved = resolveEffectiveModelProfile("image_generative", [
-    {
-      id: "11111111-1111-4111-8111-111111111111",
-      profileKey: "image_generative",
-      provider: "openrouter",
-      model: "google/gemini-3-pro-image-preview",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      imageUsdPerUnit: 2,
-      supportsStructuredOutput: true,
-      maxContextTokens: 65_536,
-      maxLatencyMs: 60_000,
-    },
-  ]);
-
-  assert.equal(resolved.primary.provider, "openrouter");
-  assert.equal(resolved.primary.model, "google/gemini-3-pro-image-preview");
-  assert.equal(resolved.primary.modelProfileVersionId, "11111111-1111-4111-8111-111111111111");
-  assert.equal(resolved.primary.pricingSnapshotId, "11111111-1111-4111-8111-111111111111");
-  assert.equal(resolved.primary.pricingSource, "persisted");
 });
 
 test("client-facing strategy profile uses the premium copywriting model", () => {

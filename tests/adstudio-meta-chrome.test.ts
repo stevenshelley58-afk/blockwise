@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-// P2.2 — the primary stage shows a clone creative exactly as Meta renders it:
+// The primary stage shows a clone creative exactly as Meta renders it:
 // page header, live primary text above the creative, the embedded in-place
 // editor as the creative, then headline/description strip + real CTA button.
 const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");
@@ -45,11 +45,10 @@ test("primary text and headline/description click through to the Text panel", ()
   assert.match(workbench, /onSelectText=\{\(\) => goToSection\("text"\)\}/);
 });
 
-test("workbench wraps the in-place editor in MetaChromePreview for clone creatives only", () => {
+test("workbench wraps the post-clone editor in MetaChromePreview", () => {
   assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?creative=\{currentCreative\}[\s\S]*?<\/MetaChromePreview>/);
-  // Non-clone creatives keep the Fabric layer editor unchanged.
-  assert.match(workbench, /<FabricAdEditor\s+brandKit=\{brandKit\}/);
+  assert.doesNotMatch(workbench, /FabricAdEditor|fabric-ad-editor/);
 });
 
 test("story chrome overlays avatar, Sponsored, progress bars and CTA pill without blocking edits", () => {

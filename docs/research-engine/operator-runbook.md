@@ -87,14 +87,12 @@ If media capture fails:
 4. Keep thumbnail-only video records when the video file is not publicly
    downloadable.
 
-## Swipe File and Ad Studio Handoff
+## Swipe File
 
-Customer users can save research ads from `/research`, review them at
-`/research/swipe-file`, and send a saved ad as an Ad Studio inspiration payload.
+Customer users can save research ads from `/research` and review them at
+`/research/swipe-file`. Saved research is not an AdStudio creation path;
+AdStudio only clones approved gallery samples with customer-provided assets.
 Saved ads live in `public.research_saved_ads` with workspace RLS.
-
-The handoff marks `handoff_status=sent_to_adstudio` and stores the payload in
-`handoff_payload`. It does not mutate the original research observation.
 
 ## Bad Records
 

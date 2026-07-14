@@ -11,11 +11,11 @@ so re-stage the key per the runbook — do not assume SSH is already configured.
 
 ## AdStudio templates
 
-Templates are the ad product and have repeatedly regressed into look-alike sets.
-Before touching anything under `src/lib/adstudio/template-gallery/` or the
-template pipeline, follow `hermes/skills/adstudio-template-builder/SKILL.md` and
-keep `node scripts/verify/adstudio-templates.mjs` green. Never reintroduce a
-fixed-role schema; never weaken the gate to pass.
+Before touching `src/lib/adstudio/template-gallery/` or the template pipeline,
+follow `hermes/skills/adstudio-template-builder/SKILL.md`. A template is one safe
+sample image plus its declared customer image/text inputs. Gallery samples and
+customer ads must both use `buildCloneImageRequest`; editing begins only after a
+finished clone exists. Keep `node scripts/verify/adstudio-templates.mjs` green.
 
 ## External Reference Repositories
 

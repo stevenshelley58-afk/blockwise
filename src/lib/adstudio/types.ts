@@ -26,28 +26,12 @@ export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 export const FIRST_AD_FORMATS = ["9:16", "4:5"] as const;
 
 export type FirstAdInput = {
-  /**
-   * "custom" mode is legacy (P2.3 cut blank mode): the New Ad dialog only ever
-   * submits "template" now, but the API keeps accepting "custom" for existing
-   * consumers and legacy canvas-composited campaigns.
-   */
-  mode: "template" | "custom";
-  source?: "blank" | "template_library" | "ad_radar" | "saved_ad";
-  templateId?: string;
-  savedAdId?: string;
-  observedAdId?: string;
-  templateKey?: string;
-  hooks?: string[];
-  referenceCta?: string;
-  referenceAdType?: string;
-  referenceIntent?: string;
+  source: "gallery";
+  templateId: string;
   description: string;
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
-  /**
-   * Back-compat primary clone image stays 4:5. New template generations can also
-   * carry format-specific clone renders so Story owns a real 9:16 image.
-   */
+  /** Clone renders produced after the request is validated. */
   templateCloneImage?: string;
   templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   templateCloneProvider?: string;
@@ -234,12 +218,8 @@ export type AdStudioCanvasObject = {
   locked: boolean;
 };
 
-/**
- * How a creative tile was produced. "custom_composite" is the default Create
- * path. "generative" is the opt-in "More options" path that returns a fully
- * model-generated image.
- */
-export type AdStudioCreativeSource = "custom_composite" | "generative";
+/** Active clones use `clone`; `legacy` keeps old saved placeholder records readable. */
+export type AdStudioCreativeSource = "clone" | "legacy";
 
 /** A normalized 0-1 bounding box for an editable element on a clone image. */
 export type AdStudioCloneRegion = {

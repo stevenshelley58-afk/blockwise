@@ -444,15 +444,35 @@ export async function loadAdStudioCampaignPack(
     rowToBrandKit(brandKitRow.data),
     await loadAdStudioBrandAssetRows(supabase, workspaceId, String(campaign.brand_kit_id)),
   );
+  const currentCreatives = filterCreativeRowsToDeclaredFormats(
+    campaign,
+    creatives.data ?? [],
+  );
 
   return rowToCampaignPack({
     brandKit,
     campaign,
     variants: variants.data ?? [],
-    creatives: creatives.data ?? [],
+    creatives: currentCreatives,
     copy: copy.data ?? [],
     compliance: compliance.data ?? null,
   });
+}
+
+/**
+ * Campaign persistence is an upsert, so campaigns created before the current
+ * two-format contract can retain obsolete creative rows. The campaign's
+ * declared formats are the authoritative child set; stale rows stay
+ * quarantined instead of leaking back into the editor or export package.
+ */
+export function filterCreativeRowsToDeclaredFormats(
+  campaign: Record<string, unknown>,
+  creatives: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const declaredFormats = asStringArray(campaign.creative_formats_json);
+  if (declaredFormats.length === 0) return creatives;
+  const allowed = new Set(declaredFormats);
+  return creatives.filter((creative) => typeof creative.format === "string" && allowed.has(creative.format));
 }
 
 function optionalString(value: unknown): string | null {

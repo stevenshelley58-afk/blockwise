@@ -36,21 +36,16 @@ export {
 } from "./layout-qa.ts";
 export {
   AD_STUDIO_TEMPLATES,
-  ADSTUDIO_TEMPLATE_RESET_MESSAGE,
   RESOLVABLE_AD_STUDIO_TEMPLATES,
   builtInAdStudioTemplates,
-  mapAdStudioLibraryTemplate,
-  mergeAdStudioTemplateLibrary,
   resolvableAdStudioTemplates,
   resolveAdStudioTemplate,
   type AdStudioGalleryTemplate,
-  type AdStudioLibraryTemplate,
   type AdStudioTemplate,
-  type AdStudioTemplateCanvas,
-  type AdStudioTemplateEditableImage,
-  type AdStudioTemplateEditableText,
+  type AdStudioTemplateImageInput,
   type AdStudioTemplateMeta,
-  type AdStudioTemplatePlacement,
+  type AdStudioTemplateSample,
+  type AdStudioTemplateTextInput,
 } from "./templates.ts";
 export {
   createImageProviderForCandidate,
@@ -80,11 +75,7 @@ export {
   type VisionProviderAdapter,
 } from "./providers.ts";
 export { scoreAdStudioVariant, type VariantScoreInput } from "./scoring.ts";
-export {
-  resolveApprovedAdStudioTemplate,
-  templatePromptHint,
-} from "./template-resolver.ts";
-export { ADSTUDIO_TEMPLATE_VERSIONS, type AdStudioTemplateVersion } from "./templates.ts";
+export { resolveApprovedAdStudioTemplate } from "./template-resolver.ts";
 export { metaLeadAdPackSchema } from "./types.ts";
 export type {
   AdStudioBrandKit,

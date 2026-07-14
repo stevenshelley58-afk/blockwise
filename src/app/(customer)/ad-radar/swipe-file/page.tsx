@@ -49,9 +49,7 @@ export default async function SwipeFilePage() {
                     <p>{truncate(ad?.creative.body ?? row.note ?? "No copy captured for this saved ad yet.", 220)}</p>
                   </div>
                   <div className="swipe-file-meta">
-                    <StatusPill tone={row.handoffStatus === "sent_to_adstudio" ? "green" : "blue"}>
-                      {row.handoffStatus === "sent_to_adstudio" ? "Sent" : "Saved"}
-                    </StatusPill>
+                    <StatusPill tone="blue">Saved</StatusPill>
                     <span>{formatDate(row.createdAt)}</span>
                   </div>
                 </div>

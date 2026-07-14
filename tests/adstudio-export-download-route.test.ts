@@ -35,6 +35,7 @@ function dependencies(
     authorize: async () => ({ ok: true, store, workspaceId }),
     loadCampaign: async () => campaignPack([{ objectId: "legacy_image" }]),
     hydrateRenders: async (_store, _workspaceId, renders) => renders,
+    renderFlatClones: async () => [],
     buildPackage: async () => ({ zipBytes: new Uint8Array([80, 75]) }),
     ...overrides,
   };
@@ -91,10 +92,13 @@ test("download handler scopes authoritative campaign load to authorized workspac
   });
 });
 
-test("authoritative flat clone returns stable 409 before body, hydration, or packaging", async () => {
+test("authoritative flat clone exports approved server-side renders without trusting the request body", async () => {
   let bodyReads = 0;
   let hydrationCalls = 0;
+  let flatRenderCalls = 0;
   let packageCalls = 0;
+  const approvedRenders = [{ creativeId: "approved-clone" }] as unknown as CreativeExportRender[];
+  let packagedRenders: CreativeExportRender[] | null = null;
   const response = await handleAdStudioExportDownload({
     request: requestBody(
       { campaignPack: campaignPack([{ objectId: "legacy_image" }]), creativeRenders: [] },
@@ -107,21 +111,26 @@ test("authoritative flat clone returns stable 409 before body, hydration, or pac
         hydrationCalls += 1;
         return [];
       },
-      buildPackage: async () => {
+      renderFlatClones: async (_store, receivedWorkspaceId, receivedPack) => {
+        flatRenderCalls += 1;
+        assert.equal(receivedWorkspaceId, workspaceId);
+        assert.equal(receivedPack.creatives[0].canvas.objects[0].objectId, "template_clone_image");
+        return approvedRenders;
+      },
+      buildPackage: async (_pack, options) => {
         packageCalls += 1;
-        return { zipBytes: new Uint8Array() };
+        packagedRenders = options.creativeRenders;
+        return { zipBytes: new Uint8Array([80, 75]) };
       },
     }),
   });
 
-  assert.equal(response.status, 409);
-  assert.deepEqual(await responseJson(response), {
-    code: "flat_clone_export_not_ready",
-    error: "This AI-designed ad cannot be exported until its approved revision files are ready.",
-  });
+  assert.equal(response.status, 200);
   assert.equal(bodyReads, 0);
   assert.equal(hydrationCalls, 0);
-  assert.equal(packageCalls, 0);
+  assert.equal(flatRenderCalls, 1);
+  assert.equal(packageCalls, 1);
+  assert.equal(packagedRenders, approvedRenders);
 });
 
 test("legacy export ignores client campaign data and packages the authoritative campaign", async () => {

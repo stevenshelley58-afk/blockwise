@@ -155,7 +155,6 @@ test("customer research APIs read the customer-safe history view", () => {
   const sources = [
     read("src/app/api/research/ads/search/route.ts"),
     read("src/app/api/research/swipe-file/route.ts"),
-    read("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"),
     read("src/lib/research/customer-ad-library-pages.ts"),
   ].join("\n");
 

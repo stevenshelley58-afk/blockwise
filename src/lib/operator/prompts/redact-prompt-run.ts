@@ -222,14 +222,32 @@ export async function reserveAdStudioProviderAttempt(input: {
   if (error) {
     throw new ProviderRunPersistenceError(`Provider attempt could not be reserved: ${error.message}`);
   }
-  const acquired = data && typeof data === "object" && !Array.isArray(data)
-    ? (data as { acquired?: unknown }).acquired
-    : false;
-  if (acquired !== true) {
+  const reservationResult = parseProviderAttemptReservationResult(data);
+  if (!reservationResult.acquired) {
     throw new ProviderRunPersistenceError(
-      "Provider attempt reservation was already claimed; duplicate request was not sent.",
+      `Provider attempt reservation was already claimed (${reservationResult.responseShape}, status ${reservationResult.status ?? "unknown"}); duplicate request was not sent.`,
     );
   }
+}
+
+export function parseProviderAttemptReservationResult(data: unknown): {
+  acquired: boolean;
+  status: string | null;
+  responseShape: "object" | "single-row-array" | "invalid";
+} {
+  const row = Array.isArray(data) && data.length === 1 ? data[0] : data;
+  const responseShape = Array.isArray(data)
+    ? data.length === 1 ? "single-row-array" : "invalid"
+    : data && typeof data === "object" ? "object" : "invalid";
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return { acquired: false, status: null, responseShape: "invalid" };
+  }
+  const result = row as { acquired?: unknown; status?: unknown };
+  return {
+    acquired: result.acquired === true,
+    status: typeof result.status === "string" ? result.status : null,
+    responseShape,
+  };
 }
 
 export async function markAdStudioProviderAttemptSubmitted(input: {
@@ -381,7 +399,7 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
     correlation_id: input.correlationId ?? null,
     prompt_version_id: input.prompt.promptVersions.find((version) => version.id)?.id ?? null,
     task_type: input.taskType,
-    model_profile: input.modelProfile,
+    model_profile: identity.modelProfile,
     model_profile_version_id: identity.modelProfileVersionId,
     pricing_snapshot_id: identity.pricingSnapshotId,
     provider_name: identity.providerName,
@@ -405,13 +423,22 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
   let data: unknown;
   let error: { message: string } | null;
   try {
-    const response = await serviceSupabase.rpc("adstudio_record_provider_run", {
+    let response = await serviceSupabase.rpc("adstudio_record_provider_run", {
       p_workspace_id: input.workspaceId,
       p_mutation_id: mutationId,
       p_payload_hash: payloadHash,
       p_run: run,
       p_attempts: attempts,
     });
+    if (shouldRecoverProviderRun(attempts, response.error)) {
+      response = await serviceSupabase.rpc("adstudio_recover_provider_run", {
+        p_workspace_id: input.workspaceId,
+        p_mutation_id: mutationId,
+        p_payload_hash: payloadHash,
+        p_run: run,
+        p_stale_before: new Date(Date.now() - 60_000).toISOString(),
+      });
+    }
     data = response.data;
     error = response.error;
   } catch (cause) {
@@ -419,7 +446,10 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
   }
 
   if (error) {
-    throw new ProviderRunPersistenceError(`Failed to record Ad Studio provider run: ${error.message}`);
+    const originalFailure = input.error ? ` Original provider lifecycle failure: ${errorSummary(input.error)}` : "";
+    throw new ProviderRunPersistenceError(
+      `Failed to record Ad Studio provider run: ${error.message}.${originalFailure}`,
+    );
   }
 
   const ids = data && typeof data === "object" && !Array.isArray(data)
@@ -436,6 +466,13 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
       accounting,
     }),
   );
+}
+
+export function shouldRecoverProviderRun(
+  attempts: ProviderRunAttempt[],
+  error: { message?: string } | null,
+): boolean {
+  return attempts.length === 0 && Boolean(error?.message?.includes("Provider run identity does not match normalized attempts"));
 }
 
 export async function runAuditAfterDurableAccounting(writeAudit: () => Promise<void>): Promise<void> {
@@ -688,13 +725,14 @@ function lastAttempt(attempts: ProviderRunAttempt[]): ProviderRunAttempt | null 
   return attempts.length > 0 ? attempts[attempts.length - 1] : null;
 }
 
-function deriveProviderRunIdentity(
-  input: Pick<ProviderRunLogInput, "providerName" | "providerType" | "modelName">,
+export function deriveProviderRunIdentity(
+  input: Pick<ProviderRunLogInput, "providerName" | "providerType" | "modelName" | "modelProfile">,
   attempts: ProviderRunAttempt[],
 ): {
   providerName: string;
   providerType: ProviderRunLogInput["providerType"];
   modelName: string;
+  modelProfile: ModelProfileKey;
   modelProfileVersionId: string | null;
   pricingSnapshotId: string | null;
 } {
@@ -705,6 +743,7 @@ function deriveProviderRunIdentity(
       providerName: input.providerName,
       providerType: input.providerType,
       modelName: input.modelName,
+      modelProfile: input.modelProfile,
       modelProfileVersionId: null,
       pricingSnapshotId: null,
     };
@@ -713,6 +752,7 @@ function deriveProviderRunIdentity(
     providerName: representative.provider,
     providerType: representative.providerType,
     modelName: representative.model,
+    modelProfile: representative.modelProfile,
     modelProfileVersionId: representative.modelProfileVersionId,
     pricingSnapshotId: representative.pricingSnapshotId,
   };

@@ -2,7 +2,15 @@ import { createHash } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
-import { generateCloneWithCascade, persistCloneRender, resolveCloneProviders } from "@/lib/adstudio/clone-generation";
+import {
+  compositeCloneRegionEdit,
+  createCloneRegionEditMask,
+  generateCloneWithCascade,
+  normalizeCloneRenderAspect,
+  persistCloneRender,
+  renderExactCloneTextEdit,
+  resolveCloneProviders,
+} from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
@@ -17,7 +25,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
@@ -34,7 +42,7 @@ type TargetedEditBody = {
   mutationId?: string;
 };
 
-// The edit loop runs on the fast tier — attempts stay cheap and quick.
+// Every saved edit is a final-quality render, never a disposable preview.
 const MAX_ATTEMPTS = 2;
 const RENDER_HISTORY_LIMIT = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -165,9 +173,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     fieldLabel,
     newValue,
     newImage,
+    expectedCopy,
     aspectRatio: String(row.format ?? "4:5"),
   });
-  const providers = await resolveCloneProviders("preview");
+  const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === fieldKey);
+  baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
+  // A targeted edit should use a provider that can enforce the QA region mask
+  // before a full-frame image-to-image provider that can only follow the text.
+  const providers = (await resolveCloneProviders()).sort(
+    (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
+  );
 
   const correlationId = mutationId;
 
@@ -187,17 +202,22 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
-        tier: "preview",
         attempt,
       });
-      lastImage = generated;
+      const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
+      const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      const boundedAssetUrl = newValue
+        ? await renderExactCloneTextEdit(boundedModelEdit, newValue, selectedRegion?.box)
+        : boundedModelEdit;
+      lastImage = { ...generated, assetUrl: boundedAssetUrl };
 
       qa = await runCloneQa({
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
-        imageUrl: generated.assetUrl,
+        imageUrl: boundedAssetUrl,
         expectedCopy,
+        format: String(row.format ?? "4:5"),
         attempt,
       });
 

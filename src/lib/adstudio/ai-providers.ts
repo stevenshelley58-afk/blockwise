@@ -4,7 +4,6 @@ import type {
 
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import { createFalImageProvider } from "./fal-image-provider.ts";
-import { formatImageSize, outpaintTargetForAspect } from "./outpaint-layout.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
@@ -33,6 +32,7 @@ type ProviderOptions = {
 const MAX_COMPLETION_TOKENS = 4096;
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_IMAGE_URL = "https://openrouter.ai/api/v1/images";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
@@ -463,7 +463,7 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
         throw preflightError("Reference-image repair requires at least one image.");
       }
 
-      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_CHAT_URL, {
+      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_IMAGE_URL, {
         method: "POST",
         signal: input.signal,
         headers: {
@@ -474,47 +474,46 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
         },
         body: JSON.stringify({
           model,
-          modalities: ["image", "text"],
-          messages: [
-            {
-              role: "user",
-              content: buildOpenRouterImageContent(input),
-            },
-          ],
+          prompt: buildImagePrompt(input, { includeReferenceList: false }),
+          n: 1,
+          aspect_ratio: input.aspectRatio,
+          quality: options.quality ?? DEFAULT_OPENAI_IMAGE_QUALITY,
+          output_format: "png",
+          seed: input.seed,
+          input_references: input.referenceAssets.map((url) => ({
+            type: "image_url",
+            image_url: { url },
+          })),
         }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         id?: string;
-        choices?: Array<{
-          message?: {
-            content?: unknown;
-            images?: Array<{ image_url?: { url?: string }; url?: string }>;
-          };
-        }>;
+        data?: Array<{ b64_json?: string; media_type?: string }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
         error?: { message?: string };
       };
+      const providerRequestId = payload.id ?? response.headers.get("x-request-id") ?? undefined;
 
       if (!response.ok) {
         throw submittedHttpError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, response.status, {
-          providerRequestId: payload.id,
+          providerRequestId,
           usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
         });
       }
 
-      const message = payload.choices?.[0]?.message;
-      const assetUrl = message?.images?.[0]?.image_url?.url ?? message?.images?.[0]?.url ?? extractImageUrl(message?.content);
-      if (!assetUrl) {
+      const image = payload.data?.[0];
+      if (!image?.b64_json) {
         throw submittedError("OpenRouter returned no image.", {
           retryable: false,
-          providerRequestId: payload.id,
+          providerRequestId,
           usage: usageFromProviderPayload(payload.usage, {
             imageUnits: 0,
-            providerRequestId: payload.id,
+            providerRequestId,
             complete: true,
           }),
         });
       }
+      const assetUrl = `data:${image.media_type ?? "image/png"};base64,${image.b64_json}`;
 
       return {
         assetUrl,
@@ -522,7 +521,7 @@ function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProv
         model,
         usage: usageFromProviderPayload(payload.usage, {
           imageUnits: 1,
-          providerRequestId: payload.id,
+          providerRequestId,
           complete: true,
         }),
         providerMetadata: {
@@ -807,21 +806,6 @@ function buildImagePrompt(
   ].filter(Boolean).join("\n");
 }
 
-function buildOpenRouterImageContent(input: ImageProviderRequest): unknown {
-  if (!input.referenceAssets.length) return buildImagePrompt(input);
-
-  // The references are attached as image_url parts below; repeating them in the
-  // text prompt would paste whole base64 data URLs as text and blow the model's
-  // context window (a 32k-context image model saw ~77k tokens of "prompt").
-  return [
-    { type: "text", text: buildImagePrompt(input, { includeReferenceList: false }) },
-    ...input.referenceAssets.map((url) => ({
-      type: "image_url",
-      image_url: { url },
-    })),
-  ];
-}
-
 function extractImageUrl(content: unknown): string | undefined {
   if (typeof content === "string") {
     return content.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/)?.[0];
@@ -844,5 +828,10 @@ function extractImageUrl(content: unknown): string | undefined {
 }
 
 function imageSizeForAspect(aspectRatio: string): string {
-  return formatImageSize(outpaintTargetForAspect(aspectRatio));
+  // OpenAI's image endpoints accept only these native canvases. AdStudio's
+  // exact placement ratio remains in the prompt and the clone pipeline crops
+  // the returned native canvas to that ratio before QA and persistence.
+  if (aspectRatio === "1:1") return "1024x1024";
+  if (aspectRatio === "1.91:1") return "1536x1024";
+  return "1024x1536";
 }

@@ -37,12 +37,12 @@ const ASPECT_TARGETS: Record<string, OutpaintTarget> = {
   "1:1": { width: 1024, height: 1024 },
 };
 
-/** Maps an Ad Studio aspect ratio to the target pixel size we ask the model for. */
+/** Maps an Ad Studio aspect ratio to its canonical layout working size. */
 export function outpaintTargetForAspect(aspectRatio: string): OutpaintTarget {
   return ASPECT_TARGETS[aspectRatio] ?? ASPECT_TARGETS["1:1"];
 }
 
-/** Serialises a target into the `size` string the OpenAI image API expects. */
+/** Serialises a target for providers that accept arbitrary multiple-of-16 sizes. */
 export function formatImageSize(target: OutpaintTarget): string {
   return `${target.width}x${target.height}`;
 }

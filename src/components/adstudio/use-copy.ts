@@ -122,7 +122,7 @@ export function useCopy(
   const [alternates, setAlternates] = useState<CopyAlternates>(EMPTY_ALTERNATES);
   const [feedback, setFeedback] = useState<CopyFeedback | null>(null);
 
-  // Stable identity: flows into the Fabric editor's commit pipeline.
+  // Stable identity keeps copy changes attached to the current creative.
   const updateCopy = useCallback((key: keyof CopyState, value: string) => {
     setCopy((current) => ({ ...current, [key]: value }));
     setSelectedElement?.(key);

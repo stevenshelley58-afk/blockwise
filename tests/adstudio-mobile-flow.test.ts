@@ -14,8 +14,8 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /studio\.mobileTab === "media"/);
   assert.match(mobileBody, /studio\.mobileTab === "text"/);
   assert.match(mobileBody, /label: "Home"/);
-  assert.match(mobileBody, /label: "Templates"/);
-  assert.match(mobileBody, /templatePickerOpen/);
+  assert.match(mobileBody, /label: "Samples"/);
+  assert.match(mobileBody, /samplePickerOpen/);
   assert.match(mobileBody, /label: "Media"/);
   assert.match(mobileBody, /label: "Text"/);
   assert.match(mobileBody, /label: "Publish"/);
@@ -30,7 +30,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mediaPanel, /AssetUploadDropzone/);
   assert.match(mediaPanel, /capturePagePaste/);
   assert.doesNotMatch(mediaPanel, /Auto fit all ad sizes|Auto fit current size|studio-image-repair-actions/);
-  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "templates"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "samples"/);
 });
 
 test("brief copy generation leaves editable copy visible with inline feedback", () => {
@@ -64,11 +64,10 @@ test("mobile preview uses the same creative editor surface as desktop", () => {
   const styles = read("src/components/adstudio/styles.ts");
 
   assert.match(workbench, /const MOBILE_WORKBENCH_QUERY = "\(max-width: 900px\)";/);
-  assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<FabricAdEditor/);
+  assert.match(workbench, /function renderCreativeEditor\(\) \{[\s\S]*<InPlaceAdEditor/);
   assert.match(workbench, /!isMobileViewport \? renderCreativeEditor\(\) : null/);
   assert.match(workbench, /isMobileViewport \? renderCreativeEditor\(\) : renderFallbackPreview\(\)/);
-  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-editor/);
-  assert.match(styles, /studio-mobile-preview-wrap \.studio-fabric-shell\[data-format="4:5"\]\{width:min\(475px,100%\)\}/);
+  assert.match(styles, /studio-mobile-preview-wrap/);
 });
 
 test("mobile overflow exposes save draft", () => {

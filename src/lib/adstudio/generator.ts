@@ -71,7 +71,7 @@ type OfferCopySeed = {
 };
 
 // 1.91:1 landscape and 1:1 square are legacy-only: nothing generates them
-// anymore (P2.3 cut landscape; square dropped 2026-07 — Meta crops 4:5 for
+// anymore (Meta crops 4:5 for
 // square placements). The AdStudioFormat members stay so existing creatives
 // keep rendering.
 const FALLBACK_FORMATS: AdStudioFormat[] = ["4:5", "9:16"];
@@ -84,10 +84,9 @@ const CANVAS_SIZE: Record<AdStudioFormat, { width: number; height: number }> = {
 };
 
 function resolveTemplateForGeneration(input: GenerateCampaignPackInput): AdStudioTemplate | null {
-  if (input.firstAd?.mode !== "template") return null;
+  if (!input.firstAd) return null;
 
-  const templateKey = input.firstAd.templateId ?? input.firstAd.templateKey;
-  const resolved = resolveAdStudioTemplate(templateKey);
+  const resolved = resolveAdStudioTemplate(input.firstAd.templateId);
   if (!resolved) {
     throw new Error("Selected template was not found.");
   }
@@ -98,7 +97,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
   // B2 (simplification): draft/unapproved brand kits may generate; brand-kit
   // approval is enforced at publish (readiness checks), not at generation.
   const template = resolveTemplateForGeneration(input);
-  const templateKey = template?.templateKey ?? template?.id ?? input.firstAd?.templateKey ?? input.firstAd?.templateId ?? null;
+  const templateKey = template?.id ?? input.firstAd?.templateId ?? null;
   const requestedOfferId = template?.offerId ?? inferOfferIdFromFirstAd(input.firstAd?.description, input.offerId);
   const offer = resolveCampaignOffer({
     offerId: requestedOfferId,
@@ -130,9 +129,8 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     audienceIntent: offer.expectedLeadIntent,
     offerId: offer.offerId,
     templateKey,
-    templateSource: template?.source ?? (input.firstAd?.source === "ad_radar" ? "ad_radar" : null),
-    // Only explicit Ad Radar copy starts are sourced from a real observed ad.
-    sourceObservedAdId: input.firstAd?.source === "ad_radar" ? input.firstAd.observedAdId ?? null : null,
+    templateSource: template?.source ?? null,
+    sourceObservedAdId: null,
     templateSnapshot: template ? buildTemplateSnapshot(template) : null,
     platforms: input.platforms,
     creativeFormats: formats,
@@ -193,7 +191,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       templateCloneQa: input.firstAd?.templateCloneQa,
       templateCloneQaByFormat: input.firstAd?.templateCloneQaByFormat,
       onImageCopy: input.firstAd?.onImageCopy,
-      subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
+      subheadline: galleryTemplate?.meta.descriptions[0] ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
   const compliance = runAdStudioComplianceReview({ campaign, copyPacks });
@@ -236,11 +234,11 @@ function offerFromTemplate(
     goal: template.goal ?? fallbackGoal,
     leadTemperature: registered?.leadTemperature ?? leadTemperatureForTemplateOffer(template, offerId),
     requiredInputs: registered?.requiredInputs ?? ["suburb", "brand_kit"],
-    defaultCta: template.sampleCopy?.cta?.trim() || registered?.defaultCta || defaultCtaForTemplateOffer(template, offerId),
+    defaultCta: registered?.defaultCta || defaultCtaForTemplateOffer(template, offerId),
     landingPageType: registered?.landingPageType ?? landingPageTypeForTemplateOffer(offerId),
     followupType: registered?.followupType ?? followupTypeForTemplateOffer(template, offerId),
     expectedLeadIntent:
-      template.promptHint ||
+      template.audienceIntent ||
       registered?.expectedLeadIntent ||
       `People responding to the ${template.name} template before their next property decision.`,
   };
@@ -487,9 +485,9 @@ function buildFirstAdMessages(
   return [
     {
       label: template.name,
-      headline: template.sampleCopy?.headline || templateHeroHeadline(template),
-      primaryText: template.sampleCopy?.primaryText || templatePrimaryText(template, suburb),
-      description: template.sampleCopy?.description || templateDescription(template.name),
+      headline: template.meta.headlines[0] || templateHeroHeadline(template),
+      primaryText: template.meta.primaryText[0] || templatePrimaryText(template, suburb),
+      description: template.meta.descriptions[0] || templateDescription(template.name),
       notes: ["Template selected", "Uses uploaded image", "No blocking compliance issues"],
     },
     {
@@ -525,10 +523,10 @@ function buildGalleryTemplateMessages(template: AdStudioGalleryTemplate): Defaul
   return [
     {
       label: template.name,
-      headline: template.editableText?.headline ?? template.sampleCopy?.headline ?? template.name,
-      primaryText: template.editableText?.primaryText ?? template.sampleCopy?.primaryText ?? "",
-      description: template.editableText?.description ?? template.sampleCopy?.description ?? "",
-      notes: ["Self-contained template", "Uses editable template image", "No blocking compliance issues"],
+      headline: template.meta.headlines[0] ?? template.name,
+      primaryText: template.meta.primaryText[0] ?? "",
+      description: template.meta.descriptions[0] ?? "",
+      notes: ["Cloned from approved sample", "Editable after generation", "No blocking compliance issues"],
     },
   ];
 }
@@ -1005,7 +1003,7 @@ function buildCreative(input: {
       input.templateCloneQa;
     if (cloneImage) {
       return buildTemplateCloneCreative({
-        creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}:clone`),
+        creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.id}:clone`),
         campaignId: input.campaign.campaignId,
         variantId: input.variant.variantId,
         template: galleryTemplate,
@@ -1015,18 +1013,7 @@ function buildCreative(input: {
       });
     }
 
-    return buildTemplateCreative({
-      creativeId: deterministicUuid(`${input.campaign.campaignId}:${input.variant.variantId}:${input.format}:${galleryTemplate.templateKey}`),
-      campaignId: input.campaign.campaignId,
-      variantId: input.variant.variantId,
-      template: galleryTemplate,
-      headline: input.variant.headline,
-      subheadline: input.subheadline ?? templateDefaultSubheadline(galleryTemplate),
-      cta: input.variant.cta,
-      imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl ?? templateDefaultImage(galleryTemplate),
-      imagesBySlot: input.sourceImagesBySlot,
-      onImageCopy: input.onImageCopy,
-    });
+    throw new Error("The ad must be cloned before it can be opened or edited.");
   }
 
   if (input.template) {
@@ -1061,7 +1048,7 @@ function buildTemplateCloneCreative(input: {
     campaignId: input.campaignId,
     variantId: input.variantId,
     format: input.format,
-    source: "generative",
+    source: "clone",
     canvas: {
       width: size.width,
       height: size.height,
@@ -1094,107 +1081,6 @@ function buildTemplateCloneCreative(input: {
     ...creative,
     previewSvg: renderGeneratedCreativeSvg(creative),
   };
-}
-
-function buildTemplateCreative(input: {
-  creativeId: string;
-  campaignId: string;
-  variantId: string;
-  template: AdStudioGalleryTemplate;
-  headline: string;
-  subheadline: string;
-  cta: string;
-  imageUrl: string;
-  imagesBySlot?: Partial<Record<string, string>>;
-  onImageCopy?: Partial<Record<string, string>>;
-}): AdStudioCreative {
-  const imagesBySlot = input.imagesBySlot ?? {};
-  const onImageCopy = input.onImageCopy ?? {};
-  let primaryAssigned = false;
-  const objects = input.template.canvas.objects.map((object) => {
-    if (object.type === "image" || object.role === "primary_image") {
-      const slotImage = imagesBySlot[object.role] ?? imagesBySlot[object.objectId] ?? (!primaryAssigned ? input.imageUrl : undefined);
-      if (slotImage) { primaryAssigned = true; return { ...object, content: slotImage, assetId: slotImage }; }
-      return { ...object };
-    }
-    if (onImageCopy[object.role] !== undefined) return { ...object, content: onImageCopy[object.role] };
-    if (object.role === "headline") return { ...object, content: input.headline };
-    if (object.role === "subheadline") return { ...object, content: input.subheadline };
-    if (object.role === "cta_text" || object.role === "cta_button") return { ...object, content: input.cta };
-    return { ...object };
-  });
-  const creative: Omit<AdStudioCreative, "previewSvg"> = {
-    creativeId: input.creativeId,
-    campaignId: input.campaignId,
-    variantId: input.variantId,
-    format: input.template.format,
-    source: "custom_composite",
-    canvas: {
-      width: input.template.canvas.width,
-      height: input.template.canvas.height,
-      backgroundAssetId: null,
-      objects,
-      fabricJson: syncTemplateFabricJson(input.template.canvas.fabricJson, {
-        headline: input.headline,
-        description: input.subheadline,
-        cta: input.cta,
-        imageUrl: input.imageUrl,
-        imagesBySlot,
-        textByRole: onImageCopy,
-      }),
-    },
-    safeZones: {
-      metaStory: input.template.format === "9:16",
-      googleDemandGen: true,
-    },
-  };
-
-  return {
-    ...creative,
-    previewSvg: renderGeneratedCreativeSvg(creative),
-  };
-}
-
-function syncTemplateFabricJson(
-  fabricJson: AdStudioGalleryTemplate["canvas"]["fabricJson"],
-  copy: {
-    headline: string;
-    description: string;
-    cta: string;
-    imageUrl: string;
-    imagesBySlot?: Partial<Record<string, string>>;
-    textByRole?: Partial<Record<string, string>>;
-  },
-): AdStudioGalleryTemplate["canvas"]["fabricJson"] {
-  const imagesBySlot = copy.imagesBySlot ?? {};
-  const textByRole = copy.textByRole ?? {};
-  let primaryAssigned = false;
-  return {
-    ...fabricJson,
-    objects: fabricJson.objects.map((object) => {
-      const meta = object.blockwise;
-      if (!meta || typeof meta !== "object") return { ...object };
-      if (meta.type === "image" || meta.role === "primary_image") {
-        const slotImage = imagesBySlot[meta.role] ?? imagesBySlot[meta.objectId] ?? (!primaryAssigned ? copy.imageUrl : undefined);
-        if (slotImage) { primaryAssigned = true; return { ...object, src: slotImage }; }
-        return { ...object };
-      }
-      if (meta.type === "text" && textByRole[meta.role] !== undefined) return { ...object, text: textByRole[meta.role] };
-      if (meta.role === "headline") return { ...object, text: copy.headline };
-      if (meta.role === "subheadline") return { ...object, text: copy.description };
-      if (meta.role === "cta_text" || meta.role === "cta_button") return { ...object, text: copy.cta };
-      return { ...object };
-    }),
-  };
-}
-
-function templateDefaultSubheadline(t: AdStudioGalleryTemplate): string {
-  return t.editableText?.description ?? t.sampleCopy?.primaryText ?? t.sampleCopy?.description ?? "";
-}
-
-function templateDefaultImage(t: AdStudioGalleryTemplate): string {
-  const img = t.canvas?.objects?.find((o) => o.type === "image" || o.role === "primary_image");
-  return t.editableImage?.src ?? img?.content ?? img?.assetId ?? t.gallery?.sampleImageSrc ?? "";
 }
 
 function buildCustomCreative(input: {
@@ -1353,7 +1239,7 @@ function buildCustomCreative(input: {
     campaignId: input.campaignId,
     variantId: input.variantId,
     format: input.format,
-    source: "custom_composite",
+    source: "legacy",
     canvas: {
       width: size.width,
       height: size.height,
@@ -1430,20 +1316,19 @@ function escapeSvg(value: string): string {
 function buildTemplateSnapshot(template: AdStudioTemplate): Record<string, unknown> {
   return {
     id: template.id,
-    templateKey: template.templateKey ?? template.id,
+    templateKey: template.id,
     name: template.name,
     goal: template.goal,
     offerId: template.offerId,
     source: template.source ?? null,
     status: template.status ?? null,
-    promptHint: template.promptHint,
-    placement: template.placement ?? null,
+    audienceIntent: template.audienceIntent,
     format: template.format ?? null,
   };
 }
 
 function galleryTemplateOrNull(template: AdStudioTemplate | null): AdStudioGalleryTemplate | null {
-  if (!template?.canvas || !template.gallery || !template.meta) return null;
+  if (!template?.sample || !template.inputs || !template.meta) return null;
   if (template.format !== "4:5" && template.format !== "9:16") return null;
   return template as AdStudioGalleryTemplate;
 }

@@ -2,11 +2,8 @@
 
 ## Authority
 
-This register consolidates the user-approved AdStudio completion architecture,
-the binding repository instructions, and the existing product/design reviews.
-It introduces no new positioning. Those checked-in sources are its provenance;
-explicit confirmation of this working register remains required before UI
-implementation. Later explicit owner direction supersedes it.
+This register states the current owner-approved AdStudio product architecture.
+Later explicit owner direction supersedes it.
 
 ## Register
 
@@ -25,9 +22,8 @@ learning design software or interpreting internal AI/provider mechanics.
 Blockwise turns real advertising evidence, customer Brand Packs, property media,
 and a short brief into compliant Meta lead ads and an auditable execution path.
 AdStudio succeeds when a user can choose a meaningfully different real-ad-derived
-template, generate accurate Feed and Story creatives, correct declared content,
-review exactly what will export, and publish without hidden failures or stale
-versions.
+sample, generate accurate Feed and Story creatives, edit the finished result,
+review exactly what will export, and publish without hidden failures.
 
 ## Brand Personality
 
@@ -55,11 +51,15 @@ about evidence, risk, and system state.
    not a menu of tools.
 2. Show evidence and state honestly. Partial success, stale formats, QA blockers,
    retries, and export readiness must be visible and recoverable.
-3. Preserve diversity from real ads. Template structure follows its source ad;
-   the product never normalizes every ad into a shared skeleton.
-4. Reduce user decisions before adding polish. Delete duplicate navigation,
+3. Preserve diversity from real ads. Vision extracts each source ad's required
+   customer assets and text; the image model clones the approved sample instead
+   of rebuilding it from a shared layout recipe.
+4. Clone first, edit second. Creation sends the sample and customer inputs to the
+   image model as one request. Editing is enabled only on the finished clone and
+   uses that latest image as its anchor.
+5. Reduce user decisions before adding polish. Delete duplicate navigation,
    repeated controls, and internal terminology before adding new UI.
-5. Keep craft subordinate to the work. Strong hierarchy, restrained color,
+6. Keep craft subordinate to the work. Strong hierarchy, restrained color,
    familiar controls, and purposeful motion should help users finish an ad.
 
 ## Accessibility & Inclusion

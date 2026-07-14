@@ -1,161 +1,116 @@
-// Reference-clone generation: turn a gallery sample into a new ad by cloning its
-// design from the sample image itself, swapping in the customer's photo(s) and copy.
-//
-// Why this exists: the gallery sample is the design source of truth. Instead of
-// describing the layout in a long text prompt (brittle, bland), we pass the sample
-// image as the FIRST reference asset ("clone this") and the customer's image(s)
-// after it, then let the image model (gpt-image-2 edits / Gemini flash image) do
-// the work. The per-template brief therefore only needs to declare the input
-// contract (which images + which copy fields) and a short clone prompt.
-//
-// This module is the request builder + a thin generate wrapper. It is pure and
-// dependency-light (no DB/auth) so it is unit-testable and runnable from a script.
-
 import type { ImageProviderRequest } from "./providers.ts";
+import type { AdStudioTemplate } from "./templates.ts";
 
-/** One image the customer must (or may) supply for a template, by role. */
-export type CloneImageSlot = {
-  role: string;
-  objectId?: string;
-  required: boolean;
-  /** Hint for the upload UI / cropper, e.g. "landscape" | "square". */
-  aspect?: string;
-  /** Human description; also fed to the model as the reference-asset legend. */
-  description?: string;
-};
-
-/** One editable copy field a template exposes. */
-export type CloneCopyField = {
-  key: string;
-  label: string;
-  maxLength?: number;
-  default?: string;
-  rules?: string;
-  /**
-   * The customer types this value verbatim (price, address, phone…) — the
-   * copy model must never invent or paraphrase it. Fields a customer cannot
-   * supply and a model cannot know do not belong on a template at all.
-   */
-  customerSupplied?: boolean;
-};
-
-/** The per-template extraction artifact: input contract + short clone prompt. */
-export type TemplateCloneBrief = {
-  templateId: string;
-  name: string;
-  /** "4:5" | "9:16" | "1:1". */
-  aspectRatio: string;
-  /** Path or URL to the gallery sample image whose design we clone. */
-  referenceImage: string;
-  imageSlots: CloneImageSlot[];
-  copyFields: CloneCopyField[];
-  /** Default brand accent hex; overridable per request from the brand kit. */
-  brandHex: string;
-  /**
-   * Optional clone prompt with {copyKey} and {brandHex} placeholders. When
-   * omitted, a generic clone prompt is built from the slots + copy fields, so a
-   * brief can be pure data (the sample image carries the design).
-   */
-  clonePrompt?: string;
-};
-
-/**
- * Build a generic clone prompt from a brief's slots + copy fields. The reference
- * image carries the design, so this only has to say "clone it, swap these in".
- */
-export function defaultClonePromptTemplate(brief: TemplateCloneBrief): string {
-  const labelize = (s: string) => s.replace(/_/g, " ").trim();
-  const copyList = brief.copyFields
-    .map((f) => `set the ${labelize(f.label || f.key)} to "{${f.key}}"`)
-    .join("; ");
-  const copySentence = copyList ? ` Then ${copyList}.` : "";
-  return [
-    "Recreate the attached REFERENCE ad design (reference image 1) as closely as possible —",
-    "identical layout, brand bar, logos, badges, colours, type treatment, accent shapes and composition.",
-    "Replace the photo/image area(s) with the supplied customer image(s) (reference image 2 onward,",
-    "in the given order), keeping them photoreal and unaltered." + copySentence,
-    "Keep every line of copy crisp, legible, off the photos, and in the same positions and colour scheme as the reference.",
-    `Render a clean, premium, photoreal ${brief.aspectRatio} Meta real-estate ad.`,
-  ].join(" ");
-}
-
-/**
- * Global guardrails appended to every clone as the negative prompt. The two that
- * matter most for real estate: never alter the supplied property photo / agent
- * face, and never invent copy (prices, results). Keep this template-agnostic.
- */
-export const GLOBAL_CLONE_NEGATIVES = [
-  "do not invent or change any text beyond the provided copy",
-  "do not distort, repaint, relight, or restructure the supplied property photo or agent face",
-  "replace every phone number, URL, handle, and contact detail in the reference with the supplied copy values; if a contact detail has no supplied value, omit it entirely - never keep the reference's contact details and never invent new ones",
-  "no extra logos, watermarks, captions, borders, or platform UI",
-  "no fabricated prices, sale results, awards, or claims",
-  "no warped windows, rooflines, faces, hands, or text",
-  "keep every line of copy crisp, legible, and inside the canvas",
-].join("; ");
-
+/** The one input shape used for gallery-sample clones and customer ad clones. */
 export type CloneInputs = {
-  /** Resolved reference design image (data: or http(s) URL). Defaults to brief.referenceImage. */
+  /** The design image to clone. Gallery creation uses the private source ad;
+   * customer generation uses the approved public sample. */
   referenceImage?: string;
-  /** Customer images keyed by slot role (data: or http(s) URL). */
+  /** Customer or sample images keyed by template.inputs.images[].key. */
   images: Record<string, string>;
-  /** Copy values keyed by field key; falls back to the field default. */
+  /** Exact visible text keyed by template.inputs.text[].key. */
   copy?: Record<string, string>;
-  /** Brand accent hex; falls back to brief.brandHex. */
   brandHex?: string;
-  /** Override the brief aspect ratio if needed. */
   aspectRatio?: string;
   seed?: number;
 };
 
-/** Resolve each copy field to a final string (input → default), trimmed to maxLength. */
+export const GLOBAL_CLONE_NEGATIVES = [
+  "do not retain any name, phone number, URL, handle, logo, address, price, or identifying detail from reference image 1",
+  "do not invent or change any text beyond the supplied text values",
+  "do not distort, repaint, relight, or restructure supplied property photos, logos, or faces",
+  "no extra logos, watermarks, captions, borders, or platform UI",
+  "no fabricated prices, sale results, awards, or claims",
+  "no warped windows, rooflines, faces, hands, logos, or text",
+  "keep every supplied text value crisp, legible, and inside the canvas",
+].join("; ");
+
+/** Resolve every declared field to exact text, using the safe sample value only
+ * when a caller does not provide a replacement. */
 export function resolveCloneCopy(
-  brief: TemplateCloneBrief,
+  template: AdStudioTemplate,
   copy: Record<string, string> = {},
 ): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const field of brief.copyFields) {
-    const raw = copy[field.key] ?? field.default;
-    if (raw === undefined || raw === null) {
-      throw new Error(`Missing copy for "${field.key}" (${field.label}) and no default is set.`);
-    }
-    const value = String(raw).trim();
-    out[field.key] = field.maxLength ? value.slice(0, field.maxLength) : value;
+  const resolved: Record<string, string> = {};
+  for (const field of template.inputs.text) {
+    const raw = copy[field.key] ?? field.sample;
+    const value = String(raw ?? "").trim();
+    if (field.required && !value) throw new Error(`Missing text: ${field.label}`);
+    resolved[field.key] = value.slice(0, field.maxLength);
   }
-  return out;
+  return resolved;
 }
 
-/** Replace every {token} in `template` using the supplied values. Unknown tokens are left intact. */
-function interpolate(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (whole, key: string) =>
-    Object.prototype.hasOwnProperty.call(values, key) ? values[key] : whole,
-  );
+/**
+ * Build the only full-ad generation request.
+ *
+ * Reference order is contractual: image 1 is the approved design sample (or
+ * the private source while creating that sample), followed by the declared
+ * customer assets in template order.
+ */
+export function buildCloneImageRequest(template: AdStudioTemplate, inputs: CloneInputs): ImageProviderRequest {
+  const images = inputs.images ?? {};
+  const missingImages = template.inputs.images.filter((input) => input.required && !images[input.key]?.trim());
+  if (missingImages.length) {
+    throw new Error(`Missing required image(s): ${missingImages.map((input) => input.label).join(", ")}`);
+  }
+
+  const referenceImage = (inputs.referenceImage ?? template.sample.imageSrc)?.trim();
+  if (!referenceImage) throw new Error("A reference ad image is required.");
+
+  const suppliedImages = template.inputs.images.filter((input) => images[input.key]?.trim());
+  const copy = resolveCloneCopy(template, inputs.copy);
+  const aspectRatio = inputs.aspectRatio ?? template.format;
+  const brandHex = inputs.brandHex?.trim() || "use the supplied logo's brand colours";
+
+  const assetLegend = [
+    "Reference image 1 is the ad design to clone.",
+    ...suppliedImages.map(
+      (input, index) => `Reference image ${index + 2} is ${input.description}. Replace the matching asset in the design with it.`,
+    ),
+  ].join(" ");
+  const copyLegend = template.inputs.text
+    .map((field) => `${field.label}: "${copy[field.key]}"`)
+    .join("; ");
+
+  return {
+    prompt: [
+      "Clone reference image 1 as closely as possible, preserving its composition, spacing, typography, visual hierarchy, shapes, and image treatment.",
+      assetLegend,
+      `Use these exact visible text values and no others: ${copyLegend}.`,
+      `Use ${brandHex}. Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
+    ].join(" "),
+    negativePrompt: GLOBAL_CLONE_NEGATIVES,
+    referenceAssets: [referenceImage, ...suppliedImages.map((input) => images[input.key].trim())],
+    aspectRatio,
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+    seed: inputs.seed ?? 0,
+  };
 }
 
 export type TargetedEditInputs = {
-  /** The current creative image (data: URL or absolute URL) — the anchor. */
   currentImage: string;
-  /** Human label of the element being changed (e.g. "headline"). */
   fieldLabel: string;
-  /** The exact new text to render. */
   newValue: string;
-  /** Optional replacement image for an image slot instead of a text change. */
   newImage?: string;
+  expectedCopy?: Record<string, string>;
   aspectRatio: string;
   seed?: number;
 };
 
-/**
- * Build the request for a Stitch-style in-place edit: the CURRENT image is the
- * anchor (never the template sample), and the instruction changes exactly one
- * element while everything else stays pixel-identical. This is what keeps the
- * design stable across edits.
- */
+/** Build a single-element edit anchored on the current finished ad. */
 export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProviderRequest {
   const referenceAssets = inputs.newImage ? [inputs.currentImage, inputs.newImage] : [inputs.currentImage];
+  const preservationContract = Object.entries(inputs.expectedCopy ?? {})
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join("; ");
+  const preservationInstruction = preservationContract
+    ? ` Every listed text value must remain visible and character-for-character exact: ${preservationContract}.`
+    : "";
   const instruction = inputs.newImage
-    ? `Reference image 1 is an existing finished ad. Replace ONLY the ${inputs.fieldLabel} photo with reference image 2 (fit it naturally into the same area). Keep every other pixel — all text, layout, colours, logos, and other photos — exactly identical to reference image 1.`
-    : `Reference image 1 is an existing finished ad. Change ONLY the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position, font treatment, and colour. Keep every other pixel — all other text, layout, colours, logos, and photos — exactly identical to reference image 1.`;
+    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
+    : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.${preservationInstruction}`;
 
   return {
     prompt: instruction,
@@ -168,16 +123,11 @@ export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProvi
   };
 }
 
-/**
- * Build the request for the quality-upgrade pass: re-render the finished draft
- * ad at maximum fidelity without changing ANY element. Anchoring on the draft
- * (not the original inputs) keeps the design pixel-stable between the fast
- * draft the user sees first and the final version that replaces it.
- */
+/** Build the quality pass without changing the finished design. */
 export function buildRefineRequest(inputs: { currentImage: string; aspectRatio: string; seed?: number }): ImageProviderRequest {
   return {
     prompt:
-      "Reference image 1 is a finished ad design. Re-render this EXACT ad at maximum fidelity: crisp, clean typography with sharp edges; professional photographic quality in the photos; smooth colour gradients. Keep the layout, colours, every text string, logos, and photos exactly as they appear in reference image 1 — change nothing, only render it better.",
+      "Reference image 1 is a finished ad. Re-render this exact ad at maximum fidelity. Keep its layout, colours, every text string, logos, and photos unchanged; improve only rendering quality and text sharpness.",
     negativePrompt: GLOBAL_CLONE_NEGATIVES,
     referenceAssets: [inputs.currentImage],
     aspectRatio: inputs.aspectRatio,
@@ -186,48 +136,3 @@ export function buildRefineRequest(inputs: { currentImage: string; aspectRatio: 
     seed: inputs.seed ?? 0,
   };
 }
-
-/**
- * Build the image-provider request for a reference clone. Reference order is the
- * contract the prompt relies on: index 1 is always the design to clone, then the
- * customer images in declared slot order (only the ones supplied).
- */
-export function buildCloneImageRequest(brief: TemplateCloneBrief, inputs: CloneInputs): ImageProviderRequest {
-  const images = inputs.images ?? {};
-
-  const missing = brief.imageSlots.filter((slot) => slot.required && !images[slot.role]?.trim());
-  if (missing.length) {
-    throw new Error(`Missing required image(s): ${missing.map((slot) => slot.role).join(", ")}`);
-  }
-
-  const referenceImage = (inputs.referenceImage ?? brief.referenceImage)?.trim();
-  if (!referenceImage) {
-    throw new Error("A reference design image is required to clone.");
-  }
-
-  // Supplied slots, in the brief's declared order (stable, drives the legend).
-  const suppliedSlots = brief.imageSlots.filter((slot) => images[slot.role]?.trim());
-  const referenceAssets = [referenceImage, ...suppliedSlots.map((slot) => images[slot.role].trim())];
-
-  const copy = resolveCloneCopy(brief, inputs.copy);
-  const brandHex = (inputs.brandHex ?? brief.brandHex).trim();
-
-  const promptBrief = inputs.aspectRatio ? { ...brief, aspectRatio: inputs.aspectRatio } : brief;
-  const template = brief.clonePrompt ?? defaultClonePromptTemplate(promptBrief);
-  const body = interpolate(template, { ...copy, brandHex });
-  const legend = [
-    "Reference image 1 = the finished ad design to clone exactly.",
-    ...suppliedSlots.map((slot, index) => `Reference image ${index + 2} = ${slot.description ?? slot.role} (use as supplied, do not alter).`),
-  ].join(" ");
-
-  return {
-    prompt: `${body}\n${legend}`,
-    negativePrompt: GLOBAL_CLONE_NEGATIVES,
-    referenceAssets,
-    aspectRatio: inputs.aspectRatio ?? brief.aspectRatio,
-    stylePreset: "real_estate_clone",
-    requiresReferenceAssets: true,
-    seed: inputs.seed ?? 0,
-  };
-}
-

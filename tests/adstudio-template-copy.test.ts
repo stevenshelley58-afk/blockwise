@@ -37,12 +37,13 @@ function buildTemplatePack(variantCount = 2) {
     platforms: ["meta"],
     variantCount,
     firstAd: {
-      mode: "template",
-      source: "template_library",
-      templateKey: template.templateKey,
+      source: "gallery",
+      templateId: template.id,
       description: "Open home Saturday, 18 Smith St Scarborough.",
       imageDataUrl: IMAGE,
-      imageDataUrls: { primary_image: IMAGE },
+      imageDataUrls: { property_photo: IMAGE, brand_logo: IMAGE },
+      templateCloneImage: IMAGE,
+      templateCloneImagesByFormat: { "4:5": IMAGE, "9:16": IMAGE },
       formats: ["9:16", "4:5"],
     },
   });
@@ -76,9 +77,8 @@ test("applyProvidedCopyToCampaignPack replaces offer-library copy on every varia
   assert.notEqual(applied.campaign.status, undefined);
 });
 
-test("template mode wires brief-grounded copy through the server-side generation flow", () => {
+test("customer copy is merged before the single server-side clone flow", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
-  const copyRoute = readFileSync("src/app/api/adstudio/copy/route.ts", "utf8");
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const copyGeneration = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
@@ -99,20 +99,14 @@ test("template mode wires brief-grounded copy through the server-side generation
   assert.match(generation, /copy: onImageCopy/);
   assert.match(generation, /copy: copyResult\.copy/);
   assert.ok(
-    generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildTemplateCloneRequestsByFormat(brief"),
+    generation.indexOf("generateAdStudioTemplateCopy({") < generation.indexOf("buildTemplateCloneRequestsByFormat(template"),
     "copy generation must run before the clone so the image carries the user's copy",
   );
 
-  // Provided copy replaces offer-library defaults (with compliance re-run) in
-  // the server pipeline AND in the route's old-style template branch.
+  // The campaign route has one generation call and no old fallback branch.
   assert.match(generation, /applyProvidedCopyToCampaignPack/);
-  assert.match(createRoute, /applyProvidedCopyToCampaignPack/);
   assert.match(createRoute, /runTemplateCampaignGeneration/);
-
-  // Copy route: templateFields mode stays available for other callers.
-  assert.match(copyRoute, /mode === "templateFields"/);
-  assert.match(copyRoute, /generateAdStudioTemplateCopy/);
-  assert.match(copyRoute, /templateFields is required/);
+  assert.doesNotMatch(createRoute, /generateAdStudioCampaignPack\(\{/);
 
   // The on-image instruction forbids reusing sample facts; field values are
   // clamped to the template's declared maxLength.

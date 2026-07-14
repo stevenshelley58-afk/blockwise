@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Copy, Image as ImageIcon, Radar, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import type { AdStudioBrandKit, AdStudioTemplate, FirstAdInput } from "@/lib/adstudio";
@@ -19,23 +19,15 @@ import {
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
 
-type StartStep = "source" | "template" | "reuse" | "radar";
 type Step = "source" | "brief";
-type ExploreTab = "templates" | "myads" | "research";
-type TemplateFilter = "all" | "new" | "listings" | "appraisals" | "market" | "sold";
-type MediaSourceMode = "details" | "library" | "generate";
+type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
+type MediaSourceMode = "details" | "library";
 type ImageLibraryAsset = {
   src: string;
   label: string;
   type?: string;
   ratio?: string;
   role?: string;
-};
-type GeneratedImageOption = {
-  image: string;
-  model?: string;
-  provider?: string;
-  index?: number;
 };
 type RequirementBlockerTarget = "description" | "images" | "upload";
 type RequirementBlocker = {
@@ -48,7 +40,6 @@ const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5"];
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
-  { id: "new", label: "New" },
   { id: "listings", label: "Listings" },
   { id: "appraisals", label: "Appraisals" },
   { id: "market", label: "Market updates" },
@@ -60,25 +51,6 @@ type TrialStatus = {
   includedAdPacks: number;
 };
 
-type ReuseAd = {
-  id: string;
-  name: string;
-  goal: string | null;
-  status: string | null;
-  createdAt: string | null;
-};
-
-type RadarAd = {
-  savedId: string;
-  observedAdId: string;
-  cta: string;
-  adType: string;
-  primaryIntent: string;
-  hooks: string[];
-};
-
-type RadarInspiration = RadarAd;
-
 type NewAdDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -87,10 +59,8 @@ type NewAdDialogProps = {
   templates: AdStudioTemplate[];
   mediaAssets?: ImageLibraryAsset[];
   onGenerate: (input: FirstAdInput) => Promise<void>;
-  /** Pre-select a template (e.g. launched from a template card). */
+  /** Open directly on a selected gallery sample. */
   initialTemplateId?: string;
-  /** Where the dialog opens: which tab of the explore view. */
-  initialStep?: StartStep;
 };
 
 function templateCategory(goal: string | null | undefined): "listings" | "appraisals" | "market" | "sold" {
@@ -107,34 +77,6 @@ function templateCategory(goal: string | null | undefined): "listings" | "apprai
     default:
       return "listings";
   }
-}
-
-function isNewTemplate(template: AdStudioTemplate): boolean {
-  return template.source === "operator" || template.source === "radar";
-}
-
-/**
- * Ad Radar starts build on a real template (blank mode was cut in P2.3): the
- * saved ad's intent picks the closest template category so every radar
- * submission carries a template id and goes down the single template path.
- */
-function templateForRadarAd(templates: AdStudioTemplate[], ad: RadarAd): AdStudioTemplate | undefined {
-  const intent = `${ad.primaryIntent} ${ad.adType}`.toLowerCase();
-  const category: TemplateFilter | null = /appraisal|valuation|home value/u.test(intent)
-    ? "appraisals"
-    : /market|report|update|stat/u.test(intent)
-      ? "market"
-      : /sold|open home|nurture|testimonial|follow/u.test(intent)
-        ? "sold"
-        : /listing|buyer|seller|property/u.test(intent)
-          ? "listings"
-          : null;
-
-  return (
-    (category ? templates.find((template) => templateCategory(template.goal) === category) : undefined) ??
-    templates.find((template) => template.source === "radar") ??
-    templates[0]
-  );
 }
 
 function templatePreviewSrc(template: AdStudioTemplate, brandKit: AdStudioBrandKit): string {
@@ -157,14 +99,14 @@ function TemplateChoiceCard({
   brandKit: AdStudioBrandKit;
   onSelect: (id: string) => void;
 }) {
-  const isFullscreen = template.placement === "meta_fullscreen" || template.format === "9:16";
+  const isFullscreen = template.format === "9:16";
   const placementLabel = isFullscreen ? "Fullscreen ad" : "Feed ad";
 
   return (
     <button
       type="button"
       className={`studio-explore-card studio-explore-card--template${isFullscreen ? " studio-explore-card--fullscreen" : " studio-explore-card--feed"}`}
-      aria-label={`Use ${template.name} ${placementLabel.toLowerCase()} template`}
+      aria-label={`Use ${template.name} ${placementLabel.toLowerCase()} sample`}
       onClick={() => onSelect(template.id)}
     >
       <span className="studio-explore-card-head">
@@ -172,11 +114,10 @@ function TemplateChoiceCard({
           <strong>{template.name}</strong>
           <small>{placementLabel}</small>
         </span>
-        {isNewTemplate(template) ? <span className="studio-explore-new-badge">NEW</span> : null}
       </span>
       <TemplateAdPreview template={template} brandKit={brandKit} />
       <span className="studio-explore-card-action">
-        <span>Use template</span>
+        <span>Clone this sample</span>
         <ArrowUpRight aria-hidden size={15} />
       </span>
     </button>
@@ -189,7 +130,7 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
   const brandName = brandNameForPreview(brandKit);
   const brandInitial = initialForBrand(brandName);
   const domain = domainForPreview(brandKit);
-  const isFullscreen = template.placement === "meta_fullscreen" || template.format === "9:16";
+  const isFullscreen = template.format === "9:16";
 
   if (isFullscreen) {
     return (
@@ -246,24 +187,10 @@ function TemplateAdPreview({ template, brandKit }: { template: AdStudioTemplate;
 }
 
 function templateAdCopy(template: AdStudioTemplate): TemplateAdCopy {
-  const headline =
-    cleanText(template.editableText?.headline) ||
-    cleanText(template.sampleCopy?.headline) ||
-    cleanText(template.meta?.headlines[0]) ||
-    template.name;
-  const primaryText =
-    cleanText(template.editableText?.primaryText) ||
-    cleanText(template.sampleCopy?.primaryText) ||
-    cleanText(template.meta?.primaryText[0]) ||
-    template.promptHint;
-  const description =
-    cleanText(template.editableText?.description) ||
-    cleanText(template.sampleCopy?.description) ||
-    cleanText(template.meta?.descriptions[0]);
-  const cta =
-    cleanText(template.editableText?.ctaLabel) ||
-    cleanText(template.sampleCopy?.cta) ||
-    metaCtaLabel(template.editableText?.cta ?? template.meta?.cta);
+  const headline = cleanText(template.meta.headlines[0]) || template.name;
+  const primaryText = cleanText(template.meta.primaryText[0]) || template.audienceIntent;
+  const description = cleanText(template.meta.descriptions[0]);
+  const cta = metaCtaLabel(template.meta.cta);
 
   return { headline, primaryText, description, cta };
 }
@@ -298,12 +225,6 @@ function domainForPreview(brandKit: AdStudioBrandKit): string {
   return resolveAdvertiserDomain({ brandKit }).host;
 }
 
-function tabForStep(step: StartStep): ExploreTab {
-  if (step === "reuse") return "myads";
-  if (step === "radar") return "research";
-  return "templates";
-}
-
 export function NewAdDialog({
   open,
   onClose,
@@ -313,7 +234,6 @@ export function NewAdDialog({
   mediaAssets = [],
   onGenerate,
   initialTemplateId,
-  initialStep = "source",
 }: NewAdDialogProps) {
   const titleId = useId();
   const requirementsAlertId = useId();
@@ -321,10 +241,8 @@ export function NewAdDialog({
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   const [step, setStep] = useState<Step>("source");
-  const [tab, setTab] = useState<ExploreTab>("templates");
   const [filter, setFilter] = useState<TemplateFilter>("all");
-  // undefined = nothing chosen yet. Every new ad starts from a template (Ad
-  // Radar starts map to the closest template) — blank mode was cut in P2.3.
+  // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
@@ -333,23 +251,12 @@ export function NewAdDialog({
   const [activeImageSlotId, setActiveImageSlotId] = useState(DEFAULT_IMAGE_SLOT.id);
   const [mediaSourceMode, setMediaSourceMode] = useState<MediaSourceMode>("details");
   const [dialogMediaAssets, setDialogMediaAssets] = useState<ImageLibraryAsset[]>([]);
-  const [generatorPrompt, setGeneratorPrompt] = useState("");
-  const [generatorReference, setGeneratorReference] = useState<ImageLibraryAsset | null>(null);
-  const [generatedImageOptions, setGeneratedImageOptions] = useState<GeneratedImageOption[]>([]);
-  const [sourceNote, setSourceNote] = useState("");
-  const [radarInspiration, setRadarInspiration] = useState<RadarInspiration | null>(null);
   const [error, setError] = useState("");
   const [showRequirementsAlert, setShowRequirementsAlert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingReference, setUploadingReference] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
 
-  const [reuseAds, setReuseAds] = useState<ReuseAd[] | null>(null);
-  const [reuseError, setReuseError] = useState("");
-  const [radarAds, setRadarAds] = useState<RadarAd[] | null>(null);
-  const [radarError, setRadarError] = useState("");
   const selectedTemplate = templates.find((template) => template.id === templateId);
   const imageRequirements = useMemo(
     () => imageRequirementsForTemplate(selectedTemplate),
@@ -379,7 +286,7 @@ export function NewAdDialog({
     [brandKit, imageDataUrlsBySlot, imageRequirements],
   );
   const missingCopyLabels = useMemo(
-    () => customerCopyFields.filter((field) => !onImageCopy[field.key]?.trim()).map((field) => field.label),
+    () => customerCopyFields.filter((field) => field.required && !onImageCopy[field.key]?.trim()).map((field) => field.label),
     [customerCopyFields, onImageCopy],
   );
   const requirementBlockers = buildRequirementBlockers({
@@ -425,32 +332,20 @@ export function NewAdDialog({
       setTemplateId(undefined);
       setStep("source");
     }
-    setTab(tabForStep(initialStep));
     setFilter("all");
     setDescription("");
-    // The customer supplies their own listing photo; the template drives the
-    // layout, copy and brand — never a pre-baked image.
+    // The customer supplies every declared image and text field. The selected
+    // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
     setMediaSourceMode("details");
-    setGeneratorPrompt("");
-    setGeneratorReference(null);
-    setGeneratedImageOptions([]);
-    setSourceNote("");
-    setRadarInspiration(null);
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
-    setUploadingReference(false);
-    setGeneratingImage(false);
-    setReuseAds(null);
-    setReuseError("");
-    setRadarAds(null);
-    setRadarError("");
     window.setTimeout(() => dialogRef.current?.focus(), 0);
-  }, [open, initialTemplateId, initialStep]);
+  }, [open, initialTemplateId, mediaAssets]);
 
   useEffect(() => {
     if (!open) return;
@@ -472,50 +367,6 @@ export function NewAdDialog({
     };
   }, [open]);
 
-  // Load previous ads and Ad Radar lists once the dialog opens so their
-  // tab counts are accurate and switching tabs is instant.
-  useEffect(() => {
-    if (!open || reuseAds !== null) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch("/api/adstudio/campaigns", { cache: "no-store" });
-        const payload = (await response.json().catch(() => ({}))) as { campaigns?: Array<Record<string, unknown>>; error?: string };
-        if (!response.ok) throw new Error(payload.error || "Could not load your ads.");
-        if (!cancelled) setReuseAds((payload.campaigns ?? []).map(toReuseAd).filter((ad): ad is ReuseAd => ad !== null));
-      } catch (caught) {
-        if (!cancelled) {
-          setReuseAds([]);
-          setReuseError(caught instanceof Error ? caught.message : "Could not load your ads.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, reuseAds]);
-
-  useEffect(() => {
-    if (!open || radarAds !== null) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch("/api/research/swipe-file", { cache: "no-store" });
-        const payload = (await response.json().catch(() => ({}))) as { savedAds?: Array<Record<string, unknown>>; error?: string };
-        if (!response.ok) throw new Error(payload.error || "Could not load saved Ad Radar ads.");
-        if (!cancelled) setRadarAds((payload.savedAds ?? []).map(toRadarAd).filter((ad): ad is RadarAd => ad !== null));
-      } catch (caught) {
-        if (!cancelled) {
-          setRadarAds([]);
-          setRadarError(caught instanceof Error ? caught.message : "Could not load saved Ad Radar ads.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, radarAds]);
-
   useEffect(() => {
     if (!open) return;
     function handleKey(event: KeyboardEvent) {
@@ -536,7 +387,6 @@ export function NewAdDialog({
 
   const visibleTemplates = templates.filter((template) => {
     if (filter === "all") return true;
-    if (filter === "new") return isNewTemplate(template);
     return templateCategory(template.goal) === filter;
   });
 
@@ -558,48 +408,13 @@ export function NewAdDialog({
 
   function chooseTemplate(id: string) {
     setTemplateId(id);
-    setSourceNote("");
-    setRadarInspiration(null);
     setError("");
     setShowRequirementsAlert(false);
-    // The customer adds their own listing photo; the template only drives layout/copy.
+    // Inputs reset whenever the customer chooses a different sample.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setOnImageCopy({});
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
-    setMediaSourceMode("details");
-    setStep("brief");
-  }
-
-  function chooseReuse(ad: ReuseAd) {
-    // Reuse opens the existing ad so it can be duplicated or tweaked.
-    window.location.href = `/ad-studio?campaignId=${encodeURIComponent(ad.id)}`;
-  }
-
-  function chooseRadar(ad: RadarAd) {
-    // Radar starts map to the closest template — the submission always carries
-    // a template id (mode "template"); the saved ad only shapes the copy brief.
-    const template = templateForRadarAd(templates, ad);
-    if (!template) {
-      setRadarError("Templates are still loading. Try again in a moment.");
-      return;
-    }
-    setTemplateId(template.id);
-    setDescription("Use this saved Ad Radar pattern as structure only. Write original Blockwise copy for this campaign.");
-    setSourceNote(`Ad Radar structure selected — built on the ${template.name} template. Add your own photo and Blockwise will write an original version.`);
-    setImageDataUrlsBySlot({});
-    setImageNamesBySlot({});
-    setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
-    setRadarInspiration({
-      savedId: ad.savedId,
-      observedAdId: ad.observedAdId,
-      cta: ad.cta,
-      adType: ad.adType,
-      primaryIntent: ad.primaryIntent,
-      hooks: ad.hooks,
-    });
-    setError("");
-    setShowRequirementsAlert(false);
     setMediaSourceMode("details");
     setStep("brief");
   }
@@ -661,101 +476,8 @@ export function NewAdDialog({
     setError("");
   }
 
-  function openGenerator(slotId: string) {
-    setActiveImageSlotId(slotId);
-    setMediaSourceMode("generate");
-    setGeneratorPrompt("");
-    setGeneratorReference(null);
-    setGeneratedImageOptions([]);
-    setError("");
-  }
-
   function selectLibraryImage(asset: ImageLibraryAsset) {
     setSlotImage(activeImageSlot.id, asset.src, asset.label);
-    setMediaSourceMode("details");
-    setError("");
-  }
-
-  async function selectGeneratorReference(file: File) {
-    setError("");
-    setUploadingReference(true);
-    try {
-      const uploaded = await uploadAdStudioMedia({
-        file,
-        workspaceId,
-        brandKitId: brandKit.brandKitId,
-      });
-      const asset = { src: uploaded.src, label: file.name, type: "Reference image", ratio: "Just now", role: "property" };
-      setGeneratorReference(asset);
-      rememberLibraryAsset(asset);
-    } catch (caught) {
-      setGeneratorReference(null);
-      setError(caught instanceof Error ? caught.message : "Could not upload that sample image.");
-    } finally {
-      setUploadingReference(false);
-    }
-  }
-
-  async function generateImageForAd() {
-    const prompt = generatorPrompt.trim();
-    if (!prompt) {
-      setError("Add a prompt for the image.");
-      return;
-    }
-
-    setGeneratingImage(true);
-    setGeneratedImageOptions([]);
-    setError("");
-    try {
-      const response = await fetch("/api/adstudio/generate-options", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          copyText: description.trim() || prompt,
-          sourceImage: generatorReference?.src,
-          aspectRatio: "4:5",
-          stylePreset: "real_estate_photography",
-          brandKitId: brandKit.brandKitId,
-          optionCount: 1,
-          brand: {
-            palette: [
-              brandKit.colours.primary,
-              brandKit.colours.secondary,
-              brandKit.colours.accent,
-              brandKit.colours.background,
-              brandKit.colours.text,
-            ],
-            styleTags: brandKit.visualStyle.styleTags,
-            imageTreatment: brandKit.visualStyle.imageTreatment,
-          },
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        options?: GeneratedImageOption[];
-        compliance?: { pass?: boolean; issues?: string[] };
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error || "Could not generate that image.");
-      if (payload.compliance?.pass === false) {
-        throw new Error(payload.compliance.issues?.[0] || "Adjust the image prompt and try again.");
-      }
-
-      const options = (payload.options ?? []).filter((option) => Boolean(option.image));
-      if (options.length === 0) throw new Error("No generated image was returned.");
-      setGeneratedImageOptions(options);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not generate that image.");
-    } finally {
-      setGeneratingImage(false);
-    }
-  }
-
-  function useGeneratedImage(option: GeneratedImageOption) {
-    const label = option.index === undefined ? "Generated image" : `Generated image ${option.index + 1}`;
-    setSlotImage(activeImageSlot.id, option.image, label);
-    rememberLibraryAsset({ src: option.image, label, type: "AI generated", ratio: "Image", role: "background" });
-    void registerGeneratedImageAsAsset(brandKit.brandKitId, option.image);
     setMediaSourceMode("details");
     setError("");
   }
@@ -773,8 +495,7 @@ export function NewAdDialog({
     }
 
     if (!selectedTemplate) {
-      // Every new ad starts from a template; without one, go pick it.
-      setError("Choose a template to start this ad.");
+      setError("Choose a sample to clone first.");
       setStep("source");
       return;
     }
@@ -783,22 +504,9 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     try {
-      const source = radarInspiration ? "ad_radar" : "template_library";
-      // Template mode: copy, clone, and QA all run server-side in one async
-      // generation job (see runTemplateCampaignGeneration) — the dialog only
-      // submits the brief and images, and onGenerate polls until it finishes.
-      // The dialog only ever submits mode "template"; "custom" is legacy-only.
       await onGenerate({
-        mode: "template",
-        source,
+        source: "gallery",
         templateId: selectedTemplate.id,
-        templateKey: selectedTemplate.templateKey ?? selectedTemplate.id,
-        savedAdId: radarInspiration?.savedId,
-        observedAdId: radarInspiration?.observedAdId,
-        hooks: radarInspiration?.hooks,
-        referenceCta: radarInspiration?.cta,
-        referenceAdType: radarInspiration?.adType,
-        referenceIntent: radarInspiration?.primaryIntent,
         description: trimmed,
         imageDataUrl,
         imageDataUrls,
@@ -819,19 +527,15 @@ export function NewAdDialog({
 
   const stepTitle =
     step === "source"
-      ? "Templates"
+      ? "Choose a sample"
       : mediaSourceMode === "library"
         ? "Choose from library"
-        : mediaSourceMode === "generate"
-          ? "Generate image"
-          : `${selectedTemplate?.name ?? "Template"} - add your details`;
+        : `${selectedTemplate?.name ?? "Sample"} - add your assets`;
 
   const footHint =
     mediaSourceMode === "library"
       ? `Select an image for ${activeImageSlot.label}.`
-      : mediaSourceMode === "generate"
-        ? `Generate an image for ${activeImageSlot.label}.`
-        : "Blockwise will clone the selected Meta template with your image.";
+      : "Blockwise will recreate the selected sample with your images and text.";
   const showFooter = step === "brief";
 
   return (
@@ -854,7 +558,7 @@ export function NewAdDialog({
           <div className="studio-newad-titleblock">
             <span>Start an ad</span>
             <h2 id={titleId}>{stepTitle}</h2>
-            {mediaSourceMode === "library" || mediaSourceMode === "generate" ? (
+            {mediaSourceMode === "library" ? (
               <p>{activeImageSlot.label}</p>
             ) : null}
           </div>
@@ -866,116 +570,32 @@ export function NewAdDialog({
         <div className="studio-newad-body">
           {step === "source" && (
             <div className="studio-explore">
-              <div className="studio-explore-tabs" role="tablist" aria-label="Where to start">
-                <button type="button" role="tab" aria-selected={tab === "templates"} className={tab === "templates" ? "on" : ""} onClick={() => setTab("templates")}>
-                  Templates <i>{templates.length}</i>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === "myads"}
-                  aria-label={`Previous ads (${reuseAds === null ? "loading" : reuseAds.length})`}
-                  className={tab === "myads" ? "on" : ""}
-                  onClick={() => setTab("myads")}
-                >
-                  Previous <i>{reuseAds === null ? "..." : reuseAds.length}</i>
-                </button>
-                <button type="button" role="tab" aria-selected={tab === "research"} className={tab === "research" ? "on" : ""} onClick={() => setTab("research")}>
-                  Ad Radar <i>{radarAds === null ? "..." : radarAds.length}</i>
-                </button>
-              </div>
-
-              {tab === "templates" && (
-                <>
-                  <div className="studio-explore-filterbar">
-                    <label className="studio-explore-filter">
-                      <span>Category</span>
-                      <select value={filter} onChange={(event) => setFilter(event.target.value as TemplateFilter)}>
-                        {TEMPLATE_FILTERS.map((chip) => (
-                          <option key={chip.id} value={chip.id}>{chip.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <span className="studio-explore-count">{visibleTemplates.length} templates</span>
-                  </div>
-                  <div className="studio-explore-grid">
-                    {visibleTemplates.length === 0 ? (
-                      <p className="studio-explore-msg">No templates in this category yet. Pick another category, reuse a previous ad, or use saved Ad Radar inspiration.</p>
-                    ) : null}
-                    {visibleTemplates.map((template) => (
-                      <TemplateChoiceCard key={template.id} template={template} brandKit={brandKit} onSelect={chooseTemplate} />
+              <p className="studio-explore-intro">Choose the ad to clone. The next step asks only for the images and exact text that sample requires.</p>
+              <div className="studio-explore-filterbar">
+                <label className="studio-explore-filter">
+                  <span>Category</span>
+                  <select value={filter} onChange={(event) => setFilter(event.target.value as TemplateFilter)}>
+                    {TEMPLATE_FILTERS.map((chip) => (
+                      <option key={chip.id} value={chip.id}>{chip.label}</option>
                     ))}
-                  </div>
-                </>
-              )}
-
-              {tab === "myads" && (
-                <div className="studio-explore-grid">
-                  {reuseAds === null ? (
-                    <p className="studio-explore-msg">Loading your ads...</p>
-                  ) : reuseAds.length === 0 ? (
-                    <p className="studio-explore-msg">{reuseError || "No previous ads yet. Start from a template or competitor research instead."}</p>
-                  ) : (
-                    reuseAds.map((ad) => (
-                      <article key={ad.id} className="studio-explore-card">
-                        <div className="studio-explore-thumb">
-                          <span className="studio-explore-ph">
-                            <Copy aria-hidden size={22} />
-                          </span>
-                        </div>
-                        <div className="studio-explore-meta">
-                          <div className="studio-explore-row">
-                            <strong>{ad.name}</strong>
-                            <ArrowUpRight aria-hidden size={16} />
-                          </div>
-                          <p>{[formatGoal(ad.goal), formatStatus(ad.status), formatDate(ad.createdAt)].filter(Boolean).join(" / ")}</p>
-                          <button type="button" className="studio-explore-use" onClick={() => chooseReuse(ad)}>
-                            Open ad
-                          </button>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {tab === "research" && (
-                <div className="studio-explore-grid">
-                  {radarAds === null ? (
-                    <p className="studio-explore-msg">Loading saved Ad Radar ads...</p>
-                  ) : radarAds.length === 0 ? (
-                    <p className="studio-explore-msg">
-                      {radarError || "No saved ads yet. Save ads from Ad Radar, then use them here."} <a href="/ad-radar">Open Ad Radar</a>
-                    </p>
-                  ) : (
-                    radarAds.map((ad) => (
-                      <article key={ad.savedId} className="studio-explore-card">
-                        <div className="studio-explore-thumb">
-                          <span className="studio-explore-ph">
-                            <Radar aria-hidden size={22} />
-                          </span>
-                        </div>
-                        <div className="studio-explore-meta">
-                          <div className="studio-explore-row">
-                            <strong>Saved Ad Radar inspiration</strong>
-                            <ArrowUpRight aria-hidden size={16} />
-                          </div>
-                          <p>Uses the selected ad structure internally. Competitor creative is not copied or shown.</p>
-                          <button type="button" className="studio-explore-use" onClick={() => chooseRadar(ad)}>
-                            Use inspiration
-                          </button>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              )}
+                  </select>
+                </label>
+                <span className="studio-explore-count">{visibleTemplates.length} samples</span>
+              </div>
+              <div className="studio-explore-grid">
+                {visibleTemplates.length === 0 ? (
+                  <p className="studio-explore-msg">No samples are available in this category yet.</p>
+                ) : null}
+                {visibleTemplates.map((template) => (
+                  <TemplateChoiceCard key={template.id} template={template} brandKit={brandKit} onSelect={chooseTemplate} />
+                ))}
+              </div>
             </div>
           )}
 
           {step === "brief" && mediaSourceMode === "details" && (
             <div className="studio-newad-own">
-              {sourceNote ? <p className="studio-newad-note">{sourceNote}</p> : <p className="studio-newad-note">{briefGuidance.note} {trialCreditNote}</p>}
+              <p className="studio-newad-note">{briefGuidance.note} {trialCreditNote}</p>
               <div className="studio-newad-upload-group">
                 {imageRequirements.map((slot) => (
                   <div className="studio-newad-image-slot" key={slot.id}>
@@ -1013,10 +633,6 @@ export function NewAdDialog({
                       <button type="button" onClick={() => openLibrary(slot.id)}>
                         <ImageIcon aria-hidden size={16} />
                         Choose from library
-                      </button>
-                      <button type="button" onClick={() => openGenerator(slot.id)}>
-                        <Sparkles aria-hidden size={16} />
-                        Generate image
                       </button>
                     </div>
                   </div>
@@ -1081,59 +697,6 @@ export function NewAdDialog({
             </div>
           )}
 
-          {step === "brief" && mediaSourceMode === "generate" && (
-            <div className="studio-newad-generator">
-              <AssetUploadDropzone
-                className="studio-newad-upload"
-                label="Upload sample image"
-                actionText="Upload sample image"
-                helperText="Optional JPG, PNG, or WebP reference / up to 8 MB"
-                previewUrl={generatorReference?.src ?? ""}
-                previewAlt=""
-                fileName={generatorReference?.label ?? ""}
-                acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-                maxBytes={AD_IMAGE_MAX_BYTES}
-                typeError="Use a JPG, PNG, or WebP image."
-                sizeError="Use an image under 8 MB."
-                onFileAccepted={selectGeneratorReference}
-                onFileRejected={setError}
-                onClear={() => {
-                  setGeneratorReference(null);
-                  setError("");
-                }}
-              />
-              <label className="studio-newad-field">
-                <span>Image prompt</span>
-                <textarea
-                  value={generatorPrompt}
-                  maxLength={500}
-                  rows={4}
-                  onChange={(event) => setGeneratorPrompt(event.target.value)}
-                  placeholder="Example: Bright editorial real estate background with warm natural light, clean living room styling, space for ad text."
-                />
-                <small>{generatorPrompt.length}/500</small>
-              </label>
-              <button
-                className="studio-btn accent studio-newad-generate-image"
-                type="button"
-                disabled={generatingImage || uploadingReference}
-                onClick={() => void generateImageForAd()}
-              >
-                <Sparkles aria-hidden size={16} />
-                {uploadingReference ? "Uploading sample" : generatingImage ? "Generating image" : "Generate image"}
-              </button>
-              {generatedImageOptions.length > 0 && (
-                <div className="studio-newad-generated-grid">
-                  {generatedImageOptions.map((option) => (
-                    <button key={option.image} type="button" onClick={() => useGeneratedImage(option)}>
-                      <img src={option.image} alt="" />
-                      <span>Use generated image</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {showFooter && (
@@ -1160,7 +723,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting ? "Cloning template" : "Generate ad"}
+                {uploadingImage ? "Uploading" : submitting ? "Creating ad" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}
@@ -1176,81 +739,6 @@ function uploadActionText(slot: TemplateImageRequirement, slotCount: number): st
   if (slot.role === "primary") return "Upload primary image";
   if (slot.role === "agent_headshot") return "Upload headshot";
   return "Upload supporting image";
-}
-
-function toReuseAd(row: Record<string, unknown>): ReuseAd | null {
-  const id = String(row.id ?? row.campaign_id ?? "");
-  if (!id) return null;
-  if (row.status === "archived") return null;
-  return {
-    id,
-    name: typeof row.name === "string" && row.name.trim() ? row.name : "Ad draft",
-    goal: typeof row.goal === "string" ? row.goal : null,
-    status: typeof row.status === "string" ? row.status : null,
-    createdAt: typeof row.created_at === "string" ? row.created_at : null,
-  };
-}
-
-function toRadarAd(entry: Record<string, unknown>): RadarAd | null {
-  const handoffPayload = isRecord(entry.handoff_payload) ? entry.handoff_payload : {};
-  const ad = entry.ad as
-    | {
-        id?: string | null;
-        creative?: {
-          headline?: string | null;
-          body?: string | null;
-          cta?: string | null;
-          adType?: string | null;
-          primaryIntent?: string | null;
-          hooks?: string[] | null;
-        };
-        page?: { name?: string | null };
-      }
-    | null
-    | undefined;
-  if (!ad) return null;
-  const savedId = String(entry.id ?? "");
-  if (!savedId) return null;
-  const observedAdId = String(entry.observedAdId ?? ad.id ?? handoffPayload.observedAdId ?? "");
-  const cta = ad.creative?.cta?.trim() ?? "";
-  if (!observedAdId) return null;
-  return {
-    savedId,
-    observedAdId,
-    cta,
-    adType: ad.creative?.adType?.trim() || stringValue(handoffPayload.adType),
-    primaryIntent: ad.creative?.primaryIntent?.trim() || stringValue(handoffPayload.primaryIntent),
-    hooks: Array.isArray(ad.creative?.hooks)
-      ? ad.creative.hooks.filter((hook): hook is string => typeof hook === "string" && hook.trim().length > 0)
-      : Array.isArray(handoffPayload.hooks)
-        ? handoffPayload.hooks.filter((hook): hook is string => typeof hook === "string" && hook.trim().length > 0)
-        : [],
-  };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function stringValue(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function formatGoal(goal: string | null): string {
-  if (!goal) return "";
-  return goal.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatStatus(status: string | null): string {
-  if (!status) return "";
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
 function formatTrialCreditNote(status: TrialStatus | null): string {
@@ -1295,7 +783,7 @@ function buildRequirementBlockers(input: {
       target: "images",
       message:
         input.missingImageLabels.length === 1
-          ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file, choose from library, or generate an image.`
+          ? `Add ${input.missingImageLabels[0]} before generating the ad. Upload a file or choose one from your library.`
           : `Add the required images before generating the ad: ${input.missingImageLabels.join(", ")}.`,
     });
   }
@@ -1328,42 +816,13 @@ function dedupeImageLibraryAssets(assets: ImageLibraryAsset[]): ImageLibraryAsse
   });
 }
 
-async function registerGeneratedImageAsAsset(brandKitId: string, src: string) {
-  const storagePath = storagePathFromMediaSrc(src);
-  if (!brandKitId || !storagePath) return;
-  await fetch(`/api/adstudio/brand-kits/${brandKitId}/assets`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      assetType: "listing_image",
-      storagePath,
-      source: "ai_generated",
-    }),
-  }).catch(() => {});
-}
-
-function storagePathFromMediaSrc(src: string): string | null {
-  try {
-    const url = new URL(src, window.location.origin);
-    if (url.pathname !== "/api/adstudio/media") return null;
-    return url.searchParams.get("path")?.trim() || null;
-  } catch {
-    return null;
-  }
-}
-
 const EXPLORE_STYLES = `
 .studio-explore{display:grid;gap:14px}
-.studio-explore-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;border-radius:12px;background:var(--line-soft);padding:3px}
-.studio-explore-tabs button{min-width:0;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:background-color .15s,color .15s,box-shadow .15s}
-.studio-explore-tabs button:hover{color:var(--ink)}
-.studio-explore-tabs button.on{background:#fff;color:#001b3d;box-shadow:var(--st-sh-1)}
-.studio-explore-tabs button i{font-style:normal;font-size:11px;font-weight:800;min-width:21px;height:19px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:#fff;color:var(--muted);font-variant-numeric:tabular-nums}
-.studio-explore-tabs button.on i{background:#001b3d;color:#fff}
+.studio-explore-intro{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-explore-filterbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .studio-explore-filter{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .studio-explore-filter span{font-size:12px;font-weight:700;color:var(--muted)}
-.studio-explore-filter select{min-height:38px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
+.studio-explore-filter select{min-height:44px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
 .studio-explore-filter select:focus{outline:2px solid var(--accent);outline-offset:2px}
 .studio-explore-count{flex:0 0 auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
@@ -1377,7 +836,6 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-card-head>span:first-child{display:grid;gap:2px;min-width:0}
 .studio-explore-card-head strong{font-size:13.5px;font-weight:760;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-explore-card-head small{font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.1}
-.studio-explore-new-badge{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:0;background:#d9f66a;color:#1c2b08;border-radius:999px;padding:3px 8px}
 .studio-explore-card-action{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;border-top:1px solid var(--line-soft);padding:11px 12px;color:#001b3d;font-size:13px;font-weight:760}
 .studio-explore-card-action svg{flex:0 0 auto}
 .studio-template-ad{display:block;min-width:0}
@@ -1432,37 +890,30 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-image-slot-head small{font-size:12px;color:var(--muted);line-height:1.35}
 .studio-newad-image-slot-head em{font-style:normal;font-size:11px;font-weight:750;color:#47627d;background:#eef4fb;border-radius:999px;padding:3px 8px;white-space:nowrap}
 .studio-newad-media-actions{display:flex;gap:8px;flex-wrap:wrap}
-.studio-newad-media-actions button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
+.studio-newad-media-actions button{min-height:44px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 12px;font-size:12.5px;font-weight:650;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-media-actions button:hover{background:var(--accent-tint);border-color:#cfe0f3;color:var(--accent)}
-.studio-newad-library,.studio-newad-generator{display:grid;gap:14px}
+.studio-newad-library{display:grid;gap:14px}
 .studio-newad-library-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .studio-newad-library-grid button{min-width:0;border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;text-align:left;display:grid;gap:8px;box-shadow:var(--st-sh-1);cursor:pointer}
 .studio-newad-library-grid button:hover{box-shadow:var(--st-sh-lift)}
 .studio-newad-library-grid img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
-.studio-newad-library-grid span,.studio-newad-generated-grid span{display:grid;gap:2px;min-width:0}
+.studio-newad-library-grid span{display:grid;gap:2px;min-width:0}
 .studio-newad-library-grid strong{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-newad-library-grid small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.studio-newad-generate-image{justify-self:start;min-height:40px}
-.studio-newad-generated-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.studio-newad-generated-grid button{border:1px solid var(--line-soft);border-radius:8px;background:#fff;padding:8px;display:grid;gap:8px;text-align:left;box-shadow:var(--st-sh-1);cursor:pointer;color:var(--ink);font-weight:650;font-size:12.5px}
-.studio-newad-generated-grid button:hover{box-shadow:var(--st-sh-lift)}
-.studio-newad-generated-grid img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:6px;background:#eef2f7;display:block}
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-thumb{height:210px}
   .studio-explore-thumb--sample{height:286px}
-  .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-newad-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
-  .studio-explore-tabs button{min-height:38px;font-size:11.5px;padding:0 5px;gap:4px}
-  .studio-explore-tabs button i{min-width:18px;height:18px;padding:0 5px;font-size:10px}
   .studio-explore-filterbar{gap:8px}
   .studio-explore-filter{flex:1}
   .studio-explore-filter select{min-width:0;width:100%}
   .studio-explore-grid{grid-template-columns:1fr}
   .studio-explore-thumb{height:220px}
   .studio-explore-thumb--sample{height:320px}
-  .studio-newad-library-grid,.studio-newad-generated-grid{grid-template-columns:1fr}
+  .studio-newad-library-grid{grid-template-columns:1fr}
 }
 `;
-// NewAdDialog: Templates pop-up with Templates, Previous, and Ad Radar tabs.
+// NewAdDialog: choose one gallery sample, then provide its declared assets.

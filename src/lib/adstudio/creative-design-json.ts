@@ -101,6 +101,15 @@ export function syncCreativeWithCopyAndImage(
   copy: CreativeCopyFields,
   imageSrc: string,
 ): AdStudioCreative {
+  // A reference clone is already one finished raster. Generic draft syncing
+  // must never replace it with the shared media-picker image or try to rewrite
+  // copy that is baked into its pixels; targeted image-model edits own it.
+  if (
+    creative.canvas.objects.length === 1
+    && creative.canvas.objects[0]?.objectId === "template_clone_image"
+  ) {
+    return creative;
+  }
   const objects = creative.canvas.objects.map((object) => syncObjectWithCopyAndImage(object, copy, imageSrc));
   const designJson = getCreativeDesignJson(creative);
   const next = {
@@ -222,7 +231,7 @@ function syncObjectWithCopyAndImage(
     return { ...object, content: copy.cta };
   }
   if (object.role === "primary_image") {
-    return { ...object, content: imageSrc, assetId: undefined };
+    return { ...object, content: imageSrc, assetId: imageSrc };
   }
   return object;
 }

@@ -15,7 +15,12 @@ import {
   resolveAdStudioTemplate,
 } from "../src/lib/adstudio/index.ts";
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
-import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
+import {
+  hydrateStoredCreativeExportRenders,
+  renderStoredFlatCloneExports,
+} from "../src/lib/adstudio/export-render-storage.ts";
+import { filterCreativeRowsToDeclaredFormats } from "../src/lib/adstudio/persistence.ts";
+import type { AdStudioCampaignPack } from "../src/lib/adstudio/types.ts";
 
 function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
   return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
@@ -289,50 +294,6 @@ test("creative layout repair fixes existing overlapped generated canvases", () =
   assert.ok(subhead.y >= headline.y + (headline.height ?? 0) + 18);
 });
 
-test("first-ad generation uses the uploaded image as the full creative visual", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-  const uploadedImage = "data:image/png;base64,iVBORw0KGgo=";
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 3,
-    firstAd: {
-      mode: "custom",
-      description: "Open home this weekend with a renovated kitchen.",
-      imageDataUrl: uploadedImage,
-      formats: ["9:16", "4:5"],
-    },
-  });
-  const story = pack.creatives.find((creative) => creative.format === "9:16");
-  assert.ok(story);
-
-  const image = story.canvas.objects.find((object) => object.role === "primary_image");
-  const subhead = story.canvas.objects.find((object) => object.role === "subheadline");
-  assert.deepEqual(
-    { content: image?.content, x: image?.x, y: image?.y, width: image?.width, height: image?.height },
-    { content: uploadedImage, x: 0, y: 0, width: story.canvas.width, height: story.canvas.height },
-  );
-  assert.equal(pack.campaign.offerId, "open_home_followup");
-  assert.equal(pack.copyPacks[0]?.landingPage.headline, "Open-home follow-up guide");
-  assert.equal(subhead?.content, pack.copyPacks[0]?.landingPage.subheadline);
-  assert.doesNotMatch(String(subhead?.content ?? ""), /seller prep checklist/i);
-  assert.ok(story.canvas.objects.findIndex((object) => object.role === "primary_image") < story.canvas.objects.findIndex((object) => object.role === "headline"));
-  assert.ok(story.canvas.objects.findIndex((object) => object.role === "image_scrim") < story.canvas.objects.findIndex((object) => object.role === "headline"));
-});
-
 test("template first-ad generation fails closed while the registry is reset", () => {
   const brandKit = extractBrandKitFromWebsite({
     workspaceId: "workspace_demo",
@@ -357,9 +318,8 @@ test("template first-ad generation fails closed while the registry is reset", ()
         platforms: ["meta"],
         variantCount: 1,
         firstAd: {
-          mode: "template",
-          source: "template_library",
-          templateKey: "meta_002",
+          source: "gallery",
+          templateId: "meta_002",
           description: "Agent-led property planning for local owners.",
           imageDataUrl: "data:image/png;base64,original",
           formats: ["9:16", "4:5"],
@@ -367,39 +327,6 @@ test("template first-ad generation fails closed while the registry is reset", ()
       }),
     /Selected template was not found\./,
   );
-});
-
-test("ad radar inspiration keeps the explicitly copied observed ad id", () => {
-  const brandKit = extractBrandKitFromWebsite({
-    workspaceId: "workspace_demo",
-    websiteUrl: "https://northstar.example",
-    marketCountry: "AU",
-    htmlByUrl: {
-      "https://northstar.example": sampleHtml,
-    },
-  });
-
-  const pack = generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit: { ...brandKit, reviewStatus: "approved" as const },
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    firstAd: {
-      mode: "custom",
-      source: "ad_radar",
-      observedAdId: "observed-ad-user-picked",
-      description: "Use this competitor angle but make it our own.",
-      imageDataUrl: "data:image/png;base64,iVBORw0KGgo=",
-      formats: ["9:16", "4:5"],
-    },
-  });
-
-  assert.equal(pack.campaign.templateKey, null);
-  assert.equal(pack.campaign.sourceObservedAdId, "observed-ad-user-picked");
 });
 
 test("scoreAdStudioVariant weights offer clarity, relevance, intent, brand fit, compliance, and hierarchy", () => {
@@ -643,5 +570,154 @@ test("stored creative export renders hydrate from workspace storage before packa
         },
       ]),
     /not found/,
+  );
+});
+
+test("flat clone export converts authoritative workspace renders to PNG and JPEG on the server", async () => {
+  const { default: sharp } = await import("sharp");
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: { "https://northstar.example": sampleHtml },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+  });
+  const stored = new Map<string, Buffer>();
+  const clonePack = {
+    ...pack,
+    creatives: await Promise.all(pack.creatives.map(async (creative) => {
+      const path = `workspace_demo/adstudio/clones/${creative.creativeId}.png`;
+      stored.set(path, await sharp({
+        create: {
+          width: Math.round(creative.canvas.width / 2),
+          height: Math.round(creative.canvas.height / 2),
+          channels: 4,
+          background: { r: 18, g: 62, b: 117, alpha: 1 },
+        },
+      }).png().toBuffer());
+      return {
+        ...creative,
+        canvas: {
+          ...creative.canvas,
+          objects: [{
+            objectId: "template_clone_image",
+            type: "image" as const,
+            role: "primary_image",
+            x: 0,
+            y: 0,
+            width: creative.canvas.width,
+            height: creative.canvas.height,
+            locked: true,
+            content: `/api/adstudio/media?path=${encodeURIComponent(path)}`,
+          }],
+        },
+      };
+    })),
+  };
+  const renders = await renderStoredFlatCloneExports(
+    {
+      storage: {
+        from(bucket: string) {
+          assert.equal(bucket, "workspace-artifacts");
+          return {
+            async download(path: string) {
+              const bytes = stored.get(path);
+              return bytes
+                ? { data: new Blob([new Uint8Array(bytes)], { type: "image/png" }), error: null }
+                : { data: null, error: { message: "missing" } };
+            },
+          };
+        },
+      },
+    },
+    "workspace_demo",
+    clonePack,
+  );
+
+  assert.equal(renders.length, clonePack.creatives.length * 2);
+  assert.ok(renders.every((render) => render.dataUrl?.startsWith(`data:${render.mimeType};base64,`)));
+  assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
+  const feedPng = renders.find((render) => render.format === "4:5" && render.mimeType === "image/png");
+  assert.ok(feedPng?.dataUrl);
+  const metadata = await sharp(Buffer.from(feedPng.dataUrl.split(",")[1], "base64")).metadata();
+  assert.deepEqual({ width: metadata.width, height: metadata.height }, { width: feedPng.width, height: feedPng.height });
+});
+
+test("flat clone export falls back to assetId when persisted content is blank", async () => {
+  const { default: sharp } = await import("sharp");
+  const path = "workspace_demo/adstudio/clones/edited.png";
+  const source = await sharp({
+    create: {
+      width: 108,
+      height: 135,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const pack = {
+    campaign: { name: "Edited clone" },
+    creatives: [{
+      creativeId: "creative-edited",
+      variantId: "variant-edited",
+      format: "4:5",
+      canvas: {
+        width: 1080,
+        height: 1350,
+        objects: [{
+          objectId: "template_clone_image",
+          content: "",
+          assetId: `/api/adstudio/media?path=${encodeURIComponent(path)}`,
+        }],
+      },
+    }],
+  } as unknown as AdStudioCampaignPack;
+
+  const renders = await renderStoredFlatCloneExports(
+    {
+      storage: {
+        from() {
+          return {
+            async download(receivedPath: string) {
+              assert.equal(receivedPath, path);
+              return { data: new Blob([new Uint8Array(source)], { type: "image/png" }), error: null };
+            },
+          };
+        },
+      },
+    },
+    "workspace_demo",
+    pack,
+  );
+
+  assert.equal(renders.length, 2);
+  assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
+});
+
+test("campaign loading quarantines creative rows from retired formats", () => {
+  const currentFeed = { id: "feed", format: "4:5" };
+  const currentStory = { id: "story", format: "9:16" };
+  const retiredSquare = { id: "old-square", format: "1:1" };
+
+  assert.deepEqual(
+    filterCreativeRowsToDeclaredFormats(
+      { creative_formats_json: ["4:5", "9:16"] },
+      [currentFeed, retiredSquare, currentStory],
+    ),
+    [currentFeed, currentStory],
+  );
+  assert.deepEqual(
+    filterCreativeRowsToDeclaredFormats({}, [retiredSquare]),
+    [retiredSquare],
+    "legacy campaigns without a declaration retain their historical creatives",
   );
 });

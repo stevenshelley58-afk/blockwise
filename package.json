@@ -20,6 +20,7 @@
     "verify:hard-reset": "node scripts/verify/hard-reset-static.mjs && node scripts/verify/adstudio-templates.mjs && node --test tests/hard-reset/*.test.ts",
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
+    "adstudio:create-template": "node scripts/adstudio/create-template.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs",
     "trigger:dev": "node scripts/run-trigger-with-project-ref.mjs dev",
     "trigger:deploy": "node scripts/run-trigger-with-project-ref.mjs deploy"
@@ -30,7 +31,6 @@
     "@supabase/supabase-js": "^2.49.8",
     "@tanstack/react-table": "^8.21.3",
     "@vercel/analytics": "^2.0.1",
-    "fabric": "^7.4.0",
     "lucide-react": "^0.468.0",
     "next": "^16.2.6",
     "react": "^19.2.6",

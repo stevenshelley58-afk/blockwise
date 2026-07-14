@@ -7,7 +7,7 @@ export default defineConfig({
   // environment identifier is committed. Enforced by observability-config test.
   project: "configured-by-trigger-cli-project-ref",
   dirs: ["./trigger"],
-  maxDuration: 300,
+  maxDuration: 900,
   init: async () => {
     initTriggerSentry();
   },

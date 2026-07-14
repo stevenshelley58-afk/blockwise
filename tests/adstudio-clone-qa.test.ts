@@ -4,11 +4,19 @@ import { readFileSync } from "node:fs";
 
 import {
   cloneQaCorrectionPrompt,
+  cloneQaMutationId,
   cloneQaPassed,
   cloneQaWarnings,
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
-import { generateCloneWithCascade } from "../src/lib/adstudio/clone-generation.ts";
+import {
+  compositeCloneRegionEdit,
+  createCloneRegionEditMask,
+  generateCloneWithCascade,
+  normalizeCloneRenderAspect,
+  persistCloneRender,
+  renderExactCloneTextEdit,
+} from "../src/lib/adstudio/clone-generation.ts";
 import {
   fetchProviderRequest,
   ProviderRequestError,
@@ -20,6 +28,190 @@ import {
   ProviderRunPersistenceError,
   runAuditAfterDurableAccounting,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
+
+test("parallel clone formats receive distinct QA mutation identities", () => {
+  const correlationId = "11111111-1111-4111-8111-111111111111";
+  assert.notEqual(
+    cloneQaMutationId(correlationId, "4:5", 1),
+    cloneQaMutationId(correlationId, "9:16", 1),
+  );
+});
+
+test("provider-native portrait renders are cropped to exact Meta placement ratios", async () => {
+  const { default: sharp } = await import("sharp");
+  const nativePortrait = await sharp({
+    create: {
+      width: 96,
+      height: 144,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const source = `data:image/png;base64,${nativePortrait.toString("base64")}`;
+
+  const story = await normalizeCloneRenderAspect(source, "9:16");
+  const feed = await normalizeCloneRenderAspect(source, "4:5");
+  const storyMetadata = await sharp(Buffer.from(story.split(",")[1], "base64")).metadata();
+  const feedMetadata = await sharp(Buffer.from(feed.split(",")[1], "base64")).metadata();
+
+  assert.deepEqual(
+    { width: storyMetadata.width, height: storyMetadata.height },
+    { width: 864, height: 1536 },
+  );
+  assert.deepEqual(
+    { width: feedMetadata.width, height: feedMetadata.height },
+    { width: 1024, height: 1280 },
+  );
+
+  const nativeSameRatio = await sharp({
+    create: {
+      width: 800,
+      height: 1000,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const exactFeed = await normalizeCloneRenderAspect(
+    `data:image/png;base64,${nativeSameRatio.toString("base64")}`,
+    "4:5",
+  );
+  const exactFeedMetadata = await sharp(Buffer.from(exactFeed.split(",")[1], "base64")).metadata();
+  assert.deepEqual(
+    { width: exactFeedMetadata.width, height: exactFeedMetadata.height },
+    { width: 1024, height: 1280 },
+  );
+});
+
+test("exact provider-hosted clone renders become owned bytes and persist to workspace storage", async () => {
+  const { default: sharp } = await import("sharp");
+  const providerBytes = await sharp({
+    create: {
+      width: 1024,
+      height: 1280,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const fetchImpl = async () => new Response(new Uint8Array(providerBytes), {
+    status: 200,
+    headers: { "content-type": "image/png" },
+  });
+
+  const normalized = await normalizeCloneRenderAspect(
+    "https://provider.example/temporary-render.png",
+    "4:5",
+    fetchImpl as typeof fetch,
+  );
+  assert.match(normalized, /^data:image\/png;base64,/);
+
+  let uploadedPath = "";
+  let uploadedBytes = 0;
+  const stored = await persistCloneRender({
+    supabase: {
+      storage: {
+        from(bucket: string) {
+          assert.equal(bucket, "workspace-artifacts");
+          return {
+            async upload(path: string, bytes: Uint8Array, options: { contentType: string; upsert: boolean }) {
+              uploadedPath = path;
+              uploadedBytes = bytes.byteLength;
+              assert.deepEqual(options, { contentType: "image/png", upsert: false });
+              return { error: null };
+            },
+          };
+        },
+      },
+    },
+    workspaceId: "workspace_demo",
+    assetUrl: normalized,
+    fileNameSeed: "accepted-clone",
+  });
+
+  assert.equal(uploadedPath, "workspace_demo/adstudio/clones/accepted-clone.png");
+  assert.ok(uploadedBytes > 0);
+  assert.equal(stored, `/api/adstudio/media?path=${encodeURIComponent(uploadedPath)}`);
+});
+
+test("targeted edit masks preserve the full ad outside the selected QA region", async () => {
+  const { default: sharp } = await import("sharp");
+  const creative = await sharp({
+    create: {
+      width: 100,
+      height: 100,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const source = `data:image/png;base64,${creative.toString("base64")}`;
+  const mask = await createCloneRegionEditMask(source, { x: 0.4, y: 0.4, width: 0.2, height: 0.2 });
+
+  assert.ok(mask);
+  const { data, info } = await sharp(Buffer.from(mask.split(",")[1], "base64"))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const alphaAt = (x: number, y: number) => data[(y * info.width + x) * info.channels + 3];
+  assert.equal(alphaAt(10, 10), 255, "pixels outside the edit region remain opaque");
+  assert.equal(alphaAt(50, 50), 0, "pixels inside the edit region are transparent");
+  assert.equal(await createCloneRegionEditMask(source), undefined);
+});
+
+test("targeted edits composite only the selected region onto the finished ad", async () => {
+  const { default: sharp } = await import("sharp");
+  const original = await sharp({
+    create: { width: 100, height: 100, channels: 4, background: { r: 220, g: 20, b: 20, alpha: 1 } },
+  }).png().toBuffer();
+  const edited = await sharp({
+    create: { width: 100, height: 100, channels: 4, background: { r: 20, g: 20, b: 220, alpha: 1 } },
+  }).png().toBuffer();
+  const result = await compositeCloneRegionEdit(
+    `data:image/png;base64,${original.toString("base64")}`,
+    `data:image/png;base64,${edited.toString("base64")}`,
+    { x: 0.4, y: 0.4, width: 0.2, height: 0.2 },
+  );
+  const { data, info } = await sharp(Buffer.from(result.split(",")[1], "base64"))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
+  assert.deepEqual(rgbAt(10, 10), [220, 20, 20], "outside pixels come from the original ad");
+  assert.deepEqual(rgbAt(50, 50), [20, 20, 220], "inside pixels come from the model edit");
+});
+
+test("post-clone text edits typeset exact copy only inside the selected region", async () => {
+  const { default: sharp } = await import("sharp");
+  const source = await sharp({
+    create: { width: 240, height: 120, channels: 4, background: { r: 190, g: 20, b: 20, alpha: 1 } },
+  })
+    .composite([{
+      input: await sharp({
+        create: { width: 120, height: 120, channels: 4, background: { r: 18, g: 62, b: 117, alpha: 1 } },
+      }).png().toBuffer(),
+      left: 0,
+      top: 0,
+    }])
+    .png()
+    .toBuffer();
+  const result = await renderExactCloneTextEdit(
+    `data:image/png;base64,${source.toString("base64")}`,
+    "JUST LISTED TODAY",
+    { x: 0, y: 0, width: 0.5, height: 1 },
+  );
+  const { data, info } = await sharp(Buffer.from(result.split(",")[1], "base64"))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
+  assert.deepEqual(rgbAt(200, 60), [190, 20, 20], "pixels outside the selected text region stay unchanged");
+  let lightPixels = 0;
+  for (let y = 0; y < 120; y += 1) {
+    for (let x = 0; x < 120; x += 1) {
+      const [red, green, blue] = rgbAt(x, y);
+      if (red > 220 && green > 220 && blue > 220) lightPixels += 1;
+    }
+  }
+  assert.ok(lightPixels > 30, "the exact-copy finalizer paints readable high-contrast text in the region");
+});
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
   try {
@@ -76,7 +268,6 @@ function qualityGateInput(providers: ImageProviderAdapter[], maxAttempts = 99) {
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "quality-gate",
-    tier: "preview",
     maxAttempts,
     deadline: Date.now() + 60_000,
   };
@@ -96,7 +287,11 @@ async function qualityGateFunction() {
   const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
   const fn = (module as Record<string, unknown>).generateQaAcceptedClone;
   assert.equal(typeof fn, "function", "quality-attempt state machine must be directly testable");
-  return fn as (input: unknown, dependencies: unknown) => Promise<unknown>;
+  const gate = fn as (input: unknown, dependencies: Record<string, unknown>) => Promise<unknown>;
+  return (input: unknown, dependencies: Record<string, unknown>) => gate(input, {
+    normalize: async (assetUrl: string) => assetUrl,
+    ...dependencies,
+  });
 }
 
 async function verifiedPersistencePipelineFunction() {
@@ -177,25 +372,26 @@ test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
   );
 });
 
-test("clone route runs cascade + QA reroll and never ships an unverified clone silently", () => {
-  const route = readFileSync("src/app/api/adstudio/generate-clone/route.ts", "utf8");
+test("template campaign generation runs cascade + QA and never ships an unverified clone silently", () => {
+  const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
-  // Provider cascade from the model-profile registry, not a single hardcoded vendor.
-  assert.match(generation, /tier === "preview" \? "image_draft" : "image_final"/);
+  // One final-quality provider cascade from the model-profile registry, not a
+  // draft/final split or a single hardcoded vendor.
+  assert.match(generation, /CLONE_MODEL_PROFILE = "image_final"/);
+  assert.doesNotMatch(generation, /image_draft|CloneTier|tier:/);
   assert.match(generation, /createImageProviderForCandidate/);
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(route, /resolveCloneProviders\(tier\)/);
-  assert.doesNotMatch(route, /createFalImageProvider|fal-image-provider|FAL_KEY/);
+  assert.match(pipeline, /resolveCloneProviders\(\)/);
+  assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // Every generation is QA'd; failures reroll with a correction, and a clone
   // that still fails returns 502 with the report instead of shipping.
-  assert.match(route, /runCloneQa/);
-  assert.match(route, /cloneQaCorrectionPrompt/);
-  assert.match(route, /status: 502/);
-  assert.match(route, /runComplianceGate/);
+  assert.match(pipeline, /runCloneQa/);
+  assert.match(pipeline, /cloneQaCorrectionPrompt/);
+  assert.match(pipeline, /TemplateCampaignQaError/);
 });
 
 test("durable accounting failure after provider success never dispatches a fallback", async () => {
@@ -228,7 +424,6 @@ test("durable accounting failure after provider success never dispatches a fallb
       workspaceId: "11111111-1111-4111-8111-111111111111",
       userId: "22222222-2222-4222-8222-222222222222",
       correlationId: "accounting-rpc-failure",
-      tier: "preview",
       attempt: 1,
       accounting: {
         executeAttempt,
@@ -266,7 +461,6 @@ test("clone generation does not fallback after a non-retryable provider failure"
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "non-retryable-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /invalid request/);
@@ -301,7 +495,6 @@ test("clone generation invokes one fallback after a retryable provider failure",
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "retryable-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   });
@@ -331,7 +524,6 @@ test("clone generation does not fallback after a dispatched request is aborted",
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "aborted-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /cancelled after dispatch/);
@@ -361,7 +553,6 @@ test("clone generation never invokes a second fallback candidate", async () => {
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "bounded-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /fallback unavailable/);
@@ -369,7 +560,7 @@ test("clone generation never invokes a second fallback candidate", async () => {
   assert.equal(thirdProviderCalls, 0);
 });
 
-test("template quality gate caps each format at four image-provider calls", async () => {
+test("template quality gate caps each format to the caller's QA budget", async () => {
   const gate = await qualityGateFunction();
   let providerCalls = 0;
   const failedProvider = (name: string) => accountedImageProvider(name, async () => {
@@ -378,7 +569,7 @@ test("template quality gate caps each format at four image-provider calls", asyn
   });
 
   await assert.rejects(() => gate(
-    qualityGateInput([failedProvider("primary"), failedProvider("fallback")]),
+    qualityGateInput([failedProvider("primary"), failedProvider("fallback")], 1),
     {
       generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
         ...input,
@@ -388,7 +579,7 @@ test("template quality gate caps each format at four image-provider calls", asyn
     },
   ));
 
-  assert.equal(providerCalls, 4);
+  assert.equal(providerCalls, 2);
 });
 
 test("provider failures do not consume the two QA-candidate attempts", async () => {
@@ -411,7 +602,7 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
     throw submittedProviderFailure("fallback unavailable", true);
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 1), {
+  const result = await gate(qualityGateInput([primary, fallback], 2), {
     generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
@@ -428,7 +619,7 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
   assert.equal(qaCalls, 1);
 });
 
-test("one provider call failure still leaves room for two QA candidates", async () => {
+test("the async budget leaves room for two QA candidates after one provider failure", async () => {
   const gate = await qualityGateFunction();
   let providerCalls = 0;
   let qaCalls = 0;
@@ -451,7 +642,7 @@ test("one provider call failure still leaves room for two QA candidates", async 
     throw submittedProviderFailure("fallback unavailable", true);
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 1), {
+  const result = await gate(qualityGateInput([primary, fallback], 2), {
     generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
@@ -498,6 +689,18 @@ test("template quality gate evaluates at most two candidates and never persists 
   }), /did not pass verification/);
   assert.equal(generateCalls, 2);
   assert.equal(reviewCalls, 2);
+
+  generateCalls = 0;
+  reviewCalls = 0;
+  await assert.rejects(() => gate(qualityGateInput([], 1), {
+    generate,
+    review: async () => {
+      reviewCalls += 1;
+      return failedQa;
+    },
+  }), /did not pass verification/);
+  assert.equal(generateCalls, 1);
+  assert.equal(reviewCalls, 1);
 
   generateCalls = 0;
   reviewCalls = 0;
@@ -573,14 +776,19 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
 
   // The anchor is the CURRENT creative image, never the template sample.
   assert.match(builder, /buildTargetedEditRequest/);
-  assert.match(builder, /exactly identical to reference image 1/);
+  assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
-  assert.match(route, /resolveCloneProviders\("preview"\)/);
+  assert.match(route, /resolveCloneProviders\(\)/);
+  assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries forward from the last verdict with the edited field
   // overridden, so unrelated drift fails QA too.
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
   assert.match(route, /expectedCopy\[fieldKey\] = newValue/);
+  assert.match(route, /createCloneRegionEditMask/);
+  assert.match(route, /compositeCloneRegionEdit/);
+  assert.match(route, /renderExactCloneTextEdit/);
+  assert.match(route, /capabilities\.inpainting/);
 
   // Undo history and a real failure mode.
   assert.match(route, /renderHistory/);

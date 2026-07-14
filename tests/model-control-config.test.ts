@@ -102,13 +102,7 @@ test("getOpenRouterReadiness reports missing API key without leaking configured 
   assert.equal(JSON.stringify(configured).includes("sk-or-v1-secret"), false);
 });
 
-test("the generative image profile is operator-editable with image-output options", () => {
-  const options = getCuratedModelOptionsForProfile("image_generative");
-  assert.ok(options.length > 0);
-  assert.ok(options.every((option) => option.supportsImageOutput));
-});
-
-test("buildModelControlViewData keeps every app-area section visible and lists the generative profile", () => {
+test("buildModelControlViewData keeps every app-area section visible", () => {
   const data = buildModelControlViewData();
 
   assert.deepEqual(
@@ -118,9 +112,5 @@ test("buildModelControlViewData keeps every app-area section visible and lists t
   assert.ok(data.sections.every((section) => section.profiles.length > 0));
 
   const creative = data.sections.find((section) => section.label === "Creative");
-  assert.ok(creative);
-  assert.ok(
-    creative.profiles.some((profile) => profile.key === "image_generative"),
-    "operator console must list the new image_generative profile",
-  );
+  assert.deepEqual(creative?.profiles.map((profile) => profile.key), ["image_draft", "image_final"]);
 });

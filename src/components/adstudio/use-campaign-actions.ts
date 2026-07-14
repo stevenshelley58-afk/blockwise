@@ -247,12 +247,12 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  async function generateFirstAd(input: FirstAdInput): Promise<{ campaignPack: AdStudioCampaignPack; viaBackgroundJob: boolean }> {
+  async function generateFirstAd(input: FirstAdInput): Promise<void> {
     if (generateInFlightRef.current) {
       throw new Error("A generation is already running - wait for it to finish.");
     }
     generateInFlightRef.current = true;
-    const expectedCount = input.mode === "template" ? 1 : 3;
+    const expectedCount = 1;
     const stopPhases = startGenerationPhases(s.setGeneration, expectedCount);
 
     try {
@@ -283,7 +283,6 @@ export function useCampaignActions(s: CampaignActionsState) {
       if (!response.ok) throw new Error(payload?.error ?? `Request failed with ${response.status}.`);
 
       let campaignPack: AdStudioCampaignPack;
-      const viaBackgroundJob = response.status === 202 && Boolean(payload?.jobId);
       if (response.status === 202 && payload?.jobId) {
         // Async generation: the server runs copy → clone → QA → persist in a
         // background job; poll it and keep the staged-progress skeletons alive.
@@ -304,11 +303,8 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setPrimaryImage(input.templateCloneImage ?? packPrimaryImage(campaignPack) ?? input.imageDataUrl);
       s.setSaveState("saved");
       s.setSection("media");
-      s.showToast(input.mode === "template" ? "Generated template clone" : "Generated Story and Feed");
+      s.showToast("Your ad is ready to edit");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
-      // The background job already renders at the quality tier; only sync
-      // drafts need the client-driven upgrade pass.
-      return { campaignPack, viaBackgroundJob };
     } catch (error) {
       stopPhases();
       // The New Ad dialog shows this error inline, so clear the skeletons.
@@ -377,6 +373,13 @@ export function useCampaignActions(s: CampaignActionsState) {
       const exportPack = packForVariant(currentPack, currentVariant?.variantId);
       const formats = exportableFormats(exportPack);
       if (formats.length === 0) throw new Error("Export failed — please retry.");
+
+      if (isFlatClonePack(exportPack)) {
+        await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, []);
+        setExportStatus(null);
+        s.showToast("Creative export downloaded");
+        return;
+      }
 
       setExportStatus(formats.map((format) => ({ format, label: exportFormatLabel(format), state: "rendering" })));
       const { renders, failedFormats } = await renderFormatsIndependently(exportPack, formats);
@@ -524,6 +527,13 @@ function exportableFormats(pack: AdStudioCampaignPack): AdStudioFormat[] {
   return Array.from(new Set(formats));
 }
 
+function isFlatClonePack(pack: AdStudioCampaignPack): boolean {
+  return pack.creatives.length > 0 && pack.creatives.every(
+    (creative) => creative.canvas.objects.length === 1
+      && creative.canvas.objects[0]?.objectId === "template_clone_image",
+  );
+}
+
 /** Each format renders with its own timeout, so one stall delivers the rest. */
 async function renderFormatsIndependently(pack: AdStudioCampaignPack, formats: AdStudioFormat[]) {
   const results = await Promise.allSettled(
@@ -648,13 +658,23 @@ function stripFabricJson(creative: AdStudioCampaignPack["creatives"][number]): A
 }
 
 function stripDuplicateDraftImage() {
-  const keptByVariant = new Set<string>();
+  const keptByVariantAndSource = new Set<string>();
   return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
-    const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-    const hasImage = Boolean(image?.content || image?.assetId);
-    const keepImage = hasImage && !keptByVariant.has(creative.variantId);
+    // A cloned ad is one authoritative raster, not a browser-rendered layer
+    // tree. Its storage pointer must survive every autosave and reload.
+    if (
+      creative.canvas.objects.length === 1
+      && creative.canvas.objects[0]?.objectId === "template_clone_image"
+    ) {
+      return creative;
+    }
 
-    if (keepImage) keptByVariant.add(creative.variantId);
+    const image = creative.canvas.objects.find((object) => object.role === "primary_image");
+    const imageSource = image?.content || image?.assetId || "";
+    const imageKey = imageSource ? `${creative.variantId}:${imageSource}` : "";
+    const keepImage = Boolean(imageKey) && !keptByVariantAndSource.has(imageKey);
+
+    if (keepImage) keptByVariantAndSource.add(imageKey);
     if (keepImage) return creative;
 
     return {

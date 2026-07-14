@@ -182,7 +182,7 @@ test("resolveAzureOpenAiChatUrl supports explicit URLs and deployment URLs", () 
   );
 });
 
-test("priced OpenRouter image candidate attaches references as image parts, never as prompt text", async () => {
+test("priced OpenRouter image candidate uses the native image API with explicit references and quality", async () => {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
     env: {
@@ -195,7 +195,7 @@ test("priced OpenRouter image candidate attaches references as image parts, neve
 
       return new Response(
         JSON.stringify({
-          choices: [{ message: { images: [{ image_url: { url: "data:image/png;base64,b3V0" } }] } }],
+          data: [{ b64_json: "b3V0" }],
           usage: { prompt_tokens: 900, completion_tokens: 1, cost: 0.039 },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -216,16 +216,15 @@ test("priced OpenRouter image candidate attaches references as image parts, neve
   });
 
   const body = JSON.parse(String(calls[0].init.body));
-  const content = body.messages[0].content as Array<Record<string, unknown>>;
-  const textParts = content.filter((part) => part.type === "text");
-  const imageParts = content.filter((part) => part.type === "image_url");
-
-  assert.equal(textParts.length, 1);
+  assert.equal(calls[0].url, "https://openrouter.ai/api/v1/images");
+  assert.equal(body.aspect_ratio, "4:5");
+  assert.equal(body.quality, "high");
+  assert.equal(body.output_format, "png");
   // A data URL inside the text prompt is tokenized as text and blows the
-  // image model's context window — references belong in image_url parts only.
-  assert.doesNotMatch(String(textParts[0].text), /data:image/);
+  // image model's context window — references belong in input_references only.
+  assert.doesNotMatch(String(body.prompt), /data:image/);
   assert.deepEqual(
-    imageParts.map((part) => (part.image_url as { url: string }).url),
+    body.input_references.map((part: { image_url: { url: string } }) => part.image_url.url),
     references,
   );
   assert.equal(output.assetUrl, "data:image/png;base64,b3V0");
@@ -588,6 +587,7 @@ test("priced OpenAI image candidate attaches a mask when one is supplied", async
 
   const body = calls[0].init.body as FormData;
   assert.ok(body.get("mask"), "mask must be attached when provided");
+  assert.equal(body.get("size"), "1024x1536");
 });
 
 test("priced OpenAI image candidate honours quality tier and the Cloudflare gateway for edits", async () => {

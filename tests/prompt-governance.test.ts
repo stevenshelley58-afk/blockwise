@@ -24,8 +24,11 @@ import {
   buildProviderRunAttempt,
   buildProviderRunPayloadHash,
   buildRedactedProviderRunInput,
+  deriveProviderRunIdentity,
   estimateAdStudioProviderRunCostUsd,
+  parseProviderAttemptReservationResult,
   redactRecord,
+  shouldRecoverProviderRun,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
 
 const initialMigrationSql = readFileSync("supabase/migrations/202605260001_initial_blockwise.sql", "utf8");
@@ -400,6 +403,81 @@ test("provider run payload hash is stable across persistence retry timestamps", 
   );
 
   assert.equal(first, retry);
+});
+
+test("provider run identity derives the model profile from the normalized attempt", () => {
+  const attempt = buildProviderRunAttempt({
+    attemptIndex: 0,
+    modelProfile: "image_final",
+    status: "completed",
+    provider: {
+      providerName: "openai",
+      providerType: "image_generation",
+      capabilities: { textToImage: true },
+      accounting: {
+        model: "gpt-image-2",
+        pricing: {
+          inputUsdPerMillionTokens: 5,
+          outputUsdPerMillionTokens: 30,
+          imageUsdPerUnit: 0.211,
+        },
+      },
+      async generate() {
+        throw new Error("not called");
+      },
+    },
+    output: {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "gpt-image-2",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    },
+  });
+
+  const identity = deriveProviderRunIdentity(
+    {
+      providerName: "untrusted-provider",
+      providerType: "text_generation",
+      modelName: "untrusted-model",
+      modelProfile: "image_draft",
+    },
+    [attempt],
+  );
+
+  assert.equal(identity.providerName, "openai");
+  assert.equal(identity.providerType, "image_generation");
+  assert.equal(identity.modelName, "gpt-image-2");
+  assert.equal(identity.modelProfile, "image_final");
+});
+
+test("an orphaned reservation uses the database recovery finalizer", () => {
+  assert.equal(
+    shouldRecoverProviderRun([], {
+      message: "Provider run identity does not match normalized attempts",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldRecoverProviderRun([], {
+      message: "Provider attempt accounting is internally inconsistent",
+    }),
+    false,
+  );
+});
+
+test("provider reservation accepts object and single-row PostgREST response shapes", () => {
+  assert.deepEqual(parseProviderAttemptReservationResult({ acquired: true, status: "reserved" }), {
+    acquired: true,
+    status: "reserved",
+    responseShape: "object",
+  });
+  assert.deepEqual(parseProviderAttemptReservationResult([{ acquired: true, status: "reserved" }]), {
+    acquired: true,
+    status: "reserved",
+    responseShape: "single-row-array",
+  });
+  assert.equal(parseProviderAttemptReservationResult([]).acquired, false);
 });
 
 test("missing provider usage is unreconciled instead of a zero-cost estimate", () => {
