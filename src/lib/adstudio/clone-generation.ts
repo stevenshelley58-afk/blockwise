@@ -76,12 +76,16 @@ export async function normalizeCloneRenderAspect(
   const metadata = await image.metadata();
   if (!metadata.width || !metadata.height) throw new Error("Generated image dimensions could not be read.");
 
-  if (metadata.width === target.width && metadata.height === target.height) return assetUrl;
-
-  const png = await image
-    .resize(target.width, target.height, { fit: "cover", position: "centre" })
-    .png()
-    .toBuffer();
+  // Always return owned image bytes. Providers may return a temporary hosted
+  // URL even when its dimensions are already exact; passing that URL through
+  // would make the finished ad display today but leave nothing authoritative
+  // in workspace storage for reload/export later.
+  const png = metadata.width === target.width && metadata.height === target.height
+    ? await image.png().toBuffer()
+    : await image
+      .resize(target.width, target.height, { fit: "cover", position: "centre" })
+      .png()
+      .toBuffer();
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
@@ -390,7 +394,7 @@ export async function generateCloneWithCascade(input: {
   throw new CloneGenerationError(lastError, providerAttemptCount);
 }
 
-/** Persist a data: URL render to workspace storage; passthrough for other refs. */
+/** Persist every generated render to workspace storage, including provider-hosted URLs. */
 export async function persistCloneRender(input: {
   supabase: {
     storage: {
@@ -406,9 +410,24 @@ export async function persistCloneRender(input: {
   workspaceId: string;
   assetUrl: string;
   fileNameSeed: string;
+  fetchImpl?: typeof fetch;
 }): Promise<string> {
-  if (!input.assetUrl || !input.assetUrl.startsWith("data:image/")) return input.assetUrl;
-  const decoded = dataUrlToUploadBytes(input.assetUrl);
+  if (!input.assetUrl) throw new Error("Generated image could not be stored.");
+  let decoded: ReturnType<typeof dataUrlToUploadBytes>;
+  if (input.assetUrl.startsWith("data:image/")) {
+    decoded = dataUrlToUploadBytes(input.assetUrl);
+  } else {
+    const response = await (input.fetchImpl ?? fetch)(input.assetUrl);
+    if (!response.ok) throw new Error("Generated image could not be stored.");
+    const source = new Uint8Array(await response.arrayBuffer());
+    const { default: sharp } = await import("sharp");
+    const png = await sharp(source).png().toBuffer();
+    decoded = {
+      bytes: new Uint8Array(png),
+      contentType: "image/png",
+      extension: "png",
+    };
+  }
   const storagePath = `${input.workspaceId}/adstudio/clones/${input.fileNameSeed}.${decoded.extension}`;
   const { error } = await input.supabase.storage
     .from("workspace-artifacts")

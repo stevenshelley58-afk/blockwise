@@ -14,6 +14,7 @@ import {
   createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
+  persistCloneRender,
   renderExactCloneTextEdit,
 } from "../src/lib/adstudio/clone-generation.ts";
 import {
@@ -79,6 +80,56 @@ test("provider-native portrait renders are cropped to exact Meta placement ratio
     { width: exactFeedMetadata.width, height: exactFeedMetadata.height },
     { width: 1024, height: 1280 },
   );
+});
+
+test("exact provider-hosted clone renders become owned bytes and persist to workspace storage", async () => {
+  const { default: sharp } = await import("sharp");
+  const providerBytes = await sharp({
+    create: {
+      width: 1024,
+      height: 1280,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const fetchImpl = async () => new Response(new Uint8Array(providerBytes), {
+    status: 200,
+    headers: { "content-type": "image/png" },
+  });
+
+  const normalized = await normalizeCloneRenderAspect(
+    "https://provider.example/temporary-render.png",
+    "4:5",
+    fetchImpl as typeof fetch,
+  );
+  assert.match(normalized, /^data:image\/png;base64,/);
+
+  let uploadedPath = "";
+  let uploadedBytes = 0;
+  const stored = await persistCloneRender({
+    supabase: {
+      storage: {
+        from(bucket: string) {
+          assert.equal(bucket, "workspace-artifacts");
+          return {
+            async upload(path: string, bytes: Uint8Array, options: { contentType: string; upsert: boolean }) {
+              uploadedPath = path;
+              uploadedBytes = bytes.byteLength;
+              assert.deepEqual(options, { contentType: "image/png", upsert: false });
+              return { error: null };
+            },
+          };
+        },
+      },
+    },
+    workspaceId: "workspace_demo",
+    assetUrl: normalized,
+    fileNameSeed: "accepted-clone",
+  });
+
+  assert.equal(uploadedPath, "workspace_demo/adstudio/clones/accepted-clone.png");
+  assert.ok(uploadedBytes > 0);
+  assert.equal(stored, `/api/adstudio/media?path=${encodeURIComponent(uploadedPath)}`);
 });
 
 test("targeted edit masks preserve the full ad outside the selected QA region", async () => {
