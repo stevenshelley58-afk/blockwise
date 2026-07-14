@@ -17,7 +17,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
@@ -34,7 +34,7 @@ type TargetedEditBody = {
   mutationId?: string;
 };
 
-// The edit loop runs on the fast tier — attempts stay cheap and quick.
+// Every saved edit is a final-quality render, never a disposable preview.
 const MAX_ATTEMPTS = 2;
 const RENDER_HISTORY_LIMIT = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     newImage,
     aspectRatio: String(row.format ?? "4:5"),
   });
-  const providers = await resolveCloneProviders("preview");
+  const providers = await resolveCloneProviders();
 
   const correlationId = mutationId;
 
@@ -187,7 +187,6 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
-        tier: "preview",
         attempt,
       });
       lastImage = generated;

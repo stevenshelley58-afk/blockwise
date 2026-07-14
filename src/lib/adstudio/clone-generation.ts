@@ -1,6 +1,5 @@
-// Shared clone-generation plumbing: tiered provider resolution + first-success
-// cascade with provider-run logging. Used by full-ad clones and
-// the targeted in-place edit endpoint.
+// Shared final-quality clone generation + first-success provider cascade.
+// Used for both the initial full-ad clone and later targeted in-place edits.
 
 import { createImageProviderForCandidate } from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
@@ -17,15 +16,11 @@ import {
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
 
-export type CloneTier = "preview" | "final";
+const CLONE_MODEL_PROFILE = "image_final" as const;
 
-export function cloneTierProfile(tier: CloneTier): "image_draft" | "image_final" {
-  return tier === "preview" ? "image_draft" : "image_final";
-}
-
-/** Ordered providers for the tier, each pinned to its runtime profile pricing. */
-export async function resolveCloneProviders(tier: CloneTier): Promise<ImageProviderAdapter[]> {
-  const profile = await resolveRuntimeModelProfile(cloneTierProfile(tier));
+/** Ordered final-quality providers, each pinned to runtime profile pricing. */
+export async function resolveCloneProviders(): Promise<ImageProviderAdapter[]> {
+  const profile = await resolveRuntimeModelProfile(CLONE_MODEL_PROFILE);
   return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
 }
 
@@ -53,7 +48,6 @@ export async function generateCloneWithCascade(input: {
   workspaceId: string;
   userId: string;
   correlationId: string;
-  tier: CloneTier;
   attempt: number;
   accounting?: {
     executeAttempt: typeof executeAdStudioProviderAttempt;
@@ -61,7 +55,7 @@ export async function generateCloneWithCascade(input: {
   };
 }): Promise<CloneGenerationResult> {
   const startedAt = Date.now();
-  const mutationId = `${input.correlationId}:adstudio.clone:${input.tier}:${input.attempt}:${input.request.aspectRatio}`;
+  const mutationId = `${input.correlationId}:adstudio.clone:${input.attempt}:${input.request.aspectRatio}`;
   const attempts: ProviderRunAttempt[] = [];
   const prompt = {
     system: "",
@@ -86,7 +80,7 @@ export async function generateCloneWithCascade(input: {
         workspaceId: input.workspaceId,
         mutationId,
         attemptIndex,
-        modelProfile: cloneTierProfile(input.tier),
+        modelProfile: CLONE_MODEL_PROFILE,
         provider,
         execute: async () => {
           const result = await provider.generate(input.request);
@@ -113,10 +107,10 @@ export async function generateCloneWithCascade(input: {
       userId: input.userId,
       correlationId: input.correlationId,
       taskType: "adstudio.clone",
-      modelProfile: cloneTierProfile(input.tier),
+      modelProfile: CLONE_MODEL_PROFILE,
       mutationId,
       prompt,
-      input: { tier: input.tier, attempt: input.attempt, aspectRatio: input.request.aspectRatio },
+      input: { attempt: input.attempt, aspectRatio: input.request.aspectRatio },
       attempts,
       latencyMs: Date.now() - startedAt,
       providerName: provider.providerName,
@@ -138,10 +132,10 @@ export async function generateCloneWithCascade(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     taskType: "adstudio.clone",
-    modelProfile: cloneTierProfile(input.tier),
+    modelProfile: CLONE_MODEL_PROFILE,
     mutationId,
     prompt,
-    input: { tier: input.tier, attempt: input.attempt, aspectRatio: input.request.aspectRatio },
+    input: { attempt: input.attempt, aspectRatio: input.request.aspectRatio },
     attempts,
     latencyMs: Date.now() - startedAt,
     providerName: "unavailable",

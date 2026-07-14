@@ -85,7 +85,6 @@ function qualityGateInput(providers: ImageProviderAdapter[], maxAttempts = 99) {
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "quality-gate",
-    tier: "preview",
     maxAttempts,
     deadline: Date.now() + 60_000,
   };
@@ -190,13 +189,15 @@ test("template campaign generation runs cascade + QA and never ships an unverifi
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
-  // Provider cascade from the model-profile registry, not a single hardcoded vendor.
-  assert.match(generation, /tier === "preview" \? "image_draft" : "image_final"/);
+  // One final-quality provider cascade from the model-profile registry, not a
+  // draft/final split or a single hardcoded vendor.
+  assert.match(generation, /CLONE_MODEL_PROFILE = "image_final"/);
+  assert.doesNotMatch(generation, /image_draft|CloneTier|tier:/);
   assert.match(generation, /createImageProviderForCandidate/);
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(pipeline, /resolveCloneProviders\(tier\)/);
+  assert.match(pipeline, /resolveCloneProviders\(\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // Every generation is QA'd; failures reroll with a correction, and a clone
@@ -236,7 +237,6 @@ test("durable accounting failure after provider success never dispatches a fallb
       workspaceId: "11111111-1111-4111-8111-111111111111",
       userId: "22222222-2222-4222-8222-222222222222",
       correlationId: "accounting-rpc-failure",
-      tier: "preview",
       attempt: 1,
       accounting: {
         executeAttempt,
@@ -274,7 +274,6 @@ test("clone generation does not fallback after a non-retryable provider failure"
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "non-retryable-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /invalid request/);
@@ -309,7 +308,6 @@ test("clone generation invokes one fallback after a retryable provider failure",
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "retryable-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   });
@@ -339,7 +337,6 @@ test("clone generation does not fallback after a dispatched request is aborted",
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "aborted-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /cancelled after dispatch/);
@@ -369,7 +366,6 @@ test("clone generation never invokes a second fallback candidate", async () => {
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "bounded-clone",
-    tier: "preview",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
   }), /fallback unavailable/);
@@ -583,7 +579,8 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   assert.match(builder, /buildTargetedEditRequest/);
   assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
-  assert.match(route, /resolveCloneProviders\("preview"\)/);
+  assert.match(route, /resolveCloneProviders\(\)/);
+  assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries forward from the last verdict with the edited field
   // overridden, so unrelated drift fails QA too.

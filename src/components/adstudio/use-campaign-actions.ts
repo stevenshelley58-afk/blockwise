@@ -247,7 +247,7 @@ export function useCampaignActions(s: CampaignActionsState) {
     }
   }
 
-  async function generateFirstAd(input: FirstAdInput): Promise<{ campaignPack: AdStudioCampaignPack; viaBackgroundJob: boolean }> {
+  async function generateFirstAd(input: FirstAdInput): Promise<void> {
     if (generateInFlightRef.current) {
       throw new Error("A generation is already running - wait for it to finish.");
     }
@@ -283,7 +283,6 @@ export function useCampaignActions(s: CampaignActionsState) {
       if (!response.ok) throw new Error(payload?.error ?? `Request failed with ${response.status}.`);
 
       let campaignPack: AdStudioCampaignPack;
-      const viaBackgroundJob = response.status === 202 && Boolean(payload?.jobId);
       if (response.status === 202 && payload?.jobId) {
         // Async generation: the server runs copy → clone → QA → persist in a
         // background job; poll it and keep the staged-progress skeletons alive.
@@ -306,9 +305,6 @@ export function useCampaignActions(s: CampaignActionsState) {
       s.setSection("media");
       s.showToast("Your ad is ready to edit");
       window.dispatchEvent(new Event("blockwise:trial-status-refresh"));
-      // The background job already renders at the quality tier; only sync
-      // drafts need the client-driven upgrade pass.
-      return { campaignPack, viaBackgroundJob };
     } catch (error) {
       stopPhases();
       // The New Ad dialog shows this error inline, so clear the skeletons.

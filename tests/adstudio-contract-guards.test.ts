@@ -8,6 +8,7 @@ test("old ad and template creation endpoints stay deleted", () => {
     "src/app/api/adstudio/generate-options/route.ts",
     "src/app/api/adstudio/template-library/route.ts",
     "src/app/api/adstudio/template-photo-prep/route.ts",
+    "src/app/api/adstudio/creatives/[id]/enhance/route.ts",
     "src/lib/adstudio/template-brief.ts",
     "src/components/adstudio/canvas/fabric-ad-editor.tsx",
   ]) assert.equal(existsSync(path), false, path);
@@ -15,8 +16,11 @@ test("old ad and template creation endpoints stay deleted", () => {
 
 test("campaign creation has one template clone pipeline", () => {
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+  const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
   assert.match(route, /runTemplateCampaignGeneration/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{|generate-options|template-photo-prep/);
+  assert.match(generation, /CLONE_MODEL_PROFILE = "image_final"/);
+  assert.doesNotMatch(generation, /image_draft|CloneTier|tier:/);
 });
 
 test("the one full-ad request consumes sample, assets, and exact copy", () => {

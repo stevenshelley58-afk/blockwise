@@ -281,10 +281,6 @@ export async function POST(request: NextRequest) {
         body,
         deadlineMs: SYNC_GENERATION_DEADLINE_MS,
         maxCloneAttempts: 1,
-        // Draft-then-upgrade: the sync path returns preview-tier renders as quickly
-        // as possible; the client can re-render them at the quality tier in
-        // the background without making the current ad worse.
-        tier: "preview",
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,
