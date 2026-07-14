@@ -192,6 +192,7 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
       templateCloneImagesByFormat: input.firstAd?.templateCloneImagesByFormat,
       templateCloneQa: input.firstAd?.templateCloneQa,
       templateCloneQaByFormat: input.firstAd?.templateCloneQaByFormat,
+      onImageCopy: input.firstAd?.onImageCopy,
       subheadline: galleryTemplate?.editableText?.description ?? copyPacks[index]?.landingPage.subheadline ?? messages[index]?.description,
     })),
   );
@@ -989,6 +990,7 @@ function buildCreative(input: {
   templateCloneImagesByFormat?: Partial<Record<AdStudioFormat, string>>;
   templateCloneQa?: AdStudioCloneQa;
   templateCloneQaByFormat?: Partial<Record<AdStudioFormat, AdStudioCloneQa>>;
+  onImageCopy?: Partial<Record<string, string>>;
   subheadline?: string;
 }): AdStudioCreative {
   const galleryTemplate = galleryTemplateOrNull(input.template);
@@ -1023,6 +1025,7 @@ function buildCreative(input: {
       cta: input.variant.cta,
       imageUrl: input.sourceImagesBySlot?.primary_photo ?? input.sourceImagesBySlot?.primary ?? input.sourceImageDataUrl ?? templateDefaultImage(galleryTemplate),
       imagesBySlot: input.sourceImagesBySlot,
+      onImageCopy: input.onImageCopy,
     });
   }
 
@@ -1103,8 +1106,10 @@ function buildTemplateCreative(input: {
   cta: string;
   imageUrl: string;
   imagesBySlot?: Partial<Record<string, string>>;
+  onImageCopy?: Partial<Record<string, string>>;
 }): AdStudioCreative {
   const imagesBySlot = input.imagesBySlot ?? {};
+  const onImageCopy = input.onImageCopy ?? {};
   let primaryAssigned = false;
   const objects = input.template.canvas.objects.map((object) => {
     if (object.type === "image" || object.role === "primary_image") {
@@ -1112,6 +1117,7 @@ function buildTemplateCreative(input: {
       if (slotImage) { primaryAssigned = true; return { ...object, content: slotImage, assetId: slotImage }; }
       return { ...object };
     }
+    if (onImageCopy[object.role] !== undefined) return { ...object, content: onImageCopy[object.role] };
     if (object.role === "headline") return { ...object, content: input.headline };
     if (object.role === "subheadline") return { ...object, content: input.subheadline };
     if (object.role === "cta_text" || object.role === "cta_button") return { ...object, content: input.cta };
@@ -1134,6 +1140,7 @@ function buildTemplateCreative(input: {
         cta: input.cta,
         imageUrl: input.imageUrl,
         imagesBySlot,
+        textByRole: onImageCopy,
       }),
     },
     safeZones: {
@@ -1150,9 +1157,17 @@ function buildTemplateCreative(input: {
 
 function syncTemplateFabricJson(
   fabricJson: AdStudioGalleryTemplate["canvas"]["fabricJson"],
-  copy: { headline: string; description: string; cta: string; imageUrl: string; imagesBySlot?: Partial<Record<string, string>> },
+  copy: {
+    headline: string;
+    description: string;
+    cta: string;
+    imageUrl: string;
+    imagesBySlot?: Partial<Record<string, string>>;
+    textByRole?: Partial<Record<string, string>>;
+  },
 ): AdStudioGalleryTemplate["canvas"]["fabricJson"] {
   const imagesBySlot = copy.imagesBySlot ?? {};
+  const textByRole = copy.textByRole ?? {};
   let primaryAssigned = false;
   return {
     ...fabricJson,
@@ -1164,6 +1179,7 @@ function syncTemplateFabricJson(
         if (slotImage) { primaryAssigned = true; return { ...object, src: slotImage }; }
         return { ...object };
       }
+      if (meta.type === "text" && textByRole[meta.role] !== undefined) return { ...object, text: textByRole[meta.role] };
       if (meta.role === "headline") return { ...object, text: copy.headline };
       if (meta.role === "subheadline") return { ...object, text: copy.description };
       if (meta.role === "cta_text" || meta.role === "cta_button") return { ...object, text: copy.cta };

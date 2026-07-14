@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { deriveTemplateBrief, getTemplateBrief } from "../src/lib/adstudio/template-brief.ts";
-import { customerCopyFieldsForTemplate, imageRequirementsForTemplate } from "../src/components/adstudio/new-ad-dialog-slots.ts";
+import {
+  customerCopyFieldsForTemplate,
+  defaultImageForTemplateSlot,
+  imageRequirementsForTemplate,
+} from "../src/components/adstudio/new-ad-dialog-slots.ts";
 import { buildCloneImageRequest } from "../src/lib/adstudio/reference-clone.ts";
 import { RAW_ADSTUDIO_GALLERY_TEMPLATES } from "../src/lib/adstudio/template-gallery/index.ts";
 import type { AdStudioTemplate } from "../src/lib/adstudio/index.ts";
@@ -28,6 +32,20 @@ test("meta-feed-020 declares exactly one required photo and five customer copy f
     ["address", "headline", "phone", "price", "website_handle"],
     "the five customer-typed fields, nothing more",
   );
+});
+
+test("meta-feed-020 carries the approved brand logo without a second upload", () => {
+  const logoSlot = imageRequirementsForTemplate(template020!).find((slot) => slot.id === "brand_logo");
+  assert.ok(logoSlot, "the logo slot exists");
+  assert.equal(defaultImageForTemplateSlot(logoSlot, {
+    logos: {
+      primaryLogoUrl: "/brand/blockwise-logo.svg",
+      darkLogoUrl: null,
+      lightLogoUrl: null,
+      faviconUrl: null,
+    },
+  }), "/brand/blockwise-logo.svg");
+  assert.equal(defaultImageForTemplateSlot({ id: "property_photo", label: "Property image" }, undefined), "");
 });
 
 test("meta-feed-020 brief marks customer fields and uses the ORIGINAL ad as the clone reference", () => {

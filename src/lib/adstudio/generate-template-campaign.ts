@@ -309,7 +309,12 @@ export async function runTemplateCampaignGeneration(
   const suppliedImages = firstAd.imageDataUrls ?? {};
   const resolvedImages: Record<string, string> = {};
   for (const slot of brief.imageSlots) {
-    const ref = suppliedImages[slot.role] ?? (slot.objectId ? suppliedImages[slot.objectId] : undefined);
+    const brandLogo = /logo/i.test(slot.role)
+      ? brandKit.logos.primaryLogoUrl ?? brandKit.logos.darkLogoUrl ?? brandKit.logos.lightLogoUrl ?? brandKit.logos.faviconUrl
+      : undefined;
+    const ref = suppliedImages[slot.role]
+      ?? (slot.objectId ? suppliedImages[slot.objectId] : undefined)
+      ?? brandLogo;
     if (!ref?.trim()) continue;
     const resolved = await resolveAdStudioImageForModel(supabase, input.workspaceId, ref.trim());
     if (!resolved) {

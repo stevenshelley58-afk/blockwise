@@ -120,23 +120,29 @@ function backgroundFill(creative: AdStudioCreative): string {
 function drawShape(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
   ctx.save();
   ctx.fillStyle = object.fill ?? "#123E75";
+  ctx.globalAlpha = object.opacity ?? 1;
   const height = object.height ?? object.width;
-  const radius = object.role === "cta_button" ? 18 : 0;
-  roundedRect(ctx, object.x, object.y, object.width, height, radius);
+  roundedRect(ctx, object.x, object.y, object.width, height, object.radius ?? 0);
   ctx.fill();
   ctx.restore();
 }
 
 function drawText(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject, brandKit: AdStudioBrandKit) {
-  const fontSize = object.size ?? 36;
+  const fontSize = object.size ?? 48;
   ctx.save();
   ctx.fillStyle = object.fill ?? "#131B2E";
-  ctx.font = `${object.role === "headline" ? 800 : 650} ${fontSize}px ${fontFamily(object, brandKit)}`;
+  ctx.font = `${object.weight ?? (object.role === "headline" ? 850 : 650)} ${fontSize}px ${fontFamily(object, brandKit)}`;
   ctx.textBaseline = "top";
-  const lineHeight = Math.round(fontSize * (object.role === "headline" ? 1.1 : 1.25));
-  const lines = wrapText(ctx, object.content ?? "", object.width);
+  ctx.textAlign = object.align ?? "left";
+  const textX = object.align === "center"
+    ? object.x + object.width / 2
+    : object.align === "right"
+      ? object.x + object.width
+      : object.x;
+  const lineHeight = Math.round(fontSize * (object.lineHeight ?? 1.16));
+  const lines = wrapText(object.content ?? "", object.width, fontSize);
   lines.forEach((line, index) => {
-    ctx.fillText(line, object.x, object.y + index * lineHeight);
+    ctx.fillText(line, textX, object.y + index * lineHeight);
   });
   ctx.restore();
 }
@@ -153,8 +159,7 @@ async function drawImageObject(ctx: CanvasRenderingContext2D, object: AdStudioCa
 
   try {
     const image = await loadImage(src);
-    const radius = object.x === 0 && object.y === 0 && width === ctx.canvas.width && height === ctx.canvas.height ? 0 : 22;
-    drawImageCover(ctx, image, object.x, object.y, width, height, radius);
+    drawImageCover(ctx, image, object);
   } catch {
     drawImagePlaceholder(ctx, object.x, object.y, width, height);
   }
@@ -211,22 +216,64 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function drawImageCover(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
+  object: AdStudioCanvasObject,
 ) {
+  const { x, y, width } = object;
+  const height = object.height ?? object.width;
   const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
   const drawWidth = image.naturalWidth * scale;
   const drawHeight = image.naturalHeight * scale;
-  const drawX = x + (width - drawWidth) / 2;
-  const drawY = y + (height - drawHeight) / 2;
+  const drawX = anchoredOffset(x, width, drawWidth, horizontalAnchor(object.imageAnchor));
+  const drawY = anchoredOffset(y, height, drawHeight, verticalAnchor(object.imageAnchor));
   ctx.save();
-  roundedRect(ctx, x, y, width, height, radius);
+  imageClipPath(ctx, object);
   ctx.clip();
   ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
   ctx.restore();
+}
+
+function imageClipPath(ctx: CanvasRenderingContext2D, object: AdStudioCanvasObject) {
+  const height = object.height ?? object.width;
+  ctx.beginPath();
+  if (object.clip === "circle") {
+    ctx.arc(
+      object.x + object.width / 2,
+      object.y + height / 2,
+      Math.min(object.width, height) / 2,
+      0,
+      Math.PI * 2,
+    );
+    ctx.closePath();
+    return;
+  }
+  if (object.clip === "arch") {
+    const radius = object.width / 2;
+    ctx.moveTo(object.x, object.y + height);
+    ctx.lineTo(object.x, object.y + radius);
+    ctx.arc(object.x + radius, object.y + radius, radius, Math.PI, 0);
+    ctx.lineTo(object.x + object.width, object.y + height);
+    ctx.closePath();
+    return;
+  }
+  ctx.rect(object.x, object.y, object.width, height);
+}
+
+function anchoredOffset(start: number, frameSize: number, imageSize: number, anchor: "start" | "center" | "end") {
+  if (anchor === "start") return start;
+  if (anchor === "end") return start + frameSize - imageSize;
+  return start + (frameSize - imageSize) / 2;
+}
+
+function horizontalAnchor(anchor: AdStudioCanvasObject["imageAnchor"]): "start" | "center" | "end" {
+  if (anchor === "left" || anchor === "top_left" || anchor === "bottom_left") return "start";
+  if (anchor === "right" || anchor === "top_right" || anchor === "bottom_right") return "end";
+  return "center";
+}
+
+function verticalAnchor(anchor: AdStudioCanvasObject["imageAnchor"]): "start" | "center" | "end" {
+  if (anchor === "top" || anchor === "top_left" || anchor === "top_right") return "start";
+  if (anchor === "bottom" || anchor === "bottom_left" || anchor === "bottom_right") return "end";
+  return "center";
 }
 
 function drawImageContain(
@@ -260,17 +307,18 @@ function drawImagePlaceholder(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.restore();
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+function wrapText(text: string, width: number, size: number): string[] {
+  const words = text.split(/\s+/u).filter(Boolean);
+  const maxChars = Math.max(8, Math.floor(width / Math.max(1, size * 0.52)));
   const lines: string[] = [];
   let line = "";
 
   for (const word of words) {
     const next = line ? `${line} ${word}` : word;
-    if (ctx.measureText(next).width <= maxWidth || !line) {
+    if (next.length <= maxChars) {
       line = next;
     } else {
-      lines.push(line);
+      if (line) lines.push(line);
       line = word;
     }
   }
@@ -295,6 +343,8 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width:
 }
 
 function fontFamily(object: AdStudioCanvasObject, brandKit: AdStudioBrandKit): string {
+  if (object.fontFamily) return object.fontFamily;
+
   if (object.font === "brand_heading") {
     const fallback = brandKit.typography.fallbackHeading === "serif" ? "Georgia, serif" : "Inter, Arial, sans-serif";
     return brandKit.typography.headingFont ? `${brandKit.typography.headingFont}, ${fallback}` : fallback;

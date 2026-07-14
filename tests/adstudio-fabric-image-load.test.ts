@@ -44,6 +44,21 @@ test("browser export renderer does not fall back to oversized inline data", () =
   assert.doesNotMatch(renderer, /falling back to inline render data/);
 });
 
+test("browser export renderer honours the template's declared visual properties", () => {
+  const renderer = readFileSync("src/components/adstudio/canvas/browser-creative-renderer.ts", "utf8");
+
+  assert.match(renderer, /object\.weight \?\?/);
+  assert.match(renderer, /object\.align === "center"/);
+  assert.match(renderer, /object\.lineHeight \?\?/);
+  assert.match(renderer, /object\.radius \?\? 0/);
+  assert.match(renderer, /object\.opacity \?\? 1/);
+  assert.match(renderer, /object\.clip === "circle"/);
+  assert.match(renderer, /object\.clip === "arch"/);
+  assert.match(renderer, /horizontalAnchor\(object\.imageAnchor\)/);
+  assert.match(renderer, /verticalAnchor\(object\.imageAnchor\)/);
+  assert.match(renderer, /if \(object\.fontFamily\) return object\.fontFamily/);
+});
+
 test("Ad Studio export blocks when any required raster render fails", () => {
   const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
 

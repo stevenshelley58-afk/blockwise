@@ -1,5 +1,5 @@
 import type { AdStudioTemplate } from "../../lib/adstudio/index.ts";
-import type { AdStudioCanvasObject } from "../../lib/adstudio/types.ts";
+import type { AdStudioBrandKit, AdStudioCanvasObject } from "../../lib/adstudio/types.ts";
 
 export type TemplateImageRequirementRole = "primary" | "secondary" | "agent_headshot";
 
@@ -25,6 +25,21 @@ export type TemplateCopyRequirement = {
   /** The reference ad's own text — shown as the placeholder, never submitted. */
   sample: string;
 };
+
+/** Use the approved Brand Studio logo for declared logo slots by default. */
+export function defaultImageForTemplateSlot(
+  slot: Pick<TemplateImageRequirement, "id" | "label">,
+  brandKit: Pick<AdStudioBrandKit, "logos"> | undefined,
+): string {
+  if (!/logo/i.test(`${slot.id} ${slot.label}`)) return "";
+  return (
+    brandKit?.logos.primaryLogoUrl?.trim() ||
+    brandKit?.logos.darkLogoUrl?.trim() ||
+    brandKit?.logos.lightLogoUrl?.trim() ||
+    brandKit?.logos.faviconUrl?.trim() ||
+    ""
+  );
+}
 
 /**
  * Copy fields the CUSTOMER types verbatim (price, address, phone…), declared
