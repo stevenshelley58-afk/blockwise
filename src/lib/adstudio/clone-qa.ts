@@ -108,6 +108,37 @@ export function cloneQaPassed(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects"
   return qa.copyChecks.every((check) => check.exact) && qa.defects.length === 0;
 }
 
+/**
+ * A deterministic text render writes the requested characters itself, so it
+ * does not need another vision-model round trip. The previous passing verdict
+ * remains authoritative for every untouched pixel and copy field.
+ */
+export function applyDeterministicTextEditQa(
+  previous: AdStudioCloneQa,
+  fieldKey: string,
+  value: string,
+): AdStudioCloneQa {
+  const expected = value.trim();
+  let replaced = false;
+  const copyChecks = previous.copyChecks.map((check) => {
+    if (check.key !== fieldKey) return check;
+    replaced = true;
+    return { key: fieldKey, expected, rendered: expected, exact: true };
+  });
+  if (!replaced) {
+    copyChecks.push({ key: fieldKey, expected, rendered: expected, exact: true });
+  }
+
+  const next: AdStudioCloneQa = {
+    ...previous,
+    attempts: 1,
+    checkedAt: new Date().toISOString(),
+    copyChecks,
+    model: "deterministic-text-renderer",
+  };
+  return { ...next, passed: cloneQaPassed(next) };
+}
+
 export function cloneQaMutationId(correlationId: string, format: string, attempt: number): string {
   return `${correlationId}:adstudio.clone_qa:${format}:${attempt}`;
 }

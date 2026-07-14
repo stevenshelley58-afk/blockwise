@@ -11,7 +11,7 @@ import {
   renderExactCloneTextEdit,
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
-import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
+import { applyDeterministicTextEditQa, cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -167,67 +167,86 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
   if (newValue) expectedCopy[fieldKey] = newValue;
 
-  const fieldLabel = fieldKey.replace(/_/g, " ");
-  const baseRequest = buildTargetedEditRequest({
-    currentImage,
-    fieldLabel,
-    newValue,
-    newImage,
-    expectedCopy,
-    aspectRatio: String(row.format ?? "4:5"),
-  });
   const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === fieldKey);
-  baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
-  // A targeted edit should use a provider that can enforce the QA region mask
-  // before a full-frame image-to-image provider that can only follow the text.
-  const providers = (await resolveCloneProviders()).sort(
-    (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
-  );
-
   const correlationId = mutationId;
 
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
-  let correction = "";
+  const canRenderTextDirectly = Boolean(
+    newValue
+    && selectedRegion?.kind === "text"
+    && selectedRegion.box.width > 0
+    && selectedRegion.box.height > 0
+    && canvas.cloneQa?.passed,
+  );
 
-  try {
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-      const generated = await generateCloneWithCascade({
-        providers,
-        request: {
-          ...baseRequest,
-          prompt: correction ? `${baseRequest.prompt} ${correction}` : baseRequest.prompt,
-          seed: attempt,
-        },
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        correlationId,
-        attempt,
-      });
-      const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
-      const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
-      const boundedAssetUrl = newValue
-        ? await renderExactCloneTextEdit(boundedModelEdit, newValue, selectedRegion?.box)
-        : boundedModelEdit;
-      lastImage = { ...generated, assetUrl: boundedAssetUrl };
-
-      qa = await runCloneQa({
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        correlationId,
-        imageUrl: boundedAssetUrl,
-        expectedCopy,
-        format: String(row.format ?? "4:5"),
-        attempt,
-      });
-
-      if (qa.passed) break;
-      if (attempt >= MAX_ATTEMPTS) break;
-      correction = cloneQaCorrectionPrompt(qa);
+  if (canRenderTextDirectly && selectedRegion && canvas.cloneQa) {
+    try {
+      const assetUrl = await renderExactCloneTextEdit(currentImage, newValue, selectedRegion.box);
+      lastImage = {
+        assetUrl,
+        model: "deterministic-text-renderer",
+        provider: "blockwise",
+      };
+      qa = applyDeterministicTextEditQa(canvas.cloneQa, fieldKey, newValue);
+    } catch (error) {
+      await releaseClaim();
+      return errorResponse(error, 500);
     }
-  } catch (error) {
-    await releaseClaim();
-    return errorResponse(error, 502);
+  } else {
+    const fieldLabel = fieldKey.replace(/_/g, " ");
+    const baseRequest = buildTargetedEditRequest({
+      currentImage,
+      fieldLabel,
+      newValue,
+      newImage,
+      expectedCopy,
+      aspectRatio: String(row.format ?? "4:5"),
+    });
+    baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
+    // Image replacements and legacy/unverified text regions still need a model
+    // edit followed by whole-ad vision QA.
+    const providers = (await resolveCloneProviders()).sort(
+      (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
+    );
+    let correction = "";
+
+    try {
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        const generated = await generateCloneWithCascade({
+          providers,
+          request: {
+            ...baseRequest,
+            prompt: correction ? `${baseRequest.prompt} ${correction}` : baseRequest.prompt,
+            seed: attempt,
+          },
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          correlationId,
+          attempt,
+        });
+        const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
+        const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+        lastImage = { ...generated, assetUrl: boundedModelEdit };
+
+        qa = await runCloneQa({
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          correlationId,
+          imageUrl: boundedModelEdit,
+          expectedCopy,
+          format: String(row.format ?? "4:5"),
+          attempt,
+        });
+
+        if (qa.passed) break;
+        if (attempt >= MAX_ATTEMPTS) break;
+        correction = cloneQaCorrectionPrompt(qa);
+      }
+    } catch (error) {
+      await releaseClaim();
+      return errorResponse(error, 502);
+    }
   }
 
   if (!lastImage || (qa && !qa.passed)) {
