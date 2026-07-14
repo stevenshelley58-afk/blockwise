@@ -741,9 +741,9 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><LayoutGrid aria-hidden size={22} /></div>
         <strong>No ad created yet</strong>
-        <p>Choose a sample, add its requested images and text, then clone it.</p>
+        <p>Choose a template, add its requested images and text, then clone it.</p>
         <button className="studio-btn accent" type="button" onClick={() => openSamplePicker()}>
-          Choose a sample
+          Choose a template
         </button>
       </div>
     );
