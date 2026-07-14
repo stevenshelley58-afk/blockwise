@@ -2,31 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("approvals page exposes human approve and reject actions", () => {
-  const page = readFileSync("src/app/(customer)/approvals/page.tsx", "utf8");
-  const actions = readFileSync("src/components/approvals/approval-actions.tsx", "utf8");
-  const liveData = readFileSync("src/lib/operator/overview.ts", "utf8");
+test("approval workflow stays contextual instead of exposing a standalone section", () => {
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
+  const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
+  const campaignControls = readFileSync("src/components/monitor/CampaignsManagement.tsx", "utf8");
+  const approvalRoute = readFileSync("src/app/api/approvals/[id]/route.ts", "utf8");
 
-  assert.match(page, /ApprovalActions/);
-  assert.match(page, /<th>Actions<\/th>/);
-  assert.match(page, /access\.isOperator \? undefined : access\.workspaceId/);
-  assert.match(page, /status: "requested"/);
-  assert.match(page, /workspaceId=\{item\.workspaceId\}/);
-  assert.match(page, /approvalTone\(item\.status\)/);
-  assert.match(page, /status === "approved"[\s\S]*return "green"/);
-  assert.match(page, /status === "rejected" \|\| status === "cancelled"[\s\S]*return "rose"/);
-  assert.match(liveData, /workspace_id,target_type,target_id,status,risk_summary,workspaces\(name\)/);
-  assert.match(liveData, /if \(workspaceId\)/);
-  assert.match(liveData, /if \(options\.status\)/);
-  assert.match(sidebar, /\{ href: "\/approvals", label: "Approvals", icon: ClipboardCheck \}/);
-  assert.match(sidebar, /showApprovals \|\| item\.href !== "\/approvals"/);
-  assert.match(appShell, /primaryMembership\?\.role === "owner" \|\| primaryMembership\?\.role === "admin"/);
-  assert.match(actions, /PATCH/);
-  assert.match(actions, /\/api\/approvals\/\$\{approvalId\}/);
-  assert.match(actions, /Approve/);
-  assert.match(actions, /Reject/);
+  assert.doesNotMatch(sidebar, /\/approvals|Approvals|ClipboardCheck/);
+  assert.doesNotMatch(appShell, /showApprovals/);
+  assert.doesNotMatch(mobileNav, /\/approvals|showApprovals/);
+  assert.match(campaignControls, /\/api\/approvals\/\$\{approvalId\}/);
+  assert.match(approvalRoute, /PATCH/);
+  assert.match(approvalRoute, /approved|rejected/);
 });
 
 test("publish review state is not treated as a hard publish error", () => {
