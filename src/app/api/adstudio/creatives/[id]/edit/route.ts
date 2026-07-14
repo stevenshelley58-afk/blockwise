@@ -8,6 +8,7 @@ import {
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
+  renderExactCloneTextEdit,
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
@@ -204,7 +205,10 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         attempt,
       });
       const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
-      const boundedAssetUrl = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      const boundedAssetUrl = newValue
+        ? await renderExactCloneTextEdit(boundedModelEdit, newValue, selectedRegion?.box)
+        : boundedModelEdit;
       lastImage = { ...generated, assetUrl: boundedAssetUrl };
 
       qa = await runCloneQa({
