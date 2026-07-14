@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
 const BATCH_SIZE = 48;
+const MASONRY_ROW_HEIGHT = 8;
+const MASONRY_GAP = 16;
 
 /**
  * Renders the full result set with incremental (lazy) rendering: the first
@@ -45,7 +47,9 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
     <>
       <div className="research-results-grid">
         {visibleCards.map((card) => (
-          <MetaAdLibraryCard card={card} key={card.id} />
+          <MasonryItem key={card.id}>
+            <MetaAdLibraryCard card={card} />
+          </MasonryItem>
         ))}
       </div>
       {remaining > 0 ? (
@@ -60,5 +64,33 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
         </div>
       ) : null}
     </>
+  );
+}
+
+function MasonryItem({ children }: { children: ReactNode }) {
+  const itemRef = useRef<HTMLDivElement | null>(null);
+  const [rowSpan, setRowSpan] = useState(1);
+
+  useLayoutEffect(() => {
+    const item = itemRef.current;
+    if (!item) return;
+
+    function updateRowSpan() {
+      const height = item?.getBoundingClientRect().height ?? 0;
+      const nextRowSpan = Math.max(1, Math.ceil((height + MASONRY_GAP) / (MASONRY_ROW_HEIGHT + MASONRY_GAP)));
+      setRowSpan((current) => (current === nextRowSpan ? current : nextRowSpan));
+    }
+
+    updateRowSpan();
+    const observer = new ResizeObserver(updateRowSpan);
+    observer.observe(item);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="research-results-item" ref={itemRef} style={{ gridRowEnd: `span ${rowSpan}` }}>
+      {children}
+    </div>
   );
 }
