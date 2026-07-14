@@ -13,6 +13,16 @@ import metaFeed179 from "./meta-feed-179.json" with { type: "json" };
 import metaFeed163 from "./meta-feed-163.json" with { type: "json" };
 import metaFeed197 from "./meta-feed-197.json" with { type: "json" };
 
+import metaFeed055 from "./meta-feed-055.json" with { type: "json" };
+import metaFeed150 from "./meta-feed-150.json" with { type: "json" };
+import metaFeed151 from "./meta-feed-151.json" with { type: "json" };
+import metaFeed152 from "./meta-feed-152.json" with { type: "json" };
+import metaFeed173 from "./meta-feed-173.json" with { type: "json" };
+import metaFeed188 from "./meta-feed-188.json" with { type: "json" };
+import metaFeed196 from "./meta-feed-196.json" with { type: "json" };
+import metaStories245 from "./meta-stories-245.json" with { type: "json" };
+import metaStories255 from "./meta-stories-255.json" with { type: "json" };
+import metaStories262 from "./meta-stories-262.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -27,4 +37,14 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaFeed179 as AdStudioGalleryTemplate,
   metaFeed163 as AdStudioGalleryTemplate,
   metaFeed197 as AdStudioGalleryTemplate,
+  metaFeed055 as AdStudioGalleryTemplate,
+  metaFeed150 as AdStudioGalleryTemplate,
+  metaFeed151 as AdStudioGalleryTemplate,
+  metaFeed152 as AdStudioGalleryTemplate,
+  metaFeed173 as AdStudioGalleryTemplate,
+  metaFeed188 as AdStudioGalleryTemplate,
+  metaFeed196 as AdStudioGalleryTemplate,
+  metaStories245 as AdStudioGalleryTemplate,
+  metaStories255 as AdStudioGalleryTemplate,
+  metaStories262 as AdStudioGalleryTemplate,
 ];

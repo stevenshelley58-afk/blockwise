@@ -1,0 +1,136 @@
+{
+  "id": "meta-feed-055",
+  "name": "Just Sold - A New Chapter Starts Here",
+  "goal": "seller_leads",
+  "offerId": "just-sold-2024",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners interested in selling or learning about recent sales in their area.",
+  "category": "just_sold",
+  "tags": [
+    "just sold",
+    "recent sale",
+    "seller leads",
+    "real estate",
+    "agent branding"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-055-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-055-sample.png",
+    "alt": "Generated sample for Just Sold - A New Chapter Starts Here.",
+    "contentHash": "3e48b6c81d41097fae6f39fabfc6cb104ab17e33a2c0c9adfc2403dd79312eb6",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_image",
+        "label": "Property Image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality exterior photo of the recently sold property."
+      },
+      {
+        "key": "agent_photo",
+        "label": "Agent Photo",
+        "required": true,
+        "aspect": "square",
+        "description": "A professional headshot of the real estate agent."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 20,
+        "sample": "Just sold",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 40,
+        "sample": "A NEW CHAPTER STARTS HERE",
+        "required": false
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 30,
+        "sample": "AVA BENNETT",
+        "required": true
+      },
+      {
+        "key": "agent_phone",
+        "label": "Agent Phone Number",
+        "maxLength": 20,
+        "sample": "+123-555-0155",
+        "required": true
+      },
+      {
+        "key": "agent_email",
+        "label": "Agent Email",
+        "maxLength": 40,
+        "sample": "hello@bennett.example",
+        "required": true
+      },
+      {
+        "key": "contact_label",
+        "label": "Contact Label",
+        "maxLength": 20,
+        "sample": "contact me",
+        "required": false
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_055.png",
+    "contentHash": "82c1f3f48d910b3daeaf4d347fabce2ed5c56721287e03826c5d8184368c10b9"
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

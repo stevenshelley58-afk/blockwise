@@ -1,0 +1,142 @@
+{
+  "id": "meta-feed-150",
+  "name": "New Listing - 123 Anywhere St.",
+  "goal": "buyer_leads",
+  "offerId": "meta-feed-150",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Attract buyers interested in a newly listed residential property.",
+  "category": "residential_listing",
+  "tags": [
+    "new listing",
+    "for sale",
+    "residential",
+    "buyer leads"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-150-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-150-sample.png",
+    "alt": "Generated sample for New Listing - 123 Anywhere St..",
+    "contentHash": "c2dda343b9c01ff3c7e8f9abcb9b4d6a996ce50b5f695894bfb0d7fb2d5f5c96",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_photo",
+        "label": "Main Property Photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality exterior photo of the property."
+      },
+      {
+        "key": "interior_photo_1",
+        "label": "Interior Photo 1",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality interior photo of the property (e.g., dining room)."
+      },
+      {
+        "key": "interior_photo_2",
+        "label": "Interior Photo 2",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality interior photo of the property (e.g., kitchen)."
+      },
+      {
+        "key": "interior_photo_3",
+        "label": "Interior Photo 3",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality interior photo of the property (e.g., living room)."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 30,
+        "sample": "New Listing",
+        "required": true
+      },
+      {
+        "key": "address",
+        "label": "Property Address",
+        "maxLength": 60,
+        "sample": "14 Alder Lane, Greenvale, WA 6210",
+        "required": true
+      },
+      {
+        "key": "property_details",
+        "label": "Property Details",
+        "maxLength": 60,
+        "sample": "4 bed · 3 bath · 1,850 sqft · 9,400 sqft lot",
+        "required": true
+      },
+      {
+        "key": "asking_price",
+        "label": "Asking Price",
+        "maxLength": 30,
+        "sample": "Asking $915,000",
+        "required": true
+      },
+      {
+        "key": "agent_contact",
+        "label": "Agent Contact",
+        "maxLength": 50,
+        "sample": "Contact Amelia Hart +123-555-0182",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_150.png",
+    "contentHash": "f8ac3bf2b46c2819b6dfa359c663fe62747f96392cc181cf8ba12866b460fa80"
+  },
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

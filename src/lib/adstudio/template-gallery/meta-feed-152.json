@@ -1,0 +1,115 @@
+{
+  "id": "meta-feed-152",
+  "name": "Smart Tips for Home Buyers",
+  "goal": "buyer_leads",
+  "offerId": "smart-tips-home-buyers-001",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "People looking for advice and tips to buy a home and avoid costly mistakes.",
+  "category": "real_estate",
+  "tags": [
+    "home buyers",
+    "real estate tips",
+    "buyer advice",
+    "property purchase",
+    "mistake avoidance"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-152-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-152-sample.png",
+    "alt": "Generated sample for Smart Tips for Home Buyers.",
+    "contentHash": "9dc27f335aa84eb6da625d07e6eb8458abb66488ac7bb20b3b15932e5f0be8b2",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_property_image",
+        "label": "Main Property Image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality exterior photo of a modern home, preferably with good lighting and clear visibility."
+      }
+    ],
+    "text": [
+      {
+        "key": "brand_name",
+        "label": "Brand Name",
+        "maxLength": 20,
+        "sample": "HAVENFIELD",
+        "required": true
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 40,
+        "sample": "SMART TIPS FOR HOME BUYERS",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 30,
+        "sample": "Avoid Costly Mistakes",
+        "required": false
+      },
+      {
+        "key": "cta",
+        "label": "Call to Action",
+        "maxLength": 15,
+        "sample": "Learn More",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_152.png",
+    "contentHash": "365aa30a9da93245638a9d4daee66694b189677bde9cef052688ff49ceb6e803"
+  },
+  "classification": {
+    "ad_type": "single_image",
+    "primary_intent": "educate_buyers",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
