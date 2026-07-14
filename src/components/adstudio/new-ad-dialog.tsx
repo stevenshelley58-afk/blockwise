@@ -15,7 +15,10 @@ import {
   DEFAULT_IMAGE_SLOT,
   customerCopyFieldsForTemplate,
   defaultImageForTemplateSlot,
+  defaultImageLabelForTemplateSlot,
+  defaultTextForTemplateField,
   imageRequirementsForTemplate,
+  type TemplateCopyRequirement,
   type TemplateImageRequirement,
 } from "./new-ad-dialog-slots";
 
@@ -237,9 +240,13 @@ export function NewAdDialog({
 }: NewAdDialogProps) {
   const titleId = useId();
   const requirementsAlertId = useId();
+  const copyFieldsTitleId = useId();
+  const copyFieldIdPrefix = useId();
+  const descriptionInputId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const latestMediaAssetsRef = useRef(mediaAssets);
   const [step, setStep] = useState<Step>("source");
   const [filter, setFilter] = useState<TemplateFilter>("all");
   // Nothing can be created until the customer chooses the sample to clone.
@@ -270,13 +277,6 @@ export function NewAdDialog({
   );
   const primaryImageSlot = imageRequirements.find((slot) => slot.required) ?? imageRequirements[0] ?? DEFAULT_IMAGE_SLOT;
   const activeImageSlot = imageRequirements.find((slot) => slot.id === activeImageSlotId) ?? primaryImageSlot;
-  const imageDataUrl = imageDataUrlsBySlot[primaryImageSlot.id] ?? "";
-  const missingImageLabels = useMemo(
-    () => imageRequirements
-      .filter((slot) => slot.required && !imageDataUrlsBySlot[slot.id])
-      .map((slot) => slot.label),
-    [imageDataUrlsBySlot, imageRequirements],
-  );
   const imageDataUrls = useMemo(
     () => imageRequirements.reduce<Record<string, string>>((values, slot) => {
       const src = imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit);
@@ -284,6 +284,13 @@ export function NewAdDialog({
       return values;
     }, {}),
     [brandKit, imageDataUrlsBySlot, imageRequirements],
+  );
+  const imageDataUrl = imageDataUrls[primaryImageSlot.id] ?? "";
+  const missingImageLabels = useMemo(
+    () => imageRequirements
+      .filter((slot) => slot.required && !imageDataUrls[slot.id])
+      .map((slot) => slot.label),
+    [imageDataUrls, imageRequirements],
   );
   const missingCopyLabels = useMemo(
     () => customerCopyFields.filter((field) => field.required && !onImageCopy[field.key]?.trim()).map((field) => field.label),
@@ -338,14 +345,22 @@ export function NewAdDialog({
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
+    const initialTemplate = templates.find((template) => template.id === initialTemplateId);
+    setOnImageCopy(brandTextDefaultsForTemplate(initialTemplate, brandKit));
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
-    setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
+    setDialogMediaAssets(dedupeImageLibraryAssets(latestMediaAssetsRef.current));
     setMediaSourceMode("details");
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
-  }, [open, initialTemplateId, mediaAssets]);
+  }, [open, initialTemplateId]);
+
+  useEffect(() => {
+    latestMediaAssetsRef.current = mediaAssets;
+    if (!open) return;
+    setDialogMediaAssets((current) => dedupeImageLibraryAssets([...current, ...mediaAssets]));
+  }, [mediaAssets, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -407,13 +422,14 @@ export function NewAdDialog({
   }
 
   function chooseTemplate(id: string) {
+    const template = templates.find((candidate) => candidate.id === id);
     setTemplateId(id);
     setError("");
     setShowRequirementsAlert(false);
     // Inputs reset whenever the customer chooses a different sample.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
-    setOnImageCopy({});
+    setOnImageCopy(brandTextDefaultsForTemplate(template, brandKit));
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
@@ -482,6 +498,28 @@ export function NewAdDialog({
     setError("");
   }
 
+  function useCopyExample(field: TemplateCopyRequirement) {
+    setOnImageCopy((current) => ({ ...current, [field.key]: field.sample }));
+    setShowRequirementsAlert(false);
+  }
+
+  function fillEmptyCopyFieldsWithExamples() {
+    setOnImageCopy((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        customerCopyFields
+          .filter((field) => !current[field.key]?.trim())
+          .map((field) => [field.key, field.sample]),
+      ),
+    }));
+    setShowRequirementsAlert(false);
+  }
+
+  function useBriefExample() {
+    setDescription(briefGuidance.placeholder.replace(/^Example:\s*/u, ""));
+    setShowRequirementsAlert(false);
+  }
+
   async function submit() {
     const trimmed = description.trim();
     const blockers = buildRequirementBlockers({ description, missingImageLabels, missingCopyLabels, uploadingImage });
@@ -547,6 +585,7 @@ export function NewAdDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-busy={submitting}
         tabIndex={-1}
       >
         <div className="studio-newad-head">
@@ -615,7 +654,7 @@ export function NewAdDialog({
                       helperText="JPG, PNG, or WebP / up to 8 MB"
                       previewUrl={imageDataUrlsBySlot[slot.id] ?? defaultImageForTemplateSlot(slot, brandKit)}
                       previewAlt=""
-                      fileName={imageNamesBySlot[slot.id] ?? (defaultImageForTemplateSlot(slot, brandKit) ? "Brand Studio logo" : "")}
+                      fileName={imageNamesBySlot[slot.id] ?? defaultImageLabelForTemplateSlot(slot, brandKit)}
                       acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
                       maxBytes={AD_IMAGE_MAX_BYTES}
                       typeError="Use a JPG, PNG, or WebP image."
@@ -639,41 +678,70 @@ export function NewAdDialog({
                 ))}
               </div>
               {customerCopyFields.length > 0 && (
-                <div className="studio-newad-copyfields" aria-label="Ad text fields">
-                  {customerCopyFields.map((field) => (
-                    <label className="studio-newad-field" key={field.key}>
-                      <span>
-                        {field.label}
-                        <small> — appears on the ad exactly as typed</small>
-                      </span>
-                      <input
-                        type="text"
-                        value={onImageCopy[field.key] ?? ""}
-                        maxLength={Math.min(field.maxLength, 200)}
-                        placeholder={field.sample}
-                        onChange={(event) =>
-                          setOnImageCopy((current) => ({ ...current, [field.key]: event.target.value }))
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
+                <section className="studio-newad-copyfields" aria-labelledby={copyFieldsTitleId}>
+                  <div className="studio-newad-copyfields-head">
+                    <span>
+                      <strong id={copyFieldsTitleId}>Text on the ad</strong>
+                      <small>Brand details are filled from your Brand Pack when available. Listing details stay blank.</small>
+                    </span>
+                    <button type="button" onClick={fillEmptyCopyFieldsWithExamples}>Fill empty fields with examples</button>
+                  </div>
+                  <div className="studio-newad-copyfields-list">
+                    {customerCopyFields.map((field) => {
+                      const inputId = `${copyFieldIdPrefix}-${field.key}`;
+                      const brandDefault = defaultTextForTemplateField(field, brandKit);
+                      const isBrandPrefilled = Boolean(brandDefault && onImageCopy[field.key] === brandDefault);
+                      return (
+                        <div className="studio-newad-field" key={field.key}>
+                          <div className="studio-newad-field-head">
+                            <label htmlFor={inputId}>
+                              {field.label}
+                              <small>Appears exactly as typed</small>
+                            </label>
+                            <span className="studio-newad-field-actions">
+                              {isBrandPrefilled ? <em>From Brand Pack</em> : null}
+                              <button type="button" onClick={() => useCopyExample(field)}>Use example</button>
+                            </span>
+                          </div>
+                          <input
+                            id={inputId}
+                            type="text"
+                            value={onImageCopy[field.key] ?? ""}
+                            maxLength={Math.min(field.maxLength, 200)}
+                            placeholder={field.sample}
+                            onChange={(event) => {
+                              setShowRequirementsAlert(false);
+                              setOnImageCopy((current) => ({ ...current, [field.key]: event.target.value }));
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               )}
-              <label className="studio-newad-field">
-                <span>{briefGuidance.fieldLabel}</span>
+              <div className="studio-newad-field studio-newad-brief-field">
+                <div className="studio-newad-field-head">
+                  <label htmlFor={descriptionInputId}>{briefGuidance.fieldLabel}</label>
+                  <button type="button" onClick={useBriefExample}>Use example brief</button>
+                </div>
                 <textarea
+                  id={descriptionInputId}
                   ref={descriptionRef}
                   value={description}
                   maxLength={500}
                   rows={5}
                   aria-invalid={hasDescriptionRequirement ? true : undefined}
                   aria-describedby={hasDescriptionRequirement ? requirementsAlertId : undefined}
-                  onChange={(event) => setDescription(event.target.value)}
+                  onChange={(event) => {
+                    setShowRequirementsAlert(false);
+                    setDescription(event.target.value);
+                  }}
                   placeholder={briefGuidance.placeholder}
                 />
                 <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
-                <small>{description.length}/500</small>
-              </label>
+                <small className="studio-newad-field-count">{description.length}/500</small>
+              </div>
             </div>
           )}
 
@@ -718,7 +786,13 @@ export function NewAdDialog({
                 )}
               </div>
             ) : (
-              <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
+              <span
+                className={error ? "studio-newad-error" : "studio-newad-sel"}
+                role="status"
+                aria-live="polite"
+              >
+                {submitting ? "Creating your ad. This can take a few minutes." : error || footHint}
+              </span>
             )}
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
@@ -731,6 +805,17 @@ export function NewAdDialog({
         )}
       </div>
     </div>
+  );
+}
+
+function brandTextDefaultsForTemplate(
+  template: AdStudioTemplate | undefined,
+  brandKit: AdStudioBrandKit,
+): Record<string, string> {
+  return Object.fromEntries(
+    customerCopyFieldsForTemplate(template)
+      .map((field) => [field.key, defaultTextForTemplateField(field, brandKit)] as const)
+      .filter(([, value]) => value),
   );
 }
 
@@ -883,6 +968,31 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-explore-msg{grid-column:1/-1;margin:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:18px;color:var(--muted);font-size:13.5px;line-height:1.5}
 .studio-explore-msg a{color:var(--accent);font-weight:650}
 .studio-newad-upload-group{display:grid;gap:14px}
+.studio-newad-copyfields{display:grid;gap:14px;border-top:1px solid var(--line-soft);padding-top:18px}
+.studio-newad-copyfields-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.studio-newad-copyfields-head>span{display:grid;gap:4px;min-width:0;max-width:68ch}
+.studio-newad-copyfields-head strong{font-size:15px;font-weight:760;line-height:1.3;color:var(--ink)}
+.studio-newad-copyfields-head small{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.studio-newad-copyfields-head button,.studio-newad-field-head>button,.studio-newad-field-actions button{min-height:44px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;padding:0 14px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.studio-newad-copyfields-head button:hover,.studio-newad-field-head>button:hover,.studio-newad-field-actions button:hover{background:var(--accent-tint);border-color:#c8d4e2;color:var(--accent)}
+.studio-newad-copyfields-head button:focus-visible,.studio-newad-field-head>button:focus-visible,.studio-newad-field-actions button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.studio-newad-copyfields-list{display:grid;gap:14px}
+.studio-newad-field{display:grid;gap:7px;min-width:0}
+.studio-newad-field-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.studio-newad-field-head label{display:flex;align-items:baseline;gap:6px;min-width:0;color:var(--ink);font-size:13px;font-weight:750;line-height:1.35}
+.studio-newad-field-head label small{color:var(--muted);font-size:12px;font-weight:500}
+.studio-newad-field-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.studio-newad-field-actions em{font-style:normal;border-radius:999px;background:#f1f2f4;color:#3f4651;font-size:11.5px;font-weight:700;padding:5px 9px;white-space:nowrap}
+.studio-newad-field input,.studio-newad-field textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:15px;line-height:1.45;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+.studio-newad-field input{min-height:44px;padding:0 12px}
+.studio-newad-field textarea{resize:vertical;min-height:116px;padding:11px 12px}
+.studio-newad-field input::placeholder,.studio-newad-field textarea::placeholder{color:#545a66;opacity:1}
+.studio-newad-field input:hover,.studio-newad-field textarea:hover{border-color:#b8bec9}
+.studio-newad-field input:focus-visible,.studio-newad-field textarea:focus-visible{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(22,24,29,.14)}
+.studio-newad-field textarea[aria-invalid="true"]{border-color:#ba1a1a}
+.studio-newad-field-help{color:var(--muted);font-size:12px;line-height:1.4}
+.studio-newad-field-count{justify-self:end;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
+.studio-newad-brief-field{border-top:1px solid var(--line-soft);padding-top:18px}
 .studio-newad-image-slot{display:grid;gap:8px}
 .studio-newad-image-slot-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .studio-newad-image-slot-head span{display:grid;gap:3px;min-width:0}
@@ -914,6 +1024,11 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-explore-thumb{height:220px}
   .studio-explore-thumb--sample{height:320px}
   .studio-newad-library-grid{grid-template-columns:1fr}
+  .studio-newad-copyfields-head,.studio-newad-field-head{align-items:stretch;flex-direction:column}
+  .studio-newad-copyfields-head button{width:100%;white-space:normal}
+  .studio-newad-field-actions{justify-content:space-between;width:100%}
+  .studio-newad-field-head label{align-items:flex-start;flex-direction:column;gap:2px}
+  .studio-newad-field-head>button{width:100%}
 }
 `;
 // NewAdDialog: choose one gallery sample, then provide its declared assets.

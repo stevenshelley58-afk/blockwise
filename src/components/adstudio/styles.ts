@@ -556,15 +556,16 @@
 .studio-metachrome-copy:hover{color:var(--accent)}
 .studio-metachrome-card .studio-feed-primary{padding:0 16px 12px;color:#050505;font-size:15px;line-height:1.333;white-space:pre-line}
 .studio-metachrome-media{position:relative;background:#eee;min-height:120px}
-.studio-metachrome-media .studio-inplace-stage,.studio-metachrome-media .studio-clone-stage{width:100%;gap:0}
-.studio-metachrome-media .studio-inplace-frame{width:100%}
-.studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;max-width:100%;max-height:none;border-radius:0;box-shadow:none}
+.studio-metachrome-media .studio-inplace-stage{width:100%;gap:0}
+.studio-metachrome-media .studio-inplace-frame,.studio-metachrome-media .studio-clone-stage{width:100%;aspect-ratio:4/5;overflow:hidden}
+.studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;height:100%;max-width:100%;max-height:none;object-fit:cover;border-radius:0;box-shadow:none}
 .studio-metachrome-media .studio-inplace-hint,.studio-metachrome-media .studio-inplace-undo{display:none}
 .studio-metachrome-media .studio-editor-loading{min-height:320px;color:var(--muted)}
 .studio-metachrome-nudge,.studio-metachrome-edit-hint{margin:10px auto 0;width:min(500px,92vw);color:#d7deea;font-size:12px;font-weight:650;line-height:1.35;text-align:left}
-.studio-metachrome-story{position:relative;display:inline-block;overflow:hidden;background:#000}
-.studio-metachrome-story .studio-inplace-stage,.studio-metachrome-story .studio-clone-stage{gap:0}
-.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{border-radius:0;box-shadow:none}
+.studio-metachrome-story{position:relative;width:min(360px,82vw);aspect-ratio:9/16;overflow:hidden;background:#000}
+.studio-metachrome-story .studio-inplace-stage{width:100%;height:100%;gap:0}
+.studio-metachrome-story .studio-inplace-frame,.studio-metachrome-story .studio-clone-stage{width:100%;height:100%;overflow:hidden}
+.studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;border-radius:0;box-shadow:none}
 .studio-metachrome-story .studio-inplace-hint,.studio-metachrome-story .studio-inplace-undo{display:none}
 .studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:0;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 78%,rgba(0,0,0,.45) 100%)}
 .studio-metachrome-story-progress{position:absolute;top:10px;left:12px;right:12px;display:flex;gap:4px}

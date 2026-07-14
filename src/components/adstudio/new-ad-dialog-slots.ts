@@ -27,19 +27,59 @@ export type TemplateCopyRequirement = {
   sample: string;
 };
 
-/** Use the approved Brand Studio logo for declared logo inputs by default. */
+type BrandKitDefaults = Pick<AdStudioBrandKit, "assets" | "contact" | "identity" | "logos" | "source">;
+type BrandAssetDefaults = Pick<AdStudioBrandKit, "logos"> & Partial<Pick<AdStudioBrandKit, "assets">>;
+
+/** Use reusable Brand Pack assets for matching identity slots. */
 export function defaultImageForTemplateSlot(
   slot: Pick<TemplateImageRequirement, "id" | "label">,
-  brandKit: Pick<AdStudioBrandKit, "logos"> | undefined,
+  brandKit: BrandAssetDefaults | undefined,
 ): string {
-  if (!/logo/i.test(`${slot.id} ${slot.label}`)) return "";
-  return (
-    brandKit?.logos.primaryLogoUrl?.trim() ||
-    brandKit?.logos.darkLogoUrl?.trim() ||
-    brandKit?.logos.lightLogoUrl?.trim() ||
-    brandKit?.logos.faviconUrl?.trim() ||
-    ""
-  );
+  const identity = `${slot.id} ${slot.label}`;
+  if (/logo/i.test(identity)) {
+    return (
+      brandKit?.logos.primaryLogoUrl?.trim() ||
+      brandKit?.logos.darkLogoUrl?.trim() ||
+      brandKit?.logos.lightLogoUrl?.trim() ||
+      brandKit?.logos.faviconUrl?.trim() ||
+      ""
+    );
+  }
+  if (/agent|avatar|headshot|portrait|profile/i.test(identity)) {
+    return brandKit?.assets?.headshots.find((src) => src.trim())?.trim() || "";
+  }
+  if (/office|team/i.test(identity)) {
+    return brandKit?.assets?.officeImages.find((src) => src.trim())?.trim() || "";
+  }
+  return "";
+}
+
+export function defaultImageLabelForTemplateSlot(
+  slot: Pick<TemplateImageRequirement, "id" | "label">,
+  brandKit: BrandAssetDefaults | undefined,
+): string {
+  if (!defaultImageForTemplateSlot(slot, brandKit)) return "";
+  const identity = `${slot.id} ${slot.label}`;
+  if (/logo/i.test(identity)) return "Brand Pack logo";
+  if (/agent|avatar|headshot|portrait|profile/i.test(identity)) return "Brand Pack headshot";
+  if (/office|team/i.test(identity)) return "Brand Pack image";
+  return "Brand Pack asset";
+}
+
+/** Prefill identity facts only. Campaign-specific claims must stay explicit. */
+export function defaultTextForTemplateField(
+  field: Pick<TemplateCopyRequirement, "key" | "label">,
+  brandKit: BrandKitDefaults | undefined,
+): string {
+  if (!brandKit) return "";
+  const identity = `${field.key} ${field.label}`.toLowerCase();
+  if (/agency|business|brand|company/.test(identity) && /name/.test(identity)) {
+    return (brandKit.identity.tradingName || brandKit.identity.businessName || "").trim();
+  }
+  if (/phone|telephone|mobile/.test(identity)) return brandKit.contact.phone?.trim() || "";
+  if (/email/.test(identity)) return brandKit.contact.email?.trim() || "";
+  if (/website|web url|site url|domain/.test(identity)) return brandKit.source.url?.trim() || "";
+  return "";
 }
 
 export function customerCopyFieldsForTemplate(
