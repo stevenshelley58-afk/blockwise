@@ -19,6 +19,7 @@ import {
   hydrateStoredCreativeExportRenders,
   renderStoredFlatCloneExports,
 } from "../src/lib/adstudio/export-render-storage.ts";
+import { filterCreativeRowsToDeclaredFormats } from "../src/lib/adstudio/persistence.ts";
 import type { AdStudioCampaignPack } from "../src/lib/adstudio/types.ts";
 
 function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
@@ -700,4 +701,23 @@ test("flat clone export falls back to assetId when persisted content is blank", 
 
   assert.equal(renders.length, 2);
   assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
+});
+
+test("campaign loading quarantines creative rows from retired formats", () => {
+  const currentFeed = { id: "feed", format: "4:5" };
+  const currentStory = { id: "story", format: "9:16" };
+  const retiredSquare = { id: "old-square", format: "1:1" };
+
+  assert.deepEqual(
+    filterCreativeRowsToDeclaredFormats(
+      { creative_formats_json: ["4:5", "9:16"] },
+      [currentFeed, retiredSquare, currentStory],
+    ),
+    [currentFeed, currentStory],
+  );
+  assert.deepEqual(
+    filterCreativeRowsToDeclaredFormats({}, [retiredSquare]),
+    [retiredSquare],
+    "legacy campaigns without a declaration retain their historical creatives",
+  );
 });
