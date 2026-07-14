@@ -405,13 +405,22 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
   let data: unknown;
   let error: { message: string } | null;
   try {
-    const response = await serviceSupabase.rpc("adstudio_record_provider_run", {
+    let response = await serviceSupabase.rpc("adstudio_record_provider_run", {
       p_workspace_id: input.workspaceId,
       p_mutation_id: mutationId,
       p_payload_hash: payloadHash,
       p_run: run,
       p_attempts: attempts,
     });
+    if (shouldRecoverProviderRun(attempts, response.error)) {
+      response = await serviceSupabase.rpc("adstudio_recover_provider_run", {
+        p_workspace_id: input.workspaceId,
+        p_mutation_id: mutationId,
+        p_payload_hash: payloadHash,
+        p_run: run,
+        p_stale_before: new Date(Date.now() - 60_000).toISOString(),
+      });
+    }
     data = response.data;
     error = response.error;
   } catch (cause) {
@@ -436,6 +445,13 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
       accounting,
     }),
   );
+}
+
+export function shouldRecoverProviderRun(
+  attempts: ProviderRunAttempt[],
+  error: { message?: string } | null,
+): boolean {
+  return attempts.length === 0 && Boolean(error?.message?.includes("Provider run identity does not match normalized attempts"));
 }
 
 export async function runAuditAfterDurableAccounting(writeAudit: () => Promise<void>): Promise<void> {

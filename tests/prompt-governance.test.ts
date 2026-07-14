@@ -27,6 +27,7 @@ import {
   deriveProviderRunIdentity,
   estimateAdStudioProviderRunCostUsd,
   redactRecord,
+  shouldRecoverProviderRun,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
 
 const initialMigrationSql = readFileSync("supabase/migrations/202605260001_initial_blockwise.sql", "utf8");
@@ -447,6 +448,21 @@ test("provider run identity derives the model profile from the normalized attemp
   assert.equal(identity.providerType, "image_generation");
   assert.equal(identity.modelName, "gpt-image-2");
   assert.equal(identity.modelProfile, "image_final");
+});
+
+test("an orphaned reservation uses the database recovery finalizer", () => {
+  assert.equal(
+    shouldRecoverProviderRun([], {
+      message: "Provider run identity does not match normalized attempts",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldRecoverProviderRun([], {
+      message: "Provider attempt accounting is internally inconsistent",
+    }),
+    false,
+  );
 });
 
 test("missing provider usage is unreconciled instead of a zero-cost estimate", () => {
