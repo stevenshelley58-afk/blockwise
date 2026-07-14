@@ -1,0 +1,122 @@
+{
+  "id": "meta-feed-128",
+  "name": "Just Sold Announcement - New Chapter",
+  "goal": "seller_leads",
+  "offerId": "just-sold-announcement-001",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Showcase a recently sold property and attract new seller leads.",
+  "category": "just_sold",
+  "tags": [
+    "just sold",
+    "seller leads",
+    "real estate",
+    "announcement",
+    "new chapter"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-128-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-128-sample.png",
+    "alt": "Sample just-sold announcement with a property photo, agent portrait, result message, and contact details.",
+    "contentHash": "19442d8ce4449cb24413aa148cc38b8b22e69c2c360402633436c4c0e4011789",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property Photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A clear, attractive photo of the recently sold property."
+      },
+      {
+        "key": "agent_photo",
+        "label": "Agent Photo",
+        "required": true,
+        "aspect": "square",
+        "description": "A headshot or portrait of the agent (optional, shown in a circle)."
+      }
+    ],
+    "text": [
+      {
+        "key": "property_address",
+        "label": "Property Address",
+        "maxLength": 60,
+        "sample": "8 MARINE TERRACE, COTTESLOE WA",
+        "required": true
+      },
+      {
+        "key": "main_message",
+        "label": "Main Message",
+        "maxLength": 60,
+        "sample": "Just Sold! A new chapter begins.",
+        "required": true
+      },
+      {
+        "key": "contact_email",
+        "label": "Contact Email",
+        "maxLength": 40,
+        "sample": "hello@cedarcoast.example",
+        "required": true
+      },
+      {
+        "key": "contact_phone",
+        "label": "Contact Phone",
+        "maxLength": 20,
+        "sample": "08 6102 1840",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_128.png",
+    "contentHash": "c37d0b77e60869df409e48ff386281f60f5f62a5b876fb069395446eecf43baf"
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

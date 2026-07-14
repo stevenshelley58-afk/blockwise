@@ -307,9 +307,40 @@ export const googleAssetPackSchema = z.object({
   }),
 });
 
+export const adStudioTemplateAnalysisSchema = z.object({
+  name: z.string().min(1),
+  goal: adStudioGoalSchema,
+  offerId: z.string(),
+  audienceIntent: z.string().min(1),
+  category: z.string().min(1),
+  tags: z.array(z.string()),
+  inputs: z.object({
+    images: z.array(z.object({
+      key: z.string().min(1),
+      label: z.string().min(1),
+      required: z.boolean(),
+      aspect: z.enum(["landscape", "portrait", "square"]),
+      description: z.string().min(1),
+    })).min(1),
+    text: z.array(z.object({
+      key: z.string().min(1),
+      label: z.string().min(1),
+      maxLength: z.number().int().positive(),
+      sample: z.string(),
+      required: z.boolean(),
+    })),
+  }),
+  classification: z.object({
+    ad_type: z.string().min(1),
+    primary_intent: z.string().min(1),
+    property_or_agent_focus: z.string().min(1),
+  }),
+});
+
 export type MetaLeadAdPack = z.infer<typeof metaLeadAdPackSchema>;
 export type GoogleSearchPack = z.infer<typeof googleSearchPackSchema>;
 export type GoogleAssetPack = z.infer<typeof googleAssetPackSchema>;
+export type AdStudioTemplateAnalysis = z.infer<typeof adStudioTemplateAnalysisSchema>;
 
 export type AdStudioPlatformCopyPack = {
   copyPackId: string;

@@ -1,0 +1,144 @@
+{
+  "id": "meta-feed-156",
+  "name": "Your Trusted Real Estate Partner",
+  "goal": "seller_leads",
+  "offerId": "trusted-agent-intro",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Find a reliable real estate partner for buying or selling property",
+  "category": "agent_branding",
+  "tags": [
+    "real estate",
+    "agent",
+    "branding",
+    "seller leads",
+    "property",
+    "professional"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-156-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-156-sample.png",
+    "alt": "Sample agent profile ad with a property backdrop, portrait, service message, and contact details.",
+    "contentHash": "064232d2ec7ec7131301c2cdc77f00a7bc4b250598050e1af0fb78a4824a7a76",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_property",
+        "label": "Background Property Image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality image of a modern home or property to use as the background."
+      },
+      {
+        "key": "agent_photo",
+        "label": "Agent Portrait Photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "A professional portrait photo of the real estate agent."
+      }
+    ],
+    "text": [
+      {
+        "key": "company_name",
+        "label": "Company Name",
+        "maxLength": 40,
+        "sample": "Summit Lane Property",
+        "required": true
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 60,
+        "sample": "Local advice. Clear next steps.",
+        "required": true
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 40,
+        "sample": "Jordan Lee",
+        "required": true
+      },
+      {
+        "key": "about_text",
+        "label": "About/Description",
+        "maxLength": 240,
+        "sample": "Practical advice for buying, selling, and investing, with clear communication from the first conversation to settlement.",
+        "required": true
+      },
+      {
+        "key": "cta_text",
+        "label": "Call To Action",
+        "maxLength": 25,
+        "sample": "BOOK A CALL",
+        "required": true
+      },
+      {
+        "key": "phone_number",
+        "label": "Phone Number",
+        "maxLength": 20,
+        "sample": "08 6102 1840",
+        "required": true
+      },
+      {
+        "key": "website_url",
+        "label": "Website URL",
+        "maxLength": 60,
+        "sample": "summitlane.example",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_156.png",
+    "contentHash": "3e0b29ed50a71905d5890f3fd7d5dc017610e02c24d96ee2790c7de72d82fdff"
+  },
+  "classification": {
+    "ad_type": "single-image",
+    "primary_intent": "brand_agent",
+    "property_or_agent_focus": "agent"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

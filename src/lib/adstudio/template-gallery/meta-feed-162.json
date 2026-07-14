@@ -1,0 +1,117 @@
+{
+  "id": "meta-feed-162",
+  "name": "Borcelle Villa For Rent",
+  "goal": "buyer_leads",
+  "offerId": "for-rent-borcelle-villa",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "People looking to rent a premium villa for short stays",
+  "category": "rental_property",
+  "tags": [
+    "villa",
+    "for rent",
+    "luxury",
+    "short term",
+    "2 bedroom",
+    "living room",
+    "kitchen"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-162-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-162-sample.png",
+    "alt": "Sample short-stay rental ad with one warm interior photo, property name, nightly rate, features, and call to action.",
+    "contentHash": "c16f70b6f1dbe660638ed5c6f711902637cd9c7723d0c3e9afe80baf3582ccaf",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_image",
+        "label": "Main Property Image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of the main living area or a representative space in the property."
+      }
+    ],
+    "text": [
+      {
+        "key": "property_name",
+        "label": "Property Name",
+        "maxLength": 40,
+        "sample": "CEDAR COAST STAY",
+        "required": true
+      },
+      {
+        "key": "price_per_night",
+        "label": "Price Per Night",
+        "maxLength": 20,
+        "sample": "$420 / NIGHT",
+        "required": true
+      },
+      {
+        "key": "features",
+        "label": "Key Features",
+        "maxLength": 60,
+        "sample": "2 BEDROOMS | LOUNGE | KITCHEN",
+        "required": true
+      },
+      {
+        "key": "main_cta",
+        "label": "Main Call to Action",
+        "maxLength": 20,
+        "sample": "BOOK YOUR STAY",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_162.png",
+    "contentHash": "70d1efbae33cb4121acd82cead76daa3189a611d3deb3c6e10e9e08f490d4880"
+  },
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

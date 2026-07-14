@@ -8,7 +8,7 @@ import {
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
 } from "../src/lib/adstudio/ai-providers.ts";
-import { ProviderRequestError } from "../src/lib/adstudio/providers.ts";
+import { ProviderRequestError, validateProviderJsonOutput } from "../src/lib/adstudio/providers.ts";
 import { buildProviderRunAttempt } from "../src/lib/operator/prompts/redact-prompt-run.ts";
 import type { ModelCandidate, ModelProvider } from "../src/lib/ai/model-registry.ts";
 
@@ -27,6 +27,48 @@ function candidate(provider: ModelProvider, model: string): ModelCandidate {
     maxLatencyMs: 30_000,
   };
 }
+
+test("template analysis uses its own strict provider schema", () => {
+  const valid = validateProviderJsonOutput({
+    schemaName: "adStudioTemplateAnalysis",
+    rawText: JSON.stringify({
+      name: "Seller Tips",
+      goal: "seller_leads",
+      offerId: "seller-tips",
+      audienceIntent: "Homeowners preparing to sell",
+      category: "education",
+      tags: ["seller"],
+      inputs: {
+        images: [{
+          key: "background_photo",
+          label: "Background photo",
+          required: true,
+          aspect: "landscape",
+          description: "Customer property image",
+        }],
+        text: [{
+          key: "headline",
+          label: "Headline",
+          maxLength: 40,
+          sample: "Five steps for a smoother sale",
+          required: true,
+        }],
+      },
+      classification: {
+        ad_type: "social_post",
+        primary_intent: "educational_content",
+        property_or_agent_focus: "property",
+      },
+    }),
+  });
+  assert.equal(valid.ok, true);
+
+  const invalid = validateProviderJsonOutput({
+    schemaName: "adStudioTemplateAnalysis",
+    rawText: JSON.stringify({ name: "Incomplete" }),
+  });
+  assert.equal(invalid.ok, false);
+});
 
 test("production exports expose only explicitly priced provider candidates", () => {
   const adapters = readFileSync("src/lib/adstudio/ai-providers.ts", "utf8");
@@ -629,4 +671,3 @@ test("resolveOpenAiImageEditsUrl derives the edits endpoint from a gateway URL",
     "https://gw/openai/edits",
   );
 });
-

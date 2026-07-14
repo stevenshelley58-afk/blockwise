@@ -10,7 +10,7 @@ import {
 } from "../src/lib/adstudio/reference-clone.ts";
 import { buildTemplateCloneRequestsByFormat } from "../src/lib/adstudio/generate-template-campaign.ts";
 
-const template = AD_STUDIO_TEMPLATES[0]!;
+const template = AD_STUDIO_TEMPLATES.find((entry) => entry.id === "meta-feed-020")!;
 const images = {
   property_photo: "data:image/png;base64,PROPERTY",
   brand_logo: "data:image/png;base64,LOGO",
@@ -47,6 +47,8 @@ test("copy is exact, defaulted from safe sample values, and max-length bounded",
   const request = buildCloneImageRequest(template, { images, copy: { address: "45 REAL ST, PERTH WA" } });
   assert.match(request.prompt, /45 REAL ST, PERTH WA/);
   assert.match(request.prompt, /Use these exact visible text values and no others/);
+  assert.match(request.prompt, /Customer asset replacement is mandatory/);
+  assert.match(request.prompt, /render each value character-for-character exactly once/);
 });
 
 test("missing required assets fail before any model request", () => {

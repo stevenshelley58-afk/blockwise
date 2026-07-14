@@ -77,7 +77,9 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
     prompt: [
       "Clone reference image 1 as closely as possible, preserving its composition, spacing, typography, visual hierarchy, shapes, and image treatment.",
       assetLegend,
+      "Customer asset replacement is mandatory: reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.",
       `Use these exact visible text values and no others: ${copyLegend}.`,
+      "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
       `Use ${brandHex}. Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
     ].join(" "),
     negativePrompt: GLOBAL_CLONE_NEGATIVES,
