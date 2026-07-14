@@ -374,6 +374,13 @@ export function useCampaignActions(s: CampaignActionsState) {
       const formats = exportableFormats(exportPack);
       if (formats.length === 0) throw new Error("Export failed — please retry.");
 
+      if (isFlatClonePack(exportPack)) {
+        await downloadExportZip(currentPack.campaign.campaignId, currentPack.campaign.name, exportPack, []);
+        setExportStatus(null);
+        s.showToast("Creative export downloaded");
+        return;
+      }
+
       setExportStatus(formats.map((format) => ({ format, label: exportFormatLabel(format), state: "rendering" })));
       const { renders, failedFormats } = await renderFormatsIndependently(exportPack, formats);
       setExportStatus(
@@ -518,6 +525,13 @@ function exportableFormats(pack: AdStudioCampaignPack): AdStudioFormat[] {
     .map((creative) => creative.format)
     .filter((format) => EXPORT_FORMAT_LABELS[format] !== undefined);
   return Array.from(new Set(formats));
+}
+
+function isFlatClonePack(pack: AdStudioCampaignPack): boolean {
+  return pack.creatives.length > 0 && pack.creatives.every(
+    (creative) => creative.canvas.objects.length === 1
+      && creative.canvas.objects[0]?.objectId === "template_clone_image",
+  );
 }
 
 /** Each format renders with its own timeout, so one stall delivers the rest. */

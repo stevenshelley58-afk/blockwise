@@ -15,7 +15,10 @@ import {
   resolveAdStudioTemplate,
 } from "../src/lib/adstudio/index.ts";
 import { repairCreativeTextLayout } from "../src/lib/adstudio/creative-design-json.ts";
-import { hydrateStoredCreativeExportRenders } from "../src/lib/adstudio/export-render-storage.ts";
+import {
+  hydrateStoredCreativeExportRenders,
+  renderStoredFlatCloneExports,
+} from "../src/lib/adstudio/export-render-storage.ts";
 
 function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
   return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
@@ -566,4 +569,80 @@ test("stored creative export renders hydrate from workspace storage before packa
       ]),
     /not found/,
   );
+});
+
+test("flat clone export converts authoritative workspace renders to PNG and JPEG on the server", async () => {
+  const { default: sharp } = await import("sharp");
+  const brandKit = extractBrandKitFromWebsite({
+    workspaceId: "workspace_demo",
+    websiteUrl: "https://northstar.example",
+    marketCountry: "AU",
+    htmlByUrl: { "https://northstar.example": sampleHtml },
+  });
+  const pack = generateAdStudioCampaignPack({
+    workspaceId: "workspace_demo",
+    brandKit: { ...brandKit, reviewStatus: "approved" as const },
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+  });
+  const stored = new Map<string, Buffer>();
+  const clonePack = {
+    ...pack,
+    creatives: await Promise.all(pack.creatives.map(async (creative) => {
+      const path = `workspace_demo/adstudio/clones/${creative.creativeId}.png`;
+      stored.set(path, await sharp({
+        create: {
+          width: creative.canvas.width,
+          height: creative.canvas.height,
+          channels: 4,
+          background: { r: 18, g: 62, b: 117, alpha: 1 },
+        },
+      }).png().toBuffer());
+      return {
+        ...creative,
+        canvas: {
+          ...creative.canvas,
+          objects: [{
+            objectId: "template_clone_image",
+            type: "image" as const,
+            role: "primary_image",
+            x: 0,
+            y: 0,
+            width: creative.canvas.width,
+            height: creative.canvas.height,
+            locked: true,
+            content: `/api/adstudio/media?path=${encodeURIComponent(path)}`,
+          }],
+        },
+      };
+    })),
+  };
+  const renders = await renderStoredFlatCloneExports(
+    {
+      storage: {
+        from(bucket: string) {
+          assert.equal(bucket, "workspace-artifacts");
+          return {
+            async download(path: string) {
+              const bytes = stored.get(path);
+              return bytes
+                ? { data: new Blob([new Uint8Array(bytes)], { type: "image/png" }), error: null }
+                : { data: null, error: { message: "missing" } };
+            },
+          };
+        },
+      },
+    },
+    "workspace_demo",
+    clonePack,
+  );
+
+  assert.equal(renders.length, clonePack.creatives.length * 2);
+  assert.ok(renders.every((render) => render.dataUrl?.startsWith(`data:${render.mimeType};base64,`)));
+  assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
 });

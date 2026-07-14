@@ -1,7 +1,10 @@
 import type { NextRequest } from "next/server";
 
 import { buildAdStudioExportPackage } from "@/lib/adstudio";
-import { hydrateStoredCreativeExportRenders } from "@/lib/adstudio/export-render-storage";
+import {
+  hydrateStoredCreativeExportRenders,
+  renderStoredFlatCloneExports,
+} from "@/lib/adstudio/export-render-storage";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
 import {
@@ -38,6 +41,7 @@ const dependencies: ExportDownloadDependencies<AdStudioRequestStore> = {
     if (!hydrated) throw new Error("Creative renders could not be prepared for export.");
     return hydrated;
   },
+  renderFlatClones: renderStoredFlatCloneExports,
   buildPackage: buildAdStudioExportPackage,
 };
 

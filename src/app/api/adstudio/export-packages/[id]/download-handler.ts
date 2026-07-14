@@ -19,6 +19,11 @@ export type ExportDownloadDependencies<Store> = {
     workspaceId: string,
     renders: CreativeExportRender[],
   ): Promise<CreativeExportRender[]>;
+  renderFlatClones(
+    store: Store,
+    workspaceId: string,
+    campaign: AdStudioCampaignPack,
+  ): Promise<CreativeExportRender[]>;
   buildPackage(
     campaign: AdStudioCampaignPack,
     options: { creativeRenders: CreativeExportRender[] },
@@ -45,19 +50,22 @@ export async function handleAdStudioExportDownload<Store>(input: {
     );
   }
 
-  const containsFlatClone = authoritativePack.creatives.some(
+  const containsOnlyFlatClones = authoritativePack.creatives.length > 0 && authoritativePack.creatives.every(
     (creative) =>
       creative.canvas.objects.length === 1 &&
       creative.canvas.objects[0]?.objectId === "template_clone_image",
   );
-  if (containsFlatClone) {
-    return jsonResponse(
-      {
-        code: "flat_clone_export_not_ready",
-        error: "This AI-designed ad cannot be exported until its approved revision files are ready.",
-      },
-      409,
+  if (containsOnlyFlatClones) {
+    const creativeRenders = await input.dependencies.renderFlatClones(
+      access.store,
+      access.workspaceId,
+      authoritativePack,
     );
+    const exportPackage = await input.dependencies.buildPackage(
+      authoritativePack,
+      { creativeRenders },
+    );
+    return packageResponse(authoritativePack, exportPackage);
   }
 
   const body = await input.request.json().catch(() => null) as {
@@ -79,6 +87,13 @@ export async function handleAdStudioExportDownload<Store>(input: {
     authoritativePack,
     { creativeRenders },
   );
+  return packageResponse(authoritativePack, exportPackage);
+}
+
+function packageResponse(
+  authoritativePack: AdStudioCampaignPack,
+  exportPackage: { zipBytes: Uint8Array },
+): Response {
   const zipBlob = new Blob(
     [new Uint8Array(exportPackage.zipBytes).buffer as ArrayBuffer],
     { type: "application/zip" },
