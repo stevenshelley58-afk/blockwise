@@ -428,7 +428,10 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
   }
 
   if (error) {
-    throw new ProviderRunPersistenceError(`Failed to record Ad Studio provider run: ${error.message}`);
+    const originalFailure = input.error ? ` Original provider lifecycle failure: ${errorSummary(input.error)}` : "";
+    throw new ProviderRunPersistenceError(
+      `Failed to record Ad Studio provider run: ${error.message}.${originalFailure}`,
+    );
   }
 
   const ids = data && typeof data === "object" && !Array.isArray(data)
