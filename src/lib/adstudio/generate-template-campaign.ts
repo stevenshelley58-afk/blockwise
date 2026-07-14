@@ -167,11 +167,11 @@ export async function generateQaAcceptedClone(input: {
   let qualityAttempt = 0;
   let providerCallCount = 0;
   let generationAttempt = 0;
-  // This is a frozen product budget, independent of the caller's legacy
-  // provider-round hint. A one-round synchronous caller must still get two
-  // QA-reviewed candidates when early provider failures consume fewer calls.
-  const maxProviderCalls = 4;
-  const maxQualityAttempts = 2;
+  // Sync generation gets one QA-reviewed candidate so it cannot start a
+  // second premium render that will outlive Vercel's request ceiling. The
+  // background task may request the bounded correction pass.
+  const maxQualityAttempts = Math.max(1, Math.min(input.maxAttempts, 2));
+  const maxProviderCalls = maxQualityAttempts * 2;
   const generate = dependencies.generate ?? generateCloneWithCascade;
   const review = dependencies.review ?? runCloneQa;
   const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;

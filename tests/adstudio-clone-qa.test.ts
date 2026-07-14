@@ -407,7 +407,7 @@ test("clone generation never invokes a second fallback candidate", async () => {
   assert.equal(thirdProviderCalls, 0);
 });
 
-test("template quality gate caps each format at four image-provider calls", async () => {
+test("template quality gate caps each format to the caller's QA budget", async () => {
   const gate = await qualityGateFunction();
   let providerCalls = 0;
   const failedProvider = (name: string) => accountedImageProvider(name, async () => {
@@ -416,7 +416,7 @@ test("template quality gate caps each format at four image-provider calls", asyn
   });
 
   await assert.rejects(() => gate(
-    qualityGateInput([failedProvider("primary"), failedProvider("fallback")]),
+    qualityGateInput([failedProvider("primary"), failedProvider("fallback")], 1),
     {
       generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
         ...input,
@@ -426,7 +426,7 @@ test("template quality gate caps each format at four image-provider calls", asyn
     },
   ));
 
-  assert.equal(providerCalls, 4);
+  assert.equal(providerCalls, 2);
 });
 
 test("provider failures do not consume the two QA-candidate attempts", async () => {
@@ -449,7 +449,7 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
     throw submittedProviderFailure("fallback unavailable", true);
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 1), {
+  const result = await gate(qualityGateInput([primary, fallback], 2), {
     generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
@@ -466,7 +466,7 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
   assert.equal(qaCalls, 1);
 });
 
-test("one provider call failure still leaves room for two QA candidates", async () => {
+test("the async budget leaves room for two QA candidates after one provider failure", async () => {
   const gate = await qualityGateFunction();
   let providerCalls = 0;
   let qaCalls = 0;
@@ -489,7 +489,7 @@ test("one provider call failure still leaves room for two QA candidates", async 
     throw submittedProviderFailure("fallback unavailable", true);
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 1), {
+  const result = await gate(qualityGateInput([primary, fallback], 2), {
     generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
@@ -536,6 +536,18 @@ test("template quality gate evaluates at most two candidates and never persists 
   }), /did not pass verification/);
   assert.equal(generateCalls, 2);
   assert.equal(reviewCalls, 2);
+
+  generateCalls = 0;
+  reviewCalls = 0;
+  await assert.rejects(() => gate(qualityGateInput([], 1), {
+    generate,
+    review: async () => {
+      reviewCalls += 1;
+      return failedQa;
+    },
+  }), /did not pass verification/);
+  assert.equal(generateCalls, 1);
+  assert.equal(reviewCalls, 1);
 
   generateCalls = 0;
   reviewCalls = 0;
