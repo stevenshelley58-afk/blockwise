@@ -135,6 +135,9 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     await waitForSavedStatus(page);
 
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
+    // Reload intentionally returns to Home. Reopen the post-clone editor before
+    // asserting that the saved revision is the image mounted on its canvas.
+    await openPanel(page, "Text");
     await expect(page.locator(".studio-inplace-frame img")).toHaveAttribute("src", editedImage, { timeout: 30_000 });
 
     await openPanel(page, "Publish");
@@ -287,7 +290,7 @@ async function editGeneratedClone(page: Page): Promise<string> {
   return editedImage ?? "";
 }
 
-async function openPanel(page: Page, label: "Publish") {
+async function openPanel(page: Page, label: "Text" | "Publish") {
   const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
