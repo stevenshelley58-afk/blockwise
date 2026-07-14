@@ -133,6 +133,53 @@ export async function createCloneRegionEditMask(
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
+async function cloneImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array> {
+  if (assetUrl.startsWith("data:image/")) return dataUrlToUploadBytes(assetUrl).bytes;
+  const response = await fetchImpl(assetUrl);
+  if (!response.ok) throw new Error(`Creative image could not be prepared (${response.status}).`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * Keep the model's output only inside the selected QA region. This makes
+ * Stitch-style edits deterministic: pixels outside the clicked element come
+ * from the original finished ad even if the image model tries to redraw them.
+ */
+export async function compositeCloneRegionEdit(
+  originalAssetUrl: string,
+  editedAssetUrl: string,
+  box?: { x: number; y: number; width: number; height: number },
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  if (!box || box.width <= 0 || box.height <= 0) return editedAssetUrl;
+  const [originalBytes, editedBytes] = await Promise.all([
+    cloneImageBytes(originalAssetUrl, fetchImpl),
+    cloneImageBytes(editedAssetUrl, fetchImpl),
+  ]);
+  const { default: sharp } = await import("sharp");
+  const metadata = await sharp(originalBytes).metadata();
+  if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for editing.");
+
+  const paddingX = 0.02;
+  const paddingY = 0.02;
+  const left = Math.max(0, Math.floor((box.x - paddingX) * metadata.width));
+  const top = Math.max(0, Math.floor((box.y - paddingY) * metadata.height));
+  const right = Math.min(metadata.width, Math.ceil((box.x + box.width + paddingX) * metadata.width));
+  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height + paddingY) * metadata.height));
+  const width = Math.max(1, right - left);
+  const height = Math.max(1, bottom - top);
+  const editedRegion = await sharp(editedBytes)
+    .resize(metadata.width, metadata.height, { fit: "fill" })
+    .extract({ left, top, width, height })
+    .png()
+    .toBuffer();
+  const composited = await sharp(originalBytes)
+    .composite([{ input: editedRegion, left, top }])
+    .png()
+    .toBuffer();
+  return `data:image/png;base64,${composited.toString("base64")}`;
+}
+
 export async function generateCloneWithCascade(input: {
   providers: ImageProviderAdapter[];
   request: ImageProviderRequest;

@@ -10,6 +10,7 @@ import {
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
 import {
+  compositeCloneRegionEdit,
   createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
@@ -83,6 +84,28 @@ test("targeted edit masks preserve the full ad outside the selected QA region", 
   assert.equal(alphaAt(10, 10), 255, "pixels outside the edit region remain opaque");
   assert.equal(alphaAt(50, 50), 0, "pixels inside the edit region are transparent");
   assert.equal(await createCloneRegionEditMask(source), undefined);
+});
+
+test("targeted edits composite only the selected region onto the finished ad", async () => {
+  const { default: sharp } = await import("sharp");
+  const original = await sharp({
+    create: { width: 100, height: 100, channels: 4, background: { r: 220, g: 20, b: 20, alpha: 1 } },
+  }).png().toBuffer();
+  const edited = await sharp({
+    create: { width: 100, height: 100, channels: 4, background: { r: 20, g: 20, b: 220, alpha: 1 } },
+  }).png().toBuffer();
+  const result = await compositeCloneRegionEdit(
+    `data:image/png;base64,${original.toString("base64")}`,
+    `data:image/png;base64,${edited.toString("base64")}`,
+    { x: 0.4, y: 0.4, width: 0.2, height: 0.2 },
+  );
+  const { data, info } = await sharp(Buffer.from(result.split(",")[1], "base64"))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rgbAt = (x: number, y: number) => Array.from(data.subarray((y * info.width + x) * 3, (y * info.width + x) * 3 + 3));
+  assert.deepEqual(rgbAt(10, 10), [220, 20, 20], "outside pixels come from the original ad");
+  assert.deepEqual(rgbAt(50, 50), [20, 20, 220], "inside pixels come from the model edit");
 });
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
@@ -658,6 +681,7 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
   assert.match(route, /expectedCopy\[fieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
+  assert.match(route, /compositeCloneRegionEdit/);
   assert.match(route, /capabilities\.inpainting/);
 
   // Undo history and a real failure mode.

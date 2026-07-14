@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  compositeCloneRegionEdit,
   createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
@@ -203,13 +204,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         attempt,
       });
       const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
-      lastImage = { ...generated, assetUrl: exactAssetUrl };
+      const boundedAssetUrl = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      lastImage = { ...generated, assetUrl: boundedAssetUrl };
 
       qa = await runCloneQa({
         workspaceId: context.access.workspaceId,
         userId: context.access.userId,
         correlationId,
-        imageUrl: exactAssetUrl,
+        imageUrl: boundedAssetUrl,
         expectedCopy,
         format: String(row.format ?? "4:5"),
         attempt,
