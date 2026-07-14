@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
@@ -170,9 +171,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     fieldLabel,
     newValue,
     newImage,
+    expectedCopy,
     aspectRatio: String(row.format ?? "4:5"),
   });
-  const providers = await resolveCloneProviders();
+  const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === fieldKey);
+  baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
+  // A targeted edit should use a provider that can enforce the QA region mask
+  // before a full-frame image-to-image provider that can only follow the text.
+  const providers = (await resolveCloneProviders()).sort(
+    (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
+  );
 
   const correlationId = mutationId;
 

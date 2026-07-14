@@ -94,6 +94,7 @@ export type TargetedEditInputs = {
   fieldLabel: string;
   newValue: string;
   newImage?: string;
+  expectedCopy?: Record<string, string>;
   aspectRatio: string;
   seed?: number;
 };
@@ -101,9 +102,15 @@ export type TargetedEditInputs = {
 /** Build a single-element edit anchored on the current finished ad. */
 export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProviderRequest {
   const referenceAssets = inputs.newImage ? [inputs.currentImage, inputs.newImage] : [inputs.currentImage];
+  const preservationContract = Object.entries(inputs.expectedCopy ?? {})
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join("; ");
+  const preservationInstruction = preservationContract
+    ? ` Every listed text value must remain visible and character-for-character exact: ${preservationContract}.`
+    : "";
   const instruction = inputs.newImage
-    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.`
-    : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.`;
+    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
+    : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.${preservationInstruction}`;
 
   return {
     prompt: instruction,

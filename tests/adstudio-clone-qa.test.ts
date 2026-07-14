@@ -10,6 +10,7 @@ import {
   normalizeRenderedText,
 } from "../src/lib/adstudio/clone-qa.ts";
 import {
+  createCloneRegionEditMask,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
 } from "../src/lib/adstudio/clone-generation.ts";
@@ -58,6 +59,30 @@ test("provider-native portrait renders are cropped to exact Meta placement ratio
     { width: feedMetadata.width, height: feedMetadata.height },
     { width: 1024, height: 1280 },
   );
+});
+
+test("targeted edit masks preserve the full ad outside the selected QA region", async () => {
+  const { default: sharp } = await import("sharp");
+  const creative = await sharp({
+    create: {
+      width: 100,
+      height: 100,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const source = `data:image/png;base64,${creative.toString("base64")}`;
+  const mask = await createCloneRegionEditMask(source, { x: 0.4, y: 0.4, width: 0.2, height: 0.2 });
+
+  assert.ok(mask);
+  const { data, info } = await sharp(Buffer.from(mask.split(",")[1], "base64"))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const alphaAt = (x: number, y: number) => data[(y * info.width + x) * info.channels + 3];
+  assert.equal(alphaAt(10, 10), 255, "pixels outside the edit region remain opaque");
+  assert.equal(alphaAt(50, 50), 0, "pixels inside the edit region are transparent");
+  assert.equal(await createCloneRegionEditMask(source), undefined);
 });
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
@@ -632,6 +657,8 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
   // overridden, so unrelated drift fails QA too.
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
   assert.match(route, /expectedCopy\[fieldKey\] = newValue/);
+  assert.match(route, /createCloneRegionEditMask/);
+  assert.match(route, /capabilities\.inpainting/);
 
   // Undo history and a real failure mode.
   assert.match(route, /renderHistory/);

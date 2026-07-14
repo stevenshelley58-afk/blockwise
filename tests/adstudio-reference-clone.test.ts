@@ -67,11 +67,19 @@ test("post-clone edits anchor on the current finished ad and change one target",
     currentImage: "data:image/png;base64,CURRENT",
     fieldLabel: "price",
     newValue: "$1,250,000",
+    expectedCopy: {
+      headline: "JUST LISTED TODAY",
+      price: "$1,250,000",
+      website_handle: "SAMPLE TEXT",
+    },
     aspectRatio: "4:5",
   });
   assert.deepEqual(textEdit.referenceAssets, ["data:image/png;base64,CURRENT"]);
   assert.match(textEdit.prompt, /Change only the price/);
   assert.match(textEdit.prompt, /Keep every other pixel unchanged/);
+  assert.match(textEdit.prompt, /character-for-character exact/);
+  assert.match(textEdit.prompt, /headline: "JUST LISTED TODAY"/);
+  assert.match(textEdit.prompt, /website_handle: "SAMPLE TEXT"/);
 
   const imageEdit = buildTargetedEditRequest({
     currentImage: "data:image/png;base64,CURRENT",
