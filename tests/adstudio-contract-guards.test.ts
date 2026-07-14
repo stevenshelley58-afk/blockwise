@@ -39,3 +39,18 @@ test("editing is available only on the finished image", () => {
   assert.match(editor, /\/api\/adstudio\/creatives\/\$\{creative\.creativeId\}\/edit/);
   assert.match(editor, /renderHistory/);
 });
+
+test("the retired image profile stays removed", () => {
+  const retiredKey = ["image", "generative"].join("_");
+  const retiredLabel = ["Image", "generative"].join(" ");
+  const createMoreLabel = ["Create", "more", "options"].join(" ");
+  const retiredMigration = `supabase/migrations/202606200001_${retiredKey}_and_best_defaults.sql`;
+  const currentMigration = readFileSync("supabase/migrations/202606200001_best_model_defaults.sql", "utf8");
+  const cleanupMigration = readFileSync("supabase/migrations/202607140001_remove_retired_image_profile.sql", "utf8");
+
+  assert.equal(existsSync(retiredMigration), false);
+  assert.doesNotMatch(currentMigration, new RegExp(`${retiredKey}|${retiredLabel}|${createMoreLabel}`, "i"));
+  assert.match(cleanupMigration, /prompt_reference_count/);
+  assert.match(cleanupMigration, /run_reference_count/);
+  assert.match(cleanupMigration, /delete from public\.model_profiles/);
+});

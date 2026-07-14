@@ -71,7 +71,11 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
 
     await openNewAd(page);
     await chooseCloneSample(page);
-    await uploadRequiredSampleImages(page, testInfo.outputPath("listing.png"));
+    await uploadRequiredSampleImages(
+      page,
+      testInfo.outputPath("listing.png"),
+      testInfo.outputPath("logo.png"),
+    );
     await fillCustomerCopyFields(page);
     // The brief label is sample-specific (e.g. "Listing details") and the
     // dialog title can match the same words — target the textbox role so the
@@ -232,13 +236,20 @@ async function fillCustomerCopyFields(page: Page) {
 // slot blocks
 // submit() with a footer alert, not a disabled button. Fill them all, waiting
 // out each slot's upload round-trip before starting the next.
-async function uploadRequiredSampleImages(page: Page, path: string) {
-  await writeListingPng(page, path);
+async function uploadRequiredSampleImages(page: Page, listingPath: string, logoPath: string) {
+  await Promise.all([
+    writeListingPng(page, listingPath),
+    writeLogoPng(page, logoPath),
+  ]);
   const inputs = page.locator('.studio-newad input[type="file"]');
   const count = await inputs.count();
   expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {
-    await inputs.nth(index).setInputFiles(path);
+    const input = inputs.nth(index);
+    const label = ((await input.evaluate(
+      (el) => el.closest(".asset-upload-zone")?.textContent ?? "",
+    )) as string).toLowerCase();
+    await input.setInputFiles(label.includes("logo") ? logoPath : listingPath);
     await expect(
       page.locator('.studio-newad .asset-upload-zone[data-has-file="true"]'),
       `image slot ${index + 1} of ${count} should finish uploading`,
@@ -367,6 +378,34 @@ async function writeListingPng(page: Page, path: string) {
     ctx.fillStyle = "#9ec7e8";
     ctx.fillRect(280, 500, 120, 100);
     ctx.fillRect(680, 500, 120, 100);
+    return canvas.toDataURL("image/png");
+  });
+  const base64 = dataUrl.split(",")[1] ?? "";
+  await import("node:fs/promises").then((fs) => fs.writeFile(path, Buffer.from(base64, "base64")));
+}
+
+async function writeLogoPng(page: Page, path: string) {
+  const dataUrl = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 960;
+    canvas.height = 320;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas 2d context unavailable");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#102a43";
+    ctx.beginPath();
+    ctx.moveTo(70, 205);
+    ctx.lineTo(170, 95);
+    ctx.lineTo(270, 205);
+    ctx.lineTo(235, 205);
+    ctx.lineTo(170, 135);
+    ctx.lineTo(105, 205);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = "700 54px Arial";
+    ctx.textBaseline = "middle";
+    ctx.fillText("SCARBOROUGH HOMES", 305, 160);
     return canvas.toDataURL("image/png");
   });
   const base64 = dataUrl.split(",")[1] ?? "";
