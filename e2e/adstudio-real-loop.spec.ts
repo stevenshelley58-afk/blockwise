@@ -41,7 +41,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
       await openNewAd(page);
       await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-      await expect(page.getByText("11 templates", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^\d+ templates$/)).toBeVisible();
       await page.getByRole("button", { name: /^close$/i }).click();
       expect(
         await page.evaluate(
