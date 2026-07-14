@@ -51,6 +51,16 @@ test("workbench wraps the post-clone editor in MetaChromePreview", () => {
   assert.doesNotMatch(workbench, /FabricAdEditor|fabric-ad-editor/);
 });
 
+test("desktop preview fits the complete Meta ad inside the stage without an internal scrollbar", () => {
+  assert.match(workbench, /function PreviewFit/);
+  assert.match(workbench, /new ResizeObserver\(fit\)/);
+  assert.match(workbench, /Math\.min\(1, frame\.clientWidth \/ contentWidth, frame\.clientHeight \/ contentHeight\)/);
+  assert.match(workbench, /<PreviewFit enabled=\{!isMobileViewport\}>/);
+  assert.match(styles, /\.studio-preview-fit\{[^}]*height:100%[^}]*overflow:hidden/);
+  assert.match(styles, /\.studio-metachrome\{overflow:visible/);
+  assert.doesNotMatch(styles, /\.studio-metachrome\{[^}]*overflow:auto/);
+});
+
 test("story chrome overlays avatar, Sponsored, progress bars and CTA pill without blocking edits", () => {
   assert.match(preview, /studio-metachrome-story-chrome/);
   assert.match(preview, /studio-metachrome-story-progress/);

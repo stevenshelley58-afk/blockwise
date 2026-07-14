@@ -197,7 +197,10 @@
 .studio-fabric-shell[data-format="4:5"]{width:min(475px,82%)}
 .studio-fabric-shell[data-format="1:1"]{width:min(520px,84%)}
 .studio-editor-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
-.studio-clone-editor-wrap{display:grid;justify-items:center;gap:14px;max-width:100%}
+.studio-clone-editor-wrap{width:100%;height:100%;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;gap:14px;max-width:100%}
+.studio-preview-fit{position:relative;width:100%;height:100%;min-height:0;overflow:hidden}
+.studio-preview-fit-content{position:absolute;top:50%;left:50%;transform-origin:center;will-change:transform}
+.studio-preview-fit-content>.studio-metachrome{width:500px}
 .studio-clone-stage{position:relative;display:grid;justify-items:center;gap:10px}
 .studio-clone-stage img{display:block;max-width:min(475px,82%);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
 .studio-clone-warning-strip{width:min(520px,92vw);display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid rgba(245,158,11,.35);border-radius:8px;background:#fff8eb;color:#563407;padding:10px 12px;box-shadow:0 12px 28px rgba(30,41,59,.16)}
@@ -547,7 +550,7 @@
 /* Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
    itself is the embedded in-place editor, never a second static render. */
-.studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:0;scrollbar-width:thin;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.studio-metachrome{overflow:visible;border-radius:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
 .studio-metachrome-card{width:min(500px,92vw);max-width:100%;overflow:visible;border-radius:0;background:#fff;color:#050505}
 .studio-metachrome-card header{height:64px;padding:12px 16px}
 .studio-metachrome-card .studio-feed-id{gap:8px}
