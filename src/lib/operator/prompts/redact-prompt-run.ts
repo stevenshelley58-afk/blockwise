@@ -222,14 +222,32 @@ export async function reserveAdStudioProviderAttempt(input: {
   if (error) {
     throw new ProviderRunPersistenceError(`Provider attempt could not be reserved: ${error.message}`);
   }
-  const acquired = data && typeof data === "object" && !Array.isArray(data)
-    ? (data as { acquired?: unknown }).acquired
-    : false;
-  if (acquired !== true) {
+  const reservationResult = parseProviderAttemptReservationResult(data);
+  if (!reservationResult.acquired) {
     throw new ProviderRunPersistenceError(
-      "Provider attempt reservation was already claimed; duplicate request was not sent.",
+      `Provider attempt reservation was already claimed (${reservationResult.responseShape}, status ${reservationResult.status ?? "unknown"}); duplicate request was not sent.`,
     );
   }
+}
+
+export function parseProviderAttemptReservationResult(data: unknown): {
+  acquired: boolean;
+  status: string | null;
+  responseShape: "object" | "single-row-array" | "invalid";
+} {
+  const row = Array.isArray(data) && data.length === 1 ? data[0] : data;
+  const responseShape = Array.isArray(data)
+    ? data.length === 1 ? "single-row-array" : "invalid"
+    : data && typeof data === "object" ? "object" : "invalid";
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return { acquired: false, status: null, responseShape: "invalid" };
+  }
+  const result = row as { acquired?: unknown; status?: unknown };
+  return {
+    acquired: result.acquired === true,
+    status: typeof result.status === "string" ? result.status : null,
+    responseShape,
+  };
 }
 
 export async function markAdStudioProviderAttemptSubmitted(input: {

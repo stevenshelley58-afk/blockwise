@@ -26,6 +26,7 @@ import {
   buildRedactedProviderRunInput,
   deriveProviderRunIdentity,
   estimateAdStudioProviderRunCostUsd,
+  parseProviderAttemptReservationResult,
   redactRecord,
   shouldRecoverProviderRun,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
@@ -463,6 +464,20 @@ test("an orphaned reservation uses the database recovery finalizer", () => {
     }),
     false,
   );
+});
+
+test("provider reservation accepts object and single-row PostgREST response shapes", () => {
+  assert.deepEqual(parseProviderAttemptReservationResult({ acquired: true, status: "reserved" }), {
+    acquired: true,
+    status: "reserved",
+    responseShape: "object",
+  });
+  assert.deepEqual(parseProviderAttemptReservationResult([{ acquired: true, status: "reserved" }]), {
+    acquired: true,
+    status: "reserved",
+    responseShape: "single-row-array",
+  });
+  assert.equal(parseProviderAttemptReservationResult([]).acquired, false);
 });
 
 test("missing provider usage is unreconciled instead of a zero-cost estimate", () => {
