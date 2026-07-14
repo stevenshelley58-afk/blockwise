@@ -105,7 +105,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ...(firstCopyPack?.meta ? { meta: publishableConnectionStatus(metaConnection?.status) } : {}),
     ...(firstCopyPack?.googleSearch ? { google: publishableConnectionStatus(googleConnection?.status) } : {}),
   };
-  const legacyReadiness = resolveAdStudioPublishReadiness({
+  const providerPayloadReadiness = resolveAdStudioPublishReadiness({
     providerStatuses,
     approvalStatus: existingApproval.status,
     complianceStatus: pack.compliance.status,
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     blockers,
     providerWritesEnabled: writesEnabled,
     publishRequests,
-    providerPayloadReadiness: legacyReadiness,
+    providerPayloadReadiness,
     metaPublishPlan: metaPublishPlan
       ? {
           id: metaPublishPlan.planId,

@@ -19,7 +19,7 @@ import {
 } from "./clone-generation.ts";
 import { cloneQaCorrectionPrompt, runCloneQa } from "./clone-qa.ts";
 import { generateAdStudioTemplateCopy } from "./copy-generation.ts";
-import { generateAdStudioCampaignPack } from "./generator.ts";
+import { buildCloneCampaignPack } from "./clone-campaign.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
 import {
@@ -37,8 +37,6 @@ import type {
   AdStudioCampaignPack,
   AdStudioCloneQa,
   AdStudioFormat,
-  AdStudioGoal,
-  AdStudioPlatform,
   FirstAdInput,
 } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
@@ -58,16 +56,10 @@ export type SupabaseGenerationClient = SupabaseServerClient | SupabaseServiceCli
 /** The campaigns POST body — shared with the route and the job payload. */
 export type CreateCampaignBody = {
   brandKit?: AdStudioBrandKit;
-  goal?: AdStudioGoal;
   suburb?: string;
   city?: string;
   state?: string;
-  offerId?: string;
-  platforms?: AdStudioPlatform[];
-  creativeFormats?: AdStudioFormat[];
-  variantCount?: number;
-  firstAd?: FirstAdInput;
-  sourceImageDataUrl?: string;
+  firstAd: FirstAdInput;
 };
 
 export type RunTemplateCampaignGenerationInput = {
@@ -412,19 +404,13 @@ export async function runTemplateCampaignGeneration(
 
       buildCampaign: (cloneRendersByFormat) => {
         const primaryClone = cloneRendersByFormat[PRIMARY_CLONE_FORMAT];
-        const generatedPack = generateAdStudioCampaignPack({
-    workspaceId: input.workspaceId,
-    brandKit,
-    goal: template.goal ?? body.goal ?? "seller_leads",
-    suburb: body.suburb ?? "Scarborough",
-    city: body.city ?? "Perth",
-    state: body.state ?? "WA",
-    offerId: template.offerId ?? body.offerId ?? "seller_prep_checklist",
-    // Google Ads remain parked while this product creates Meta ads only.
-    platforms: body.platforms ?? ["meta"],
-    creativeFormats: body.creativeFormats,
-    variantCount: body.variantCount ?? 5,
-    firstAd: {
+        const generatedPack = buildCloneCampaignPack({
+          workspaceId: input.workspaceId,
+          brandKit,
+          suburb: body.suburb ?? "Scarborough",
+          city: body.city ?? "Perth",
+          state: body.state ?? "WA",
+          firstAd: {
       ...firstAd,
       imageDataUrl: primaryClone.image,
       templateCloneImage: primaryClone.image,
@@ -444,9 +430,7 @@ export async function runTemplateCampaignGeneration(
           : {}),
       },
       copy: copyResult.copy,
-    },
-    sourceImageDataUrl: body.sourceImageDataUrl,
-    sourceImagesBySlot: firstAd.imageDataUrls,
+          },
         });
         return applyProvidedCopyToCampaignPack(generatedPack, copyResult.copy);
       },

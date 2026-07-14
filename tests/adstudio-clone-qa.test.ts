@@ -796,11 +796,10 @@ test("targeted edit endpoint anchors on the current image and re-verifies the wh
 });
 
 test("template generation accepts only QA-passing clone renders", () => {
-  const generator = readFileSync("src/lib/adstudio/generator.ts", "utf8");
+  const builder = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
-  assert.match(generator, /cloneQa: input\.cloneQa/);
-  assert.match(generator, /templateCloneQaByFormat: input\.firstAd\?\.templateCloneQaByFormat/);
+  assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
   // Generation may persist only after every format receives a passing verdict.
   assert.match(generation, /templateCloneQa: primaryClone\.qa \?\? undefined/);
   assert.match(generation, /templateCloneQaByFormat/);
@@ -818,12 +817,12 @@ test("clone QA derives exactness from rendered copy instead of trusting the mode
   assert.match(source, /normalizeRenderedText\(rendered\) === normalizeRenderedText\(expected\)/);
 });
 
-test("campaign enrichment cannot ship partial copy after accounting persistence fails", () => {
+test("provided copy updates metadata without creating a second image-generation path", () => {
   const enrichment = readFileSync("src/lib/adstudio/campaign-copy-enrichment.ts", "utf8");
   const scoring = readFileSync("src/lib/adstudio/scoring.ts", "utf8");
 
-  assert.match(enrichment, /result\.reason instanceof ProviderRunPersistenceError/);
-  assert.match(enrichment, /if \(accountingError\) throw accountingError/);
+  assert.match(enrichment, /creatives: pack\.creatives/);
+  assert.doesNotMatch(enrichment, /generateAdStudioCopy|Promise\.allSettled/);
   assert.doesNotMatch(scoring, /Provider run persistence failed[\s\S]*console\.warn/);
   assert.match(scoring, /if \(error instanceof ProviderRunPersistenceError\) throw error/);
 });

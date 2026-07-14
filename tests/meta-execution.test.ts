@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  approveAdStudioBrandKitForUse,
-  extractBrandKitFromWebsite,
-  generateAdStudioCampaignPack,
-} from "../src/lib/adstudio/index.ts";
+import { buildCloneTestPack } from "./adstudio-clone-fixture.ts";
 import {
   buildMetaPublishTaskOptions,
   buildMetaPlanIdempotencyKey,
@@ -17,24 +13,6 @@ import {
   type MetaConnectionSetup,
   type MetaPublishControls,
 } from "../src/lib/providers/meta-execution.ts";
-
-const sampleHtml = `
-  <html>
-    <head>
-      <title>Northstar Realty Perth</title>
-      <link rel="icon" href="/favicon.ico">
-      <style>:root { --brand: #087f7a; } body { font-family: Inter, sans-serif; color: #18201f; }</style>
-    </head>
-    <body>
-      <img src="/logo.svg" alt="Northstar Realty logo">
-      <main>
-        <h1>Calm property advice for Perth sellers</h1>
-        <p>Information is general only. Speak with a licensed local agent.</p>
-        <a href="/privacy">Privacy</a>
-      </main>
-    </body>
-  </html>
-`;
 
 const setup: MetaConnectionSetup = {
   metaAdAccountId: "act_123",
@@ -67,28 +45,7 @@ const controls: MetaPublishControls = {
 };
 
 function buildPack() {
-  const brandKit = approveAdStudioBrandKitForUse(
-    extractBrandKitFromWebsite({
-      workspaceId: "workspace_demo",
-      websiteUrl: "https://northstar.example",
-      marketCountry: "AU",
-      htmlByUrl: {
-        "https://northstar.example": sampleHtml,
-      },
-    }),
-  );
-
-  return generateAdStudioCampaignPack({
-    workspaceId: "workspace_demo",
-    brandKit,
-    goal: "seller_leads",
-    suburb: "Scarborough",
-    city: "Perth",
-    state: "WA",
-    offerId: "seller_prep_checklist",
-    platforms: ["meta"],
-    variantCount: 5,
-  });
+  return buildCloneTestPack("workspace_demo");
 }
 
 test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {

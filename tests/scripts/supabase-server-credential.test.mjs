@@ -10,9 +10,7 @@ import {
 
 const legacyJwt = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature";
 const liveScripts = [
-  "scripts/adstudio-repair-production-data.mjs",
   "scripts/e2e/seed-adstudio-e2e.mjs",
-  "scripts/migrations/snapshot-legacy-creatives.mjs",
   "scripts/record-meta-app-review.mjs",
   "scripts/research/reconcile-exa-wa-roster-sources.mjs",
   "scripts/research/seed-exa-wa-roster-sources.mjs",

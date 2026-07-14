@@ -2,7 +2,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-export const STYLE_EXTRACTOR_VERSION = "style-extractor-v1";
+export const STYLE_EXTRACTOR_VERSION = "style-extractor";
 
 // The text descriptor extracted from a radar image.
 // do_not_copy is always true — the extractor enforces it regardless of model output.

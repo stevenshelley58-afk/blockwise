@@ -186,7 +186,6 @@ type VariantStripProps = {
   onAdd?: () => void;
   onEditCopy?: (index: number) => void;
   onReplaceImage?: (index: number) => void;
-  onRegenerate?: (index: number) => void;
   /** Staged generation: skeleton tiles + phase label while ads are being generated. */
   pending?: { phase: string; count: number; error: string | null } | null;
   onRetryPending?: () => void;
@@ -201,7 +200,6 @@ export function VariantStrip({
   onAdd,
   onEditCopy,
   onReplaceImage,
-  onRegenerate,
   pending = null,
   onRetryPending,
   onDismissPending,
@@ -265,7 +263,6 @@ export function VariantStrip({
               <div className="studio-variant-actions">
                 <button type="button" onClick={() => onEditCopy?.(index)}>Edit copy</button>
                 <button type="button" onClick={() => onReplaceImage?.(index)}>Replace image</button>
-                <button type="button" onClick={() => onRegenerate?.(index)}>Regenerate</button>
               </div>
             )}
           </article>

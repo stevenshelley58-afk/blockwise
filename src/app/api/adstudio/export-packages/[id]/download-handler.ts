@@ -1,4 +1,5 @@
 import type { CreativeExportRender } from "../../../../../lib/adstudio/creative-export.ts";
+import { isFinishedCloneCreative } from "../../../../../lib/adstudio/clone-creative.ts";
 import type { AdStudioCampaignPack } from "../../../../../lib/adstudio/types.ts";
 
 type MaybePromise<Value> = Value | Promise<Value>;
@@ -14,11 +15,6 @@ export type ExportDownloadDependencies<Store> = {
     workspaceId: string,
     campaignId: string,
   ): Promise<AdStudioCampaignPack | null>;
-  hydrateRenders(
-    store: Store,
-    workspaceId: string,
-    renders: CreativeExportRender[],
-  ): Promise<CreativeExportRender[]>;
   renderFlatClones(
     store: Store,
     workspaceId: string,
@@ -50,38 +46,17 @@ export async function handleAdStudioExportDownload<Store>(input: {
     );
   }
 
-  const containsOnlyFlatClones = authoritativePack.creatives.length > 0 && authoritativePack.creatives.every(
-    (creative) =>
-      creative.canvas.objects.length === 1 &&
-      creative.canvas.objects[0]?.objectId === "template_clone_image",
-  );
-  if (containsOnlyFlatClones) {
-    const creativeRenders = await input.dependencies.renderFlatClones(
-      access.store,
-      access.workspaceId,
-      authoritativePack,
-    );
-    const exportPackage = await input.dependencies.buildPackage(
-      authoritativePack,
-      { creativeRenders },
-    );
-    return packageResponse(authoritativePack, exportPackage);
-  }
-
-  const body = await input.request.json().catch(() => null) as {
-    creativeRenders?: CreativeExportRender[];
-  } | null;
-  if (!Array.isArray(body?.creativeRenders)) {
+  if (authoritativePack.creatives.length === 0 || !authoritativePack.creatives.every(isFinishedCloneCreative)) {
     return jsonResponse(
-      { code: "invalid_export_payload", error: "Creative renders are required." },
-      400,
+      { code: "clone_required", error: "Create this ad from a sample before exporting." },
+      409,
     );
   }
 
-  const creativeRenders = await input.dependencies.hydrateRenders(
+  const creativeRenders = await input.dependencies.renderFlatClones(
     access.store,
     access.workspaceId,
-    body.creativeRenders,
+    authoritativePack,
   );
   const exportPackage = await input.dependencies.buildPackage(
     authoritativePack,

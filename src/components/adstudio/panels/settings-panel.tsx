@@ -38,7 +38,7 @@ export function SettingsPanel({ market, propertyType, onChangeMarket, onChangePr
       </div>
       <details className="studio-advanced">
         <summary>More actions</summary>
-        <p>Duplicate, export, archive, share, and reset actions live in the More menu.</p>
+        <p>Export, archive, share, and reset actions live in the More menu.</p>
       </details>
     </>
   );

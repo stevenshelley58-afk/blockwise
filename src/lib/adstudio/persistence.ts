@@ -233,7 +233,6 @@ function compactCreativeCanvas(
 ): AdStudioCreative["canvas"] {
   return {
     ...creativeCanvas,
-    fabricJson: null,
     objects: creativeCanvas.objects.map((object) => {
       if (object.role !== "primary_image" || keepPrimaryImage) return object;
       return { ...object, content: undefined };

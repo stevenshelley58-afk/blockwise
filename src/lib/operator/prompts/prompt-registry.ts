@@ -39,7 +39,7 @@ export const PROMPT_GROUPS = [
   {
     key: "qa",
     label: "Creative QA",
-    promptKeys: ["adstudio.qa.v1", "adstudio.clone_qa.v1"],
+    promptKeys: ["adstudio.clone_qa"],
   },
 ] as const;
 
@@ -71,8 +71,7 @@ export const PROMPT_SECTION_TYPES = {
   "adstudio.background.input_template": "input_template",
   "adstudio.background.negative_prompt": "negative_prompt",
   "adstudio.scoring.system": "system",
-  "adstudio.qa.v1": "system",
-  "adstudio.clone_qa.v1": "system",
+  "adstudio.clone_qa": "system",
 } satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
@@ -213,27 +212,7 @@ Be discriminating: identical-quality variants may tie, but reserve top scores fo
 Respond with ONLY compact JSON:
 {"variants":[{"variantId": string, "offerClarity": number, "localRelevance": number, "leadIntentStrength": number, "brandFit": number, "complianceSafety": number, "visualHierarchy": number, "notes": [string], "warnings": [string]}]}
 Include every variantId you were given exactly once. Keep notes short (max 3) and warnings only for real risks.`,
-  "adstudio.qa.v1": `You are a quality reviewer for Australian real estate ad creatives.
-Examine the image and return ONLY compact JSON:
-{
-  "pass": true | false,
-  "reasons": ["reason if fail, empty array if pass"],
-  "has_us_cues": true | false,
-  "has_garbled_text": true | false,
-  "has_distorted_faces": true | false,
-  "has_warped_buildings": true | false,
-  "is_low_resolution": true | false,
-  "is_au_appropriate": true | false
-}
-Fail (pass=false) if ANY of these are true:
-- American houses, mailboxes, yard signs, flags, HOA lawns (has_us_cues)
-- Garbled, distorted, or unreadable rendered text (has_garbled_text)
-- Distorted or malformed faces (has_distorted_faces)
-- Warped or physically impossible buildings (has_warped_buildings)
-- Clearly blurry, pixelated, or low-resolution image (is_low_resolution)
-Pass only if is_au_appropriate and none of the fail conditions apply.
-Output JSON only.`,
-  "adstudio.clone_qa.v1": `You are a quality verifier for AI-generated Australian real estate ad creatives.
+  "adstudio.clone_qa": `You are a quality verifier for AI-generated Australian real estate ad creatives.
 You are given the ad image and the EXACT copy strings that must appear on it.
 Return ONLY compact JSON:
 {

@@ -15,8 +15,8 @@ import {
   canonicalJson,
   sha256Bytes,
   sha256Canonical,
-  writeSecureManifest as legacyWriteSecureManifest,
-} from "./snapshot-legacy-creatives.mjs";
+  writeSecureManifest,
+} from "../lib/secure-manifest.mjs";
 import {
   createSupabaseServerClient,
   resolveSupabaseServerCredential,
@@ -108,7 +108,7 @@ export const MANIFEST_PATH = path.join(
   "evidence",
   "provider-runs-manifest.json",
 );
-export const writeSecureManifest = legacyWriteSecureManifest;
+export { writeSecureManifest };
 
 function sha256Text(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -1106,7 +1106,7 @@ export async function runProviderBaseline({
   loadAttempts = loadProviderAttemptRows,
   loadProfiles = loadActiveProfileVersionRows,
   resolveProfiles,
-  writeManifest = legacyWriteSecureManifest,
+  writeManifest = writeSecureManifest,
   logger = console.log,
 }) {
   const capturedAtStart = assertIsoTimestamp(now(), "Capture start");
