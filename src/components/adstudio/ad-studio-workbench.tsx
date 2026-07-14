@@ -424,13 +424,18 @@ export function AdStudioWorkbench({
   // visible and reselectable right away, not only after a reload.
   // Demo/sample imagery is only shown when viewing the sample workspace; real
   // users see only their own uploaded and workspace assets.
-  const demoAssets = isSample ? MEDIA_ASSETS : [];
   // The Media tab shows the customer's own assets (uploads + workspace/brand-kit
-  // images); demo imagery only on the sample workspace. Dedupe by src.
-  const mediaAssets = dedupeAssetsBySrc([
-    ...uploadedAssets,
-    ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : demoAssets),
-  ]);
+  // images); demo imagery only on the sample workspace. Keep this collection
+  // referentially stable so unrelated workbench progress updates cannot reset
+  // consumers such as the in-progress New Ad form.
+  const mediaAssets = useMemo(
+    () =>
+      dedupeAssetsBySrc([
+        ...uploadedAssets,
+        ...(workspaceMediaAssets.length > 0 ? workspaceMediaAssets : isSample ? MEDIA_ASSETS : []),
+      ]),
+    [isSample, uploadedAssets, workspaceMediaAssets],
+  );
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
@@ -1338,7 +1343,10 @@ export function AdStudioWorkbench({
 
       <NewAdDialog
         open={samplePickerOpen}
-        onClose={() => setSamplePickerOpen(false)}
+        onClose={() => {
+          setSamplePickerOpen(false);
+          setSamplePickerInitialId(undefined);
+        }}
         brandKit={brandKit}
         workspaceId={workspaceId}
         templates={adTemplates}

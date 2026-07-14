@@ -326,6 +326,19 @@ test("Ad Radar remains research-only and cannot bypass the sample clone path", (
   assert.match(firstAdInput, /templateId: string/);
 });
 
+test("New Ad generation progress cannot reset the completed template form", () => {
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+
+  assert.match(workbench, /const mediaAssets = useMemo\(/);
+  assert.match(dialog, /const latestMediaAssetsRef = useRef\(mediaAssets\)/);
+  assert.match(dialog, /setDialogMediaAssets\(dedupeImageLibraryAssets\(latestMediaAssetsRef\.current\)\)/);
+  assert.doesNotMatch(dialog, /\}, \[open, initialTemplateId, mediaAssets\]\);/);
+  assert.match(dialog, /aria-busy=\{submitting\}/);
+  assert.match(dialog, /Creating your ad\. This can take a few minutes\./);
+  assert.match(dialog, /setError\(caught instanceof Error \? caught\.message : "Could not generate the ad\."\)/);
+});
+
 test("draft compaction deduplicates only the same image source, not feed and story clones", () => {
   const source = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
   assert.match(source, /keptByVariantAndSource/);
