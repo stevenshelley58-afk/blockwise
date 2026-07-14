@@ -297,25 +297,37 @@ export function BrandStudio({ brandKit: initialKit }: { brandKit: AdStudioBrandK
       <div className="bs-empty">
         <div className="bs-empty-panel">
           <span className="chip warn">Brand needed</span>
-          <h2>Scan your website</h2>
-          <p>Add your agency website to build a real brand kit before editing colours, logos, and ad previews.</p>
-          <div className="scanline">
-            <span className="url">
+          <h2>Enter your website. We’ll build your brand kit.</h2>
+          <p>We’ll find your logo, colours, fonts, and business details automatically. You can review everything before it is used.</p>
+          <form
+            className="site-setup"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void scanSite();
+            }}
+          >
+            <label htmlFor="brand-website">Your website address</label>
+            <div className="scanline">
+              <span className="url">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
               </svg>
               <input
+                id="brand-website"
                 value={scanUrl}
-                aria-label="Website"
-                placeholder="youragency.com.au"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="e.g. youragency.com.au"
                 onChange={(event) => setScanUrl(event.target.value)}
               />
-            </span>
-            <button type="button" className="go" disabled={busy} onClick={() => void scanSite()}>
-              {busy ? "Scanning..." : "Scan site"}
-            </button>
-          </div>
+              </span>
+              <button type="submit" className="go" disabled={busy}>
+                {busy ? "Building your kit…" : "Build my brand kit"}
+              </button>
+            </div>
+            <small>That’s all we need to get started. You can change anything we find.</small>
+          </form>
         </div>
       </div>
     </main>
@@ -540,18 +552,37 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
               onChange={(event) => setIdentity("businessName", event.target.value)}
             />
           </h2>
-          <div className="scanline">
-            <span className="url">
+          <form
+            className="site-setup"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void scanSite();
+            }}
+          >
+            <strong>Enter your website and we’ll do the setup</strong>
+            <span className="site-setup-copy">We’ll pull in your logo, colours, fonts, and business details automatically.</span>
+            <label htmlFor="brand-website">Your website address</label>
+            <div className="scanline">
+              <span className="url">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" />
               </svg>
-              <input value={scanUrl} aria-label="Website" onChange={(event) => setScanUrl(event.target.value)} />
-            </span>
-            <button type="button" className="go" disabled={busy !== ""} onClick={() => void scanSite()}>
-              {busy === "scan" ? "Scanning…" : "↻ Re-scan site"}
-            </button>
-          </div>
+                <input
+                  id="brand-website"
+                  value={scanUrl}
+                  inputMode="url"
+                  autoComplete="url"
+                  placeholder="e.g. youragency.com.au"
+                  onChange={(event) => setScanUrl(event.target.value)}
+                />
+              </span>
+              <button type="submit" className="go" disabled={busy !== ""}>
+                {busy === "scan" ? "Updating your kit…" : "Update from website"}
+              </button>
+            </div>
+            <small>Review and change anything below before you approve it.</small>
+          </form>
         </div>
 
         <div className="bs-logo-proof">
@@ -865,11 +896,15 @@ const BRAND_STYLES = `
 .bs-empty-panel{width:min(620px,100%);display:grid;gap:16px;background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:28px;box-shadow:0 12px 34px rgba(15,23,42,.08)}
 .bs-empty-panel h2{font-size:28px;line-height:1.1;margin:0;color:var(--ink)}
 .bs-empty-panel p{margin:0;color:var(--muted);line-height:1.55}
+.bs-screen .site-setup{display:grid;gap:8px;margin:0}
+.bs-screen .site-setup>label{font-size:12.5px;font-weight:650;color:inherit}
+.bs-screen .site-setup>small{font-size:12px;line-height:1.45;color:var(--muted)}
 .bs-empty .scanline{display:flex;gap:9px}
-.bs-empty .url{flex:1;height:42px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:13.5px}
+.bs-empty .url{flex:1;height:48px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:15px}
 .bs-empty .url svg{color:var(--muted);flex:0 0 auto}
 .bs-empty .url input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);min-width:0}
-.bs-empty .go{height:42px;padding:0 18px;border-radius:10px;background:var(--accent);color:#fff;font-weight:650;white-space:nowrap}
+.bs-empty .url:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.bs-empty .go{min-height:48px;padding:0 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:650;white-space:nowrap}
 .bs-empty .go:disabled{opacity:.6}
 .bs-hero{background:linear-gradient(170deg,#001b3d 0%,#0d3263 90%);color:#fff;padding:30px 28px 78px}
 .bs-hero .kick{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#9aaac3}
@@ -877,10 +912,17 @@ const BRAND_STYLES = `
 .bs-hero h2 input{font-family:Georgia,serif;font-size:38px;letter-spacing:-.5px;line-height:1.05;background:transparent;border:0;outline:0;color:#fff;width:100%;border-bottom:1.5px dashed transparent}
 .bs-hero h2 input:hover{border-bottom-color:rgba(255,255,255,.25)}
 .bs-hero h2 input:focus{border-bottom-color:#31c46f}
-.bs-hero .scanline{margin-top:18px;display:flex;gap:9px;max-width:560px}
+.bs-hero .site-setup{margin-top:18px;max-width:680px;padding:16px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.07)}
+.bs-hero .site-setup>strong{font-size:15px;font-weight:700;color:#fff}
+.bs-hero .site-setup-copy{font-size:13px;line-height:1.45;color:#d6e3ff}
+.bs-hero .site-setup>label{margin-top:4px;color:#fff}
+.bs-hero .site-setup>small{color:#d6e3ff}
+.bs-hero .scanline{display:flex;gap:9px}
 .bs-hero .url{flex:1;height:42px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px;padding:0 14px;color:#d6e3ff;font-size:13.5px}
 .bs-hero .url svg{color:#9aaac3;flex:0 0 auto}
 .bs-hero .url input{flex:1;background:transparent;border:0;outline:0;color:#d6e3ff;min-width:0}
+.bs-hero .url input::placeholder{color:#b8c6dc;opacity:1}
+.bs-hero .url:focus-within{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
 .bs-hero .go{height:42px;padding:0 18px;border-radius:10px;background:#fff;color:var(--ink);font-weight:650;white-space:nowrap}
 .bs-hero .go:disabled{opacity:.6}
 .bs-logo-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:740px;margin:-50px 28px 0;position:relative;z-index:2}
@@ -976,7 +1018,8 @@ const BRAND_STYLES = `
   .bs-rail{position:static}
   .bs-logo-proof{grid-template-columns:1fr;margin:-50px 16px 0}
   .bs-hero h2 input{font-size:28px}
-  .bs-empty .scanline{display:grid}
+  .bs-screen .scanline{display:grid}
+  .bs-screen .go{width:100%;min-height:44px}
   .bs-two{grid-template-columns:1fr}
 }
 `;
