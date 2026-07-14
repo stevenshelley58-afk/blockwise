@@ -14,8 +14,8 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /studio\.mobileTab === "media"/);
   assert.match(mobileBody, /studio\.mobileTab === "text"/);
   assert.match(mobileBody, /label: "Home"/);
-  assert.match(mobileBody, /label: "Templates"/);
-  assert.match(mobileBody, /templatePickerOpen/);
+  assert.match(mobileBody, /label: "Samples"/);
+  assert.match(mobileBody, /samplePickerOpen/);
   assert.match(mobileBody, /label: "Media"/);
   assert.match(mobileBody, /label: "Text"/);
   assert.match(mobileBody, /label: "Publish"/);
@@ -30,7 +30,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mediaPanel, /AssetUploadDropzone/);
   assert.match(mediaPanel, /capturePagePaste/);
   assert.doesNotMatch(mediaPanel, /Auto fit all ad sizes|Auto fit current size|studio-image-repair-actions/);
-  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "templates"/);
+  assert.doesNotMatch(mobileBody, /studio\.mobileTab === "samples"/);
 });
 
 test("brief copy generation leaves editable copy visible with inline feedback", () => {

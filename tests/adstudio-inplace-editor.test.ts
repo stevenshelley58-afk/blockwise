@@ -63,12 +63,12 @@ test("creatives without QA regions show the plain image without a badge", () => 
 });
 
 test("workbench renders the in-place editor for clone creatives", () => {
-  // P2.2: the editor is embedded in the Meta chrome, never replaced by it.
+  // The editor is embedded in the Meta chrome, never replaced by it.
   assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?\/>[\s\S]*?<\/MetaChromePreview>/);
   assert.match(workbench, /import\("\.\/canvas\/in-place-ad-editor"\)\.then\(\(mod\) => mod\.InPlaceAdEditor\)/);
   assert.match(workbench, /const InPlaceAdEditor = dynamic/);
-  assert.match(workbench, /ssr: false, loading: \(\) => <div className="studio-fabric-loading">Loading editor\.\.\.<\/div>/);
+  assert.match(workbench, /ssr: false, loading: \(\) => <div className="studio-editor-loading">Loading editor\.\.\.<\/div>/);
   // The editor replaces the creative in pack state and arms autosave.
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
   assert.match(workbench, /showToast=\{studio\.showToast\}/);

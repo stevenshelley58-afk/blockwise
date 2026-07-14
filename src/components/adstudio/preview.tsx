@@ -94,7 +94,7 @@ type MetaChromePreviewProps = {
 };
 
 /**
- * P2.2: renders the ad exactly as Meta does around the embedded creative —
+ * Renders the ad exactly as Meta does around the embedded creative —
  * page header (avatar, brand, Sponsored), primary text above the creative,
  * then the headline/description strip with the real CTA enum button label.
  * Story format overlays the chrome instead (avatar, progress bars, CTA pill)

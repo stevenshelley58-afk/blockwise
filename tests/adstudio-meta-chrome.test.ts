@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-// P2.2 — the primary stage shows a clone creative exactly as Meta renders it:
+// The primary stage shows a clone creative exactly as Meta renders it:
 // page header, live primary text above the creative, the embedded in-place
 // editor as the creative, then headline/description strip + real CTA button.
 const preview = readFileSync("src/components/adstudio/preview.tsx", "utf8");

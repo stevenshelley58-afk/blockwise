@@ -26,7 +26,30 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
   // Real AI generation + edit + export can take several minutes end to end.
   test.setTimeout(600_000);
 
-  test("gates first-run, creates a real ad, persists edits, reloads, and exports selected variant", async ({ page }, testInfo) => {
+  test("keeps the sample-first workspace usable at supported viewport sizes", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
+    const viewports = [
+      { width: 1440, height: 900 },
+      { width: 768, height: 1024 },
+      { width: 390, height: 844 },
+      { width: 320, height: 844 },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
+      await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Samples", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `workspace should not overflow horizontally at ${viewport.width}x${viewport.height}`,
+      ).toBe(true);
+    }
+  });
+
+  test("gates first-run, clones a sample, persists a targeted edit, reloads, and exports", async ({ page }, testInfo) => {
     // The cookie banner renders late (post-hydration) and overlays the dialog
     // footer, intercepting the Generate Ad click — a click-if-visible dismissal
     // races it. Seeding the stored choice keeps it from ever rendering.
@@ -47,10 +70,10 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     }
 
     await openNewAd(page);
-    await chooseKillTestTemplate(page);
-    await uploadRequiredTemplateImages(page, testInfo.outputPath("listing.png"));
+    await chooseCloneSample(page);
+    await uploadRequiredSampleImages(page, testInfo.outputPath("listing.png"));
     await fillCustomerCopyFields(page);
-    // The brief label is template-specific (e.g. "Listing details") and the
+    // The brief label is sample-specific (e.g. "Listing details") and the
     // dialog title can match the same words — target the textbox role so the
     // locator can never resolve to the dialog container.
     await page
@@ -104,25 +127,11 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     expect(campaignId).toBeTruthy();
 
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
-    // The feed copy lives in the sidebar "Text" section (the old Copy panel).
-    await openPanel(page, "Text");
-    await page.getByRole("textbox", { name: /^headline/i }).fill("Scarborough open home");
-    await saveDraft(page);
+    const editedImage = await editGeneratedClone(page);
     await waitForSavedStatus(page);
 
-    // Template mode generates a single clone ad; the variant switch only
-    // exists when a multi-ad pack is present.
-    const adTwo = page.getByRole("button", { name: /ad 2/i }).first();
-    if (await adTwo.isVisible().catch(() => false)) {
-      await adTwo.click();
-      await page.getByRole("button", { name: /ad 1/i }).first().click();
-      await openPanel(page, "Text");
-      await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home");
-    }
-
     await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    await openPanel(page, "Text");
-    await expect(page.getByRole("textbox", { name: /^headline/i })).toHaveValue("Scarborough open home", { timeout: 30_000 });
+    await expect(page.locator(".studio-inplace-frame img")).toHaveAttribute("src", editedImage, { timeout: 30_000 });
 
     await openPanel(page, "Publish");
     await exportCreatives(page);
@@ -182,19 +191,17 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
   }
 }
 
-// Blank mode was cut (P2.3): every new ad starts from a template. The loop
-// exercises Template #1 of the kill test (meta-feed-020, "Just Listed Sage
-// Panel" — customer-typed copy fields) and falls back to the first card.
-async function chooseKillTestTemplate(page: Page) {
-  const killTest = page.getByRole("button", { name: /use just listed sage panel template/i }).first();
+// The real loop uses the approved sanitized sample and no alternate creation
+// path. The private source ad is never exposed to the browser.
+async function chooseCloneSample(page: Page) {
+  const killTest = page.getByRole("button", { name: /use just listed sage panel .* sample/i }).first();
   if (await killTest.isVisible().catch(() => false)) {
     await killTest.click();
     return;
   }
-  const template = page.getByRole("button", { name: /use .* template/i }).first();
-  if (await template.isVisible().catch(() => false)) {
-    await template.click();
-  }
+  const sample = page.getByRole("button", { name: /use .* sample/i }).first();
+  await expect(sample).toBeVisible({ timeout: 30_000 });
+  await sample.click();
 }
 
 // Customer-typed on-image fields (price, address, phone…) render on the ad
@@ -221,11 +228,11 @@ async function fillCustomerCopyFields(page: Page) {
   }
 }
 
-// Templates expose one file input per image slot, and EVERY non-headshot slot
-// is required (see imageRequirementsForTemplate) — an unfilled slot blocks
+// Samples expose one file input per declared image slot. An unfilled required
+// slot blocks
 // submit() with a footer alert, not a disabled button. Fill them all, waiting
 // out each slot's upload round-trip before starting the next.
-async function uploadRequiredTemplateImages(page: Page, path: string) {
+async function uploadRequiredSampleImages(page: Page, path: string) {
   await writeListingPng(page, path);
   const inputs = page.locator('.studio-newad input[type="file"]');
   const count = await inputs.count();
@@ -240,21 +247,39 @@ async function uploadRequiredTemplateImages(page: Page, path: string) {
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
-async function openPanel(page: Page, label: "Text" | "Publish") {
+async function editGeneratedClone(page: Page): Promise<string> {
+  const image = page.locator(".studio-inplace-frame img");
+  await expect(image).toBeVisible({ timeout: 90_000 });
+  const originalImage = await image.getAttribute("src");
+  expect(originalImage).toBeTruthy();
+
+  const textRegion = page.locator(".studio-inplace-region.text").first();
+  await expect(textRegion).toBeVisible({ timeout: 90_000 });
+  await textRegion.click();
+  const editor = page.locator(".studio-inplace-editor textarea");
+  await expect(editor).toBeVisible();
+  await editor.fill("JUST LISTED TODAY");
+
+  const editResponse = page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return /\/api\/adstudio\/creatives\/[^/]+\/edit$/u.test(url.pathname) && response.request().method() === "POST";
+    },
+    { timeout: 280_000 },
+  );
+  await page.getByRole("button", { name: /confirm edit/i }).click();
+  const edited = await editResponse;
+  expect(edited.ok(), await edited.text()).toBe(true);
+  await expect(image).not.toHaveAttribute("src", originalImage ?? "", { timeout: 90_000 });
+  const editedImage = await image.getAttribute("src");
+  expect(editedImage).toBeTruthy();
+  return editedImage ?? "";
+}
+
+async function openPanel(page: Page, label: "Publish") {
   const button = page.getByRole("button", { name: new RegExp(`^${label}$`, "i") }).first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
-}
-
-async function saveDraft(page: Page) {
-  const save = page.getByRole("button", { name: /^save$/i }).first();
-  if (await save.isVisible().catch(() => false)) {
-    await save.click();
-    return;
-  }
-
-  await page.getByRole("button", { name: /more actions/i }).click();
-  await page.getByRole("menuitem", { name: /save draft/i }).click();
 }
 
 async function exportCreatives(page: Page) {

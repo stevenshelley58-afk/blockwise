@@ -308,36 +308,25 @@ test("dead Ad Studio stub endpoints stay deleted", () => {
   assert.doesNotMatch(useBrandKit, /rescanKit|\/rescan/);
 });
 
-test("Ad Radar use action opens the template popout in Ad Studio", () => {
+test("Ad Radar remains research-only and cannot bypass the sample clone path", () => {
   const actions = readFileSync("src/components/research/ad-card-actions.tsx", "utf8");
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
-  const handoffRoute = readFileSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts", "utf8");
 
-  assert.match(actions, /\/api\/research\/swipe-file\/\$\{id\}\/send-to-adstudio/);
-  assert.match(actions, /window\.location\.href = "\/ad-studio\?newAd=radar"/);
-  assert.match(actions, /Use in Ad Studio/);
-  assert.match(actions, /Opening Ad Studio/);
-  assert.doesNotMatch(actions, /open Ad Studio to use as inspiration/);
-  assert.match(handoffRoute, /handoff_status:\s*"sent_to_adstudio"/);
-  assert.match(workbench, /useSearchParams/);
-  assert.match(workbench, /searchParams\.get\("newAd"\) !== "radar"/);
-  assert.match(workbench, /openTemplatePicker\("radar"\)/);
+  assert.doesNotMatch(actions, /send-to-adstudio|newAd=radar|Use in Ad Studio|Opening Ad Studio/);
+  assert.equal(existsSync("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"), false);
+  assert.match(workbench, /openSamplePicker/);
   assert.match(workbench, /searchParams\.get\("template"\)/);
-  assert.match(workbench, /linkedTemplatePromptedRef/);
-  assert.match(workbench, /selectTemplate\(linkedTemplate\.id\)/);
-  assert.doesNotMatch(workbench, /studio\.setSection\("templates"\)/);
-  assert.match(workbench, /Choose a template, then add your own photo\./);
-  assert.doesNotMatch(workbench, /setNewAdStep\("radar"\)/);
+  assert.match(workbench, /linkedSamplePromptedRef/);
+  assert.match(workbench, /openSamplePicker\(linkedTemplate\.id\)/);
   assert.match(workbench, /<NewAdDialog/);
-  assert.match(types, /source\?: "gallery" \| "ad_radar" \| "saved_ad"/);
-  assert.match(types, /savedAdId\?: string/);
-  assert.match(types, /observedAdId\?: string/);
-  assert.match(types, /templateId: string/);
-  assert.match(types, /hooks\?: string\[\]/);
+  const firstAdInput = types.slice(types.indexOf("export type FirstAdInput"), types.indexOf("export type AdStudioBrandKit"));
+  assert.match(firstAdInput, /source: "gallery"/);
+  assert.doesNotMatch(firstAdInput, /"ad_radar"|"saved_ad"|savedAdId|referenceCta|referenceAdType|referenceIntent/);
+  assert.match(firstAdInput, /templateId: string/);
 });
 
-test("Ad Studio template picker uses the one local sample gallery", () => {
+test("Ad Studio uses one local sample gallery and one clone request", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
@@ -359,7 +348,7 @@ test("Ad Studio template picker uses the one local sample gallery", () => {
   assert.match(generator, /function resolveTemplateForGeneration/);
   assert.match(generator, /Selected template was not found\./);
   assert.match(generator, /templateSnapshot/);
-  assert.match(generator, /input\.firstAd\?\.source === "ad_radar"/);
+  assert.doesNotMatch(generator, /input\.firstAd\?\.source === "ad_radar"/);
   assert.match(generator, /must be cloned before it can be opened or edited/);
 });
 
@@ -385,9 +374,8 @@ test("every new ad starts from a sample", () => {
   assert.equal(dialog.includes('chooseTemplate("")'), false, "dialog must not select an empty template id");
   assert.doesNotMatch(dialog, /mode: "custom"|mode: "template"|templateKey/);
   assert.match(dialog, /templateId: selectedTemplate\.id/);
-  // Ad Radar starts map to a template so they carry a template id.
-  assert.match(dialog, /function templateForRadarAd/);
-  assert.match(dialog, /templateForRadarAd\(templates, ad\)/);
+  assert.match(dialog, /source: "gallery"/);
+  assert.doesNotMatch(dialog, /templateForRadarAd|chooseRadar|chooseReuse|Previous|Ad Radar/);
   const createRoute = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   assert.match(createRoute, /if \(!firstAd\.templateId\?\.trim\(\)\)/);
   assert.doesNotMatch(createRoute, /firstAd\.mode|templateKey/);

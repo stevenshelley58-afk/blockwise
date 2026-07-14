@@ -452,7 +452,6 @@ test("profile resolution uses active persisted primaries and committed runtime d
   assert.deepEqual(evidence.map((profile: { profileKey: string }) => profile.profileKey), [
     "image_draft",
     "image_final",
-    "image_generative",
     "structured_json",
     "vision_classification",
   ]);

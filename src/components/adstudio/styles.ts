@@ -189,7 +189,7 @@
 .studio-fabric-shell[data-format="9:16"]{width:min(350px,74%)}
 .studio-fabric-shell[data-format="4:5"]{width:min(475px,82%)}
 .studio-fabric-shell[data-format="1:1"]{width:min(520px,84%)}
-.studio-fabric-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
+.studio-editor-loading{min-width:260px;min-height:420px;display:grid;place-items:center;color:#d6e3ff;font-weight:650}
 .studio-clone-editor-wrap{display:grid;justify-items:center;gap:14px;max-width:100%}
 .studio-clone-stage{position:relative;display:grid;justify-items:center;gap:10px}
 .studio-clone-stage img{display:block;max-width:min(475px,82%);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
@@ -326,7 +326,7 @@
 .studio-brand-prompt a{text-decoration:none}
 .studio-mobile-body,.studio-mobile-bottom,.studio-mobile-status,.studio-mobile-busy{display:none}
 
-/* Template gallery (Templates panel + New Ad dialog step) */
+/* Sample gallery and clone-input dialog */
 .studio-tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
 .studio-tpl{display:grid;border:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;text-align:left;padding:0;transition:transform .15s,box-shadow .15s;position:relative}
 .studio-tpl:hover{transform:translateY(-2px);box-shadow:var(--st-sh-lift)}
@@ -537,7 +537,7 @@
 .studio-inplace-undo:disabled{opacity:.5;cursor:not-allowed}
 .studio-inplace-hint{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,.72);color:#e6edf9;font-size:12px;font-weight:650}
 
-/* P2.2 Meta chrome: the stage shows the clone creative exactly as Meta renders it.
+/* Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
    itself is the embedded in-place editor, never a second static render. */
 .studio-metachrome{max-height:calc(100vh - 240px);overflow:auto;border-radius:0;scrollbar-width:thin;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
@@ -560,7 +560,7 @@
 .studio-metachrome-media .studio-inplace-frame{width:100%}
 .studio-metachrome-media .studio-inplace-frame img,.studio-metachrome-media .studio-clone-stage img{width:100%;max-width:100%;max-height:none;border-radius:0;box-shadow:none}
 .studio-metachrome-media .studio-inplace-hint,.studio-metachrome-media .studio-inplace-undo{display:none}
-.studio-metachrome-media .studio-fabric-loading{min-height:320px;color:var(--muted)}
+.studio-metachrome-media .studio-editor-loading{min-height:320px;color:var(--muted)}
 .studio-metachrome-nudge,.studio-metachrome-edit-hint{margin:10px auto 0;width:min(500px,92vw);color:#d7deea;font-size:12px;font-weight:650;line-height:1.35;text-align:left}
 .studio-metachrome-story{position:relative;display:inline-block;overflow:hidden;background:#000}
 .studio-metachrome-story .studio-inplace-stage,.studio-metachrome-story .studio-clone-stage{gap:0}

@@ -75,21 +75,20 @@ type AdStudioWorkbenchProps = {
   showBrandSetupPrompt?: boolean;
 };
 
-type TemplateStartStep = "source" | "template" | "reuse" | "radar";
-type NavItem = { id: import("./use-ad-studio").StudioSection | "templates"; label: string; icon: LucideIcon };
+type NavItem = { id: import("./use-ad-studio").StudioSection | "samples"; label: string; icon: LucideIcon };
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
-  { id: "templates", label: "Templates", icon: LayoutGrid },
+  { id: "samples", label: "Samples", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
-const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "templates"; label: string; icon: LucideIcon }> = [
+const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon }> = [
   { id: "home", label: "Home", icon: Home },
-  { id: "templates", label: "Templates", icon: LayoutGrid },
+  { id: "samples", label: "Samples", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
@@ -105,7 +104,7 @@ const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
 
 const InPlaceAdEditor = dynamic(
   () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
-  { ssr: false, loading: () => <div className="studio-fabric-loading">Loading editor...</div> },
+  { ssr: false, loading: () => <div className="studio-editor-loading">Loading editor...</div> },
 );
 
 const GOAL_LABELS: Record<string, string> = {
@@ -270,7 +269,7 @@ export function AdStudioWorkbench({
   }));
   const searchParams = useSearchParams();
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
-  const [activeTemplateKey, setActiveTemplateKey] = useState<string | undefined>(undefined);
+  const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
   const [selectedAngleId, setSelectedAngleId] = useState("free_appraisal");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [previewFormat, setPreviewFormat] = useState<PreviewFormat>("feed");
@@ -297,8 +296,8 @@ export function AdStudioWorkbench({
   }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
-  const [templatePickerInitialStep, setTemplatePickerInitialStep] = useState<TemplateStartStep>("source");
+  const [samplePickerOpen, setSamplePickerOpen] = useState(false);
+  const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
   const [dismissedCloneWarningKeys, setDismissedCloneWarningKeys] = useState<Set<string>>(() => new Set());
@@ -306,8 +305,7 @@ export function AdStudioWorkbench({
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
-  const radarPromptedRef = useRef(false);
-  const linkedTemplatePromptedRef = useRef(false);
+  const linkedSamplePromptedRef = useRef(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const studio = useAdStudio();
@@ -352,20 +350,6 @@ export function AdStudioWorkbench({
     query.addEventListener("change", syncViewport);
     return () => query.removeEventListener("change", syncViewport);
   }, []);
-
-  function selectTemplate(templateId?: string) {
-    const template = templateId ? adTemplates.find((item) => item.id === templateId) : undefined;
-    setActiveTemplateKey(template?.id ?? templateId);
-    if (template) {
-      setCampaignGoal(GOAL_LABELS[template.goal] ?? campaignGoal);
-      setOfferLabel(labelForSelectedTemplate(template));
-    }
-    setTemplatePickerOpen(false);
-    setSelectedElement("image");
-    studio.setSection("media");
-    studio.setMobileTab("media");
-    studio.showToast(template ? `${template.name} selected. Add a property photo.` : "Blank ad selected. Add a property photo.");
-  }
 
   const initialMedia = useMemo(
     () => primaryImageForVariant(initialPack, initialPack.variants[0]?.variantId, PREVIEW_TO_AD_FORMAT.story),
@@ -475,14 +459,14 @@ export function AdStudioWorkbench({
     studio.setMobileTab(section as import("./use-ad-studio").MobileTab);
   }
 
-  function openTemplatePicker(initialStep: TemplateStartStep = "source") {
+  function openSamplePicker(initialSampleId?: string) {
     setSelectedElement("canvas");
-    setTemplatePickerInitialStep(initialStep);
-    setTemplatePickerOpen(true);
+    setSamplePickerInitialId(initialSampleId);
+    setSamplePickerOpen(true);
   }
 
   // API routes used in campaign actions:
-  //   POST /api/adstudio/campaigns - Generate variants
+  //   POST /api/adstudio/campaigns - Clone the selected sample
   //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft - save draft
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
@@ -575,22 +559,21 @@ export function AdStudioWorkbench({
   const selectedAngle = ANGLES.find((angle) => angle.id === selectedAngleId) ?? ANGLES[0];
 
   useEffect(() => {
-    if (searchParams.get("newAd") !== "radar" || radarPromptedRef.current) return;
-    radarPromptedRef.current = true;
-    openTemplatePicker("radar");
-    studio.showToast("Choose a template, then add your own photo.");
-  }, [searchParams]);
-
-  useEffect(() => {
     const templateKey = searchParams.get("template");
-    if (!templateKey || linkedTemplatePromptedRef.current) return;
+    if (!templateKey || linkedSamplePromptedRef.current) return;
 
     const linkedTemplate = adTemplates.find((template) => template.id === templateKey);
     if (!linkedTemplate) return;
 
-    linkedTemplatePromptedRef.current = true;
-    selectTemplate(linkedTemplate.id);
+    linkedSamplePromptedRef.current = true;
+    openSamplePicker(linkedTemplate.id);
   }, [adTemplates, searchParams]);
+
+  useEffect(() => {
+    if (!searchParams.get("newAd") || linkedSamplePromptedRef.current) return;
+    linkedSamplePromptedRef.current = true;
+    openSamplePicker();
+  }, [searchParams]);
 
   useEffect(() => {
     if (!showBrandSetupPrompt || brandKit.reviewStatus === "approved") {
@@ -693,8 +676,7 @@ export function AdStudioWorkbench({
     }
   }
 
-  // Stable identity: the Fabric editor receives this; a new identity per render
-  // would force the canvas to remount and lose in-progress edits.
+  // Keep editor identity stable so in-progress edits survive surrounding renders.
   const { setSaveState } = studio;
   const updateCreative = useCallback((nextCreative: AdStudioCreative) => {
     setPack((current) => ({
@@ -751,7 +733,7 @@ export function AdStudioWorkbench({
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
     const generated = await generateFirstAd(input);
-    setActiveTemplateKey(input.templateId);
+    setActiveSampleId(input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
     studio.setMobileTab("media");
@@ -914,7 +896,7 @@ export function AdStudioWorkbench({
     // AI-designed clone: one flat image with the copy baked into the pixels.
     // The layer editor would silently no-op on it, so edit in place instead —
     // hit-targets from the QA regions drive the targeted edit endpoint.
-    // P2.2: the editor sits inside real Meta chrome (page header, live primary
+    // The editor sits inside real Meta chrome (page header, live primary
     // text above the creative, headline/description strip, real CTA enum label)
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
@@ -970,7 +952,7 @@ export function AdStudioWorkbench({
   }
 
   function renderHomePanel() {
-    const startingPointDone = Boolean(activeTemplateKey || pack.campaign.templateKey || pack.variants.length > 0);
+    const startingPointDone = Boolean(activeSampleId || pack.campaign.templateKey || pack.variants.length > 0);
     const mediaDone = Boolean(primaryImage);
     const publishReady = !brandIsDraft && readinessItems.every((item) => item.state === "done");
     const steps = [
@@ -983,14 +965,14 @@ export function AdStudioWorkbench({
       },
       {
         title: "Choose a starting point",
-        detail: startingPointDone ? "Your ad has a working layout." : "Use a template or start blank.",
+        detail: startingPointDone ? "Your clone is ready." : "Choose the sample you want to clone.",
         done: startingPointDone,
-        action: "Templates",
-        onClick: () => openTemplatePicker(),
+        action: "Samples",
+        onClick: () => openSamplePicker(),
       },
       {
         title: "Add media",
-        detail: mediaDone ? "A photo is attached." : "Upload a property photo for the selected template.",
+        detail: mediaDone ? "A photo is attached." : "Choose a sample, then add every requested image.",
         done: mediaDone,
         action: "Media",
         onClick: () => goToSection("media"),
@@ -1006,11 +988,11 @@ export function AdStudioWorkbench({
     const completedSteps = steps.filter((step) => step.done).length;
     const tools = [
       {
-        title: "Template library",
-        detail: "Pick a proven starting layout, then change the media and text.",
+        title: "Sample gallery",
+        detail: "Choose the finished ad to clone with your own images and exact text.",
         icon: LayoutGrid,
         action: "Browse",
-        onClick: () => openTemplatePicker(),
+        onClick: () => openSamplePicker(),
       },
       {
         title: "Media",
@@ -1042,7 +1024,7 @@ export function AdStudioWorkbench({
             <span>Ad Studio</span>
             <h1>Home</h1>
           </div>
-          <button className="studio-home-create" type="button" onClick={() => openTemplatePicker()}>
+          <button className="studio-home-create" type="button" onClick={() => openSamplePicker()}>
             <Plus aria-hidden size={19} />
             Create new
           </button>
@@ -1075,7 +1057,7 @@ export function AdStudioWorkbench({
             </div>
             <strong>{campaignName}</strong>
             <small>{format.label} editor is ready for image and text changes.</small>
-            <button type="button" onClick={() => primaryImage ? goToSection("media") : openTemplatePicker()}>
+            <button type="button" onClick={() => primaryImage ? goToSection("media") : openSamplePicker()}>
               Continue editing
               <ArrowRight aria-hidden size={16} />
             </button>
@@ -1138,7 +1120,7 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Templates, Media, Text, Publish or Settings from the left rail.</p>
+        <p>Open Samples, Media, Text, Publish or Settings from the left rail.</p>
       </div>
     );
   }
@@ -1194,12 +1176,12 @@ export function AdStudioWorkbench({
 
             return (
               <button
-                className={item.id === "templates" ? templatePickerOpen ? "active" : "" : studio.section === item.id ? "active" : ""}
+                className={item.id === "samples" ? samplePickerOpen ? "active" : "" : studio.section === item.id ? "active" : ""}
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  if (item.id === "templates") {
-                    openTemplatePicker();
+                  if (item.id === "samples") {
+                    openSamplePicker();
                     return;
                   }
                   goToSection(item.id);
@@ -1261,7 +1243,7 @@ export function AdStudioWorkbench({
                 selectedVariantIndex={selectedVariantIndex}
                 onSelect={selectVariant}
                 onAdd={() => {
-                  openTemplatePicker();
+                  openSamplePicker();
                 }}
                 pending={generation}
                 onRetryPending={() => {
@@ -1394,12 +1376,12 @@ export function AdStudioWorkbench({
           const Icon = item.icon;
           return (
             <button
-              className={item.id === "templates" ? templatePickerOpen ? "active" : "" : studio.mobileTab === item.id ? "active" : ""}
+              className={item.id === "samples" ? samplePickerOpen ? "active" : "" : studio.mobileTab === item.id ? "active" : ""}
               key={item.id}
               type="button"
               onClick={() => {
-                if (item.id === "templates") {
-                  openTemplatePicker();
+                if (item.id === "samples") {
+                  openSamplePicker();
                   return;
                 }
                 setSelectedElement("canvas");
@@ -1415,14 +1397,14 @@ export function AdStudioWorkbench({
       </nav>
 
       <NewAdDialog
-        open={templatePickerOpen}
-        onClose={() => setTemplatePickerOpen(false)}
+        open={samplePickerOpen}
+        onClose={() => setSamplePickerOpen(false)}
         brandKit={brandKit}
         workspaceId={workspaceId}
         templates={adTemplates}
         mediaAssets={mediaAssets}
         onGenerate={handleGenerateFirstAd}
-        initialStep={templatePickerInitialStep}
+        initialTemplateId={samplePickerInitialId}
       />
 
       {brandPromptOpen && (

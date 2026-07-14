@@ -1,9 +1,9 @@
 "use client";
 
-import { Bookmark, ExternalLink, FileSearch, Images } from "lucide-react";
+import { Bookmark, ExternalLink, FileSearch } from "lucide-react";
 import { useState } from "react";
 
-type ActionStatus = "idle" | "saving" | "saved" | "sending" | "sent" | "error";
+type ActionStatus = "idle" | "saving" | "saved" | "error";
 
 export function AdCardActions({
   observedAdId,
@@ -12,7 +12,6 @@ export function AdCardActions({
   observedAdId: string;
   libraryId: string | null;
 }) {
-  const [savedId, setSavedId] = useState<string | null>(null);
   const [status, setStatus] = useState<ActionStatus>("idle");
   const sourceUrl = libraryId ? `https://www.facebook.com/ads/library/?id=${encodeURIComponent(libraryId)}` : null;
   const canSave = isUuid(observedAdId);
@@ -28,25 +27,7 @@ export function AdCardActions({
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not save ad.");
-      setSavedId(body.savedAd.id);
       setStatus("saved");
-      return body.savedAd.id as string;
-    } catch {
-      setStatus("error");
-      return null;
-    }
-  }
-
-  async function sendToAdStudio() {
-    const id = savedId ?? (await saveAd());
-    if (!id) return;
-    setStatus("sending");
-    try {
-      const response = await fetch(`/api/research/swipe-file/${id}/send-to-adstudio`, { method: "POST" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Could not send ad to Ad Studio.");
-      setStatus("sent");
-      window.location.href = "/ad-studio?newAd=radar";
     } catch {
       setStatus("error");
     }
@@ -65,23 +46,16 @@ export function AdCardActions({
         </a>
       ) : null}
       <button className="button secondary" type="button" onClick={saveAd} disabled={!canSave || status === "saving"}>
-        <Bookmark size={14} /> {status === "saved" || status === "sent" ? "Saved" : "Save"}
-      </button>
-      <button className="button secondary" type="button" onClick={sendToAdStudio} disabled={!canSave || status === "saving" || status === "sending"}>
-        <Images size={14} /> Use in Ad Studio
+        <Bookmark size={14} /> {status === "saved" ? "Saved" : "Save"}
       </button>
       <span className={`meta-ad-action-status ${status}`}>
         {status === "saving"
           ? "Saving"
-          : status === "sending"
-            ? "Sending"
-            : status === "sent"
-              ? "Opening Ad Studio"
-              : status === "error"
-                ? "Action failed"
-                : !canSave
-                  ? "Unavailable"
-                  : ""}
+          : status === "error"
+            ? "Action failed"
+            : !canSave
+              ? "Unavailable"
+              : ""}
       </span>
     </div>
   );

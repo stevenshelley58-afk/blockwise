@@ -11,7 +11,6 @@ export type ModelProfileKey =
   | "vision_classification"
   | "image_draft"
   | "image_final"
-  | "image_generative"
   | "compliance_review"
   | "disabled_profile";
 
@@ -271,37 +270,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
         supportsStructuredOutput: false,
         maxContextTokens: 65_536,
         maxLatencyMs: 30_000,
-      },
-    ],
-  },
-  image_generative: {
-    key: "image_generative",
-    label: "Image generative",
-    task: "Fully generative ad creatives (\"Create more options\") from a brief plus the user's photo",
-    enabled: true,
-    requiresStructuredOutput: false,
-    maxRunCostUsd: 2.5,
-    defaultTemperature: 0.85,
-    primary: {
-      provider: "openai",
-      model: "gpt-image-2",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
-      imageUsdPerUnit: 0.211,
-      supportsStructuredOutput: false,
-      maxContextTokens: 16_000,
-      maxLatencyMs: 60_000,
-    },
-    fallbacks: [
-      {
-        provider: "openai",
-        model: "gpt-image-1.5",
-        inputUsdPerMillionTokens: 5,
-        outputUsdPerMillionTokens: 10,
-        imageUsdPerUnit: 0.133,
-        supportsStructuredOutput: false,
-        maxContextTokens: 16_000,
-        maxLatencyMs: 60_000,
       },
     ],
   },

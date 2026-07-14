@@ -26,14 +26,8 @@ export type AdStudioReviewStatus = z.infer<typeof reviewStatusSchema>;
 export const FIRST_AD_FORMATS = ["9:16", "4:5"] as const;
 
 export type FirstAdInput = {
-  source?: "gallery" | "ad_radar" | "saved_ad";
+  source: "gallery";
   templateId: string;
-  savedAdId?: string;
-  observedAdId?: string;
-  hooks?: string[];
-  referenceCta?: string;
-  referenceAdType?: string;
-  referenceIntent?: string;
   description: string;
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
@@ -224,12 +218,8 @@ export type AdStudioCanvasObject = {
   locked: boolean;
 };
 
-/**
- * How a creative tile was produced. "custom_composite" is the default Create
- * path. "generative" is the opt-in "More options" path that returns a fully
- * model-generated image.
- */
-export type AdStudioCreativeSource = "custom_composite" | "generative";
+/** Active clones use `clone`; `legacy` keeps old saved placeholder records readable. */
+export type AdStudioCreativeSource = "clone" | "legacy";
 
 /** A normalized 0-1 bounding box for an editable element on a clone image. */
 export type AdStudioCloneRegion = {

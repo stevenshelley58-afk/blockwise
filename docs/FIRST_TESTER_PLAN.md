@@ -214,10 +214,6 @@ List per review: `bulk-generate`, `campaigns/[id]/generate` + `regenerate` + `va
 - Repo debris: `git rm .write-test`; trim `.vercelignore` (drop `$null` and the deleted html files).
 - **Accept:** `npm run check` green; grep confirms no imports of deleted files.
 
-### T3-5: Swipe-file "Use in Ad Studio" is a false promise 🟠 MEDIUM
-- **Files:** `src/components/research/ad-card-actions.tsx`, `src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts`, `src/components/adstudio/new-ad-dialog.tsx`
-- **Fix:** Either wire the handoff (New Ad dialog offers `handoff_status='sent_to_adstudio'` ads as "From your swipe file" prefill) or merge "Use" into "Save" with copy "Saved — pick it up in Ad Studio → New ad → Ad Radar". Pick one; don't leave the promise.
-
 ### T3-6: Data-layer cleanup migration 🟡 LOW
 - New migration: move `public.adstudio_performance_imports` to `legacy_archive`; drop the six unreferenced `v_operator_*` views; **ask the owner** about `research.target_manifest` + `research.source_fetch_log` (legal-register vocabulary, zero code references — almost certainly committed from the DraftCheck project) then archive them.
 - Add a migration creating the `research-ad-creatives` public storage bucket (currently only created at Hermes runtime; `customer-meta-card.ts` builds public URLs to it).

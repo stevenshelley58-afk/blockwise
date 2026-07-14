@@ -129,9 +129,8 @@ export function generateAdStudioCampaignPack(input: GenerateCampaignPackInput): 
     audienceIntent: offer.expectedLeadIntent,
     offerId: offer.offerId,
     templateKey,
-    templateSource: template?.source ?? (input.firstAd?.source === "ad_radar" ? "ad_radar" : null),
-    // Only explicit Ad Radar copy starts are sourced from a real observed ad.
-    sourceObservedAdId: input.firstAd?.source === "ad_radar" ? input.firstAd.observedAdId ?? null : null,
+    templateSource: template?.source ?? null,
+    sourceObservedAdId: null,
     templateSnapshot: template ? buildTemplateSnapshot(template) : null,
     platforms: input.platforms,
     creativeFormats: formats,
@@ -1049,7 +1048,7 @@ function buildTemplateCloneCreative(input: {
     campaignId: input.campaignId,
     variantId: input.variantId,
     format: input.format,
-    source: "generative",
+    source: "clone",
     canvas: {
       width: size.width,
       height: size.height,
@@ -1240,7 +1239,7 @@ function buildCustomCreative(input: {
     campaignId: input.campaignId,
     variantId: input.variantId,
     format: input.format,
-    source: "custom_composite",
+    source: "legacy",
     canvas: {
       width: size.width,
       height: size.height,
