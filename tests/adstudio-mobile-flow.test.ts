@@ -19,6 +19,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /label: "Media"/);
   assert.match(mobileBody, /label: "Text"/);
   assert.match(mobileBody, /label: "Publish"/);
+  assert.match(mobileBody, /label: "Brand Pack"/);
   assert.match(mobileBody, /label: "Settings"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "campaign"/);
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "design"/);
@@ -56,7 +57,24 @@ test("mobile flow no longer exposes a separate ad details sheet", () => {
   assert.doesNotMatch(workbench, /mobileAdDetailsOpen/);
   assert.doesNotMatch(workbench, /renderCampaignPanel/);
   assert.doesNotMatch(workbench, /studio-mobile-campaign/);
-  assert.match(styles, /grid-template-columns:repeat\(6,1fr\)/);
+  assert.match(styles, /grid-template-columns:repeat\(7,minmax\(44px,1fr\)\)/);
+});
+
+test("Brand Pack and campaign settings have separate desktop and mobile sections", () => {
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const studioState = read("src/components/adstudio/use-ad-studio.ts");
+
+  assert.match(studioState, /StudioSection[\s\S]*\| "brand"[\s\S]*\| "settings"/);
+  assert.match(studioState, /MobileTab[\s\S]*"brand"[\s\S]*"settings"/);
+  assert.match(workbench, /if \(studio\.section === "brand"\) \{[\s\S]*return <BrandPanel/);
+  assert.match(workbench, /if \(studio\.section === "settings"\) \{[\s\S]*return \([\s\S]*<SettingsPanel/);
+  assert.match(workbench, /studio\.mobileTab === "brand"[\s\S]*<BrandPanel/);
+  assert.match(workbench, /studio\.mobileTab === "settings"[\s\S]*<SettingsPanel/);
+  assert.doesNotMatch(
+    workbench,
+    /studio\.mobileTab === "settings"[\s\S]{0,180}<BrandPanel/,
+  );
+  assert.match(workbench, /if \(item\.id === "brand"\)[\s\S]*brandKit\.reviewStatus/);
 });
 
 test("mobile preview uses the same creative editor surface as desktop", () => {

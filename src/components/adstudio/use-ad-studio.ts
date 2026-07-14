@@ -7,9 +7,10 @@ export type StudioSection =
   | "media"
   | "text"
   | "publish"
+  | "brand"
   | "settings";
 export type SaveState = "saved" | "saving" | "error";
-export type MobileTab = "home" | "media" | "text" | "publish" | "settings";
+export type MobileTab = "home" | "media" | "text" | "publish" | "brand" | "settings";
 
 export function useAdStudio() {
   const [section, setSection] = useState<StudioSection>("home");

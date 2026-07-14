@@ -36,7 +36,7 @@ export function BrandPanel({ brandKit }: BrandPanelProps) {
 
   return (
     <>
-      <PanelHeader title="Brand" detail="Your approved kit sets the guardrails for every ad." />
+      <PanelHeader title="Brand Pack" detail="Your approved kit sets the guardrails for every ad." />
 
       <div className="studio-card" style={{ gap: 13 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

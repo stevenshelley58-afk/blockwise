@@ -11,6 +11,7 @@ import {
   Home,
   Image as ImageIcon,
   LayoutGrid,
+  Palette,
   Plus,
   RefreshCw,
   Send,
@@ -81,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
+  { id: "brand", label: "Brand Pack", icon: Palette },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
@@ -90,6 +92,7 @@ const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "samples"; l
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
+  { id: "brand", label: "Brand Pack", icon: Palette },
   { id: "settings", label: "Settings", icon: Settings2 },
 ];
 
@@ -1005,24 +1008,24 @@ export function AdStudioWorkbench({
         />
       );
     }
+    if (studio.section === "brand") {
+      return <BrandPanel brand={brand} brandKit={brandKit} />;
+    }
     if (studio.section === "settings") {
       return (
-        <>
-          <BrandPanel brand={brand} brandKit={brandKit} />
-          <SettingsPanel
-            market={market}
-            propertyType={propertyType}
-            onChangeMarket={updateMarket}
-            onChangePropertyType={updatePropertyType}
-          />
-        </>
+        <SettingsPanel
+          market={market}
+          propertyType={propertyType}
+          onChangeMarket={updateMarket}
+          onChangePropertyType={updatePropertyType}
+        />
       );
     }
     return (
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Templates, Media, Text, Publish or Settings from the left rail.</p>
+        <p>Open Templates, Media, Text, Publish, Brand Pack or Settings from the left rail.</p>
       </div>
     );
   }
@@ -1058,7 +1061,7 @@ export function AdStudioWorkbench({
             const Icon = item.icon;
 
             let railState: "done" | "warn" | "todo" | null = null;
-            if (item.id === "settings") {
+            if (item.id === "brand") {
               railState = brandKit.reviewStatus === "approved" ? "done" : "warn";
             } else if (item.id === "publish") {
               const allDone = readinessItems.every((ri) => ri.state === "done");
@@ -1217,9 +1220,14 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {studio.mobileTab === "settings" && (
+        {studio.mobileTab === "brand" && (
           <div className="studio-mobile-panel">
             <BrandPanel brand={brand} brandKit={brandKit} />
+          </div>
+        )}
+
+        {studio.mobileTab === "settings" && (
+          <div className="studio-mobile-panel">
             <SettingsPanel
               market={market}
               propertyType={propertyType}
