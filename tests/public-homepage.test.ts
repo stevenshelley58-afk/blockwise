@@ -1,45 +1,52 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-test("public homepage does not redirect anonymous visitors to the login screen", () => {
-  const source = readFileSync("src/app/page.tsx", "utf8");
+// The homepage renders from src/app/page.tsx plus the home-landing component
+// tree (desktop + mobile variants of every section). Guards that used to read
+// page.tsx alone now read the combined homepage source.
+const HOME_LANDING_DIR = "src/components/home-landing";
 
-  assert.doesNotMatch(source, /redirect\(/);
+function readHomeSources(): { page: string; combined: string } {
+  const page = readFileSync("src/app/page.tsx", "utf8");
+  const parts = readdirSync(HOME_LANDING_DIR)
+    .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
+    .sort()
+    .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8"));
+  return { page, combined: [page, ...parts].join("\n") };
+}
+
+test("public homepage does not redirect anonymous visitors to the login screen", () => {
+  const { page, combined } = readHomeSources();
+
+  assert.doesNotMatch(page, /redirect\(/);
   // Signup flow stays reachable; wording of buttons/sections is free to change.
-  assert.match(source, /href="\/signup"/);
+  assert.match(combined, /href="\/signup"/);
   // C5: sign-in stays in its own component so Space-key activations scroll the
   // page rather than navigating to /login. Label text itself is not pinned.
-  assert.match(source, /SignInLink/);
+  assert.match(combined, /SignInLink/);
 });
 
-test("homepage suburb scan opens the public audit report instead of the protected Ad Radar page", () => {
-  const source = readFileSync("src/app/page.tsx", "utf8");
-  const scan = readFileSync("src/components/research/landing-ad-radar-scan.tsx", "utf8");
+test("public audit report route stays public and off the protected Ad Radar surface", () => {
+  // The redesigned homepage no longer embeds the live suburb scan, but the
+  // public /audit flow it fed still exists and must keep its public posture.
   const form = readFileSync("src/components/research/ad-radar-location-form.tsx", "utf8");
   const route = readFileSync("src/app/api/research/local-ad-radar/route.ts", "utf8");
-  const slab = readFileSync("src/components/landing/landing-evidence-slab-ads.tsx", "utf8");
 
-  assert.match(source, /LandingAdRadarScan/);
-  assert.match(source, /LandingEvidenceSlabAds/);
-  assert.doesNotMatch(source, /Coastline Property|Hillview Agents|Northstar Realty|\/ads\/ad-/);
-  assert.match(scan, /router\.push\(`\/audit\?location=\$\{encodeURIComponent\(searchTerm\)\}`\)/);
-  assert.match(slab, /\/api\/research\/local-ad-radar/);
-  assert.match(scan, /onSearch=\{openScan\}/);
   assert.match(form, /event\.preventDefault\(\)/);
-  assert.doesNotMatch(source, /AdRadarLocationForm/);
-  assert.doesNotMatch(route, /requireWorkspaceAccess|requirePageSurfaceAccess|v_agent_ad_history|createSupabaseServerClient/);
+  assert.doesNotMatch(
+    route,
+    /requireWorkspaceAccess|requirePageSurfaceAccess|v_agent_ad_history|createSupabaseServerClient/,
+  );
   assert.match(route, /createSupabaseServiceClient/);
 });
 
 test("landing page anchors, sections, and claims stay connected", () => {
-  const source = readFileSync("src/app/page.tsx", "utf8");
-  const demoForm = readFileSync("src/components/landing/demo-form.tsx", "utf8");
-  const combined = `${source}\n${demoForm}`;
+  const { page, combined } = readHomeSources();
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
-  const staleSignupAnchor = "#sig" + "nup";
+  const staleSignupAnchor = 'href="#sig' + 'nup"';
   const forbiddenClaims = new RegExp(
     [
       "Meta-" + "compliant",
@@ -56,67 +63,69 @@ test("landing page anchors, sections, and claims stay connected", () => {
     "i",
   );
 
-  assert.doesNotMatch(source, oldProductName);
-  assert.doesNotMatch(source, deadAnchor);
-  assert.doesNotMatch(source, new RegExp(staleSignupAnchor));
-  assert.doesNotMatch(source, forbiddenClaims);
+  assert.doesNotMatch(combined, oldProductName);
+  assert.doesNotMatch(combined, deadAnchor);
+  assert.doesNotMatch(combined, new RegExp(staleSignupAnchor));
+  assert.doesNotMatch(combined, forbiddenClaims);
 
+  // One section element per anchor id; both breakpoint variants render inside
+  // it, so every anchor resolves at desktop and mobile widths.
   const expectedSections = [
+    "top",
+    "start",
     "workflow",
-    "campaign-types",
+    "done-for-you",
+    "control",
+    "updates",
     "property-check",
-    "approval",
-    "reporting",
     "free-trial",
     "managed-setup",
     "faq",
   ];
 
   for (const id of expectedSections) {
-    assert.match(source, new RegExp(`id="${id}"`), `missing #${id}`);
+    assert.match(page, new RegExp(`id="${id}"`), `missing #${id}`);
   }
 
-  const sectionOrder = [
-    'className="lp-hero"',
-    'id="workflow"',
-    'id="campaign-types"',
-    'id="property-check"',
-    'id="approval"',
-    'id="reporting"',
-    'id="free-trial"',
-    'id="managed-setup"',
-    'id="faq"',
-  ];
   let previousIndex = -1;
-  for (const marker of sectionOrder) {
-    const index = source.indexOf(marker);
-    assert.ok(index > previousIndex, `${marker} should appear after the previous major section`);
+  for (const id of expectedSections) {
+    const index = page.indexOf(`id="${id}"`);
+    assert.ok(index > previousIndex, `#${id} should appear after the previous major section`);
     previousIndex = index;
   }
 
-  assert.match(source, /Your competitors are advertising\. Are you\?/);
-  assert.match(source, /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./);
-  assert.match(source, /Know the property before the call/);
-  assert.match(source, /Run a property check/);
+  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
+  assert.match(
+    combined,
+    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
+  );
+  assert.match(combined, /Know the property before the call/);
+  assert.match(combined, /Run a property check/);
+  // Nearby-ad disclaimer must ship with the ad-intelligence framing.
+  assert.match(combined, /Nearby-ad examples show activity signals, not results\./);
 
   const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
 
-  const localAnchors = [...source.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map((match) => match[1]);
+  const localAnchors = [...combined.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map(
+    (match) => match[1],
+  );
   for (const target of localAnchors) {
     assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
   }
 
-  assert.match(source, /href="#free-trial"/);
-  assert.match(source, /href="#managed-setup"/);
+  assert.match(combined, /href="#free-trial"/);
+  // The walkthrough CTAs use CtaLink's default #managed-setup target.
+  assert.match(combined, /location="faq_walkthrough"/);
 });
 
 test("landing page local image assets resolve from public/", () => {
-  const source = readFileSync("src/app/page.tsx", "utf8");
-  // The centered hero is search-first and intentionally ships no hero photo.
-  // Any /hero or /ads asset the page does reference must still resolve under public/.
-  const assets = [...source.matchAll(/(?:src|srcSet)="(\/(?:hero|ads)\/[^"]+)"/g)].map((match) => match[1]);
+  const { combined } = readHomeSources();
+  const assets = [
+    ...combined.matchAll(/(?:src|photoSrc)=(?:"|\{")(\/(?:hero|ads|home)\/[^"]+)"/g),
+  ].map((match) => match[1]);
 
+  assert.ok(assets.length > 0, "homepage should reference bundled /home assets");
   for (const asset of assets) {
     assert.ok(existsSync(path.join("public", asset.slice(1))), `${asset} should exist under public/`);
   }
@@ -137,12 +146,13 @@ test("landing page metadata matches Blockwise positioning", () => {
 });
 
 test("public marketing copy stays honest about first-tester export posture", () => {
-  const home = readFileSync("src/app/page.tsx", "utf8");
+  const { combined: home } = readHomeSources();
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${layout}`;
 
-  assert.match(home, /before anything spends/i);
+  assert.match(home, /Nothing spends until you approve/i);
+  assert.match(home, /Nothing spends before approval/i);
   assert.match(home, /before and after approval/i);
   assert.match(home, /Approve every ad before it goes live/i);
   assert.match(pricing, /Create, approve, export and track property/);
@@ -152,6 +162,18 @@ test("public marketing copy stays honest about first-tester export posture", () 
   assert.doesNotMatch(combined, /publish the campaign/i);
   assert.doesNotMatch(combined, /create, approve, launch/i);
   assert.doesNotMatch(combined, /To launch from Blockwise/i);
+});
+
+test("managed-setup form posts to the demo-request endpoint with an intact honeypot", () => {
+  const form = readFileSync("src/components/home-landing/managed-setup-form.tsx", "utf8");
+  const route = readFileSync("src/app/api/demo-request/route.ts", "utf8");
+
+  assert.match(form, /\/api\/demo-request/);
+  // company_website is the API's spam honeypot: it must stay in the form,
+  // stay visually hidden, and never be a user-facing field.
+  assert.match(form, /name="company_website"/);
+  assert.match(form, /hw-ms-hp/);
+  assert.match(route, /company_website/);
 });
 
 test("legal pages rely on root title template and define page canonicals", () => {
@@ -171,8 +193,11 @@ test("legal pages rely on root title template and define page canonicals", () =>
 
 test("public pages identify the legal operator in server-rendered content", () => {
   const legalName = "SHELLEY, STEVEN JOHN";
+  const { combined } = readHomeSources();
+
+  assert.match(combined, new RegExp(legalName), "homepage must identify the legal operator");
+
   const publicPages = [
-    "src/app/page.tsx",
     "src/app/pricing/page.tsx",
     "src/app/(legal)/privacy/page.tsx",
     "src/app/(legal)/terms/page.tsx",
