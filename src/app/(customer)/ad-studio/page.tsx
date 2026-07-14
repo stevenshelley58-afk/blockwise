@@ -2,7 +2,7 @@ import { AdStudioWorkbench } from "@/components/adstudio/ad-studio-workbench";
 import { createEmptyAdStudioCampaignPack, listOfferTemplates, type AdStudioBrandKit } from "@/lib/adstudio";
 import { applyBrandAssetRows, loadAdStudioBrandAssetRows } from "@/lib/adstudio/assets";
 import { loadLiveAdStudioBundle } from "@/lib/adstudio/load-live-bundle";
-import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
+import { isExampleBrandKitSourceUrl, persistAdStudioBrandKit, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { buildTrialFallbackBrandKit } from "@/lib/adstudio/trial-brand-kit";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
@@ -36,6 +36,7 @@ export default async function AdStudioPage({ searchParams }: { searchParams?: Se
         workspaceId: access.workspaceId,
         workspaceName: access.workspaceName,
         region: access.region,
+        userId: access.userId,
       })
     : null;
   const isSample = liveBundle === null && draftBundle === null && starterBundle === null;
@@ -65,6 +66,7 @@ async function buildStarterBundle(input: {
   workspaceId: string;
   workspaceName?: string;
   region?: string;
+  userId: string;
 }) {
   const brandKit = buildTrialFallbackBrandKit({
     workspaceId: input.workspaceId,
@@ -76,6 +78,13 @@ async function buildStarterBundle(input: {
     reviewStatus: "pending_user_review",
     lockedFields: Array.from(new Set([...brandKit.lockedFields, "starter_brand"])),
   };
+  // Asset uploads are attached to a real brand-kit row. Persist the first-run
+  // kit before rendering the upload UI so a new workspace can complete its
+  // first clone without a separate Brand Studio round trip.
+  const persisted = await persistAdStudioBrandKit(input.supabase, starterBrandKit, input.userId);
+  if (persisted.error) {
+    throw new Error(`Ad Studio could not prepare the starter brand: ${persisted.error.message}`);
+  }
   const offers = listOfferTemplates();
   const campaignPack = createEmptyAdStudioCampaignPack({ workspaceId: input.workspaceId, brandKit: starterBrandKit });
   return {
