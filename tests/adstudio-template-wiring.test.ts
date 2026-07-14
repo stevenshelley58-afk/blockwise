@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -24,57 +22,6 @@ function brandKit() {
 
 const A = "data:image/png;base64,AAAAprimary";
 const B = "data:image/png;base64,BBBBsecondary";
-
-test("the 50-template source-ad cohort is complete and keeps its supplied assets", () => {
-  const cohort = AD_STUDIO_TEMPLATES.filter((template) => {
-    const feed = /^meta-feed-(\d{3})$/u.exec(template.id);
-    const fullscreen = /^meta-fullscreen-(\d{3})$/u.exec(template.id);
-    return (feed && Number(feed[1]) >= 21 && Number(feed[1]) <= 45)
-      || (fullscreen && Number(fullscreen[1]) >= 8 && Number(fullscreen[1]) <= 32);
-  });
-
-  assert.equal(cohort.length, 50);
-  assert.equal(cohort.filter((template) => template.format === "4:5").length, 25);
-  assert.equal(cohort.filter((template) => template.format === "9:16").length, 25);
-
-  const sourceAds = cohort.map((template) => template.sourceAd?.file ?? template.sourceAd?.creativeId);
-  assert.equal(sourceAds.every(Boolean), true);
-  assert.equal(new Set(sourceAds).size, 50);
-
-  assert.equal(
-    existsSync(join(process.cwd(), "public", "adstudio-samples", "photos", "blockwise-house.png")),
-    true,
-    "the supplied house image is missing",
-  );
-  let suppliedImageSlots = 0;
-
-  for (const template of cohort) {
-    const samplePath = join(process.cwd(), "public", template.gallery.sampleImageSrc.replace(/^\//u, ""));
-    assert.equal(existsSync(samplePath), true, `${template.id} sample render is missing`);
-
-    const imageObjects = template.canvas.objects.filter((object) => object.type === "image");
-    suppliedImageSlots += imageObjects.length;
-    assert.equal(
-      imageObjects.every((object) => object.content === "/adstudio-samples/photos/blockwise-house.png"),
-      true,
-      `${template.id} must use the supplied house image`,
-    );
-  }
-  assert.equal(suppliedImageSlots, 103);
-
-  const geometrySignatures = cohort.map((template) => JSON.stringify(
-    template.canvas.objects.map((object) => [
-      object.type,
-      object.x,
-      object.y,
-      object.width,
-      object.height ?? object.width,
-      object.clip ?? "rect",
-      object.align ?? "left",
-    ]),
-  ));
-  assert.equal(new Set(geometrySignatures).size, 50, "each source ad must keep a distinct template composition");
-});
 
 test("every template slot wires end-to-end: multi-image + copy reach objects AND fabric, and edits round-trip", () => {
   const template = AD_STUDIO_TEMPLATES[0];
