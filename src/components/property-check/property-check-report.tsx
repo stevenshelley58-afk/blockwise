@@ -2,8 +2,9 @@
 
 import { AlertTriangle, ArrowLeft, CheckCircle2, Copy, ExternalLink, Printer } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
+import { buildPropertySnapshot } from "@/lib/property-check/presentation";
 import {
   PROPERTY_CHECK_CLIENT_SITUATION_LABELS,
   PROPERTY_CHECK_NO_SOURCE_MESSAGE,
@@ -95,13 +96,7 @@ export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
 }
 
 function ReportSnapshot({ facts }: { facts: Record<string, unknown> }) {
-  const entries = useMemo(
-    () =>
-      Object.entries(facts)
-        .filter(([, value]) => value !== null && value !== undefined && value !== "")
-        .slice(0, 12),
-    [facts],
-  );
+  const entries = buildPropertySnapshot(facts);
 
   if (entries.length === 0) return null;
 
@@ -109,10 +104,10 @@ function ReportSnapshot({ facts }: { facts: Record<string, unknown> }) {
     <section className="pc-report-card">
       <h2>Property snapshot</h2>
       <dl className="pc-report-facts">
-        {entries.map(([key, value]) => (
-          <div key={key}>
-            <dt>{formatLabel(key)}</dt>
-            <dd>{formatValue(value)}</dd>
+        {entries.map((entry) => (
+          <div key={entry.label}>
+            <dt>{entry.label}</dt>
+            <dd>{entry.value}</dd>
           </div>
         ))}
       </dl>
@@ -211,12 +206,10 @@ function buildSummaryText(check: PropertyCheckRecord): string {
     "",
   ];
 
-  const facts = Object.entries(check.normalizedFacts).filter(
-    ([, value]) => value !== null && value !== undefined && value !== "",
-  );
+  const facts = buildPropertySnapshot(check.normalizedFacts);
   if (facts.length > 0) {
     lines.push("Snapshot:");
-    for (const [key, value] of facts) lines.push(`- ${formatLabel(key)}: ${formatValue(value)}`);
+    for (const fact of facts) lines.push(`- ${fact.label}: ${fact.value}`);
     lines.push("");
   }
   if (check.signals.length > 0) {
@@ -245,14 +238,6 @@ function formatLabel(value: string): string {
     .filter(Boolean)
     .map((part, index) => (index === 0 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part.toLowerCase()))
     .join(" ");
-}
-
-function formatValue(value: unknown): string {
-  if (Array.isArray(value)) return value.map(formatValue).join(", ");
-  if (typeof value === "number") return new Intl.NumberFormat("en-AU").format(value);
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (value && typeof value === "object") return JSON.stringify(value);
-  return String(value);
 }
 
 function formatDate(value: string): string {
