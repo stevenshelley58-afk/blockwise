@@ -61,6 +61,24 @@ test("provider-native portrait renders are cropped to exact Meta placement ratio
     { width: feedMetadata.width, height: feedMetadata.height },
     { width: 1024, height: 1280 },
   );
+
+  const nativeSameRatio = await sharp({
+    create: {
+      width: 800,
+      height: 1000,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const exactFeed = await normalizeCloneRenderAspect(
+    `data:image/png;base64,${nativeSameRatio.toString("base64")}`,
+    "4:5",
+  );
+  const exactFeedMetadata = await sharp(Buffer.from(exactFeed.split(",")[1], "base64")).metadata();
+  assert.deepEqual(
+    { width: exactFeedMetadata.width, height: exactFeedMetadata.height },
+    { width: 1024, height: 1280 },
+  );
 });
 
 test("targeted edit masks preserve the full ad outside the selected QA region", async () => {

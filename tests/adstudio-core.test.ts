@@ -597,8 +597,8 @@ test("flat clone export converts authoritative workspace renders to PNG and JPEG
       const path = `workspace_demo/adstudio/clones/${creative.creativeId}.png`;
       stored.set(path, await sharp({
         create: {
-          width: creative.canvas.width,
-          height: creative.canvas.height,
+          width: Math.round(creative.canvas.width / 2),
+          height: Math.round(creative.canvas.height / 2),
           channels: 4,
           background: { r: 18, g: 62, b: 117, alpha: 1 },
         },
@@ -645,4 +645,8 @@ test("flat clone export converts authoritative workspace renders to PNG and JPEG
   assert.equal(renders.length, clonePack.creatives.length * 2);
   assert.ok(renders.every((render) => render.dataUrl?.startsWith(`data:${render.mimeType};base64,`)));
   assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
+  const feedPng = renders.find((render) => render.format === "4:5" && render.mimeType === "image/png");
+  assert.ok(feedPng?.dataUrl);
+  const metadata = await sharp(Buffer.from(feedPng.dataUrl.split(",")[1], "base64")).metadata();
+  assert.deepEqual({ width: metadata.width, height: metadata.height }, { width: feedPng.width, height: feedPng.height });
 });

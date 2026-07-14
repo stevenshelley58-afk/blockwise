@@ -76,9 +76,7 @@ export async function normalizeCloneRenderAspect(
   const metadata = await image.metadata();
   if (!metadata.width || !metadata.height) throw new Error("Generated image dimensions could not be read.");
 
-  const sourceRatio = metadata.width / metadata.height;
-  const targetRatio = target.width / target.height;
-  if (Math.abs(sourceRatio - targetRatio) < 0.001) return assetUrl;
+  if (metadata.width === target.width && metadata.height === target.height) return assetUrl;
 
   const png = await image
     .resize(target.width, target.height, { fit: "cover", position: "centre" })

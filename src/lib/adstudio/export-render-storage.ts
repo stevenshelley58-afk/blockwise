@@ -67,13 +67,13 @@ export async function renderStoredFlatCloneExports(
 
     const source = Buffer.from(await data.arrayBuffer());
     const { default: sharp } = await import("sharp");
-    const metadata = await sharp(source).metadata();
-    if (metadata.width !== creative.canvas.width || metadata.height !== creative.canvas.height) {
-      throw new Error(`The approved clone render has invalid dimensions for ${creative.format}.`);
-    }
+    const normalized = await sharp(source)
+      .resize(creative.canvas.width, creative.canvas.height, { fit: "cover", position: "centre" })
+      .png()
+      .toBuffer();
     const [png, jpeg] = await Promise.all([
-      sharp(source).png().toBuffer(),
-      sharp(source).flatten({ background: "#ffffff" }).jpeg({ quality: 92 }).toBuffer(),
+      Promise.resolve(normalized),
+      sharp(normalized).flatten({ background: "#ffffff" }).jpeg({ quality: 92 }).toBuffer(),
     ]);
     renders.push(
       flatCloneRender(creative, "image/png", png),
