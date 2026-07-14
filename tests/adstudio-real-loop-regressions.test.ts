@@ -326,6 +326,13 @@ test("Ad Radar remains research-only and cannot bypass the sample clone path", (
   assert.match(firstAdInput, /templateId: string/);
 });
 
+test("draft compaction deduplicates only the same image source, not feed and story clones", () => {
+  const source = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
+  assert.match(source, /keptByVariantAndSource/);
+  assert.match(source, /`\$\{creative\.variantId\}:\$\{imageSource\}`/);
+  assert.doesNotMatch(source, /assetId:\s*undefined/);
+});
+
 test("Ad Studio uses one local sample gallery and one clone request", () => {
   const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
   const templates = readFileSync("src/lib/adstudio/templates.ts", "utf8");

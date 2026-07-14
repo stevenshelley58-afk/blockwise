@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { AD_STUDIO_TEMPLATES, extractBrandKitFromWebsite, generateAdStudioCampaignPack } from "../src/lib/adstudio/index.ts";
+import { syncCreativeWithCopyAndImage } from "../src/lib/adstudio/creative-design-json.ts";
 
 function brandKit() {
   return {
@@ -67,7 +68,36 @@ test("the finished clone is one flat creative, ready for image-anchored editing"
     assert.equal(creative.canvas.objects[0]?.objectId, "template_clone_image");
     assert.equal(creative.canvas.objects.some((object) => object.type === "text"), false);
     assert.equal(creative.canvas.fabricJson, null);
+    const synced = syncCreativeWithCopyAndImage(
+      creative,
+      { headline: "SHOULD NOT REWRITE", description: "SHOULD NOT REWRITE", cta: "SHOULD NOT REWRITE" },
+      "/api/adstudio/media?path=shared-picker-image.png",
+    );
+    assert.equal(synced, creative, "generic autosave must leave the finished clone untouched");
   }
+});
+
+test("draft image syncing keeps a durable image reference for layered legacy creatives", () => {
+  const legacy = generateAdStudioCampaignPack({
+    workspaceId: "workspace_wiring",
+    brandKit: brandKit(),
+    goal: "seller_leads",
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    offerId: "seller_prep_checklist",
+    platforms: ["meta"],
+    variantCount: 1,
+    sourceImageDataUrl: "/api/adstudio/media?path=old.png",
+  }).creatives[0]!;
+  const image = syncCreativeWithCopyAndImage(
+    legacy,
+    { headline: "Headline", description: "Description", cta: "Learn more" },
+    "/api/adstudio/media?path=new.png",
+  ).canvas.objects.find((object) => object.role === "primary_image");
+
+  assert.equal(image?.content, "/api/adstudio/media?path=new.png");
+  assert.equal(image?.assetId, "/api/adstudio/media?path=new.png");
 });
 
 test("the active workbench has one post-clone editor and no Fabric editor", () => {

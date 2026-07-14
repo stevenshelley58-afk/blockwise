@@ -644,13 +644,14 @@ function stripFabricJson(creative: AdStudioCampaignPack["creatives"][number]): A
 }
 
 function stripDuplicateDraftImage() {
-  const keptByVariant = new Set<string>();
+  const keptByVariantAndSource = new Set<string>();
   return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
     const image = creative.canvas.objects.find((object) => object.role === "primary_image");
-    const hasImage = Boolean(image?.content || image?.assetId);
-    const keepImage = hasImage && !keptByVariant.has(creative.variantId);
+    const imageSource = image?.content || image?.assetId || "";
+    const imageKey = imageSource ? `${creative.variantId}:${imageSource}` : "";
+    const keepImage = Boolean(imageKey) && !keptByVariantAndSource.has(imageKey);
 
-    if (keepImage) keptByVariant.add(creative.variantId);
+    if (keepImage) keptByVariantAndSource.add(imageKey);
     if (keepImage) return creative;
 
     return {
