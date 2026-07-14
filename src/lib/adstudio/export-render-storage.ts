@@ -22,10 +22,10 @@ export async function renderStoredFlatCloneExports(
     // The storage reference can be held in either clone field after autosave.
     const storagePath = cloneStoragePath(clone.content?.trim() || clone.assetId?.trim() || "");
     if (!storagePath || !isWorkspaceStoragePath(storagePath, workspaceId)) {
-      throw new Error("The approved clone render was not found.");
+      throw new Error("The approved ad render was not found.");
     }
     const { data, error } = await supabase.storage.from("workspace-artifacts").download(storagePath);
-    if (error || !data) throw new Error("The approved clone render was not found.");
+    if (error || !data) throw new Error("The approved ad render was not found.");
 
     const source = Buffer.from(await data.arrayBuffer());
     const { default: sharp } = await import("sharp");

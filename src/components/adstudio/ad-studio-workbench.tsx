@@ -76,7 +76,7 @@ type NavItem = { id: import("./use-ad-studio").StudioSection | "samples"; label:
 
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Home", icon: Home },
-  { id: "samples", label: "Samples", icon: LayoutGrid },
+  { id: "samples", label: "Templates", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
@@ -85,7 +85,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon }> = [
   { id: "home", label: "Home", icon: Home },
-  { id: "samples", label: "Samples", icon: LayoutGrid },
+  { id: "samples", label: "Templates", icon: LayoutGrid },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
   { id: "publish", label: "Publish", icon: Send },
@@ -435,7 +435,7 @@ export function AdStudioWorkbench({
   }
 
   // API routes used in campaign actions:
-  //   POST /api/adstudio/campaigns - Clone the selected sample
+  //   POST /api/adstudio/campaigns - Create from the selected template
   //   PATCH /api/adstudio/campaigns/${currentPack.campaign.campaignId}/draft - save draft
   //   POST /api/adstudio/export-packages/${currentPack.campaign.campaignId}/download - Export creatives
   //   platforms: ["meta"]
@@ -822,14 +822,14 @@ export function AdStudioWorkbench({
       },
       {
         title: "Choose a starting point",
-        detail: startingPointDone ? "Your clone is ready." : "Choose the sample you want to clone.",
+        detail: startingPointDone ? "Your ad is ready." : "Choose the template you want to use.",
         done: startingPointDone,
-        action: "Samples",
+        action: "Templates",
         onClick: () => openSamplePicker(),
       },
       {
         title: "Add media",
-        detail: mediaDone ? "A photo is attached." : "Choose a sample, then add every requested image.",
+        detail: mediaDone ? "A photo is attached." : "Choose a template, then add every requested image.",
         done: mediaDone,
         action: "Media",
         onClick: () => goToSection("media"),
@@ -845,8 +845,8 @@ export function AdStudioWorkbench({
     const completedSteps = steps.filter((step) => step.done).length;
     const tools = [
       {
-        title: "Sample gallery",
-        detail: "Choose the finished ad to clone with your own images and exact text.",
+        title: "Template gallery",
+        detail: "Choose the finished ad template to use with your own images and exact text.",
         icon: LayoutGrid,
         action: "Browse",
         onClick: () => openSamplePicker(),
@@ -977,7 +977,7 @@ export function AdStudioWorkbench({
       <div className="studio-empty">
         <div className="studio-empty-ic"><Home aria-hidden size={22} /></div>
         <strong>Choose where to work</strong>
-        <p>Open Samples, Media, Text, Publish or Settings from the left rail.</p>
+        <p>Open Templates, Media, Text, Publish or Settings from the left rail.</p>
       </div>
     );
   }

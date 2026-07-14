@@ -200,7 +200,7 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
   });
 
   if (!output) {
-    throw lastError instanceof Error ? lastError : new Error("Clone QA is not configured.");
+    throw lastError instanceof Error ? lastError : new Error("Ad quality check is not configured.");
   }
 
   const json = (output.json ?? {}) as Record<string, unknown>;

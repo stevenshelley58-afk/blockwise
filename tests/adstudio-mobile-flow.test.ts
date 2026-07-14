@@ -14,7 +14,7 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.match(mobileBody, /studio\.mobileTab === "media"/);
   assert.match(mobileBody, /studio\.mobileTab === "text"/);
   assert.match(mobileBody, /label: "Home"/);
-  assert.match(mobileBody, /label: "Samples"/);
+  assert.match(mobileBody, /label: "Templates"/);
   assert.match(mobileBody, /samplePickerOpen/);
   assert.match(mobileBody, /label: "Media"/);
   assert.match(mobileBody, /label: "Text"/);
