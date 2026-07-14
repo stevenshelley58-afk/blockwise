@@ -19,6 +19,7 @@ import {
   hydrateStoredCreativeExportRenders,
   renderStoredFlatCloneExports,
 } from "../src/lib/adstudio/export-render-storage.ts";
+import type { AdStudioCampaignPack } from "../src/lib/adstudio/types.ts";
 
 function completeCreativeRenders(pack: ReturnType<typeof generateAdStudioCampaignPack>) {
   return pack.creatives.flatMap((creative) => (["image/png", "image/jpeg"] as const).map((mimeType) => ({
@@ -649,4 +650,54 @@ test("flat clone export converts authoritative workspace renders to PNG and JPEG
   assert.ok(feedPng?.dataUrl);
   const metadata = await sharp(Buffer.from(feedPng.dataUrl.split(",")[1], "base64")).metadata();
   assert.deepEqual({ width: metadata.width, height: metadata.height }, { width: feedPng.width, height: feedPng.height });
+});
+
+test("flat clone export falls back to assetId when persisted content is blank", async () => {
+  const { default: sharp } = await import("sharp");
+  const path = "workspace_demo/adstudio/clones/edited.png";
+  const source = await sharp({
+    create: {
+      width: 108,
+      height: 135,
+      channels: 4,
+      background: { r: 18, g: 62, b: 117, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const pack = {
+    campaign: { name: "Edited clone" },
+    creatives: [{
+      creativeId: "creative-edited",
+      variantId: "variant-edited",
+      format: "4:5",
+      canvas: {
+        width: 1080,
+        height: 1350,
+        objects: [{
+          objectId: "template_clone_image",
+          content: "",
+          assetId: `/api/adstudio/media?path=${encodeURIComponent(path)}`,
+        }],
+      },
+    }],
+  } as unknown as AdStudioCampaignPack;
+
+  const renders = await renderStoredFlatCloneExports(
+    {
+      storage: {
+        from() {
+          return {
+            async download(receivedPath: string) {
+              assert.equal(receivedPath, path);
+              return { data: new Blob([new Uint8Array(source)], { type: "image/png" }), error: null };
+            },
+          };
+        },
+      },
+    },
+    "workspace_demo",
+    pack,
+  );
+
+  assert.equal(renders.length, 2);
+  assert.deepEqual(new Set(renders.map((render) => render.mimeType)), new Set(["image/png", "image/jpeg"]));
 });

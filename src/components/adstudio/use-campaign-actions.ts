@@ -660,6 +660,15 @@ function stripFabricJson(creative: AdStudioCampaignPack["creatives"][number]): A
 function stripDuplicateDraftImage() {
   const keptByVariantAndSource = new Set<string>();
   return (creative: AdStudioCampaignPack["creatives"][number]): AdStudioCampaignPack["creatives"][number] => {
+    // A cloned ad is one authoritative raster, not a browser-rendered layer
+    // tree. Its storage pointer must survive every autosave and reload.
+    if (
+      creative.canvas.objects.length === 1
+      && creative.canvas.objects[0]?.objectId === "template_clone_image"
+    ) {
+      return creative;
+    }
+
     const image = creative.canvas.objects.find((object) => object.role === "primary_image");
     const imageSource = image?.content || image?.assetId || "";
     const imageKey = imageSource ? `${creative.variantId}:${imageSource}` : "";

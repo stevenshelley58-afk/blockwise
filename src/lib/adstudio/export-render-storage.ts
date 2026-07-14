@@ -58,7 +58,10 @@ export async function renderStoredFlatCloneExports(
       : null;
     if (!clone) continue;
 
-    const storagePath = cloneStoragePath(clone.content ?? clone.assetId ?? "");
+    // Draft compaction from older clients can leave an empty `content` value
+    // while the authoritative storage reference is still present in `assetId`.
+    // Treat blank strings as absent so export always follows the saved clone.
+    const storagePath = cloneStoragePath(clone.content?.trim() || clone.assetId?.trim() || "");
     if (!storagePath || !isWorkspaceStoragePath(storagePath, workspaceId)) {
       throw new Error("The approved clone render was not found.");
     }
