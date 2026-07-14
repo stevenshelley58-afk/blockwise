@@ -240,6 +240,7 @@ export function NewAdDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const latestMediaAssetsRef = useRef(mediaAssets);
   const [step, setStep] = useState<Step>("source");
   const [filter, setFilter] = useState<TemplateFilter>("all");
   // Nothing can be created until the customer chooses the sample to clone.
@@ -338,14 +339,21 @@ export function NewAdDialog({
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
+    setOnImageCopy({});
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
-    setDialogMediaAssets(dedupeImageLibraryAssets(mediaAssets));
+    setDialogMediaAssets(dedupeImageLibraryAssets(latestMediaAssetsRef.current));
     setMediaSourceMode("details");
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
-  }, [open, initialTemplateId, mediaAssets]);
+  }, [open, initialTemplateId]);
+
+  useEffect(() => {
+    latestMediaAssetsRef.current = mediaAssets;
+    if (!open) return;
+    setDialogMediaAssets((current) => dedupeImageLibraryAssets([...current, ...mediaAssets]));
+  }, [mediaAssets, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -547,6 +555,7 @@ export function NewAdDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-busy={submitting}
         tabIndex={-1}
       >
         <div className="studio-newad-head">
@@ -718,7 +727,13 @@ export function NewAdDialog({
                 )}
               </div>
             ) : (
-              <span className={error ? "studio-newad-error" : "studio-newad-sel"}>{error || footHint}</span>
+              <span
+                className={error ? "studio-newad-error" : "studio-newad-sel"}
+                role="status"
+                aria-live="polite"
+              >
+                {submitting ? "Creating your ad. This can take a few minutes." : error || footHint}
+              </span>
             )}
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
