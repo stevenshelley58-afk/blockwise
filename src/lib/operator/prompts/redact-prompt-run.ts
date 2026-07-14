@@ -224,10 +224,21 @@ export async function reserveAdStudioProviderAttempt(input: {
   }
   const reservationResult = parseProviderAttemptReservationResult(data);
   if (!reservationResult.acquired) {
+    console.error("Ad Studio provider reservation duplicate", {
+      mutation: input.mutationId.split(":").slice(1).join(":"),
+      attemptIndex: input.attemptIndex,
+      status: reservationResult.status,
+      responseShape: reservationResult.responseShape,
+    });
     throw new ProviderRunPersistenceError(
       `Provider attempt reservation was already claimed (${reservationResult.responseShape}, status ${reservationResult.status ?? "unknown"}); duplicate request was not sent.`,
     );
   }
+  console.info("Ad Studio provider reservation acquired", {
+    mutation: input.mutationId.split(":").slice(1).join(":"),
+    attemptIndex: input.attemptIndex,
+    provider: input.provider.providerName,
+  });
 }
 
 export function parseProviderAttemptReservationResult(data: unknown): {
