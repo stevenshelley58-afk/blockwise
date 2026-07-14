@@ -5,6 +5,7 @@ import {
   belongsToMailbox,
   buildReplySubject,
   getOperatorMailboxConfig,
+  normalizeOperatorEmailContacts,
   parseEmailRecipients,
   textToHtml,
 } from "../src/lib/operator/email-service.ts";
@@ -25,6 +26,23 @@ test("parseEmailRecipients accepts comma, semicolon, and newline separated recip
     "alex@example.com",
     "sam@example.com",
   ]);
+});
+
+test("normalizeOperatorEmailContacts returns named, sorted, unique users with valid email addresses", () => {
+  assert.deepEqual(
+    normalizeOperatorEmailContacts([
+      { id: "2", full_name: " Zoe Agent ", email: "ZOE@example.com" },
+      { id: "1", full_name: "Amelia Hart", email: "amelia@example.com" },
+      { id: "3", full_name: null, email: "amelia@example.com" },
+      { id: "4", full_name: null, email: "sam@example.com" },
+      { id: "5", full_name: "No Email", email: null },
+    ]),
+    [
+      { id: "1", name: "Amelia Hart", email: "amelia@example.com" },
+      { id: "4", name: "sam@example.com", email: "sam@example.com" },
+      { id: "2", name: "Zoe Agent", email: "zoe@example.com" },
+    ],
+  );
 });
 
 test("belongsToMailbox filters exact addresses and whole-domain mailboxes", () => {

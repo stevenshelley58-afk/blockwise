@@ -2816,6 +2816,102 @@ a.operator-file-row {
   box-shadow: var(--ring);
 }
 
+.operator-email-recipient-field {
+  display: grid;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+.operator-email-recipient-field > label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.operator-email-recipient-control {
+  position: relative;
+}
+
+.operator-email-contact-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 2;
+  max-height: 264px;
+  overflow-y: auto;
+  border: 1px solid var(--line-heavy);
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  padding: 5px;
+}
+
+.operator-email-contact {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 7px 8px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.operator-email-contact:hover,
+.operator-email-contact:focus-visible,
+.operator-email-contact.active {
+  background: var(--accent-tint);
+  outline: none;
+}
+
+.operator-email-contact-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--r-chip);
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.operator-email-contact > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.operator-email-contact strong,
+.operator-email-contact small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-email-contact strong {
+  font-size: 13px;
+}
+
+.operator-email-contact small,
+.operator-email-contact-state {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.operator-email-contact-state {
+  margin: 0;
+  padding: 12px;
+  line-height: 1.45;
+}
+
 .operator-email-send-state {
   min-height: 24px;
 }
@@ -3203,6 +3299,10 @@ a.operator-file-row {
     right: 12px;
     bottom: 86px;
     width: calc(100vw - 24px);
+  }
+
+  .operator-email-contact-menu {
+    max-height: min(264px, 32vh);
   }
 }
 

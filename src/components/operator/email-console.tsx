@@ -1,15 +1,17 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Inbox, Loader2, Mail, Paperclip, RefreshCw, Reply, Send, X } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 
-import type { OperatorEmailDetail, OperatorEmailSummary } from "@/lib/operator/email-service";
+import type { OperatorEmailContact, OperatorEmailDetail, OperatorEmailSummary } from "@/lib/operator/email-service";
 
 type EmailConsoleProps = {
   mailbox: string;
   replyAddress: string;
   initialMessages: OperatorEmailSummary[];
   initialError?: string | null;
+  contacts: OperatorEmailContact[];
+  contactsError?: string | null;
 };
 
 type ComposeState = {
@@ -28,7 +30,14 @@ const emptyCompose: ComposeState = {
   replyTo: null,
 };
 
-export function EmailConsole({ mailbox, replyAddress, initialMessages, initialError = null }: EmailConsoleProps) {
+export function EmailConsole({
+  mailbox,
+  replyAddress,
+  initialMessages,
+  initialError = null,
+  contacts,
+  contactsError = null,
+}: EmailConsoleProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [selectedId, setSelectedId] = useState(initialMessages[0]?.id ?? "");
   const [selectedMessage, setSelectedMessage] = useState<OperatorEmailDetail | null>(null);
@@ -38,8 +47,15 @@ export function EmailConsole({ mailbox, replyAddress, initialMessages, initialEr
   const [composeOpen, setComposeOpen] = useState(false);
   const [compose, setCompose] = useState<ComposeState>(emptyCompose);
   const [sendState, setSendState] = useState<SendState>("idle");
+  const [recipientMenuOpen, setRecipientMenuOpen] = useState(false);
+  const [activeContactIndex, setActiveContactIndex] = useState(0);
 
   const selectedSummary = useMemo(() => messages.find((message) => message.id === selectedId) ?? null, [messages, selectedId]);
+  const filteredContacts = useMemo(() => filterContacts(contacts, compose.to), [contacts, compose.to]);
+
+  useEffect(() => {
+    setActiveContactIndex(0);
+  }, [compose.to]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -98,6 +114,33 @@ export function EmailConsole({ mailbox, replyAddress, initialMessages, initialEr
     setCompose(emptyCompose);
     setSendState("idle");
     setComposeOpen(true);
+  }
+
+  function chooseContact(contact: OperatorEmailContact) {
+    setCompose((current) => ({ ...current, to: replaceCurrentRecipient(current.to, contact.email) }));
+    setRecipientMenuOpen(false);
+  }
+
+  function handleRecipientKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!recipientMenuOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      setRecipientMenuOpen(true);
+      event.preventDefault();
+      return;
+    }
+    if (!recipientMenuOpen || filteredContacts.length === 0) return;
+    if (event.key === "ArrowDown") {
+      setActiveContactIndex((current) => (current + 1) % filteredContacts.length);
+      event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      setActiveContactIndex((current) => (current - 1 + filteredContacts.length) % filteredContacts.length);
+      event.preventDefault();
+    } else if (event.key === "Enter") {
+      chooseContact(filteredContacts[activeContactIndex] ?? filteredContacts[0]);
+      event.preventDefault();
+    } else if (event.key === "Escape") {
+      setRecipientMenuOpen(false);
+      event.preventDefault();
+    }
   }
 
   function startReply() {
@@ -281,16 +324,70 @@ export function EmailConsole({ mailbox, replyAddress, initialMessages, initialEr
               </button>
             </header>
 
-            <label>
-              <span>To</span>
-              <input
-                type="text"
-                value={compose.to}
-                onChange={(event) => setCompose((current) => ({ ...current, to: event.target.value }))}
-                placeholder="name@example.com"
-                required
-              />
-            </label>
+            <div className="operator-email-recipient-field">
+              <label htmlFor="operator-email-to">To</label>
+              <div
+                className="operator-email-recipient-control"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setRecipientMenuOpen(false);
+                }}
+              >
+                <input
+                  id="operator-email-to"
+                  type="text"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={recipientMenuOpen}
+                  aria-controls="operator-email-contacts"
+                  aria-activedescendant={
+                    recipientMenuOpen && filteredContacts[activeContactIndex]
+                      ? `operator-email-contact-${filteredContacts[activeContactIndex].id}`
+                      : undefined
+                  }
+                  value={compose.to}
+                  onChange={(event) => {
+                    setCompose((current) => ({ ...current, to: event.target.value }));
+                    setRecipientMenuOpen(true);
+                  }}
+                  onClick={() => setRecipientMenuOpen(true)}
+                  onFocus={() => setRecipientMenuOpen(true)}
+                  onKeyDown={handleRecipientKeyDown}
+                  placeholder="Choose a user or enter an email"
+                  autoComplete="off"
+                  required
+                />
+                {recipientMenuOpen ? (
+                  <div className="operator-email-contact-menu" id="operator-email-contacts" role="listbox">
+                    {contactsError ? <p className="operator-email-contact-state">{contactsError}</p> : null}
+                    {!contactsError && filteredContacts.length === 0 ? (
+                      <p className="operator-email-contact-state">
+                        {contacts.length === 0 ? "No users with email addresses found." : "No matching users."}
+                      </p>
+                    ) : null}
+                    {filteredContacts.map((contact, index) => (
+                      <button
+                        className={index === activeContactIndex ? "operator-email-contact active" : "operator-email-contact"}
+                        id={`operator-email-contact-${contact.id}`}
+                        key={contact.id}
+                        type="button"
+                        role="option"
+                        aria-selected={index === activeContactIndex}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => chooseContact(contact)}
+                      >
+                        <span className="operator-email-contact-avatar" aria-hidden>
+                          {contactInitials(contact.name)}
+                        </span>
+                        <span>
+                          <strong>{contact.name}</strong>
+                          <small>{contact.email}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
             <label>
               <span>Subject</span>
               <input
@@ -331,6 +428,34 @@ export function EmailConsole({ mailbox, replyAddress, initialMessages, initialEr
       ) : null}
     </section>
   );
+}
+
+function currentRecipientQuery(value: string): string {
+  return value.split(/[,;\n]/).at(-1)?.trim().toLocaleLowerCase() ?? "";
+}
+
+function filterContacts(contacts: OperatorEmailContact[], value: string): OperatorEmailContact[] {
+  const query = currentRecipientQuery(value);
+  if (!query) return contacts;
+  return contacts.filter(
+    (contact) => contact.name.toLocaleLowerCase().includes(query) || contact.email.toLocaleLowerCase().includes(query),
+  );
+}
+
+function replaceCurrentRecipient(value: string, email: string): string {
+  const boundary = Math.max(value.lastIndexOf(","), value.lastIndexOf(";"), value.lastIndexOf("\n"));
+  const prefix = boundary >= 0 ? `${value.slice(0, boundary + 1).trimEnd()} ` : "";
+  return `${prefix}${email}`;
+}
+
+function contactInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toLocaleUpperCase();
 }
 
 function quotedReplyText(message: OperatorEmailDetail | null): string {

@@ -38,6 +38,18 @@ export type OperatorEmailDetail = OperatorEmailSummary & {
   html: string | null;
 };
 
+export type OperatorEmailContact = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type OperatorEmailContactRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+};
+
 type ResendListResponse = {
   object: "list";
   has_more: boolean;
@@ -115,6 +127,24 @@ export function parseEmailRecipients(value: unknown): string[] {
   }
 
   return recipients;
+}
+
+export function normalizeOperatorEmailContacts(rows: OperatorEmailContactRow[]): OperatorEmailContact[] {
+  const contacts = new Map<string, OperatorEmailContact>();
+
+  for (const row of rows) {
+    const email = normalizeEmailAddress(row.email);
+    if (!email || contacts.has(email)) continue;
+    contacts.set(email, {
+      id: row.id,
+      name: row.full_name?.trim() || email,
+      email,
+    });
+  }
+
+  return [...contacts.values()].sort((left, right) =>
+    left.name.localeCompare(right.name, "en-AU", { sensitivity: "base" }),
+  );
 }
 
 export function belongsToMailbox(email: { to?: string[] | null }, mailboxScope: string): boolean {
