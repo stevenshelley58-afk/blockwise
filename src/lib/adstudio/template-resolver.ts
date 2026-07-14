@@ -16,7 +16,7 @@ export async function resolveApprovedAdStudioTemplate(input: {
 function resolveBuiltInApprovedTemplate(key: string): AdStudioTemplate {
   const template = builtInAdStudioTemplates().find((candidate) => candidate.id === key);
   if (!template || template.status !== "approved") {
-    throw new Error("Selected sample was not found.");
+    throw new Error("Selected template was not found.");
   }
   return template;
 }

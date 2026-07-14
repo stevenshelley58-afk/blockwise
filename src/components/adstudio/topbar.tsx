@@ -130,6 +130,7 @@ export function TopBar({
         <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>
         {campaigns.length > 1 && (
           <select
+            className="studio-campaign-select"
             aria-label="Switch campaign"
             value={campaignId}
             onChange={(event) => {
@@ -138,17 +139,6 @@ export function TopBar({
               void flushDraft().then(() => {
                 window.location.href = `/ad-studio?campaignId=${encodeURIComponent(nextCampaignId)}`;
               });
-            }}
-            style={{
-              height: 32,
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              background: "#fff",
-              color: "var(--ink)",
-              fontSize: 12.5,
-              fontWeight: 650,
-              padding: "0 8px",
-              maxWidth: 220,
             }}
           >
             {campaigns.map((campaign) => (

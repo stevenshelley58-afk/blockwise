@@ -35,7 +35,7 @@ export class CloneGenerationError extends Error {
   readonly providerAttemptCount: number;
 
   constructor(cause: unknown, providerAttemptCount: number) {
-    super(cause instanceof Error ? cause.message : "Clone generation is not configured.");
+    super(cause instanceof Error ? cause.message : "Ad generation is not configured.");
     this.name = "CloneGenerationError";
     this.providerAttemptCount = providerAttemptCount;
     if (cause !== undefined) this.cause = cause;

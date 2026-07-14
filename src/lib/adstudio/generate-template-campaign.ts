@@ -236,7 +236,7 @@ export async function generateQaAcceptedClone(input: {
   }
 
   if (lastQa) throw new TemplateCampaignQaError(input.format, lastQa);
-  throw lastError instanceof Error ? lastError : new Error("Clone generation failed. Try again.");
+  throw lastError instanceof Error ? lastError : new Error("Ad generation failed. Try again.");
 }
 
 export async function runVerifiedClonePersistencePipeline<
@@ -276,7 +276,7 @@ export async function runTemplateCampaignGeneration(
   const { body } = input;
   const firstAd = body.firstAd;
 
-  if (!firstAd) throw new Error("Ad generation requires a selected sample and customer assets.");
+  if (!firstAd) throw new Error("Ad generation requires a selected template and customer assets.");
   if (!firstAd.description?.trim()) {
     throw new Error("Add a short description so Blockwise knows what to write.");
   }

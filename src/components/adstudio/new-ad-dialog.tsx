@@ -106,7 +106,7 @@ function TemplateChoiceCard({
     <button
       type="button"
       className={`studio-explore-card studio-explore-card--template${isFullscreen ? " studio-explore-card--fullscreen" : " studio-explore-card--feed"}`}
-      aria-label={`Use ${template.name} ${placementLabel.toLowerCase()} sample`}
+      aria-label={`Use ${template.name} ${placementLabel.toLowerCase()} template`}
       onClick={() => onSelect(template.id)}
     >
       <span className="studio-explore-card-head">
@@ -117,7 +117,7 @@ function TemplateChoiceCard({
       </span>
       <TemplateAdPreview template={template} brandKit={brandKit} />
       <span className="studio-explore-card-action">
-        <span>Clone this sample</span>
+        <span>Use this template</span>
         <ArrowUpRight aria-hidden size={15} />
       </span>
     </button>
@@ -503,7 +503,7 @@ export function NewAdDialog({
     }
 
     if (!selectedTemplate) {
-      setError("Choose a sample to clone first.");
+      setError("Choose a template first.");
       setStep("source");
       return;
     }
@@ -535,15 +535,15 @@ export function NewAdDialog({
 
   const stepTitle =
     step === "source"
-      ? "Choose a sample"
+      ? "Choose a template"
       : mediaSourceMode === "library"
         ? "Choose from library"
-        : `${selectedTemplate?.name ?? "Sample"} - add your assets`;
+        : `${selectedTemplate?.name ?? "Template"} - add your assets`;
 
   const footHint =
     mediaSourceMode === "library"
       ? `Select an image for ${activeImageSlot.label}.`
-      : "Blockwise will recreate the selected sample with your images and text.";
+      : "Blockwise will create your ad from the selected template, using your images and text.";
   const showFooter = step === "brief";
 
   return (
@@ -579,7 +579,7 @@ export function NewAdDialog({
         <div className="studio-newad-body">
           {step === "source" && (
             <div className="studio-explore">
-              <p className="studio-explore-intro">Choose the ad to clone. The next step asks only for the images and exact text that sample requires.</p>
+              <p className="studio-explore-intro">Choose a template. The next step asks only for the images and exact text it requires.</p>
               <div className="studio-explore-filterbar">
                 <label className="studio-explore-filter">
                   <span>Category</span>
@@ -589,11 +589,11 @@ export function NewAdDialog({
                     ))}
                   </select>
                 </label>
-                <span className="studio-explore-count">{visibleTemplates.length} samples</span>
+                <span className="studio-explore-count">{visibleTemplates.length} {visibleTemplates.length === 1 ? "template" : "templates"}</span>
               </div>
               <div className="studio-explore-grid">
                 {visibleTemplates.length === 0 ? (
-                  <p className="studio-explore-msg">No samples are available in this category yet.</p>
+                  <p className="studio-explore-msg">No templates are available in this category yet.</p>
                 ) : null}
                 {visibleTemplates.map((template) => (
                   <TemplateChoiceCard key={template.id} template={template} brandKit={brandKit} onSelect={chooseTemplate} />
@@ -837,8 +837,7 @@ const EXPLORE_STYLES = `
 .studio-explore-filterbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .studio-explore-filter{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .studio-explore-filter span{font-size:12px;font-weight:700;color:var(--muted)}
-.studio-explore-filter select{min-height:44px;min-width:150px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:0 34px 0 11px;box-shadow:var(--st-sh-1)}
-.studio-explore-filter select:focus{outline:2px solid var(--accent);outline-offset:2px}
+.studio-explore-filter select{min-width:150px}
 .studio-explore-count{flex:0 0 auto;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .studio-explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
 .studio-explore-card{display:flex;min-width:0;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden;color:var(--ink);font:inherit;text-align:left;transition:transform .15s,box-shadow .15s,border-color .15s}

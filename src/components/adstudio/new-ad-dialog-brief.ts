@@ -28,7 +28,7 @@ export function briefGuidanceForTemplate(
   const result = "Saturday 10:30am";
 
   const guidance = guidanceByCategory(category, { address, property, result, suburb });
-  const note = `${template.name} selected. Add the real details for this campaign; sample details stay as examples only.`;
+  const note = `${template.name} selected. Add the real details for this campaign; template details are examples only.`;
 
   return {
     ...guidance,

@@ -526,7 +526,7 @@ function buildGalleryTemplateMessages(template: AdStudioGalleryTemplate): Defaul
       headline: template.meta.headlines[0] ?? template.name,
       primaryText: template.meta.primaryText[0] ?? "",
       description: template.meta.descriptions[0] ?? "",
-      notes: ["Cloned from approved sample", "Editable after generation", "No blocking compliance issues"],
+      notes: ["Created from an approved template", "Editable after generation", "No blocking compliance issues"],
     },
   ];
 }
