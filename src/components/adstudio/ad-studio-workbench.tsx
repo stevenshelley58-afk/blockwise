@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import type {
   AdStudioBrandKit,
@@ -98,6 +99,48 @@ const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
 };
 
 const MOBILE_WORKBENCH_QUERY = "(max-width: 900px)";
+
+function PreviewFit({ children, enabled }: { children: ReactNode; enabled: boolean }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const frame = frameRef.current;
+    const content = contentRef.current;
+    if (!frame || !content) return;
+
+    const fit = () => {
+      const contentWidth = content.offsetWidth;
+      const contentHeight = content.offsetHeight;
+      if (!contentWidth || !contentHeight) return;
+
+      const nextScale = Math.min(1, frame.clientWidth / contentWidth, frame.clientHeight / contentHeight);
+      setScale((current) => Math.abs(current - nextScale) < 0.001 ? current : nextScale);
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(frame);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  if (!enabled) return <>{children}</>;
+
+  return (
+    <div ref={frameRef} className="studio-preview-fit">
+      <div
+        ref={contentRef}
+        className="studio-preview-fit-content"
+        style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 const InPlaceAdEditor = dynamic(
   () => import("./canvas/in-place-ad-editor").then((mod) => mod.InPlaceAdEditor),
@@ -761,19 +804,21 @@ export function AdStudioWorkbench({
     if (isCloneCreative(currentCreative)) {
       return (
         <div className="studio-clone-editor-wrap">
-          <MetaChromePreview
-            brandKit={brandKit}
-            destinationUrl={destinationUrl}
-            copy={copy}
-            format={previewFormat}
-            onSelectText={() => goToSection("text")}
-          >
-            <InPlaceAdEditor
-              creative={currentCreative}
-              onCreativeChange={updateCreative}
-              showToast={studio.showToast}
-            />
-          </MetaChromePreview>
+          <PreviewFit enabled={!isMobileViewport}>
+            <MetaChromePreview
+              brandKit={brandKit}
+              destinationUrl={destinationUrl}
+              copy={copy}
+              format={previewFormat}
+              onSelectText={() => goToSection("text")}
+            >
+              <InPlaceAdEditor
+                creative={currentCreative}
+                onCreativeChange={updateCreative}
+                showToast={studio.showToast}
+              />
+            </MetaChromePreview>
+          </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
             <p className="studio-metachrome-edit-hint">Click text on the canvas to edit it.</p>
           ) : null}
