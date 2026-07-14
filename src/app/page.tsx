@@ -524,7 +524,7 @@ export default function HomePage() {
                 buttonLabel="Free suburb audit"
                 initialNote="Start with Perth, WA or choose your suburb."
                 initialValue="Perth, WA"
-                placeholder="Enter city, agent, or brokerage"
+                placeholder="Postcode, suburb, agency or agent"
                 useBestGuess
               />
             </div>

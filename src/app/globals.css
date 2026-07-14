@@ -3443,7 +3443,9 @@ a.operator-file-row {
 
 .research-location-option {
   display: grid;
-  gap: 3px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
   width: 100%;
   border: 0;
   background: var(--surface);
@@ -3475,6 +3477,58 @@ a.operator-file-row {
   font-size: 10.5px;
   font-weight: 800;
   text-align: right;
+}
+
+.ad-radar-suggestion-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+.ad-radar-suggestion-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.ad-radar-suggestion-copy strong,
+.ad-radar-suggestion-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-radar-suggestion-kind {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.research-search-scope {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+@media (max-width: 480px) {
+  .research-location-option,
+  .lp-location-option {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .ad-radar-suggestion-kind {
+    display: none;
+  }
 }
 
 .research-advertiser-divider {

@@ -187,6 +187,7 @@ export function AdRadarSearchPanel({ initialQuery, initialSort, initialIncludeSu
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
           initialValue={initialQuery || initialLocationLabel}
+          inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}
           placeholder="Postcode, suburb, agency, or agent"
