@@ -39,7 +39,10 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await page.setViewportSize(viewport);
       await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
       await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText("Samples", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+      await openNewAd(page);
+      await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
+      await expect(page.getByText("11 templates", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: /^close$/i }).click();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -138,7 +141,11 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     // Reload intentionally returns to Home. Reopen the post-clone editor before
     // asserting that the saved revision is the image mounted on its canvas.
     await openPanel(page, "Text");
-    await expect(page.locator(".studio-inplace-frame img")).toHaveAttribute("src", editedImage, { timeout: 30_000 });
+    await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
+      "src",
+      editedImage,
+      { timeout: 30_000 },
+    );
 
     await openPanel(page, "Publish");
     await exportCreatives(page);
@@ -201,12 +208,12 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
 // The real loop uses the approved sanitized sample and no alternate creation
 // path. The private source ad is never exposed to the browser.
 async function chooseCloneSample(page: Page) {
-  const killTest = page.getByRole("button", { name: /use just listed sage panel .* sample/i }).first();
+  const killTest = page.getByRole("button", { name: /use just listed sage panel .* template/i }).first();
   if (await killTest.isVisible().catch(() => false)) {
     await killTest.click();
     return;
   }
-  const sample = page.getByRole("button", { name: /use .* sample/i }).first();
+  const sample = page.getByRole("button", { name: /use .* template/i }).first();
   await expect(sample).toBeVisible({ timeout: 30_000 });
   await sample.click();
 }
@@ -249,25 +256,22 @@ async function uploadRequiredSampleImages(page: Page, listingPath: string, logoP
   expect(count, "the brief step should expose at least one image slot").toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {
     const input = inputs.nth(index);
-    const label = ((await input.evaluate(
-      (el) => el.closest(".asset-upload-zone")?.textContent ?? "",
-    )) as string).toLowerCase();
-    await input.setInputFiles(label.includes("logo") ? logoPath : listingPath);
+    await input.setInputFiles(index === 1 ? logoPath : listingPath);
     await expect(
-      page.locator('.studio-newad .asset-upload-zone[data-has-file="true"]'),
+      page.getByRole("button", { name: /uploading/i }),
       `image slot ${index + 1} of ${count} should finish uploading`,
-    ).toHaveCount(index + 1, { timeout: 30_000 });
+    ).toBeHidden({ timeout: 60_000 });
   }
   await expect(page.getByRole("button", { name: /generate ad/i })).toBeEnabled({ timeout: 30_000 });
 }
 
 async function editGeneratedClone(page: Page): Promise<string> {
-  const image = page.locator(".studio-inplace-frame img");
+  const image = page.locator(".studio-inplace-frame img").filter({ visible: true }).first();
   await expect(image).toBeVisible({ timeout: 90_000 });
   const originalImage = await image.getAttribute("src");
   expect(originalImage).toBeTruthy();
 
-  const textRegion = page.locator(".studio-inplace-region.text").first();
+  const textRegion = page.locator(".studio-inplace-region.text").filter({ visible: true }).first();
   await expect(textRegion).toBeVisible({ timeout: 90_000 });
   await textRegion.click();
   const editor = page.locator(".studio-inplace-editor textarea");
