@@ -1,7 +1,7 @@
 export type DeviceClass = "desktop" | "mobile" | "tablet" | "bot" | "unknown";
 
 /** Operator/internal surfaces are never tracked; neither are API or asset paths. */
-const UNTRACKED_PREFIXES = ["/operator", "/approvals", "/workforce", "/model-control", "/api", "/_next"];
+const UNTRACKED_PREFIXES = ["/operator", "/workforce", "/model-control", "/api", "/_next"];
 
 export function isTrackablePath(path: string): boolean {
   return !UNTRACKED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));

@@ -467,29 +467,6 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
   });
 }
 
-export async function listApprovalRows(
-  supabase: SupabaseServerClient,
-  workspaceId?: string,
-  options: { status?: ApprovalStatus } = {},
-) {
-  let query = supabase
-    .from("approval_requests")
-    .select("id,workspace_id,target_type,target_id,status,risk_summary,workspaces(name)")
-    .order("created_at", { ascending: false });
-
-  if (workspaceId) {
-    query = query.eq("workspace_id", workspaceId);
-  }
-
-  if (options.status) {
-    query = query.eq("status", options.status);
-  }
-
-  const { data } = await query;
-
-  return buildApprovalRows((data ?? []) as ApprovalRow[]);
-}
-
 export async function listAgentRunRows(supabase: SupabaseServerClient, workspaceId?: string) {
   let query = supabase
     .from("agent_runs")

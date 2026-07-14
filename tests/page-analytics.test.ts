@@ -26,7 +26,6 @@ test("isTrackablePath excludes operator, api, and internal asset paths", () => {
   assert.equal(isTrackablePath("/monitor"), true);
   assert.equal(isTrackablePath("/operator"), false);
   assert.equal(isTrackablePath("/operator/analytics"), false);
-  assert.equal(isTrackablePath("/approvals"), false);
   assert.equal(isTrackablePath("/model-control"), false);
   assert.equal(isTrackablePath("/api/track"), false);
   assert.equal(isTrackablePath("/_next/static/x.js"), false);

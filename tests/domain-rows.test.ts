@@ -220,7 +220,6 @@ test("operator usage ledger and agent-run surfaces omit workspace filters for op
 
 test("cockpit metric cards use live data instead of hardcoded counts", () => {
   const agentsPage = readFileSync("src/app/(operator)/workforce/page.tsx", "utf8");
-  const approvalsPage = readFileSync("src/app/(customer)/approvals/page.tsx", "utf8");
   const modelControlPage = readFileSync("src/app/(operator)/model-control/page.tsx", "utf8");
 
   assert.match(agentsPage, /from\("agent_runs"\)[\s\S]*select\("id", \{ count: "exact", head: true \}\)[\s\S]*\.in\("status", \["queued", "running", "needs_review"\]\)/);
@@ -229,8 +228,6 @@ test("cockpit metric cards use live data instead of hardcoded counts", () => {
   assert.match(agentsPage, /value=\{String\(enabledSchedules \?\? 0\)\}/);
   assert.match(agentsPage, /<tr key=\{run\.id\}>/);
   assert.doesNotMatch(agentsPage, /value="27"|value="6"|key=\{`\$\{run\.agent\}-\$\{run\.status\}`\}/);
-
-  assert.doesNotMatch(approvalsPage, /Budget changes|Client sends|value="1"|value="0"/);
 
   assert.match(modelControlPage, /configuredProviderNames\.length/);
   assert.doesNotMatch(modelControlPage, /label="Providers" value="2"/);
