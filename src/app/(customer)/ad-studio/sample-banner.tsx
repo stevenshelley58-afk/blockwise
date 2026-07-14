@@ -29,7 +29,7 @@ export function SampleBanner() {
       aria-live="polite"
     >
       <span>
-        <strong>You&#39;re viewing a sample workspace.</strong> This is demo ad data, not real
+        <strong>You&#39;re viewing a demo workspace.</strong> This is demo ad data, not real
         campaign activity from your account.
       </span>
       <Link

@@ -123,7 +123,7 @@ export function getAdStudioDemoBundle() {
     brandKit,
     campaignPack: {
       ...pack,
-      campaign: { ...pack.campaign, name: `Sample: ${pack.campaign.name}` },
+      campaign: { ...pack.campaign, name: `Demo: ${pack.campaign.name}` },
       copyPacks: patchedCopyPacks,
     },
     offers: listOfferTemplates(),

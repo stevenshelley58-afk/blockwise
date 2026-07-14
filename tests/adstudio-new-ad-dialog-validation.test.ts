@@ -11,13 +11,27 @@ import {
 import { extractBrandKitFromWebsite } from "../src/lib/adstudio/brand-extraction.ts";
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 
-test("the dialog collects only the selected sample's declared inputs", () => {
+test("the dialog collects only the selected template's declared inputs", () => {
   const template = AD_STUDIO_TEMPLATES[0]!;
   assert.deepEqual(imageRequirementsForTemplate(template).map((slot) => slot.id), template.inputs.images.map((input) => input.key));
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
   assert.match(dialog, /imageRequirementsForTemplate\(selectedTemplate\)/);
   assert.match(dialog, /customerCopyFieldsForTemplate\(selectedTemplate\)/);
   assert.doesNotMatch(dialog, /generate-options|generate-clone|Fabric|canvas\.objects/);
+});
+
+test("the customer flow uses template terminology and shared dropdown styling", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const workbench = readFileSync("src/components/adstudio/ad-studio-workbench.tsx", "utf8");
+  const styles = readFileSync("src/components/adstudio/styles.ts", "utf8");
+  const customerCopy = `${dialog}\n${workbench}`;
+
+  assert.doesNotMatch(customerCopy, /Choose a sample|Clone this sample|Sample gallery|label: "Samples"/);
+  assert.match(customerCopy, /Choose a template|Use this template|Template gallery|label: "Templates"/);
+  assert.match(styles, /\.studio-screen select\{appearance:none/);
+  assert.match(styles, /\.studio-screen select:focus-visible/);
+  assert.match(styles, /\.studio-screen select:disabled/);
+  assert.match(styles, /prefers-reduced-motion:reduce/);
 });
 test("missing customer inputs are shown together before generation", () => {
   const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
@@ -49,7 +63,7 @@ test("goal-specific guidance does not introduce a second template recipe", () =>
   const template = AD_STUDIO_TEMPLATES[0]!;
   const guidance = briefGuidanceForTemplate(template);
   assert.equal(guidance.fieldLabel, "Listing details");
-  assert.match(guidance.note, /sample details stay as examples only/);
+  assert.match(guidance.note, /template details are examples only/);
   assert.equal(briefGuidanceForTemplate(undefined).fieldLabel, "Short description");
 });
 

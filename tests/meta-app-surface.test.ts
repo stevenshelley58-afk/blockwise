@@ -99,7 +99,7 @@ test("Ad Studio UI presents the constrained campaign workspace", () => {
   assert.match(adstudio, /\/api\/adstudio\/campaigns\/\$\{currentPack\.campaign\.campaignId\}\/draft/);
   assert.match(adstudio, /\/api\/adstudio\/export-packages\/\$\{currentPack\.campaign\.campaignId\}\/download/);
   assert.match(adstudio, /platforms:\s*\["meta"\]/);
-  assert.match(adstudio, /Clone the selected sample/);
+  assert.match(adstudio, /Create from the selected template/);
   assert.match(adstudio, /Campaign readiness/);
   assert.match(adstudio, /Export creatives/);
   assert.match(adstudio, /const NAV_ITEMS:[\s\S]*id: "home"[\s\S]*id: "samples"[\s\S]*id: "media"[\s\S]*id: "text"[\s\S]*id: "publish"[\s\S]*id: "settings"/);
