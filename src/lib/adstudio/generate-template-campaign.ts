@@ -211,6 +211,7 @@ export async function generateQaAcceptedClone(input: {
           correlationId: input.correlationId,
           imageUrl: generated.assetUrl,
           expectedCopy: input.expectedCopy,
+          format: input.format,
           attempt: qualityAttempt,
         });
       } catch (error) {

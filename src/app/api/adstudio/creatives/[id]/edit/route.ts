@@ -198,6 +198,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         correlationId,
         imageUrl: generated.assetUrl,
         expectedCopy,
+        format: String(row.format ?? "4:5"),
         attempt,
       });
 

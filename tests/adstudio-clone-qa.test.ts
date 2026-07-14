@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   cloneQaCorrectionPrompt,
+  cloneQaMutationId,
   cloneQaPassed,
   cloneQaWarnings,
   normalizeRenderedText,
@@ -20,6 +21,14 @@ import {
   ProviderRunPersistenceError,
   runAuditAfterDurableAccounting,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
+
+test("parallel clone formats receive distinct QA mutation identities", () => {
+  const correlationId = "11111111-1111-4111-8111-111111111111";
+  assert.notEqual(
+    cloneQaMutationId(correlationId, "4:5", 1),
+    cloneQaMutationId(correlationId, "9:16", 1),
+  );
+});
 
 const executeAttempt = (async (input: Parameters<typeof executeAdStudioProviderAttempt>[0]) => {
   try {

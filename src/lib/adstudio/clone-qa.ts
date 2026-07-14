@@ -33,6 +33,8 @@ export type CloneQaInput = {
   imageUrl: string;
   /** Final resolved copy values baked into the image, keyed by field key. */
   expectedCopy: Record<string, string>;
+  /** Distinguishes parallel feed/story QA reservations for one generation. */
+  format: string;
   attempt: number;
 };
 
@@ -106,6 +108,10 @@ export function cloneQaPassed(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects"
   return qa.copyChecks.every((check) => check.exact) && qa.defects.length === 0;
 }
 
+export function cloneQaMutationId(correlationId: string, format: string, attempt: number): string {
+  return `${correlationId}:adstudio.clone_qa:${format}:${attempt}`;
+}
+
 /** Human-readable correction fed back into the reroll prompt. */
 export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects">): string {
   const mismatches = qa.copyChecks
@@ -118,7 +124,7 @@ export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" |
 export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();
-  const mutationId = `${correlationId}:adstudio.clone_qa:${input.attempt}`;
+  const mutationId = cloneQaMutationId(correlationId, input.format, input.attempt);
   const bundle = await getActivePromptBundle(["adstudio.clone_qa.v1"]);
   const system = bundle["adstudio.clone_qa.v1"].body;
   const expectedList = Object.entries(input.expectedCopy)
@@ -182,7 +188,7 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
     modelProfile: "vision_classification",
     mutationId,
     prompt,
-    input: { expectedCopy: input.expectedCopy, attempt: input.attempt },
+    input: { expectedCopy: input.expectedCopy, format: input.format, attempt: input.attempt },
     attempts,
     latencyMs: Date.now() - startedAt,
     providerName: provider?.providerName ?? "unavailable",
