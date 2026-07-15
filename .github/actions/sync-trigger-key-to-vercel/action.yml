@@ -31,7 +31,18 @@ runs:
           --project "$VERCEL_PROJECT_ID" \
           --scope "$VERCEL_ORG_ID" \
           --token "$VERCEL_TOKEN"
-        TRIGGER_PRODUCTION_SECRET_KEY="$trigger_key" node scripts/sync-trigger-production-env.mjs
+        node scripts/sync-trigger-production-env.mjs
+        failed_run="$(
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $TRIGGER_ACCESS_TOKEN" \
+            "https://api.trigger.dev/api/v1/projects/$TRIGGER_PROJECT_ID/runs?filter%5Bstatus%5D=FAILED&filter%5BtaskIdentifier%5D=adstudio.generate.template&page%5Bsize%5D=1&filter%5Benv%5D=prod" \
+          | node -e '
+              let body = "";
+              process.stdin.on("data", (chunk) => { body += chunk; });
+              process.stdin.on("end", () => process.stdout.write(JSON.parse(body).data?.[0]?.id ?? ""));
+            '
+        )"
+        TRIGGER_SECRET_KEY="$trigger_key" node scripts/inspect-trigger-production-run.mjs "$failed_run"
         printf '%s' "$trigger_key" | npx vercel@54.6.1 env add TRIGGER_SECRET_KEY production \
           --force \
           --scope "$VERCEL_ORG_ID" \
