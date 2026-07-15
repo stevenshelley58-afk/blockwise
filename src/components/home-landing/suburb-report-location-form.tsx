@@ -28,7 +28,9 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
         return;
       }
 
-      const href = `/suburb/${resolved.postcode}?s=${slugify(resolved.suburb)}&scan=1`;
+      const params = new URLSearchParams({ scan: "1" });
+      if (resolved.suburb) params.set("s", slugify(resolved.suburb));
+      const href = `/suburb/${resolved.postcode}?${params.toString()}`;
       trackCtaClick(analyticsLocation, { href, postcode: resolved.postcode });
       fireSafe("suburb_scan_started", { postcode: resolved.postcode });
       router.push(href);
@@ -60,7 +62,7 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
   );
 }
 
-async function resolveLocation(searchTerm: string): Promise<{ postcode: string; suburb: string } | null> {
+async function resolveLocation(searchTerm: string): Promise<{ postcode: string; suburb: string | null } | null> {
   const direct = parseLocation(searchTerm);
   if (direct) return direct;
 
@@ -71,11 +73,11 @@ async function resolveLocation(searchTerm: string): Promise<{ postcode: string; 
   return location ? parseLocation(`${location.mainText} ${location.secondaryText} ${location.searchTerm}`) : null;
 }
 
-function parseLocation(value: string): { postcode: string; suburb: string } | null {
+function parseLocation(value: string): { postcode: string; suburb: string | null } | null {
   const postcode = value.match(/\b([0-9]{4})\b/)?.[1];
   if (!postcode) return null;
   const beforePostcode = value.slice(0, value.indexOf(postcode)).replace(/,?\s*(WA|Western Australia)\s*$/i, "").trim();
-  const suburb = beforePostcode.split(",")[0]?.trim() || "Local area";
+  const suburb = beforePostcode.split(",")[0]?.trim() || null;
   return { postcode, suburb };
 }
 
