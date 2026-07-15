@@ -44,6 +44,7 @@ export type PublicAdRadarCard = {
   cta: string | null;
   destinationUrl: string | null;
   destinationDomain: string | null;
+  adType: string | null;
   media: PublicAdRadarMedia[];
 };
 
@@ -172,6 +173,7 @@ export function toPublicAdRadarCard(
     cta: cleanCustomerMetaDisplayText(card.cta),
     destinationUrl,
     destinationDomain: destinationUrl ? displayDomain(destinationUrl) : null,
+    adType: cleanCustomerMetaDisplayText(card.adType),
     media: card.media.flatMap((media) => {
       const url = normalisePublicAdRadarUrl(media.url);
       if (!url) return [];

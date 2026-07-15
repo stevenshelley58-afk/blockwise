@@ -107,7 +107,6 @@ export function MobileHero() {
             Ads built from what&rsquo;s actually working in your area. Start getting leads today.
           </p>
           <MobileHeroForm />
-          <div className="hwm-hero-note">7-day free trial · No credit card required</div>
 
           {/* Prepared-ad review interface */}
           <div className="hwm-panel-dark hwm-hero-review">

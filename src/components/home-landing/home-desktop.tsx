@@ -14,6 +14,7 @@ import {
 } from "./data";
 import { FaqAccordion } from "./faq-accordion";
 import { ManagedSetupForm } from "./managed-setup-form";
+import { SuburbReportLocationForm } from "./suburb-report-location-form";
 
 /**
  * Desktop tree of the homepage redesign (≥768px), a 1:1 recreation of
@@ -80,12 +81,7 @@ export function DesktopHero() {
             point.
           </p>
           <div data-reveal="up" data-rd="3">
-            <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--dark hw-hero-cta">
-              See your suburb <span className="hw-arr">→</span>
-            </CtaLink>
-          </div>
-          <div data-reveal="up" data-rd="4" className="hw-hero-note">
-            No credit card required
+            <SuburbReportLocationForm analyticsLocation="hero" />
           </div>
         </div>
 

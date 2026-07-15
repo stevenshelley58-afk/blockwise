@@ -43,6 +43,7 @@ export const CUSTOMER_META_AD_LIBRARY_CARD_SELECT = [
   "ad_area_suburbs",
   "service_area_postcodes",
   "service_area_suburbs",
+  "ad_type",
 ].join(",");
 
 export type CustomerMetaAdLibraryCardRow = {
@@ -135,6 +136,7 @@ export type CustomerMetaAdLibraryCard = {
   adAreaSuburbs: string[];
   serviceAreaPostcodes: string[];
   serviceAreaSuburbs: string[];
+  adType?: string | null;
   headline: string | null;
   body: string | null;
   description: string | null;
@@ -196,6 +198,7 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     adAreaSuburbs,
     serviceAreaPostcodes: uniqueDisplayStrings(row.service_area_postcodes ?? (row.ad_area_postcodes ? [] : row.postcodes ?? [])),
     serviceAreaSuburbs: uniqueDisplayStrings(row.service_area_suburbs ?? []),
+    adType: cleanCustomerMetaDisplayText(row.ad_type),
     headline: cleanCustomerMetaDisplayText(row.headline),
     body: cleanCustomerMetaDisplayText(row.body),
     description: cleanCustomerMetaDisplayText(row.description),
