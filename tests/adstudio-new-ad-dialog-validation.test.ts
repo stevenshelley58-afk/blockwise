@@ -66,7 +66,7 @@ test("the customer chooses fast or high quality without provider jargon", () => 
   assert.match(types, /generationQuality\?:\s*"fast" \| "high"/);
   assert.match(dialog, /legend>Generation quality<\/legend>/);
   assert.match(dialog, /Fast/);
-  assert.match(dialog, /Usually ready in about 30–45 seconds/);
+  assert.match(dialog, /Usually ready in about 1 minute/);
   assert.match(dialog, /High quality/);
   assert.match(dialog, /Usually ready in about 2–3 minutes/);
   assert.match(dialog, /generationQuality/);
