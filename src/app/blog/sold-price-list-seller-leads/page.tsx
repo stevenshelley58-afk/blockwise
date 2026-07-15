@@ -7,7 +7,7 @@ import { BlogShell } from "@/components/blog/blog-shell";
 
 import "../blog.css";
 
-const title = "How to generate seller leads with a sold-price list";
+const title = "Seller leads from a sold-price list";
 const description =
   "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with Australian homeowners without leading with an appraisal request.";
 const canonical = "/blog/sold-price-list-seller-leads";
@@ -77,12 +77,12 @@ export default function SoldPriceListGuidePage() {
               <p className="bw-blog-label">The practical playbook</p>
               <h1>{title}</h1>
               <p className="bw-article-deck">
-                Stop asking homeowners to declare they are selling. Give them the local evidence they are already looking for.
+                Give homeowners useful local evidence before asking whether they are ready for an appraisal.
               </p>
               <div className="bw-article-byline">
                 <span>By Blockwise</span>
                 <span>15 July 2026</span>
-                <span>12 minute read</span>
+                <span>9 minute read</span>
               </div>
             </div>
             <div className="bw-article-hero-media">
@@ -116,37 +116,26 @@ export default function SoldPriceListGuidePage() {
 
             <div className="bw-article-prose">
               <section className="bw-opening" id="why">
+                <p className="bw-opening-lead">Most seller ads ask for too much, too soon.</p>
                 <p className="bw-drop-intro">
-                  <span>Most seller ads ask for too much, too soon.</span> “What is your home worth?” sounds useful, but it also signals an appraisal call. An owner at the beginning of the decision may not be ready for that conversation. They may be ready to see what comparable homes nearby have sold for.
+                  “What is your home worth?” can sound like the start of an appraisal call. An owner who is only beginning to think about selling may prefer a smaller first step: seeing what comparable homes nearby have sold for.
                 </p>
 
-                <figure className="bw-stat-spread">
-                  <div className="bw-stat-ring" aria-label="75 percent">
-                    <svg viewBox="0 0 180 180" role="img" aria-labelledby="seller-stat-title seller-stat-desc">
-                      <title id="seller-stat-title">75% of sellers look at sold property listings</title>
-                      <desc id="seller-stat-desc">Three quarters of the circle is highlighted.</desc>
-                      <circle cx="90" cy="90" r="70" pathLength="100" className="bw-stat-ring-track" />
-                      <circle cx="90" cy="90" r="70" pathLength="100" className="bw-stat-ring-value" />
-                    </svg>
-                    <strong>75%</strong>
-                  </div>
-                  <figcaption>
-                    <p>of sellers look at sold-property listings to help them find an agent.</p>
-                    <a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">
-                      Source: realestate.com.au seller-leads guidance
-                    </a>
-                  </figcaption>
-                </figure>
+                <aside className="bw-evidence-note">
+                  <strong>Why this offer makes sense</strong>
+                  <p>Sold-property listings are already part of how many sellers research their market and choose an agent. A useful local list meets that existing behaviour.</p>
+                  <a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">
+                    Read the realestate.com.au seller-leads guidance
+                  </a>
+                </aside>
 
-                <p>
-                  A focused sold-price list meets that behaviour with a clear offer instead of a generic promise about service. The list is the offer. The ad only introduces it.
-                </p>
+                <p>A focused list gives the homeowner useful information. The ad simply tells them what is available and how to request it.</p>
               </section>
 
               <section className="bw-flow-section" aria-labelledby="flow-title">
                 <div className="bw-section-heading">
-                  <span>What the campaign actually does</span>
-                  <h2 id="flow-title">Turn quiet research into a useful conversation.</h2>
+                  <span>How it works</span>
+                  <h2 id="flow-title">Turn local research into a reason to talk.</h2>
                 </div>
                 <div className="bw-signal-flow" role="img" aria-label="A five-step flow from local sold evidence to a homeowner conversation">
                   <div><b>01</b><strong>Sold evidence</strong><span>Current, disclosed local results</span></div>
@@ -164,9 +153,9 @@ export default function SoldPriceListGuidePage() {
 
               <section id="list-framework" className="bw-list-section">
                 <div className="bw-section-heading bw-section-heading-split">
-                  <span>The Blockwise LIST framework</span>
-                  <h2>Four checks before you spend a dollar.</h2>
-                  <p>Specificity is the qualification mechanism. If the right owner cannot recognise themselves in the offer, the campaign is too broad.</p>
+                  <span>Before you build the ad</span>
+                  <h2>Check these four things first.</h2>
+                  <p>The offer should be local, easy to recognise, based on information you can use, and connected to a clear follow-up.</p>
                 </div>
 
                 <div className="bw-field-image">
@@ -180,10 +169,10 @@ export default function SoldPriceListGuidePage() {
                 </div>
 
                 <div className="bw-list-grid">
-                  <div className="bw-list-item"><b>L</b><div><h3>Localise</h3><p>Pick one suburb, or two adjoining suburbs when sales volume is thin.</p><span>Good: Recent sales in Scarborough</span></div></div>
-                  <div className="bw-list-item"><b>I</b><div><h3>Isolate</h3><p>Choose one property characteristic an owner can recognise instantly.</p><span>Good: Villas in Yokine</span></div></div>
-                  <div className="bw-list-item"><b>S</b><div><h3>Source</h3><p>Use current, disclosed results and media you are licensed to republish.</p><span>Good: Date, price, address, approved photo</span></div></div>
-                  <div className="bw-list-item"><b>T</b><div><h3>Tie to follow-up</h3><p>Connect delivery, consent, lead ownership and the next useful message.</p><span>Good: Immediate delivery, named owner, clear opt-out</span></div></div>
+                  <div className="bw-list-item"><b>1</b><div><h3>Choose the area</h3><p>Pick one suburb, or two adjoining suburbs when sales volume is thin.</p><span>Example: Recent sales in Scarborough</span></div></div>
+                  <div className="bw-list-item"><b>2</b><div><h3>Choose the home type</h3><p>Use one property characteristic an owner can recognise immediately.</p><span>Example: Villas in Yokine</span></div></div>
+                  <div className="bw-list-item"><b>3</b><div><h3>Check the source</h3><p>Use current, disclosed results and media you are allowed to republish.</p><span>Include: date, price, address and approved photo</span></div></div>
+                  <div className="bw-list-item"><b>4</b><div><h3>Plan the follow-up</h3><p>Decide who sends the list, who contacts the lead and what happens next.</p><span>Include: immediate delivery, named agent and clear opt-out</span></div></div>
                 </div>
               </section>
 
@@ -248,9 +237,9 @@ export default function SoldPriceListGuidePage() {
 
               <section className="bw-creative-section">
                 <div className="bw-section-heading bw-section-heading-split">
-                  <span>The creative</span>
-                  <h2>Explain the list before you explain yourself.</h2>
-                  <p>Use a local home that matches the property type. Keep the visual ordinary and recognisable. This is market evidence, not a trophy-home advertisement.</p>
+                  <span>What the ad should say</span>
+                  <h2>Tell people exactly what they will receive.</h2>
+                  <p>Use a local home that matches the property type. Lead with what is in the list, not with claims about the agency.</p>
                 </div>
                 <div className="bw-copy-specimen">
                   <div className="bw-copy-specimen-labels"><span>Primary text</span><span>Copy specimen</span></div>
@@ -263,7 +252,7 @@ export default function SoldPriceListGuidePage() {
               <section id="follow-up" className="bw-followup-section">
                 <div className="bw-section-heading">
                   <span>Delivery and consent</span>
-                  <h2>Keep the promise before starting the pitch.</h2>
+                  <h2>Send the list before following up.</h2>
                 </div>
                 <p>The thank-you screen and first email should link directly to the list. Delivering the requested resource is one action. Adding someone to ongoing marketing is another.</p>
                 <div className="bw-timeline">
@@ -282,7 +271,7 @@ export default function SoldPriceListGuidePage() {
               <section id="measure" className="bw-measure-section">
                 <div className="bw-section-heading">
                   <span>At the review date</span>
-                  <h2>Measure the path, not just the form submit.</h2>
+                  <h2>Measure what happens after the form.</h2>
                 </div>
                 <div className="bw-measure-table" role="table" aria-label="Measures for reviewing the campaign">
                   <div role="row" className="bw-measure-head"><span role="columnheader">Measure</span><span role="columnheader">What it tells you</span></div>
@@ -306,11 +295,11 @@ export default function SoldPriceListGuidePage() {
 
               <section className="bw-blockwise-cta">
                 <div>
-                  <span>Where Blockwise fits</span>
-                  <h2>Bring the ad, form, approval and lead path together.</h2>
-                  <p>You still own the data source and permission to use it. Blockwise helps turn the offer into on-brand creative, prepare the campaign and form, show publishing readiness and bring incoming Meta leads into one review path.</p>
+                  <span>Optional help from Blockwise</span>
+                  <h2>Prefer not to build every part by hand?</h2>
+                  <p>Blockwise can prepare the Meta ad and lead form, show you exactly what is ready to publish, and keep new leads in one place. You still choose the offer, budget and follow-up, and nothing goes live before you approve it.</p>
                 </div>
-                <Link href="/signup">Build the campaign <span aria-hidden>→</span></Link>
+                <Link href="/#workflow">See how Blockwise helps <span aria-hidden>→</span></Link>
               </section>
 
               <section className="bw-faq-section">

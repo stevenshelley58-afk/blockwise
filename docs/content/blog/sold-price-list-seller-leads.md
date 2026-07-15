@@ -1,12 +1,12 @@
 ---
-title: "How to generate seller leads with a sold-price list"
+title: "Seller leads from a sold-price list"
 subtitle: "A practical Meta ads playbook for turning recent local sales into useful homeowner conversations."
 slug: "sold-price-list-seller-leads"
 seo_title: "Generate Seller Leads With a Sold-Price List | Blockwise"
 meta_description: "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with Australian homeowners without leading with an appraisal request."
 excerpt: "A specific, current sold-price list gives local homeowners a useful reason to raise their hand before they are ready to request an appraisal."
 canonical: "https://blockwise.sale/blog/sold-price-list-seller-leads"
-og_title: "How to generate seller leads with a sold-price list"
+og_title: "Seller leads from a sold-price list"
 og_description: "A practical Meta ads playbook for turning recent local sales into useful homeowner conversations."
 og_type: "article"
 schema_type: "Article"
@@ -24,7 +24,7 @@ hero_image_brief: "An Australian suburban street seen from slightly above, with 
 hero_image_alt: "Three recently sold homes on an Australian suburban street"
 ---
 
-# How to generate seller leads with a sold-price list
+# Seller leads from a sold-price list
 
 Most seller ads ask for too much, too soon.
 
@@ -56,16 +56,16 @@ Second, it helps qualify the response. The form may still attract buyers, invest
 
 This is not a shortcut to an immediate listing. It is an early-intent campaign. Its job is to identify local owners who care enough about recent comparable sales to ask for the detail.
 
-## The Blockwise LIST framework
+## Four checks before you build the ad
 
-Use four checks before you spend anything.
+Keep the offer local, easy to recognise, based on information you can use, and connected to a clear follow-up.
 
 | Check | What to decide | Good example | Warning sign |
 |---|---|---|---|
-| **L: Localise** | Pick one suburb, or two adjoining suburbs if sales volume is thin | “Recent sales in Scarborough” | “Perth property update” |
-| **I: Isolate** | Choose one property characteristic owners recognise | “Villas in Yokine” | Six filters and a spreadsheet-sized audience |
-| **S: Source** | Use current, disclosed results and media you are licensed to publish | Sale date, disclosed price, address and approved photo | Withheld prices, stale results or copied portal images without usage rights |
-| **T: Tie to follow-up** | Connect delivery, consent, lead ownership and the next useful message | Instant delivery, named owner, clear opt-out | Leads sitting in a download or receiving an unexplained sales sequence |
+| **Choose the area** | Pick one suburb, or two adjoining suburbs if sales volume is thin | “Recent sales in Scarborough” | “Perth property update” |
+| **Choose the home type** | Choose one property characteristic owners recognise | “Villas in Yokine” | Six filters and a spreadsheet-sized audience |
+| **Check the source** | Use current, disclosed results and media you are licensed to publish | Sale date, disclosed price, address and approved photo | Withheld prices, stale results or copied portal images without usage rights |
+| **Plan the follow-up** | Decide who delivers the list, contacts the lead and sends the next useful message | Instant delivery, named agent, clear opt-out | Leads sitting in a download or receiving an unexplained sales sequence |
 
 If one of these checks is weak, fix it before building the ad.
 
@@ -216,17 +216,17 @@ At the review date, make one decision:
 - **Revise** if the offer is relevant but the creative, form or delivery path is weak.
 - **Stop** if the audience is wrong, the data cannot be maintained, or the economics do not support another test.
 
-## Where Blockwise fits
+## Prefer not to build every part by hand?
 
 You still need a trustworthy source for the sold results and permission to use the data and images. Blockwise does not replace that responsibility.
 
-Blockwise helps with the execution around the list: turning the offer into on-brand Feed and Story creative, preparing the campaign and lead form, showing approval and publishing readiness, and bringing Meta leads into a clearer review path.
+Blockwise can prepare the Meta ad and lead form, show you exactly what is ready to publish, and keep new leads in one place. You still choose the offer, budget and follow-up, and nothing goes live before you approve it.
 
 That matters because this campaign is a chain. A useful list with a weak form loses people. A strong ad with broken delivery loses trust. A full lead inbox without ownership or follow-up produces activity, not listings.
 
 The strategy remains straightforward: offer local evidence, keep the promise quickly, and make the next conversation useful.
 
-> **Build the campaign around your sold-price list.** Use Blockwise to prepare the creative, lead form and approval path, then review incoming Meta leads in one place. [Create your Blockwise account](/signup).
+> **Want help putting the campaign together?** [See how Blockwise helps](/#workflow).
 
 ## Frequently asked questions
 

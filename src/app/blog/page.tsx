@@ -33,7 +33,7 @@ export default function BlogIndexPage() {
             />
           </Link>
           <div className="bw-blog-feature-copy">
-            <span>Seller lead generation · 12 min</span>
+            <span>Seller lead generation · 9 min</span>
             <h2 id="featured-guide">The sold-price list</h2>
             <p>
               A visual field guide to turning recent local sales into a focused Meta campaign and a useful homeowner conversation.

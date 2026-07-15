@@ -14,8 +14,8 @@ export function BlogShell({ children }: { children: ReactNode }) {
             <Link href="/blog">Field guides</Link>
             <Link href="/pricing">Pricing</Link>
           </nav>
-          <Link href="/signup" className="bw-blog-header-cta">
-            Start free trial
+          <Link href="/#workflow" className="bw-blog-header-cta">
+            How it works
           </Link>
         </div>
       </header>
