@@ -49,6 +49,14 @@ if (!hasSupabaseUrl || !hasSupabaseCredential) {
   throw new Error("The release environment is missing the Supabase runtime required by Trigger tasks.");
 }
 
+const supabaseUrl = variables.NEXT_PUBLIC_SUPABASE_URL || variables.SUPABASE_URL;
+try {
+  const parsed = new URL(supabaseUrl);
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("unsupported protocol");
+} catch {
+  throw new Error("The release environment has an invalid Supabase URL.");
+}
+
 configure({ secretKey: accessToken });
 await envvars.upload(projectRef, "prod", { variables, override: true });
 console.log(`Synced ${Object.keys(variables).length} allowlisted production variables to Trigger.dev.`);
