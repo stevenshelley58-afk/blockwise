@@ -209,48 +209,17 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
   ],
   image_draft: [
     {
-      provider: "fal",
-      model: "fal-ai/gemini-3.1-flash-image-preview/edit",
-      label: "Google Gemini 3.1 Flash Image",
-      inputUsdPerMillionTokens: 0,
-      outputUsdPerMillionTokens: 0,
+      provider: "google",
+      model: "gemini-3.1-flash-image",
+      label: "Google Gemini 3.1 Flash Image (direct)",
+      inputUsdPerMillionTokens: 0.5,
+      outputUsdPerMillionTokens: 3,
       imageUsdPerUnit: 0.04,
-      maxContextTokens: 65_536,
+      maxContextTokens: 131_072,
       supportsStructuredOutput: false,
       supportsVisionInput: true,
       supportsImageOutput: true,
     },
-    createOpenRouterOption({
-      model: "google/gemini-2.5-flash-image",
-      label: "Google Gemini 2.5 Flash Image",
-      inputUsdPerMillionTokens: 0.3,
-      outputUsdPerMillionTokens: 0,
-      imageUsdPerUnit: 0.3,
-      maxContextTokens: 32_768,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "x-ai/grok-imagine-image-quality",
-      label: "xAI Grok Imagine Image Quality",
-      inputUsdPerMillionTokens: 0,
-      outputUsdPerMillionTokens: 0,
-      imageUsdPerUnit: 0.01,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: false,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "black-forest-labs/flux.2-flex",
-      label: "Black Forest Labs FLUX.2 Flex",
-      inputUsdPerMillionTokens: 0,
-      outputUsdPerMillionTokens: 0,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 67_344,
-      supportsImageOutput: true,
-    }),
   ],
   image_final: [
     createOpenRouterOption({
@@ -415,7 +384,7 @@ export function validateModelProfileSelection(
     };
   }
 
-  if (request.provider !== "openrouter" && request.provider !== "fal") {
+  if (request.provider !== "openrouter" && request.provider !== "google") {
     return {
       ok: false,
       status: 400,

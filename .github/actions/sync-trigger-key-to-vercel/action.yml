@@ -1,0 +1,49 @@
+name: Sync Trigger key to Vercel
+description: Refreshes Vercel's production Trigger secret after a task deployment.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_ORG_ID" ]; then
+          echo "::error::Vercel deployment credentials are required to sync the Trigger key."
+          exit 1
+        fi
+
+        trigger_key="$(
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $TRIGGER_ACCESS_TOKEN" \
+            "https://api.trigger.dev/api/v1/projects/$TRIGGER_PROJECT_ID/prod" \
+          | node -e '
+              let body = "";
+              process.stdin.on("data", (chunk) => { body += chunk; });
+              process.stdin.on("end", () => {
+                const key = JSON.parse(body).apiKey;
+                if (typeof key !== "string" || !key.startsWith("tr_prod_")) process.exit(1);
+                process.stdout.write(key);
+              });
+            '
+        )"
+
+        echo "::add-mask::$trigger_key"
+        npx vercel@54.6.1 link --yes \
+          --project "$VERCEL_PROJECT_ID" \
+          --scope "$VERCEL_ORG_ID" \
+          --token "$VERCEL_TOKEN"
+        node scripts/sync-trigger-production-env.mjs
+        failed_run="$(
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $TRIGGER_ACCESS_TOKEN" \
+            "https://api.trigger.dev/api/v1/projects/$TRIGGER_PROJECT_ID/runs?filter%5Bstatus%5D=FAILED&filter%5BtaskIdentifier%5D=adstudio.generate.template&page%5Bsize%5D=1&filter%5Benv%5D=prod" \
+          | node -e '
+              let body = "";
+              process.stdin.on("data", (chunk) => { body += chunk; });
+              process.stdin.on("end", () => process.stdout.write(JSON.parse(body).data?.[0]?.id ?? ""));
+            '
+        )"
+        TRIGGER_SECRET_KEY="$trigger_key" node scripts/inspect-trigger-production-run.mjs "$failed_run"
+        printf '%s' "$trigger_key" | npx vercel@54.6.1 env add TRIGGER_SECRET_KEY production \
+          --force \
+          --scope "$VERCEL_ORG_ID" \
+          --token "$VERCEL_TOKEN"

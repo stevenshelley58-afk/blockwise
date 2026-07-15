@@ -64,8 +64,8 @@ test("curated final image options include GPT Image 2 and Nano Banana", () => {
 test("curated fast image options lead with the benchmarked Gemini edit model", () => {
   const options = getCuratedModelOptionsForProfile("image_draft");
 
-  assert.equal(options[0].provider, "fal");
-  assert.equal(options[0].model, "fal-ai/gemini-3.1-flash-image-preview/edit");
+  assert.equal(options[0].provider, "google");
+  assert.equal(options[0].model, "gemini-3.1-flash-image");
   assert.equal(options[0].supportsVisionInput, true);
   assert.equal(options[0].supportsImageOutput, true);
 });

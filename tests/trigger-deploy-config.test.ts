@@ -4,6 +4,9 @@ import test from "node:test";
 
 test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   const workflow = readFileSync(".github/workflows/hard-reset-verification.yml", "utf8");
+  const manualWorkflow = readFileSync(".github/workflows/trigger-deploy.yml", "utf8");
+  const keySyncAction = readFileSync(".github/actions/sync-trigger-key-to-vercel/action.yml", "utf8");
+  const environmentSync = readFileSync("scripts/sync-trigger-production-env.mjs", "utf8");
   const packageJson = readFileSync("package.json", "utf8");
   const triggerWrapper = readFileSync("scripts/run-trigger-with-project-ref.mjs", "utf8");
 
@@ -16,7 +19,23 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(workflow, /test -n "\$TRIGGER_ACCESS_TOKEN"/);
   assert.match(workflow, /test -n "\$TRIGGER_PROJECT_ID"/);
   assert.match(workflow, /test -n "\$TRIGGER_PROJECT_REF"/);
+  assert.match(workflow, /test -n "\$GOOGLE_AI_API_KEY"/);
   assert.match(workflow, /npm run trigger:deploy/);
+  assert.match(workflow, /uses:\s*\.\/\.github\/actions\/sync-trigger-key-to-vercel/);
+  assert.match(manualWorkflow, /uses:\s*\.\/\.github\/actions\/sync-trigger-key-to-vercel/);
+  assert.match(keySyncAction, /api\.trigger\.dev\/api\/v1\/projects\/\$TRIGGER_PROJECT_ID\/prod/);
+  assert.match(keySyncAction, /startsWith\("tr_prod_"\)/);
+  assert.match(keySyncAction, /::add-mask::\$trigger_key/);
+  assert.match(keySyncAction, /env add TRIGGER_SECRET_KEY production/);
+  assert.match(keySyncAction, /node scripts\/sync-trigger-production-env\.mjs/);
+  assert.match(manualWorkflow, /GOOGLE_AI_API_KEY:\s*\$\{\{ secrets\.GOOGLE_AI_API_KEY \}\}/);
+  assert.match(workflow, /SUPABASE_SECRET_KEY:\s*\$\{\{ secrets\.SUPABASE_SECRET_KEY \}\}/);
+  assert.match(environmentSync, /envvars\.upload\(projectRef, "prod", \{ variables, override: true \}\)/);
+  assert.match(environmentSync, /SUPABASE_SECRET_KEY/);
+  assert.match(environmentSync, /GOOGLE_AI_API_KEY/);
+  assert.doesNotMatch(environmentSync, /FAL_KEY|FAL_API_KEY/);
+  assert.doesNotMatch(environmentSync, /STRIPE_SECRET_KEY|RESEND_API_KEY/);
+  assert.doesNotMatch(keySyncAction, /console\.log\(key\)|echo "\$trigger_key"/);
   assert.match(packageJson, /"trigger:deploy":\s*"node scripts\/run-trigger-with-project-ref\.mjs deploy"/);
   assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
   assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_REF\?\.trim\(\)/);

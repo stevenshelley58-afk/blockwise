@@ -86,6 +86,16 @@ jobs:
       TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
       TRIGGER_PROJECT_ID: ${{ secrets.TRIGGER_PROJECT_ID }}
       TRIGGER_PROJECT_REF: ${{ secrets.TRIGGER_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+      TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
 
     steps:
       - name: Checkout
@@ -105,6 +115,10 @@ jobs:
           test -n "$TRIGGER_ACCESS_TOKEN"
           test -n "$TRIGGER_PROJECT_ID"
           test -n "$TRIGGER_PROJECT_REF"
+          test -n "$GOOGLE_AI_API_KEY"
 
       - name: Deploy Trigger.dev tasks
         run: npm run trigger:deploy
+
+      - name: Sync production Trigger key to Vercel
+        uses: ./.github/actions/sync-trigger-key-to-vercel
