@@ -101,6 +101,10 @@ const locationAdSearchIntervalMinutes = positiveInt("HERMES_LOCATION_AD_SEARCH_I
 const locationAdSearchBatchSize = positiveInt("HERMES_LOCATION_AD_SEARCH_BATCH_SIZE", mode === "build" ? 40 : 12);
 const locationAdSearchMaxActive = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE", mode === "build" ? 120 : 40);
 const locationAdSearchMaxSuburbsPerPostcode = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_SUBURBS_PER_POSTCODE", 8);
+// Provider for the suburb/keyword discovery search. "hermes_browser" (default) enumerates via
+// the Steel browser, which Meta rate-limits with bot challenges under load. "apify" routes the
+// same keyword search through the approved Apify actor (URL-driven), bypassing those challenges.
+const locationAdSearchProvider = String(env.HERMES_LOCATION_AD_SEARCH_PROVIDER || "hermes_browser").toLowerCase();
 const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const classificationBackfillWeakBatchSize = positiveInt(
   "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
@@ -1439,6 +1443,9 @@ async function recordMetaBrowserChallenge(kind, input) {
 }
 
 function shouldDeferMetaBrowserChallengeJob(job) {
+  // Location searches routed through Apify do not touch the browser, so a browser challenge
+  // cooldown must never defer them.
+  if (job.job_type === LOCATION_AD_SEARCH_JOB_TYPE && locationAdSearchProvider === "apify") return false;
   return metaBrowserChallengeCooldownRemaining() > 0
     && (
       job.job_type === LOCATION_AD_SEARCH_JOB_TYPE
@@ -3021,7 +3028,7 @@ async function recoverApifyCircuitIfDue(settings) {
   return { ...settings, apify_state: "ready" };
 }
 
-async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit = false } = {}) {
+async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit = false, captureMode = "page" } = {}) {
   const startedAt = now();
   if (!apifyToken) {
     return explicit ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, "APIFY_TOKEN is not configured", { explicit }) : null;
@@ -3101,7 +3108,9 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
   try {
     const captured = await runApifyCapture({
       actorId,
-      input: apifyMetaPageInput(input, resultLimit),
+      input: captureMode === "location"
+        ? apifyMetaLocationSearchInput(input, resultLimit)
+        : apifyMetaPageInput(input, resultLimit),
       schemaMap: selection.actor.schema_map,
       maxTotalChargedUsd: guard.perRunCapUsd,
       resultLimit,
@@ -3111,7 +3120,7 @@ async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit
     });
     const items = normaliseApifyMappedMetaItems(captured.items || [], input, resultLimit);
     return {
-      runId: captured.metadata?.run_id || `apify-${hash(`${actorId}:${input.metaPageId}:${startedAt}`).slice(0, 16)}`,
+      runId: captured.metadata?.run_id || `apify-${hash(`${actorId}:${input.metaPageId || input.query}:${startedAt}`).slice(0, 16)}`,
       provider: sourceProvider,
       status: "SUCCEEDED",
       startedAt,
@@ -3621,6 +3630,50 @@ function failedCaptureOutcome(provider, input, startedAt, errorMessage, metadata
       advertiserPageId: input.advertiserPageId,
       resolverDecisionId: input.resolverDecisionId,
       ...metadata,
+    },
+  };
+}
+
+function apifyMetaLocationSearchInput(input, resultLimit) {
+  const url = metaAdLibraryLocationSearchUrl(input);
+  return {
+    searchUrl: url,
+    url,
+    urls: [url],
+    startUrls: [{ url }],
+    searchTerms: input.query,
+    query: input.query,
+    country: input.country || "AU",
+    activeStatus: input.activeStatus || "all",
+    maxResults: resultLimit,
+    count: resultLimit,
+    maxAds: resultLimit,
+  };
+}
+
+// Discovery search routed through the approved Apify actor instead of the Steel browser.
+// Reuses runApifyMetaPageCapture (circuit breaker, budget guard, account-limit checks, actor
+// selection, result mapping) via captureMode="location", then re-shapes the outcome to the
+// contract handleLocationAdSearch expects from runHermesLocationSearchCapture.
+async function runApifyLocationSearchCapture(input) {
+  const outcome = await runApifyMetaPageCapture(input, null, { explicit: true, captureMode: "location" });
+  const items = Array.isArray(outcome.items) ? outcome.items : [];
+  const confirmedAbsence = outcome.status === "SUCCEEDED" && items.length === 0;
+  return {
+    ...outcome,
+    provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+    metadata: {
+      ...(outcome.metadata || {}),
+      url: metaAdLibraryLocationSearchUrl(input),
+      postcode: input.postcode,
+      suburb: input.suburb,
+      state: input.state,
+      query: input.query,
+      confirmed_absence: confirmedAbsence,
+      count_only: false,
+      sourceDocumentId: outcome.metadata?.sourceDocumentId || null,
+      capture_provider: "apify",
+      capture_mode: "location",
     },
   };
 }
@@ -4867,7 +4920,9 @@ async function handleLocationAdSearch(job) {
 
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
   const adFetchRunId = await insertLocationSearchFetchRun(job, buildRunId, input);
-  const outcome = await runHermesLocationSearchCapture(input, job);
+  const outcome = locationAdSearchProvider === "apify"
+    ? await runApifyLocationSearchCapture(input)
+    : await runHermesLocationSearchCapture(input, job);
   if (outcome.status !== "SUCCEEDED") {
     await updateFetchRun(adFetchRunId, { status: "failed", result_summary: { provider: META_LOCATION_SEARCH_SOURCE_PROVIDER, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "location search capture failed", cost_usd: outcome.costUsd || 0 });
     await insertCoverageDefect({
