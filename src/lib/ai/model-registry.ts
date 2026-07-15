@@ -1,8 +1,7 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
 // "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
-// "fal" = fal.run hosted image models (billed to the fal account).
-export type ModelProvider = "openai" | "openrouter" | "azure" | "google" | "fal";
+export type ModelProvider = "openai" | "openrouter" | "azure" | "google";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -72,7 +71,6 @@ const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_onl
   openrouter: "allowed",
   azure: "allowed",
   google: "allowed",
-  fal: "allowed",
 };
 
 const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
@@ -210,27 +208,16 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 0.8,
     defaultTemperature: 0.8,
     primary: {
-      provider: "fal",
-      model: "fal-ai/gemini-3.1-flash-image-preview/edit",
-      inputUsdPerMillionTokens: 0,
-      outputUsdPerMillionTokens: 0,
+      provider: "google",
+      model: "gemini-3.1-flash-image",
+      inputUsdPerMillionTokens: 0.5,
+      outputUsdPerMillionTokens: 3,
       imageUsdPerUnit: 0.04,
       supportsStructuredOutput: false,
-      maxContextTokens: 65_536,
+      maxContextTokens: 131_072,
       maxLatencyMs: 30_000,
     },
-    fallbacks: [
-      {
-        provider: "openrouter",
-        model: "google/gemini-3.1-flash-image-preview",
-        inputUsdPerMillionTokens: 0.5,
-        outputUsdPerMillionTokens: 3,
-        imageUsdPerUnit: 0.04,
-        supportsStructuredOutput: false,
-        maxContextTokens: 65_536,
-        maxLatencyMs: 30_000,
-      },
-    ],
+    fallbacks: [],
   },
   image_final: {
     key: "image_final",

@@ -104,7 +104,7 @@ export async function loadPersistedModelProfileVersions(
 }
 
 function parsePersistedProvider(value: string): ModelProvider {
-  if (["openai", "openrouter", "azure", "google", "fal"].includes(value)) {
+  if (["openai", "openrouter", "azure", "google"].includes(value)) {
     return value as ModelProvider;
   }
   throw new Error(`Active model profile version has unsupported provider: ${value || "(empty)"}.`);

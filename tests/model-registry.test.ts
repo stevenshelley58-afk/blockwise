@@ -54,8 +54,8 @@ test("normalizeModelSlug stores OpenRouter model ids without the legacy openrout
 test("fast image generation defaults to the benchmarked Gemini edit model", () => {
   const resolved = resolveModelProfile("image_draft");
 
-  assert.equal(resolved.primary.provider, "fal");
-  assert.equal(resolved.primary.model, "fal-ai/gemini-3.1-flash-image-preview/edit");
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {

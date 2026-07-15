@@ -3,7 +3,7 @@ import type {
 } from "@/lib/ai/model-registry";
 
 import { dataUrlToUploadBytes } from "./generated-media.ts";
-import { createFalImageProvider } from "./fal-image-provider.ts";
+import { createGoogleImageProvider } from "./google-image-provider.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
@@ -383,63 +383,6 @@ function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProvider
   };
 }
 
-// fal any-llm: text (and best-effort vision) billed to the fal account — the
-// all-fal degraded mode for when no other text provider has credit. The DB
-// model pin is the source of truth for the model slug; a wrong slug surfaces
-// verbatim in the provider-run attempts and is fixed with one SQL update.
-const FAL_ANY_LLM_URL = "https://fal.run/fal-ai/any-llm";
-
-function createFalTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
-  const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_FAL_TEXT_MODEL ?? "google/gemini-flash-1.5";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "fal",
-    providerType: "text_generation",
-    capabilities: { structuredJson: true, visionInput: true },
-    async generate(input) {
-      const apiKey = env.FAL_KEY ?? env.FAL_API_KEY;
-      if (!apiKey) throw preflightError("FAL_KEY is not configured.");
-
-      const userText = input.messages
-        .map((message) => (typeof message.content === "string" ? message.content : ""))
-        .filter(Boolean)
-        .join("\n\n");
-      const url = input.imageUrl ? `${FAL_ANY_LLM_URL}/vision` : FAL_ANY_LLM_URL;
-      const response = await fetchProviderRequest(fetchImpl, url, {
-        method: "POST",
-        signal: undefined,
-        headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          system_prompt: `${input.system}\nRespond with ONLY valid JSON.`,
-          prompt: userText,
-          ...(input.imageUrl ? { image_url: input.imageUrl } : {}),
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { output?: string; error?: string; detail?: unknown };
-      if (!response.ok) {
-        throw submittedHttpError(
-          typeof payload.error === "string"
-            ? payload.error
-            : `fal any-llm request failed (${response.status}): ${JSON.stringify(payload.detail ?? payload).slice(0, 200)}`,
-          response.status,
-        );
-      }
-      const rawText = (payload.output ?? "").trim();
-      if (!rawText) throw submittedError("fal any-llm returned no output.", { retryable: false });
-
-      return {
-        json: parseJson(rawText),
-        rawText,
-        usage: { inputTokens: 0, outputTokens: 0, complete: false },
-        providerMetadata: { model, schemaName: input.schemaName },
-      };
-    },
-  };
-}
-
 function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
@@ -543,8 +486,6 @@ export function createTextProviderForCandidate(candidate: ModelCandidate, option
     provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
   } else if (candidate.provider === "google") {
     provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "fal") {
-    provider = createFalTextProvider({ ...options, model: candidate.model });
   } else {
     provider = createOpenAiTextProvider({ ...options, model: candidate.model });
   }
@@ -555,8 +496,8 @@ export function createImageProviderForCandidate(candidate: ModelCandidate, optio
   let provider: ImageProviderAdapter;
   if (candidate.provider === "openrouter") {
     provider = createOpenRouterImageProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "fal") {
-    provider = createFalImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
+  } else if (candidate.provider === "google") {
+    provider = createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
   } else {
     provider = createOpenAiImageProvider({ ...options, model: candidate.model });
   }
@@ -767,8 +708,8 @@ function parseJson(rawText: string): unknown {
   try {
     return JSON.parse(rawText);
   } catch {
-    // Models frequently fence JSON in markdown or preface it with prose
-    // (fal any-llm does both). Extract the outermost JSON object before
+    // Models frequently fence JSON in markdown or preface it with prose.
+    // Extract the outermost JSON object before
     // giving up — rejecting good content cost a whole provider lane.
     const unfenced = rawText.replace(/```(?:json)?/gi, "");
     const start = unfenced.indexOf("{");

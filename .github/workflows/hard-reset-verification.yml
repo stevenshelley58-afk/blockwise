@@ -94,7 +94,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      FAL_KEY: ${{ secrets.FAL_KEY }}
+      GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
       TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
 
     steps:
@@ -115,6 +115,7 @@ jobs:
           test -n "$TRIGGER_ACCESS_TOKEN"
           test -n "$TRIGGER_PROJECT_ID"
           test -n "$TRIGGER_PROJECT_REF"
+          test -n "$GOOGLE_AI_API_KEY"
 
       - name: Deploy Trigger.dev tasks
         run: npm run trigger:deploy
