@@ -18,8 +18,7 @@ export default function BlogIndexPage() {
       <main className="bw-blog-index">
         <section className="bw-blog-index-intro">
           <p className="bw-blog-label">Blockwise field guides</p>
-          <h1>Useful advertising advice, without the theatre.</h1>
-          <p>Detailed playbooks for agents who want a clear campaign, a better lead path and fewer invented benchmarks.</p>
+          <h1>Here’s one you can use today.</h1>
         </section>
 
         <section className="bw-blog-feature" aria-labelledby="featured-guide">
