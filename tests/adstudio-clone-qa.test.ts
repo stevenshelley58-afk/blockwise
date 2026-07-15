@@ -808,7 +808,7 @@ test("post-commit audit failure is contained after durable accounting", async ()
   assert.equal(calls, 1);
 });
 
-test("targeted edit endpoint renders verified text directly and model-edits image replacements", () => {
+test("targeted edit endpoint model-edits selected regions and checks the whole ad", () => {
   const route = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
   const builder = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
 
@@ -816,24 +816,24 @@ test("targeted edit endpoint renders verified text directly and model-edits imag
   assert.match(builder, /buildTargetedEditRequest/);
   assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
-  assert.match(route, /canRenderTextDirectly/);
-  assert.match(route, /selectedRegion\.box\.width > 0/);
-  assert.match(route, /selectedRegion\.box\.height > 0/);
-  assert.match(route, /applyDeterministicTextEditQa/);
-  assert.match(route, /renderExactCloneTextEdit\(currentImage, newValue/);
+  assert.doesNotMatch(route, /canRenderTextDirectly/);
+  assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
+  assert.doesNotMatch(route, /renderExactCloneTextEdit/);
   assert.match(route, /resolveCloneProviders\(\)/);
   assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries forward from the last verdict with the edited field
   // overridden, so unrelated drift fails QA too.
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
-  assert.match(route, /expectedCopy\[fieldKey\] = newValue/);
+  assert.match(route, /expectedCopy\[editFieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
   assert.match(route, /compositeCloneRegionEdit/);
   assert.match(route, /capabilities\.inpainting/);
 
-  // Undo history and a real failure mode.
+  // Undo/redo are saved revisions and receive a fresh QA verdict.
   assert.match(route, /renderHistory/);
+  assert.match(route, /redoHistory/);
+  assert.match(route, /action === "undo" \|\| action === "redo"/);
   assert.match(route, /status: 502/);
 });
 

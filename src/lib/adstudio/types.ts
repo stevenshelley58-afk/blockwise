@@ -254,6 +254,12 @@ export type AdStudioCreative = {
     cloneQa?: AdStudioCloneQa;
     /** Previous renders (media paths, newest last) for undo on clone edits. */
     renderHistory?: string[];
+    /** QA snapshots paired by index with renderHistory. */
+    renderQaHistory?: AdStudioCloneQa[];
+    /** Renders made available after undo; cleared by the next new edit. */
+    redoHistory?: string[];
+    /** QA snapshots paired by index with redoHistory. */
+    redoQaHistory?: AdStudioCloneQa[];
   };
   safeZones: {
     metaStory: boolean;

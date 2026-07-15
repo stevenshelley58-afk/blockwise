@@ -8,10 +8,9 @@ import {
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
-  renderExactCloneTextEdit,
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
-import { applyDeterministicTextEditQa, cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
+import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -32,12 +31,15 @@ type RouteContext = {
 };
 
 type TargetedEditBody = {
+  action?: "edit" | "undo" | "redo";
   /** Copy-field key (text edit) or image-slot role (image edit) to change. */
   fieldKey?: string;
   /** The exact new text for a text edit. */
   newValue?: string;
   /** Replacement image (media path or data URL) for an image edit. */
   newImage?: string;
+  /** Natural-language direction applied only inside the selected region. */
+  instruction?: string;
   expectedRevisionId?: string;
   mutationId?: string;
 };
@@ -65,19 +67,30 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   }
 
   const body = await readJsonBody<TargetedEditBody>(request);
+  const action = body.action ?? "edit";
   const fieldKey = body.fieldKey?.trim();
   const newValue = body.newValue?.trim() ?? "";
   const newImageRef = body.newImage?.trim();
+  const instruction = body.instruction?.trim() ?? "";
   const expectedRevisionId = body.expectedRevisionId?.trim() ?? "";
   const mutationId = body.mutationId?.trim() ?? "";
-  if (!fieldKey) {
+  if (!(action === "edit" || action === "undo" || action === "redo")) {
+    return NextResponse.json({ error: "Unsupported edit action." }, { status: 400 });
+  }
+  if (action === "edit" && !fieldKey) {
     return NextResponse.json({ error: "fieldKey is required." }, { status: 400 });
   }
-  if (!newValue && !newImageRef) {
-    return NextResponse.json({ error: "Provide newValue (text edit) or newImage (image edit)." }, { status: 400 });
+  if (action === "edit" && !newValue && !newImageRef && !instruction) {
+    return NextResponse.json(
+      { error: "Provide new text, a replacement image, or an edit instruction." },
+      { status: 400 },
+    );
   }
   if (newValue.length > 200) {
     return NextResponse.json({ error: "Keep the new text to 200 characters or less." }, { status: 400 });
+  }
+  if (instruction.length > 500) {
+    return NextResponse.json({ error: "Keep the edit direction to 500 characters or less." }, { status: 400 });
   }
   if (!UUID_PATTERN.test(expectedRevisionId) || !UUID_PATTERN.test(mutationId)) {
     return NextResponse.json({ error: "Reload the ad before editing it." }, { status: 400 });
@@ -87,9 +100,11 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       workspaceId: context.access.workspaceId,
       creativeId: id,
       baseRevisionId: expectedRevisionId,
+      action,
       fieldKey,
       newValue: newValue || null,
       newImage: newImageRef || null,
+      instruction: instruction || null,
     }))
     .digest("hex");
 
@@ -143,6 +158,102 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       { status: 400 },
     );
   }
+  if (action === "undo" || action === "redo") {
+    const sourceHistory = action === "undo" ? canvas.renderHistory ?? [] : canvas.redoHistory ?? [];
+    const sourceQaHistory = action === "undo" ? canvas.renderQaHistory ?? [] : canvas.redoQaHistory ?? [];
+    const targetImageRef = sourceHistory.at(-1);
+    const targetQa = sourceQaHistory.at(-1);
+    if (!targetImageRef) {
+      await releaseClaim();
+      return NextResponse.json(
+        { error: action === "undo" ? "There is nothing left to undo." : "There is nothing to redo." },
+        { status: 409 },
+      );
+    }
+    const currentImageRef = cloneObject.content || cloneObject.assetId || "";
+    const targetImage = await resolveAdStudioImageForModel(
+      context.supabase,
+      context.access.workspaceId,
+      targetImageRef,
+    );
+    if (!targetImage) {
+      await releaseClaim();
+      return NextResponse.json({ error: "That saved version could not be restored." }, { status: 400 });
+    }
+    const expectedCopy = Object.fromEntries(
+      (targetQa?.copyChecks ?? []).map((check) => [check.key, check.expected]),
+    );
+    let restoredQa: AdStudioCloneQa;
+    try {
+      restoredQa = await runCloneQa({
+        workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        correlationId: mutationId,
+        imageUrl: targetImage,
+        expectedCopy,
+        format: String(row.format ?? "4:5"),
+        attempt: 1,
+      });
+    } catch (error) {
+      await releaseClaim();
+      return errorResponse(error, 502);
+    }
+    if (!restoredQa.passed) {
+      await releaseClaim();
+      return NextResponse.json(
+        { error: "That version no longer passes the ad checks, so it was not restored.", qa: restoredQa },
+        { status: 502 },
+      );
+    }
+    const nextCanvas: AdStudioCreative["canvas"] = {
+      ...canvas,
+      objects: [{ ...cloneObject, content: targetImageRef, assetId: targetImageRef }],
+      cloneQa: restoredQa,
+      renderHistory: action === "undo"
+        ? sourceHistory.slice(0, -1)
+        : [...(canvas.renderHistory ?? []), currentImageRef].filter(Boolean).slice(-RENDER_HISTORY_LIMIT),
+      renderQaHistory: action === "undo"
+        ? sourceQaHistory.slice(0, -1)
+        : [...(canvas.renderQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])].slice(-RENDER_HISTORY_LIMIT),
+      redoHistory: action === "undo"
+        ? [...(canvas.redoHistory ?? []), currentImageRef].filter(Boolean).slice(-RENDER_HISTORY_LIMIT)
+        : sourceHistory.slice(0, -1),
+      redoQaHistory: action === "undo"
+        ? [...(canvas.redoQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])].slice(-RENDER_HISTORY_LIMIT)
+        : sourceQaHistory.slice(0, -1),
+    };
+    const revision = await appendAdStudioCreativeRevision(context.supabase, {
+      workspaceId: context.access.workspaceId,
+      creativeId: id,
+      expectedActiveRevisionId: expectedRevisionId,
+      canvas: nextCanvas,
+      renderStatus: "rendered",
+      creationOperation: "targeted_edit",
+      mutationId,
+      requestHash,
+    });
+    if (!revision.ok) {
+      await releaseClaim();
+      return NextResponse.json(
+        { code: "stale_revision", error: "This ad changed while the version was being restored. Reload and try again." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({
+      creativeId: id,
+      image: targetImageRef,
+      qa: restoredQa,
+      renderHistory: nextCanvas.renderHistory,
+      renderQaHistory: nextCanvas.renderQaHistory,
+      redoHistory: nextCanvas.redoHistory,
+      redoQaHistory: nextCanvas.redoQaHistory,
+      revisionId: revision.revisionId,
+      revisionNumber: revision.revisionNumber,
+    });
+  }
+
+  // The edit-only validation above guarantees this after history actions return.
+  const editFieldKey = fieldKey!;
 
   const currentImageRef = cloneObject.content || cloneObject.assetId || "";
   const currentImage = await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef);
@@ -165,47 +276,41 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   for (const check of canvas.cloneQa?.copyChecks ?? []) {
     expectedCopy[check.key] = check.expected;
   }
-  if (newValue) expectedCopy[fieldKey] = newValue;
+  if (newValue) expectedCopy[editFieldKey] = newValue;
 
-  const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === fieldKey);
+  const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === editFieldKey);
+  if (!selectedRegion) {
+    await releaseClaim();
+    return NextResponse.json({ error: "That editable area is no longer available. Reload the ad." }, { status: 409 });
+  }
+  if (selectedRegion.kind === "text" && !newValue) {
+    await releaseClaim();
+    return NextResponse.json({ error: "Type the exact replacement text for this area." }, { status: 400 });
+  }
+  if (selectedRegion.kind === "image" && newValue) {
+    await releaseClaim();
+    return NextResponse.json({ error: "Use an image instruction or replacement image for this area." }, { status: 400 });
+  }
   const correlationId = mutationId;
 
   let qa: AdStudioCloneQa | null = null;
   let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
-  const canRenderTextDirectly = Boolean(
-    newValue
-    && selectedRegion?.kind === "text"
-    && selectedRegion.box.width > 0
-    && selectedRegion.box.height > 0
-    && canvas.cloneQa?.passed,
-  );
-
-  if (canRenderTextDirectly && selectedRegion && canvas.cloneQa) {
-    try {
-      const assetUrl = await renderExactCloneTextEdit(currentImage, newValue, selectedRegion.box);
-      lastImage = {
-        assetUrl,
-        model: "deterministic-text-renderer",
-        provider: "blockwise",
-      };
-      qa = applyDeterministicTextEditQa(canvas.cloneQa, fieldKey, newValue);
-    } catch (error) {
-      await releaseClaim();
-      return errorResponse(error, 500);
-    }
-  } else {
-    const fieldLabel = fieldKey.replace(/_/g, " ");
+  {
+    const fieldLabel = editFieldKey.replace(/_/g, " ");
     const baseRequest = buildTargetedEditRequest({
       currentImage,
       fieldLabel,
       newValue,
       newImage,
+      editInstruction: instruction,
       expectedCopy,
       aspectRatio: String(row.format ?? "4:5"),
     });
     baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
-    // Image replacements and legacy/unverified text regions still need a model
-    // edit followed by whole-ad vision QA.
+    // All edits go through the image model. A previous deterministic text
+    // fallback blurred the selected rectangle and painted generic Arial over
+    // the ad, permanently destroying the source design. The model now retains
+    // the original type treatment, while compositing and QA preserve the rest.
     const providers = (await resolveCloneProviders()).sort(
       (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
     );
@@ -274,11 +379,16 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const renderHistory = [...(canvas.renderHistory ?? []), currentImageRef]
     .filter(Boolean)
     .slice(-RENDER_HISTORY_LIMIT);
+  const renderQaHistory = [...(canvas.renderQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])]
+    .slice(-RENDER_HISTORY_LIMIT);
   const nextCanvas: AdStudioCreative["canvas"] = {
     ...canvas,
     objects: [{ ...cloneObject, content: image, assetId: image }],
     cloneQa: qa ?? canvas.cloneQa,
     renderHistory,
+    renderQaHistory,
+    redoHistory: [],
+    redoQaHistory: [],
   };
 
   let revision;
@@ -314,6 +424,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     image,
     qa,
     renderHistory,
+    renderQaHistory,
+    redoHistory: [],
+    redoQaHistory: [],
     revisionId: revision.revisionId,
     revisionNumber: revision.revisionNumber,
     model: lastImage.model,
@@ -348,6 +461,9 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       image: completedImage,
       qa: completedCanvas.cloneQa,
       renderHistory: completedCanvas.renderHistory ?? [],
+      renderQaHistory: completedCanvas.renderQaHistory ?? [],
+      redoHistory: completedCanvas.redoHistory ?? [],
+      redoQaHistory: completedCanvas.redoQaHistory ?? [],
       revisionId: execution.revisionId,
       revisionNumber: execution.revisionNumber,
       replayed: true,
