@@ -28,6 +28,11 @@ test("tiny media repair archives bad rows and rebuilds every affected creative",
   assert.match(sql, /research_archive\.media_assets_tiny_image_202607150004/iu);
   assert.match(sql, /kind\s*=\s*'image'[\s\S]*capture_status\s*=\s*'captured'[\s\S]*byte_size\s*<\s*2048/iu);
   assert.match(sql, /update research\.media_assets[\s\S]*capture_status\s*=\s*'blocked'/iu);
+  assert.doesNotMatch(
+    sql,
+    /last_error\s*=/iu,
+    "the production media_assets table has no last_error column",
+  );
   assert.match(sql, /update research\.ad_creatives[\s\S]*media_assets\s*=\s*coalesce\(aggregated\.media_assets/iu);
   assert.match(sql, /display_state\s*=\s*case[\s\S]*then\s*'hidden'/iu);
 });

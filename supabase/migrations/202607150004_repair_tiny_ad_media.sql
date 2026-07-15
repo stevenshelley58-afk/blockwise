@@ -57,7 +57,6 @@ on conflict (id) do nothing;
 
 update research.media_assets
 set capture_status = 'blocked',
-    last_error = 'Media quality rejected: image_too_small',
     metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
       'media_quality_rejection', 'image_too_small',
       'repaired_by', '202607150004_repair_tiny_ad_media'
