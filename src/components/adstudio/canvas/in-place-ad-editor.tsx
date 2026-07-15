@@ -110,7 +110,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       list.removeEventListener("scroll", updateElementScrollState);
       resizeObserver?.disconnect();
     };
-  }, [regions.length, updateElementScrollState]);
+  }, [regions.length, selectedRegion?.key, updateElementScrollState]);
 
   const performMutation = useCallback(async (mutation: CreativeEditMutation, successMessage: string) => {
     if (!creative.activeRevisionId) {
