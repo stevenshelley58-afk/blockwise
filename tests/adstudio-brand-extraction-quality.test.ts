@@ -57,7 +57,7 @@ test("uses same-origin stylesheet content for named brand colours and typography
 });
 
 test("does not turn nested page sections into giant copy or disclaimer fields", () => {
-  const repeatedNavigation = "Buy Sell Rent Commercial International " .repeat(30);
+  const repeatedNavigation = "Buy Sell Rent Commercial International ".repeat(30);
   const kit = extract(`
     <html><body>
       <h1>Find your local Ray White office</h1>

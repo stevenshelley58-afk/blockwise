@@ -208,7 +208,7 @@ function extractColours(cssText: string): {
   }
 
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([colour]) => colour);
-  const primary = extractNamedColour(cssText, ["primary", "brand-primary"] ) ?? ranked[0] ?? null;
+  const primary = extractNamedColour(cssText, ["primary", "brand-primary"]) ?? ranked[0] ?? null;
   const secondary = extractNamedColour(cssText, ["secondary", "brand-secondary"]) ?? ranked.find((colour) => colour !== primary) ?? null;
   const background = extractNamedColour(cssText, ["background", "page-background", "surface"]);
   const text = extractNamedColour(cssText, ["text", "foreground", "body-text"]);
