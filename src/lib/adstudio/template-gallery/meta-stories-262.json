@@ -1,0 +1,107 @@
+{
+  "id": "meta-stories-262",
+  "name": "Buyer Tip - Get Pre-Approved",
+  "goal": "buyer_leads",
+  "offerId": "buyer-tip-preapproval-001",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Prospective home buyers seeking advice on starting the buying process",
+  "category": "real_estate",
+  "tags": [
+    "buyer tip",
+    "pre-approval",
+    "home buying",
+    "real estate advice"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-stories-262-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-262-sample.png",
+    "alt": "Generated sample for Buyer Tip - Get Pre-Approved.",
+    "contentHash": "fd076c2d1f5551069fe186239419507d4184c5344fdc8066d846c8e4e0663db9",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "agent_photo",
+        "label": "Agent or Professional Portrait",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A professional photo of the agent or advisor, seated or posed in a welcoming manner."
+      }
+    ],
+    "text": [
+      {
+        "key": "main_heading",
+        "label": "Main Heading",
+        "maxLength": 20,
+        "sample": "BUYER TIP",
+        "required": true
+      },
+      {
+        "key": "tip_text",
+        "label": "Tip Text",
+        "maxLength": 240,
+        "sample": "Get pre-approved before you start house hunting. It locks in your budget and lets you make an offer the moment you find the right home.",
+        "required": true
+      },
+      {
+        "key": "contact_handle",
+        "label": "Contact Handle or Website",
+        "maxLength": 40,
+        "sample": "@brightside.example",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_262.png",
+    "contentHash": "27a5dc43ed7c200505f876d6a46ad8b8dc792c31e85d2ae9803c209540d2b21e"
+  },
+  "classification": {
+    "ad_type": "social_post",
+    "primary_intent": "educational",
+    "property_or_agent_focus": "agent"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

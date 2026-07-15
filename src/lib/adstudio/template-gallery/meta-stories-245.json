@@ -1,0 +1,152 @@
+{
+  "id": "meta-stories-245",
+  "name": "Looking for a Real Estate Agent?",
+  "goal": "buyer_leads",
+  "offerId": "dwell-realty-best-service-2024",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "People seeking to buy or sell a home and looking for an agent",
+  "category": "real_estate",
+  "tags": [
+    "real estate",
+    "agent",
+    "buyer",
+    "seller",
+    "contact",
+    "viewing",
+    "service"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-stories-245-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-stories-245-sample.png",
+    "alt": "Generated sample for Looking for a Real Estate Agent?.",
+    "contentHash": "0cce6e6b8be766b169feaa10292176372e0f5db5b26c83855a6e92e83b70c894",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "agency_logo",
+        "label": "Agency Logo",
+        "required": true,
+        "aspect": "square",
+        "description": "Logo image of the real estate agency, shown at the top left."
+      },
+      {
+        "key": "agent_photo",
+        "label": "Agent Photo",
+        "required": true,
+        "aspect": "portrait",
+        "description": "Professional photo of the real estate agent, shown on the right side."
+      }
+    ],
+    "text": [
+      {
+        "key": "agency_name",
+        "label": "Agency Name",
+        "maxLength": 30,
+        "sample": "HARBOURLINE REALTY",
+        "required": true
+      },
+      {
+        "key": "service_tagline",
+        "label": "Service Tagline",
+        "maxLength": 30,
+        "sample": "Best Service",
+        "required": false
+      },
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 60,
+        "sample": "LOOKING FOR A REAL ESTATE AGENT?",
+        "required": true
+      },
+      {
+        "key": "supporting_text",
+        "label": "Supporting Text",
+        "maxLength": 90,
+        "sample": "We are ready to help you with the buying or selling of your home.",
+        "required": true
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 40,
+        "sample": "Mia Calloway",
+        "required": true
+      },
+      {
+        "key": "agent_title",
+        "label": "Agent Title",
+        "maxLength": 30,
+        "sample": "Real Estate Agent",
+        "required": true
+      },
+      {
+        "key": "cta_text",
+        "label": "Call to Action Text",
+        "maxLength": 40,
+        "sample": "Schedule a Viewing",
+        "required": true
+      },
+      {
+        "key": "contact_number",
+        "label": "Contact Number",
+        "maxLength": 20,
+        "sample": "+123-555-0134",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_245.png",
+    "contentHash": "b6d85d3015a97438faaf619b460f78f24ebc4c0d22a3e471575d105d6f65141e"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "connect_with_agent",
+    "property_or_agent_focus": "agent"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

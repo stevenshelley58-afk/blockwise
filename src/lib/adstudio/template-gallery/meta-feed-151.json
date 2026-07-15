@@ -1,0 +1,192 @@
+{
+  "id": "meta-feed-151",
+  "name": "Open House This Sunday - Modern Home Showcase",
+  "goal": "buyer_leads",
+  "offerId": "open-house-995k-2025",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Attend an open house and inquire about purchasing a modern home.",
+  "category": "open_home",
+  "tags": [
+    "open house",
+    "modern home",
+    "real estate",
+    "buyer leads",
+    "property tour"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-151-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-151-sample.png",
+    "alt": "Generated sample for Open House This Sunday - Modern Home Showcase.",
+    "contentHash": "127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_exterior",
+        "label": "Main Exterior Photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A wide exterior shot of the property, ideally showing the front and garden."
+      },
+      {
+        "key": "interior_1",
+        "label": "Interior Photo 1",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of a main living area or feature room."
+      },
+      {
+        "key": "interior_2",
+        "label": "Interior Photo 2",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of a bedroom or secondary living space."
+      },
+      {
+        "key": "interior_3",
+        "label": "Interior Photo 3",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of a bathroom or other notable interior space."
+      },
+      {
+        "key": "agent_photo",
+        "label": "Agent Photo",
+        "required": false,
+        "aspect": "square",
+        "description": "A professional photo of the listing agent (optional)."
+      }
+    ],
+    "text": [
+      {
+        "key": "brand_name",
+        "label": "Agency Name",
+        "maxLength": 20,
+        "sample": "HARBOURLINE",
+        "required": true
+      },
+      {
+        "key": "listing_price",
+        "label": "Listing Price",
+        "maxLength": 20,
+        "sample": "$860,000",
+        "required": true
+      },
+      {
+        "key": "open_house_date",
+        "label": "Open House Date",
+        "maxLength": 30,
+        "sample": "21st June 2026",
+        "required": true
+      },
+      {
+        "key": "open_house_time",
+        "label": "Open House Time",
+        "maxLength": 20,
+        "sample": "10 AM - 2 PM",
+        "required": true
+      },
+      {
+        "key": "bedrooms",
+        "label": "Number of Bedrooms",
+        "maxLength": 10,
+        "sample": "4 Beds",
+        "required": true
+      },
+      {
+        "key": "bathrooms",
+        "label": "Number of Bathrooms",
+        "maxLength": 10,
+        "sample": "2 Baths",
+        "required": true
+      },
+      {
+        "key": "area",
+        "label": "Property Area",
+        "maxLength": 15,
+        "sample": "2,400 sqft",
+        "required": true
+      },
+      {
+        "key": "features",
+        "label": "Key Features",
+        "maxLength": 50,
+        "sample": "Car Port, Pool, Garden",
+        "required": true
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 40,
+        "sample": "Sophie Hale",
+        "required": true
+      },
+      {
+        "key": "agent_phone",
+        "label": "Agent Phone Number",
+        "maxLength": 20,
+        "sample": "+123-555-0126",
+        "required": true
+      },
+      {
+        "key": "agent_website",
+        "label": "Agent Website",
+        "maxLength": 50,
+        "sample": "www.harbourline.example",
+        "required": false
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_151.png",
+    "contentHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979"
+  },
+  "classification": {
+    "ad_type": "open_house",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

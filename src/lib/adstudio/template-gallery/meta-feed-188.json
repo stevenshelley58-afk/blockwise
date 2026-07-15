@@ -1,0 +1,122 @@
+{
+  "id": "meta-feed-188",
+  "name": "Under Contract Just Sold Announcement",
+  "goal": "seller_leads",
+  "offerId": "under_contract_just_sold_001",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Showcase a property that is under contract and just sold to attract potential sellers.",
+  "category": "just_sold",
+  "tags": [
+    "under contract",
+    "just sold",
+    "seller leads",
+    "property marketing",
+    "real estate"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-188-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-188-sample.png",
+    "alt": "Generated sample for Under Contract Just Sold Announcement.",
+    "contentHash": "7c1b39837ef9ad924efb5be343c9a30895be4f8d79fb939cd9a5c817d35e43d3",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property Photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality photo of the property that is under contract."
+      }
+    ],
+    "text": [
+      {
+        "key": "main_heading",
+        "label": "Main Heading",
+        "maxLength": 30,
+        "sample": "UNDER CONTRACT",
+        "required": true
+      },
+      {
+        "key": "badge_text",
+        "label": "Badge Text",
+        "maxLength": 15,
+        "sample": "JUST SOLD",
+        "required": true
+      },
+      {
+        "key": "contact_phone",
+        "label": "Contact Phone",
+        "maxLength": 20,
+        "sample": "+123-555-0143",
+        "required": true
+      },
+      {
+        "key": "contact_handle",
+        "label": "Contact Handle",
+        "maxLength": 30,
+        "sample": "@harbourline.example",
+        "required": true
+      },
+      {
+        "key": "price",
+        "label": "Price",
+        "maxLength": 20,
+        "sample": "$695,000",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_188.png",
+    "contentHash": "e746739b1e5f57dd69a58fcf3b5a583eb1964b470e578b5dfd79b1533788341a"
+  },
+  "classification": {
+    "ad_type": "just_sold",
+    "primary_intent": "seller_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

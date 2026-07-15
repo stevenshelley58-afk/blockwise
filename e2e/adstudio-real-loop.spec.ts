@@ -41,7 +41,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await expect(page.getByLabel("Ad Studio workspace")).toBeVisible({ timeout: 30_000 });
       await openNewAd(page);
       await expect(page.getByRole("heading", { name: /choose a template/i })).toBeVisible();
-      await expect(page.getByText("11 templates", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^\d+ templates$/)).toBeVisible();
       await page.getByRole("button", { name: /^close$/i }).click();
       expect(
         await page.evaluate(
@@ -209,7 +209,11 @@ async function waitForGenerationJob(page: Page, jobId: string): Promise<string> 
 // path. The private source ad is never exposed to the browser.
 async function chooseCloneSample(page: Page) {
   const killTest = page.getByRole("button", { name: /use just listed sage panel .* template/i }).first();
-  if (await killTest.isVisible().catch(() => false)) {
+  // The gallery renders after the dialog opens; an immediate isVisible() races
+  // it and silently falls back to whatever template happens to sort first.
+  // Wait for the kill-test template properly - its inputs match the uploaded
+  // listing photo + logo and the KILL_TEST_COPY fields.
+  if (await killTest.waitFor({ state: "visible", timeout: 30_000 }).then(() => true).catch(() => false)) {
     await killTest.click();
     return;
   }

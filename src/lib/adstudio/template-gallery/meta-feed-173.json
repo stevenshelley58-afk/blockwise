@@ -1,0 +1,108 @@
+{
+  "id": "meta-feed-173",
+  "name": "New Location Coming Soon Announcement",
+  "goal": "buyer_leads",
+  "offerId": "coming-soon-location-2024",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Inform buyers about a new residential development launching soon in the city.",
+  "category": "new_development",
+  "tags": [
+    "coming soon",
+    "new location",
+    "property launch",
+    "buyer interest",
+    "modern apartments"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-feed-173-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-feed-173-sample.png",
+    "alt": "Generated sample for New Location Coming Soon Announcement.",
+    "contentHash": "9385a07d2f3ca2e7c548f29f6e16a89f21486395cb9d14c4187d47fcba0c5e35",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "main_property_image",
+        "label": "Main Property Image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "A high-quality image of the featured property or residential complex."
+      }
+    ],
+    "text": [
+      {
+        "key": "headline_top",
+        "label": "Headline Top",
+        "maxLength": 30,
+        "sample": "NEW LOCATION",
+        "required": true
+      },
+      {
+        "key": "main_headline",
+        "label": "Main Headline",
+        "maxLength": 30,
+        "sample": "COMING SOON !",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 100,
+        "sample": "Elevate your living.\nA new destination is rising in the heart of the city",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_173.png",
+    "contentHash": "62af7a0e093d06a1eda25d187c05fafad4db95a82523f714dcfcffba44aa68cc"
+  },
+  "classification": {
+    "ad_type": "announcement",
+    "primary_intent": "generate_buyer_interest",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
