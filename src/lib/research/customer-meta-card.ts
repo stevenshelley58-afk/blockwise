@@ -369,7 +369,7 @@ function isString(value: string | null): value is string {
   return Boolean(value);
 }
 
-function normaliseNumber(value: string | number | null | undefined): number | null {
+function normaliseNumber(value: unknown): number | null {
   const numeric = typeof value === "string" ? Number(value) : value;
   return typeof numeric === "number" && Number.isFinite(numeric) ? numeric : null;
 }
