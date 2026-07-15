@@ -1,6 +1,6 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app
  * pre-emit critique: P5 H5 E4 S5 R5 V5 · nav: N1b · footer: Ft5 · contrast: pass (40–41)
- * honest: pass (46) · chrome: pass (47) · responsive: pass (49) · mobile: pass pending preview verification
+ * honest: pass (46) · chrome: pass (47) · responsive: pass (49) · mobile: pass (34, 49, 50–57)
  */
 html, body { overflow-x: clip; }
 
@@ -67,6 +67,7 @@ html, body { overflow-x: clip; }
 .home-brand-mark { width: 18px; height: 18px; border-radius: 5px; background: var(--home-ink); box-shadow: inset -6px -6px 0 var(--home-brand-shadow); }
 .home-nav { display: flex; gap: 28px; margin-left: auto; }
 .home-nav a, .home-login { min-height: 44px; display: inline-flex; align-items: center; color: var(--home-muted); text-decoration: none; font-size: .9rem; font-weight: 650; }
+.home-login { min-width: 44px; justify-content: center; }
 .home-header-actions { display: flex; gap: 8px; align-items: center; }
 
 .home-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 999px; padding: 10px 19px; text-decoration: none; white-space: nowrap; font-size: .9rem; font-weight: 700; line-height: 1.2; cursor: pointer; transition: background-color .18s var(--home-ease-out), border-color .18s var(--home-ease-out), color .18s var(--home-ease-out); }
