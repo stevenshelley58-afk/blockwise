@@ -213,11 +213,94 @@ export function hasUnresolvedDynamicPlaceholder(creative) {
   ].some((value) => /\{\{\s*[a-z0-9_.-]+\s*\}\}/iu.test(cleanString(value) ?? ""));
 }
 
+const MIN_DISPLAY_IMAGE_BYTES = 2_048;
+const MIN_DISPLAY_IMAGE_WIDTH = 200;
+const MIN_DISPLAY_IMAGE_HEIGHT = 150;
+
+export function assessCapturedImageQuality(input = {}) {
+  const byteSize = positiveMediaNumber(input.byteSize ?? input.byte_size);
+  const width = positiveMediaNumber(input.width);
+  const height = positiveMediaNumber(input.height);
+  if (byteSize !== null && byteSize < MIN_DISPLAY_IMAGE_BYTES) {
+    return { displayable: false, reason: "image_too_small" };
+  }
+  if (
+    (width !== null && width < MIN_DISPLAY_IMAGE_WIDTH) ||
+    (height !== null && height < MIN_DISPLAY_IMAGE_HEIGHT)
+  ) {
+    return { displayable: false, reason: "image_dimensions_too_small" };
+  }
+  return { displayable: true, reason: null };
+}
+
+export function readImageDimensions(input) {
+  const buffer = Buffer.isBuffer(input) ? input : Buffer.from(input ?? []);
+  if (buffer.length >= 24 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return dimensions(buffer.readUInt32BE(16), buffer.readUInt32BE(20));
+  }
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") {
+    return readWebpDimensions(buffer);
+  }
+  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
+    return readJpegDimensions(buffer);
+  }
+  return null;
+}
+
+function readJpegDimensions(buffer) {
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = buffer[offset + 1];
+    if (marker === 0xd8 || marker === 0xd9) {
+      offset += 2;
+      continue;
+    }
+    const segmentLength = buffer.readUInt16BE(offset + 2);
+    if (segmentLength < 2 || offset + segmentLength + 2 > buffer.length) return null;
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      return dimensions(buffer.readUInt16BE(offset + 7), buffer.readUInt16BE(offset + 5));
+    }
+    offset += segmentLength + 2;
+  }
+  return null;
+}
+
+function readWebpDimensions(buffer) {
+  const chunk = buffer.subarray(12, 16).toString("ascii");
+  if (chunk === "VP8X" && buffer.length >= 30) {
+    return dimensions(1 + readUInt24LE(buffer, 24), 1 + readUInt24LE(buffer, 27));
+  }
+  if (chunk === "VP8 " && buffer.length >= 30 && buffer[23] === 0x9d && buffer[24] === 0x01 && buffer[25] === 0x2a) {
+    return dimensions(buffer.readUInt16LE(26) & 0x3fff, buffer.readUInt16LE(28) & 0x3fff);
+  }
+  if (chunk === "VP8L" && buffer.length >= 25 && buffer[20] === 0x2f) {
+    const width = 1 + buffer[21] + ((buffer[22] & 0x3f) << 8);
+    const height = 1 + (buffer[22] >> 6) + (buffer[23] << 2) + ((buffer[24] & 0x0f) << 10);
+    return dimensions(width, height);
+  }
+  return null;
+}
+
+function readUInt24LE(buffer, offset) {
+  return buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16);
+}
+
+function dimensions(width, height) {
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
 export function hasUsableCapturedMedia(capturedAssets = []) {
   return Array.isArray(capturedAssets) && capturedAssets.some((asset) => {
     if (!firstMediaUrl([asset]) && !cleanString(asset?.storage_path)) return false;
     const byteSize = mediaByteSize(asset);
-    return byteSize === null || byteSize >= 2048;
+    if (cleanString(asset?.kind)?.toLowerCase() === "image") {
+      return assessCapturedImageQuality({ ...asset, byteSize }).displayable;
+    }
+    return byteSize === null || byteSize >= MIN_DISPLAY_IMAGE_BYTES;
   });
 }
 
@@ -442,6 +525,10 @@ function hasListingSignal(text) {
 
 function mediaByteSize(asset) {
   const value = asset?.byte_size ?? asset?.byteSize;
+  return positiveMediaNumber(value);
+}
+
+function positiveMediaNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }

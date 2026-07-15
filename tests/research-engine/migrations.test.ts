@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const dropMigration = "supabase/migrations/202605280002_research_drop_legacy.sql";
@@ -19,6 +19,18 @@ const mediaAssetsDedupeMigration = "supabase/migrations/202606150002_dedupe_medi
 const mediaAssetsContentHashDedupeMigration = "supabase/migrations/202606150003_dedupe_media_asset_content_hash.sql";
 const adAttributionLinksMigration = "supabase/migrations/202606200004_research_ad_attribution_links.sql";
 const drainWorkQueueIndexesMigration = "supabase/migrations/20260621061000_research_drain_work_queue_indexes.sql";
+const tinyMediaRepairMigration = "supabase/migrations/202607150004_repair_tiny_ad_media.sql";
+
+test("tiny media repair archives bad rows and rebuilds every affected creative", () => {
+  assert.equal(existsSync(tinyMediaRepairMigration), true, "tiny media repair migration must exist");
+  const sql = readFileSync(tinyMediaRepairMigration, "utf8");
+
+  assert.match(sql, /research_archive\.media_assets_tiny_image_202607150004/iu);
+  assert.match(sql, /kind\s*=\s*'image'[\s\S]*capture_status\s*=\s*'captured'[\s\S]*byte_size\s*<\s*2048/iu);
+  assert.match(sql, /update research\.media_assets[\s\S]*capture_status\s*=\s*'blocked'/iu);
+  assert.match(sql, /update research\.ad_creatives[\s\S]*media_assets\s*=\s*coalesce\(aggregated\.media_assets/iu);
+  assert.match(sql, /display_state\s*=\s*case[\s\S]*then\s*'hidden'/iu);
+});
 
 test("legacy-drop migration removes the v1 research tables idempotently", () => {
   const sql = readFileSync(dropMigration, "utf8");

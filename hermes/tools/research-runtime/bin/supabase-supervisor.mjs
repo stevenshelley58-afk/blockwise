@@ -9,9 +9,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   CLASSIFIER_VERSION,
+  assessCapturedImageQuality,
   classifyCreativeWithModels,
   hasUnresolvedDynamicPlaceholder,
   hasUsableCapturedMedia,
+  readImageDimensions,
   shouldDisplayClassifiedCreative,
   shouldReclassifyCreative,
   shouldWaitForMediaClassification,
@@ -5207,10 +5209,30 @@ async function handleMediaCollector(job) {
   let failed = 0;
   let deduped = 0;
   let refreshed = 0;
+  let qualityBlocked = 0;
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
   for (const asset of assets) {
     try {
       const stored = await captureMediaAsset(asset, buildRunId);
+      if (stored.rejected) {
+        await patchMediaAsset(asset.id, {
+          storage_bucket: null,
+          storage_path: null,
+          content_type: stored.contentType,
+          byte_size: stored.byteSize,
+          width: stored.width,
+          height: stored.height,
+          capture_status: "blocked",
+          captured_at: now(),
+          last_error: `Media quality rejected: ${stored.rejectionReason}`,
+          metadata: {
+            ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
+            media_quality_rejection: stored.rejectionReason,
+          },
+        });
+        qualityBlocked += 1;
+        continue;
+      }
       const existingStoredAsset = await findCapturedMediaAssetByStorage({
         creativeId: payload.adCreativeId,
         storagePath: stored.storagePath,
@@ -5222,6 +5244,8 @@ async function handleMediaCollector(job) {
           storage_path: null,
           content_type: stored.contentType,
           byte_size: stored.byteSize,
+          width: stored.width,
+          height: stored.height,
           checksum: stored.checksum,
           content_hash: stored.contentHash,
           capture_status: "blocked",
@@ -5241,6 +5265,8 @@ async function handleMediaCollector(job) {
         storage_path: stored.storagePath,
         content_type: stored.contentType,
         byte_size: stored.byteSize,
+        width: stored.width,
+        height: stored.height,
         checksum: stored.checksum,
         content_hash: stored.contentHash,
         capture_status: "captured",
@@ -5277,7 +5303,7 @@ async function handleMediaCollector(job) {
     status: "pending",
     max_attempts: 3,
   }, job);
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, failed } };
+  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, quality_blocked: qualityBlocked, failed } };
 }
 
 async function findCapturedMediaAssetByStorage({ creativeId, storagePath, excludeId }) {
@@ -5352,7 +5378,7 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
   if (shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
   }
@@ -5443,6 +5469,20 @@ async function captureMediaAsset(asset, buildRunId) {
     const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
     const buffer = Buffer.from(await response.arrayBuffer());
     if (!buffer.length) throw new Error("media fetch returned an empty body");
+    const imageDimensions = asset.kind === "image" ? readImageDimensions(buffer, contentType) : null;
+    const imageQuality = asset.kind === "image"
+      ? assessCapturedImageQuality({ byteSize: buffer.length, ...imageDimensions })
+      : { displayable: true, reason: null };
+    if (!imageQuality.displayable) {
+      return {
+        rejected: true,
+        rejectionReason: imageQuality.reason,
+        contentType,
+        byteSize: buffer.length,
+        width: imageDimensions?.width ?? null,
+        height: imageDimensions?.height ?? null,
+      };
+    }
     const checksum = hash(buffer);
     const existingBlob = await findMediaBlob(checksum);
     if (existingBlob) {
@@ -5451,6 +5491,8 @@ async function captureMediaAsset(asset, buildRunId) {
         storagePath: existingBlob.storage_path,
         contentType: existingBlob.content_type || contentType,
         byteSize: existingBlob.byte_size || buffer.length,
+        width: imageDimensions?.width ?? null,
+        height: imageDimensions?.height ?? null,
         checksum,
         contentHash: checksum,
         deduped: true,
@@ -5466,7 +5508,17 @@ async function captureMediaAsset(asset, buildRunId) {
       asset,
       buildRunId,
     });
-    return { storagePath, contentType, byteSize: buffer.length, checksum, contentHash: checksum, deduped: false };
+    return {
+      storagePath,
+      contentType,
+      byteSize: buffer.length,
+      width: imageDimensions?.width ?? null,
+      height: imageDimensions?.height ?? null,
+      checksum,
+      contentHash: checksum,
+      deduped: false,
+      rejected: false,
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -5658,6 +5710,9 @@ async function refreshCreativeStoredMedia(adCreativeId) {
         storagePath: asset.storage_path,
         contentType: asset.content_type || asset.mime_type || null,
         byteSize: asset.byte_size,
+        width: asset.width,
+        height: asset.height,
+        captureStatus: asset.capture_status,
         capturedAt: asset.captured_at,
       })),
     }),

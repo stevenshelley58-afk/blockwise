@@ -1413,6 +1413,24 @@ test("Hermes media collector globally dedupes stored media by content hash", () 
   );
 });
 
+test("Hermes blocks thumbnail-sized images before storage and records their dimensions", () => {
+  assert.match(
+    supervisor,
+    /assessCapturedImageQuality[\s\S]*readImageDimensions/u,
+    "the media collector must use the shared image-quality contract",
+  );
+  assert.match(
+    captureMediaAsset,
+    /readImageDimensions\(buffer[\s\S]*assessCapturedImageQuality[\s\S]*rejected:\s*true/u,
+    "image bytes must be dimension-checked before they can become captured media",
+  );
+  assert.match(
+    mediaCollector,
+    /stored\.rejected[\s\S]*capture_status:\s*["']blocked["'][\s\S]*width:\s*stored\.width[\s\S]*height:\s*stored\.height/u,
+    "quality-rejected images must become blocked rows with diagnostic dimensions",
+  );
+});
+
 test("Hermes media asset seeding tolerates source-url unique races", () => {
   const mediaSource = `${upsertMediaAssets}\n${functionBody(supervisor, "isMediaAssetUniqueConflict")}`;
   assert.match(
