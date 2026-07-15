@@ -96,6 +96,8 @@ export type TargetedEditInputs = {
   fieldLabel: string;
   newValue: string;
   newImage?: string;
+  /** Natural-language direction for a selected image region. */
+  editInstruction?: string;
   expectedCopy?: Record<string, string>;
   aspectRatio: string;
   seed?: number;
@@ -110,9 +112,12 @@ export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProvi
   const preservationInstruction = preservationContract
     ? ` Every listed text value must remain visible and character-for-character exact: ${preservationContract}.`
     : "";
+  const requestedChange = inputs.editInstruction?.trim();
   const instruction = inputs.newImage
-    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
-    : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.${preservationInstruction}`;
+    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area.${requestedChange ? ` Apply this direction only to the replacement: ${requestedChange}.` : ""} Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
+    : requestedChange
+      ? `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} according to this direction: ${requestedChange}. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
+      : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.${preservationInstruction}`;
 
   return {
     prompt: instruction,

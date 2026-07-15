@@ -92,4 +92,17 @@ test("post-clone edits anchor on the current finished ad and change one target",
   });
   assert.deepEqual(imageEdit.referenceAssets, ["data:image/png;base64,CURRENT", "data:image/png;base64,NEW_PROPERTY"]);
   assert.match(imageEdit.prompt, /Replace only the property photo/);
+
+  const promptedEdit = buildTargetedEditRequest({
+    currentImage: "data:image/png;base64,CURRENT",
+    fieldLabel: "property photo",
+    newValue: "",
+    editInstruction: "remove the parked car and brighten the garden",
+    expectedCopy: { headline: "JUST LISTED TODAY" },
+    aspectRatio: "4:5",
+  });
+  assert.deepEqual(promptedEdit.referenceAssets, ["data:image/png;base64,CURRENT"]);
+  assert.match(promptedEdit.prompt, /remove the parked car and brighten the garden/);
+  assert.match(promptedEdit.prompt, /Change only the property photo/);
+  assert.match(promptedEdit.prompt, /headline: "JUST LISTED TODAY"/);
 });

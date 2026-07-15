@@ -823,7 +823,7 @@ export function AdStudioWorkbench({
             </MetaChromePreview>
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
-            <p className="studio-metachrome-edit-hint">Click text on the canvas to edit it.</p>
+            <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>
           ) : null}
           {showCloneWarnings && (
             <div className="studio-clone-warning-strip" role="status" aria-live="polite">

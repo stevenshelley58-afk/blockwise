@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Pencil, Sparkles, Undo2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { Check, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
@@ -16,22 +16,30 @@ type EditResponse = {
   image?: string;
   qa?: AdStudioCreative["canvas"]["cloneQa"];
   renderHistory?: string[];
+  renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
+  redoHistory?: string[];
+  redoQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   revisionId?: string;
   error?: string;
 };
 
-// Matches the server-side limit in /api/adstudio/creatives/[id]/edit.
+type EditMutation = {
+  action?: "edit" | "undo" | "redo";
+  fieldKey?: string;
+  newValue?: string;
+  newImage?: string;
+  instruction?: string;
+};
+
 const MAX_TEXT_LENGTH = 200;
-// Replacement images travel as data URLs in the edit request body; cap them.
+const MAX_INSTRUCTION_LENGTH = 500;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-// After this long an in-flight edit switches to the "Still working…" label.
 const SLOW_EDIT_MS = 8000;
 
 function labelForRegionKey(key: string): string {
   return key.replace(/_/g, " ");
 }
 
-/** Percentage placement from the region's normalized 0-1 box. */
 function regionStyle(region: AdStudioCloneRegion): CSSProperties {
   const { x, y, width, height } = region.box;
   return {
@@ -39,15 +47,12 @@ function regionStyle(region: AdStudioCloneRegion): CSSProperties {
     top: `${y * 100}%`,
     width: `${width * 100}%`,
     height: `${height * 100}%`,
-    // Photo regions often contain text. Keep the more specific text target on
-    // top regardless of the order returned by vision QA.
     zIndex: region.kind === "text" ? 2 : 1,
   };
 }
 
 function expectedTextForKey(creative: AdStudioCreative, key: string): string {
-  const check = creative.canvas.cloneQa?.copyChecks.find((item) => item.key === key);
-  return check?.expected ?? "";
+  return creative.canvas.cloneQa?.copyChecks.find((item) => item.key === key)?.expected ?? "";
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -60,20 +65,27 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPlaceAdEditorProps) {
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [textDraft, setTextDraft] = useState("");
+  const [instruction, setInstruction] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [stillWorking, setStillWorking] = useState(false);
+  const [comparePrevious, setComparePrevious] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const pendingImageKeyRef = useRef<string | null>(null);
-  const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const textInputRef = useRef<HTMLTextAreaElement | null>(null);
   const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
 
   const cloneObject = creative.canvas.objects[0];
   const src = cloneObject?.content ?? cloneObject?.assetId ?? "";
   const regions = creative.canvas.cloneQa?.regions ?? [];
   const renderHistory = creative.canvas.renderHistory ?? [];
+  const redoHistory = creative.canvas.redoHistory ?? [];
+  const displaySrc = comparePrevious ? renderHistory.at(-1) ?? src : src;
   const busy = pendingKey !== null;
+  const selectedRegion = useMemo(
+    () => regions.find((region) => region.key === selectedKey),
+    [regions, selectedKey],
+  );
 
   useEffect(() => {
     if (!busy) {
@@ -85,106 +97,121 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   }, [busy]);
 
   useEffect(() => {
-    if (editingKey) draftInputRef.current?.focus();
-  }, [editingKey]);
+    if (selectedRegion?.kind === "text") textInputRef.current?.focus();
+  }, [selectedRegion]);
 
-  const submitEdit = useCallback(
-    async (fieldKey: string, payload: { newValue?: string; newImage?: string }) => {
-      if (!creative.activeRevisionId) {
-        showToast("This ad changed. Reload it before editing.");
+  useEffect(() => setComparePrevious(false), [src]);
+
+  const performMutation = useCallback(async (mutation: EditMutation, successMessage: string) => {
+    if (!creative.activeRevisionId) {
+      showToast("This ad changed. Reload it before editing.");
+      return;
+    }
+    const signature = JSON.stringify({
+      creativeId: creative.creativeId,
+      expectedRevisionId: creative.activeRevisionId,
+      mutation,
+    });
+    const mutationId = retryMutationRef.current?.signature === signature
+      ? retryMutationRef.current.mutationId
+      : crypto.randomUUID();
+    retryMutationRef.current = { signature, mutationId };
+    setPendingKey(mutation.fieldKey ?? mutation.action ?? "edit");
+    try {
+      const response = await fetch(`/api/adstudio/creatives/${creative.creativeId}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...mutation,
+          expectedRevisionId: creative.activeRevisionId,
+          mutationId,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as EditResponse;
+      if (!response.ok || !data.image || !data.revisionId) {
+        showToast(data.error || "The edit did not pass the ad checks. Your previous version is unchanged.");
         return;
       }
-      const signature = JSON.stringify({
-        creativeId: creative.creativeId,
-        expectedRevisionId: creative.activeRevisionId,
-        fieldKey,
-        payload,
+      onCreativeChange({
+        ...creative,
+        activeRevisionId: data.revisionId,
+        canvas: {
+          ...creative.canvas,
+          objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
+          cloneQa: data.qa ?? creative.canvas.cloneQa,
+          renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
+          renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,
+          redoHistory: data.redoHistory ?? creative.canvas.redoHistory,
+          redoQaHistory: data.redoQaHistory ?? creative.canvas.redoQaHistory,
+        },
       });
-      const mutationId = retryMutationRef.current?.signature === signature
-        ? retryMutationRef.current.mutationId
-        : crypto.randomUUID();
-      retryMutationRef.current = { signature, mutationId };
-      setPendingKey(fieldKey);
-      setEditingKey(null);
-      try {
-        const response = await fetch(`/api/adstudio/creatives/${creative.creativeId}/edit`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fieldKey,
-            ...payload,
-            expectedRevisionId: creative.activeRevisionId,
-            mutationId,
-          }),
-        });
-        const data = (await response.json().catch(() => ({}))) as EditResponse;
-        if (!response.ok || !data.image || !data.revisionId) {
-          // Keep the old image; the failure is surfaced, never silently shipped.
-          showToast(data.error || "The edit did not render correctly. Try again.");
-          return;
-        }
-        const next: AdStudioCreative = {
-          ...creative,
-          activeRevisionId: data.revisionId,
-          canvas: {
-            ...creative.canvas,
-            objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
-            cloneQa: data.qa ?? creative.canvas.cloneQa,
-            renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
-          },
-        };
-        retryMutationRef.current = null;
-        onCreativeChange(next);
-        showToast("Updated");
-      } catch {
-        showToast("The edit could not reach the server. Try again.");
-      } finally {
-        setPendingKey(null);
-      }
-    },
-    [cloneObject, creative, onCreativeChange, showToast],
-  );
+      retryMutationRef.current = null;
+      setInstruction("");
+      showToast(successMessage);
+    } catch {
+      showToast("The editor could not reach the server. Your previous version is unchanged.");
+    } finally {
+      setPendingKey(null);
+    }
+  }, [cloneObject, creative, onCreativeChange, showToast]);
 
-  function openTextEditor(region: AdStudioCloneRegion) {
+  function selectRegion(region: AdStudioCloneRegion) {
     if (busy) return;
-    setDraft(expectedTextForKey(creative, region.key));
-    setEditingKey(region.key);
+    setSelectedKey(region.key);
+    setInstruction("");
+    setTextDraft(region.kind === "text" ? expectedTextForKey(creative, region.key) : "");
   }
 
-  function confirmTextEdit() {
-    if (!editingKey) return;
-    const value = draft.trim();
+  function closeInspector() {
+    if (busy) return;
+    setSelectedKey(null);
+    setInstruction("");
+  }
+
+  function applyTextEdit() {
+    if (!selectedRegion || selectedRegion.kind !== "text") return;
+    const value = textDraft.trim();
     if (!value) {
-      showToast("Type the new text first.");
+      showToast("Type the replacement text first.");
       return;
     }
     if (value.length > MAX_TEXT_LENGTH) {
-      showToast(`Keep the new text to ${MAX_TEXT_LENGTH} characters or less.`);
+      showToast(`Keep the replacement text to ${MAX_TEXT_LENGTH} characters or less.`);
       return;
     }
-    void submitEdit(editingKey, { newValue: value });
+    void performMutation({ action: "edit", fieldKey: selectedRegion.key, newValue: value }, "Text updated and checked");
+  }
+
+  function applyImageInstruction() {
+    if (!selectedRegion || selectedRegion.kind !== "image") return;
+    const value = instruction.trim();
+    if (!value) {
+      showToast("Describe the image change first.");
+      return;
+    }
+    if (value.length > MAX_INSTRUCTION_LENGTH) {
+      showToast(`Keep the direction to ${MAX_INSTRUCTION_LENGTH} characters or less.`);
+      return;
+    }
+    void performMutation(
+      { action: "edit", fieldKey: selectedRegion.key, instruction: value },
+      "Image updated and checked",
+    );
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      confirmTextEdit();
+      if (selectedRegion?.kind === "text") applyTextEdit();
+      else applyImageInstruction();
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setEditingKey(null);
+      closeInspector();
     }
   }
 
-  function openImagePicker(region: AdStudioCloneRegion) {
-    if (busy) return;
-    pendingImageKeyRef.current = region.key;
-    fileInputRef.current?.click();
-  }
-
   async function handleImageFile(file: File | null) {
-    const fieldKey = pendingImageKeyRef.current;
-    pendingImageKeyRef.current = null;
-    if (!file || !fieldKey) return;
+    if (!file || !selectedRegion || selectedRegion.kind !== "image") return;
     if (!file.type.startsWith("image/")) {
       showToast("Choose an image file.");
       return;
@@ -196,30 +223,28 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
         return;
       }
       const dataUrl = await readFileAsDataUrl(scaled);
-      await submitEdit(fieldKey, { newImage: dataUrl });
+      await performMutation(
+        {
+          action: "edit",
+          fieldKey: selectedRegion.key,
+          newImage: dataUrl,
+          instruction: instruction.trim() || undefined,
+        },
+        "Image replaced and checked",
+      );
     } catch {
       showToast("The image could not be read. Try another file.");
     }
   }
 
-  // Client-side undo: restore the previous render; the QA verdict stays as-is
-  // (stale) — server-side undo verification is a later task.
-  function undoLastEdit() {
-    if (busy || renderHistory.length === 0) return;
-    const previous = renderHistory[renderHistory.length - 1];
-    const next: AdStudioCreative = {
-      ...creative,
-      canvas: {
-        ...creative.canvas,
-        objects: [{ ...cloneObject, content: previous, assetId: previous }],
-        renderHistory: renderHistory.slice(0, -1),
-      },
-    };
-    onCreativeChange(next);
-    showToast("Restored the previous render");
+  function restoreVersion(action: "undo" | "redo") {
+    if (busy) return;
+    void performMutation(
+      { action },
+      action === "undo" ? "Previous version restored and checked" : "Next version restored and checked",
+    );
   }
 
-  // Older creatives without QA regions: show the image without dead hit-targets.
   if (regions.length === 0) {
     return (
       <div className="studio-clone-stage">
@@ -229,83 +254,151 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     );
   }
 
-  const editingRegion = editingKey ? regions.find((region) => region.key === editingKey) : undefined;
-
   return (
-    <div className="studio-inplace-stage">
+    <div className="studio-inplace-stage" data-inspector-open={selectedRegion ? "true" : undefined}>
       <div className="studio-inplace-frame">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="AI-designed ad creative" />
-        {renderHistory.length > 0 && (
-          <button
-            type="button"
-            className="studio-inplace-undo"
-            onClick={undoLastEdit}
-            disabled={busy}
-            aria-label="Undo last edit"
-          >
-            <Undo2 aria-hidden size={13} />
-            Undo
-          </button>
-        )}
+        <img src={displaySrc} alt={comparePrevious ? "Previous ad version" : "AI-designed ad creative"} />
         {regions.map((region) => {
           const pending = pendingKey === region.key;
+          const selected = selectedKey === region.key;
           return (
             <button
-              key={region.key}
+              key={`${region.kind}:${region.key}`}
               type="button"
               className={`studio-inplace-region ${region.kind}`}
               style={regionStyle(region)}
               data-pending={pending || undefined}
-              disabled={busy && !pending}
+              data-selected={selected || undefined}
+              disabled={comparePrevious || (busy && !pending)}
               aria-label={`Edit ${labelForRegionKey(region.key)}`}
-              onClick={() => (region.kind === "image" ? openImagePicker(region) : openTextEditor(region))}
+              aria-pressed={selected}
+              onClick={() => selectRegion(region)}
             >
               {pending ? (
                 <span className="studio-inplace-status" role="status">
                   {stillWorking ? "Still working…" : "Updating…"}
                 </span>
-              ) : (
-                <span className="studio-inplace-chip" aria-hidden>
-                  <Pencil size={12} />
-                </span>
-              )}
+              ) : null}
             </button>
           );
         })}
-        {editingRegion && (
-          <div
-            className="studio-inplace-editor"
-            style={{
-              left: `${editingRegion.box.x * 100}%`,
-              top: `${editingRegion.box.y * 100}%`,
-              minWidth: `${Math.max(editingRegion.box.width * 100, 42)}%`,
-            }}
-          >
-            <textarea
-              ref={draftInputRef}
-              value={draft}
-              rows={Math.min(4, Math.max(1, Math.ceil(draft.length / 32)))}
-              maxLength={MAX_TEXT_LENGTH}
-              aria-label={`New text for ${labelForRegionKey(editingRegion.key)}`}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={handleEditorKeyDown}
-            />
-            <div className="studio-inplace-editor-actions">
-              <button type="button" className="cancel" onClick={() => setEditingKey(null)} aria-label="Cancel edit">
-                <X aria-hidden size={14} />
+      </div>
+
+      <div className="studio-inplace-toolbar" aria-label="Edit history">
+        <button type="button" onClick={() => restoreVersion("undo")} disabled={busy || renderHistory.length === 0}>
+          <Undo2 aria-hidden size={15} />
+          Undo
+        </button>
+        <button type="button" onClick={() => restoreVersion("redo")} disabled={busy || redoHistory.length === 0}>
+          <Redo2 aria-hidden size={15} />
+          Redo
+        </button>
+        <button
+          type="button"
+          aria-pressed={comparePrevious}
+          onClick={() => {
+            setComparePrevious((current) => !current);
+            setSelectedKey(null);
+          }}
+          disabled={busy || renderHistory.length === 0}
+        >
+          <ScanEye aria-hidden size={15} />
+          {comparePrevious ? "Current" : "Compare"}
+        </button>
+        <button
+          type="button"
+          onClick={() => selectRegion(regions.find((region) => region.kind === "text") ?? regions[0]!)}
+          disabled={busy || comparePrevious}
+        >
+          <ListTree aria-hidden size={15} />
+          Edit elements
+        </button>
+      </div>
+
+      {selectedRegion ? (
+        <aside className="studio-inplace-inspector" aria-label="Edit selected element">
+          <header>
+            <div>
+              <span>{selectedRegion.kind === "text" ? "Text" : "Image"}</span>
+              <strong>{labelForRegionKey(selectedRegion.key)}</strong>
+            </div>
+            <button type="button" onClick={closeInspector} aria-label="Close editor" disabled={busy}>
+              <X aria-hidden size={18} />
+            </button>
+          </header>
+
+          <div className="studio-inplace-element-list" aria-label="Editable elements">
+            {regions.map((region) => (
+              <button
+                key={`list:${region.kind}:${region.key}`}
+                type="button"
+                aria-pressed={selectedKey === region.key}
+                onClick={() => selectRegion(region)}
+                disabled={busy}
+              >
+                {region.kind === "text" ? <Sparkles aria-hidden size={15} /> : <ImagePlus aria-hidden size={15} />}
+                {labelForRegionKey(region.key)}
               </button>
-              <button type="button" className="confirm" onClick={confirmTextEdit} aria-label="Confirm edit">
-                <Check aria-hidden size={14} />
+            ))}
+          </div>
+
+          {selectedRegion.kind === "text" ? (
+            <div className="studio-inplace-field">
+              <label htmlFor={`studio-text-${selectedRegion.key}`}>Replacement text</label>
+              <textarea
+                id={`studio-text-${selectedRegion.key}`}
+                ref={textInputRef}
+                value={textDraft}
+                rows={4}
+                maxLength={MAX_TEXT_LENGTH}
+                disabled={busy}
+                onChange={(event) => setTextDraft(event.target.value)}
+                onKeyDown={handleEditorKeyDown}
+              />
+              <small>{textDraft.length}/{MAX_TEXT_LENGTH}. Press Ctrl+Enter to apply.</small>
+              <button className="primary" type="button" onClick={applyTextEdit} disabled={busy || !textDraft.trim()}>
+                <Check aria-hidden size={16} />
+                Replace text
               </button>
             </div>
-          </div>
-        )}
-      </div>
-      <span className="studio-inplace-hint">
-        <Sparkles aria-hidden size={13} />
-        Click any text on the ad to edit it
-      </span>
+          ) : (
+            <div className="studio-inplace-field">
+              <label htmlFor={`studio-image-${selectedRegion.key}`}>Describe the change</label>
+              <textarea
+                id={`studio-image-${selectedRegion.key}`}
+                value={instruction}
+                rows={4}
+                maxLength={MAX_INSTRUCTION_LENGTH}
+                placeholder="For example: remove the car and brighten the front garden"
+                disabled={busy}
+                onChange={(event) => setInstruction(event.target.value)}
+                onKeyDown={handleEditorKeyDown}
+              />
+              <small>Only this selected area can change. The rest of the ad is checked before saving.</small>
+              <button className="primary" type="button" onClick={applyImageInstruction} disabled={busy || !instruction.trim()}>
+                <WandSparkles aria-hidden size={16} />
+                Apply image edit
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={busy}>
+                <ImagePlus aria-hidden size={16} />
+                Replace with another image
+              </button>
+            </div>
+          )}
+
+          <p className="studio-inplace-preserve-note">
+            The current finished ad stays as the reference. Nothing is saved unless the updated ad passes the copy and visual checks.
+          </p>
+          {busy ? (
+            <div className="studio-inplace-progress" role="status" aria-live="polite">
+              <Sparkles aria-hidden size={16} />
+              {stillWorking ? "Checking the updated ad…" : "Creating the scoped edit…"}
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
+
       <input
         ref={fileInputRef}
         type="file"
