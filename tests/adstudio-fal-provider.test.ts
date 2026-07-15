@@ -64,6 +64,25 @@ test("unknown aspect falls back to 4:5", () => {
   assert.deepEqual(falImageSizeForAspect("weird"), { width: 1024, height: 1280 });
 });
 
+test("fal Gemini edits use the native aspect and 1K request contract", async () => {
+  const submittedBodies: Array<Record<string, unknown>> = [];
+  const provider = createFalImageProvider(accounting, {
+    env: { FAL_KEY: "test-key" },
+    model: "fal-ai/gemini-3.1-flash-image-preview/edit",
+    fetchImpl: async (_input, init) => {
+      submittedBodies.push(JSON.parse(String(init?.body ?? "{}")));
+      return new Response(JSON.stringify({ detail: "stop after submit" }), { status: 400 });
+    },
+  });
+
+  await assert.rejects(() => provider.generate(request));
+  const submittedBody = submittedBodies[0] ?? {};
+  assert.equal(submittedBody?.aspect_ratio, "4:5");
+  assert.equal(submittedBody?.resolution, "1K");
+  assert.equal("image_size" in (submittedBody ?? {}), false);
+  assert.equal("quality" in (submittedBody ?? {}), false);
+});
+
 test("generate throws a clear error when FAL_KEY is missing", async () => {
   const provider = createFalImageProvider(accounting, { env: {} });
   await assert.rejects(() => provider.generate(request), (error: unknown) => {

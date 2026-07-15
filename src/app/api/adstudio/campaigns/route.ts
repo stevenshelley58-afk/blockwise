@@ -1,4 +1,3 @@
-import { tasks } from "@trigger.dev/sdk/v3";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
@@ -29,8 +28,28 @@ const SYNC_GENERATION_DEADLINE_MS = 240_000;
 // Secrets pasted into the Vercel dashboard can pick up an invisible BOM
 // (U+FEFF), which makes every trigger call throw "Cannot convert argument to
 // a ByteString" — the async path then silently degrades to sync forever.
-if (process.env.TRIGGER_SECRET_KEY) {
-  process.env.TRIGGER_SECRET_KEY = process.env.TRIGGER_SECRET_KEY.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+export function normaliseTriggerSecretKey(value: string | undefined): string {
+  return (value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+}
+
+async function triggerTemplateGeneration(payload: {
+  workspaceId: string;
+  userId: string;
+  jobId: string;
+  origin: string;
+  body: CreateCampaignBody;
+}): Promise<void> {
+  const secretKey = normaliseTriggerSecretKey(process.env.TRIGGER_SECRET_KEY);
+  if (!secretKey) throw new Error("Trigger.dev is not configured.");
+
+  // Import after normalisation so the SDK cannot capture an invalid raw key.
+  const { configure, tasks } = await import("@trigger.dev/sdk");
+  configure({ secretKey });
+  await tasks.trigger("adstudio.generate.template", payload, {
+    idempotencyKey: payload.jobId,
+    tags: ["adstudio-generate", payload.workspaceId, payload.jobId],
+    maxAttempts: 1,
+  });
 }
 
 const inFlightGenerations = new Map<string, number>();
@@ -39,8 +58,6 @@ const GENERATION_DEDUP_TTL_MS = 30_000;
 // Warm-lambda cache: once trigger.dev rejects the key as invalid, stop paying
 // the queue-insert + failed-trigger round trip on every generation. Fixing
 // the key requires a redeploy, which resets this.
-let triggerAuthBroken = false;
-
 function isAdStudioImageSrc(value: string | undefined): boolean {
   return Boolean(
     value?.startsWith("data:image/") ||
@@ -68,6 +85,9 @@ function validateFirstAd(firstAd: FirstAdInput | undefined): string | null {
     return "First ad formats must be Story and Feed.";
   }
   if (!firstAd.templateId?.trim()) return "Selected sample was not found.";
+  if (firstAd.generationQuality && !["fast", "high"].includes(firstAd.generationQuality)) {
+    return "Choose Fast or High quality generation.";
+  }
   if (firstAd.copy) {
     const fields = [firstAd.copy.primaryText, firstAd.copy.headline, firstAd.copy.description, firstAd.copy.cta];
     if (fields.some((field) => typeof field !== "string" || field.length > 500)) {
@@ -206,7 +226,7 @@ export async function POST(request: NextRequest) {
     {
       const origin = request.nextUrl.origin;
 
-      if (process.env.TRIGGER_SECRET_KEY && !triggerAuthBroken && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
+      if (normaliseTriggerSecretKey(process.env.TRIGGER_SECRET_KEY) && process.env.ADSTUDIO_SYNC_GENERATE !== "1") {
         const service = createSupabaseServiceClient();
         const inserted = await service
           .from("adstudio_creative_jobs")
@@ -233,44 +253,29 @@ export async function POST(request: NextRequest) {
         }
 
         const jobId = String(inserted.data.id);
-        let triggered = false;
 
         try {
-          await tasks.trigger(
-            "adstudio.generate.template",
-            {
-              workspaceId: context.access.workspaceId,
-              userId: context.access.userId,
-              jobId,
-              origin,
-              body,
-            },
-            {
-              idempotencyKey: jobId,
-              tags: ["adstudio-generate", context.access.workspaceId, jobId],
-              maxAttempts: 1,
-            },
-          );
-          triggered = true;
+          await triggerTemplateGeneration({
+            workspaceId: context.access.workspaceId,
+            userId: context.access.userId,
+            jobId,
+            origin,
+            body,
+          });
         } catch (error) {
-          // Trigger unavailable or the task not yet registered (e.g. the
-          // deploy window right after a release): mark the queued row failed
-          // and FALL THROUGH to the inline sync path — generation must never
-          // depend on the queue being healthy.
-          console.error("adstudio.generate.template trigger failed; falling back to sync", error);
-          if ((error as { status?: number })?.status === 401) triggerAuthBroken = true;
+          // Fail quickly instead of hiding a queue fault behind a multi-minute
+          // synchronous request. The customer can retry without a lost credit.
+          console.error("adstudio.generate.template trigger failed", error);
           await service
             .from("adstudio_creative_jobs")
-            .update({ status: "failed", error: "The generation job could not be started; ran synchronously instead.", updated_at: new Date().toISOString() })
+            .update({ status: "failed", error: "The background generation job could not be started.", updated_at: new Date().toISOString() })
             .eq("id", jobId)
             .eq("workspace_id", context.access.workspaceId);
+          throw new Error("Ad generation could not start. Please try again in a moment.");
         }
 
-        // The generation lock is released in finally, as for the sync path; the
-        // job itself is idempotent via the deterministic campaign id.
-        if (triggered) {
-          return NextResponse.json({ jobId }, { status: 202 });
-        }
+        // The generation lock is released in finally; Trigger owns the long run.
+        return NextResponse.json({ jobId }, { status: 202 });
       }
 
       const result = await runTemplateCampaignGeneration({

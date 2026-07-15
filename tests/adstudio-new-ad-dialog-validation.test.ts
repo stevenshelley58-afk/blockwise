@@ -59,6 +59,20 @@ test("the server owns clone generation and the client waits for the finished ad"
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 
+test("the customer chooses fast or high quality without provider jargon", () => {
+  const dialog = readFileSync("src/components/adstudio/new-ad-dialog.tsx", "utf8");
+  const types = readFileSync("src/lib/adstudio/types.ts", "utf8");
+
+  assert.match(types, /generationQuality\?:\s*"fast" \| "high"/);
+  assert.match(dialog, /legend>Generation quality<\/legend>/);
+  assert.match(dialog, /Fast/);
+  assert.match(dialog, /Usually ready in about 30–45 seconds/);
+  assert.match(dialog, /High quality/);
+  assert.match(dialog, /Usually ready in about 2–3 minutes/);
+  assert.match(dialog, /generationQuality/);
+  assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
+});
+
 test("goal-specific guidance does not introduce a second template recipe", () => {
   const template = AD_STUDIO_TEMPLATES[0]!;
   const guidance = briefGuidanceForTemplate(template);

@@ -16,11 +16,21 @@ import {
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
 
-const CLONE_MODEL_PROFILE = "image_final" as const;
+export type AdGenerationQuality = "fast" | "high";
 
-/** Ordered final-quality providers, each pinned to runtime profile pricing. */
-export async function resolveCloneProviders(): Promise<ImageProviderAdapter[]> {
-  const profile = await resolveRuntimeModelProfile(CLONE_MODEL_PROFILE);
+const CLONE_MODEL_PROFILE_BY_QUALITY = {
+  fast: "image_draft",
+  high: "image_final",
+} as const;
+type CloneModelProfile = (typeof CLONE_MODEL_PROFILE_BY_QUALITY)[AdGenerationQuality];
+
+export function cloneModelProfileForQuality(quality: AdGenerationQuality): CloneModelProfile {
+  return CLONE_MODEL_PROFILE_BY_QUALITY[quality];
+}
+
+/** Ordered providers for the customer's quality choice, pinned to runtime pricing. */
+export async function resolveCloneProviders(quality: AdGenerationQuality = "high"): Promise<ImageProviderAdapter[]> {
+  const profile = await resolveRuntimeModelProfile(cloneModelProfileForQuality(quality));
   return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
 }
 
@@ -294,6 +304,7 @@ export async function generateCloneWithCascade(input: {
   userId: string;
   correlationId: string;
   attempt: number;
+  modelProfile?: CloneModelProfile;
   accounting?: {
     executeAttempt: typeof executeAdStudioProviderAttempt;
     recordRun: typeof recordAdStudioProviderRun;
@@ -316,6 +327,7 @@ export async function generateCloneWithCascade(input: {
     executeAttempt: executeAdStudioProviderAttempt,
     recordRun: recordAdStudioProviderRun,
   };
+  const modelProfile = input.modelProfile ?? "image_final";
 
   for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
     providerAttemptCount += 1;
@@ -325,7 +337,7 @@ export async function generateCloneWithCascade(input: {
         workspaceId: input.workspaceId,
         mutationId,
         attemptIndex,
-        modelProfile: CLONE_MODEL_PROFILE,
+        modelProfile,
         provider,
         execute: async () => {
           const result = await provider.generate(input.request);
@@ -352,7 +364,7 @@ export async function generateCloneWithCascade(input: {
       userId: input.userId,
       correlationId: input.correlationId,
       taskType: "adstudio.clone",
-      modelProfile: CLONE_MODEL_PROFILE,
+      modelProfile,
       mutationId,
       prompt,
       input: { attempt: input.attempt, aspectRatio: input.request.aspectRatio },
@@ -377,7 +389,7 @@ export async function generateCloneWithCascade(input: {
     userId: input.userId,
     correlationId: input.correlationId,
     taskType: "adstudio.clone",
-    modelProfile: CLONE_MODEL_PROFILE,
+    modelProfile,
     mutationId,
     prompt,
     input: { attempt: input.attempt, aspectRatio: input.request.aspectRatio },
