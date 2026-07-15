@@ -9,6 +9,7 @@ import {
   cloneQaPassed,
   cloneQaWarnings,
   normalizeRenderedText,
+  parseCloneRegions,
 } from "../src/lib/adstudio/clone-qa.ts";
 import {
   compositeCloneRegionEdit,
@@ -36,6 +37,16 @@ test("parallel clone formats receive distinct QA mutation identities", () => {
     cloneQaMutationId(correlationId, "4:5", 1),
     cloneQaMutationId(correlationId, "9:16", 1),
   );
+});
+
+test("declared copy regions stay editable as text when vision misclassifies them", () => {
+  const regions = parseCloneRegions([
+    { key: "headline", kind: "image", box: { x: 0.2, y: 0.5, width: 0.6, height: 0.15 } },
+    { key: "property_photo", kind: "image", box: { x: 0, y: 0, width: 1, height: 0.8 } },
+  ], { headline: "NEW LISTING" });
+
+  assert.equal(regions.find((region) => region.key === "headline")?.kind, "text");
+  assert.equal(regions.find((region) => region.key === "property_photo")?.kind, "image");
 });
 
 test("provider-native portrait renders are cropped to exact Meta placement ratios", async () => {
