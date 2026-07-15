@@ -1,4 +1,4 @@
-import { configure, envvars } from "@trigger.dev/sdk";
+import { configure, envvars, runs } from "@trigger.dev/sdk";
 
 const accessToken = process.env.TRIGGER_ACCESS_TOKEN?.trim();
 const projectRef = process.env.TRIGGER_PROJECT_ID?.trim();
@@ -52,3 +52,17 @@ if (!hasSupabaseUrl || !hasSupabaseCredential) {
 configure({ secretKey: accessToken });
 await envvars.upload(projectRef, "prod", { variables, override: true });
 console.log(`Synced ${Object.keys(variables).length} allowlisted production variables to Trigger.dev.`);
+
+// Leave a safe post-deploy signal in the release log. This catches runs that
+// dispatch successfully but are waiting for a compatible production version.
+const recentRuns = await runs.list(projectRef, {
+  env: "prod",
+  limit: 10,
+  period: "1h",
+  taskIdentifier: "adstudio.generate.template",
+});
+for (const run of recentRuns.data) {
+  console.log(
+    `Trigger run ${run.id}: ${run.status} (version ${run.version ?? "unassigned"}, created ${run.createdAt.toISOString()})`,
+  );
+}
