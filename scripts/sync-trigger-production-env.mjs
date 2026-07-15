@@ -7,7 +7,7 @@ if (!accessToken || !projectRef) {
   throw new Error("Trigger deployment credentials are required to sync production environment variables.");
 }
 
-// Trigger tasks receive only the Vercel values used by their runtime. Keep
+// Trigger tasks receive only the release secrets used by their runtime. Keep
 // unrelated billing, auth, and integration secrets out of the worker.
 const allowlist = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -46,7 +46,7 @@ const variables = Object.fromEntries(
 const hasSupabaseUrl = Boolean(variables.NEXT_PUBLIC_SUPABASE_URL || variables.SUPABASE_URL);
 const hasSupabaseCredential = Boolean(variables.SUPABASE_SECRET_KEY || variables.SUPABASE_SERVICE_ROLE_KEY);
 if (!hasSupabaseUrl || !hasSupabaseCredential) {
-  throw new Error("Vercel production is missing the Supabase runtime required by Trigger tasks.");
+  throw new Error("The release environment is missing the Supabase runtime required by Trigger tasks.");
 }
 
 configure({ secretKey: accessToken });

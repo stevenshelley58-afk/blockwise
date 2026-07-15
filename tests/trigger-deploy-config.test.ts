@@ -26,7 +26,9 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(keySyncAction, /startsWith\("tr_prod_"\)/);
   assert.match(keySyncAction, /::add-mask::\$trigger_key/);
   assert.match(keySyncAction, /env add TRIGGER_SECRET_KEY production/);
-  assert.match(keySyncAction, /env run --environment production/);
+  assert.match(keySyncAction, /node scripts\/sync-trigger-production-env\.mjs/);
+  assert.match(manualWorkflow, /FAL_KEY:\s*\$\{\{ secrets\.FAL_KEY \}\}/);
+  assert.match(workflow, /SUPABASE_SECRET_KEY:\s*\$\{\{ secrets\.SUPABASE_SECRET_KEY \}\}/);
   assert.match(environmentSync, /envvars\.upload\(projectRef, "prod", \{ variables, override: true \}\)/);
   assert.match(environmentSync, /SUPABASE_SECRET_KEY/);
   assert.match(environmentSync, /FAL_KEY/);
