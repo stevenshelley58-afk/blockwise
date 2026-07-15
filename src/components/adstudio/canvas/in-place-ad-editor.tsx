@@ -38,6 +38,10 @@ function expectedTextForKey(creative: AdStudioCreative, key: string): string {
   return creative.canvas.cloneQa?.copyChecks.find((item) => item.key === key)?.expected ?? "";
 }
 
+function preferredScrollBehavior(): ScrollBehavior {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -97,6 +101,18 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     setCanScrollForward(list.scrollLeft < maximumScroll - 1);
   }, []);
 
+  const scrollSelectedElementToEnd = useCallback((key: string) => {
+    const list = elementListRef.current;
+    const button = elementButtonRefs.current.get(key);
+    if (!list || !button) return;
+    const listBounds = list.getBoundingClientRect();
+    const buttonBounds = button.getBoundingClientRect();
+    list.scrollTo({
+      left: list.scrollLeft + buttonBounds.right - listBounds.right,
+      behavior: preferredScrollBehavior(),
+    });
+  }, []);
+
   useEffect(() => {
     const list = elementListRef.current;
     if (!list) return;
@@ -111,6 +127,12 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       resizeObserver?.disconnect();
     };
   }, [regions.length, selectedRegion?.key, updateElementScrollState]);
+
+  useEffect(() => {
+    if (!selectedKey) return;
+    const frame = requestAnimationFrame(() => scrollSelectedElementToEnd(selectedKey));
+    return () => cancelAnimationFrame(frame);
+  }, [scrollSelectedElementToEnd, selectedKey]);
 
   const performMutation = useCallback(async (mutation: CreativeEditMutation, successMessage: string) => {
     if (!creative.activeRevisionId) {
@@ -139,24 +161,6 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       setPendingKey(null);
     }
   }, [cloneObject, creative, onCreativeChange, showToast]);
-
-  function preferredScrollBehavior(): ScrollBehavior {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-  }
-
-  function scrollSelectedElementToEnd(key: string) {
-    requestAnimationFrame(() => {
-      const list = elementListRef.current;
-      const button = elementButtonRefs.current.get(key);
-      if (!list || !button) return;
-      const listBounds = list.getBoundingClientRect();
-      const buttonBounds = button.getBoundingClientRect();
-      list.scrollTo({
-        left: list.scrollLeft + buttonBounds.right - listBounds.right,
-        behavior: preferredScrollBehavior(),
-      });
-    });
-  }
 
   function scrollElementList(direction: -1 | 1) {
     const list = elementListRef.current;
