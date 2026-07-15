@@ -1,6 +1,7 @@
 "use client";
 
-import { type CSSProperties, useMemo, useState } from "react";
+import { Check, Image as ImageIcon, X } from "lucide-react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
@@ -22,10 +23,13 @@ type MediaPanelProps = {
   primaryImage: string;
   primaryImageName?: string;
   mediaAssets?: MediaAsset[];
-  openFilePicker: () => void;
   onUploadImage: (file: File) => void | Promise<void>;
   onUploadRejected: (message: string) => void;
-  onSelectImage?: (src: string) => void;
+  selectedImageSrc?: string;
+  replacing?: boolean;
+  onSelectImage: (src: string) => void;
+  onClearSelection: () => void;
+  onConfirmReplace: () => void | Promise<void>;
 };
 
 type RoleFilter = AssetRole | "all";
@@ -54,15 +58,59 @@ export function MediaPanel({
   primaryImage,
   primaryImageName,
   mediaAssets = MEDIA_ASSETS,
-  openFilePicker,
   onUploadImage,
   onUploadRejected,
+  selectedImageSrc,
+  replacing = false,
   onSelectImage,
+  onClearSelection,
+  onConfirmReplace,
 }: MediaPanelProps) {
   const [filter, setFilter] = useState<RoleFilter>("all");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmRef = useRef<HTMLElement>(null);
+  const confirmTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function closeConfirmation() {
+    if (replacing) return;
+    setConfirmOpen(false);
+    window.setTimeout(() => confirmTriggerRef.current?.focus(), 0);
+  }
 
   const selectedAsset = mediaAssets.find((asset) => asset.src === primaryImage);
   const currentLabel = selectedAsset?.label ?? primaryImageName ?? "Uploaded image";
+  const replacementAsset = mediaAssets.find((asset) => asset.src === selectedImageSrc);
+
+  useEffect(() => {
+    if (!selectedImageSrc) setConfirmOpen(false);
+  }, [selectedImageSrc]);
+
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const dialog = confirmRef.current;
+    window.setTimeout(() => dialog?.focus(), 0);
+    function handleKey(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape" && !replacing) {
+        event.preventDefault();
+        closeConfirmation();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const controls = dialog.querySelectorAll<HTMLButtonElement>("button:not([disabled])");
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [confirmOpen, replacing]);
 
   const counts = useMemo(() => {
     const next: Record<AssetRole, number> = { property: 0, person: 0, logo: 0, background: 0 };
@@ -113,9 +161,7 @@ export function MediaPanel({
           <strong>Current image</strong>
           <small>{currentLabel}</small>
         </span>
-        <button type="button" onClick={openFilePicker}>
-          Replace
-        </button>
+        <small className="studio-current-media-state">In ad</small>
       </div>
 
       <AssetUploadDropzone
@@ -123,10 +169,6 @@ export function MediaPanel({
         label="Upload image"
         actionText="Upload image"
         helperText="PNG, JPG or WebP / up to 8 MB"
-        previewUrl={primaryImage}
-        previewAlt=""
-        fileName={currentLabel}
-        fileType={selectedAsset?.type ?? "Uploaded image"}
         acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
         maxBytes={AD_IMAGE_MAX_BYTES}
         typeError="Use a JPG, PNG, or WebP image."
@@ -169,11 +211,12 @@ export function MediaPanel({
           const inUse = primaryImage === asset.src;
           return (
             <button
-              className={inUse ? "active" : ""}
+              className={`${inUse ? "active" : ""}${selectedImageSrc === asset.src ? " selected" : ""}`}
               key={asset.src}
               type="button"
               style={{ position: "relative" }}
-              onClick={() => onSelectImage?.(asset.src)}
+              aria-pressed={selectedImageSrc === asset.src}
+              onClick={() => inUse ? onClearSelection() : onSelectImage(asset.src)}
             >
               <span
                 aria-hidden
@@ -201,6 +244,51 @@ export function MediaPanel({
           );
         })}
       </div>
+
+      {replacementAsset ? (
+        <section className="studio-media-replacement" aria-label="Selected replacement image">
+          <img src={replacementAsset.src} alt="" />
+          <span>
+            <small>Selected replacement</small>
+            <strong>{replacementAsset.label}</strong>
+          </span>
+          <button className="studio-media-selection-clear" type="button" onClick={onClearSelection} aria-label="Clear selected replacement">
+            <X aria-hidden size={16} />
+          </button>
+          <button ref={confirmTriggerRef} className="studio-btn accent" type="button" onClick={() => setConfirmOpen(true)}>
+            Replace image
+          </button>
+        </section>
+      ) : null}
+
+      {confirmOpen && replacementAsset ? (
+        <div
+          className="studio-media-confirm-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeConfirmation();
+          }}
+        >
+          <section ref={confirmRef} className="studio-media-confirm" role="dialog" aria-modal="true" aria-labelledby="studio-media-confirm-title" tabIndex={-1}>
+            <div className="studio-media-confirm-icon"><ImageIcon aria-hidden size={20} /></div>
+            <div>
+              <h3 id="studio-media-confirm-title">Generate a new ad with this image?</h3>
+              <p>Blockwise will replace the photo in your current ad and keep its text, layout, colours and logos unchanged.</p>
+            </div>
+            <div className="studio-media-confirm-preview">
+              <span><small>Current</small><img src={primaryImage} alt="Current image" /></span>
+              <span><small>Replacement</small><img src={replacementAsset.src} alt="Selected replacement" /></span>
+            </div>
+            <div className="studio-media-confirm-actions">
+              <button className="studio-btn secondary" type="button" disabled={replacing} onClick={closeConfirmation}>Cancel</button>
+              <button className="studio-btn accent" type="button" disabled={replacing} onClick={() => void onConfirmReplace()}>
+                {replacing ? "Generating new ad" : "Generate new ad"}
+                {!replacing ? <Check aria-hidden size={16} /> : null}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

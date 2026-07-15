@@ -6,29 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
 
+import { requestCreativeEdit, type CreativeEditMutation } from "./creative-edit-client";
+
 export type InPlaceAdEditorProps = {
   creative: AdStudioCreative;
   onCreativeChange: (next: AdStudioCreative) => void;
   showToast: (msg: string) => void;
-};
-
-type EditResponse = {
-  image?: string;
-  qa?: AdStudioCreative["canvas"]["cloneQa"];
-  renderHistory?: string[];
-  renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
-  redoHistory?: string[];
-  redoQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
-  revisionId?: string;
-  error?: string;
-};
-
-type EditMutation = {
-  action?: "edit" | "undo" | "redo";
-  fieldKey?: string;
-  newValue?: string;
-  newImage?: string;
-  instruction?: string;
 };
 
 const MAX_TEXT_LENGTH = 200;
@@ -102,7 +85,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
 
   useEffect(() => setComparePrevious(false), [src]);
 
-  const performMutation = useCallback(async (mutation: EditMutation, successMessage: string) => {
+  const performMutation = useCallback(async (mutation: CreativeEditMutation, successMessage: string) => {
     if (!creative.activeRevisionId) {
       showToast("This ad changed. Reload it before editing.");
       return;
@@ -118,38 +101,13 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     retryMutationRef.current = { signature, mutationId };
     setPendingKey(mutation.fieldKey ?? mutation.action ?? "edit");
     try {
-      const response = await fetch(`/api/adstudio/creatives/${creative.creativeId}/edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...mutation,
-          expectedRevisionId: creative.activeRevisionId,
-          mutationId,
-        }),
-      });
-      const data = (await response.json().catch(() => ({}))) as EditResponse;
-      if (!response.ok || !data.image || !data.revisionId) {
-        showToast(data.error || "The edit did not pass the ad checks. Your previous version is unchanged.");
-        return;
-      }
-      onCreativeChange({
-        ...creative,
-        activeRevisionId: data.revisionId,
-        canvas: {
-          ...creative.canvas,
-          objects: [{ ...cloneObject, content: data.image, assetId: data.image }],
-          cloneQa: data.qa ?? creative.canvas.cloneQa,
-          renderHistory: data.renderHistory ?? creative.canvas.renderHistory,
-          renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,
-          redoHistory: data.redoHistory ?? creative.canvas.redoHistory,
-          redoQaHistory: data.redoQaHistory ?? creative.canvas.redoQaHistory,
-        },
-      });
+      const next = await requestCreativeEdit({ creative, mutation, mutationId });
+      onCreativeChange(next);
       retryMutationRef.current = null;
       setInstruction("");
       showToast(successMessage);
-    } catch {
-      showToast("The editor could not reach the server. Your previous version is unchanged.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The editor could not reach the server. Your previous version is unchanged.");
     } finally {
       setPendingKey(null);
     }

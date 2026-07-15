@@ -34,6 +34,25 @@ test("mobile nav exposes the canvas-first Ad Studio sections", () => {
   assert.doesNotMatch(mobileBody, /studio\.mobileTab === "samples"/);
 });
 
+test("media library stages a replacement and confirms before generating a new ad", () => {
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
+  const editClient = read("src/components/adstudio/canvas/creative-edit-client.ts");
+
+  assert.match(mediaPanel, /selectedImageSrc/);
+  assert.match(mediaPanel, /Selected replacement/);
+  assert.match(mediaPanel, /Replace image/);
+  assert.match(mediaPanel, /Generate a new ad with this image\?/);
+  assert.match(mediaPanel, /Generate new ad/);
+  assert.match(mediaPanel, /role="dialog"/);
+  assert.match(workbench, /setPendingMediaReplacement\(\{ src, label: asset\.label \}\)/);
+  assert.match(workbench, /currentCreative\.canvas\.cloneQa\?\.regions\.find\(\(region\) => region\.kind === "image"\)/);
+  assert.match(workbench, /requestCreativeEdit\(\{/);
+  assert.match(workbench, /newImage: pendingMediaReplacement\.src/);
+  assert.match(editClient, /expectedRevisionId: creative\.activeRevisionId/);
+  assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.image, assetId: data\.image \}\]/);
+});
+
 test("brief copy generation leaves editable copy visible with inline feedback", () => {
   const panel = read("src/components/adstudio/panels/copy-panel.tsx");
   const hook = read("src/components/adstudio/use-copy.ts");
