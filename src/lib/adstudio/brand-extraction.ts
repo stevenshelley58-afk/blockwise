@@ -7,6 +7,7 @@ export type ExtractBrandKitInput = {
   marketCountry: "AU";
   marketRegion?: string | null;
   htmlByUrl: Record<string, string>;
+  stylesheetTextByUrl?: Record<string, string>;
 };
 
 export type BrandKitReviewPatch = {
@@ -44,9 +45,9 @@ export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudi
     extractMeta(homepageHtml, "application-name") ??
     cleanBusinessName(title) ??
     hostToBusinessName(normalizedUrl);
-  const cssText = extractCssText(homepageHtml);
+  const cssText = [extractCssText(homepageHtml), ...Object.values(input.stylesheetTextByUrl ?? {})].filter(Boolean).join("\n");
   const colours = extractColours(cssText);
-  const font = extractPrimaryFont(cssText);
+  const typography = extractTypography(cssText);
   const logo = extractLogoUrl(homepageHtml, normalizedUrl);
   const favicon = extractLinkUrl(homepageHtml, normalizedUrl, ["icon", "shortcut icon", "apple-touch-icon"]);
   const privacyPolicyUrl = extractAnchorUrl(homepageHtml, normalizedUrl, /privacy/i);
@@ -76,24 +77,24 @@ export function extractBrandKitFromWebsite(input: ExtractBrandKitInput): AdStudi
       faviconUrl: favicon,
     },
     colours: {
-      primary: colours[0] ?? DEFAULT_COLOURS.primary,
-      secondary: colours[1] ?? DEFAULT_COLOURS.secondary,
-      accent: colours[2] ?? DEFAULT_COLOURS.accent,
-      background: DEFAULT_COLOURS.background,
-      text: colours.find((colour) => colour !== colours[0]) ?? DEFAULT_COLOURS.text,
+      primary: colours.primary ?? DEFAULT_COLOURS.primary,
+      secondary: colours.secondary ?? DEFAULT_COLOURS.secondary,
+      accent: colours.accent ?? DEFAULT_COLOURS.accent,
+      background: colours.background ?? DEFAULT_COLOURS.background,
+      text: colours.text ?? DEFAULT_COLOURS.text,
       confidence: {
-        primary: colours[0] ? 0.88 : 0.52,
-        secondary: colours[1] ? 0.74 : 0.48,
+        primary: colours.primary ? 0.88 : 0.52,
+        secondary: colours.secondary ? 0.74 : 0.48,
       },
     },
     typography: {
-      headingFont: font,
-      bodyFont: font,
-      fallbackHeading: fontLooksSerif(font) ? "serif" : "sans-serif",
+      headingFont: typography.heading,
+      bodyFont: typography.body,
+      fallbackHeading: typography.headingFallback,
       fallbackBody: "sans-serif",
     },
     visualStyle: {
-      styleTags: inferStyleTags(homepageHtml, colours),
+      styleTags: inferStyleTags(homepageHtml, colours.ranked),
       imageTreatment: "Bright local property imagery with clean brand typography.",
       layoutDensity: "low",
       cornerRadius: cssText.includes("border-radius: 8px") ? "small" : "medium",
@@ -174,16 +175,10 @@ function extractTagText(html: string, tagName: string): string | null {
 }
 
 function extractMeta(html: string, name: string): string | null {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const patterns = [
-    new RegExp(`<meta[^>]+property=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
-    new RegExp(`<meta[^>]+name=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
-  ];
-
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[1]) {
-      return decodeHtml(match[1]).trim();
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const attributes = extractAttributes(match[0]);
+    if ((attributes.property ?? attributes.name)?.toLowerCase() === name.toLowerCase() && attributes.content) {
+      return decodeHtml(attributes.content).trim();
     }
   }
 
@@ -194,7 +189,14 @@ function extractCssText(html: string): string {
   return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
 }
 
-function extractColours(cssText: string): string[] {
+function extractColours(cssText: string): {
+  primary: string | null;
+  secondary: string | null;
+  accent: string | null;
+  background: string | null;
+  text: string | null;
+  ranked: string[];
+} {
   const counts = new Map<string, number>();
 
   for (const match of cssText.matchAll(/#[0-9a-f]{3,8}\b/gi)) {
@@ -205,7 +207,27 @@ function extractColours(cssText: string): string[] {
     counts.set(colour, (counts.get(colour) ?? 0) + 1);
   }
 
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([colour]) => colour).slice(0, 4);
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([colour]) => colour);
+  const primary = extractNamedColour(cssText, ["primary", "brand-primary"] ) ?? ranked[0] ?? null;
+  const secondary = extractNamedColour(cssText, ["secondary", "brand-secondary"]) ?? ranked.find((colour) => colour !== primary) ?? null;
+  const background = extractNamedColour(cssText, ["background", "page-background", "surface"]);
+  const text = extractNamedColour(cssText, ["text", "foreground", "body-text"]);
+  const accent =
+    extractNamedColour(cssText, ["accent", "brand-accent"]) ??
+    ranked.find((colour) => !new Set([primary, secondary, background, text]).has(colour)) ??
+    null;
+
+  return { primary, secondary, accent, background, text, ranked: ranked.slice(0, 8) };
+}
+
+function extractNamedColour(cssText: string, names: string[]): string | null {
+  for (const name of names) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = cssText.match(new RegExp(`--(?:color-)?${escaped}\\s*:\\s*(#[0-9a-f]{3,8})\\b`, "i"));
+    const colour = normalizeHex(match?.[1] ?? "");
+    if (colour) return colour;
+  }
+  return null;
 }
 
 function normalizeHex(value: string): string | null {
@@ -226,14 +248,37 @@ function normalizeHex(value: string): string | null {
   return null;
 }
 
-function extractPrimaryFont(cssText: string): string {
-  const match = cssText.match(/font-family\s*:\s*([^;}]+)/i);
-  const fonts = (match?.[1] ?? "Inter")
+function extractTypography(cssText: string): { heading: string; body: string; headingFallback: "serif" | "sans-serif" } {
+  let heading: string | null = null;
+  let body: string | null = null;
+  let headingFallback: "serif" | "sans-serif" | null = null;
+  const discovered: string[] = [];
+
+  for (const rule of cssText.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = rule[1] ?? "";
+    const declaration = rule[2]?.match(/font-family\s*:\s*([^;}]+)/i)?.[1];
+    const font = declaration ? firstUsefulFont(declaration) : null;
+    if (!font) continue;
+    discovered.push(font);
+    if (!body && /(^|[\s,>+~])(?:html|body)(?=$|[\s,.#:[>+~])/i.test(selector)) body = font;
+    if (!heading && /(^|[\s,>+~])h[1-6](?=$|[\s,.#:[>+~])/i.test(selector)) {
+      heading = font;
+      headingFallback = /(?:^|,)\s*serif\s*$/i.test(declaration ?? "") ? "serif" : "sans-serif";
+    }
+  }
+
+  body ??= discovered[0] ?? "Inter";
+  heading ??= discovered.find((font) => font !== body) ?? body;
+  return { heading, body, headingFallback: headingFallback ?? (fontLooksSerif(heading) ? "serif" : "sans-serif") };
+}
+
+function firstUsefulFont(value: string): string | null {
+  const fonts = value
     .split(",")
     .map((font) => font.replace(/["']/g, "").trim())
     .filter(Boolean);
 
-  return fonts.find((font) => !COMMON_SYSTEM_FONTS.has(font)) ?? fonts[0] ?? "Inter";
+  return fonts.find((font) => !COMMON_SYSTEM_FONTS.has(font)) ?? fonts[0] ?? null;
 }
 
 function extractLogoUrl(html: string, baseUrl: string): string | null {
@@ -306,8 +351,9 @@ function extractLicenceText(html: string): string | null {
 }
 
 function extractDisclaimers(html: string): string[] {
-  const blockText = [...html.matchAll(/<(?:p|small|footer|aside)[^>]*>([\s\S]*?)<\/(?:p|small|footer|aside)>/gi)]
-    .map((match) => stripTags(match[1] ?? "").replace(/\s+/g, " ").trim())
+  const blockText = [...html.matchAll(/<(p|small|aside)\b[^>]*>([\s\S]*?)<\/\1>/gi)]
+    .map((match) => decodeHtml(stripTags(match[2] ?? "")).replace(/\s+/g, " ").trim())
+    .filter((sentence) => sentence.length <= 320)
     .join("\n");
   const source = blockText || stripTags(html).replace(/\s+/g, " ");
 
@@ -315,7 +361,7 @@ function extractDisclaimers(html: string): string[] {
     .split(/\n+/)
     .filter((sentence) => /general only|privacy|terms|licensed|licence|disclaimer|not financial advice/i.test(sentence))
     .map((sentence) => sentence.trim())
-    .filter(Boolean)
+    .filter((sentence) => sentence.length > 0 && sentence.length <= 320)
     .slice(0, 6);
 }
 
@@ -324,7 +370,7 @@ function cleanBusinessName(title: string | null): string | null {
     return null;
   }
 
-  return title.split(/[-|]/)[0]?.trim() || null;
+  return title.split(/[-|•]/)[0]?.trim() || null;
 }
 
 function hostToBusinessName(value: string): string {
@@ -371,7 +417,7 @@ function extractPreferredPhrases(html: string): string[] {
 function extractSampleCopy(html: string): string[] {
   return [...html.matchAll(/<(?:h1|h2|p)[^>]*>([\s\S]*?)<\/(?:h1|h2|p)>/gi)]
     .map((match) => decodeHtml(stripTags(match[1] ?? "")).replace(/\s+/g, " ").trim())
-    .filter((copy) => copy.length >= 12)
+    .filter((copy) => copy.length >= 12 && copy.length <= 240)
     .slice(0, 8);
 }
 
@@ -383,13 +429,25 @@ function stripTags(value: string): string {
   return value.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
 }
 
+function extractAttributes(tag: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  for (const match of tag.matchAll(/([^\s=<>]+)\s*=\s*(["'])(.*?)\2/g)) {
+    const key = match[1]?.toLowerCase();
+    if (key) attributes[key] = match[3] ?? "";
+  }
+  return attributes;
+}
+
 function decodeHtml(value: string): string {
   return value
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, decimal: string) => String.fromCodePoint(Number.parseInt(decimal, 10)));
 }
 
 function getPath(source: unknown, path: string): unknown {
