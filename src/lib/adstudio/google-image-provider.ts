@@ -61,7 +61,7 @@ export function createGoogleImageProvider(
           input: [...referenceParts, { type: "text", text: prompt }],
           response_format: {
             type: "image",
-            mime_type: "image/png",
+            mime_type: "image/jpeg",
             aspect_ratio: input.aspectRatio,
             image_size: "1K",
           },
@@ -100,7 +100,7 @@ export function createGoogleImageProvider(
       }
 
       return {
-        assetUrl: `data:${image.mime_type ?? "image/png"};base64,${image.data}`,
+        assetUrl: `data:${image.mime_type ?? "image/jpeg"};base64,${image.data}`,
         seed: input.seed ?? 0,
         model,
         usage: { imageUnits: 1, complete: true },

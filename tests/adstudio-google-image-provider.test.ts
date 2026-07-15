@@ -46,7 +46,7 @@ test("Google image provider edits with multiple inline references through the di
       return new Response(JSON.stringify({
         steps: [{
           type: "model_output",
-          content: [{ type: "image", mime_type: "image/png", data: "ZmluaXNoZWQtYWQ=" }],
+          content: [{ type: "image", mime_type: "image/jpeg", data: "ZmluaXNoZWQtYWQ=" }],
         }],
         usage_metadata: { total_token_count: 321 },
       }));
@@ -66,11 +66,11 @@ test("Google image provider edits with multiple inline references through the di
   assert.match(body.input[2].text, /Clone the reference ad/);
   assert.deepEqual(body.response_format, {
     type: "image",
-    mime_type: "image/png",
+    mime_type: "image/jpeg",
     aspect_ratio: "4:5",
     image_size: "1K",
   });
-  assert.equal(output.assetUrl, "data:image/png;base64,ZmluaXNoZWQtYWQ=");
+  assert.equal(output.assetUrl, "data:image/jpeg;base64,ZmluaXNoZWQtYWQ=");
   assert.equal(output.model, "gemini-3.1-flash-image");
   assert.equal(output.providerMetadata.provider, "google");
   assert.deepEqual(output.usage, { imageUnits: 1, complete: true });
