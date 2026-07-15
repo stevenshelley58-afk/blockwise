@@ -71,6 +71,20 @@ test("does not turn nested page sections into giant copy or disclaimer fields", 
   assert.ok(!kit.compliance.disclaimers.some((disclaimer) => disclaimer.includes("International Buy Sell Rent")));
 });
 
+test("deduplicates copy repeated by responsive website markup", () => {
+  const kit = extract(`
+    <html><body>
+      <h1>Here for your property journey</h1>
+      <section><h1>Here for your property journey</h1></section>
+      <p>Property experts since 1902</p>
+      <p>Property experts since 1902</p>
+    </body></html>
+  `);
+
+  assert.deepEqual(kit.tone.sampleCopy, ["Here for your property journey", "Property experts since 1902"]);
+  assert.deepEqual(kit.tone.preferredPhrases, ["Here for your property journey", "Property experts since 1902"]);
+});
+
 test("Brand Studio replaces stale previews and never invents logo variants", () => {
   const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
 
