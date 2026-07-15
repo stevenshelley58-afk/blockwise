@@ -6,6 +6,7 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   const workflow = readFileSync(".github/workflows/hard-reset-verification.yml", "utf8");
   const manualWorkflow = readFileSync(".github/workflows/trigger-deploy.yml", "utf8");
   const keySyncAction = readFileSync(".github/actions/sync-trigger-key-to-vercel/action.yml", "utf8");
+  const environmentSync = readFileSync("scripts/sync-trigger-production-env.mjs", "utf8");
   const packageJson = readFileSync("package.json", "utf8");
   const triggerWrapper = readFileSync("scripts/run-trigger-with-project-ref.mjs", "utf8");
 
@@ -25,6 +26,11 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(keySyncAction, /startsWith\("tr_prod_"\)/);
   assert.match(keySyncAction, /::add-mask::\$trigger_key/);
   assert.match(keySyncAction, /env add TRIGGER_SECRET_KEY production/);
+  assert.match(keySyncAction, /env run --environment production/);
+  assert.match(environmentSync, /envvars\.upload\(projectRef, "prod", \{ variables, override: true \}\)/);
+  assert.match(environmentSync, /SUPABASE_SECRET_KEY/);
+  assert.match(environmentSync, /FAL_KEY/);
+  assert.doesNotMatch(environmentSync, /STRIPE_SECRET_KEY|RESEND_API_KEY/);
   assert.doesNotMatch(keySyncAction, /console\.log\(key\)|echo "\$trigger_key"/);
   assert.match(packageJson, /"trigger:deploy":\s*"node scripts\/run-trigger-with-project-ref\.mjs deploy"/);
   assert.match(triggerWrapper, /process\.env\.TRIGGER_PROJECT_ID\?\.trim\(\)/);
