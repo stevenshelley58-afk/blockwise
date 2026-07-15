@@ -105,10 +105,8 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     const list = elementListRef.current;
     const button = elementButtonRefs.current.get(key);
     if (!list || !button) return;
-    const listBounds = list.getBoundingClientRect();
-    const buttonBounds = button.getBoundingClientRect();
     list.scrollTo({
-      left: list.scrollLeft + buttonBounds.right - listBounds.right,
+      left: button.offsetLeft + button.offsetWidth - list.clientWidth,
       behavior: preferredScrollBehavior(),
     });
   }, []);

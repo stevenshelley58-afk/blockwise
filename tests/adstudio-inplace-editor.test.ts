@@ -30,12 +30,13 @@ test("editor exposes both canvas selection and a non-spatial element list", () =
 test("element list exposes overflow controls and aligns each selection to the visible end", () => {
   assert.match(editor, /aria-label="Show previous elements"/);
   assert.match(editor, /aria-label="Show more elements"/);
-  assert.match(editor, /left: list\.scrollLeft \+ buttonBounds\.right - listBounds\.right/);
+  assert.match(editor, /left: button\.offsetLeft \+ button\.offsetWidth - list\.clientWidth/);
   assert.match(editor, /scrollSelectedElementToEnd\(region\.key\)/);
   assert.match(editor, /requestAnimationFrame\(\(\) => scrollSelectedElementToEnd\(selectedKey\)\)/);
   assert.match(editor, /ResizeObserver\(updateElementScrollState\)/);
   assert.match(editor, /\[regions\.length, selectedRegion\?\.key, updateElementScrollState\]/);
   assert.match(styles, /\.studio-inplace-element-picker\{display:grid;grid-template-columns:44px minmax\(0,1fr\) 44px/);
+  assert.match(styles, /\.studio-inplace-element-list\{position:relative/);
 });
 
 test("undo and redo are durable checked revision mutations", () => {
