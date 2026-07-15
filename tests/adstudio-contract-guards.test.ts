@@ -59,9 +59,10 @@ test("the one full-ad request consumes sample, assets, and exact copy", () => {
 test("editing is available only on the finished image", () => {
   const builder = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
   const editor = readFileSync("src/components/adstudio/canvas/in-place-ad-editor.tsx", "utf8");
+  const editClient = readFileSync("src/components/adstudio/canvas/creative-edit-client.ts", "utf8");
   assert.match(builder, /Reference image 1 is an existing finished ad/);
   assert.match(builder, /Keep every other pixel unchanged/);
-  assert.match(editor, /\/api\/adstudio\/creatives\/\$\{creative\.creativeId\}\/edit/);
+  assert.match(editClient, /\/api\/adstudio\/creatives\/\$\{creative\.creativeId\}\/edit/);
   assert.match(editor, /renderHistory/);
 });
 

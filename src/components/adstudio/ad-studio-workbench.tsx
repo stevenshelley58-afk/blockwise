@@ -35,6 +35,7 @@ import type {
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
 import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
 
+import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
 import type { PreviewFormat, SelectedElement } from "./preview";
 import { STYLES } from "./styles";
@@ -314,6 +315,8 @@ export function AdStudioWorkbench({
   }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
+  const [pendingMediaReplacement, setPendingMediaReplacement] = useState<{ src: string; label: string } | null>(null);
+  const [replacingMedia, setReplacingMedia] = useState(false);
   const [samplePickerOpen, setSamplePickerOpen] = useState(false);
   const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -396,14 +399,14 @@ export function AdStudioWorkbench({
   async function handleUploadImage(file: File | null | undefined) {
     let uploaded: { src: string; label: string } | undefined;
     try {
-      uploaded = await replaceImage(file);
+      uploaded = await replaceImage(file, { commit: false });
     } catch {
       return; // replaceImage already surfaced the failure to the user
     }
     if (!uploaded) return;
-    if (pack.variants.length > 0 && selectedVariant?.variantId) {
-      studio.setSaveState("saving");
-    }
+    setPendingMediaReplacement(uploaded);
+    setSelectedElement("image");
+    studio.setSection("media");
   }
 
   const workspaceMediaAssets = useMemo(
@@ -449,12 +452,13 @@ export function AdStudioWorkbench({
 
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
-    setPrimaryImage(src);
-    setPrimaryImageName(asset?.label ?? "Uploaded image");
+    if (!asset || src === primaryImage) {
+      setPendingMediaReplacement(null);
+      return;
+    }
+    setPendingMediaReplacement({ src, label: asset.label });
     setSelectedElement("image");
     studio.setSection("media");
-    studio.setSaveState("saving");
-    studio.showToast("Image selected");
   }
 
   const { readinessItems } = useReadiness({
@@ -688,6 +692,40 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
+  async function confirmMediaReplacement() {
+    if (!pendingMediaReplacement) return;
+    if (!currentCreative || !isCloneCreative(currentCreative)) {
+      studio.showToast("Generate an ad before replacing its image.");
+      return;
+    }
+    const imageRegion = currentCreative.canvas.cloneQa?.regions.find((region) => region.kind === "image");
+    if (!imageRegion) {
+      studio.showToast("This ad does not have an editable image region.");
+      return;
+    }
+
+    setReplacingMedia(true);
+    studio.setBusy(true);
+    studio.setBusyMessage("Generating a new ad with your image");
+    try {
+      const nextCreative = await requestCreativeEdit({
+        creative: currentCreative,
+        mutation: { fieldKey: imageRegion.key, newImage: pendingMediaReplacement.src },
+        mutationId: crypto.randomUUID(),
+      });
+      updateCreative(nextCreative);
+      setPrimaryImage(pendingMediaReplacement.src);
+      setPrimaryImageName(pendingMediaReplacement.label);
+      setPendingMediaReplacement(null);
+      studio.showToast("New ad generated");
+    } catch (error) {
+      studio.showToast(error instanceof Error ? error.message : "The new ad could not be generated. Try again.");
+    } finally {
+      setReplacingMedia(false);
+      studio.setBusy(false);
+    }
+  }
+
   async function patchSelectedLayer() {
     if (selectedElement === "image") {
       studio.setSection("media");
@@ -750,10 +788,13 @@ export function AdStudioWorkbench({
       <MediaPanel
         primaryImage={primaryImage}
         primaryImageName={primaryImageName}
-        openFilePicker={openFilePicker}
         onUploadImage={handleUploadImage}
         onUploadRejected={studio.showToast}
         onSelectImage={selectMediaImage}
+        selectedImageSrc={pendingMediaReplacement?.src}
+        replacing={replacingMedia}
+        onClearSelection={() => setPendingMediaReplacement(null)}
+        onConfirmReplace={confirmMediaReplacement}
         mediaAssets={mediaAssets}
       />
     );

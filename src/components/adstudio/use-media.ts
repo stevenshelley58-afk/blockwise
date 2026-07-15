@@ -61,6 +61,7 @@ export function useMedia(
 
   async function replaceImage(
     file: File | null | undefined,
+    optionsOverride: { commit?: boolean } = {},
   ): Promise<{ src: string; label: string } | undefined> {
     if (!file) return undefined;
     const validationError = validateAssetUploadFile(file, {
@@ -80,10 +81,13 @@ export function useMedia(
 
     // Paint the picked image instantly so the upload never feels dead, then swap
     // to the stored URL once it lands (or revert if the upload fails).
-    const localPreview = URL.createObjectURL(file);
-    setPrimaryImageState(localPreview);
-    setPrimaryImageNameState(file.name);
-    onImageSelected?.();
+    const commit = optionsOverride.commit !== false;
+    const localPreview = commit ? URL.createObjectURL(file) : "";
+    if (commit) {
+      setPrimaryImageState(localPreview);
+      setPrimaryImageNameState(file.name);
+      onImageSelected?.();
+    }
 
     try {
       const result = await uploadAdStudioMedia({
@@ -93,20 +97,20 @@ export function useMedia(
       });
       if (!isCurrentUpload()) return undefined;
       const uploaded = { src: result.src, label: file.name };
-      commitPrimaryImage(uploaded.src, uploaded.label);
+      if (commit) commitPrimaryImage(uploaded.src, uploaded.label);
       options.onUploaded?.(uploaded);
-      showToast("Image added to this ad");
+      showToast(commit ? "Image added to this ad" : "Image added to your library");
       return uploaded;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not upload that image.";
-      if (isCurrentUpload()) {
+      if (commit && isCurrentUpload()) {
         commitPrimaryImage(committedPrimaryImageRef.current, committedPrimaryImageNameRef.current);
         showToast(message);
       }
       throw new Error(message);
     } finally {
       // Free the blob once the <img> has swapped to the stored (or reverted) URL.
-      setTimeout(() => URL.revokeObjectURL(localPreview), 15_000);
+      if (localPreview) setTimeout(() => URL.revokeObjectURL(localPreview), 15_000);
     }
   }
 
