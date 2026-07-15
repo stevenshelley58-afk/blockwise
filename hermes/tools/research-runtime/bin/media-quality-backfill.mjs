@@ -33,7 +33,7 @@ for (;;) {
   const cursor = lastId ? `&id=gt.${encodeURIComponent(lastId)}` : "";
   const assets = await rest(
     "research",
-    `media_assets?select=id,ad_creative_id,kind,source_url,storage_path,content_type,byte_size,width,height,capture_status,metadata,created_at&capture_status=eq.captured&kind=eq.image${cursor}&order=id.asc&limit=${batchSize}`,
+    `media_assets?select=id,ad_creative_id,kind,source_url,storage_path,content_type,byte_size,width,height,capture_status,metadata,created_at&capture_status=eq.captured&kind=eq.image&or=(width.is.null,height.is.null)${cursor}&order=id.asc&limit=${batchSize}`,
   );
   if (!assets.length) break;
 

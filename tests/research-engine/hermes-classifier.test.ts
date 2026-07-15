@@ -22,7 +22,7 @@ test("Hermes exposes an image dimensions reader for capture-time validation", ()
   assert.equal(typeof classifierModule.readImageDimensions, "function");
 });
 
-test("Hermes reads JPEG, PNG, and WebP dimensions without image-library dependencies", async () => {
+test("Hermes reads JPEG, PNG, WebP, and HEIF dimensions without runtime image dependencies", async () => {
   const { default: sharp } = await import("sharp");
   const source = sharp({
     create: { width: 60, height: 80, channels: 3, background: { r: 255, g: 225, b: 0 } },
@@ -32,10 +32,21 @@ test("Hermes reads JPEG, PNG, and WebP dimensions without image-library dependen
     source.clone().png().toBuffer(),
     source.clone().webp().toBuffer(),
   ]);
+  const heif = Buffer.alloc(64);
+  heif.write("ftyp", 4, "ascii");
+  heif.writeUInt32BE(20, 8);
+  heif.write("ispe", 12, "ascii");
+  heif.writeUInt32BE(60, 20);
+  heif.writeUInt32BE(80, 24);
+  heif.writeUInt32BE(20, 32);
+  heif.write("ispe", 36, "ascii");
+  heif.writeUInt32BE(1920, 44);
+  heif.writeUInt32BE(1280, 48);
 
   assert.deepEqual(classifierModule.readImageDimensions(jpeg, "image/jpeg"), { width: 60, height: 80 });
   assert.deepEqual(classifierModule.readImageDimensions(png, "image/png"), { width: 60, height: 80 });
   assert.deepEqual(classifierModule.readImageDimensions(webp, "image/webp"), { width: 60, height: 80 });
+  assert.deepEqual(classifierModule.readImageDimensions(heif, "image/heif"), { width: 1920, height: 1280 });
 });
 
 test("Hermes rejects byte-sized and dimensionally tiny captured images", () => {
