@@ -109,11 +109,13 @@ export function createFalImageProvider(
         detail?: unknown;
       };
       if (!submit.ok || !submitJson.status_url || !submitJson.response_url) {
+        const submitDetail = JSON.stringify(submitJson.detail ?? submitJson).slice(0, 300);
         throw new ProviderRequestError(
-          `fal submit failed (${submit.status}): ${JSON.stringify(submitJson.detail ?? submitJson).slice(0, 300)}`,
+          `fal submit failed (${submit.status}): ${submitDetail}`,
           {
             requestSubmitted: true,
-            retryable: isRetryableProviderStatus(submit.status),
+            retryable: isRetryableProviderStatus(submit.status)
+              || isFalBillingUnavailable(submit.status, submitDetail),
             providerRequestId: submitJson.request_id,
           },
         );
@@ -225,4 +227,9 @@ export function createFalImageProvider(
 
 function isRetryableProviderStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isFalBillingUnavailable(status: number, detail: string): boolean {
+  return (status === 402 || status === 403)
+    && /exhausted balance|insufficient (?:funds|balance)|billing quota/i.test(detail);
 }

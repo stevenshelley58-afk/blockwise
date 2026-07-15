@@ -106,6 +106,22 @@ test("generate requires at least one reference image", async () => {
   await assert.rejects(() => provider.generate(req), /at least one reference image/);
 });
 
+test("exhausted Fal balance allows the configured fallback provider to run", async () => {
+  const provider = createFalImageProvider(accounting, {
+    env: { FAL_KEY: "test-key" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      detail: "User is locked. Reason: Exhausted balance.",
+    }), { status: 403 }),
+  });
+
+  await assert.rejects(() => provider.generate(request), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.requestSubmitted, true);
+    assert.equal(error.retryable, true);
+    return true;
+  });
+});
+
 test("successful Fal image without provider cost produces an exact estimated attempt", async () => {
   const provider = createFalImageProvider(accounting, {
     env: { FAL_KEY: "test-key" },
