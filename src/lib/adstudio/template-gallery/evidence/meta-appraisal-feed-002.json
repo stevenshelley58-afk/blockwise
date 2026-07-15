@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-appraisal-feed-002",
+  "requestHash": "4480f096c428f97aaba356809f6c70e937e0a85d50d662c7b25bafeaf8ded09b",
+  "inputHashes": {
+    "source_ad": "a88fd2cb75d114774bd46f9b10bd1385583523054be384a437577e83e1fb2a26",
+    "property_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "agent_portrait": "792c38064c18b2bf5845b4104c9f1ffc251af8461242132f27981472cf5cb8d0",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T06:30:13.4210901Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "trust_badge",
+        "expected": "YOUR LOCAL PROPERTY TEAM",
+        "exact": true
+      },
+      {
+        "key": "headline",
+        "expected": "WHAT COULD YOUR HOME BE WORTH?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "REQUEST A FREE APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Get a clear, local view of your property's current market value and the opportunities available to you.",
+        "exact": true
+      },
+      {
+        "key": "agent_name",
+        "expected": "ALEX MORGAN",
+        "exact": true
+      },
+      {
+        "key": "agent_role",
+        "expected": "LOCAL PROPERTY SPECIALIST",
+        "exact": true
+      },
+      {
+        "key": "email",
+        "expected": "alex@youragency.com.au",
+        "exact": true
+      },
+      {
+        "key": "phone",
+        "expected": "0400 123 456",
+        "exact": true
+      },
+      {
+        "key": "social_handle",
+        "expected": "@youragency",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agent_portrait",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

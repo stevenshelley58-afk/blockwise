@@ -23,6 +23,8 @@ import metaFeed196 from "./meta-feed-196.json" with { type: "json" };
 import metaStories245 from "./meta-stories-245.json" with { type: "json" };
 import metaStories255 from "./meta-stories-255.json" with { type: "json" };
 import metaStories262 from "./meta-stories-262.json" with { type: "json" };
+import metaAppraisalFeed002 from "./meta-appraisal-feed-002.json" with { type: "json" };
+import metaAppraisalStory247 from "./meta-appraisal-story-247.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -47,4 +49,6 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaStories245 as AdStudioGalleryTemplate,
   metaStories255 as AdStudioGalleryTemplate,
   metaStories262 as AdStudioGalleryTemplate,
+  metaAppraisalFeed002 as AdStudioGalleryTemplate,
+  metaAppraisalStory247 as AdStudioGalleryTemplate,
 ];

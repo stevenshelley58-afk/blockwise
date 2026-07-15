@@ -11,6 +11,12 @@ import sharp from "sharp";
 import { createTextProviderForCandidate } from "../../src/lib/adstudio/ai-providers.ts";
 import { validateProviderJsonOutput } from "../../src/lib/adstudio/providers.ts";
 import { buildCloneImageRequest } from "../../src/lib/adstudio/reference-clone.ts";
+import {
+  createLockedClonePacket,
+  localAuditEvidence,
+  validateLocalQaEvidence,
+  verifyLockedClonePacket,
+} from "./local-template-adapter.mjs";
 
 const root = process.cwd();
 const command = process.argv[2];
@@ -18,7 +24,10 @@ const args = parseArgs(process.argv.slice(3));
 loadLocalEnvironment();
 
 if (command === "analyse") await analyseSource();
+else if (command === "analyse-local") await analyseLocalSource();
 else if (command === "render") await renderSample();
+else if (command === "export-local") await exportLocalSample();
+else if (command === "import-local") await importLocalSample();
 else usage();
 
 async function analyseSource() {
@@ -50,7 +59,27 @@ async function analyseSource() {
   });
   const validated = validateProviderJsonOutput({ rawText: response.rawText, schemaName: "adStudioTemplateAnalysis" });
   if (!validated.ok) throw new Error(`The vision model did not return a valid template analysis: ${validated.error}`);
-  const extracted = validated.value;
+  writeTemplateContract({ extracted: validated.value, sourcePath, id, outputPath, format });
+}
+
+async function analyseLocalSource() {
+  const sourcePath = requiredPath("source");
+  const analysisPath = requiredPath("analysis");
+  const id = required("id");
+  const outputPath = resolve(args.output ?? join(root, "src", "lib", "adstudio", "template-gallery", `${id}.json`));
+  const metadata = await sharp(sourcePath).metadata();
+  const format = nearestFormat(metadata.width, metadata.height);
+  const validated = validateProviderJsonOutput({
+    rawText: readFileSync(analysisPath, "utf8"),
+    schemaName: "adStudioTemplateAnalysis",
+  });
+  if (!validated.ok) throw new Error(`The local vision analysis is invalid: ${validated.error}`);
+  writeTemplateContract({ extracted: validated.value, sourcePath, id, outputPath, format });
+}
+
+function writeTemplateContract({ extracted, sourcePath, id, outputPath, format }) {
+  const sourceRelative = relative(join(root, "meta_ad_candidates"), sourcePath).split(sep).join("/");
+  if (sourceRelative.startsWith("..")) throw new Error("--source must be inside meta_ad_candidates.");
 
   const template = {
     id,
@@ -83,6 +112,87 @@ async function analyseSource() {
   writeFileSync(outputPath, `${JSON.stringify(template, null, 2)}\n`);
   console.log(`Template input contract written to ${relative(root, outputPath)}.`);
   console.log("Review the extracted fields, then run the render command with one --asset key=path for each required image.");
+}
+
+async function exportLocalSample() {
+  const templatePath = requiredPath("template");
+  const packetPath = resolve(required("packet"));
+  const template = JSON.parse(readFileSync(templatePath, "utf8"));
+  const sourcePath = resolve(root, "meta_ad_candidates", template.sourceAd.file);
+  if (!existsSync(sourcePath)) throw new Error(`Source ad not found: ${sourcePath}`);
+
+  const assets = {};
+  const assetPaths = {};
+  for (const pair of arrayArg("asset")) {
+    const equals = pair.indexOf("=");
+    if (equals < 1) throw new Error(`Invalid --asset ${pair}; use key=path.`);
+    const key = pair.slice(0, equals);
+    const path = resolve(pair.slice(equals + 1));
+    if (!existsSync(path)) throw new Error(`Replacement asset not found: ${path}`);
+    assetPaths[key] = path;
+    assets[key] = await pngDataUrl(path);
+  }
+  const missing = template.inputs.images.filter((field) => field.required && !assets[field.key]);
+  if (missing.length) throw new Error(`Missing --asset values: ${missing.map((field) => field.key).join(", ")}`);
+  const copy = Object.fromEntries(template.inputs.text.map((field) => [field.key, field.sample]));
+  const request = buildCloneImageRequest(template, {
+    referenceImage: await pngDataUrl(sourcePath),
+    images: assets,
+    copy,
+    seed: Number(args.seed ?? 0),
+  });
+  const suppliedFields = template.inputs.images.filter((field) => assetPaths[field.key]);
+  const expectedOutput = resolve(args.output ?? join(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, "")));
+  const packet = createLockedClonePacket({
+    root,
+    templateId: template.id,
+    request,
+    copy,
+    referencePaths: [
+      { key: "source_ad", role: "source", path: sourcePath },
+      ...suppliedFields.map((field) => ({ key: field.key, role: "replacement_asset", path: assetPaths[field.key] })),
+    ],
+    expectedOutput,
+  });
+  mkdirSync(dirname(packetPath), { recursive: true });
+  writeFileSync(packetPath, `${JSON.stringify(packet, null, 2)}\n`);
+  console.log(`Locked local clone request written to ${relative(root, packetPath)}.`);
+}
+
+async function importLocalSample() {
+  const templatePath = requiredPath("template");
+  const packetPath = requiredPath("packet");
+  const outputPath = requiredPath("output");
+  const qaPath = requiredPath("qa");
+  const template = JSON.parse(readFileSync(templatePath, "utf8"));
+  const packet = JSON.parse(readFileSync(packetPath, "utf8"));
+  const qa = JSON.parse(readFileSync(qaPath, "utf8"));
+  verifyLockedClonePacket(packet, { root });
+  if (packet.templateId !== template.id) throw new Error("Local clone packet belongs to another template.");
+  const bytes = readFileSync(outputPath);
+  const outputHash = sha256(bytes);
+  validateLocalQaEvidence({ qa, packet, template, outputHash });
+
+  const metadata = await sharp(outputPath).metadata();
+  if (metadata.width !== template.dimensions.width || metadata.height !== template.dimensions.height) {
+    throw new Error(`QA output must be exactly ${template.dimensions.width}x${template.dimensions.height}; received ${metadata.width}x${metadata.height}.`);
+  }
+  const finalPath = resolve(root, packet.expectedOutput);
+  const declaredFinalPath = resolve(root, "public", template.sample.imageSrc.replace(/^[/\\]+/u, ""));
+  if (finalPath !== declaredFinalPath) throw new Error("Locked output path does not match the template sample path.");
+  mkdirSync(dirname(finalPath), { recursive: true });
+  writeFileSync(finalPath, bytes);
+  template.sample.contentHash = sha256(bytes);
+  writeFileSync(templatePath, `${JSON.stringify(template, null, 2)}\n`);
+  const evidencePath = join(root, "src", "lib", "adstudio", "template-gallery", "evidence", `${template.id}.json`);
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(localAuditEvidence({
+    template,
+    packet,
+    qa,
+    outputHash: template.sample.contentHash,
+  }), null, 2)}\n`);
+  console.log(`QA-approved local sample imported to ${relative(root, finalPath)}.`);
 }
 
 async function renderSample() {
@@ -303,6 +413,9 @@ function defaultMeta() {
 function usage() {
   console.error("Usage:");
   console.error("  node scripts/adstudio/create-template.mjs analyse --source meta_ad_candidates/... --id meta-feed-001");
+  console.error("  node scripts/adstudio/create-template.mjs analyse-local --source meta_ad_candidates/... --analysis analysis.json --id meta-feed-001");
   console.error("  node scripts/adstudio/create-template.mjs render --template src/lib/adstudio/template-gallery/meta-feed-001.json --asset photo=path --asset logo=path");
+  console.error("  node scripts/adstudio/create-template.mjs export-local --template template.json --packet packet.json --asset photo=path");
+  console.error("  node scripts/adstudio/create-template.mjs import-local --template template.json --packet packet.json --output generated.png --qa qa.json");
   process.exit(1);
 }
