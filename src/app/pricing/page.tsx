@@ -30,8 +30,8 @@ export default function PricingPage() {
             <BlockwiseLogo />
           </Link>
           <nav className="lp-nav-links" aria-label="Primary">
-            <a href="/#campaign-types">Campaigns</a>
-            <a href="/#workflow">How it works</a>
+            <a href="/#start">How it works</a>
+            <a href="/#property-check">Property Check</a>
             <a href="/#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </nav>
@@ -204,8 +204,8 @@ export default function PricingPage() {
           </div>
           <div>
             <h4>Product</h4>
-            <a href="/#campaign-types">Campaigns</a>
-            <a href="/#workflow">How it works</a>
+            <a href="/#start">How it works</a>
+            <a href="/#property-check">Property Check</a>
             <a href="/#free-trial">Free trial</a>
             <Link href="/pricing">Pricing</Link>
           </div>

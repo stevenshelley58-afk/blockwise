@@ -11,10 +11,11 @@ import Link from "next/link";
  * that behaviour so Space scrolls the viewport while Enter and click still
  * navigate to /login as expected.
  */
-export function SignInLink() {
+export function SignInLink({ className }: { className?: string }) {
   return (
     <Link
       href="/login"
+      className={className}
       onKeyDown={(e) => {
         if (e.key === " ") {
           // Let the browser scroll the page instead of following the link.
