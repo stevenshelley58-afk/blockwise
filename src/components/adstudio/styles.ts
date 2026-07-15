@@ -124,11 +124,23 @@
 .studio-current-media strong{font-size:13.5px;font-weight:650}
 .studio-current-media small{font-size:12px;color:var(--muted);margin-top:2px}
 .studio-current-media .studio-current-media-state{justify-self:end;margin:0;padding:5px 9px;border-radius:999px;background:var(--accent-tint);color:var(--accent);font-size:11px;font-weight:700}
-.studio-current-media button:focus-visible,.studio-media-grid button:focus-visible,.studio-media-replacement button:focus-visible,.studio-media-confirm button:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 18%,transparent);outline-offset:2px}
+.studio-current-media button:focus-visible,.studio-library-tabs button:focus-visible,.studio-library-filters button:focus-visible,.studio-media-grid button:focus-visible,.studio-media-replacement button:focus-visible,.studio-media-confirm button:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 18%,transparent);outline-offset:2px}
 .studio-dropzone{min-height:112px;border:1.5px dashed var(--line);border-radius:12px;background:#fff;display:grid;place-items:center;gap:4px;color:var(--muted)}
 .studio-dropzone span{font-weight:600;color:var(--ink)}
+.studio-library-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface-subtle)}
+.studio-library-tabs button{min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:650}
+.studio-library-tabs button:hover{color:var(--ink)}
+.studio-library-tabs button.active{background:#fff;color:var(--ink);box-shadow:var(--st-sh-1)}
+.studio-library-tabs button span,.studio-library-filters button span{color:var(--st-faint);font-size:11px;font-weight:750}
+.studio-library-tabs button.active span{color:var(--muted)}
+.studio-library-panel{display:grid;gap:12px}
+.studio-library-filters{display:flex;flex-wrap:wrap;gap:6px}
+.studio-library-filters button{min-height:44px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);padding:0 13px;font-size:12px;font-weight:650}
+.studio-library-filters button:hover{border-color:var(--line-heavy);color:var(--ink)}
+.studio-library-filters button.active{border-color:var(--accent);background:var(--accent);color:#fff}
+.studio-library-filters button.active span{color:rgba(255,255,255,.78)}
 .studio-media-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.studio-media-grid button{border:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:8px;text-align:left;transition:transform .15s,box-shadow .15s}
+.studio-media-grid button{position:relative;border:0;border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:8px;text-align:left;transition:transform .15s,box-shadow .15s}
 .studio-media-grid button:hover{transform:translateY(-1px);box-shadow:var(--st-sh-lift)}
 .studio-media-grid button.active{outline:2px solid var(--accent);outline-offset:1px}
 .studio-media-grid button.selected{outline:3px solid var(--accent);outline-offset:1px;background:var(--accent-tint)}
@@ -136,6 +148,12 @@
 .studio-media-grid span,.studio-media-grid small{display:block;padding:0 4px}
 .studio-media-grid span{font-size:12.5px;font-weight:650}
 .studio-media-grid small{color:var(--muted);font-size:11.5px;padding-bottom:4px}
+.studio-media-grid .studio-media-role{position:absolute;top:15px;left:15px;z-index:2;width:max-content;padding:3px 7px;border-radius:999px;background:rgba(22,24,29,.88);color:#fff;font-size:10px;font-weight:700;line-height:1}
+.studio-generated-ad-grid img{aspect-ratio:4/5;object-position:top}
+.studio-library-empty{min-height:176px;display:grid;place-items:center;align-content:center;gap:7px;border:1px dashed var(--line-heavy);border-radius:12px;background:#fff;padding:24px;text-align:center;color:var(--muted)}
+.studio-library-empty svg{color:var(--st-faint)}
+.studio-library-empty strong{color:var(--ink);font-size:13.5px}
+.studio-library-empty p{max-width:28ch;margin:0;font-size:12.5px;line-height:1.45}
 .studio-media-replacement{position:sticky;bottom:12px;z-index:5;display:grid;grid-template-columns:52px minmax(0,1fr) 36px;align-items:center;gap:10px;margin-top:16px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 12px 30px rgba(16,18,23,.14)}
 .studio-media-replacement>img{width:52px;height:52px;object-fit:cover;border-radius:9px}
 .studio-media-replacement>span{min-width:0;display:grid;gap:2px}
@@ -588,7 +606,7 @@
   .studio-inplace-toolbar button{font-size:0;padding:0;width:44px}
   .studio-inplace-toolbar button:last-child{width:auto;padding:0 12px;font-size:12px}
 }
-@media(prefers-reduced-motion:reduce){.studio-inplace-region{transition:none}.studio-inplace-region[data-pending]{animation:none}}
+@media(prefers-reduced-motion:reduce){.studio-media-grid button,.studio-inplace-region{transition:none}.studio-media-grid button:hover{transform:none}.studio-inplace-region[data-pending]{animation:none}}
 
 /* Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
