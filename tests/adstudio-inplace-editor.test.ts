@@ -33,6 +33,7 @@ test("element list exposes overflow controls and aligns each selection to the vi
   assert.match(editor, /left: list\.scrollLeft \+ buttonBounds\.right - listBounds\.right/);
   assert.match(editor, /scrollSelectedElementToEnd\(region\.key\)/);
   assert.match(editor, /ResizeObserver\(updateElementScrollState\)/);
+  assert.match(editor, /\[regions\.length, selectedRegion\?\.key, updateElementScrollState\]/);
   assert.match(styles, /\.studio-inplace-element-picker\{display:grid;grid-template-columns:44px minmax\(0,1fr\) 44px/);
 });
 
