@@ -538,7 +538,7 @@
 .studio-inplace-toolbar button:hover:not(:disabled){background:rgba(255,255,255,.12)}
 .studio-inplace-toolbar button:disabled{opacity:.38;cursor:not-allowed}
 .studio-inplace-toolbar button:focus-visible,.studio-inplace-inspector button:focus-visible,.studio-inplace-inspector textarea:focus-visible{outline:2px solid #16181d;outline-offset:2px}
-.studio-inplace-inspector{position:fixed;z-index:190;top:78px;right:24px;bottom:24px;width:min(370px,calc(100vw - 32px));overflow:auto;border:1px solid var(--line-heavy);border-radius:18px;background:#fff;color:var(--ink);box-shadow:0 18px 48px rgba(16,18,23,.18);padding:18px;line-height:1.45}
+.studio-inplace-inspector{position:fixed;z-index:190;top:78px;left:612px;bottom:24px;width:320px;overflow:auto;border:1px solid var(--line-heavy);border-radius:18px;background:#fff;color:var(--ink);box-shadow:0 18px 48px rgba(16,18,23,.18);padding:18px;line-height:1.45}
 .studio-inplace-inspector header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .studio-inplace-inspector header div{display:grid;gap:3px}
 .studio-inplace-inspector header span{font-size:12px;color:var(--muted)}
@@ -557,8 +557,10 @@
 .studio-inplace-field button:disabled{opacity:.42;cursor:not-allowed}
 .studio-inplace-preserve-note{margin:18px 0 0;padding:13px 14px;border-radius:12px;background:#f1f2f4;color:#3f444e;font-size:12.5px;line-height:1.5}
 .studio-inplace-progress{margin-top:12px;min-height:44px;border-radius:10px;background:#16181d;color:#fff;display:flex;align-items:center;gap:9px;padding:9px 12px;font-size:12.5px;font-weight:650}
-@media(max-width:760px){
+@media(max-width:1280px){
   .studio-inplace-inspector{top:auto;right:8px;bottom:86px;left:8px;width:auto;max-height:min(68vh,620px);border-radius:18px;padding:16px}
+}
+@media(max-width:760px){
   .studio-inplace-toolbar{bottom:8px}
   .studio-inplace-toolbar button{font-size:0;padding:0;width:44px}
   .studio-inplace-toolbar button:last-child{width:auto;padding:0 12px;font-size:12px}
