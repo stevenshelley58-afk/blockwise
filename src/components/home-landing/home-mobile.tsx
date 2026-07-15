@@ -793,6 +793,7 @@ export function MobileFooter() {
                 <a href="#property-check">Property Check</a>
                 <a href="#free-trial">Free trial</a>
                 <Link href="/pricing">Pricing</Link>
+                <Link href="/blog">Guides</Link>
               </div>
             </div>
             <div>
