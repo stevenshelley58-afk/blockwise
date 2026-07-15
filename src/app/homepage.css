@@ -54,6 +54,32 @@ body:has(.hw-page) {
   outline-offset: 2px;
 }
 
+.hw-report-search { max-width: 610px; margin-top: 24px; }
+.hw-report-search .lp-location-form { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.hw-report-search .lp-location-field { min-width: 0; }
+.hw-report-search .lp-location-pill { min-height: 52px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--hw-line); border-radius: 999px; padding: 0 18px; background: var(--hw-card); }
+.hw-report-search .lp-location-pill input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--hw-ink); font-size: 14px; }
+.hw-report-search .lp-btn { min-height: 52px; border: 0; border-radius: 999px; padding: 0 22px; background: var(--hw-ink); color: #fff; cursor: pointer; font-weight: 700; }
+.hw-report-search .lp-btn svg { display: none; }
+.hw-report-search .lp-search-scope, .hw-report-search .lp-radar-note { display: none; }
+.hw-report-search .lp-location-suggestions { position: absolute; z-index: 30; top: 60px; left: 0; width: min(420px, 100%); overflow: hidden; border: 1px solid var(--hw-line); border-radius: 14px; background: #fff; box-shadow: var(--hw-shadow-soft); }
+.hw-report-search .lp-location-option { width: 100%; min-height: 54px; display: flex; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--hw-hairline); padding: 9px 12px; background: #fff; color: var(--hw-ink); text-align: left; cursor: pointer; }
+.hw-report-search .lp-location-option:hover, .hw-report-search .lp-location-option[aria-selected="true"] { background: var(--hw-chip); }
+.hw-report-search .ad-radar-suggestion-copy { min-width: 0; display: flex; flex-direction: column; }
+.hw-report-search .ad-radar-suggestion-copy strong { font-size: 13px; }.hw-report-search .ad-radar-suggestion-copy span, .hw-report-search .ad-radar-suggestion-kind { color: var(--hw-muted); font-size: 10px; }
+.hw-report-search .ad-radar-suggestion-kind { margin-left: auto; }.hw-report-search .lp-location-powered { display: block; padding: 7px 12px; color: var(--hw-muted); font-size: 9px; }
+.hw-report-search-note { margin: 9px 0 0; color: var(--hw-muted); font-size: 12px; }
+.hw-report-search-error { margin: 7px 0 0; color: #9d2525; font-size: 12px; }
+.hwm-report-search .lp-location-form { position: relative; display: flex; flex-direction: column; gap: 9px; }
+.hwm-report-search .lp-location-pill { min-height: 48px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--hw-line); border-radius: 999px; padding: 0 17px; background: var(--hw-card); }
+.hwm-report-search .lp-location-pill input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--hw-ink); }
+.hwm-report-search .lp-btn { min-height: 48px; border: 0; border-radius: 999px; background: var(--hw-ink); color: #fff; font-weight: 700; }
+.hwm-report-search .lp-btn svg, .hwm-report-search .lp-search-scope, .hwm-report-search .lp-radar-note { display: none; }
+.hwm-report-search .lp-location-suggestions { position: absolute; z-index: 30; top: 56px; left: 0; right: 0; overflow: hidden; border: 1px solid var(--hw-line); border-radius: 14px; background: #fff; box-shadow: var(--hw-shadow-soft); }
+.hwm-report-search .lp-location-option { width: 100%; min-height: 54px; display: flex; align-items: center; gap: 9px; border: 0; border-bottom: 1px solid var(--hw-hairline); padding: 9px 11px; background: #fff; color: var(--hw-ink); text-align: left; }
+.hwm-report-search .ad-radar-suggestion-copy { min-width: 0; display: flex; flex-direction: column; }.hwm-report-search .ad-radar-suggestion-copy strong { font-size: 12px; }.hwm-report-search .ad-radar-suggestion-copy span, .hwm-report-search .ad-radar-suggestion-kind { color: var(--hw-muted); font-size: 9px; }.hwm-report-search .ad-radar-suggestion-kind { margin-left: auto; }.hwm-report-search .lp-location-powered { display: block; padding: 7px 11px; color: var(--hw-muted); font-size: 9px; }
+.hwm-report-search .hw-report-search-note { text-align: center; }
+
 /* ---------- Breakpoint trees ---------- */
 .hw-only {
   display: block;

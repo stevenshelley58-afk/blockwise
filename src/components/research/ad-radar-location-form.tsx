@@ -13,6 +13,7 @@ type AdRadarLocationFormProps = {
   initialValue: string;
   inputLabel?: string;
   isSubmitting?: boolean;
+  onEmptySearch?: () => void;
   onSearch?: (searchTerm: string) => void;
   placeholder: string;
   surface: "landing" | "research";
@@ -40,6 +41,7 @@ export function AdRadarLocationForm({
   inputLabel = "Search",
   isSubmitting = false,
   onSearch,
+  onEmptySearch,
   placeholder,
   surface,
   useBestGuess = false,
@@ -55,6 +57,7 @@ export function AdRadarLocationForm({
   const [isFocused, setIsFocused] = useState(false);
   const [sessionToken] = useState(createSessionToken);
   const userEditedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const isLanding = surface === "landing";
   const showSuggestions = isFocused && suggestions.length > 0;
 
@@ -164,6 +167,10 @@ export function AdRadarLocationForm({
     const trimmed = searchTerm.trim() || (onSearch ? fallbackSearchTerm.trim() : "");
     if (onSearch) {
       if (trimmed) onSearch(trimmed);
+      else {
+        onEmptySearch?.();
+        inputRef.current?.focus();
+      }
       return;
     }
 
@@ -195,6 +202,7 @@ export function AdRadarLocationForm({
         <span className={isLanding ? "lp-location-pill" : "research-location-field"}>
           <input
             id={`${listId}-input`}
+            ref={inputRef}
             name="q"
             value={value}
             placeholder={placeholderText}
