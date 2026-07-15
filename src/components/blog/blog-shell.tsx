@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { BlockwiseLogo } from "@/components/blockwise-logo";
+
 export function BlogShell({ children }: { children: ReactNode }) {
   return (
     <div className="bw-blog-page">
       <header className="bw-blog-header">
         <div className="bw-blog-header-in">
           <Link href="/" className="bw-blog-brand" aria-label="Blockwise home">
-            <span className="bw-blog-brand-mark" aria-hidden />
-            <span>blockwise</span>
+            <BlockwiseLogo />
           </Link>
           <nav aria-label="Guides">
             <Link href="/blog">Field guides</Link>
@@ -24,8 +25,7 @@ export function BlogShell({ children }: { children: ReactNode }) {
         <div className="bw-blog-footer-in">
           <div>
             <Link href="/" className="bw-blog-brand bw-blog-brand-light">
-              <span className="bw-blog-brand-mark" aria-hidden />
-              <span>blockwise</span>
+              <BlockwiseLogo />
             </Link>
             <p>Practical advertising field guides for Australian real-estate teams.</p>
           </div>
