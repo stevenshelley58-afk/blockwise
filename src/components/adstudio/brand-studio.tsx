@@ -443,6 +443,8 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
       const json = (await res.json().catch(() => ({}))) as { brandKit?: AdStudioBrandKit; error?: string };
       if (!res.ok || !json.brandKit) throw new Error(json.error || `Scan failed (${res.status})`);
       setKit(json.brandKit);
+      setLogoFile(null);
+      setLogoPreviewUrl(json.brandKit.logos.primaryLogoUrl ?? "");
       setScanUrl(json.brandKit.source.url.replace(/^https?:\/\//, ""));
       flash("ok", "Scan complete — kit updated from your site.");
     } catch (error) {
@@ -516,7 +518,6 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
   }
 
   const brandName = kit.identity.businessName || "Your brand";
-  const initial = brandName.charAt(0).toUpperCase();
   const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
@@ -588,7 +589,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
         <div className="bs-logo-proof">
           <div className="lp">
             <div className="face" style={{ background: "#fff", color: kit.colours.primary }}>
-              {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : `${initial}★ ${brandName.split(" ")[0]?.toLowerCase()}`}
+              {logoPreviewUrl ? <img src={logoPreviewUrl} alt={`${brandName} primary logo`} /> : <span className="missing">Not found</span>}
             </div>
             <small>
               <b>Primary</b>
@@ -597,7 +598,11 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
           </div>
           <div className="lp">
             <div className="face" style={{ background: "#001b3d", color: "#fff" }}>
-              {initial}★ {brandName.split(" ")[0]?.toLowerCase()}
+              {kit.logos.lightLogoUrl ? (
+                <img src={kit.logos.lightLogoUrl} alt={`${brandName} light logo`} />
+              ) : (
+                <span className="missing">Not found</span>
+              )}
             </div>
             <small>
               <b>Dark</b>
@@ -605,7 +610,13 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
             </small>
           </div>
           <div className="lp">
-            <div className="face photo">{initial}★</div>
+            <div className="face photo">
+              {kit.logos.faviconUrl ? (
+                <img src={kit.logos.faviconUrl} alt={`${brandName} brand mark`} />
+              ) : (
+                <span className="missing">Not found</span>
+              )}
+            </div>
             <small>
               <b>Mark</b>
               <em>on photo</em>
@@ -833,7 +844,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
               <div className="minis">
                 <div className="mini-story">
                   <span className="bc" style={{ color: kit.colours.primary }}>
-                    {initial}★ {brandName.split(" ")[0]}
+                    {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" /> : brandName}
                   </span>
                   <h5>{headlineSample}</h5>
                   <span className="cta" style={{ color: kit.colours.primary }}>
@@ -842,7 +853,7 @@ function BrandStudioEditor({ brandKit: initialKit }: { brandKit: AdStudioBrandKi
                 </div>
                 <div className="mini-feed">
                   <div className="fh">
-                    <i style={{ background: kit.colours.primary }}>{initial}</i>
+                    {kit.logos.faviconUrl && <img src={kit.logos.faviconUrl} alt="" />}
                     <b>{brandName}</b>
                   </div>
                   <div className="img" />
@@ -929,6 +940,8 @@ const BRAND_STYLES = `
 .bs-logo-proof .lp{border-radius:14px;box-shadow:0 12px 34px rgba(15,23,42,.16);overflow:hidden;background:#fff}
 .bs-logo-proof .face{height:90px;display:grid;place-items:center;font-weight:800;font-size:21px;letter-spacing:-.3px}
 .bs-logo-proof .face img{display:block;max-width:78%;max-height:58px;object-fit:contain}
+.bs-logo-proof .face .missing{font-size:12px;font-weight:600;letter-spacing:0;color:#94a3b8}
+.bs-logo-proof .face.photo .missing{color:#dbeafe;text-shadow:none}
 .bs-logo-proof .face.photo{background:linear-gradient(160deg,#3a608f,#0d3263);color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4)}
 .bs-logo-proof small{display:flex;justify-content:space-between;padding:8px 12px;font-size:11px;color:var(--muted);background:#fff}
 .bs-logo-proof small b{font-weight:650;color:var(--ink)}
@@ -1001,11 +1014,12 @@ const BRAND_STYLES = `
 .bs-rail .mini-story{width:126px;aspect-ratio:9/16;border-radius:14px;position:relative;overflow:hidden;background:linear-gradient(168deg,#3a608f,#0d3263);color:#fff;box-shadow:0 14px 34px rgba(0,0,0,.45)}
 .bs-rail .mini-story::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(8,12,20,.85) 82%)}
 .bs-rail .mini-story .bc{position:absolute;top:7px;left:7px;background:rgba(255,255,255,.94);border-radius:99px;padding:3px 7px;font-size:6.5px;font-weight:750}
+.bs-rail .mini-story .bc img{display:block;max-width:54px;max-height:10px;object-fit:contain}
 .bs-rail .mini-story h5{position:absolute;left:8px;right:8px;bottom:24px;font-family:Georgia,serif;font-size:10px;line-height:1.25;font-weight:750;z-index:1;margin:0}
 .bs-rail .mini-story .cta{position:absolute;left:8px;right:8px;bottom:6px;height:15px;border-radius:4px;background:#fff;font-size:6.5px;font-weight:750;display:grid;place-items:center;z-index:1}
 .bs-rail .mini-feed{width:126px;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.45)}
 .bs-rail .mini-feed .fh{display:flex;align-items:center;gap:4px;padding:6px 7px}
-.bs-rail .mini-feed .fh i{width:11px;height:11px;border-radius:99px;color:#fff;display:grid;place-items:center;font-style:normal;font-size:6px;font-weight:800}
+.bs-rail .mini-feed .fh img{width:11px;height:11px;object-fit:contain}
 .bs-rail .mini-feed .fh b{font-size:7px;color:var(--ink)}
 .bs-rail .mini-feed .img{height:72px;background:linear-gradient(160deg,#3a608f,#0d3263)}
 .bs-rail .mini-feed .ft{display:flex;justify-content:space-between;align-items:center;background:#f1f5f9;padding:5px 7px}
