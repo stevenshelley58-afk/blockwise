@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Image as ImageIcon, X } from "lucide-react";
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { Check, Image as ImageIcon, Images, Megaphone, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
@@ -19,10 +19,19 @@ type MediaAsset = {
   role?: string;
 };
 
+type GeneratedAd = {
+  creativeId: string;
+  src: string;
+  label: string;
+  formatLabel: string;
+};
+
 type MediaPanelProps = {
   primaryImage: string;
   primaryImageName?: string;
   mediaAssets?: MediaAsset[];
+  generatedAds?: GeneratedAd[];
+  activeGeneratedAdId?: string;
   onUploadImage: (file: File) => void | Promise<void>;
   onUploadRejected: (message: string) => void;
   selectedImageSrc?: string;
@@ -30,17 +39,19 @@ type MediaPanelProps = {
   onSelectImage: (src: string) => void;
   onClearSelection: () => void;
   onConfirmReplace: () => void | Promise<void>;
+  onSelectGeneratedAd?: (creativeId: string) => void;
 };
 
 type RoleFilter = AssetRole | "all";
+type LibraryView = "assets" | "ads";
 
 const ROLE_ORDER: AssetRole[] = ["property", "person", "logo", "background"];
 
-const ROLE_META: Record<AssetRole, { label: string; plural: string; color: string }> = {
-  property: { label: "Property", plural: "Property", color: "#123e75" },
-  person: { label: "Person", plural: "People", color: "#006d38" },
-  logo: { label: "Logo", plural: "Logos", color: "#8a5a00" },
-  background: { label: "Background", plural: "Backgrounds", color: "#475569" },
+const ROLE_META: Record<AssetRole, { label: string; plural: string }> = {
+  property: { label: "Property", plural: "Property" },
+  person: { label: "Person", plural: "People" },
+  logo: { label: "Logo", plural: "Logos" },
+  background: { label: "Background", plural: "Backgrounds" },
 };
 
 /** Resolve a display role from an explicit tag, falling back to label/type cues
@@ -58,6 +69,8 @@ export function MediaPanel({
   primaryImage,
   primaryImageName,
   mediaAssets = MEDIA_ASSETS,
+  generatedAds = [],
+  activeGeneratedAdId,
   onUploadImage,
   onUploadRejected,
   selectedImageSrc,
@@ -65,7 +78,9 @@ export function MediaPanel({
   onSelectImage,
   onClearSelection,
   onConfirmReplace,
+  onSelectGeneratedAd,
 }: MediaPanelProps) {
+  const [libraryView, setLibraryView] = useState<LibraryView>("assets");
   const [filter, setFilter] = useState<RoleFilter>("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmRef = useRef<HTMLElement>(null);
@@ -123,37 +138,14 @@ export function MediaPanel({
 
   const presentRoles = ROLE_ORDER.filter((role) => counts[role] > 0);
 
-  const subheadStyle: CSSProperties = {
-    margin: "18px 0 9px",
-    fontSize: 11,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: "#94a3b8",
-    fontWeight: 700,
-  };
-  const filterRowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 };
-  const chipStyle = (on: boolean): CSSProperties => ({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    border: `1px solid ${on ? "#123e75" : "#dfe6f0"}`,
-    background: on ? "#123e75" : "#fff",
-    color: on ? "#fff" : "#475569",
-    fontSize: 12,
-    fontWeight: 600,
-    padding: "5px 11px",
-    borderRadius: 9999,
-    cursor: "pointer",
-  });
-  const chipCountStyle = (on: boolean): CSSProperties => ({
-    fontSize: 11,
-    fontWeight: 700,
-    color: on ? "rgba(255,255,255,0.85)" : "#94a3b8",
-  });
+  function selectLibraryView(nextView: LibraryView) {
+    setLibraryView(nextView);
+    if (nextView === "ads") onClearSelection();
+  }
 
   return (
     <>
-      <PanelHeader title="Media library" detail="Upload, organise and reuse your photos. Each one is tagged by what it is — property, person or logo." />
+      <PanelHeader title="Library" detail="Use your uploaded assets or open an ad you have generated." />
 
       <div className="studio-current-media" aria-label="Current image">
         <img src={primaryImage} alt="" />
@@ -164,86 +156,121 @@ export function MediaPanel({
         <small className="studio-current-media-state">In ad</small>
       </div>
 
-      <AssetUploadDropzone
-        className="studio-media-upload"
-        label="Upload image"
-        actionText="Upload image"
-        helperText="PNG, JPG or WebP / up to 8 MB"
-        acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
-        maxBytes={AD_IMAGE_MAX_BYTES}
-        typeError="Use a JPG, PNG, or WebP image."
-        sizeError="Use an image under 8 MB."
-        capturePagePaste
-        onFileAccepted={onUploadImage}
-        onFileRejected={onUploadRejected}
-      />
-
-      <p style={subheadStyle}>Your library</p>
-      {presentRoles.length > 0 && (
-        <div style={filterRowStyle} role="tablist" aria-label="Filter assets by type">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === "all"}
-            style={chipStyle(filter === "all")}
-            onClick={() => setFilter("all")}
-          >
-            All <span style={chipCountStyle(filter === "all")}>{mediaAssets.length}</span>
-          </button>
-          {presentRoles.map((role) => (
-            <button
-              key={role}
-              type="button"
-              role="tab"
-              aria-selected={filter === role}
-              style={chipStyle(filter === role)}
-              onClick={() => setFilter(role)}
-            >
-              {ROLE_META[role].plural} <span style={chipCountStyle(filter === role)}>{counts[role]}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="studio-media-grid">
-        {visibleAssets.map((asset) => {
-          const role = resolveRole(asset);
-          const inUse = primaryImage === asset.src;
-          return (
-            <button
-              className={`${inUse ? "active" : ""}${selectedImageSrc === asset.src ? " selected" : ""}`}
-              key={asset.src}
-              type="button"
-              style={{ position: "relative" }}
-              aria-pressed={selectedImageSrc === asset.src}
-              onClick={() => inUse ? onClearSelection() : onSelectImage(asset.src)}
-            >
-              <span
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: 7,
-                  left: 7,
-                  zIndex: 2,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  letterSpacing: "0.01em",
-                  color: "#fff",
-                  background: ROLE_META[role].color,
-                  padding: "3px 7px",
-                  borderRadius: 9999,
-                }}
-              >
-                {ROLE_META[role].label}
-              </span>
-              <img src={asset.src} alt="" />
-              <span>{asset.label}</span>
-              <small>{inUse ? "Primary / in use" : `${asset.type ?? "Image"} / ${asset.ratio ?? "Image"}`}</small>
-            </button>
-          );
-        })}
+      <div className="studio-library-tabs" role="tablist" aria-label="Library content">
+        <button
+          id="studio-library-assets-tab"
+          type="button"
+          role="tab"
+          aria-controls="studio-library-assets-panel"
+          aria-selected={libraryView === "assets"}
+          className={libraryView === "assets" ? "active" : ""}
+          onClick={() => selectLibraryView("assets")}
+        >
+          <Images aria-hidden size={16} />
+          Assets <span>{mediaAssets.length}</span>
+        </button>
+        <button
+          id="studio-library-ads-tab"
+          type="button"
+          role="tab"
+          aria-controls="studio-library-ads-panel"
+          aria-selected={libraryView === "ads"}
+          className={libraryView === "ads" ? "active" : ""}
+          onClick={() => selectLibraryView("ads")}
+        >
+          <Megaphone aria-hidden size={16} />
+          Ads <span>{generatedAds.length}</span>
+        </button>
       </div>
+
+      {libraryView === "assets" ? (
+        <section id="studio-library-assets-panel" role="tabpanel" aria-labelledby="studio-library-assets-tab" className="studio-library-panel">
+          <AssetUploadDropzone
+            className="studio-media-upload"
+            label="Upload image"
+            actionText="Upload image"
+            helperText="PNG, JPG or WebP / up to 8 MB"
+            acceptedTypes={AD_IMAGE_UPLOAD_TYPES}
+            maxBytes={AD_IMAGE_MAX_BYTES}
+            typeError="Use a JPG, PNG, or WebP image."
+            sizeError="Use an image under 8 MB."
+            capturePagePaste
+            onFileAccepted={onUploadImage}
+            onFileRejected={onUploadRejected}
+          />
+
+          {presentRoles.length > 0 ? (
+            <div className="studio-library-filters" aria-label="Filter assets by type">
+              <button type="button" aria-pressed={filter === "all"} className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
+                All <span>{mediaAssets.length}</span>
+              </button>
+              {presentRoles.map((role) => (
+                <button key={role} type="button" aria-pressed={filter === role} className={filter === role ? "active" : ""} onClick={() => setFilter(role)}>
+                  {ROLE_META[role].plural} <span>{counts[role]}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {visibleAssets.length > 0 ? (
+            <div className="studio-media-grid">
+              {visibleAssets.map((asset) => {
+                const role = resolveRole(asset);
+                const inUse = primaryImage === asset.src;
+                return (
+                  <button
+                    className={`${inUse ? "active" : ""}${selectedImageSrc === asset.src ? " selected" : ""}`}
+                    key={asset.src}
+                    type="button"
+                    aria-pressed={selectedImageSrc === asset.src}
+                    onClick={() => inUse ? onClearSelection() : onSelectImage(asset.src)}
+                  >
+                    <span className="studio-media-role" aria-hidden>{ROLE_META[role].label}</span>
+                    <img src={asset.src} alt="" />
+                    <span>{asset.label}</span>
+                    <small>{inUse ? "Primary / in use" : `${asset.type ?? "Image"} / ${asset.ratio ?? "Image"}`}</small>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="studio-library-empty">
+              <Images aria-hidden size={22} />
+              <strong>No assets yet</strong>
+              <p>Upload a property photo, headshot or logo to use it in an ad.</p>
+            </div>
+          )}
+        </section>
+      ) : (
+        <section id="studio-library-ads-panel" role="tabpanel" aria-labelledby="studio-library-ads-tab" className="studio-library-panel">
+          {generatedAds.length > 0 ? (
+            <div className="studio-media-grid studio-generated-ad-grid">
+              {generatedAds.map((ad) => {
+                const active = ad.creativeId === activeGeneratedAdId;
+                return (
+                  <button
+                    className={active ? "active" : ""}
+                    key={ad.creativeId}
+                    type="button"
+                    aria-current={active ? "true" : undefined}
+                    onClick={() => onSelectGeneratedAd?.(ad.creativeId)}
+                  >
+                    <img src={ad.src} alt="" />
+                    <span>{ad.label}</span>
+                    <small>{active ? `${ad.formatLabel} / open` : `${ad.formatLabel} / generated ad`}</small>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="studio-library-empty">
+              <Megaphone aria-hidden size={22} />
+              <strong>No generated ads yet</strong>
+              <p>Ads will appear here after you generate them from a template.</p>
+            </div>
+          )}
+        </section>
+      )}
 
       {replacementAsset ? (
         <section className="studio-media-replacement" aria-label="Selected replacement image">

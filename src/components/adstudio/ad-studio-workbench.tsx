@@ -225,6 +225,14 @@ function primaryImageForVariant(
   return primaryImageFromCreative(creative);
 }
 
+function creativeLibraryPreview(creative: AdStudioCreative): string | null {
+  if (isCloneCreative(creative)) return primaryImageFromCreative(creative)?.src ?? null;
+  if (!creative.previewSvg) return null;
+  return creative.previewSvg.startsWith("data:image/")
+    ? creative.previewSvg
+    : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(creative.previewSvg)}`;
+}
+
 function commitVariantEdits(input: {
   pack: AdStudioCampaignPack;
   variantId: string | undefined;
@@ -450,6 +458,22 @@ export function AdStudioWorkbench({
     [isSample, uploadedAssets, workspaceMediaAssets],
   );
 
+  const generatedAds = useMemo(
+    () =>
+      pack.creatives.flatMap((creative) => {
+        const src = creativeLibraryPreview(creative);
+        if (!src) return [];
+        const variantIndex = pack.variants.findIndex((variant) => variant.variantId === creative.variantId);
+        return [{
+          creativeId: creative.creativeId,
+          src,
+          label: variantIndex >= 0 ? `Ad ${variantIndex + 1}` : "Generated ad",
+          formatLabel: creative.format === "9:16" ? "Story" : "Feed",
+        }];
+      }),
+    [pack.creatives, pack.variants],
+  );
+
   function selectMediaImage(src: string) {
     const asset = mediaAssets.find((item) => item.src === src);
     if (!asset || src === primaryImage) {
@@ -459,6 +483,20 @@ export function AdStudioWorkbench({
     setPendingMediaReplacement({ src, label: asset.label });
     setSelectedElement("image");
     studio.setSection("media");
+  }
+
+  function selectGeneratedAd(creativeId: string) {
+    const creative = pack.creatives.find((item) => item.creativeId === creativeId);
+    if (!creative) return;
+    const variantIndex = pack.variants.findIndex((variant) => variant.variantId === creative.variantId);
+    if (variantIndex >= 0) selectVariant(variantIndex);
+    setPreviewFormat(creative.format === "9:16" ? "story" : "feed");
+    const image = primaryImageFromCreative(creative);
+    if (image) {
+      setPrimaryImage(image.src);
+      setPrimaryImageName(image.label);
+    }
+    setSelectedElement("canvas");
   }
 
   const { readinessItems } = useReadiness({
@@ -796,6 +834,9 @@ export function AdStudioWorkbench({
         onClearSelection={() => setPendingMediaReplacement(null)}
         onConfirmReplace={confirmMediaReplacement}
         mediaAssets={mediaAssets}
+        generatedAds={generatedAds}
+        activeGeneratedAdId={currentCreative?.creativeId}
+        onSelectGeneratedAd={selectGeneratedAd}
       />
     );
   }

@@ -53,6 +53,22 @@ test("media library stages a replacement and confirms before generating a new ad
   assert.match(editClient, /objects: \[\{ \.\.\.cloneObject, content: data\.image, assetId: data\.image \}\]/);
 });
 
+test("media library separates uploaded assets from generated ads", () => {
+  const workbench = read("src/components/adstudio/ad-studio-workbench.tsx");
+  const mediaPanel = read("src/components/adstudio/panels/media-panel.tsx");
+
+  assert.match(mediaPanel, /type LibraryView = "assets" \| "ads"/);
+  assert.match(mediaPanel, /aria-label="Library content"/);
+  assert.match(mediaPanel, /Assets <span>\{mediaAssets\.length\}<\/span>/);
+  assert.match(mediaPanel, /Ads <span>\{generatedAds\.length\}<\/span>/);
+  assert.match(mediaPanel, /studio-library-assets-panel/);
+  assert.match(mediaPanel, /studio-library-ads-panel/);
+  assert.match(mediaPanel, /No generated ads yet/);
+  assert.match(workbench, /creativeLibraryPreview/);
+  assert.match(workbench, /onSelectGeneratedAd=\{selectGeneratedAd\}/);
+  assert.match(workbench, /setPreviewFormat\(creative\.format === "9:16" \? "story" : "feed"\)/);
+});
+
 test("brief copy generation leaves editable copy visible with inline feedback", () => {
   const panel = read("src/components/adstudio/panels/copy-panel.tsx");
   const hook = read("src/components/adstudio/use-copy.ts");
