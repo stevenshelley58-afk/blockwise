@@ -761,7 +761,7 @@ export function NewAdDialog({
                     />
                     <span>
                       <strong>Fast</strong>
-                      <small>Usually ready in about 30–45 seconds</small>
+                      <small>Usually ready in about 1 minute</small>
                     </span>
                     <em>Recommended</em>
                   </label>
