@@ -55,7 +55,10 @@ function clamp01(value: unknown): number {
   return Math.min(1, Math.max(0, num));
 }
 
-function parseRegions(raw: unknown): AdStudioCloneRegion[] {
+export function parseCloneRegions(
+  raw: unknown,
+  expectedCopy: Record<string, string>,
+): AdStudioCloneRegion[] {
   if (!Array.isArray(raw)) return [];
   const regions: AdStudioCloneRegion[] = [];
   for (const entry of raw) {
@@ -66,7 +69,10 @@ function parseRegions(raw: unknown): AdStudioCloneRegion[] {
     if (!key) continue;
     regions.push({
       key,
-      kind: item.kind === "image" ? "image" : "text",
+      // Declared copy keys are authoritative. Vision occasionally labels a
+      // text box inside a large photo region as an image, which would open the
+      // file picker instead of the text editor.
+      kind: Object.hasOwn(expectedCopy, key) ? "text" : item.kind === "image" ? "image" : "text",
       box: {
         x: clamp01(box.x),
         y: clamp01(box.y),
@@ -239,7 +245,7 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
   const defects = Array.isArray(json.defects)
     ? (json.defects as unknown[]).filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
-  const regions = parseRegions(json.regions);
+  const regions = parseCloneRegions(json.regions, input.expectedCopy);
 
   return {
     passed: copyChecks.every((check) => check.exact) && defects.length === 0,

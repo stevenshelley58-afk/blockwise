@@ -33,6 +33,12 @@ test("hit-targets come from cloneQa.regions as percentages of the normalized box
   assert.match(editor, /copyChecks\.find\(\(item\) => item\.key === key\)/);
 });
 
+test("text hit-targets stay above overlapping image regions", () => {
+  // Vision QA may return a broad photo box that contains smaller text boxes.
+  // Region array order must never make that photo open the file picker instead.
+  assert.match(editor, /zIndex: region\.kind === "text" \? 2 : 1/);
+});
+
 test("successful edit swaps image, QA verdict and render history on the creative", () => {
   assert.match(editor, /content: data\.image, assetId: data\.image/);
   assert.match(editor, /cloneQa: data\.qa \?\? creative\.canvas\.cloneQa/);

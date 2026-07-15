@@ -39,6 +39,9 @@ function regionStyle(region: AdStudioCloneRegion): CSSProperties {
     top: `${y * 100}%`,
     width: `${width * 100}%`,
     height: `${height * 100}%`,
+    // Photo regions often contain text. Keep the more specific text target on
+    // top regardless of the order returned by vision QA.
+    zIndex: region.kind === "text" ? 2 : 1,
   };
 }
 
