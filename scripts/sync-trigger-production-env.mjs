@@ -2,6 +2,7 @@ import { configure, envvars, runs } from "@trigger.dev/sdk";
 
 const accessToken = process.env.TRIGGER_ACCESS_TOKEN?.trim();
 const projectRef = process.env.TRIGGER_PROJECT_ID?.trim();
+const productionSecretKey = process.env.TRIGGER_PRODUCTION_SECRET_KEY?.trim();
 
 if (!accessToken || !projectRef) {
   throw new Error("Trigger deployment credentials are required to sync production environment variables.");
@@ -65,4 +66,11 @@ for (const run of recentRuns.data) {
   console.log(
     `Trigger run ${run.id}: ${run.status} (version ${run.version ?? "unassigned"}, created ${run.createdAt.toISOString()})`,
   );
+}
+
+const failedRun = recentRuns.data.find((run) => run.status === "FAILED");
+if (failedRun && productionSecretKey) {
+  configure({ secretKey: productionSecretKey });
+  const detail = await runs.retrieve(failedRun.id);
+  console.log(`Latest failed Trigger run: ${detail.error?.message ?? "No error message returned."}`);
 }
