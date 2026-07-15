@@ -40,14 +40,14 @@ const loadReport = cache(async (postcode: string) => {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { postcode } = await params;
-  if (!/^\d{4}$/.test(postcode)) return { title: "Suburb report | Blockwise", robots: { index: false, follow: false } };
+  if (!/^\d{4}$/.test(postcode)) return { title: { absolute: "Suburb report | Blockwise" }, robots: { index: false, follow: false } };
   const report = await loadReport(postcode).catch(() => null);
-  if (!report) return { title: "Suburb report | Blockwise", robots: { index: false, follow: false } };
+  if (!report) return { title: { absolute: "Suburb report | Blockwise" }, robots: { index: false, follow: false } };
   const suburb = suburbFromLabel(report.label, postcode);
   const count = report.response.ads.length;
   const description = `Browse ${count} live ads observed in ${suburb} ${postcode}, with local advertiser counts, category patterns and practical ad concepts.`;
   return {
-    title: `Every live ad in ${suburb} ${postcode} | Blockwise`,
+    title: { absolute: `Every live ad in ${suburb} ${postcode} | Blockwise` },
     description,
     alternates: { canonical: `/suburb/${postcode}` },
     openGraph: { title: `Every live ad in ${suburb} ${postcode}`, description, url: `/suburb/${postcode}`, type: "website" },
