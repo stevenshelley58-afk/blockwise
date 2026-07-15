@@ -27,6 +27,15 @@ test("editor exposes both canvas selection and a non-spatial element list", () =
   assert.match(editor, /Edit elements/);
 });
 
+test("element list exposes overflow controls and aligns each selection to the visible end", () => {
+  assert.match(editor, /aria-label="Show previous elements"/);
+  assert.match(editor, /aria-label="Show more elements"/);
+  assert.match(editor, /left: list\.scrollLeft \+ buttonBounds\.right - listBounds\.right/);
+  assert.match(editor, /scrollSelectedElementToEnd\(region\.key\)/);
+  assert.match(editor, /ResizeObserver\(updateElementScrollState\)/);
+  assert.match(styles, /\.studio-inplace-element-picker\{display:grid;grid-template-columns:44px minmax\(0,1fr\) 44px/);
+});
+
 test("undo and redo are durable checked revision mutations", () => {
   assert.match(editor, /restoreVersion\("undo"\)/);
   assert.match(editor, /restoreVersion\("redo"\)/);

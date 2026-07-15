@@ -585,7 +585,11 @@
 .studio-inplace-inspector header span{font-size:12px;color:var(--muted)}
 .studio-inplace-inspector header strong{font-size:19px;line-height:1.2;text-transform:capitalize}
 .studio-inplace-inspector header button{width:44px;height:44px;border:1px solid var(--line-heavy);border-radius:10px;background:#fff;color:var(--ink);display:grid;place-items:center}
-.studio-inplace-element-list{display:flex;gap:7px;overflow-x:auto;padding:16px 1px}
+.studio-inplace-element-picker{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:6px;padding:12px 0}
+.studio-inplace-element-nav{width:44px;height:44px;border:1px solid var(--line-heavy);border-radius:9999px;background:#fff;color:var(--ink);display:grid;place-items:center;transition:background-color .18s cubic-bezier(.22,1,.36,1),border-color .18s cubic-bezier(.22,1,.36,1)}
+.studio-inplace-element-nav:hover:not(:disabled){border-color:var(--ink);background:var(--canvas)}
+.studio-inplace-element-nav:disabled{opacity:.28;cursor:not-allowed}
+.studio-inplace-element-list{display:flex;min-width:0;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;padding:4px 1px;scrollbar-width:thin}
 .studio-inplace-element-list button{flex:0 0 auto;min-height:44px;border:1px solid var(--line-heavy);border-radius:9999px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 13px;font-size:12.5px;font-weight:650;text-transform:capitalize}
 .studio-inplace-element-list button[aria-pressed="true"]{border-color:#16181d;background:#16181d;color:#fff}
 .studio-inplace-field{display:grid;gap:10px;padding-top:4px}
@@ -606,7 +610,7 @@
   .studio-inplace-toolbar button{font-size:0;padding:0;width:44px}
   .studio-inplace-toolbar button:last-child{width:auto;padding:0 12px;font-size:12px}
 }
-@media(prefers-reduced-motion:reduce){.studio-media-grid button,.studio-inplace-region{transition:none}.studio-media-grid button:hover{transform:none}.studio-inplace-region[data-pending]{animation:none}}
+@media(prefers-reduced-motion:reduce){.studio-media-grid button,.studio-inplace-region,.studio-inplace-element-nav{transition:none}.studio-media-grid button:hover{transform:none}.studio-inplace-region[data-pending]{animation:none}}
 
 /* Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
