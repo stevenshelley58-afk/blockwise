@@ -12,6 +12,7 @@ const credential = resolveHermesSupabaseCredential(env);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const batchSize = Math.max(1, Math.min(500, Number.parseInt(env.HERMES_MEDIA_QUALITY_BACKFILL_BATCH_SIZE || "200", 10)));
 const fetchTimeoutMs = Math.max(1_000, Math.min(60_000, Number.parseInt(env.HERMES_MEDIA_QUALITY_FETCH_TIMEOUT_MS || "15000", 10)));
+const concurrency = Math.max(1, Math.min(32, Number.parseInt(env.HERMES_MEDIA_QUALITY_BACKFILL_CONCURRENCY || "16", 10)));
 
 if (!supabaseUrl) throw new Error("Missing HERMES_SUPABASE_URL/SUPABASE_URL");
 if (!credential) throw new Error("Missing Hermes Supabase server credential");
@@ -36,71 +37,8 @@ for (;;) {
   );
   if (!assets.length) break;
 
-  for (const asset of assets) {
-    stats.scanned += 1;
-    lastId = asset.id;
-    const url = mediaUrl(asset);
-    if (!url) {
-      stats.fetchFailed += 1;
-      continue;
-    }
-
-    let response;
-    try {
-      response = await fetch(url, {
-        headers: { "user-agent": "BlockwiseHermesMediaRepair/1.0" },
-        signal: AbortSignal.timeout(fetchTimeoutMs),
-      });
-      if (!response.ok) throw new Error(`media fetch failed ${response.status}`);
-    } catch {
-      stats.fetchFailed += 1;
-      continue;
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || asset.content_type || null;
-    const dimensions = readImageDimensions(buffer, contentType) ?? await ffprobeImageDimensions(buffer);
-    if (!dimensions) stats.probeFailed += 1;
-    else stats.measured += 1;
-
-    const quality = assessCapturedImageQuality({
-      byteSize: buffer.length,
-      width: dimensions?.width ?? null,
-      height: dimensions?.height ?? null,
-    });
-    const patch = {
-      byte_size: buffer.length,
-      width: dimensions?.width ?? null,
-      height: dimensions?.height ?? null,
-      content_type: contentType,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (!quality.displayable) {
-      patch.capture_status = "blocked";
-      patch.metadata = {
-        ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
-        media_quality_rejection: quality.reason,
-        repaired_by: "media-quality-backfill",
-      };
-      stats.blocked += 1;
-      affectedCreativeIds.add(asset.ad_creative_id);
-    } else if (
-      asset.byte_size === buffer.length &&
-      asset.width === (dimensions?.width ?? null) &&
-      asset.height === (dimensions?.height ?? null)
-    ) {
-      stats.unchanged += 1;
-      continue;
-    }
-
-    if (!dryRun) {
-      await rest("research", `media_assets?id=eq.${encodeURIComponent(asset.id)}`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-      });
-    }
-  }
+  await mapWithConcurrency(assets, concurrency, inspectAsset);
+  lastId = assets.at(-1)?.id || lastId;
 
   console.error(JSON.stringify({ event: "progress", dryRun, scanned: stats.scanned, ...stats }));
 
@@ -115,6 +53,84 @@ if (!dryRun) {
 }
 
 console.log(JSON.stringify({ dryRun, ...stats }));
+
+async function inspectAsset(asset) {
+  stats.scanned += 1;
+  const url = mediaUrl(asset);
+  if (!url) {
+    stats.fetchFailed += 1;
+    return;
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { "user-agent": "BlockwiseHermesMediaRepair/1.0" },
+      signal: AbortSignal.timeout(fetchTimeoutMs),
+    });
+    if (!response.ok) throw new Error(`media fetch failed ${response.status}`);
+  } catch {
+    stats.fetchFailed += 1;
+    return;
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || asset.content_type || null;
+  const dimensions = readImageDimensions(buffer, contentType) ?? await ffprobeImageDimensions(buffer);
+  if (!dimensions) stats.probeFailed += 1;
+  else stats.measured += 1;
+
+  const quality = assessCapturedImageQuality({
+    byteSize: buffer.length,
+    width: dimensions?.width ?? null,
+    height: dimensions?.height ?? null,
+  });
+  const patch = {
+    byte_size: buffer.length,
+    width: dimensions?.width ?? null,
+    height: dimensions?.height ?? null,
+    content_type: contentType,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (!quality.displayable) {
+    patch.capture_status = "blocked";
+    patch.metadata = {
+      ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
+      media_quality_rejection: quality.reason,
+      repaired_by: "media-quality-backfill",
+    };
+    stats.blocked += 1;
+    affectedCreativeIds.add(asset.ad_creative_id);
+  } else if (
+    asset.byte_size === buffer.length &&
+    asset.width === (dimensions?.width ?? null) &&
+    asset.height === (dimensions?.height ?? null)
+  ) {
+    stats.unchanged += 1;
+    return;
+  }
+
+  if (!dryRun) {
+    await rest("research", `media_assets?id=eq.${encodeURIComponent(asset.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+  }
+}
+
+async function mapWithConcurrency(items, limit, operation) {
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) return;
+      await operation(items[index]);
+    }
+  });
+  await Promise.all(workers);
+}
 
 function mediaUrl(asset) {
   if (asset.storage_path) {

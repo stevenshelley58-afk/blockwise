@@ -14,6 +14,7 @@ test("media quality backfill inspects all captured images and rebuilds affected 
   assert.match(source, /refreshCreativeStoredMedia/iu);
   assert.match(source, /--dry-run/iu);
   assert.match(source, /AbortSignal\.timeout\(fetchTimeoutMs\)/u);
+  assert.match(source, /mapWithConcurrency\(assets, concurrency/iu);
   assert.match(source, /progress[\s\S]*stats\.scanned/u);
   assert.doesNotMatch(source, /last_error\s*=/u, "the live media_assets table has no last_error column");
 });
