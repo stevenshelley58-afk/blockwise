@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
@@ -56,7 +56,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   const [comparePrevious, setComparePrevious] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const elementListRef = useRef<HTMLDivElement | null>(null);
+  const elementButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
+  const [canScrollBackward, setCanScrollBackward] = useState(false);
+  const [canScrollForward, setCanScrollForward] = useState(false);
 
   const cloneObject = creative.canvas.objects[0];
   const src = cloneObject?.content ?? cloneObject?.assetId ?? "";
@@ -84,6 +88,29 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
   }, [selectedRegion]);
 
   useEffect(() => setComparePrevious(false), [src]);
+
+  const updateElementScrollState = useCallback(() => {
+    const list = elementListRef.current;
+    if (!list) return;
+    const maximumScroll = Math.max(0, list.scrollWidth - list.clientWidth);
+    setCanScrollBackward(list.scrollLeft > 1);
+    setCanScrollForward(list.scrollLeft < maximumScroll - 1);
+  }, []);
+
+  useEffect(() => {
+    const list = elementListRef.current;
+    if (!list) return;
+    updateElementScrollState();
+    list.addEventListener("scroll", updateElementScrollState, { passive: true });
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(updateElementScrollState);
+    resizeObserver?.observe(list);
+    return () => {
+      list.removeEventListener("scroll", updateElementScrollState);
+      resizeObserver?.disconnect();
+    };
+  }, [regions.length, updateElementScrollState]);
 
   const performMutation = useCallback(async (mutation: CreativeEditMutation, successMessage: string) => {
     if (!creative.activeRevisionId) {
@@ -113,11 +140,39 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     }
   }, [cloneObject, creative, onCreativeChange, showToast]);
 
+  function preferredScrollBehavior(): ScrollBehavior {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  }
+
+  function scrollSelectedElementToEnd(key: string) {
+    requestAnimationFrame(() => {
+      const list = elementListRef.current;
+      const button = elementButtonRefs.current.get(key);
+      if (!list || !button) return;
+      const listBounds = list.getBoundingClientRect();
+      const buttonBounds = button.getBoundingClientRect();
+      list.scrollTo({
+        left: list.scrollLeft + buttonBounds.right - listBounds.right,
+        behavior: preferredScrollBehavior(),
+      });
+    });
+  }
+
+  function scrollElementList(direction: -1 | 1) {
+    const list = elementListRef.current;
+    if (!list) return;
+    list.scrollBy({
+      left: direction * Math.max(120, list.clientWidth * 0.8),
+      behavior: preferredScrollBehavior(),
+    });
+  }
+
   function selectRegion(region: AdStudioCloneRegion) {
     if (busy) return;
     setSelectedKey(region.key);
     setInstruction("");
     setTextDraft(region.kind === "text" ? expectedTextForKey(creative, region.key) : "");
+    scrollSelectedElementToEnd(region.key);
   }
 
   function closeInspector() {
@@ -286,19 +341,50 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
             </button>
           </header>
 
-          <div className="studio-inplace-element-list" aria-label="Editable elements">
-            {regions.map((region) => (
-              <button
-                key={`list:${region.kind}:${region.key}`}
-                type="button"
-                aria-pressed={selectedKey === region.key}
-                onClick={() => selectRegion(region)}
-                disabled={busy}
-              >
-                {region.kind === "text" ? <Sparkles aria-hidden size={15} /> : <ImagePlus aria-hidden size={15} />}
-                {labelForRegionKey(region.key)}
-              </button>
-            ))}
+          <div className="studio-inplace-element-picker">
+            <button
+              className="studio-inplace-element-nav"
+              type="button"
+              aria-label="Show previous elements"
+              aria-controls="studio-editable-elements"
+              onClick={() => scrollElementList(-1)}
+              disabled={busy || !canScrollBackward}
+            >
+              <ChevronLeft aria-hidden size={20} />
+            </button>
+            <div
+              id="studio-editable-elements"
+              ref={elementListRef}
+              className="studio-inplace-element-list"
+              aria-label="Editable elements"
+            >
+              {regions.map((region) => (
+                <button
+                  key={`list:${region.kind}:${region.key}`}
+                  ref={(node) => {
+                    if (node) elementButtonRefs.current.set(region.key, node);
+                    else elementButtonRefs.current.delete(region.key);
+                  }}
+                  type="button"
+                  aria-pressed={selectedKey === region.key}
+                  onClick={() => selectRegion(region)}
+                  disabled={busy}
+                >
+                  {region.kind === "text" ? <Sparkles aria-hidden size={15} /> : <ImagePlus aria-hidden size={15} />}
+                  {labelForRegionKey(region.key)}
+                </button>
+              ))}
+            </div>
+            <button
+              className="studio-inplace-element-nav"
+              type="button"
+              aria-label="Show more elements"
+              aria-controls="studio-editable-elements"
+              onClick={() => scrollElementList(1)}
+              disabled={busy || !canScrollForward}
+            >
+              <ChevronRight aria-hidden size={20} />
+            </button>
           </div>
 
           {selectedRegion.kind === "text" ? (
