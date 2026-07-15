@@ -8,12 +8,7 @@ import { AdRadarLocationForm } from "@/components/research/ad-radar-location-for
 import { trackCtaClick } from "@/lib/analytics/pixel";
 import type { AdRadarSearchSuggestion } from "@/lib/research/ad-radar-search-suggestions";
 
-type SuburbReportLocationFormProps = {
-  analyticsLocation: string;
-  mobile?: boolean;
-};
-
-export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: SuburbReportLocationFormProps) {
+export function SuburbReportLocationForm({ analyticsLocation }: { analyticsLocation: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,16 +30,16 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
       fireSafe("suburb_scan_started", { postcode: resolved.postcode });
       router.push(href);
     } catch {
-      setError("We could not confirm that location. Try the postcode instead.");
+      setError("We could not confirm that location. Choose a suggestion or try the postcode.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div className={mobile ? "hwm-report-search" : "hw-report-search"}>
+    <div className="home-report-search">
       <AdRadarLocationForm
-        buttonLabel="Show me the ads →"
+        buttonLabel="View local ads"
         initialNote=""
         initialValue=""
         inputLabel="Suburb or postcode"
@@ -56,8 +51,8 @@ export function SuburbReportLocationForm({ analyticsLocation, mobile = false }: 
         useBestGuess
         useBestGuessAsPlaceholder
       />
-      <p className="hw-report-search-note">Free report. No email, no sign-up, just your suburb.</p>
-      {error ? <p className="hw-report-search-error" role="alert">{error}</p> : null}
+      <p className="home-report-search-note">Free report. No email or account required.</p>
+      {error ? <p className="home-report-search-error" role="alert">{error}</p> : null}
     </div>
   );
 }
@@ -86,5 +81,5 @@ function slugify(value: string): string {
 }
 
 function fireSafe(event: string, properties: Record<string, string>) {
-  try { track(event, properties); } catch { /* analytics is best effort */ }
+  try { track(event, properties); } catch { /* Analytics is best effort. */ }
 }

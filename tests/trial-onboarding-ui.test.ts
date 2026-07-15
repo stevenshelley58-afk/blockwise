@@ -44,11 +44,10 @@ test("onboarding logo upload previews flexible file input", () => {
 test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only for managed setup", () => {
   const ctaLink = readFileSync("src/components/landing/cta-link.tsx", "utf8");
   const pixel = readFileSync("src/lib/analytics/pixel.ts", "utf8");
-  // The homepage renders from page.tsx plus the home-landing component tree.
+  // The homepage renders from page.tsx plus one shared responsive tree.
   const homepage = [
     readFileSync("src/app/page.tsx", "utf8"),
-    readFileSync("src/components/home-landing/home-desktop.tsx", "utf8"),
-    readFileSync("src/components/home-landing/home-mobile.tsx", "utf8"),
+    readFileSync("src/components/home-landing/home-landing.tsx", "utf8"),
   ].join("\n");
 
   // Every CTA fires a cta_click with the location label.

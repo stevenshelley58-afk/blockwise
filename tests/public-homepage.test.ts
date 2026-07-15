@@ -3,9 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-// The homepage renders from src/app/page.tsx plus the home-landing component
-// tree (desktop + mobile variants of every section). Guards that used to read
-// page.tsx alone now read the combined homepage source.
+// The homepage renders from page.tsx plus one shared responsive component tree.
 const HOME_LANDING_DIR = "src/components/home-landing";
 
 function readHomeSources(): { page: string; combined: string } {
@@ -43,7 +41,7 @@ test("public audit report route stays public and off the protected Ad Radar surf
 });
 
 test("landing page anchors, sections, and claims stay connected", () => {
-  const { page, combined } = readHomeSources();
+  const { combined } = readHomeSources();
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
   const staleSignupAnchor = 'href="#sig' + 'nup"';
@@ -68,15 +66,12 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(combined, new RegExp(staleSignupAnchor));
   assert.doesNotMatch(combined, forbiddenClaims);
 
-  // One section element per anchor id; both breakpoint variants render inside
-  // it, so every anchor resolves at desktop and mobile widths.
+  // One section element per anchor id keeps the responsive tree compact and
+  // every anchor valid at desktop and mobile widths.
   const expectedSections = [
     "top",
-    "start",
-    "workflow",
-    "done-for-you",
+    "how-it-works",
     "control",
-    "updates",
     "property-check",
     "free-trial",
     "managed-setup",
@@ -84,21 +79,17 @@ test("landing page anchors, sections, and claims stay connected", () => {
   ];
 
   for (const id of expectedSections) {
-    assert.match(page, new RegExp(`id="${id}"`), `missing #${id}`);
+    assert.match(combined, new RegExp(`id="${id}"`), `missing #${id}`);
   }
 
   let previousIndex = -1;
   for (const id of expectedSections) {
-    const index = page.indexOf(`id="${id}"`);
+    const index = combined.indexOf(`id="${id}"`);
     assert.ok(index > previousIndex, `#${id} should appear after the previous major section`);
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors are advertising\. Are&nbsp;you\?/);
-  assert.match(
-    combined,
-    /Ads built from what&rsquo;s actually working in your area\. Start getting leads today\./,
-  );
+  assert.match(combined, /See the ads competing in your suburb\./);
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
   // Nearby-ad disclaimer must ship with the ad-intelligence framing.
@@ -114,9 +105,9 @@ test("landing page anchors, sections, and claims stay connected", () => {
     assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
   }
 
-  assert.match(combined, /href="#free-trial"/);
-  // The walkthrough CTAs use CtaLink's default #managed-setup target.
-  assert.match(combined, /location="faq_walkthrough"/);
+  assert.match(combined, /location="trial_managed_setup"/);
+  assert.match(combined, /HomeLanding/);
+  assert.doesNotMatch(combined, /data-reveal|HomeDesktop|HomeMobile|RevealObserver/);
 });
 
 test("landing page local image assets resolve from public/", () => {
@@ -152,9 +143,8 @@ test("public marketing copy stays honest about first-tester export posture", () 
   const combined = `${home}\n${pricing}\n${layout}`;
 
   assert.match(home, /Nothing spends until you approve/i);
-  assert.match(home, /Nothing spends before approval/i);
-  assert.match(home, /before and after approval/i);
   assert.match(home, /Approve every ad before it goes live/i);
+  assert.match(home, /What runs is always your call/i);
   assert.match(pricing, /Create, approve, export and track property/);
   assert.match(pricing, /\$799/);
   assert.doesNotMatch(pricing, /\$500/);
@@ -172,7 +162,7 @@ test("managed-setup form posts to the demo-request endpoint with an intact honey
   // company_website is the API's spam honeypot: it must stay in the form,
   // stay visually hidden, and never be a user-facing field.
   assert.match(form, /name="company_website"/);
-  assert.match(form, /hw-ms-hp/);
+  assert.match(form, /home-form-honeypot/);
   assert.match(route, /company_website/);
 });
 
