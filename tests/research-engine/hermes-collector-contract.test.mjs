@@ -74,6 +74,8 @@ const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBench
 const apifyActorBenchmark = functionBody(supervisor, "benchmarkApifyCandidateActor");
 const apifyCanaryInput = functionBody(supervisor, "readApifyCanaryCaptureInput");
 const apifyPageInput = functionBody(supervisor, "apifyMetaPageInput");
+const apifyLocationSearchInput = functionBody(supervisor, "apifyMetaLocationSearchInput");
+const apifyLocationSearchCapture = functionBody(supervisor, "runApifyLocationSearchCapture");
 const apifyErrorCost = functionBody(supervisor, "costUsdFromApifyError");
 const apifySpendCircuit = functionBody(supervisor, "openApifyCircuitAfterSpendWithoutIngest");
 const apifySpendCircuitGuard = functionBody(supervisor, "openCircuitIfPaidSpendWithoutIngest");
@@ -591,6 +593,16 @@ test("Hermes page resolver collects agency Facebook pages linked from verified a
 });
 
 test("Hermes location ad search is explicit, gated, and separate from page collection", () => {
+  assert.match(
+    researchCompose,
+    /HERMES_LOCATION_AD_SEARCH_PROVIDER:\s*\$\{HERMES_LOCATION_AD_SEARCH_PROVIDER:-hermes_browser\}/u,
+    "location search provider selection must be explicit in the VPS runtime",
+  );
+  assert.match(
+    `${apifyLocationSearchInput}\n${apifyLocationSearchCapture}\n${locationAdSearch}`,
+    /startUrls:\s*\[\{\s*url\s*\}\][\s\S]*captureMode:\s*["']location["'][\s\S]*locationAdSearchProvider\s*===\s*["']apify["']/u,
+    "approved Apify location search must use the Meta search URL and remain explicitly selected",
+  );
   assert.match(
     supervisor,
     /const LOCATION_AD_SEARCH_JOB_TYPE = ["']blockwise-location-ad-search["']/u,
