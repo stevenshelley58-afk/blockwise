@@ -86,6 +86,9 @@ jobs:
       TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
       TRIGGER_PROJECT_ID: ${{ secrets.TRIGGER_PROJECT_ID }}
       TRIGGER_PROJECT_REF: ${{ secrets.TRIGGER_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
 
     steps:
       - name: Checkout
@@ -108,3 +111,6 @@ jobs:
 
       - name: Deploy Trigger.dev tasks
         run: npm run trigger:deploy
+
+      - name: Sync production Trigger key to Vercel
+        uses: ./.github/actions/sync-trigger-key-to-vercel
