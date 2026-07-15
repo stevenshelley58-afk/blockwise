@@ -11,6 +11,7 @@ const supabaseUrl = String(env.HERMES_SUPABASE_URL || env.SUPABASE_URL || "").re
 const credential = resolveHermesSupabaseCredential(env);
 const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
 const batchSize = Math.max(1, Math.min(500, Number.parseInt(env.HERMES_MEDIA_QUALITY_BACKFILL_BATCH_SIZE || "200", 10)));
+const fetchTimeoutMs = Math.max(1_000, Math.min(60_000, Number.parseInt(env.HERMES_MEDIA_QUALITY_FETCH_TIMEOUT_MS || "15000", 10)));
 
 if (!supabaseUrl) throw new Error("Missing HERMES_SUPABASE_URL/SUPABASE_URL");
 if (!credential) throw new Error("Missing Hermes Supabase server credential");
@@ -46,7 +47,10 @@ for (;;) {
 
     let response;
     try {
-      response = await fetch(url, { headers: { "user-agent": "BlockwiseHermesMediaRepair/1.0" } });
+      response = await fetch(url, {
+        headers: { "user-agent": "BlockwiseHermesMediaRepair/1.0" },
+        signal: AbortSignal.timeout(fetchTimeoutMs),
+      });
       if (!response.ok) throw new Error(`media fetch failed ${response.status}`);
     } catch {
       stats.fetchFailed += 1;
@@ -74,7 +78,6 @@ for (;;) {
 
     if (!quality.displayable) {
       patch.capture_status = "blocked";
-      patch.last_error = `Media quality rejected: ${quality.reason}`;
       patch.metadata = {
         ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
         media_quality_rejection: quality.reason,
@@ -98,6 +101,8 @@ for (;;) {
       });
     }
   }
+
+  console.error(JSON.stringify({ event: "progress", dryRun, scanned: stats.scanned, ...stats }));
 
   if (assets.length < batchSize) break;
 }
