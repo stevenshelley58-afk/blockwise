@@ -241,10 +241,29 @@ export function readImageDimensions(input) {
   if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") {
     return readWebpDimensions(buffer);
   }
+  if (buffer.length >= 16 && buffer.subarray(4, 8).toString("ascii") === "ftyp") {
+    return readIsobmffImageDimensions(buffer);
+  }
   if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
     return readJpegDimensions(buffer);
   }
   return null;
+}
+
+function readIsobmffImageDimensions(buffer) {
+  let offset = 0;
+  let largest = null;
+  const marker = Buffer.from("ispe", "ascii");
+  while ((offset = buffer.indexOf(marker, offset)) >= 0) {
+    if (offset >= 4 && offset + 16 <= buffer.length && buffer.readUInt32BE(offset - 4) >= 20) {
+      const candidate = dimensions(buffer.readUInt32BE(offset + 8), buffer.readUInt32BE(offset + 12));
+      if (candidate && (!largest || candidate.width * candidate.height > largest.width * largest.height)) {
+        largest = candidate;
+      }
+    }
+    offset += marker.length;
+  }
+  return largest;
 }
 
 function readJpegDimensions(buffer) {

@@ -9,6 +9,7 @@ test("media quality backfill inspects all captured images and rebuilds affected 
   const source = readFileSync(scriptPath, "utf8");
 
   assert.match(source, /capture_status=eq\.captured[\s\S]*kind=eq\.image/iu);
+  assert.match(source, /or=\(width\.is\.null,height\.is\.null\)/u);
   assert.match(source, /readImageDimensions[\s\S]*assessCapturedImageQuality/iu);
   assert.match(source, /capture_status\s*=\s*["']blocked["']/u);
   assert.match(source, /refreshCreativeStoredMedia/iu);
