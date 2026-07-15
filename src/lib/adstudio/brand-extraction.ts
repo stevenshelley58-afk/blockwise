@@ -415,10 +415,11 @@ function extractPreferredPhrases(html: string): string[] {
 }
 
 function extractSampleCopy(html: string): string[] {
-  return [...html.matchAll(/<(?:h1|h2|p)[^>]*>([\s\S]*?)<\/(?:h1|h2|p)>/gi)]
+  const copy = [...html.matchAll(/<(?:h1|h2|p)[^>]*>([\s\S]*?)<\/(?:h1|h2|p)>/gi)]
     .map((match) => decodeHtml(stripTags(match[1] ?? "")).replace(/\s+/g, " ").trim())
-    .filter((copy) => copy.length >= 12 && copy.length <= 240)
-    .slice(0, 8);
+    .filter((value) => value.length >= 12 && value.length <= 240);
+
+  return [...new Set(copy)].slice(0, 8);
 }
 
 function fontLooksSerif(font: string): boolean {
