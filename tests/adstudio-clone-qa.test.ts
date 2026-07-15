@@ -413,15 +413,16 @@ test("template campaign generation runs cascade + QA and never ships an unverifi
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
-  // One final-quality provider cascade from the model-profile registry, not a
-  // draft/final split or a single hardcoded vendor.
-  assert.match(generation, /CLONE_MODEL_PROFILE = "image_final"/);
-  assert.doesNotMatch(generation, /image_draft|CloneTier|tier:/);
+  // Each customer quality choice resolves through the model-profile registry;
+  // neither path hardcodes a vendor or introduces a separate clone pipeline.
+  assert.match(generation, /fast: "image_draft"/);
+  assert.match(generation, /high: "image_final"/);
+  assert.doesNotMatch(generation, /CloneTier|tier:/);
   assert.match(generation, /createImageProviderForCandidate/);
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(pipeline, /resolveCloneProviders\(\)/);
+  assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // Every generation is QA'd; failures reroll with a correction, and a clone

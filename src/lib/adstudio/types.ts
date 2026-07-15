@@ -29,6 +29,8 @@ export type FirstAdInput = {
   source: "gallery";
   templateId: string;
   description: string;
+  /** Customer-facing render choice. Fast is the default for new ads. */
+  generationQuality?: "fast" | "high";
   imageDataUrl: string;
   imageDataUrls?: Partial<Record<string, string>>;
   /** Clone renders produced after the request is validated. */

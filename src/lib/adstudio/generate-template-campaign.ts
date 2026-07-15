@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
 import {
   CloneGenerationError,
+  cloneModelProfileForQuality,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
@@ -152,6 +153,7 @@ export async function generateQaAcceptedClone(input: {
   correlationId: string;
   maxAttempts: number;
   deadline: number;
+  modelProfile?: "image_draft" | "image_final";
 }, dependencies: CloneQualityGateDependencies = {}): Promise<GeneratedCloneRender & { qa: AdStudioCloneQa }> {
   let lastError: unknown = null;
   let lastQa: AdStudioCloneQa | null = null;
@@ -186,6 +188,7 @@ export async function generateQaAcceptedClone(input: {
         userId: input.userId,
         correlationId: input.correlationId,
         attempt: generationAttempt,
+        modelProfile: input.modelProfile,
       });
 
       let exactAssetUrl: string;
@@ -373,7 +376,9 @@ export async function runTemplateCampaignGeneration(
     copy: onImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
-  const providers = await resolveCloneProviders();
+  const generationQuality = firstAd.generationQuality ?? "fast";
+  const providers = await resolveCloneProviders(generationQuality);
+  const modelProfile = cloneModelProfileForQuality(generationQuality);
   const maxAttempts = Math.max(1, input.maxCloneAttempts);
   const cloneFormats = Object.keys(cloneRequestsByFormat) as TemplateCloneRenderFormat[];
 
@@ -390,6 +395,7 @@ export async function runTemplateCampaignGeneration(
         correlationId,
         maxAttempts,
         deadline,
+        modelProfile,
       }),
 
       persistClone: async (format, generated): Promise<PersistedCloneRender> => ({

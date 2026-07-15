@@ -25,6 +25,7 @@ import {
 type Step = "source" | "brief";
 type TemplateFilter = "all" | "listings" | "appraisals" | "market" | "sold";
 type MediaSourceMode = "details" | "library";
+type GenerationQuality = NonNullable<FirstAdInput["generationQuality"]>;
 type ImageLibraryAsset = {
   src: string;
   label: string;
@@ -252,6 +253,7 @@ export function NewAdDialog({
   // Nothing can be created until the customer chooses the sample to clone.
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState("");
+  const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
   const [imageNamesBySlot, setImageNamesBySlot] = useState<Record<string, string>>({});
   const [onImageCopy, setOnImageCopy] = useState<Record<string, string>>({});
@@ -341,6 +343,7 @@ export function NewAdDialog({
     }
     setFilter("all");
     setDescription("");
+    setGenerationQuality("fast");
     // The customer supplies every declared image and text field. The selected
     // sample is only the visual anchor sent to the image model.
     setImageDataUrlsBySlot({});
@@ -423,6 +426,8 @@ export function NewAdDialog({
 
   function chooseTemplate(id: string) {
     const template = templates.find((candidate) => candidate.id === id);
+    if (!template) return;
+    preloadTemplateReference(template.sample.imageSrc);
     setTemplateId(id);
     setError("");
     setShowRequirementsAlert(false);
@@ -546,6 +551,7 @@ export function NewAdDialog({
         source: "gallery",
         templateId: selectedTemplate.id,
         description: trimmed,
+        generationQuality,
         imageDataUrl,
         imageDataUrls,
         onImageCopy: Object.fromEntries(
@@ -742,6 +748,38 @@ export function NewAdDialog({
                 <small className="studio-newad-field-help">{briefGuidance.helperText}</small>
                 <small className="studio-newad-field-count">{description.length}/500</small>
               </div>
+              <fieldset className="studio-newad-quality">
+                <legend>Generation quality</legend>
+                <div className="studio-newad-quality-options">
+                  <label className={generationQuality === "fast" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="generation-quality"
+                      value="fast"
+                      checked={generationQuality === "fast"}
+                      onChange={() => setGenerationQuality("fast")}
+                    />
+                    <span>
+                      <strong>Fast</strong>
+                      <small>Usually ready in about 30–45 seconds</small>
+                    </span>
+                    <em>Recommended</em>
+                  </label>
+                  <label className={generationQuality === "high" ? "is-selected" : undefined}>
+                    <input
+                      type="radio"
+                      name="generation-quality"
+                      value="high"
+                      checked={generationQuality === "high"}
+                      onChange={() => setGenerationQuality("high")}
+                    />
+                    <span>
+                      <strong>High quality</strong>
+                      <small>Usually ready in about 2–3 minutes</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
             </div>
           )}
 
@@ -791,7 +829,11 @@ export function NewAdDialog({
                 role="status"
                 aria-live="polite"
               >
-                {submitting ? "Creating your ad. This can take a few minutes." : error || footHint}
+                {submitting
+                  ? generationQuality === "fast"
+                    ? "Creating your ad. Fast ads are usually ready in under a minute."
+                    : "Creating your high-quality ad. This usually takes 2–3 minutes."
+                  : error || footHint}
               </span>
             )}
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
@@ -901,6 +943,20 @@ function dedupeImageLibraryAssets(assets: ImageLibraryAsset[]): ImageLibraryAsse
   });
 }
 
+function preloadTemplateReference(src: string): void {
+  if (!src || typeof document === "undefined") return;
+  const absoluteSrc = new URL(src, document.baseURI).href;
+  const alreadyLoaded = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="image"]'))
+    .some((link) => link.href === absoluteSrc);
+  if (alreadyLoaded) return;
+
+  const link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "image";
+  link.href = absoluteSrc;
+  document.head.appendChild(link);
+}
+
 const EXPLORE_STYLES = `
 .studio-explore{display:grid;gap:14px}
 .studio-explore-intro{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
@@ -992,6 +1048,18 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-field-help{color:var(--muted);font-size:12px;line-height:1.4}
 .studio-newad-field-count{justify-self:end;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
 .studio-newad-brief-field{border-top:1px solid var(--line-soft);padding-top:18px}
+.studio-newad-quality{display:grid;gap:9px;margin:0;border:0;border-top:1px solid var(--line-soft);padding:18px 0 0;min-width:0}
+.studio-newad-quality legend{padding:0;color:var(--ink);font-size:13px;font-weight:750;line-height:1.35}
+.studio-newad-quality-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.studio-newad-quality-options label{position:relative;display:flex;align-items:center;gap:10px;min-height:66px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.studio-newad-quality-options label:hover{border-color:#b8bec9;background:var(--accent-tint)}
+.studio-newad-quality-options label.is-selected{border-color:var(--ink);background:#f6f7f9;box-shadow:0 0 0 1px var(--ink)}
+.studio-newad-quality-options label:focus-within{outline:0;box-shadow:0 0 0 3px rgba(22,24,29,.14)}
+.studio-newad-quality-options input{width:18px;height:18px;flex:0 0 auto;accent-color:var(--ink)}
+.studio-newad-quality-options span{display:grid;gap:3px;min-width:0}
+.studio-newad-quality-options strong{color:var(--ink);font-size:13px;font-weight:750;line-height:1.2}
+.studio-newad-quality-options small{color:var(--muted);font-size:11.5px;line-height:1.35}
+.studio-newad-quality-options em{margin-left:auto;border-radius:999px;background:var(--ink);color:#fff;padding:4px 7px;font-size:10.5px;font-style:normal;font-weight:700;white-space:nowrap}
 .studio-newad-image-slot{display:grid;gap:8px}
 .studio-newad-image-slot-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .studio-newad-image-slot-head span{display:grid;gap:3px;min-width:0}
@@ -1028,6 +1096,7 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-newad-field-actions{justify-content:space-between;width:100%}
   .studio-newad-field-head label{align-items:flex-start;flex-direction:column;gap:2px}
   .studio-newad-field-head>button{width:100%}
+  .studio-newad-quality-options{grid-template-columns:1fr}
 }
 `;
 // NewAdDialog: choose one gallery sample, then provide its declared assets.

@@ -208,6 +208,18 @@ const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> 
     }),
   ],
   image_draft: [
+    {
+      provider: "fal",
+      model: "fal-ai/gemini-3.1-flash-image-preview/edit",
+      label: "Google Gemini 3.1 Flash Image",
+      inputUsdPerMillionTokens: 0,
+      outputUsdPerMillionTokens: 0,
+      imageUsdPerUnit: 0.04,
+      maxContextTokens: 65_536,
+      supportsStructuredOutput: false,
+      supportsVisionInput: true,
+      supportsImageOutput: true,
+    },
     createOpenRouterOption({
       model: "google/gemini-2.5-flash-image",
       label: "Google Gemini 2.5 Flash Image",
@@ -403,11 +415,11 @@ export function validateModelProfileSelection(
     };
   }
 
-  if (request.provider !== "openrouter") {
+  if (request.provider !== "openrouter" && request.provider !== "fal") {
     return {
       ok: false,
       status: 400,
-      error: "Only OpenRouter model selections can be saved from Model Control.",
+      error: "That provider cannot be saved from Model Control.",
     };
   }
 
@@ -419,7 +431,7 @@ export function validateModelProfileSelection(
     };
   }
 
-  const normalizedModel = normalizeModelSlug("openrouter", request.model.trim());
+  const normalizedModel = normalizeModelSlug(request.provider, request.model.trim());
   const option = getCuratedModelOptionsForProfile(profileKeyValue).find(
     (candidate) => candidate.provider === request.provider && candidate.model === normalizedModel,
   );

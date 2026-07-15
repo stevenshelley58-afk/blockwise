@@ -54,6 +54,7 @@ export function createFalImageProvider(
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? 110_000;
   const pollMs = options.pollMs ?? 2_500;
+  const isGeminiEdit = /gemini/i.test(model);
 
   return {
     providerName: "fal",
@@ -79,11 +80,20 @@ export function createFalImageProvider(
       const body = JSON.stringify({
         prompt: buildFalPrompt(input),
         image_urls: input.referenceAssets,
-        image_size: falImageSizeForAspect(input.aspectRatio),
-        quality,
+        ...(isGeminiEdit
+          ? {
+              aspect_ratio: input.aspectRatio,
+              resolution: "1K",
+              limit_generations: true,
+            }
+          : {
+              image_size: falImageSizeForAspect(input.aspectRatio),
+              quality,
+            }),
         num_images: 1,
         output_format: "png",
         sync_mode: true,
+        seed: input.seed,
       });
 
       const submit = await fetchProviderRequest(fetchImpl, `${FAL_QUEUE_BASE}/${model}`, {

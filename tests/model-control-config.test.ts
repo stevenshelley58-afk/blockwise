@@ -61,6 +61,15 @@ test("curated final image options include GPT Image 2 and Nano Banana", () => {
   assert.equal(options[1].supportsImageOutput, true);
 });
 
+test("curated fast image options lead with the benchmarked Gemini edit model", () => {
+  const options = getCuratedModelOptionsForProfile("image_draft");
+
+  assert.equal(options[0].provider, "fal");
+  assert.equal(options[0].model, "fal-ai/gemini-3.1-flash-image-preview/edit");
+  assert.equal(options[0].supportsVisionInput, true);
+  assert.equal(options[0].supportsImageOutput, true);
+});
+
 test("buildModelProfileVersionInsert maps a selected option to Supabase columns", () => {
   const option = getCuratedModelOptionsForProfile("cheap_draft_text").find(
     (candidate) => candidate.model === "google/gemini-2.0-flash-001",

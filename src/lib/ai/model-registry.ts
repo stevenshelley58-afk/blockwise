@@ -210,13 +210,13 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     maxRunCostUsd: 0.8,
     defaultTemperature: 0.8,
     primary: {
-      provider: "openai",
-      model: "gpt-image-1-mini",
+      provider: "fal",
+      model: "fal-ai/gemini-3.1-flash-image-preview/edit",
       inputUsdPerMillionTokens: 0,
       outputUsdPerMillionTokens: 0,
       imageUsdPerUnit: 0.04,
       supportsStructuredOutput: false,
-      maxContextTokens: 16_000,
+      maxContextTokens: 65_536,
       maxLatencyMs: 30_000,
     },
     fallbacks: [

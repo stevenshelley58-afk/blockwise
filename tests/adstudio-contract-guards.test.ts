@@ -28,13 +28,24 @@ test("campaign creation has one template clone pipeline", () => {
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
   assert.match(route, /runTemplateCampaignGeneration/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{|generate-options|template-photo-prep/);
-  assert.match(generation, /CLONE_MODEL_PROFILE = "image_final"/);
-  assert.doesNotMatch(generation, /image_draft|CloneTier|tier:/);
+  assert.match(generation, /fast:\s*"image_draft"/);
+  assert.match(generation, /high:\s*"image_final"/);
+  assert.match(generation, /resolveCloneProviders\(quality/);
+  assert.doesNotMatch(generation, /CloneTier|tier:/);
 
   const client = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
   assert.equal((client.match(/fetch\("\/api\/adstudio\/campaigns"/g) ?? []).length, 1);
   assert.match(client, /firstAd: input/);
   assert.doesNotMatch(client, /variantCount|generateVariantsForAngle|onRegenerate/);
+});
+
+test("Trigger dispatch uses the cleaned production key explicitly", () => {
+  const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
+
+  assert.doesNotMatch(route, /@trigger\.dev\/sdk\/v3/);
+  assert.match(route, /normaliseTriggerSecretKey/);
+  assert.match(route, /configure\(\{\s*secretKey/);
+  assert.match(route, /await import\("@trigger\.dev\/sdk"\)/);
 });
 
 test("the one full-ad request consumes sample, assets, and exact copy", () => {
