@@ -62,7 +62,7 @@ html, body { overflow-x: clip; }
 
 .home-header { position: relative; z-index: 20; border-bottom: 1px solid var(--home-line); background: var(--home-header-surface); backdrop-filter: blur(12px); }
 .home-header-inner { min-height: 74px; display: flex; align-items: center; gap: 28px; }
-.home-logo-link { text-decoration: none; border-radius: 10px; }
+.home-logo-link { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; border-radius: 10px; }
 .home-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--home-font-display); font-weight: 750; letter-spacing: -.035em; font-size: 1.16rem; }
 .home-brand-mark { width: 18px; height: 18px; border-radius: 5px; background: var(--home-ink); box-shadow: inset -6px -6px 0 var(--home-brand-shadow); }
 .home-nav { display: flex; gap: 28px; margin-left: auto; }
@@ -238,6 +238,9 @@ html, body { overflow-x: clip; }
 .home-footer-meta nav a { min-height: 44px; color: var(--home-dark-link); text-decoration: none; }
 .home-footer-meta nav a:hover { color: var(--home-surface); text-decoration: underline; }
 .home-legal { padding: 18px 0 30px; border-top: 1px solid var(--home-dark-line); color: var(--home-dark-legal); font-size: .76rem; }
+
+.consent-banner__link { min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
+.consent-banner__btn { min-height: 44px; white-space: nowrap; }
 
 @media (max-width: 900px) {
   .home-nav { display: none; }
