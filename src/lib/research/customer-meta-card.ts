@@ -234,13 +234,20 @@ export function cleanCustomerMetaDisplayText(value: unknown): string | null {
 function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryMedia[] {
   const media = new Map<string, CustomerMetaAdLibraryMedia>();
   const assets = parseMediaAssets(row.media_assets);
+  const rejectedImageUrls = new Set<string>();
 
   for (const asset of assets) {
     const url = normaliseMediaUrl(asset.storagePath) ?? normaliseMediaUrl(asset.url);
     if (!url) continue;
+    const kind = asset.kind === "video" || isVideoUrl(url) ? "video" : "image";
+    if (asset.captureStatus && asset.captureStatus !== "captured") continue;
+    if (kind === "image" && !isDisplayableImageAsset(asset)) {
+      rejectedImageUrls.add(url);
+      continue;
+    }
     addMedia(media, {
       id: url,
-      kind: asset.kind === "video" || isVideoUrl(url) ? "video" : "image",
+      kind,
       url,
       posterUrl: normaliseMediaUrl(asset.posterStoragePath) ?? normaliseMediaUrl(asset.posterUrl),
     });
@@ -257,7 +264,7 @@ function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryM
   }
 
   const storedImage = normaliseMediaUrl(row.image_storage_path);
-  if (storedImage) {
+  if (storedImage && !rejectedImageUrls.has(storedImage)) {
     addMedia(media, { id: storedImage, kind: "image", url: storedImage, posterUrl: null });
   }
 
@@ -279,6 +286,10 @@ type ParsedMediaAsset = {
   posterStoragePath: string | null;
   url: string | null;
   posterUrl: string | null;
+  byteSize: number | null;
+  width: number | null;
+  height: number | null;
+  captureStatus: string | null;
 };
 
 function parseMediaAssets(value: unknown): ParsedMediaAsset[] {
@@ -306,7 +317,22 @@ function parseMediaAssets(value: unknown): ParsedMediaAsset[] {
         cleanString(asset.poster_url) ??
         cleanString(asset.thumbnailUrl) ??
         cleanString(asset.thumbnail_url),
+      byteSize: normaliseNumber(asset.byteSize ?? asset.byte_size),
+      width: normaliseNumber(asset.width),
+      height: normaliseNumber(asset.height),
+      captureStatus: cleanString(asset.captureStatus) ?? cleanString(asset.capture_status),
     }));
+}
+
+const MIN_DISPLAY_IMAGE_BYTES = 2_048;
+const MIN_DISPLAY_IMAGE_WIDTH = 200;
+const MIN_DISPLAY_IMAGE_HEIGHT = 150;
+
+function isDisplayableImageAsset(asset: ParsedMediaAsset): boolean {
+  if (asset.byteSize !== null && asset.byteSize < MIN_DISPLAY_IMAGE_BYTES) return false;
+  if (asset.width !== null && asset.width < MIN_DISPLAY_IMAGE_WIDTH) return false;
+  if (asset.height !== null && asset.height < MIN_DISPLAY_IMAGE_HEIGHT) return false;
+  return true;
 }
 
 function normaliseActiveStatus(value: string | null): "active" | "inactive" | "unknown" {
@@ -343,7 +369,7 @@ function isString(value: string | null): value is string {
   return Boolean(value);
 }
 
-function normaliseNumber(value: string | number | null | undefined): number | null {
+function normaliseNumber(value: unknown): number | null {
   const numeric = typeof value === "string" ? Number(value) : value;
   return typeof numeric === "number" && Number.isFinite(numeric) ? numeric : null;
 }

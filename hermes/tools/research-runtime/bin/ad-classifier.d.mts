@@ -28,6 +28,13 @@ export function shouldWaitForMediaClassification(
   capturedAssets?: Array<Record<string, unknown>>,
 ): boolean;
 export function hasUnresolvedDynamicPlaceholder(creative: Record<string, unknown>): boolean;
+export function assessCapturedImageQuality(input?: {
+  byteSize?: number | null;
+  byte_size?: number | null;
+  width?: number | null;
+  height?: number | null;
+}): { displayable: boolean; reason: string | null };
+export function readImageDimensions(buffer: Uint8Array, contentType?: string | null): { width: number; height: number } | null;
 export function hasUsableCapturedMedia(capturedAssets?: Array<Record<string, unknown>>): boolean;
 export function shouldDisplayClassifiedCreative(
   creative: Record<string, unknown>,

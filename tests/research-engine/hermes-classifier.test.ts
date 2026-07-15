@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as classifierModule from "../../hermes/tools/research-runtime/bin/ad-classifier.mjs";
+
 import {
   CLASSIFIER_VERSION,
   classifyCreativeDeterministically,
@@ -11,6 +13,52 @@ import {
   shouldDisplayClassifiedCreative,
   shouldWaitForMediaClassification,
 } from "../../hermes/tools/research-runtime/bin/ad-classifier.mjs";
+
+test("Hermes exposes a shared captured-image quality assessment", () => {
+  assert.equal(typeof classifierModule.assessCapturedImageQuality, "function");
+});
+
+test("Hermes exposes an image dimensions reader for capture-time validation", () => {
+  assert.equal(typeof classifierModule.readImageDimensions, "function");
+});
+
+test("Hermes reads JPEG, PNG, and WebP dimensions without image-library dependencies", async () => {
+  const { default: sharp } = await import("sharp");
+  const source = sharp({
+    create: { width: 60, height: 80, channels: 3, background: { r: 255, g: 225, b: 0 } },
+  });
+  const [jpeg, png, webp] = await Promise.all([
+    source.clone().jpeg().toBuffer(),
+    source.clone().png().toBuffer(),
+    source.clone().webp().toBuffer(),
+  ]);
+
+  assert.deepEqual(classifierModule.readImageDimensions(jpeg, "image/jpeg"), { width: 60, height: 80 });
+  assert.deepEqual(classifierModule.readImageDimensions(png, "image/png"), { width: 60, height: 80 });
+  assert.deepEqual(classifierModule.readImageDimensions(webp, "image/webp"), { width: 60, height: 80 });
+});
+
+test("Hermes rejects byte-sized and dimensionally tiny captured images", () => {
+  assert.deepEqual(
+    classifierModule.assessCapturedImageQuality({ byteSize: 902, width: 60, height: 60 }),
+    { displayable: false, reason: "image_too_small" },
+  );
+  assert.deepEqual(
+    classifierModule.assessCapturedImageQuality({ byteSize: 8_000, width: 80, height: 80 }),
+    { displayable: false, reason: "image_dimensions_too_small" },
+  );
+});
+
+test("Hermes accepts normal captured images and tolerates missing legacy dimensions", () => {
+  assert.deepEqual(
+    classifierModule.assessCapturedImageQuality({ byteSize: 85_000, width: 1080, height: 1080 }),
+    { displayable: true, reason: null },
+  );
+  assert.deepEqual(
+    classifierModule.assessCapturedImageQuality({ byteSize: 85_000, width: null, height: null }),
+    { displayable: true, reason: null },
+  );
+});
 
 test("Hermes deterministic fallback separates seller guides from sold results", () => {
   const sellerGuide = classifyCreativeDeterministically({
