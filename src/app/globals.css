@@ -1033,13 +1033,33 @@ article.card a[href]:focus-visible,
   box-shadow: var(--shadow-float), var(--ring);
 }
 
+.pc-input-wrap {
+  position: relative;
+}
+
+.pc-inline-prediction {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--faint);
+  font: 500 19px/58px var(--font-sans);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.pc-inline-entry {
+  color: transparent;
+}
+
 .pc-searchbox input {
+  position: relative;
   width: 100%;
   height: 58px;
   border: 0;
   outline: none;
   background: transparent;
   color: var(--ink);
+  caret-color: var(--ink);
   font: 500 19px/1.5 var(--font-sans);
 }
 
@@ -1609,6 +1629,7 @@ article.card a[href]:focus-visible,
     padding: 18px 74px 52px 18px;
   }
 
+  .pc-inline-prediction,
   .pc-searchbox input {
     font-size: 17px;
   }

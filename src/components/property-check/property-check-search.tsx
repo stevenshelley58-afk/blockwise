@@ -3,7 +3,7 @@
 import { ArrowUp, Building2, MapPin, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import type { PropertyAddressPrediction } from "@/lib/property-check/address-autocomplete";
 import {
@@ -46,6 +46,8 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canSubmit = address.trim().length >= 3 && !submitting;
+  const predictiveAddress = useMemo(() => firstInlinePrediction(address, suggestions), [address, suggestions]);
+  const showPredictiveText = isFocused && Boolean(predictiveAddress) && !submitting;
   const showSuggestions = isFocused && suggestions.length > 0 && !submitting;
 
   useEffect(() => {
@@ -130,8 +132,20 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
     inputRef.current?.focus();
   }
 
+  function acceptPredictiveText() {
+    if (!predictiveAddress) return false;
+    suppressedAddressRef.current = predictiveAddress;
+    setAddress(predictiveAddress);
+    setSuggestions([]);
+    setActiveIndex(-1);
+    return true;
+  }
+
   function onInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (showSuggestions && event.key === "ArrowDown") {
+    if (showPredictiveText && (event.key === "Tab" || event.key === "ArrowRight")) {
+      event.preventDefault();
+      acceptPredictiveText();
+    } else if (showSuggestions && event.key === "ArrowDown") {
       event.preventDefault();
       setActiveIndex((index) => (index + 1) % suggestions.length);
     } else if (showSuggestions && event.key === "ArrowUp") {
@@ -156,29 +170,37 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
         <h1>Know the block before the call.</h1>
 
         <form className="pc-searchbox" onSubmit={(event) => void submitCheck(event)}>
-          <input
-            id={`${listId}-input`}
-            ref={inputRef}
-            value={address}
-            onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
-            onChange={(event) => {
-              suppressedAddressRef.current = null;
-              setAddress(event.target.value);
-              setError(null);
-            }}
-            onFocus={() => setIsFocused(true)}
-            onKeyDown={onInputKeyDown}
-            placeholder="Type a street address to run a property check"
-            aria-label="Street address"
-            aria-autocomplete="list"
-            aria-controls={`${listId}-list`}
-            aria-expanded={showSuggestions}
-            aria-activedescendant={activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined}
-            autoComplete="off"
-            role="combobox"
-            maxLength={500}
-            disabled={submitting}
-          />
+          <div className="pc-input-wrap">
+            {showPredictiveText ? (
+              <div className="pc-inline-prediction" aria-hidden="true">
+                <span className="pc-inline-entry">{address}</span>
+                <span>{predictiveAddress!.slice(address.length)}</span>
+              </div>
+            ) : null}
+            <input
+              id={`${listId}-input`}
+              ref={inputRef}
+              value={address}
+              onBlur={() => window.setTimeout(() => setIsFocused(false), 120)}
+              onChange={(event) => {
+                suppressedAddressRef.current = null;
+                setAddress(event.target.value);
+                setError(null);
+              }}
+              onFocus={() => setIsFocused(true)}
+              onKeyDown={onInputKeyDown}
+              placeholder="Type a street address to run a property check"
+              aria-label="Street address"
+              aria-autocomplete="list"
+              aria-controls={`${listId}-list`}
+              aria-expanded={showSuggestions}
+              aria-activedescendant={activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined}
+              autoComplete="off"
+              role="combobox"
+              maxLength={500}
+              disabled={submitting}
+            />
+          </div>
           {showSuggestions ? (
             <div
               id={`${listId}-list`}
@@ -279,6 +301,20 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
       ) : null}
     </div>
   );
+}
+
+function firstInlinePrediction(address: string, suggestions: PropertyAddressPrediction[]): string | null {
+  if (!address || suggestions.length === 0) return null;
+
+  const normalizedAddress = address.trimStart();
+  if (normalizedAddress.length < 3) return null;
+
+  const suggestion = suggestions.find((candidate) =>
+    candidate.label.toLocaleLowerCase("en-AU").startsWith(normalizedAddress.toLocaleLowerCase("en-AU")),
+  );
+
+  if (!suggestion || suggestion.label.length <= normalizedAddress.length) return null;
+  return suggestion.label;
 }
 
 function formatDate(value: string): string {
