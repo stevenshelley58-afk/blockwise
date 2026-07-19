@@ -89,12 +89,10 @@ const NAV_ITEMS: NavItem[] = [
 
 const MOBILE_NAV: Array<{ id: import("./use-ad-studio").MobileTab | "samples"; label: string; icon: LucideIcon }> = [
   { id: "home", label: "Home", icon: Home },
-  { id: "samples", label: "Templates", icon: LayoutGrid },
+  { id: "samples", label: "Create", icon: Plus },
   { id: "media", label: "Media", icon: ImageIcon },
   { id: "text", label: "Text", icon: FileText },
-  { id: "publish", label: "Publish", icon: Send },
-  { id: "brand", label: "Brand Pack", icon: Palette },
-  { id: "settings", label: "Settings", icon: Settings2 },
+  { id: "publish", label: "Review", icon: Send },
 ];
 
 const PREVIEW_TO_AD_FORMAT: Record<PreviewFormat, AdStudioFormat> = {
@@ -941,6 +939,8 @@ export function AdStudioWorkbench({
   function renderHomePanel() {
     const startingPointDone = Boolean(activeSampleId || pack.campaign.templateKey || pack.variants.length > 0);
     const mediaDone = Boolean(primaryImage);
+    const copyItems = readinessItems.filter((item) => ["Ad copy", "Call to action"].includes(item.label));
+    const copyDone = copyItems.length > 0 && copyItems.every((item) => item.state === "done");
     const publishReady = !brandIsDraft && readinessItems.every((item) => item.state === "done");
     const steps = [
       {
@@ -973,6 +973,38 @@ export function AdStudioWorkbench({
       },
     ];
     const completedSteps = steps.filter((step) => step.done).length;
+    const mobileSteps = [
+      {
+        title: "Choose a template",
+        detail: startingPointDone ? "Your starting design is ready." : "Pick the ad you want to make your own.",
+        action: startingPointDone ? "Change template" : "Choose template",
+        done: startingPointDone,
+        onClick: () => openSamplePicker(),
+      },
+      {
+        title: "Add your media",
+        detail: mediaDone ? "Your property image is attached." : "Add the property image requested by the template.",
+        action: mediaDone ? "Change media" : "Add media",
+        done: mediaDone,
+        onClick: () => goToSection("media"),
+      },
+      {
+        title: "Check the wording",
+        detail: copyDone ? "Your headline and call to action are ready." : "Review the headline and call to action.",
+        action: copyDone ? "Edit text" : "Check text",
+        done: copyDone,
+        onClick: () => goToSection("text"),
+      },
+      {
+        title: "Review and publish",
+        detail: publishReady ? "Your ad is ready to export." : "Resolve the final checks before launch.",
+        action: "Review ad",
+        done: publishReady,
+        onClick: () => goToSection("publish"),
+      },
+    ];
+    const completedMobileSteps = mobileSteps.filter((step) => step.done).length;
+    const nextMobileStep = mobileSteps.find((step) => !step.done) ?? mobileSteps[mobileSteps.length - 1]!;
     const tools = [
       {
         title: "Template gallery",
@@ -1006,6 +1038,57 @@ export function AdStudioWorkbench({
 
     return (
       <div className="studio-home-panel">
+        <section className="studio-mobile-home-focus" aria-labelledby="studio-mobile-home-title">
+          <div className="studio-mobile-home-kicker">
+            <span>Ad Studio</span>
+            <span>{completedMobileSteps} of {mobileSteps.length} ready</span>
+          </div>
+
+          <div className="studio-mobile-home-hero">
+            <div className="studio-mobile-home-media" aria-hidden={!primaryImage}>
+              {primaryImage ? <img src={primaryImage} alt={`${campaignName} ad preview`} /> : <span>{initials}</span>}
+            </div>
+            <div className="studio-mobile-home-shade" />
+            <div className="studio-mobile-home-copy">
+              <p>{startingPointDone ? "Continue your ad" : "Start with one proven design"}</p>
+              <h1 id="studio-mobile-home-title">{startingPointDone ? campaignName : "Create your first ad"}</h1>
+              <span>{nextMobileStep.title}. {nextMobileStep.detail}</span>
+              <button type="button" onClick={nextMobileStep.onClick}>
+                {nextMobileStep.action}
+                <ArrowRight aria-hidden size={18} />
+              </button>
+            </div>
+          </div>
+
+          {brandIsDraft && (
+            <Link href="/ad-studio/brand" className="studio-mobile-brand-note">
+              <CircleAlert aria-hidden size={17} />
+              <span><b>Confirm your brand before publishing.</b> You can keep creating now.</span>
+              <ArrowRight aria-hidden size={16} />
+            </Link>
+          )}
+
+          <details className="studio-mobile-home-progress">
+            <summary>
+              <span>View all steps</span>
+              <span>{completedMobileSteps}/{mobileSteps.length}</span>
+            </summary>
+            <div>
+              {mobileSteps.map((step) => (
+                <button key={step.title} type="button" onClick={step.onClick}>
+                  <span className={step.done ? "done" : "todo"}>
+                    {step.done ? <Check aria-hidden size={14} /> : <ArrowRight aria-hidden size={14} />}
+                  </span>
+                  <span>
+                    <strong>{step.title}</strong>
+                    <small>{step.detail}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </details>
+        </section>
+
         <header className="studio-home-head">
           <div>
             <span>Ad Studio</span>
@@ -1256,7 +1339,7 @@ export function AdStudioWorkbench({
       </div>
 
       <div className="studio-mobile-body">
-        {brandIsDraft && (
+        {brandIsDraft && studio.mobileTab !== "home" && (
           <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
             <CircleAlert aria-hidden size={15} />
             <span><b>Draft brand in use.</b> Confirm your brand before publishing.</span>
@@ -1351,9 +1434,11 @@ export function AdStudioWorkbench({
         </div>
       )}
 
-      <div className="studio-mobile-status" data-state={studio.saveState}>
-        {studio.statusText}
-      </div>
+      {studio.saveState !== "saved" && (
+        <div className="studio-mobile-status" data-state={studio.saveState} role="status" aria-live="polite">
+          {studio.statusText}
+        </div>
+      )}
 
       <footer className="studio-statusbar">
         {/* L5: data-state attribute lets CSS color the save chip; existing .error class also applies */}
