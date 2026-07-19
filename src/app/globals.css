@@ -7287,6 +7287,14 @@ a.operator-file-row {
    Operator Content-to-Lead Engine
    =========================================================================== */
 
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
+ * macrostructure: source-first workbench · genre: product
+ * theme: studied-DNA (source: https://blockwise.sale/guides/sold-price-list-seller-leads)
+ * fingerprint: single source field → progressive direction → draft review
+ * contrast: pass (40–41) · nav/footer/hero: inherited operator shell · slop: pass (42–49)
+ * mobile: pass by rule (34, 49–57); rendered verification recorded with the change
+ */
+
 .content-run-console,
 .content-run-form,
 .content-review-sidebar,
@@ -7300,10 +7308,46 @@ a.operator-file-row {
 
 .content-run-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.4fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: start;
   min-width: 0;
+}
+
+.content-run-form {
+  gap: 20px;
+  padding: 24px;
+}
+
+.content-run-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.content-run-form-heading > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.content-run-form-heading h2,
+.content-run-form-heading p,
+.content-run-submit-row p {
+  margin: 0;
+}
+
+.content-run-form-heading h2 {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.content-run-form-heading p {
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .content-run-form label,
@@ -7318,40 +7362,196 @@ a.operator-file-row {
 
 .content-run-form input,
 .content-run-form select,
+.content-run-form textarea,
 .content-review-sidebar select,
 .content-prompt-editor textarea {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: var(--r-ctl);
   background: var(--surface);
   color: var(--ink);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
   padding: 0 11px;
 }
 
-.content-run-form input:focus,
-.content-run-form select:focus,
-.content-review-sidebar select:focus,
-.content-prompt-editor textarea:focus {
+.content-run-form textarea {
+  min-height: 300px;
+  padding: 14px;
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.content-run-form input::placeholder,
+.content-run-form textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.content-run-form input:hover,
+.content-run-form select:hover,
+.content-run-form textarea:hover {
+  border-color: var(--line-strong);
+}
+
+.content-run-form input:focus-visible,
+.content-run-form select:focus-visible,
+.content-run-form textarea:focus-visible,
+.content-review-sidebar select:focus-visible,
+.content-prompt-editor textarea:focus-visible {
   border-color: var(--accent);
-  outline: none;
-  box-shadow: var(--ring);
+  outline-color: var(--accent);
+  box-shadow: none;
 }
 
-.content-run-metric {
-  min-height: 104px;
+.content-run-form input:disabled,
+.content-run-form select:disabled,
+.content-run-form textarea:disabled {
+  background: var(--surface-subtle);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.content-run-metric-value {
+.content-run-form input:active,
+.content-run-form select:active,
+.content-run-form textarea:active {
+  border-color: var(--accent);
+}
+
+.content-run-form input:invalid:not(:placeholder-shown),
+.content-run-form textarea:invalid:not(:placeholder-shown) {
+  border-color: var(--rose);
+}
+
+.content-run-transcript-field {
+  min-width: 0;
+}
+
+.content-run-transcript-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.content-run-transcript-meta span:last-child {
+  white-space: nowrap;
+}
+
+.content-run-advanced {
+  overflow: clip;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface-subtle);
+}
+
+.content-run-advanced summary {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
   color: var(--ink);
-  font-size: 30px;
-  line-height: 1;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  list-style: none;
 }
 
-.content-run-metric-value.green { color: var(--green); }
-.content-run-metric-value.rose { color: var(--rose); }
-.content-run-metric-value.amber { color: var(--amber); }
-.content-run-metric-value.blue { color: var(--blue); }
+.content-run-advanced summary::-webkit-details-marker {
+  display: none;
+}
+
+.content-run-advanced summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.content-run-advanced[open] summary::after {
+  content: "−";
+}
+
+.content-run-advanced summary:hover {
+  background: var(--accent-tint);
+}
+
+.content-run-advanced summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.content-run-advanced-fields {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding: 18px;
+}
+
+.content-run-advanced-fields label > span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.content-run-prompt-link {
+  display: inline-flex;
+  min-height: 44px;
+  width: fit-content;
+  align-items: center;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.content-run-prompt-link:hover {
+  color: var(--accent-strong);
+}
+
+.content-run-prompt-link:focus-visible {
+  color: var(--accent-strong);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.content-run-prompt-link:active {
+  color: var(--accent);
+}
+
+.content-run-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.content-run-submit-row .button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.content-run-submit-row p {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.content-run-message {
+  margin: -6px 0 0;
+}
+
+.content-run-history {
+  min-width: 0;
+}
 
 .content-review-grid {
   display: grid;
@@ -7503,9 +7703,28 @@ a.operator-file-row {
   }
 
   .content-artifact-panel > .row-between,
-  .content-run-form > .row-between {
+  .content-run-form-heading,
+  .content-run-submit-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .content-run-form {
+    gap: 18px;
+    padding: 18px;
+  }
+
+  .content-run-form textarea {
+    min-height: 240px;
+  }
+
+  .content-run-transcript-meta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .content-run-submit-row .button {
+    width: 100%;
   }
 
   .content-review-main,

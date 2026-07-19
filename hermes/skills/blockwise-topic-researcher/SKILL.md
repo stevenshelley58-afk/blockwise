@@ -11,7 +11,9 @@ Gather source-backed material for a Blockwise authority article.
   "topic": "...",
   "target_audience": "...",
   "content_angle": "...",
-  "business_goal": "..."
+  "business_goal": "...",
+  "source_transcript": "...",
+  "source_url": "..."
 }
 ```
 
@@ -23,6 +25,9 @@ Strict JSON with `research_summary`, `source_claims`,
 ## Constraints
 
 - Do not invent stats or case studies.
+- Treat transcript claims as unverified until supported; separate observations,
+  opinions, examples, and externally checkable claims.
+- Never invent a citation or source URL.
 - Prefer official docs for platform behaviour.
 - Flag uncertain claims instead of polishing them.
 
