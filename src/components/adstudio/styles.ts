@@ -566,7 +566,10 @@
 .studio-inplace-stage{position:relative;display:grid;justify-items:center;gap:10px}
 .studio-inplace-frame{position:relative;display:inline-block;line-height:0}
 .studio-inplace-frame img{display:block;max-width:min(475px,82vw);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
-.studio-inplace-region{position:absolute;min-width:44px;min-height:44px;margin:0;padding:0;display:grid;place-items:center;border:1.5px dashed rgba(255,255,255,.28);border-radius:8px;background:transparent;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.studio-inplace-region{position:absolute;margin:0;padding:0;display:grid;place-items:center;border:1.5px dashed rgba(255,255,255,.28);border-radius:8px;background:transparent;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+/* The 44px touch minimum lives on an invisible hit-area so the visible dashed
+   outline always matches the detected region exactly, even for small text. */
+.studio-inplace-region::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 .studio-inplace-region.image{border-color:transparent}
 .studio-inplace-region:hover:not(:disabled),.studio-inplace-region:focus-visible,.studio-inplace-region[data-selected]{border-color:rgba(255,255,255,.92);background:rgba(255,255,255,.05);box-shadow:0 0 0 2px rgba(22,24,29,.7)}
 .studio-inplace-region:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,.95),0 0 0 5px rgba(22,24,29,.72)}
