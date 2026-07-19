@@ -58,7 +58,7 @@ test("leads page shows dedupe state", async ({ page }) => {
   await expect(page.getByText("duplicate candidate")).toBeVisible();
 });
 
-test("model control exposes grouped OpenRouter dropdowns", async ({ page }) => {
+test("model control exposes pinned direct-provider profiles", async ({ page }) => {
   await page.goto("/model-control");
 
   await expect(page.getByRole("heading", { name: "Model Control" })).toBeVisible();

@@ -68,6 +68,12 @@ jobs:
       - name: Install Playwright chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Refresh dedicated E2E fixture
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/e2e/seed-adstudio-e2e.mjs
+
       - name: Log in and capture storage state
         run: node scripts/e2e/login-storage-state.mjs
 
