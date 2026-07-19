@@ -57,6 +57,10 @@ import metaOffmarketAlertsFeed177 from "./meta-offmarket-alerts-feed-177.json" w
 import metaOffmarketAlertsFeed195 from "./meta-offmarket-alerts-feed-195.json" with { type: "json" };
 import metaOffmarketAlertsStory043 from "./meta-offmarket-alerts-story-043.json" with { type: "json" };
 import metaOffmarketAlertsStory260 from "./meta-offmarket-alerts-story-260.json" with { type: "json" };
+import metaRentalAppraisalFeed135 from "./meta-rental-appraisal-feed-135.json" with { type: "json" };
+import metaRentalAppraisalFeed146 from "./meta-rental-appraisal-feed-146.json" with { type: "json" };
+import metaRentalAppraisalStory234 from "./meta-rental-appraisal-story-234.json" with { type: "json" };
+import metaInvestorConsultStory280 from "./meta-investor-consult-story-280.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -115,4 +119,8 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaOffmarketAlertsFeed195 as AdStudioGalleryTemplate,
   metaOffmarketAlertsStory043 as AdStudioGalleryTemplate,
   metaOffmarketAlertsStory260 as AdStudioGalleryTemplate,
+  metaRentalAppraisalFeed135 as AdStudioGalleryTemplate,
+  metaRentalAppraisalFeed146 as AdStudioGalleryTemplate,
+  metaRentalAppraisalStory234 as AdStudioGalleryTemplate,
+  metaInvestorConsultStory280 as AdStudioGalleryTemplate,
 ];
