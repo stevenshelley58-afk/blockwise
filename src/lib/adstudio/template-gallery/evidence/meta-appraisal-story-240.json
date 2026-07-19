@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-appraisal-story-240",
+  "requestHash": "a2b9f040ddaf1e76e70e9a1b80c12a33392e718628dd6b12f6f8e34412e9dac7",
+  "inputHashes": {
+    "source_ad": "d10fb48e8f4a19666c134e3a110b35fbc964388a462ab769a3ae48934473cd81",
+    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1"
+  },
+  "outputHash": "313d8deba9e370151b605c5d395ebaff2ac990f5f99dea67f3ce4f8dbdd637a0",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T08:40:19.498Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "WHAT COULD YOUR HOME BE WORTH?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "REQUEST A FREE APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK YOUR APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "website",
+        "expected": "youragency.com.au",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "background_photo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

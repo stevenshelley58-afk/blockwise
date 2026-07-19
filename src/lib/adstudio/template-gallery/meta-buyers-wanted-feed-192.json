@@ -1,0 +1,141 @@
+{
+  "id": "meta-buyers-wanted-feed-192",
+  "name": "Active Buyers Wanted — Feed 192",
+  "goal": "seller_leads",
+  "offerId": "active-buyers-in-your-area",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners who may sell when matched with active local buyers",
+  "category": "buyer-demand-lead-generation",
+  "tags": [
+    "buyers-wanted",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-buyers-wanted-feed-192-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-buyers-wanted-feed-192-sample.png",
+    "alt": "Generated sample for Active Buyers Wanted — Feed 192.",
+    "contentHash": "84a48ecd6574814a6a5bbca6f354366269ff08610d6da541d9b5c8278556392c",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 53,
+        "sample": "ACTIVE BUYERS WANT HOMES LIKE YOURS",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 46,
+        "sample": "SEE IF YOUR PROPERTY MATCHES",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 77,
+        "sample": "We are speaking with qualified buyers looking in your area.",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 34,
+        "sample": "QUALIFIED BUYERS",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 30,
+        "sample": "LOCAL DEMAND",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 34,
+        "sample": "NO-PRESSURE CHAT",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 36,
+        "sample": "CHECK BUYER DEMAND",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_192.png",
+    "contentHash": "3622fe6198b9b09421b46326fe90740bd6b6a5570881338034c7cce47a62d74a"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "buyers_wanted",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
