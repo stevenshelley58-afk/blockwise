@@ -174,15 +174,6 @@ export function cloneQaMutationId(correlationId: string, format: string, attempt
   return `${correlationId}:adstudio.clone_qa:${format}:${attempt}`;
 }
 
-/** Human-readable correction fed back into the reroll prompt. */
-export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects">): string {
-  const mismatches = qa.copyChecks
-    .filter((check) => !check.exact)
-    .map((check) => `the ${check.key.replace(/_/g, " ")} must read EXACTLY "${check.expected}"${check.rendered ? ` (previous attempt rendered "${check.rendered}")` : " (it was missing)"}`);
-  const defects = qa.defects.map((defect) => `fix: ${defect}`);
-  return ["Corrections from review of the previous attempt:", ...mismatches, ...defects].join(" ");
-}
-
 export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> {
   const startedAt = Date.now();
   const correlationId = input.correlationId ?? randomUUID();

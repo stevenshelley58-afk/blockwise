@@ -39,23 +39,29 @@ test("element list exposes overflow controls and aligns each selection to the vi
   assert.match(styles, /\.studio-inplace-element-list\{position:relative/);
 });
 
-test("undo and redo are durable checked revision mutations", () => {
+test("undo and redo restore instantly from the stored verdict and always succeed", () => {
   assert.match(editor, /restoreVersion\("undo"\)/);
   assert.match(editor, /restoreVersion\("redo"\)/);
   assert.match(route, /action === "undo" \|\| action === "redo"/);
-  assert.match(route, /runCloneQa\(/);
   assert.match(route, /appendAdStudioCreativeRevision/);
   assert.match(route, /redoHistory/);
-  assert.match(route, /That version no longer passes the ad checks/);
+  // Restores reuse the QA verdict saved with the version - no vision
+  // round-trip, and never a rejection.
+  assert.match(route, /targetQa \?\? canvas\.cloneQa/);
+  assert.doesNotMatch(route, /That version no longer passes/);
 });
 
-test("destructive blur-and-generic-font text fallback is not used by the edit route", () => {
+test("edits save always; verification is advisory and rendering stays model-driven", () => {
+  // The destructive blur-and-generic-font RENDER fallback stays banned; the
+  // deterministic path below is verdict bookkeeping only.
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
-  assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
-  assert.doesNotMatch(route, /deterministic-text-renderer/);
   assert.match(route, /buildTargetedEditRequest/);
   assert.match(route, /compositeCloneRegionEdit/);
-  assert.match(route, /cloneQaCorrectionPrompt/);
+  // No reroll loop, no QA gate on saving: one render, one advisory check,
+  // and a vision outage falls back to deterministic verdict bookkeeping.
+  assert.doesNotMatch(route, /cloneQaCorrectionPrompt/);
+  assert.doesNotMatch(route, /qa && !qa\.passed/);
+  assert.match(route, /applyDeterministicTextEditQa/);
 });
 
 test("all editor controls meet the 44px target and adapt to a mobile sheet", () => {
@@ -74,4 +80,15 @@ test("workbench embeds the editor in Meta chrome with honest selection guidance"
   assert.match(workbench, /Select text or an image on the ad, or open Edit elements\./);
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
   assert.match(workbench, /cloneQaWarnings\(currentCreative\?\.canvas\.cloneQa\)/);
+});
+
+test("the ad shows before its advisory QA pass and the editor announces it is preparing", () => {
+  // The workbench polls the campaign until verdicts land, merging only the
+  // missing cloneQa so local edits are never clobbered.
+  assert.match(workbench, /const editorPreparing = pack\.creatives\.some/);
+  assert.match(workbench, /preparing=\{editorPreparing\}/);
+  assert.match(workbench, /qa && !creative\.canvas\.cloneQa/);
+  assert.match(editor, /preparing \?/);
+  assert.match(editor, /Preparing your editor/);
+  assert.match(styles, /\.studio-editor-preparing\{position:absolute/);
 });

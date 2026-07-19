@@ -11,11 +11,6 @@ import {
 } from "../src/lib/adstudio/generation-trial.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
-// Generous budget — the whole point of the async path is that copy + clone +
-// QA rerolls never race a serverless timeout (trigger.config maxDuration still
-// bounds the run).
-const JOB_DEADLINE_MS = 8 * 60_000;
-const MAX_CLONE_ATTEMPTS = 3;
 
 type GenerateTemplateCampaignPayload = {
   workspaceId: string;
@@ -70,24 +65,34 @@ export const generateAdStudioTemplateCampaignTask = task({
         userId: payload.userId,
         origin: payload.origin,
         body: stored.body ?? payload.body,
-        deadlineMs: JOB_DEADLINE_MS,
-        maxCloneAttempts: MAX_CLONE_ATTEMPTS,
         workspaceName: stored.workspaceName,
         region: stored.region,
         isTrialWorkspace: reservation?.isTrialWorkspace ?? false,
       });
 
+      // "done" the moment the renders persist — the polling client shows the
+      // ad now. The advisory QA pass (editor regions + copy warnings) runs
+      // after, attaching to the persisted creatives as it lands.
       await supabase
         .from("adstudio_creative_jobs")
         .update({
           status: "done",
           campaign_id: result.campaignId,
-          qa: result.qa,
+          qa: null,
           error: null,
           updated_at: now(),
         })
         .eq("workspace_id", payload.workspaceId)
         .eq("id", payload.jobId);
+
+      const qa = await result.enrichQa();
+      if (qa) {
+        await supabase
+          .from("adstudio_creative_jobs")
+          .update({ qa, updated_at: now() })
+          .eq("workspace_id", payload.workspaceId)
+          .eq("id", payload.jobId);
+      }
 
       return { jobId: payload.jobId, status: "done" as const, campaignId: result.campaignId };
     } catch (error) {

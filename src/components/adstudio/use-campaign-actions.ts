@@ -26,7 +26,7 @@ const TEMPLATE_JOB_TIMEOUT_MS = 10 * 60_000;
 const TEMPLATE_JOB_PHASES: Array<{ label: string; atMs: number }> = [
   { label: "Writing copy...", atMs: 0 },
   { label: "Designing your ad...", atMs: 15_000 },
-  { label: "Checking every word...", atMs: 75_000 },
+  { label: "Saving your ad...", atMs: 60_000 },
 ];
 
 type CampaignJobStatus = {
@@ -206,8 +206,9 @@ export function useCampaignActions(s: CampaignActionsState) {
 
       let campaignPack: AdStudioCampaignPack;
       if (response.status === 202 && payload?.jobId) {
-        // Async generation: the server runs copy → clone → QA → persist in a
-        // background job; poll it and keep the staged-progress skeletons alive.
+        // Async generation: the server runs copy → clone → persist in a
+        // background job (the advisory QA pass attaches afterwards); poll it
+        // and keep the staged-progress skeletons alive.
         campaignPack = await waitForTemplateCampaignJob(String(payload.jobId), (phase) =>
           s.setGeneration({ phase, count: expectedCount, error: null }),
         );
