@@ -25,6 +25,54 @@ import metaStories255 from "./meta-stories-255.json" with { type: "json" };
 import metaStories262 from "./meta-stories-262.json" with { type: "json" };
 import metaAppraisalFeed002 from "./meta-appraisal-feed-002.json" with { type: "json" };
 import metaAppraisalStory247 from "./meta-appraisal-story-247.json" with { type: "json" };
+import metaAppraisalFeed082 from "./meta-appraisal-feed-082.json" with { type: "json" };
+import metaAppraisalFeed107 from "./meta-appraisal-feed-107.json" with { type: "json" };
+import metaAppraisalFeed144 from "./meta-appraisal-feed-144.json" with { type: "json" };
+import metaAppraisalFeed170 from "./meta-appraisal-feed-170.json" with { type: "json" };
+import metaAppraisalFeed200 from "./meta-appraisal-feed-200.json" with { type: "json" };
+import metaAppraisalStory240 from "./meta-appraisal-story-240.json" with { type: "json" };
+import metaAppraisalStory258 from "./meta-appraisal-story-258.json" with { type: "json" };
+import metaAppraisalStory300 from "./meta-appraisal-story-300.json" with { type: "json" };
+import metaSellerConsultFeed097 from "./meta-seller-consult-feed-097.json" with { type: "json" };
+import metaSellerConsultFeed155 from "./meta-seller-consult-feed-155.json" with { type: "json" };
+import metaSellerConsultFeed166 from "./meta-seller-consult-feed-166.json" with { type: "json" };
+import metaSellerConsultFeed168 from "./meta-seller-consult-feed-168.json" with { type: "json" };
+import metaSellerConsultFeed174 from "./meta-seller-consult-feed-174.json" with { type: "json" };
+import metaSellerConsultStory264 from "./meta-seller-consult-story-264.json" with { type: "json" };
+import metaSellerConsultStory270 from "./meta-seller-consult-story-270.json" with { type: "json" };
+import metaSellerConsultStory323 from "./meta-seller-consult-story-323.json" with { type: "json" };
+import metaBuyersWantedFeed126 from "./meta-buyers-wanted-feed-126.json" with { type: "json" };
+import metaBuyersWantedFeed191 from "./meta-buyers-wanted-feed-191.json" with { type: "json" };
+import metaBuyersWantedFeed192 from "./meta-buyers-wanted-feed-192.json" with { type: "json" };
+import metaBuyersWantedStory235 from "./meta-buyers-wanted-story-235.json" with { type: "json" };
+import metaBuyersWantedStory272 from "./meta-buyers-wanted-story-272.json" with { type: "json" };
+import metaMarketReportFeed139 from "./meta-market-report-feed-139.json" with { type: "json" };
+import metaMarketReportFeed158 from "./meta-market-report-feed-158.json" with { type: "json" };
+import metaMarketReportFeed164 from "./meta-market-report-feed-164.json" with { type: "json" };
+import metaMarketReportFeed167 from "./meta-market-report-feed-167.json" with { type: "json" };
+import metaMarketReportStory239 from "./meta-market-report-story-239.json" with { type: "json" };
+import metaMarketReportStory242 from "./meta-market-report-story-242.json" with { type: "json" };
+import metaOffmarketAlertsFeed130 from "./meta-offmarket-alerts-feed-130.json" with { type: "json" };
+import metaOffmarketAlertsFeed177 from "./meta-offmarket-alerts-feed-177.json" with { type: "json" };
+import metaOffmarketAlertsFeed195 from "./meta-offmarket-alerts-feed-195.json" with { type: "json" };
+import metaOffmarketAlertsStory043 from "./meta-offmarket-alerts-story-043.json" with { type: "json" };
+import metaOffmarketAlertsStory260 from "./meta-offmarket-alerts-story-260.json" with { type: "json" };
+import metaRentalAppraisalFeed135 from "./meta-rental-appraisal-feed-135.json" with { type: "json" };
+import metaRentalAppraisalFeed146 from "./meta-rental-appraisal-feed-146.json" with { type: "json" };
+import metaRentalAppraisalStory234 from "./meta-rental-appraisal-story-234.json" with { type: "json" };
+import metaInvestorConsultStory280 from "./meta-investor-consult-story-280.json" with { type: "json" };
+import metaDownsizerConsultFeed103 from "./meta-downsizer-consult-feed-103.json" with { type: "json" };
+import metaDownsizerConsultFeed178 from "./meta-downsizer-consult-feed-178.json" with { type: "json" };
+import metaDownsizerConsultStory266 from "./meta-downsizer-consult-story-266.json" with { type: "json" };
+import metaDownsizerConsultStory314 from "./meta-downsizer-consult-story-314.json" with { type: "json" };
+import metaAgentIntroFeed037 from "./meta-agent-intro-feed-037.json" with { type: "json" };
+import metaAgentIntroFeed051 from "./meta-agent-intro-feed-051.json" with { type: "json" };
+import metaAgentIntroFeed131 from "./meta-agent-intro-feed-131.json" with { type: "json" };
+import metaAgentIntroStory310 from "./meta-agent-intro-story-310.json" with { type: "json" };
+import metaLeadChecklistFeed157 from "./meta-lead-checklist-feed-157.json" with { type: "json" };
+import metaLeadChecklistFeed175 from "./meta-lead-checklist-feed-175.json" with { type: "json" };
+import metaLeadChecklistStory304 from "./meta-lead-checklist-story-304.json" with { type: "json" };
+import metaLeadChecklistStory316 from "./meta-lead-checklist-story-316.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -51,4 +99,52 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaStories262 as AdStudioGalleryTemplate,
   metaAppraisalFeed002 as AdStudioGalleryTemplate,
   metaAppraisalStory247 as AdStudioGalleryTemplate,
+  metaAppraisalFeed082 as AdStudioGalleryTemplate,
+  metaAppraisalFeed107 as AdStudioGalleryTemplate,
+  metaAppraisalFeed144 as AdStudioGalleryTemplate,
+  metaAppraisalFeed170 as AdStudioGalleryTemplate,
+  metaAppraisalFeed200 as AdStudioGalleryTemplate,
+  metaAppraisalStory240 as AdStudioGalleryTemplate,
+  metaAppraisalStory258 as AdStudioGalleryTemplate,
+  metaAppraisalStory300 as AdStudioGalleryTemplate,
+  metaSellerConsultFeed097 as AdStudioGalleryTemplate,
+  metaSellerConsultFeed155 as AdStudioGalleryTemplate,
+  metaSellerConsultFeed166 as AdStudioGalleryTemplate,
+  metaSellerConsultFeed168 as AdStudioGalleryTemplate,
+  metaSellerConsultFeed174 as AdStudioGalleryTemplate,
+  metaSellerConsultStory264 as AdStudioGalleryTemplate,
+  metaSellerConsultStory270 as AdStudioGalleryTemplate,
+  metaSellerConsultStory323 as AdStudioGalleryTemplate,
+  metaBuyersWantedFeed126 as AdStudioGalleryTemplate,
+  metaBuyersWantedFeed191 as AdStudioGalleryTemplate,
+  metaBuyersWantedFeed192 as AdStudioGalleryTemplate,
+  metaBuyersWantedStory235 as AdStudioGalleryTemplate,
+  metaBuyersWantedStory272 as AdStudioGalleryTemplate,
+  metaMarketReportFeed139 as AdStudioGalleryTemplate,
+  metaMarketReportFeed158 as AdStudioGalleryTemplate,
+  metaMarketReportFeed164 as AdStudioGalleryTemplate,
+  metaMarketReportFeed167 as AdStudioGalleryTemplate,
+  metaMarketReportStory239 as AdStudioGalleryTemplate,
+  metaMarketReportStory242 as AdStudioGalleryTemplate,
+  metaOffmarketAlertsFeed130 as AdStudioGalleryTemplate,
+  metaOffmarketAlertsFeed177 as AdStudioGalleryTemplate,
+  metaOffmarketAlertsFeed195 as AdStudioGalleryTemplate,
+  metaOffmarketAlertsStory043 as AdStudioGalleryTemplate,
+  metaOffmarketAlertsStory260 as AdStudioGalleryTemplate,
+  metaRentalAppraisalFeed135 as AdStudioGalleryTemplate,
+  metaRentalAppraisalFeed146 as AdStudioGalleryTemplate,
+  metaRentalAppraisalStory234 as AdStudioGalleryTemplate,
+  metaInvestorConsultStory280 as AdStudioGalleryTemplate,
+  metaDownsizerConsultFeed103 as AdStudioGalleryTemplate,
+  metaDownsizerConsultFeed178 as AdStudioGalleryTemplate,
+  metaDownsizerConsultStory266 as AdStudioGalleryTemplate,
+  metaDownsizerConsultStory314 as AdStudioGalleryTemplate,
+  metaAgentIntroFeed037 as AdStudioGalleryTemplate,
+  metaAgentIntroFeed051 as AdStudioGalleryTemplate,
+  metaAgentIntroFeed131 as AdStudioGalleryTemplate,
+  metaAgentIntroStory310 as AdStudioGalleryTemplate,
+  metaLeadChecklistFeed157 as AdStudioGalleryTemplate,
+  metaLeadChecklistFeed175 as AdStudioGalleryTemplate,
+  metaLeadChecklistStory304 as AdStudioGalleryTemplate,
+  metaLeadChecklistStory316 as AdStudioGalleryTemplate,
 ];

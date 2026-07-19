@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-lead-checklist-story-304",
+  "requestHash": "e1b5fffb1c5f8e93fcfcfe1df93a7cea50453f329f66fa2dd6f761451e5d96c6",
+  "inputHashes": {
+    "source_ad": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597",
+    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1"
+  },
+  "outputHash": "0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T07:00:14.665Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "FREE PROPERTY PLANNING CHECKLIST",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "MAKE YOUR NEXT MOVE CLEARER",
+        "exact": true
+      },
+      {
+        "key": "benefit_1",
+        "expected": "PREPARE YOUR HOME",
+        "exact": true
+      },
+      {
+        "key": "benefit_2",
+        "expected": "UNDERSTAND TIMING",
+        "exact": true
+      },
+      {
+        "key": "benefit_3",
+        "expected": "ASK BETTER QUESTIONS",
+        "exact": true
+      },
+      {
+        "key": "check_1",
+        "expected": "PREPARE YOUR PROPERTY",
+        "exact": true
+      },
+      {
+        "key": "check_2",
+        "expected": "UNDERSTAND YOUR TIMING",
+        "exact": true
+      },
+      {
+        "key": "check_3",
+        "expected": "REVIEW LOCAL CONDITIONS",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "GET THE FREE CHECKLIST",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "background_photo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

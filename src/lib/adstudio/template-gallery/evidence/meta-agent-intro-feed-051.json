@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-agent-intro-feed-051",
+  "requestHash": "2c4a9ba0e97ed41045559604f8fd3e1a88ffd3c9634abb12ee514df2f4ace4fc",
+  "inputHashes": {
+    "source_ad": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "b149b5633ba59f6be2c39cb2b49fba6c42d24de6d2a9a2771469919f9406b49a",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T06:37:16.940Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "YOUR LOCAL PROPERTY PARTNER",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "BOOK A NO-PRESSURE CALL",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Local insight, clear advice and a practical plan for your next property move.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A CALL",
+        "exact": true
+      },
+      {
+        "key": "phone",
+        "expected": "0400 123 456",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

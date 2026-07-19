@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-lead-checklist-story-316",
+  "requestHash": "b44818a5cc1ee83b1758c5431d7c6602fdacbf7d7f3321d6575010356d5fef8b",
+  "inputHashes": {
+    "source_ad": "3220c9384dd6f8bc19bea23b86edc3215ab1132acf717f480c24b9e86d7fef2a",
+    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "b97602fa4522579f5c206ab82ad24a611ac49cbcef1cd2e3c1f67a970cb019da",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T07:00:14.696Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "FREE PROPERTY PLANNING CHECKLIST",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "MAKE YOUR NEXT MOVE CLEARER",
+        "exact": true
+      },
+      {
+        "key": "benefit_1",
+        "expected": "PREPARE YOUR HOME",
+        "exact": true
+      },
+      {
+        "key": "benefit_2",
+        "expected": "UNDERSTAND TIMING",
+        "exact": true
+      },
+      {
+        "key": "benefit_3",
+        "expected": "ASK BETTER QUESTIONS",
+        "exact": true
+      },
+      {
+        "key": "check_1",
+        "expected": "PREPARE YOUR PROPERTY",
+        "exact": true
+      },
+      {
+        "key": "check_2",
+        "expected": "UNDERSTAND YOUR TIMING",
+        "exact": true
+      },
+      {
+        "key": "check_3",
+        "expected": "REVIEW LOCAL CONDITIONS",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "GET THE FREE CHECKLIST",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "background_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-rental-appraisal-story-234",
+  "requestHash": "26e924f4767a8087830d98da0581644cf69c573b9e84a59800f239317365d9a4",
+  "inputHashes": {
+    "source_ad": "f2be96eafb7a0a77341c9c73464b1161866f08bb968348474de50a0cac173ccd",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "17987becc85c6e0fc32c737a5685a48e006da709a1dade9625e958f780f6e92f",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T05:58:17.322Z",
+  "correctionCount": 1,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "WHAT COULD YOUR PROPERTY RENT FOR?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "REQUEST A RENTAL APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Get a clear view of current rent, tenant demand and your next steps.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A RENTAL APPRAISAL",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

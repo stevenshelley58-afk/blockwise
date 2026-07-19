@@ -1,0 +1,148 @@
+{
+  "id": "meta-rental-appraisal-feed-146",
+  "name": "Rental Appraisal — Feed 146",
+  "goal": "investor_leads",
+  "offerId": "rental-appraisal",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Property investors and landlords seeking current rental guidance",
+  "category": "investor-lead-generation",
+  "tags": [
+    "rental-appraisal",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-rental-appraisal-feed-146-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-rental-appraisal-feed-146-sample.png",
+    "alt": "Generated sample for Rental Appraisal — Feed 146.",
+    "contentHash": "50876ddb0a5b4729059c664858aa9e9ddc0c14dfadc5279366329e71089e6a96",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "Property photo 1",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's first property photograph"
+      },
+      {
+        "key": "property_photo_2",
+        "label": "Property photo 2",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's second property photograph"
+      },
+      {
+        "key": "property_photo_3",
+        "label": "Property photo 3",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's third property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 52,
+        "sample": "WHAT COULD YOUR PROPERTY RENT FOR?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 44,
+        "sample": "REQUEST A RENTAL APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 30,
+        "sample": "CURRENT RENT",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 31,
+        "sample": "TENANT DEMAND",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 35,
+        "sample": "INVESTOR GUIDANCE",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 41,
+        "sample": "BOOK A RENTAL APPRAISAL",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_146.png",
+    "contentHash": "97e3301b3358d5b8bff7330b99502b73c8e201d361789deb2967f65dab0888fd"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "rental_appraisal",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

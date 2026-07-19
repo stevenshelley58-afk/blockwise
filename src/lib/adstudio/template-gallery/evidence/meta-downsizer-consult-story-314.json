@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-downsizer-consult-story-314",
+  "requestHash": "44244afd4d63aa1028afbf8a7d5b8813892573c619a1e9395e36bf4978093224",
+  "inputHashes": {
+    "source_ad": "5db9bbfba2ed48dd9432aca11c264433a89e3ca5e651105eabbf397f8bfe1a53",
+    "couple_photo": "dda6f72059b3e36e29f117cc95c25b600a323a3b6ed7b9171decee7276a70582"
+  },
+  "outputHash": "bc29bcd19b971491ab192378313030d896a5a390d870ba13ab69522e6d5e8b20",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T06:13:53.685Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "THINKING ABOUT DOWNSIZING?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "PLAN YOUR NEXT MOVE WITH CONFIDENCE",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Talk through timing, value and suitable next-home options with a local expert.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A DOWNSIZER CHAT",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "couple_photo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

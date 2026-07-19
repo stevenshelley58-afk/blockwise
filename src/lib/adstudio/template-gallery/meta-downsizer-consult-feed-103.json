@@ -1,0 +1,141 @@
+{
+  "id": "meta-downsizer-consult-feed-103",
+  "name": "Downsizer Consultation — Feed 103",
+  "goal": "downsizer_leads",
+  "offerId": "downsizer-consultation",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Established homeowners planning a simpler property move",
+  "category": "downsizer-lead-generation",
+  "tags": [
+    "downsizer",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-downsizer-consult-feed-103-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-downsizer-consult-feed-103-sample.png",
+    "alt": "Generated sample for Downsizer Consultation — Feed 103.",
+    "contentHash": "63bb71434075ba04aa5e0c9ab086f87b109d58efe30c4a680697039738819fe5",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "Property photo 1",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's first property photograph"
+      },
+      {
+        "key": "property_photo_2",
+        "label": "Property photo 2",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's second property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 44,
+        "sample": "THINKING ABOUT DOWNSIZING?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 53,
+        "sample": "PLAN YOUR NEXT MOVE WITH CONFIDENCE",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 96,
+        "sample": "Talk through timing, value and suitable next-home options with a local expert.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 39,
+        "sample": "BOOK A DOWNSIZER CHAT",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_103.png",
+    "contentHash": "6877f2b0081b56a5d510501f88a9855f9b3934bd29be62a637bc256e04838305"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "downsizer_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

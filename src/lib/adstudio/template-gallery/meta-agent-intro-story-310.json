@@ -1,0 +1,148 @@
+{
+  "id": "meta-agent-intro-story-310",
+  "name": "Meet Your Local Agent — Story 310",
+  "goal": "seller_leads",
+  "offerId": "agent-introduction-call",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Local property owners seeking a trusted agent relationship",
+  "category": "agent-introduction-lead-generation",
+  "tags": [
+    "agent-intro",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-agent-intro-story-310-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-agent-intro-story-310-sample.png",
+    "alt": "Generated sample for Meet Your Local Agent — Story 310.",
+    "contentHash": "071bcd9f0e4a73fb4a547550383990eb5bc6d867bf6687744bd240791a0b9a7a",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 45,
+        "sample": "YOUR LOCAL PROPERTY PARTNER",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 41,
+        "sample": "BOOK A NO-PRESSURE CALL",
+        "required": true
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 29,
+        "sample": "ALEX MORGAN",
+        "required": true
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent Role",
+        "maxLength": 43,
+        "sample": "LOCAL PROPERTY SPECIALIST",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 95,
+        "sample": "Local insight, clear advice and a practical plan for your next property move.",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "email",
+        "label": "Email",
+        "maxLength": 40,
+        "sample": "alex@youragency.com.au",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 29,
+        "sample": "BOOK A CALL",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_310.png",
+    "contentHash": "d57e9f8f071b1961ba9f429072f93b92a1f4d471f849fa5aac16c132816d98ea"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "agent_introduction",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

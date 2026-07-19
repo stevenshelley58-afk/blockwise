@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-offmarket-alerts-story-043",
+  "requestHash": "66b70e8bca2a57985333cbe672fa1c626e500b54820dc3d1209ce42ea0a14316",
+  "inputHashes": {
+    "source_ad": "1d264a515215d94a8a47386b36922b672cfe7cac055a0bd362ccc11865afe962",
+    "property_photo_1": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "property_photo_2": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "property_photo_3": "82a332772f09ef1f7b28ac8c0a9c3a94367aaa978b3bd7928d991552497bcc60",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "fca038bcca9f29f441749cb6e68f60c01b3510f245c871d8bff11bfebd7c7c5c",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T05:38:42.586Z",
+  "correctionCount": 1,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "SEE HOMES BEFORE THEY HIT THE MARKET",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "JOIN OUR OFF-MARKET ALERTS",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Register your preferences and hear about suitable local homes first.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "REGISTER FOR ALERTS",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo_1",
+        "used": true
+      },
+      {
+        "key": "property_photo_2",
+        "used": true
+      },
+      {
+        "key": "property_photo_3",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}
