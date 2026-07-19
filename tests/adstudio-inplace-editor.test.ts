@@ -82,6 +82,40 @@ test("workbench embeds the editor in Meta chrome with honest selection guidance"
   assert.match(workbench, /cloneQaWarnings\(currentCreative\?\.canvas\.cloneQa\)/);
 });
 
+test("regions are object-aware: hover labels, selection spotlight, corner handles, keyboard walk", () => {
+  assert.match(editor, /data-label=\{labelForRegionKey\(region\.key\)\}/);
+  assert.match(styles, /\.studio-inplace-region::before\{content:attr\(data-label\)/);
+  assert.match(styles, /0 0 0 9999px rgba\(6,10,18,\.34\)/);
+  assert.match(editor, /studio-inplace-handles/);
+  assert.match(styles, /\.studio-inplace-handles\{position:absolute/);
+  // Arrow keys cycle elements in place; Escape releases the selection.
+  assert.match(editor, /handleRegionKeyDown\(event, index\)/);
+  assert.match(editor, /ArrowRight/);
+  assert.match(editor, /regionButtonRefs\.current\.get\(next\.key\)\?\.focus\(\)/);
+});
+
+test("zoom is available for small targets: toolbar cycle, double-click, drag pan", () => {
+  assert.match(editor, /studio-inplace-zoom/);
+  assert.match(editor, /cycleZoom/);
+  assert.match(editor, /handleZoomDoubleClick/);
+  assert.match(editor, /setPointerCapture/);
+  // Pan deltas convert through the outer PreviewFit scale and stay clamped.
+  assert.match(editor, /frameScaleFactor/);
+  assert.match(editor, /clampPan/);
+  assert.match(styles, /\.studio-inplace-zoom\{position:relative/);
+  assert.match(styles, /\.studio-metachrome-media \.studio-inplace-zoom,\.studio-metachrome-story \.studio-inplace-zoom\{display:block;width:100%;height:100%\}/);
+});
+
+test("element list shows real thumbnails and flags inexact copy", () => {
+  assert.match(editor, /regionThumbStyle\(src, region\.box\)/);
+  assert.match(editor, /warningKeys\.has\(region\.key\)/);
+  assert.match(styles, /\.studio-inplace-thumb\{width:26px/);
+  assert.match(styles, /\.studio-inplace-flag\{width:8px/);
+  // Pending edits narrate what they are doing instead of a generic label.
+  assert.match(editor, /truncateForStatus/);
+  assert.match(editor, /Repainting this area/);
+});
+
 test("the ad shows before its advisory QA pass and the editor announces it is preparing", () => {
   // The workbench polls the campaign until verdicts land, merging only the
   // missing cloneQa so local edits are never clobbered.
