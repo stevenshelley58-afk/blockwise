@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-agent-intro-feed-131",
+  "requestHash": "be1de6da955806e62a424cfb59251f706700ad014d694d8abc66a91bc9f9ff0a",
+  "inputHashes": {
+    "source_ad": "d09b5fb2f23fcb6aa57e8726f3fab3b02123fbcb3e5a9831775e95537486398e",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "589c87b49571eab444f84bed519a4b64b015df1945cfb6ed2465de49108a52db",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T06:37:16.953Z",
+  "correctionCount": 1,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "YOUR LOCAL PROPERTY PARTNER",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "BOOK A NO-PRESSURE CALL",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Local insight, clear advice and a practical plan for your next property move.",
+        "exact": true
+      },
+      {
+        "key": "website",
+        "expected": "youragency.com.au",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}
