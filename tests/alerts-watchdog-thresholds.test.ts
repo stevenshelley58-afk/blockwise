@@ -19,17 +19,17 @@ test("levelForPct crosses to warn at 80% and critical at 95%", () => {
 });
 
 test("diffForAlerts escalates on both the WARN and CRITICAL crossings", () => {
-  const warn: ServiceStatus = { service: "openrouter-credits", level: "warn", summary: "80%", pctUsed: 80 };
-  const critical: ServiceStatus = { service: "openrouter-credits", level: "critical", summary: "96%", pctUsed: 96 };
+  const warn: ServiceStatus = { service: "openai-spend", level: "warn", summary: "80%", pctUsed: 80 };
+  const critical: ServiceStatus = { service: "openai-spend", level: "critical", summary: "96%", pctUsed: 96 };
 
   // ok -> warn is an escalation (80% emails)
   assert.equal(diffForAlerts({}, [warn]).escalations.length, 1);
   // ok -> critical is an escalation (95% emails)
   assert.equal(diffForAlerts({}, [critical]).escalations.length, 1);
   // warn -> critical is an escalation
-  assert.equal(diffForAlerts({ "openrouter-credits": "warn" }, [critical]).escalations.length, 1);
+  assert.equal(diffForAlerts({ "openai-spend": "warn" }, [critical]).escalations.length, 1);
   // staying at warn does not re-alert (anti-spam)
-  assert.equal(diffForAlerts({ "openrouter-credits": "warn" }, [warn]).escalations.length, 0);
+  assert.equal(diffForAlerts({ "openai-spend": "warn" }, [warn]).escalations.length, 0);
 });
 
 // A minimal Supabase double covering the runner's runtime_settings load + upsert.
@@ -59,10 +59,10 @@ async function runWith(statuses: ServiceStatus[]) {
 
 test("runPaidServiceWatchdog emails the owner at the 80% WARN crossing", async () => {
   const { sent, result } = await runWith([
-    { service: "openrouter-credits", level: "warn", summary: "80% used", pctUsed: 80 },
+    { service: "openai-spend", level: "warn", summary: "80% used", pctUsed: 80 },
   ]);
   assert.equal(sent.length, 1);
-  assert.deepEqual(result.escalations, ["openrouter-credits"]);
+  assert.deepEqual(result.escalations, ["openai-spend"]);
   assert.deepEqual(result.delivery, { email: true, whatsapp: false });
 });
 

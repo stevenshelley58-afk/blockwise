@@ -14,7 +14,7 @@ import {
 import {
   compositeCloneRegionEdit,
   createCloneRegionEditMask,
-  generateCloneWithCascade,
+  generateClone,
   normalizeCloneRenderAspect,
   persistCloneRender,
   renderExactCloneTextEdit,
@@ -299,7 +299,17 @@ function submittedProviderFailure(message: string, retryable: boolean): Provider
 function qualityGateInput(providers: ImageProviderAdapter[], maxAttempts = 99) {
   return {
     format: "4:5",
-    providers,
+    provider: providers[0],
+    qaCandidate: {
+      provider: "openai" as const,
+      model: "gpt-5.5",
+      inputUsdPerMillionTokens: 5,
+      outputUsdPerMillionTokens: 30,
+      imageUsdPerUnit: 0.01,
+      supportsStructuredOutput: true,
+      maxContextTokens: 1_050_000,
+      maxLatencyMs: 30_000,
+    },
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     expectedCopy: { headline: "JUST LISTED" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
@@ -409,7 +419,7 @@ test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
   );
 });
 
-test("template campaign generation runs cascade + QA and never ships an unverified clone silently", () => {
+test("template campaign generation runs direct generation + QA and never ships an unverified clone silently", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
@@ -422,7 +432,7 @@ test("template campaign generation runs cascade + QA and never ships an unverifi
   assert.doesNotMatch(generation, /createOpenAiImageProvider\(\)/);
   assert.match(generation, /recordAdStudioProviderRun/);
   assert.match(generation, /output: result/);
-  assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
+  assert.match(pipeline, /resolveCloneProvider\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
   // Every generation is QA'd; failures reroll with a correction, and a clone
@@ -451,8 +461,8 @@ test("durable accounting failure after provider success never dispatches a fallb
   });
 
   await assert.rejects(
-    () => generateCloneWithCascade({
-      providers: [primary, fallback],
+    () => generateClone({
+      provider: primary,
       request: {
         prompt: "clone",
         referenceAssets: [],
@@ -493,8 +503,8 @@ test("clone generation does not fallback after a non-retryable provider failure"
     };
   });
 
-  await assert.rejects(() => generateCloneWithCascade({
-    providers: [primary, fallback],
+  await assert.rejects(() => generateClone({
+    provider: primary,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
@@ -506,7 +516,7 @@ test("clone generation does not fallback after a non-retryable provider failure"
   assert.equal(fallbackCalls, 0);
 });
 
-test("clone generation invokes one fallback after a retryable provider failure", async () => {
+test("clone generation surfaces a retryable provider failure without failover", async () => {
   let fallbackCalls = 0;
   const primary = accountedImageProvider("primary", async () => {
     await fetchProviderRequest(
@@ -527,18 +537,17 @@ test("clone generation invokes one fallback after a retryable provider failure",
     };
   });
 
-  const result = await generateCloneWithCascade({
-    providers: [primary, fallback],
+  await assert.rejects(() => generateClone({
+    provider: primary,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "retryable-clone",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
-  });
+  }), /transport failed/);
 
-  assert.equal(result.provider, "fallback");
-  assert.equal(fallbackCalls, 1);
+  assert.equal(fallbackCalls, 0);
 });
 
 test("clone generation does not fallback after a dispatched request is aborted", async () => {
@@ -556,8 +565,8 @@ test("clone generation does not fallback after a dispatched request is aborted",
     throw new Error("must not be called");
   });
 
-  await assert.rejects(() => generateCloneWithCascade({
-    providers: [primary, fallback],
+  await assert.rejects(() => generateClone({
+    provider: primary,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
@@ -569,33 +578,34 @@ test("clone generation does not fallback after a dispatched request is aborted",
   assert.equal(fallbackCalls, 0);
 });
 
-test("clone generation never invokes a second fallback candidate", async () => {
-  let thirdProviderCalls = 0;
+test("clone generation never invokes an alternate provider", async () => {
+  let alternateProviderCalls = 0;
   const failedProvider = (name: string) => accountedImageProvider(name, async () => {
     throw submittedProviderFailure(`${name} unavailable`, true);
   });
-  const forbiddenThird = accountedImageProvider("third", async () => {
-    thirdProviderCalls += 1;
+  const forbiddenAlternate = accountedImageProvider("alternate", async () => {
+    alternateProviderCalls += 1;
     return {
       assetUrl: "data:image/png;base64,b2s=",
       seed: 1,
-      model: "third-model",
+      model: "alternate-model",
       usage: { imageUnits: 1, complete: true },
       providerMetadata: {},
     };
   });
 
-  await assert.rejects(() => generateCloneWithCascade({
-    providers: [failedProvider("primary"), failedProvider("fallback"), forbiddenThird],
+  await assert.rejects(() => generateClone({
+    provider: failedProvider("primary"),
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
     correlationId: "bounded-clone",
     attempt: 1,
     accounting: { executeAttempt, recordRun: async () => {} },
-  }), /fallback unavailable/);
+  }), /primary unavailable/);
 
-  assert.equal(thirdProviderCalls, 0);
+  void forbiddenAlternate;
+  assert.equal(alternateProviderCalls, 0);
 });
 
 test("template quality gate caps each format to the caller's QA budget", async () => {
@@ -609,7 +619,7 @@ test("template quality gate caps each format to the caller's QA budget", async (
   await assert.rejects(() => gate(
     qualityGateInput([failedProvider("primary"), failedProvider("fallback")], 1),
     {
-      generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
+      generate: (input: Parameters<typeof generateClone>[0]) => generateClone({
         ...input,
         accounting: { executeAttempt, recordRun: async () => {} },
       }),
@@ -617,7 +627,7 @@ test("template quality gate caps each format to the caller's QA budget", async (
     },
   ));
 
-  assert.equal(providerCalls, 2);
+  assert.equal(providerCalls, 1);
 });
 
 test("provider failures do not consume the two QA-candidate attempts", async () => {
@@ -641,7 +651,7 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
   });
 
   const result = await gate(qualityGateInput([primary, fallback], 2), {
-    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
+    generate: (input: Parameters<typeof generateClone>[0]) => generateClone({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
     }),
@@ -653,19 +663,16 @@ test("provider failures do not consume the two QA-candidate attempts", async () 
   });
 
   assert.ok(result);
-  assert.equal(providerCalls, 3);
+  assert.equal(providerCalls, 2);
   assert.equal(qaCalls, 1);
 });
 
-test("the async budget leaves room for two QA candidates after one provider failure", async () => {
+test("the async budget uses two QA correction attempts on the same provider", async () => {
   const gate = await qualityGateFunction();
   let providerCalls = 0;
   let qaCalls = 0;
   const primary = accountedImageProvider("primary", async () => {
     providerCalls += 1;
-    if (providerCalls === 1) {
-      throw submittedProviderFailure("request rejected", false);
-    }
     return {
       assetUrl: `data:image/png;base64,candidate-${providerCalls}`,
       seed: providerCalls,
@@ -681,7 +688,7 @@ test("the async budget leaves room for two QA candidates after one provider fail
   });
 
   const result = await gate(qualityGateInput([primary, fallback], 2), {
-    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
+    generate: (input: Parameters<typeof generateClone>[0]) => generateClone({
       ...input,
       accounting: { executeAttempt, recordRun: async () => {} },
     }),
@@ -694,7 +701,7 @@ test("the async budget leaves room for two QA candidates after one provider fail
   });
 
   assert.ok(result);
-  assert.equal(providerCalls, 3);
+  assert.equal(providerCalls, 2);
   assert.equal(fallbackCalls, 0);
   assert.equal(qaCalls, 2);
 });
@@ -819,7 +826,7 @@ test("targeted edit endpoint model-edits selected regions and checks the whole a
   assert.doesNotMatch(route, /canRenderTextDirectly/);
   assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
-  assert.match(route, /resolveCloneProviders\(\)/);
+  assert.match(route, /resolveCloneProvider\(generationQuality\)/);
   assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries forward from the last verdict with the edited field
@@ -828,7 +835,7 @@ test("targeted edit endpoint model-edits selected regions and checks the whole a
   assert.match(route, /expectedCopy\[editFieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
   assert.match(route, /compositeCloneRegionEdit/);
-  assert.match(route, /capabilities\.inpainting/);
+  assert.doesNotMatch(route, /capabilities\.inpainting/);
 
   // Undo/redo are saved revisions and receive a fresh QA verdict.
   assert.match(route, /renderHistory/);

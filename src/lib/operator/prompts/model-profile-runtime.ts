@@ -31,8 +31,8 @@ export function resolveRuntimeProfileFromVersions(
   };
 }
 
-export function modelCandidateAttempts(profile: RuntimeModelProfile): ModelCandidate[] {
-  return [profile.primary, ...profile.fallbacks.slice(0, 1)];
+export function modelCandidateForProfile(profile: RuntimeModelProfile): ModelCandidate {
+  return profile.primary;
 }
 
 export function isRetryableProviderFailure(error: unknown): boolean {

@@ -9,6 +9,7 @@ import {
   refundReservedTrialCredit,
   type AdStudioGenerationTrialReservation,
 } from "../src/lib/adstudio/generation-trial.ts";
+import { adStudioGenerationFailureMessage } from "../src/lib/adstudio/generation-mode.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 // Generous budget — the whole point of the async path is that copy + clone +
@@ -96,7 +97,8 @@ export const generateAdStudioTemplateCampaignTask = task({
       // gives it back (no-op for paid workspaces via shouldRefund).
       await refundReservedTrialCredit(reservation, supabase);
 
-      const message = error instanceof Error ? error.message : "Ad generation failed.";
+      const quality = (stored.body ?? payload.body).firstAd.generationQuality ?? "fast";
+      const message = adStudioGenerationFailureMessage(quality);
       await supabase
         .from("adstudio_creative_jobs")
         .update({ status: "failed", error: message, qa: null, updated_at: now() })

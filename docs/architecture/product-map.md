@@ -8,7 +8,7 @@ Blockwise is organized around a few shared primitives rather than separate produ
 - Monitor: connected account health, reporting snapshots, CPL, lead quality, competitor snapshots, recommendations, and alerts.
 - Self-Serve: research, idea mine, campaign builder, creative studio, ad previews, lead magnets, leads, and reports.
 - Agent Workforce: agent definitions, runs, steps, artifacts, schedules, permissions, and reviews.
-- Model Control: grouped model profile dropdowns, OpenRouter-routed model selection, fallbacks, spend policies, kill switches, and usage ledger.
+- Model Control: direct OpenAI/Gemini readiness, pinned AdStudio modes, grouped profile selection, spend policies, kill switches, and usage ledger.
 
 ## Data Flow
 

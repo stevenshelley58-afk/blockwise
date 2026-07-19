@@ -5,12 +5,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   compositeCloneRegionEdit,
   createCloneRegionEditMask,
-  generateCloneWithCascade,
+  generateClone,
   normalizeCloneRenderAspect,
   persistCloneRender,
-  resolveCloneProviders,
+  resolveCloneProvider,
 } from "@/lib/adstudio/clone-generation";
 import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
+import {
+  adStudioGenerationFailureMessage,
+  resolveAdStudioGenerationMode,
+  type AdGenerationQuality,
+} from "@/lib/adstudio/generation-mode";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -138,6 +143,18 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     await releaseClaim();
     return NextResponse.json({ error: "Creative not found." }, { status: 404 });
   }
+  const { data: campaign, error: campaignError } = await context.supabase
+    .from("adstudio_campaigns")
+    .select("generation_quality")
+    .eq("workspace_id", context.access.workspaceId)
+    .eq("id", String(row.campaign_id))
+    .maybeSingle();
+  if (campaignError || !campaign) {
+    await releaseClaim();
+    return NextResponse.json({ error: "This ad's generation mode could not be loaded." }, { status: 500 });
+  }
+  const generationQuality: AdGenerationQuality = campaign.generation_quality === "fast" ? "fast" : "high";
+  const generationMode = resolveAdStudioGenerationMode(generationQuality);
 
   const baseRevisionId = typeof row.active_revision_id === "string" ? row.active_revision_id : "";
   if (!baseRevisionId || baseRevisionId !== expectedRevisionId) {
@@ -193,10 +210,18 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         expectedCopy,
         format: String(row.format ?? "4:5"),
         attempt: 1,
+        candidate: generationMode.qa,
       });
     } catch (error) {
+      console.error("Ad Studio edit restore QA failed", {
+        workspaceId: context.access.workspaceId,
+        creativeId: id,
+        campaignId: row.campaign_id,
+        generationQuality,
+        error,
+      });
       await releaseClaim();
-      return errorResponse(error, 502);
+      return NextResponse.json({ error: adStudioGenerationFailureMessage(generationQuality) }, { status: 502 });
     }
     if (!restoredQa.passed) {
       await releaseClaim();
@@ -311,15 +336,13 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // fallback blurred the selected rectangle and painted generic Arial over
     // the ad, permanently destroying the source design. The model now retains
     // the original type treatment, while compositing and QA preserve the rest.
-    const providers = (await resolveCloneProviders()).sort(
-      (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
-    );
+    const provider = resolveCloneProvider(generationQuality);
     let correction = "";
 
     try {
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-        const generated = await generateCloneWithCascade({
-          providers,
+        const generated = await generateClone({
+          provider,
           request: {
             ...baseRequest,
             prompt: correction ? `${baseRequest.prompt} ${correction}` : baseRequest.prompt,
@@ -342,6 +365,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
           expectedCopy,
           format: String(row.format ?? "4:5"),
           attempt,
+          candidate: generationMode.qa,
         });
 
         if (qa.passed) break;
@@ -349,8 +373,14 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         correction = cloneQaCorrectionPrompt(qa);
       }
     } catch (error) {
+      console.error("AdStudio edit generation failed", {
+        creativeId: id,
+        campaignId: row.campaign_id,
+        generationQuality,
+        error,
+      });
       await releaseClaim();
-      return errorResponse(error, 502);
+      return NextResponse.json({ error: adStudioGenerationFailureMessage(generationQuality) }, { status: 502 });
     }
   }
 

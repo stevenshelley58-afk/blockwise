@@ -15,9 +15,9 @@ Blockwise Model Control instead of hardcoded model names.
 
 - Query runtime model profile configuration.
 - Log the exact provider, model, policy, prompt version, and temperature.
-- Support fallback routing when the selected provider fails.
+- Fail the job when the selected direct model remains unavailable after its bounded retry policy.
 
 ## Tools
 
 - `blockwise.model_profiles.load`
-- `openrouter.models.list`
+- `hermes.openai.complete`

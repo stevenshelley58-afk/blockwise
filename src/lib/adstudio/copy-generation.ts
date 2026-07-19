@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
 
 import { createTextProviderForCandidate } from "./ai-providers.ts";
+import type { ModelCandidate } from "../ai/model-registry.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
-import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
 import {
-  isRetryableProviderFailure,
-  modelCandidateAttempts,
+  modelCandidateForProfile,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle, type PromptKey } from "../operator/prompts/prompt-registry.ts";
@@ -158,7 +157,7 @@ export async function generateAdStudioCopy(
     };
   } catch (error) {
     if (finalizationStarted) throw error;
-    const terminalError = error instanceof CopyCascadeError && error.cause instanceof ProviderRunPersistenceError
+    const terminalError = error instanceof CopyGenerationError && error.cause instanceof ProviderRunPersistenceError
       ? error.cause
       : error;
     await recordAdStudioProviderRun({
@@ -170,7 +169,7 @@ export async function generateAdStudioCopy(
       mutationId,
       prompt: assembled,
       input: generationLogInput(input),
-      attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
+      attempts: error instanceof CopyGenerationError ? error.attempts : generation?.attempts ?? [],
       latencyMs: Date.now() - startedAt,
       providerName: generation?.provider.providerName ?? "unavailable",
       providerType: "text_generation",
@@ -201,6 +200,7 @@ export type AdStudioTemplateCopyInput = {
   fields: AdStudioTemplateCopyFieldSpec[];
   sourceImageUrl?: string;
   context?: AdStudioCopyRequestBody["context"];
+  candidate?: ModelCandidate;
 };
 
 export type AdStudioTemplateCopyResponse = {
@@ -260,7 +260,7 @@ export async function generateAdStudioTemplateCopy(
     generation = await generateCopyWithProfile(assembled.system, userPrompt, imageUrl, {
       workspaceId: input.workspaceId,
       mutationId,
-    });
+    }, input.candidate);
     const json = (generation.output.json ?? {}) as Record<string, unknown>;
     const onImageRaw = (json.onImage ?? {}) as Record<string, unknown>;
     const onImage: Record<string, string> = {};
@@ -304,7 +304,7 @@ export async function generateAdStudioTemplateCopy(
     };
   } catch (error) {
     if (finalizationStarted) throw error;
-    const terminalError = error instanceof CopyCascadeError && error.cause instanceof ProviderRunPersistenceError
+    const terminalError = error instanceof CopyGenerationError && error.cause instanceof ProviderRunPersistenceError
       ? error.cause
       : error;
     await recordAdStudioProviderRun({
@@ -316,7 +316,7 @@ export async function generateAdStudioTemplateCopy(
       mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
-      attempts: error instanceof CopyCascadeError ? error.attempts : generation?.attempts ?? [],
+      attempts: error instanceof CopyGenerationError ? error.attempts : generation?.attempts ?? [],
       latencyMs: Date.now() - startedAt,
       providerName: generation?.provider.providerName ?? "unavailable",
       providerType: "text_generation",
@@ -364,12 +364,13 @@ async function generateCopyWithProfile(
   user: string,
   imageUrl?: string,
   reservation?: { workspaceId: string; mutationId: string },
+  selectedCandidate?: ModelCandidate,
 ): Promise<CopyGenerationResult> {
-  const profile = await resolveRuntimeModelProfile("structured_json");
-  const candidates = modelCandidateAttempts(profile);
+  const candidate = selectedCandidate
+    ?? modelCandidateForProfile(await resolveRuntimeModelProfile("structured_json"));
   const attempts: CopyGenerationResult["attempts"] = [];
 
-  for (const [index, candidate] of candidates.entries()) {
+  {
     const provider = createTextProviderForCandidate(candidate);
     if (!reservation) {
       throw new Error("Provider accounting reservation context is required.");
@@ -379,7 +380,7 @@ async function generateCopyWithProfile(
       execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
         workspaceId: reservation.workspaceId,
         mutationId: reservation.mutationId,
-        attemptIndex: index,
+        attemptIndex: 0,
         modelProfile: "structured_json",
         provider,
         execute: () => provider.generate({
@@ -390,7 +391,7 @@ async function generateCopyWithProfile(
         }),
       });
     } catch (error) {
-      throw new CopyCascadeError(error instanceof Error ? error.message : String(error), attempts, { cause: error });
+      throw new CopyGenerationError(error instanceof Error ? error.message : String(error), attempts, { cause: error });
     }
     attempts.push(execution.attempt);
     if (execution.ok) {
@@ -403,46 +404,28 @@ async function generateCopyWithProfile(
       };
     }
 
-    if (!isRetryableProviderFailure(execution.error)) break;
-
-    // A configured model just failed — tell the owner their chosen model is down.
-    // De-duped by stage+toModel, so a burst of requests sends one alert.
-    const toModel = candidates[index + 1]?.model;
-    if (toModel) {
-      void emitModelFallbackAlert({
-        stage: "adstudio.copy",
-        fromModel: candidate.model,
-        toModel,
-        reason: execution.error instanceof Error ? execution.error.message : String(execution.error),
-      });
-    }
   }
 
-  // Carry the per-candidate outcomes on the error: the failure-path provider
-  // run must record WHICH models failed and why, not just the last message —
-  // losing this is how a dead OpenRouter key masqueraded as an OpenAI quota
-  // problem for half a day.
-  // The dialog shows this message: summarize EVERY lane's failure instead of
-  // quoting whichever provider happened to speak last (that masked a fal
-  // parsing bug behind OpenAI's quota message for hours).
+  // Keep the detailed provider/model failure on the operator run record. The
+  // customer-facing campaign path replaces it with a mode-based message.
   const summary = attempts
     .filter((attempt) => attempt.status === "failed")
     .map((attempt) => `${attempt.provider} (${attempt.model}): ${attempt.error ?? "failed"}`)
     .join(" · ")
     .slice(0, 600);
-  const failure = new CopyCascadeError(
-    summary || "Copy generation is not configured. Add AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY to enable it.",
+  const failure = new CopyGenerationError(
+    summary || "Copy generation is unavailable.",
     attempts,
   );
   throw failure;
 }
 
-class CopyCascadeError extends Error {
+class CopyGenerationError extends Error {
   readonly attempts: CopyGenerationResult["attempts"];
 
   constructor(message: string, attempts: CopyGenerationResult["attempts"], options?: { cause?: unknown }) {
     super(message, options);
-    this.name = "CopyCascadeError";
+    this.name = "CopyGenerationError";
     this.attempts = attempts;
   }
 }

@@ -84,10 +84,10 @@ export async function persistAdStudioCampaignPack(
   const now = new Date().toISOString();
   const compactCreatives = compactCreativesForPersistence(pack.creatives);
 
-  // One transactional RPC (adstudio_persist_campaign_pack, SECURITY INVOKER so
+  // One transactional RPC (adstudio_persist_campaign_pack_v2, SECURITY INVOKER so
   // RLS still applies): a failure in any table rolls back the whole pack —
   // partially written campaigns are impossible.
-  const result = await supabase.rpc("adstudio_persist_campaign_pack", {
+  const result = await supabase.rpc("adstudio_persist_campaign_pack_v2", {
     brand_kit: {
       id: pack.brandKit.brandKitId,
       workspace_id: pack.brandKit.workspaceId,
@@ -124,6 +124,7 @@ export async function persistAdStudioCampaignPack(
       template_snapshot_json: pack.campaign.templateSnapshot ?? {},
       platforms_json: pack.campaign.platforms,
       creative_formats_json: pack.campaign.creativeFormats,
+      generation_quality: pack.campaign.generationQuality,
       status: pack.campaign.status,
       created_by: userId,
       updated_at: now,
@@ -384,6 +385,7 @@ export function rowToCampaignPack(input: {
     templateSnapshot: isRecord(input.campaign.template_snapshot_json) ? input.campaign.template_snapshot_json : null,
     platforms: (input.campaign.platforms_json as AdStudioCampaign["platforms"]) ?? [],
     creativeFormats: (input.campaign.creative_formats_json as AdStudioCampaign["creativeFormats"]) ?? [],
+    generationQuality: input.campaign.generation_quality === "fast" ? "fast" : "high",
     status: (input.campaign.status as AdStudioCampaign["status"]) ?? "ready",
   };
 

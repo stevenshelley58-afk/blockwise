@@ -132,8 +132,8 @@ export default function PrivacyPolicyPage() {
         <li>Vercel (application hosting)</li>
         <li>Supabase (authentication, application database, encrypted storage)</li>
         <li>Trigger.dev (background job execution)</li>
-        <li>Model providers and gateways (large language model inference for ad copy generation)</li>
-        <li>Cloudflare (egress filtering and model gateway)</li>
+        <li>OpenAI and Google (direct model inference for ad copy and image generation)</li>
+        <li>Cloudflare (network security and content delivery)</li>
       </ul>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>

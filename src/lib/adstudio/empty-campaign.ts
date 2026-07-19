@@ -26,6 +26,7 @@ export function createEmptyAdStudioCampaignPack(input: {
       templateSource: null,
       sourceObservedAdId: null,
       templateSnapshot: null,
+      generationQuality: "fast",
       platforms: ["meta"],
       creativeFormats: [],
       status: "draft",

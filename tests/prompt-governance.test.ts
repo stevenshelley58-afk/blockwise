@@ -316,9 +316,9 @@ test("provider run accounting prefers actual cost and exact runtime pricing with
     attempts: [
       {
         attemptIndex: 0,
-        provider: "openrouter",
+        provider: "google",
         providerType: "image_generation",
-        model: "google/gemini-2.5-flash-image",
+        model: "gemini-3.1-flash-image",
         modelProfile: "image_draft",
         modelProfileVersionId: "11111111-1111-4111-8111-111111111111",
         pricingSnapshotId: "11111111-1111-4111-8111-111111111111",

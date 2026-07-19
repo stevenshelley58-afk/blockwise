@@ -27,54 +27,14 @@ type ProviderOptions = {
 };
 
 // Hard cap on completion tokens for copy/QA chat calls. Outputs are small
-// JSON packs; this bounds worst-case spend per call and keeps requests viable
-// on low OpenRouter balances (it reserves credits against the requested max).
+// JSON packs, so this bounds worst-case spend per direct-provider call.
 const MAX_COMPLETION_TOKENS = 4096;
 
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_IMAGE_URL = "https://openrouter.ai/api/v1/images";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
-const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
 // best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
-
-function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
-  const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENROUTER_TEXT_MODEL ?? "openai/gpt-5.5";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "openrouter",
-    providerType: "text_generation",
-    capabilities: {
-      structuredJson: true,
-      longContext: true,
-      toolCalling: true,
-      visionInput: true,
-    },
-    async generate(input) {
-      const apiKey = env.OPENROUTER_API_KEY;
-
-      if (!apiKey) {
-        throw preflightError("OPENROUTER_API_KEY is not configured.");
-      }
-
-      return postChatCompletion({
-        url: OPENROUTER_CHAT_URL,
-        apiKey,
-        model,
-        input,
-        fetchImpl,
-        headers: {
-          "HTTP-Referer": env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-          "X-Title": "Blockwise",
-        },
-      });
-    },
-  };
-}
 
 function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
@@ -97,75 +57,14 @@ function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAd
       }
 
       return postChatCompletion({
-        url: env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_CHAT_URL,
+        url: OPENAI_CHAT_URL,
         apiKey,
         model,
         input,
         fetchImpl,
-        headers: gatewayHeaders(env),
       });
     },
   };
-}
-
-function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
-  const env = options.env ?? process.env;
-  const deployment =
-    options.model ??
-    env.AZURE_OPENAI_DEPLOYMENT ??
-    env.AZURE_OPENAI_CHAT_DEPLOYMENT ??
-    env.AZURE_OPENAI_TEXT_DEPLOYMENT ??
-    env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT ??
-    "";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "azure",
-    providerType: "text_generation",
-    capabilities: {
-      structuredJson: true,
-      longContext: true,
-      visionInput: true,
-    },
-    async generate(input) {
-      const apiKey = env.AZURE_OPENAI_API_KEY;
-
-      if (!apiKey) {
-        throw preflightError("AZURE_OPENAI_API_KEY is not configured.");
-      }
-      if (!deployment && !env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) {
-        throw preflightError("AZURE_OPENAI_DEPLOYMENT is not configured.");
-      }
-
-      return postChatCompletion({
-        url: resolveAzureOpenAiChatUrl(env, deployment),
-        apiKey,
-        model: deployment || "azure-openai",
-        input,
-        fetchImpl,
-        headers: {
-          "api-key": apiKey,
-        },
-        authHeader: false,
-        includeModelInBody: false,
-      });
-    },
-  };
-}
-
-export function resolveAzureOpenAiChatUrl(env: EnvLike, deployment: string): string {
-  if (env.AZURE_OPENAI_CHAT_COMPLETIONS_URL) return env.AZURE_OPENAI_CHAT_COMPLETIONS_URL;
-
-  const endpoint = env.AZURE_OPENAI_ENDPOINT?.replace(/\/+$/u, "");
-  if (!endpoint) {
-    throw new Error("AZURE_OPENAI_ENDPOINT is not configured.");
-  }
-  if (!deployment) {
-    throw new Error("AZURE_OPENAI_DEPLOYMENT is not configured.");
-  }
-
-  const apiVersion = env.AZURE_OPENAI_API_VERSION ?? AZURE_OPENAI_DEFAULT_API_VERSION;
-  return `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
 }
 
 function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
@@ -198,13 +97,12 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
       // text-to-image /images/generations path (JSON), unchanged.
       const response = input.requiresReferenceAssets
         ? await postOpenAiImageEdit({ env, apiKey, model, quality, input, fetchImpl })
-        : await fetchProviderRequest(fetchImpl, env.CLOUDFLARE_AI_GATEWAY_URL ?? OPENAI_IMAGE_URL, {
+        : await fetchProviderRequest(fetchImpl, OPENAI_IMAGE_URL, {
             method: "POST",
             signal: input.signal,
             headers: {
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
-              ...gatewayHeaders(env),
             },
             body: JSON.stringify({
               model,
@@ -268,20 +166,9 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
   };
 }
 
-/** Resolves the /images/edits endpoint, honouring a Cloudflare AI Gateway URL. */
-export function resolveOpenAiImageEditsUrl(env: EnvLike): string {
-  const gateway = env.CLOUDFLARE_AI_GATEWAY_URL;
-  if (!gateway) return OPENAI_IMAGE_EDITS_URL;
-  // A real gateway mirrors the OpenAI path (…/openai/images/generations); swap the
-  // trailing endpoint to edits. If the URL doesn't expose that segment, use it
-  // verbatim — same best-effort posture as the generations path.
-  if (gateway.includes("/images/generations")) {
-    return gateway.replace("/images/generations", "/images/edits");
-  }
-  if (/\/generations\/?$/.test(gateway)) {
-    return gateway.replace(/\/generations(\/?)$/, "/edits$1");
-  }
-  return gateway;
+/** Resolves the direct OpenAI image-edit endpoint. */
+export function resolveOpenAiImageEditsUrl(_env: EnvLike = {}): string {
+  return OPENAI_IMAGE_EDITS_URL;
 }
 
 async function postOpenAiImageEdit(input: {
@@ -333,7 +220,6 @@ async function postOpenAiImageEdit(input: {
       signal: input.input.signal,
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
-        ...gatewayHeaders(input.env),
       },
       body: form,
     });
@@ -383,124 +269,17 @@ function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProvider
   };
 }
 
-function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
-  const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "openrouter",
-    providerType: "image_generation",
-    capabilities: {
-      textToImage: true,
-      imageToImage: true,
-      multiReference: true,
-    },
-    async generate(input) {
-      const apiKey = env.OPENROUTER_API_KEY;
-
-      if (!apiKey) {
-        throw preflightError("OPENROUTER_API_KEY is not configured.");
-      }
-      if (input.requiresReferenceAssets && input.referenceAssets.length === 0) {
-        throw preflightError("Reference-image repair requires at least one image.");
-      }
-
-      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_IMAGE_URL, {
-        method: "POST",
-        signal: input.signal,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-          "X-Title": "Blockwise",
-        },
-        body: JSON.stringify({
-          model,
-          prompt: buildImagePrompt(input, { includeReferenceList: false }),
-          n: 1,
-          aspect_ratio: input.aspectRatio,
-          quality: options.quality ?? DEFAULT_OPENAI_IMAGE_QUALITY,
-          output_format: "png",
-          seed: input.seed,
-          input_references: input.referenceAssets.map((url) => ({
-            type: "image_url",
-            image_url: { url },
-          })),
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        id?: string;
-        data?: Array<{ b64_json?: string; media_type?: string }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
-        error?: { message?: string };
-      };
-      const providerRequestId = payload.id ?? response.headers.get("x-request-id") ?? undefined;
-
-      if (!response.ok) {
-        throw submittedHttpError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, response.status, {
-          providerRequestId,
-          usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
-        });
-      }
-
-      const image = payload.data?.[0];
-      if (!image?.b64_json) {
-        throw submittedError("OpenRouter returned no image.", {
-          retryable: false,
-          providerRequestId,
-          usage: usageFromProviderPayload(payload.usage, {
-            imageUnits: 0,
-            providerRequestId,
-            complete: true,
-          }),
-        });
-      }
-      const assetUrl = `data:${image.media_type ?? "image/png"};base64,${image.b64_json}`;
-
-      return {
-        assetUrl,
-        seed: input.seed ?? 0,
-        model,
-        usage: usageFromProviderPayload(payload.usage, {
-          imageUnits: 1,
-          providerRequestId,
-          complete: true,
-        }),
-        providerMetadata: {
-          provider: "openrouter",
-          referenceAssets: input.referenceAssets.length,
-          inputTokens: payload.usage?.prompt_tokens ?? 0,
-          outputTokens: payload.usage?.completion_tokens ?? 0,
-        },
-      };
-    },
-  };
-}
-
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
-  let provider: TextProviderAdapter;
-  if (candidate.provider === "openrouter") {
-    provider = createOpenRouterTextProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "azure") {
-    provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "google") {
-    provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
-  } else {
-    provider = createOpenAiTextProvider({ ...options, model: candidate.model });
-  }
+  const provider = candidate.provider === "google"
+    ? createGoogleAiTextProvider({ ...options, model: candidate.model })
+    : createOpenAiTextProvider({ ...options, model: candidate.model });
   return withAccounting(provider, candidate);
 }
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
-  let provider: ImageProviderAdapter;
-  if (candidate.provider === "openrouter") {
-    provider = createOpenRouterImageProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "google") {
-    provider = createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
-  } else {
-    provider = createOpenAiImageProvider({ ...options, model: candidate.model });
-  }
+  const provider = candidate.provider === "google"
+    ? createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model })
+    : createOpenAiImageProvider({ ...options, model: candidate.model });
   return withAccounting(provider, candidate);
 }
 
@@ -511,28 +290,23 @@ async function postChatCompletion(input: {
   input: TextProviderRequest;
   fetchImpl: typeof fetch;
   headers?: Record<string, string>;
-  authHeader?: boolean;
-  includeModelInBody?: boolean;
 }): Promise<TextProviderResponse> {
-  const includeModelInBody = input.includeModelInBody ?? true;
   const response = await fetchProviderRequest(input.fetchImpl, input.url, {
     method: "POST",
     headers: {
-      ...(input.authHeader === false ? {} : { Authorization: `Bearer ${input.apiKey}` }),
+      Authorization: `Bearer ${input.apiKey}`,
       "Content-Type": "application/json",
       ...input.headers,
     },
     body: JSON.stringify({
-      ...(includeModelInBody ? { model: input.model } : {}),
+      model: input.model,
       messages: buildChatMessages(input.input),
       response_format: { type: "json_object" },
       // Reasoning models (gpt-5*, o*) accept only the default temperature and
       // reject the request outright when any other value is sent.
       ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
-      // Without an explicit cap, OpenRouter reserves credits for the model's
-      // absolute max completion (65k+ tokens) — requests fail on low balances
-      // and a bad loop can drain the account. Copy/QA outputs are small JSON;
-      // 4096 is generous. Reasoning models only accept max_completion_tokens.
+      // Copy/QA outputs are small JSON; 4096 is generous. Reasoning models
+      // only accept max_completion_tokens.
       ...(supportsCustomTemperature(input.model)
         ? { max_tokens: MAX_COMPLETION_TOKENS }
         : { max_completion_tokens: MAX_COMPLETION_TOKENS }),
@@ -723,12 +497,6 @@ function parseJson(rawText: string): unknown {
     }
     throw new Error("Provider returned non-JSON content.");
   }
-}
-
-function gatewayHeaders(env: EnvLike): Record<string, string> {
-  return env.CLOUDFLARE_AI_GATEWAY_TOKEN
-    ? { "cf-aig-authorization": `Bearer ${env.CLOUDFLARE_AI_GATEWAY_TOKEN}` }
-    : {};
 }
 
 function buildImagePrompt(

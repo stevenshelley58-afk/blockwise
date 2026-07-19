@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
-import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import {
   refundReservedTrialCredit,
   reserveAdStudioGenerationCredit,
@@ -11,6 +11,7 @@ import {
   runTemplateCampaignGeneration,
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
+import { adStudioGenerationFailureMessage } from "@/lib/adstudio/generation-mode";
 import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -306,8 +307,16 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
+    console.error("AdStudio campaign generation failed", {
+      workspaceId: context.access.workspaceId,
+      generationQuality: body.firstAd?.generationQuality ?? "fast",
+      error,
+    });
     await refundReservedTrialCredit(trialReservation);
-    return errorResponse(error, 400);
+    return NextResponse.json(
+      { error: adStudioGenerationFailureMessage(body.firstAd?.generationQuality ?? "fast") },
+      { status: 502 },
+    );
   } finally {
     inFlightGenerations.delete(dedupKey);
     await releaseGenerationLock(context.supabase, dedupKey);

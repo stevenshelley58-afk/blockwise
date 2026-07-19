@@ -10,13 +10,7 @@ export type AdClassifierResult = {
   classification: AdClassifierClassification;
   model: string;
   evidenceSource: string;
-  usedFallback: boolean;
-  fallbackReason: string | null;
 };
-export function classifyCreativeDeterministically(
-  creative: Record<string, unknown>,
-  options?: Record<string, unknown>,
-): AdClassifierClassification;
 export function classifyCreativeWithModels(
   creative: Record<string, unknown>,
   capturedAssets?: Array<Record<string, unknown>>,

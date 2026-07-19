@@ -18,9 +18,8 @@ Do not print real secret values in logs or docs.
 | `STEEL_IMAGE` | Compose image | Must be a pinned Steel browser tag or digest. |
 | `UPTIME_KUMA_IMAGE` | Compose image | Pinned uptime monitor image. |
 | `HERMES_API_SERVER_KEY` | Hermes gateway | Required by compose. Can mirror `HERMES_WEBHOOK_SECRET` when rotating from older reset scripts. |
-| `HERMES_DEFAULT_MODEL` | Hermes/OpenRouter | Required model slug unless task-specific model JSON covers every task. |
-| `HERMES_ESCALATION_MODEL` | Hermes/OpenRouter | Escalation model slug. |
-| `OPENROUTER_API_KEY` | OpenRouter client | Required for LLM-backed page resolution, classification, audits, and investigations. |
+| `HERMES_DEFAULT_MODEL` | Hermes/OpenAI | Direct OpenAI model slug; defaults to `gpt-5.5`. |
+| `OPENAI_API_KEY` | OpenAI client | Required for LLM-backed page resolution, classification, audits, and investigations. |
 | `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
 | `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
@@ -36,12 +35,7 @@ Do not print real secret values in logs or docs.
 | `HERMES_GATEWAY_HOST_PORT` | `8642` | Bound to localhost on the VPS. |
 | `HERMES_DASHBOARD_HOST_PORT` | `9119` | Bound to localhost on the VPS. |
 | `HERMES_DASHBOARD_INSECURE` | `1` | Dashboard is not public; keep behind the VPS boundary. |
-| `HERMES_PROVIDER` | `openrouter` | Only `openrouter` is accepted by the TypeScript config. |
-| `HERMES_OPENROUTER_MODEL` | none | Legacy fallback model variable. |
-| `HERMES_OPENROUTER_MODELS_JSON` | `{}` | Optional per-task model map for `page_resolution`, `ad_classification`, `coverage_audit`, and `defect_investigation`. |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Optional override for the OpenRouter API base. |
-| `OPENROUTER_SITE_URL` | none | Optional OpenRouter attribution header. |
-| `OPENROUTER_APP_NAME` | none | Optional OpenRouter app title header. |
+| `HERMES_MODELS_JSON` | `{}` | Optional direct OpenAI per-task model map for `page_resolution`, `ad_classification`, `coverage_audit`, and `defect_investigation`. |
 | `MEM0_API_KEY` | none | Passed through to Hermes when configured. |
 | `MEM0_PROJECT_ID` | `blockwise-research` | Passed through to Hermes. |
 | `RESEND_API_KEY` | none | Optional notification email provider key. |

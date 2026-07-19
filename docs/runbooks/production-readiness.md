@@ -54,7 +54,7 @@ as a release gate unless a later task adds real package scripts.
 ## P0 - Must Finish Before Launch
 
 - [ ] Vercel Preview and Production env vars are complete and non-placeholder:
-  `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, Supabase URL/anon/service-role keys,
+  `OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`, Supabase URL/anon/service-role keys,
   `TOKEN_ENCRYPTION_KEY`, Trigger keys, `META_APP_ID`, `META_APP_SECRET`,
   `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `CRON_SECRET`,
   and notification/provider keys needed for the enabled flows.

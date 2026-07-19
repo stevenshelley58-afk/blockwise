@@ -5,121 +5,46 @@ import {
   buildModelControlViewData,
   buildModelProfileVersionInsert,
   getCuratedModelOptionsForProfile,
-  getOpenRouterReadiness,
+  getDirectProviderReadiness,
   validateModelProfileSelection,
 } from "../src/lib/ai/model-control-config.ts";
 
-test("validateModelProfileSelection rejects unknown profile keys", () => {
-  const result = validateModelProfileSelection("unknown_profile", {
-    provider: "openrouter",
-    model: "google/gemini-2.0-flash-001",
-  });
-
-  assert.deepEqual(result, {
-    ok: false,
-    status: 404,
-    error: "Unknown model profile: unknown_profile",
-  });
+test("Model Control accepts only curated direct OpenAI or Gemini selections", () => {
+  assert.equal(validateModelProfileSelection("structured_json", { provider: "openai", model: "gpt-5.5" }).ok, true);
+  assert.equal(validateModelProfileSelection("structured_json", { provider: "google", model: "gemini-2.5-flash-lite" }).ok, true);
+  const unsupported = validateModelProfileSelection("structured_json", { provider: "retired", model: "anything" });
+  assert.equal(unsupported.ok, false);
+  if (!unsupported.ok) assert.match(unsupported.error, /Only direct OpenAI or Gemini/);
 });
 
-test("validateModelProfileSelection rejects uncurated model ids", () => {
-  const result = validateModelProfileSelection("cheap_draft_text", {
-    provider: "openrouter",
-    model: "not-approved/model",
-  });
-
-  assert.equal(result.ok, false);
-  assert.equal(result.status, 400);
-  assert.match(result.error, /not approved for Cheap draft text/);
-});
-
-test("curated structured-output profiles expose OpenRouter slugs and capabilities", () => {
-  const options = getCuratedModelOptionsForProfile("structured_json");
-  const gemini = options.find((option) => option.model === "google/gemini-2.0-flash-001");
-
-  assert.ok(gemini);
-  assert.equal(gemini.provider, "openrouter");
-  assert.equal(gemini.supportsStructuredOutput, true);
-  assert.equal(gemini.supportsVisionInput, true);
-  assert.equal(gemini.supportsImageOutput, false);
-});
-
-test("curated high-quality strategy options lead with the premium copy model", () => {
-  const options = getCuratedModelOptionsForProfile("high_quality_strategy");
-
-  assert.equal(options[0].provider, "openrouter");
-  assert.equal(options[0].model, "openai/gpt-5.5");
-  assert.equal(options[0].supportsStructuredOutput, true);
-});
-
-test("curated final image options include GPT Image 2 and Nano Banana", () => {
-  const options = getCuratedModelOptionsForProfile("image_final");
-
-  assert.equal(options[0].model, "openai/gpt-5.4-image-2");
-  assert.equal(options[0].supportsImageOutput, true);
-  assert.equal(options[1].model, "google/gemini-3.1-flash-image-preview");
-  assert.equal(options[1].supportsImageOutput, true);
-});
-
-test("curated fast image options lead with the benchmarked Gemini edit model", () => {
-  const options = getCuratedModelOptionsForProfile("image_draft");
-
-  assert.equal(options[0].provider, "google");
-  assert.equal(options[0].model, "gemini-3.1-flash-image");
-  assert.equal(options[0].supportsVisionInput, true);
-  assert.equal(options[0].supportsImageOutput, true);
-});
-
-test("buildModelProfileVersionInsert maps a selected option to Supabase columns", () => {
-  const option = getCuratedModelOptionsForProfile("cheap_draft_text").find(
-    (candidate) => candidate.model === "google/gemini-2.0-flash-001",
-  );
-
-  assert.ok(option);
-
-  const insert = buildModelProfileVersionInsert("profile_id_123", option);
-
-  assert.deepEqual(insert, {
-    model_profile_id: "profile_id_123",
-    provider: "openrouter",
-    model: "google/gemini-2.0-flash-001",
-    input_usd_per_million_tokens: 0.1,
-    output_usd_per_million_tokens: 0.4,
-    image_usd_per_unit: 0,
-    supports_structured_output: true,
-    max_context_tokens: 1_000_000,
-  });
-});
-
-test("getOpenRouterReadiness reports missing API key without leaking configured values", () => {
-  assert.deepEqual(getOpenRouterReadiness({ NEXT_PUBLIC_APP_URL: "http://localhost:3000" }), {
-    configured: false,
-    missing: ["OPENROUTER_API_KEY"],
-    appUrl: "http://localhost:3000",
-  });
-
-  const configured = getOpenRouterReadiness({
-    OPENROUTER_API_KEY: "sk-or-v1-secret",
-    NEXT_PUBLIC_APP_URL: "https://blockwise.example",
-  });
-
-  assert.deepEqual(configured, {
-    configured: true,
-    missing: [],
-    appUrl: "https://blockwise.example",
-  });
-  assert.equal(JSON.stringify(configured).includes("sk-or-v1-secret"), false);
-});
-
-test("buildModelControlViewData keeps every app-area section visible", () => {
-  const data = buildModelControlViewData();
-
+test("curated image options are the two pinned direct image models", () => {
   assert.deepEqual(
-    data.sections.map((section) => section.label),
-    ["Research", "Campaigns", "Creative", "Compliance", "Agent Workforce", "Reporting"],
+    getCuratedModelOptionsForProfile("image_final").map(({ provider, model }) => [provider, model]),
+    [["openai", "gpt-image-2"], ["google", "gemini-3.1-flash-image"]],
   );
-  assert.ok(data.sections.every((section) => section.profiles.length > 0));
+});
 
-  const creative = data.sections.find((section) => section.label === "Creative");
-  assert.deepEqual(creative?.profiles.map((profile) => profile.key), ["image_draft", "image_final"]);
+test("version inserts preserve direct provider metadata", () => {
+  const selected = getCuratedModelOptionsForProfile("cheap_draft_text")[0];
+  assert.deepEqual(buildModelProfileVersionInsert("profile", selected), {
+    model_profile_id: "profile", provider: "openai", model: "gpt-4.1-mini",
+    input_usd_per_million_tokens: 0.4, output_usd_per_million_tokens: 1.6,
+    image_usd_per_unit: 0, supports_structured_output: true, max_context_tokens: 128_000,
+  });
+});
+
+test("readiness reports both direct credentials without exposing values", () => {
+  const readiness = getDirectProviderReadiness({ OPENAI_API_KEY: "secret" });
+  assert.deepEqual(readiness.openai, { configured: true, missing: [] });
+  assert.deepEqual(readiness.google, { configured: false, missing: ["GOOGLE_AI_API_KEY"] });
+  assert.equal(JSON.stringify(readiness).includes("secret"), false);
+});
+
+test("Model Control shows pinned Fast and High Quality modes without fallback columns", () => {
+  const data = buildModelControlViewData();
+  assert.deepEqual(data.generationModes, [
+    { key: "fast", label: "Fast", copy: "google / gemini-2.5-flash-lite", image: "google / gemini-3.1-flash-image", qa: "google / gemini-2.5-flash-lite" },
+    { key: "high", label: "High quality", copy: "openai / gpt-5.5", image: "openai / gpt-image-2", qa: "openai / gpt-5.5" },
+  ]);
+  assert.deepEqual(data.sections.map((section) => section.label), ["Research", "Campaigns", "Creative", "Compliance"]);
 });

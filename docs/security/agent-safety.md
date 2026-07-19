@@ -5,7 +5,7 @@ Blockwise agents are allowed to draft, classify, summarize, recommend, and queue
 ## Runtime Boundary
 
 - Blockwise-native workers are the default runtime.
-- Hermes-style agents, OpenAI Agents, OpenRouter-routed agents, and other runtimes are optional adapters.
+- Hermes-style agents and OpenAI Agents are optional adapters.
 - External runtimes receive scoped task payloads and call Blockwise APIs; they do not receive provider tokens, service-role keys, or unnecessary lead PII.
 - Every run must be built from an `AgentRuntimePolicy` containing `workspaceId`, `agentRunId`, `actorProfileId`, `agentKey`, allowed actions, allowed data classes, allowed destinations, allowed outbound domains, row limits, and explicit approval ids.
 - `canCrossWorkspace` defaults to `false` and must stay false unless a specific cross-workspace approval record exists.
@@ -32,9 +32,9 @@ No agent should receive `lead_pii` or `provider_token` by default.
 ## Model And Egress Rules
 
 - Use `resolveModelProfileForData` for model selection whenever data classes are known.
-- Operator-approved OpenRouter profiles can be used for model prompts, including sensitive client data, after the runtime policy permits the data classes and outbound domain.
-- Production AI calls should go through Cloudflare AI Gateway with authenticated access, DLP checks, prompt/response logging disabled or tightly retained for sensitive runs, and per-workspace metadata.
-- Outbound agent traffic must be allowlisted. Default approved model domains are `api.openai.com`, `gateway.ai.cloudflare.com`, and `openrouter.ai`; provider APIs should be added only to server-owned sync/publish workers.
+- Operator-approved direct OpenAI or Gemini profiles can be used after the runtime policy permits the data classes and outbound domain.
+- Production AI calls use the direct provider adapters with DLP checks, prompt/response logging disabled or tightly retained for sensitive runs, and per-workspace metadata.
+- Outbound agent traffic must be allowlisted. Default approved model domains are `api.openai.com` and `generativelanguage.googleapis.com`; provider APIs should be added only to server-owned sync/publish workers.
 
 ## Detection
 

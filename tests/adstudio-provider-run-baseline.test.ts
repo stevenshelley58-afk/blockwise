@@ -431,13 +431,13 @@ test("workspace IDs are enumerated fully in memory before provider-run passes", 
   assert.equal(supabase.calls.some((call) => call.filters.some((filter) => filter.column === "workspace_id")), false);
 });
 
-test("profile resolution uses active persisted primaries and committed runtime defaults and fallbacks", () => {
+test("profile resolution uses active persisted direct primaries and committed runtime defaults", () => {
   const rawVersionId = "22222222-2222-4222-8222-222222222222";
   const evidence = baseline.resolveModelProfileEvidence([
     {
       id: rawVersionId,
-      provider: "openrouter",
-      model: "google/gemini-2.5-flash-image",
+      provider: "google",
+      model: "gemini-3.1-flash-image",
       input_usd_per_million_tokens: "0.3",
       output_usd_per_million_tokens: "2.5",
       image_usd_per_unit: "0.039",
@@ -457,8 +457,8 @@ test("profile resolution uses active persisted primaries and committed runtime d
   ]);
   const draft = evidence.find((profile: { profileKey: string }) => profile.profileKey === "image_draft");
   assert.equal(draft.source, "persisted");
-  assert.equal(draft.primary.provider, "openrouter");
-  assert.equal(draft.primary.model, "google/gemini-2.5-flash-image");
+  assert.equal(draft.primary.provider, "google");
+  assert.equal(draft.primary.model, "gemini-3.1-flash-image");
   assert.match(draft.activeVersionIdSha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(draft.fallbacks, []);
 

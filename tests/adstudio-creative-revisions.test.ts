@@ -178,7 +178,7 @@ test("targeted edit appends through the revision CAS and returns a clean stale c
   assert.match(route, /createHash\("sha256"\)/);
   assert.match(route, /requestHash/);
   assert.ok(
-    route.indexOf("executeAdStudioCreativeRevisionMutation") < route.indexOf("generateCloneWithCascade({"),
+    route.indexOf("executeAdStudioCreativeRevisionMutation") < route.indexOf("generateClone({"),
     "the route claims before paid provider dispatch",
   );
   assert.match(route, /reason === "stale_revision"/);

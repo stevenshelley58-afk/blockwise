@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Save } from "lucide-react";
+import { CircleDollarSign, Play, Save } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StatusPill } from "@/components/status-pill";
@@ -34,7 +34,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   const [pendingByProfile, setPendingByProfile] = useState<Record<string, boolean>>({});
   const [statusByProfile, setStatusByProfile] = useState<Record<string, RowStatus>>({});
 
-  const readiness = initialData.readiness.openrouter;
+  const readiness = initialData.readiness;
   const profileCount = useMemo(
     () => new Set(sections.flatMap((section) => section.profiles.map((profile) => profile.key))).size,
     [sections],
@@ -43,12 +43,12 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   async function saveProfile(profile: ModelControlProfileRow) {
     const option = getSelectedOption(profile, selectedByProfile[profile.key]);
 
-    if (!option || option.provider !== "openrouter") {
+    if (!option) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
           tone: "amber",
-          message: "Choose an OpenRouter model before saving.",
+          message: "Choose a direct model before saving.",
         },
       }));
       return;
@@ -93,12 +93,12 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   async function testProfile(profile: ModelControlProfileRow) {
     const option = getSelectedOption(profile, selectedByProfile[profile.key]);
 
-    if (!option || option.provider !== "openrouter") {
+    if (!option) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
           tone: "amber",
-          message: "Choose an OpenRouter model before testing.",
+          message: "Choose a direct model before testing.",
         },
       }));
       return;
@@ -115,7 +115,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
       const payload = (await response.json()) as { content?: string; error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "OpenRouter test failed.");
+        throw new Error(payload.error ?? "Direct model test failed.");
       }
 
       setStatusByProfile((current) => ({
@@ -130,7 +130,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
         ...current,
         [profile.key]: {
           tone: "rose",
-          message: error instanceof Error ? error.message : "OpenRouter test failed.",
+          message: error instanceof Error ? error.message : "Direct model test failed.",
         },
       }));
     } finally {
@@ -140,18 +140,9 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
 
   return (
     <div className="stack">
-      <section className="panel model-readiness">
-        <div>
-          <h2>OpenRouter</h2>
-          <p className="item-meta">
-            {readiness.configured
-              ? "OpenRouter API key is configured for server-side model tests and routing."
-              : `Missing ${readiness.missing.join(", ")}. Dropdowns still render, but live tests and saved OpenRouter runs need the key.`}
-          </p>
-        </div>
-        <StatusPill tone={readiness.configured ? "green" : "amber"}>
-          {readiness.configured ? "Ready" : "Key missing"}
-        </StatusPill>
+      <section className="grid cols-2" aria-label="Direct provider readiness">
+        <ProviderReadinessCard name="OpenAI" readiness={readiness.openai} />
+        <ProviderReadinessCard name="Gemini" readiness={readiness.google} />
       </section>
 
       <section className="grid cols-3">
@@ -160,13 +151,35 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
           <p className="item-meta">Runtime profiles with selectable primary models.</p>
         </article>
         <article className="item-card">
-          <h3>OpenRouter</h3>
-          <p className="item-meta">Curated model slugs are stored without legacy prefixes.</p>
+          <h3>Direct only</h3>
+          <p className="item-meta">Every active model calls OpenAI or Gemini without provider failover.</p>
         </article>
         <article className="item-card">
-          <h3>Fallbacks</h3>
-          <p className="item-meta">Fallback chains are shown for review and left unchanged.</p>
+          <h3>Works or fails</h3>
+          <p className="item-meta">Bounded retries stay on the selected provider and model.</p>
         </article>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>AdStudio generation modes</h2>
+            <p className="item-meta">Customer modes are pinned in product code and cannot inherit an operator profile fallback.</p>
+          </div>
+        </div>
+        <div className="grid cols-2">
+          {initialData.generationModes.map((mode) => (
+            <article className="item-card" key={mode.key}>
+              <h3>{mode.label}</h3>
+              <p className="item-meta">Copy: {mode.copy}</p>
+              <p className="item-meta">Image: {mode.image}</p>
+              <p className="item-meta">QA: {mode.qa}</p>
+            </article>
+          ))}
+        </div>
+        <p className="item-meta" role="note">
+          <CircleDollarSign aria-hidden size={16} /> Image profile tests make a live, billable generation request.
+        </p>
       </section>
 
       {sections.map((section) => (
@@ -184,7 +197,6 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                   <th>Profile</th>
                   <th>Primary model</th>
                   <th>Cost and context</th>
-                  <th>Fallbacks</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -235,14 +247,10 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                           <span>{formatTokens(option?.maxContextTokens ?? profile.active.maxContextTokens)} ctx</span>
                         </div>
                       </td>
-                      <td data-label="Fallbacks">
-                        <span>{profile.fallbacks.length}</span>
-                        <p className="item-meta">{profile.fallbacks.map((fallback) => fallback.model).join(", ") || "None"}</p>
-                      </td>
                       <td data-label="Status">
                         <StatusPill tone={profile.enabled ? "green" : "rose"}>{profile.enabled ? "Enabled" : "Disabled"}</StatusPill>
                         {rowStatus ? (
-                          <p className={`row-status ${rowStatus.tone}`}>{rowStatus.message}</p>
+                          <p className={`row-status ${rowStatus.tone}`} aria-live="polite">{rowStatus.message}</p>
                         ) : null}
                       </td>
                       <td data-label="Actions">
@@ -252,7 +260,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                             type="button"
                             aria-label={`Save ${profile.label} model`}
                             title="Save model"
-                            disabled={!changed || pending || option?.provider !== "openrouter"}
+                            disabled={!changed || pending || !option}
                             onClick={() => saveProfile(profile)}
                           >
                             <Save aria-hidden size={18} />
@@ -262,7 +270,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                             type="button"
                             aria-label={`Test ${profile.label} model`}
                             title="Test model"
-                            disabled={pending || option?.provider !== "openrouter"}
+                            disabled={pending || !option}
                             onClick={() => testProfile(profile)}
                           >
                             <Play aria-hidden size={18} />
@@ -278,6 +286,30 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
         </section>
       ))}
     </div>
+  );
+}
+
+function ProviderReadinessCard({
+  name,
+  readiness,
+}: {
+  name: string;
+  readiness: ModelControlViewData["readiness"]["openai"];
+}) {
+  return (
+    <article className="panel model-readiness">
+      <div>
+        <h2>{name}</h2>
+        <p className="item-meta">
+          {readiness.configured
+            ? "Direct API credentials are configured for production adapters and live tests."
+            : `Missing ${readiness.missing.join(", ")}. Saved models remain visible, but calls will fail until the key is configured.`}
+        </p>
+      </div>
+      <StatusPill tone={readiness.configured ? "green" : "amber"}>
+        {readiness.configured ? "Ready" : "Key missing"}
+      </StatusPill>
+    </article>
   );
 }
 

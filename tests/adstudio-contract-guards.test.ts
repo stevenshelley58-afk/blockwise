@@ -30,7 +30,7 @@ test("campaign creation has one template clone pipeline", () => {
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{|generate-options|template-photo-prep/);
   assert.match(generation, /fast:\s*"image_draft"/);
   assert.match(generation, /high:\s*"image_final"/);
-  assert.match(generation, /resolveCloneProviders\(quality/);
+  assert.match(generation, /resolveCloneProvider\(quality/);
   assert.doesNotMatch(generation, /CloneTier|tier:/);
 
   const client = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");

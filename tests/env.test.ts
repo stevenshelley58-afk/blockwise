@@ -15,8 +15,9 @@ import {
   parseEnvFile,
 } from "../src/lib/config/env.ts";
 
-test("required environment keys include OpenRouter for live model routing", () => {
-  assert.equal(REQUIRED_ENV_KEYS.includes("OPENROUTER_API_KEY"), true);
+test("required environment keys include both direct AI credentials", () => {
+  assert.equal(REQUIRED_ENV_KEYS.includes("OPENAI_API_KEY"), true);
+  assert.equal(REQUIRED_ENV_KEYS.includes("GOOGLE_AI_API_KEY"), true);
   assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET"), true);
 });
 
@@ -39,12 +40,8 @@ test("Google Ads keys are tracked as provider-scoped, not core required, so a Me
   ]);
 });
 
-test("recommended security environment keys cover Turnstile and Cloudflare gateway", () => {
-  assert.deepEqual(RECOMMENDED_SECURITY_ENV_KEYS, [
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
-    "CLOUDFLARE_AI_GATEWAY_URL",
-    "CLOUDFLARE_AI_GATEWAY_TOKEN",
-  ]);
+test("recommended security environment keys cover Turnstile", () => {
+  assert.deepEqual(RECOMMENDED_SECURITY_ENV_KEYS, ["NEXT_PUBLIC_TURNSTILE_SITE_KEY"]);
 });
 
 test("deployment readiness accepts secret-first or legacy Supabase server credentials", () => {
@@ -76,14 +73,12 @@ test("getMissingRecommendedSecurityEnvKeys reports non-blocking production harde
     getMissingRecommendedSecurityEnvKeys({
       NODE_ENV: "test",
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAABtest",
-      CLOUDFLARE_AI_GATEWAY_URL: "https://gateway.ai.cloudflare.com/v1/account/gateway",
-      CLOUDFLARE_AI_GATEWAY_TOKEN: "token",
     } as NodeJS.ProcessEnv),
     [],
   );
 });
 
-test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements without Cloudflare gateway hard-fail", () => {
+test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements", () => {
   const validBoot = Object.fromEntries(REQUIRED_ENV_KEYS.map((key) => [key, `${key.toLowerCase()}_value`])) as NodeJS.ProcessEnv;
   const readiness = getDeploymentReadiness({
     ...validBoot,
@@ -96,7 +91,6 @@ test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements w
   });
 
   assert.equal(readiness.firstTester.ok, true);
-  assert.equal(readiness.firstTester.invalid.includes("CLOUDFLARE_AI_GATEWAY_URL"), false);
   assert.deepEqual(
     getInvalidFirstTesterEnvKeys({
       ...validBoot,
@@ -115,8 +109,8 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
   const example = readFileSync(".env.example", "utf8");
 
   for (const key of [
-    "CLOUDFLARE_AI_GATEWAY_URL",
-    "CLOUDFLARE_AI_GATEWAY_TOKEN",
+    "OPENAI_API_KEY",
+    "GOOGLE_AI_API_KEY",
     "OPERATOR_EMAILS",
     "BLOCKWISE_DEV_PASSWORD",
     "GOOGLE_ADS_ENABLED",
@@ -140,10 +134,10 @@ test("getInvalidEnvKeys treats placeholder production secrets as invalid", () =>
     getInvalidEnvKeys({
       ...base,
       OPENAI_API_KEY: "replace_me",
-      OPENROUTER_API_KEY: "",
+      GOOGLE_AI_API_KEY: "",
       META_APP_SECRET: "proj_replace_me",
     }),
-    ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "META_APP_SECRET"],
+    ["OPENAI_API_KEY", "GOOGLE_AI_API_KEY", "META_APP_SECRET"],
   );
 });
 

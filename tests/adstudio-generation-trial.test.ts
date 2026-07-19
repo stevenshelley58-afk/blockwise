@@ -68,7 +68,7 @@ test("campaign-pack persistence is transactional and surfaces errors", () => {
   const source = read(persistence);
 
   // One RPC writes the whole pack; any table failure rolls everything back.
-  assert.match(source, /supabase\.rpc\("adstudio_persist_campaign_pack"/);
+  assert.match(source, /supabase\.rpc\("adstudio_persist_campaign_pack_v2"/);
   assert.match(source, /error: result\.error \? \{ message: result\.error\.message \} : null/);
   // Demo kits still refuse to persist before any write happens.
   assert.match(source, /Demo brand kits cannot be used for saved campaigns\./);

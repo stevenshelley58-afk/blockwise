@@ -14,7 +14,7 @@ Blockwise hosts the Next.js website and request/response route handlers on Verce
 ## Environment Groups
 
 - Public client values: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, and `NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA`.
-- Server-only values: Supabase service role, token encryption key, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, Cloudflare AI Gateway values, Trigger.dev keys, Meta/Google app secrets, Resend key, `OPERATOR_EMAILS`, `BLOCKWISE_DEV_PASSWORD`, `META_MONITOR_BUDGET_AUD`, and `CRON_SECRET`.
+- Server-only values: Supabase service role, token encryption key, `OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`, Trigger.dev keys, Meta/Google app secrets, Resend key, `OPERATOR_EMAILS`, `BLOCKWISE_DEV_PASSWORD`, `META_MONITOR_BUDGET_AUD`, and `CRON_SECRET`.
 - Feature flags: keep `GOOGLE_ADS_ENABLED=false` unless the Google Ads integration is being deliberately enabled.
 - Provider-write control: set `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` for Preview and initial Production smoke testing, then switch to `true` only after approval-gated publish checks pass.
 - Never expose provider access tokens, service-role keys, or lead PII to client components or agent workers.

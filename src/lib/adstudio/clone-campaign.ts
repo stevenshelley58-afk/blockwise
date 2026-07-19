@@ -61,6 +61,7 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     templateSnapshot: templateSnapshot(template),
     platforms: ["meta"],
     creativeFormats: [...CLONE_FORMATS],
+    generationQuality: input.firstAd.generationQuality ?? "fast",
     status: "ready",
   };
 

@@ -30,7 +30,7 @@ export function createGoogleImageProvider(
     accounting,
     capabilities: { textToImage: true, imageToImage: true, multiReference: true },
     async generate(input) {
-      const apiKey = env.GOOGLE_AI_API_KEY ?? env.GEMINI_API_KEY;
+      const apiKey = env.GOOGLE_AI_API_KEY;
       if (!apiKey) {
         throw new ProviderRequestError("GOOGLE_AI_API_KEY is not configured.", {
           requestSubmitted: false,

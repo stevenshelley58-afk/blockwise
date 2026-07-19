@@ -21,7 +21,7 @@ not loaded by the Next.js app at runtime.
 
 | Tool | Purpose |
 | ---- | ------- |
-| `tools/research-runtime` | Deterministic JSON-serialisable queue, worker, supervisor, and env-driven OpenRouter client |
+| `tools/research-runtime` | Deterministic JSON-serialisable queue, worker, supervisor, and direct OpenAI client |
 | `tools/meta-library-capture` | Disabled-by-default, resolved-page-only Meta Ad Library capture scaffold for future Hermes-owned adapters |
 
 ## Runtime Rules
@@ -43,9 +43,8 @@ not loaded by the Next.js app at runtime.
    `source_documents.id`.
 7. Provider failure is not absence. Login walls, blocks, timeouts, bad payloads,
    and failed provider responses mark the run failed or open a defect.
-8. OpenRouter model names are environment-driven only. Set
-   `HERMES_DEFAULT_MODEL`, `HERMES_ESCALATION_MODEL`, or
-   `HERMES_OPENROUTER_MODELS_JSON`; do not pin model names in skill code.
+8. OpenAI model names are environment-driven only. Set
+   `HERMES_DEFAULT_MODEL` or `HERMES_MODELS_JSON`; do not pin model names in skill code.
 
 ## Deployment
 

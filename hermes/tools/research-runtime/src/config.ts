@@ -1,44 +1,39 @@
 import { z } from "zod";
 
-export const openRouterTasks = [
+export const researchModelTasks = [
   "page_resolution",
   "ad_classification",
   "coverage_audit",
   "defect_investigation",
 ] as const;
 
-export type OpenRouterTask = typeof openRouterTasks[number];
+export type ResearchModelTask = typeof researchModelTasks[number];
 
 const booleanFromString = z
   .union([z.boolean(), z.string()])
-  .transform((value) => {
-    if (typeof value === "boolean") return value;
-    const normalised = value.trim().toLowerCase();
-    return normalised === "1" || normalised === "true" || normalised === "yes";
-  });
+  .transform((value) => typeof value === "boolean" || ["1", "true", "yes"].includes(value.trim().toLowerCase()));
 
-const openRouterModelsSchema = z.string().optional().transform((value, context): Partial<Record<OpenRouterTask, string>> => {
-  if (!value || !value.trim()) return {};
+const taskModelsSchema = z.string().optional().transform((value, context): Partial<Record<ResearchModelTask, string>> => {
+  if (!value?.trim()) return {};
   try {
     const parsed = JSON.parse(value) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "must be a JSON object" });
       return z.NEVER;
     }
-    const out: Partial<Record<OpenRouterTask, string>> = {};
-    for (const task of openRouterTasks) {
+    const models: Partial<Record<ResearchModelTask, string>> = {};
+    for (const task of researchModelTasks) {
       const model = (parsed as Record<string, unknown>)[task];
-      if (typeof model === "string" && model.trim()) out[task] = model.trim();
+      if (typeof model === "string" && model.trim()) models[task] = model.trim();
     }
-    return out;
-  } catch (err) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: `invalid JSON: ${(err as Error).message}` });
+    return models;
+  } catch (error) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: `invalid JSON: ${(error as Error).message}` });
     return z.NEVER;
   }
 });
 
 const envSchema = z.object({
-  HERMES_PROVIDER: z.enum(["openrouter"]).default("openrouter"),
   HERMES_RESEARCH_MODE: z.enum(["build", "maintain"]).default("maintain"),
   HERMES_BUILD_CONCURRENCY: z.coerce.number().int().positive().default(4),
   HERMES_MAINTAIN_CONCURRENCY: z.coerce.number().int().positive().default(1),
@@ -54,14 +49,9 @@ const envSchema = z.object({
   HERMES_RESEARCH_AD_CREATIVES_BUCKET: z.string().min(1).default("research-ad-creatives"),
   HERMES_RESEARCH_SCREENSHOTS_BUCKET: z.string().min(1).default("research-screenshots"),
   HERMES_RESEARCH_RAW_EVIDENCE_BUCKET: z.string().min(1).default("research-raw-evidence"),
-  OPENROUTER_API_KEY: z.string().min(1).optional(),
-  OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
-  OPENROUTER_SITE_URL: z.string().url().optional(),
-  OPENROUTER_APP_NAME: z.string().min(1).optional(),
-  HERMES_DEFAULT_MODEL: z.string().min(1).optional(),
-  HERMES_ESCALATION_MODEL: z.string().min(1).optional(),
-  HERMES_OPENROUTER_MODEL: z.string().min(1).optional(),
-  HERMES_OPENROUTER_MODELS_JSON: openRouterModelsSchema.default("{}"),
+  OPENAI_API_KEY: z.string().min(1),
+  HERMES_DEFAULT_MODEL: z.string().min(1).default("gpt-5.5"),
+  HERMES_MODELS_JSON: taskModelsSchema.default("{}"),
 });
 
 export type ResearchRuntimeEnv = z.infer<typeof envSchema>;
@@ -75,16 +65,6 @@ export function loadResearchRuntimeEnv(source: NodeJS.ProcessEnv = process.env):
   return parsed.data;
 }
 
-export function modelForTask(env: ResearchRuntimeEnv, task: OpenRouterTask): string {
-  const model = env.HERMES_OPENROUTER_MODELS_JSON[task] ?? env.HERMES_DEFAULT_MODEL ?? env.HERMES_OPENROUTER_MODEL;
-  if (!model) {
-    throw new Error(
-      `No OpenRouter model configured for ${task}; set HERMES_DEFAULT_MODEL or HERMES_OPENROUTER_MODELS_JSON`,
-    );
-  }
-  return model;
-}
-
-export function modelForEscalation(env: ResearchRuntimeEnv, task: OpenRouterTask): string {
-  return env.HERMES_ESCALATION_MODEL ?? modelForTask(env, task);
+export function modelForTask(env: ResearchRuntimeEnv, task: ResearchModelTask): string {
+  return env.HERMES_MODELS_JSON[task] ?? env.HERMES_DEFAULT_MODEL;
 }

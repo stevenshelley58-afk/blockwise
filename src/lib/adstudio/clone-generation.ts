@@ -1,14 +1,11 @@
-// Shared final-quality clone generation + first-success provider cascade.
+// Shared provider-pinned clone generation.
 // Used for both the initial full-ad clone and later targeted in-place edits.
 
 import { createImageProviderForCandidate } from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
-import {
-  isRetryableProviderFailure,
-  modelCandidateAttempts,
-  resolveRuntimeModelProfile,
-} from "../operator/prompts/model-profile-runtime.ts";
+import type { AdGenerationQuality } from "./generation-mode.ts";
+import { resolveAdStudioGenerationMode } from "./generation-mode.ts";
 import {
   executeAdStudioProviderAttempt,
   ProviderRunPersistenceError,
@@ -16,7 +13,7 @@ import {
   type ProviderRunAttempt,
 } from "../operator/prompts/redact-prompt-run.ts";
 
-export type AdGenerationQuality = "fast" | "high";
+export type { AdGenerationQuality } from "./generation-mode.ts";
 
 const CLONE_MODEL_PROFILE_BY_QUALITY = {
   fast: "image_draft",
@@ -28,10 +25,9 @@ export function cloneModelProfileForQuality(quality: AdGenerationQuality): Clone
   return CLONE_MODEL_PROFILE_BY_QUALITY[quality];
 }
 
-/** Ordered providers for the customer's quality choice, pinned to runtime pricing. */
-export async function resolveCloneProviders(quality: AdGenerationQuality = "high"): Promise<ImageProviderAdapter[]> {
-  const profile = await resolveRuntimeModelProfile(cloneModelProfileForQuality(quality));
-  return modelCandidateAttempts(profile).map((candidate) => createImageProviderForCandidate(candidate));
+/** The one image provider pinned to the customer's generation mode. */
+export function resolveCloneProvider(quality: AdGenerationQuality = "fast"): ImageProviderAdapter {
+  return createImageProviderForCandidate(resolveAdStudioGenerationMode(quality).image);
 }
 
 export type CloneGenerationResult = {
@@ -297,8 +293,8 @@ export async function renderExactCloneTextEdit(
   return `data:image/png;base64,${output.toString("base64")}`;
 }
 
-export async function generateCloneWithCascade(input: {
-  providers: ImageProviderAdapter[];
+export async function generateClone(input: {
+  provider: ImageProviderAdapter;
   request: ImageProviderRequest;
   workspaceId: string;
   userId: string;
@@ -322,43 +318,36 @@ export async function generateCloneWithCascade(input: {
     warnings: [],
   };
   let lastError: unknown = null;
-  let providerAttemptCount = 0;
+  const providerAttemptCount = 1;
   const accounting = input.accounting ?? {
     executeAttempt: executeAdStudioProviderAttempt,
     recordRun: recordAdStudioProviderRun,
   };
   const modelProfile = input.modelProfile ?? "image_final";
 
-  for (const [attemptIndex, provider] of input.providers.slice(0, 2).entries()) {
-    providerAttemptCount += 1;
-    let result: ImageProviderResponse | null = null;
-    try {
-      const execution = await accounting.executeAttempt<ImageProviderResponse>({
-        workspaceId: input.workspaceId,
-        mutationId,
-        attemptIndex,
-        modelProfile,
-        provider,
-        execute: async () => {
-          const result = await provider.generate(input.request);
-          if (!result.assetUrl) throw new Error("Provider returned no image.");
-          return result;
-        },
-      });
-      attempts.push(execution.attempt);
-      if (!execution.ok) {
-        lastError = execution.error;
-        if (!isRetryableProviderFailure(execution.error)) break;
-        continue;
-      }
-      result = execution.output;
-    } catch (error) {
-      lastError = error;
-      break;
-    }
-    if (!result) continue;
-    // A durable finalization failure is not a provider failure and must never
-    // enter the fallback loop or be retried with a different payload.
+  const provider = input.provider;
+  let result: ImageProviderResponse | null = null;
+  try {
+    const execution = await accounting.executeAttempt<ImageProviderResponse>({
+      workspaceId: input.workspaceId,
+      mutationId,
+      attemptIndex: 0,
+      modelProfile,
+      provider,
+      execute: async () => {
+        const output = await provider.generate(input.request);
+        if (!output.assetUrl) throw new Error("Provider returned no image.");
+        return output;
+      },
+    });
+    attempts.push(execution.attempt);
+    if (execution.ok) result = execution.output;
+    else lastError = execution.error;
+  } catch (error) {
+    lastError = error;
+  }
+
+  if (result) {
     await accounting.recordRun({
       workspaceId: input.workspaceId,
       userId: input.userId,

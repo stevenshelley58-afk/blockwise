@@ -1,4 +1,3 @@
-import { buildOpenRouterHeaders } from "@/lib/ai/openrouter-client";
 import { executeRefreshPostcode as executeSharedRefreshPostcode } from "@/lib/operator/postcode-refresh";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -7,7 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
  *
  * This replaces the previous stub (which ignored the operator's question and
  * returned a canned status string). It runs a real tool-calling loop against
- * OpenRouter: read tools execute immediately and feed back into the model;
+ * OpenAI: read tools execute immediately and feed back into the model;
  * action tools (which mutate the live research queue / policies) are NOT
  * executed inline — they are surfaced as a `proposedAction` for explicit
  * operator confirmation, matching the "Operator actions require confirmation"
@@ -18,11 +17,11 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
  * requireOperator). No location-based Meta discovery is ever triggered.
  */
 
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL =
   process.env.OPERATOR_ASSISTANT_MODEL ??
-  process.env.BLOCKWISE_OPENROUTER_TEXT_MODEL ??
-  "openai/gpt-5.5";
+  process.env.BLOCKWISE_OPENAI_TEXT_MODEL ??
+  "gpt-5.5";
 const MAX_ITERATIONS = 6;
 
 type ResearchClient = ReturnType<ReturnType<typeof createSupabaseServiceClient>["schema"]>;
@@ -536,28 +535,29 @@ async function executeAction(research: ResearchClient, action: OperatorProposedA
 
 // ---------- model loop ----------
 
-async function callOpenRouter(messages: OrMessage[], allowTools: boolean): Promise<OrAssistantMessage> {
+async function callOpenAi(messages: OrMessage[], allowTools: boolean): Promise<OrAssistantMessage> {
   const body: Record<string, unknown> = {
     model: MODEL,
     messages,
-    temperature: 0.2,
-    provider: { require_parameters: true },
   };
   if (allowTools) {
     body.tools = TOOL_SPECS;
     body.tool_choice = "auto";
   }
-  const response = await fetch(OPENROUTER_CHAT_URL, {
+  const response = await fetch(OPENAI_CHAT_URL, {
     method: "POST",
-    headers: buildOpenRouterHeaders(),
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   });
   const payload = (await response.json()) as OrResponse;
   if (!response.ok) {
-    throw new Error(payload.error?.message ?? `OpenRouter request failed with status ${response.status}.`);
+    throw new Error(payload.error?.message ?? `OpenAI request failed with status ${response.status}.`);
   }
   const message = payload.choices?.[0]?.message;
-  if (!message) throw new Error("OpenRouter returned no message.");
+  if (!message) throw new Error("OpenAI returned no message.");
   return message;
 }
 
@@ -573,10 +573,10 @@ export async function runOperatorAssistant(input: {
     return { answer };
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return {
       answer:
-        "I can't reach a model yet — OPENROUTER_API_KEY isn't set in this environment. Add it (and optionally OPERATOR_ASSISTANT_MODEL) and I'll be able to chat and drive Hermes.",
+        "I can't reach a model yet — OPENAI_API_KEY isn't set in this environment. Add it and I'll be able to chat and drive Hermes.",
     };
   }
 
@@ -586,7 +586,7 @@ export async function runOperatorAssistant(input: {
   ];
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
-    const message = await callOpenRouter(conversation, true);
+    const message = await callOpenAi(conversation, true);
     const toolCalls = message.tool_calls ?? [];
 
     if (toolCalls.length === 0) {
@@ -611,6 +611,6 @@ export async function runOperatorAssistant(input: {
     }
   }
 
-  const closing = await callOpenRouter(conversation, false);
+  const closing = await callOpenAi(conversation, false);
   return { answer: (closing.content ?? "").trim() || "I pulled the data but couldn't compose a reply — try asking again more specifically." };
 }

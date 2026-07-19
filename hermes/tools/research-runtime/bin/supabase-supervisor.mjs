@@ -5458,9 +5458,7 @@ async function handleAdClassifier(job) {
       rationale:
         classification.rationale ||
         classification.rejection_reason ||
-        (classificationResult.usedFallback
-          ? `Deterministic fallback classification: ${classificationResult.fallbackReason || "model unavailable"}.`
-          : "Model-backed Hermes classification for verified real-estate page creative."),
+        "Model-backed Hermes classification for verified real-estate page creative.",
       confidence: Math.round((classification.confidence || 0) * 100),
       evidence: {
         headline: creative.headline,

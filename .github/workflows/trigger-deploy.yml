@@ -40,15 +40,14 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
       TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
     steps:
       - name: Check for trigger.dev credentials
         id: gate
         run: |
-          if [ -z "$TRIGGER_ACCESS_TOKEN" ] || [ -z "$TRIGGER_PROJECT_ID" ] || [ -z "$GOOGLE_AI_API_KEY" ]; then
-            echo "::error::TRIGGER_ACCESS_TOKEN / TRIGGER_PROJECT_ID / GOOGLE_AI_API_KEY secrets are required."
+          if [ -z "$TRIGGER_ACCESS_TOKEN" ] || [ -z "$TRIGGER_PROJECT_ID" ] || [ -z "$OPENAI_API_KEY" ] || [ -z "$GOOGLE_AI_API_KEY" ]; then
+            echo "::error::TRIGGER_ACCESS_TOKEN / TRIGGER_PROJECT_ID / OPENAI_API_KEY / GOOGLE_AI_API_KEY secrets are required."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 1
           fi

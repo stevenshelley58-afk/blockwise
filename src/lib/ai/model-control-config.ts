@@ -1,3 +1,4 @@
+import { resolveAdStudioGenerationMode } from "../adstudio/generation-mode.ts";
 import type { ModelCandidate, ModelProfile, ModelProfileKey, ModelProvider } from "./model-registry.ts";
 import {
   isModelProfileKey,
@@ -19,15 +20,14 @@ export type ModelCatalogOption = {
   supportsImageOutput: boolean;
 };
 
-export type OpenRouterReadiness = {
+export type ProviderReadiness = {
   configured: boolean;
   missing: string[];
-  appUrl: string;
 };
 
 export type EnvLike = {
-  NEXT_PUBLIC_APP_URL?: string;
-  OPENROUTER_API_KEY?: string;
+  OPENAI_API_KEY?: string;
+  GOOGLE_AI_API_KEY?: string;
 };
 
 export type ModelProfileVersionInsert = {
@@ -50,7 +50,6 @@ export type ModelControlProfileRow = {
   maxRunCostUsd: number;
   defaultTemperature: number;
   active: ModelCandidate;
-  fallbacks: ModelCandidate[];
   options: ModelCatalogOption[];
 };
 
@@ -61,229 +60,92 @@ export type ModelControlSection = {
   profiles: ModelControlProfileRow[];
 };
 
+export type ModelControlGenerationMode = {
+  key: "fast" | "high";
+  label: string;
+  copy: string;
+  image: string;
+  qa: string;
+};
+
 export type ModelControlViewData = {
   sections: ModelControlSection[];
   modelProfiles: ModelProfile[];
+  generationModes: ModelControlGenerationMode[];
   readiness: {
-    openrouter: OpenRouterReadiness;
+    openai: ProviderReadiness;
+    google: ProviderReadiness;
   };
 };
 
-type SelectionRequest = {
-  provider?: unknown;
-  model?: unknown;
-};
-
+type SelectionRequest = { provider?: unknown; model?: unknown };
 type SelectionValidationResult =
-  | {
-      ok: true;
-      option: ModelCatalogOption;
-    }
-  | {
-      ok: false;
-      status: number;
-      error: string;
-    };
+  | { ok: true; option: ModelCatalogOption }
+  | { ok: false; status: number; error: string };
 
-const DEFAULT_APP_URL = "http://localhost:3000";
 const DEFAULT_MAX_LATENCY_MS = 12_000;
 
-const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> = {
-  cheap_draft_text: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-lite-001",
-      label: "Google Gemini 2.0 Flash Lite",
-      inputUsdPerMillionTokens: 0.075,
-      outputUsdPerMillionTokens: 0.3,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "qwen/qwen3.5-flash-02-23",
-      label: "Qwen Qwen3.5 Flash",
-      inputUsdPerMillionTokens: 0.065,
-      outputUsdPerMillionTokens: 0.26,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  high_quality_strategy: [
-    createOpenRouterOption({
-      model: "openai/gpt-5.5",
-      label: "GPT-5.5",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-5.5-pro",
-      label: "GPT-5.5 Pro",
-      inputUsdPerMillionTokens: 30,
-      outputUsdPerMillionTokens: 180,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3.1-pro-preview",
-      label: "Google Gemini 3.1 Pro Preview",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  structured_json: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-2.5-flash-lite",
-      label: "Google Gemini 2.5 Flash Lite",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  vision_classification: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      imageUsdPerUnit: 0.01,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "qwen/qwen3-vl-32b-instruct",
-      label: "Qwen Qwen3 VL 32B Instruct",
-      inputUsdPerMillionTokens: 0.104,
-      outputUsdPerMillionTokens: 0.416,
-      maxContextTokens: 262_144,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  image_draft: [
-    {
-      provider: "google",
-      model: "gemini-3.1-flash-image",
-      label: "Google Gemini 3.1 Flash Image (direct)",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0.04,
-      maxContextTokens: 131_072,
-      supportsStructuredOutput: false,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    },
-  ],
-  image_final: [
-    createOpenRouterOption({
-      model: "openai/gpt-5.4-image-2",
-      label: "GPT-5.4 Image 2",
-      inputUsdPerMillionTokens: 8,
-      outputUsdPerMillionTokens: 15,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 400_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3.1-flash-image-preview",
-      label: "Google Nano Banana 2",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3-pro-image-preview",
-      label: "Google Nano Banana Pro",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      imageUsdPerUnit: 2,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-  ],
-  compliance_review: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "anthropic/claude-sonnet-4.6",
-      label: "Anthropic Claude Sonnet 4.6",
-      inputUsdPerMillionTokens: 3,
-      outputUsdPerMillionTokens: 15,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
+const OPENAI_GPT_41_MINI = option({
+  provider: "openai",
+  model: "gpt-4.1-mini",
+  label: "OpenAI GPT-4.1 Mini",
+  inputUsdPerMillionTokens: 0.4,
+  outputUsdPerMillionTokens: 1.6,
+  maxContextTokens: 128_000,
+  supportsStructuredOutput: true,
+  supportsVisionInput: true,
+});
+const OPENAI_GPT_55 = option({
+  provider: "openai",
+  model: "gpt-5.5",
+  label: "OpenAI GPT-5.5",
+  inputUsdPerMillionTokens: 5,
+  outputUsdPerMillionTokens: 30,
+  maxContextTokens: 1_050_000,
+  supportsStructuredOutput: true,
+  supportsVisionInput: true,
+});
+const GOOGLE_FLASH_LITE = option({
+  provider: "google",
+  model: "gemini-2.5-flash-lite",
+  label: "Gemini 2.5 Flash-Lite",
+  inputUsdPerMillionTokens: 0.1,
+  outputUsdPerMillionTokens: 0.4,
+  maxContextTokens: 1_048_576,
+  supportsStructuredOutput: true,
+  supportsVisionInput: true,
+});
+const GOOGLE_FLASH_IMAGE = option({
+  provider: "google",
+  model: "gemini-3.1-flash-image",
+  label: "Gemini 3.1 Flash Image",
+  inputUsdPerMillionTokens: 0.5,
+  outputUsdPerMillionTokens: 3,
+  imageUsdPerUnit: 0.04,
+  maxContextTokens: 131_072,
+  supportsVisionInput: true,
+  supportsImageOutput: true,
+});
+const OPENAI_IMAGE_2 = option({
+  provider: "openai",
+  model: "gpt-image-2",
+  label: "OpenAI GPT Image 2",
+  inputUsdPerMillionTokens: 5,
+  outputUsdPerMillionTokens: 30,
+  imageUsdPerUnit: 0.211,
+  maxContextTokens: 16_000,
+  supportsVisionInput: true,
+  supportsImageOutput: true,
+});
+
+const CURATED_DIRECT_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> = {
+  cheap_draft_text: [OPENAI_GPT_41_MINI, GOOGLE_FLASH_LITE],
+  high_quality_strategy: [OPENAI_GPT_55, GOOGLE_FLASH_LITE],
+  structured_json: [OPENAI_GPT_55, GOOGLE_FLASH_LITE],
+  vision_classification: [OPENAI_GPT_55, GOOGLE_FLASH_LITE],
+  image_draft: [GOOGLE_FLASH_IMAGE, OPENAI_IMAGE_2],
+  image_final: [OPENAI_IMAGE_2, GOOGLE_FLASH_IMAGE],
+  compliance_review: [OPENAI_GPT_41_MINI, GOOGLE_FLASH_LITE],
   disabled_profile: [],
 };
 
@@ -293,83 +155,42 @@ const PROFILE_SECTION_MAP: Array<{
   description: string;
   profileKeys: ModelProfileKey[];
 }> = [
-  {
-    key: "research",
-    label: "Research",
-    description: "Competitor research, pattern classification, and public evidence processing.",
-    profileKeys: ["cheap_draft_text", "vision_classification", "structured_json"],
-  },
-  {
-    key: "campaigns",
-    label: "Campaigns",
-    description: "Campaign strategy, hooks, recommendations, and structured campaign objects.",
-    profileKeys: ["high_quality_strategy", "structured_json"],
-  },
-  {
-    key: "creative",
-    label: "Creative",
-    description: "Draft and client-ready image generation profiles for cloning and targeted edits.",
-    profileKeys: ["image_draft", "image_final"],
-  },
-  {
-    key: "compliance",
-    label: "Compliance",
-    description: "Real-estate claim, housing targeting, and policy review outputs.",
-    profileKeys: ["compliance_review"],
-  },
-  {
-    key: "agents",
-    label: "Agent Workforce",
-    description: "Agent planning and internal operational outputs.",
-    profileKeys: ["cheap_draft_text", "structured_json", "high_quality_strategy"],
-  },
-  {
-    key: "reporting",
-    label: "Reporting",
-    description: "Performance summaries and cost-aware internal reporting.",
-    profileKeys: ["cheap_draft_text", "structured_json"],
-  },
+  { key: "research", label: "Research", description: "Research and evidence classification.", profileKeys: ["cheap_draft_text", "vision_classification"] },
+  { key: "campaigns", label: "Campaigns", description: "Strategy and structured campaign outputs.", profileKeys: ["high_quality_strategy", "structured_json"] },
+  { key: "creative", label: "Creative", description: "Direct image generation profiles.", profileKeys: ["image_draft", "image_final"] },
+  { key: "compliance", label: "Compliance", description: "Real-estate claim and policy review.", profileKeys: ["compliance_review"] },
 ];
 
-function createOpenRouterOption(
-  option: Omit<ModelCatalogOption, "provider" | "imageUsdPerUnit" | "supportsStructuredOutput" | "supportsVisionInput" | "supportsImageOutput"> &
-    Partial<Pick<ModelCatalogOption, "imageUsdPerUnit" | "supportsStructuredOutput" | "supportsVisionInput" | "supportsImageOutput">>,
+function option(
+  value: Pick<ModelCatalogOption, "provider" | "model" | "label" | "inputUsdPerMillionTokens" | "outputUsdPerMillionTokens" | "maxContextTokens">
+    & Partial<Pick<ModelCatalogOption, "imageUsdPerUnit" | "supportsStructuredOutput" | "supportsVisionInput" | "supportsImageOutput">>,
 ): ModelCatalogOption {
   return {
-    provider: "openrouter",
     imageUsdPerUnit: 0,
     supportsStructuredOutput: false,
     supportsVisionInput: false,
     supportsImageOutput: false,
-    ...option,
-    model: normalizeModelSlug("openrouter", option.model),
+    ...value,
   };
 }
 
-export function getOpenRouterReadiness(env: EnvLike = process.env as EnvLike): OpenRouterReadiness {
-  const missing = env.OPENROUTER_API_KEY ? [] : ["OPENROUTER_API_KEY"];
-
+export function getDirectProviderReadiness(env: EnvLike = process.env as EnvLike) {
   return {
-    configured: missing.length === 0,
-    missing,
-    appUrl: env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL,
+    openai: readiness(env.OPENAI_API_KEY, "OPENAI_API_KEY"),
+    google: readiness(env.GOOGLE_AI_API_KEY, "GOOGLE_AI_API_KEY"),
   };
+}
+
+function readiness(value: string | undefined, key: string): ProviderReadiness {
+  return { configured: Boolean(value), missing: value ? [] : [key] };
 }
 
 export function getCuratedModelOptionsForProfile(profileKey: ModelProfileKey): ModelCatalogOption[] {
-  return CURATED_OPENROUTER_OPTIONS[profileKey].map((option) => ({ ...option }));
+  return CURATED_DIRECT_OPTIONS[profileKey].map((candidate) => ({ ...candidate }));
 }
 
-export function getCuratedModelOptionsWithCatalog(
-  profileKey: ModelProfileKey,
-  catalogOptions: ModelCatalogOption[] = [],
-): ModelCatalogOption[] {
-  const catalogByModel = new Map(catalogOptions.map((option) => [option.model, option]));
-
-  return getCuratedModelOptionsForProfile(profileKey).map((option) => ({
-    ...option,
-    ...catalogByModel.get(option.model),
-  }));
+export function getCuratedModelOptionsWithCatalog(profileKey: ModelProfileKey): ModelCatalogOption[] {
+  return getCuratedModelOptionsForProfile(profileKey);
 }
 
 export function validateModelProfileSelection(
@@ -377,108 +198,76 @@ export function validateModelProfileSelection(
   request: SelectionRequest,
 ): SelectionValidationResult {
   if (!isModelProfileKey(profileKeyValue)) {
-    return {
-      ok: false,
-      status: 404,
-      error: `Unknown model profile: ${profileKeyValue}`,
-    };
+    return { ok: false, status: 404, error: `Unknown model profile: ${profileKeyValue}` };
   }
-
-  if (request.provider !== "openrouter" && request.provider !== "google") {
-    return {
-      ok: false,
-      status: 400,
-      error: "That provider cannot be saved from Model Control.",
-    };
+  if (request.provider !== "openai" && request.provider !== "google") {
+    return { ok: false, status: 400, error: "Only direct OpenAI or Gemini models can be saved." };
   }
-
-  if (typeof request.model !== "string" || request.model.trim().length === 0) {
-    return {
-      ok: false,
-      status: 400,
-      error: "A model id is required.",
-    };
+  if (typeof request.model !== "string" || !request.model.trim()) {
+    return { ok: false, status: 400, error: "A model id is required." };
   }
-
-  const normalizedModel = normalizeModelSlug(request.provider, request.model.trim());
-  const option = getCuratedModelOptionsForProfile(profileKeyValue).find(
-    (candidate) => candidate.provider === request.provider && candidate.model === normalizedModel,
+  const model = normalizeModelSlug(request.provider, request.model.trim());
+  const approved = getCuratedModelOptionsForProfile(profileKeyValue).find(
+    (candidate) => candidate.provider === request.provider && candidate.model === model,
   );
-
-  if (!option) {
+  if (!approved) {
     const profile = listModelProfiles().find((candidate) => candidate.key === profileKeyValue);
-
-    return {
-      ok: false,
-      status: 400,
-      error: `${normalizedModel} is not approved for ${profile?.label ?? profileKeyValue}.`,
-    };
+    return { ok: false, status: 400, error: `${model} is not approved for ${profile?.label ?? profileKeyValue}.` };
   }
-
-  return {
-    ok: true,
-    option,
-  };
+  return { ok: true, option: approved };
 }
 
 export function buildModelProfileVersionInsert(
   modelProfileId: string,
-  option: ModelCatalogOption,
+  selected: ModelCatalogOption,
 ): ModelProfileVersionInsert {
   return {
     model_profile_id: modelProfileId,
-    provider: option.provider,
-    model: normalizeModelSlug(option.provider, option.model),
-    input_usd_per_million_tokens: option.inputUsdPerMillionTokens,
-    output_usd_per_million_tokens: option.outputUsdPerMillionTokens,
-    image_usd_per_unit: option.imageUsdPerUnit,
-    supports_structured_output: option.supportsStructuredOutput,
-    max_context_tokens: option.maxContextTokens,
+    provider: selected.provider,
+    model: selected.model,
+    input_usd_per_million_tokens: selected.inputUsdPerMillionTokens,
+    output_usd_per_million_tokens: selected.outputUsdPerMillionTokens,
+    image_usd_per_unit: selected.imageUsdPerUnit,
+    supports_structured_output: selected.supportsStructuredOutput,
+    max_context_tokens: selected.maxContextTokens,
   };
 }
 
 export function buildModelControlViewData(
-  args: {
-    profiles?: ModelProfile[];
-    env?: EnvLike;
-    catalogOptions?: ModelCatalogOption[];
-  } = {},
+  args: { profiles?: ModelProfile[]; env?: EnvLike } = {},
 ): ModelControlViewData {
   const modelProfiles = args.profiles ?? resolveEffectiveModelProfiles();
   const profileMap = new Map(modelProfiles.map((profile) => [profile.key, profile]));
+  const sections = PROFILE_SECTION_MAP.map((section) => ({
+    ...section,
+    profiles: section.profileKeys.flatMap((key) => {
+      const profile = profileMap.get(key);
+      return profile ? [buildModelControlProfileRow(profile)] : [];
+    }),
+  })).filter((section) => section.profiles.length > 0);
 
-  const sections = PROFILE_SECTION_MAP.map((section) => {
-    const rows = section.profileKeys.flatMap((profileKey) => {
-      const profile = profileMap.get(profileKey);
-
-      if (!profile) {
-        return [];
-      }
-
-      return [buildModelControlProfileRow(profile, args.catalogOptions)];
-    });
-
-    return {
-      key: section.key,
-      label: section.label,
-      description: section.description,
-      profiles: rows,
-    };
-  }).filter((section) => section.profiles.length > 0);
-
+  const fast = resolveAdStudioGenerationMode("fast");
+  const high = resolveAdStudioGenerationMode("high");
   return {
     sections,
     modelProfiles,
-    readiness: {
-      openrouter: getOpenRouterReadiness(args.env),
-    },
+    generationModes: [fast, high].map((mode) => ({
+      key: mode.quality,
+      label: mode.label,
+      copy: `${mode.copy.provider} / ${mode.copy.model}`,
+      image: `${mode.image.provider} / ${mode.image.model}`,
+      qa: `${mode.qa.provider} / ${mode.qa.model}`,
+    })),
+    readiness: getDirectProviderReadiness(args.env),
   };
 }
 
-function buildModelControlProfileRow(
-  profile: ModelProfile,
-  catalogOptions: ModelCatalogOption[] = [],
-): ModelControlProfileRow {
+function buildModelControlProfileRow(profile: ModelProfile): ModelControlProfileRow {
+  const active = { ...profile.primary, model: normalizeModelSlug(profile.primary.provider, profile.primary.model) };
+  const curated = getCuratedModelOptionsForProfile(profile.key);
+  const options = curated.some((candidate) => candidate.provider === active.provider && candidate.model === active.model)
+    ? curated
+    : [modelCandidateToOption(active, "Current"), ...curated];
   return {
     key: profile.key,
     label: profile.label,
@@ -487,55 +276,35 @@ function buildModelControlProfileRow(
     requiresStructuredOutput: profile.requiresStructuredOutput,
     maxRunCostUsd: profile.maxRunCostUsd,
     defaultTemperature: profile.defaultTemperature,
-    active: {
-      ...profile.primary,
-      model: normalizeModelSlug(profile.primary.provider, profile.primary.model),
-    },
-    fallbacks: profile.fallbacks.map((fallback) => ({
-      ...fallback,
-      model: normalizeModelSlug(fallback.provider, fallback.model),
-    })),
-    options: getOptionsWithActiveCandidate(profile, catalogOptions),
+    active,
+    options,
   };
 }
 
-function getOptionsWithActiveCandidate(
-  profile: ModelProfile,
-  catalogOptions: ModelCatalogOption[],
-): ModelCatalogOption[] {
-  const curated = getCuratedModelOptionsWithCatalog(profile.key, catalogOptions);
-  const activeOption = modelCandidateToOption(profile.primary, "Current primary");
-  const hasActiveOption = curated.some(
-    (option) => option.provider === activeOption.provider && option.model === activeOption.model,
-  );
-
-  return hasActiveOption ? curated : [activeOption, ...curated];
-}
-
-function modelCandidateToOption(candidate: ModelCandidate, labelSuffix: string): ModelCatalogOption {
+function modelCandidateToOption(candidate: ModelCandidate, suffix: string): ModelCatalogOption {
   return {
     provider: candidate.provider,
-    model: normalizeModelSlug(candidate.provider, candidate.model),
-    label: `${candidate.model} (${labelSuffix})`,
+    model: candidate.model,
+    label: `${candidate.model} (${suffix})`,
     inputUsdPerMillionTokens: candidate.inputUsdPerMillionTokens,
     outputUsdPerMillionTokens: candidate.outputUsdPerMillionTokens,
     imageUsdPerUnit: candidate.imageUsdPerUnit,
     maxContextTokens: candidate.maxContextTokens,
     supportsStructuredOutput: candidate.supportsStructuredOutput,
     supportsVisionInput: candidate.imageUsdPerUnit > 0 || candidate.maxContextTokens >= 128_000,
-    supportsImageOutput: candidate.imageUsdPerUnit > 0 && candidate.inputUsdPerMillionTokens === 0,
+    supportsImageOutput: candidate.imageUsdPerUnit > 0,
   };
 }
 
-export function optionToCandidate(option: ModelCatalogOption): ModelCandidate {
+export function optionToCandidate(selected: ModelCatalogOption): ModelCandidate {
   return {
-    provider: option.provider,
-    model: normalizeModelSlug(option.provider, option.model),
-    inputUsdPerMillionTokens: option.inputUsdPerMillionTokens,
-    outputUsdPerMillionTokens: option.outputUsdPerMillionTokens,
-    imageUsdPerUnit: option.imageUsdPerUnit,
-    supportsStructuredOutput: option.supportsStructuredOutput,
-    maxContextTokens: option.maxContextTokens,
+    provider: selected.provider,
+    model: selected.model,
+    inputUsdPerMillionTokens: selected.inputUsdPerMillionTokens,
+    outputUsdPerMillionTokens: selected.outputUsdPerMillionTokens,
+    imageUsdPerUnit: selected.imageUsdPerUnit,
+    supportsStructuredOutput: selected.supportsStructuredOutput,
+    maxContextTokens: selected.maxContextTokens,
     maxLatencyMs: DEFAULT_MAX_LATENCY_MS,
   };
 }

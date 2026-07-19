@@ -4,86 +4,32 @@ import test from "node:test";
 import { loadPersistedModelProfileVersions } from "../src/lib/ai/model-profile-store.ts";
 import {
   isRetryableProviderFailure,
-  modelCandidateAttempts,
+  modelCandidateForProfile,
   resolveRuntimeProfileFromVersions,
 } from "../src/lib/operator/prompts/model-profile-runtime.ts";
 
-function modelVersionClient(result: { data: unknown; error: { message: string } | null }) {
-  const query = {
-    select() { return this; },
-    is() { return this; },
-    async order() { return result; },
-  };
+function client(result: { data: unknown; error: { message: string } | null }) {
+  const query = { select() { return this; }, is() { return this; }, async order() { return result; } };
   return { from() { return query; } };
 }
 
-test("model profile database errors fail closed instead of masquerading as persisted pricing", async () => {
-  await assert.rejects(
-    () => loadPersistedModelProfileVersions(
-      modelVersionClient({ data: null, error: { message: "database unavailable" } }) as never,
-    ),
-    /Unable to load active model profile versions: database unavailable/,
-  );
+test("persisted profile loading fails closed on database and unsupported-provider configuration", async () => {
+  await assert.rejects(() => loadPersistedModelProfileVersions(client({ data: null, error: { message: "down" } }) as never), /down/);
+  await assert.rejects(() => loadPersistedModelProfileVersions(client({ error: null, data: [{
+    id: "11111111-1111-4111-8111-111111111111", provider: "retired", model: "model",
+    input_usd_per_million_tokens: 1, output_usd_per_million_tokens: 2, image_usd_per_unit: 0,
+    supports_structured_output: true, max_context_tokens: 1000, model_profiles: { key: "structured_json" },
+  }] }) as never), /Operator configuration error.*unsupported provider retired/);
 });
 
-test("unknown persisted providers are rejected instead of coerced to OpenAI", async () => {
-  await assert.rejects(
-    () => loadPersistedModelProfileVersions(
-      modelVersionClient({
-        error: null,
-        data: [{
-          id: "11111111-1111-4111-8111-111111111111",
-          provider: "mystery-provider",
-          model: "mystery/model",
-          input_usd_per_million_tokens: 1,
-          output_usd_per_million_tokens: 2,
-          image_usd_per_unit: 0,
-          supports_structured_output: true,
-          max_context_tokens: 1000,
-          model_profiles: { key: "structured_json" },
-        }],
-      }) as never,
-    ),
-    /unsupported provider: mystery-provider/,
-  );
-});
-
-test("runtime profiles distinguish declared defaults from persisted version and pricing ids", () => {
-  const fallback = resolveRuntimeProfileFromVersions("image_draft", []);
-  assert.equal(fallback.source, "default");
-  assert.match(fallback.warning ?? "", /No active persisted version/);
-
-  const persisted = resolveRuntimeProfileFromVersions("image_draft", [{
-    id: "22222222-2222-4222-8222-222222222222",
-    profileKey: "image_draft",
-    provider: "openrouter",
-    model: "google/gemini-2.5-flash-image",
-    inputUsdPerMillionTokens: 0.3,
-    outputUsdPerMillionTokens: 2.5,
-    imageUsdPerUnit: 0.039,
-    supportsStructuredOutput: false,
-    maxContextTokens: 65_536,
-    maxLatencyMs: 30_000,
-  }]);
-
-  assert.equal(persisted.source, "persisted");
-  assert.equal(persisted.primary.modelProfileVersionId, "22222222-2222-4222-8222-222222222222");
-  assert.equal(persisted.primary.pricingSnapshotId, "22222222-2222-4222-8222-222222222222");
-  assert.equal(persisted.primary.imageUsdPerUnit, 0.039);
-});
-
-test("runtime model attempts expose one primary and at most one declared fallback", () => {
+test("runtime profile exposes exactly its selected candidate", () => {
   const profile = resolveRuntimeProfileFromVersions("image_final", []);
-
-  assert.equal(profile.fallbacks.length, 2, "the registry may retain additional recovery choices");
-  assert.deepEqual(
-    modelCandidateAttempts(profile).map((candidate) => candidate.model),
-    [profile.primary.model, profile.fallbacks[0].model],
-  );
+  assert.equal(profile.source, "default");
+  assert.equal(modelCandidateForProfile(profile), profile.primary);
 });
 
-test("provider fallback requires an explicit retryable discriminator", () => {
-  assert.equal(isRetryableProviderFailure(new Error("generic failure")), false);
+test("same-model retryability remains explicit", () => {
+  assert.equal(isRetryableProviderFailure(new Error("generic")), false);
   assert.equal(isRetryableProviderFailure({ retryable: false }), false);
   assert.equal(isRetryableProviderFailure({ retryable: true }), true);
 });

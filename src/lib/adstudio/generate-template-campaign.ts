@@ -1,5 +1,5 @@
 // The complete server-side template-campaign generation pipeline, callable from
-// the campaigns POST route (synchronous fallback) or the trigger.dev task
+// the campaigns POST route (synchronous execution) or the trigger.dev task
 // "adstudio.generate.template" (the normal async path; no 120s route ceiling).
 //
 // Order matters and is the product: brand kit -> slot images -> brief-grounded
@@ -12,14 +12,15 @@ import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
 import {
   CloneGenerationError,
   cloneModelProfileForQuality,
-  generateCloneWithCascade,
+  generateClone,
   normalizeCloneRenderAspect,
   persistCloneRender,
-  resolveCloneProviders,
+  resolveCloneProvider,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
 import { cloneQaCorrectionPrompt, runCloneQa } from "./clone-qa.ts";
 import { generateAdStudioTemplateCopy } from "./copy-generation.ts";
+import { resolveAdStudioGenerationMode } from "./generation-mode.ts";
 import { buildCloneCampaignPack } from "./clone-campaign.ts";
 import { persistAdStudioCampaignPack } from "./persistence.ts";
 import { ensureRasterReferenceImage } from "./rasterize-reference.ts";
@@ -41,6 +42,7 @@ import type {
   FirstAdInput,
 } from "./types.ts";
 import type { ImageProviderAdapter, ImageProviderRequest } from "./providers.ts";
+import type { ModelCandidate } from "../ai/model-registry.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -138,14 +140,15 @@ export function buildTemplateCloneRequestsByFormat(
 }
 
 type CloneQualityGateDependencies = {
-  generate?: typeof generateCloneWithCascade;
+  generate?: typeof generateClone;
   review?: typeof runCloneQa;
   normalize?: typeof normalizeCloneRenderAspect;
 };
 
 export async function generateQaAcceptedClone(input: {
   format: TemplateCloneRenderFormat;
-  providers: ImageProviderAdapter[];
+  provider: ImageProviderAdapter;
+  qaCandidate: ModelCandidate;
   request: ImageProviderRequest;
   expectedCopy: Record<string, string>;
   workspaceId: string;
@@ -165,18 +168,17 @@ export async function generateQaAcceptedClone(input: {
   // second premium render that will outlive Vercel's request ceiling. The
   // background task may request the bounded correction pass.
   const maxQualityAttempts = Math.max(1, Math.min(input.maxAttempts, 2));
-  const maxProviderCalls = maxQualityAttempts * 2;
-  const generate = dependencies.generate ?? generateCloneWithCascade;
+  const maxProviderCalls = maxQualityAttempts;
+  const generate = dependencies.generate ?? generateClone;
   const review = dependencies.review ?? runCloneQa;
   const normalize = dependencies.normalize ?? normalizeCloneRenderAspect;
 
   while (providerCallCount < maxProviderCalls && qualityAttempt < maxQualityAttempts) {
     if (generationAttempt > 0 && Date.now() >= input.deadline) break;
     generationAttempt += 1;
-    const remainingProviderCalls = maxProviderCalls - providerCallCount;
     try {
       const generated = await generate({
-        providers: input.providers.slice(0, remainingProviderCalls),
+        provider: input.provider,
         request: {
           ...input.request,
           prompt: correctionPrompt
@@ -210,6 +212,7 @@ export async function generateQaAcceptedClone(input: {
           expectedCopy: input.expectedCopy,
           format: input.format,
           attempt: qualityAttempt,
+          candidate: input.qaCandidate,
         });
       } catch (error) {
         if (error instanceof ProviderRunPersistenceError) throw error;
@@ -245,22 +248,26 @@ export async function runVerifiedClonePersistencePipeline<
   persistClone(format: Format, generated: Generated): Promise<Persisted>;
   buildCampaign(persistedByFormat: Record<Format, Persisted>): Campaign;
   persistCampaign(campaign: Campaign): Promise<void>;
+  rollbackPersisted?(persistedByFormat: Partial<Record<Format, Persisted>>, error: unknown): Promise<void>;
 }): Promise<{ persistedByFormat: Record<Format, Persisted>; campaign: Campaign }> {
   const acceptedEntries = await Promise.all(
     input.formats.map(async (format) => [format, await input.generateAccepted(format)] as const),
   );
   const acceptedByFormat = Object.fromEntries(acceptedEntries) as Record<Format, Generated>;
 
-  const persistedEntries = await Promise.all(
-    input.formats.map(async (format) => [
-      format,
-      await input.persistClone(format, acceptedByFormat[format]),
-    ] as const),
-  );
-  const persistedByFormat = Object.fromEntries(persistedEntries) as Record<Format, Persisted>;
-  const campaign = input.buildCampaign(persistedByFormat);
-  await input.persistCampaign(campaign);
-  return { persistedByFormat, campaign };
+  const persistedByFormat: Partial<Record<Format, Persisted>> = {};
+  try {
+    for (const format of input.formats) {
+      persistedByFormat[format] = await input.persistClone(format, acceptedByFormat[format]);
+    }
+    const complete = persistedByFormat as Record<Format, Persisted>;
+    const campaign = input.buildCampaign(complete);
+    await input.persistCampaign(campaign);
+    return { persistedByFormat: complete, campaign };
+  } catch (error) {
+    await input.rollbackPersisted?.(persistedByFormat, error);
+    throw error;
+  }
 }
 
 export async function runTemplateCampaignGeneration(
@@ -275,6 +282,8 @@ export async function runTemplateCampaignGeneration(
   if (!firstAd.description?.trim()) {
     throw new Error("Add a short description so Blockwise knows what to write.");
   }
+  const generationQuality = firstAd.generationQuality ?? "fast";
+  const generationMode = resolveAdStudioGenerationMode(generationQuality);
 
   const template = await resolveApprovedAdStudioTemplate({
     templateId: firstAd.templateId,
@@ -341,6 +350,7 @@ export async function runTemplateCampaignGeneration(
       sample: field.sample,
     })),
     sourceImageUrl,
+    candidate: generationMode.copy,
     context: {
       goal: template.goal,
       templateName: template.name,
@@ -376,8 +386,7 @@ export async function runTemplateCampaignGeneration(
     copy: onImageCopy,
     brandHex: brandKit.colours.accent || brandKit.colours.primary,
   });
-  const generationQuality = firstAd.generationQuality ?? "fast";
-  const providers = await resolveCloneProviders(generationQuality);
+  const provider = resolveCloneProvider(generationQuality);
   const modelProfile = cloneModelProfileForQuality(generationQuality);
   const maxAttempts = Math.max(1, input.maxCloneAttempts);
   const cloneFormats = Object.keys(cloneRequestsByFormat) as TemplateCloneRenderFormat[];
@@ -387,7 +396,8 @@ export async function runTemplateCampaignGeneration(
       formats: cloneFormats,
       generateAccepted: (format) => generateQaAcceptedClone({
         format,
-        providers,
+        provider,
+        qaCandidate: generationMode.qa,
         request: cloneRequestsByFormat[format],
         expectedCopy,
         workspaceId: input.workspaceId,
@@ -450,6 +460,22 @@ export async function runTemplateCampaignGeneration(
           throw new Error(
             `Your ad was generated but could not be saved (${persisted.error.message}). Please try again.`,
           );
+        }
+      },
+      rollbackPersisted: async (persistedByFormat) => {
+        const storagePaths = Object.values(persistedByFormat)
+          .map((render) => render?.image)
+          .filter((image): image is string => typeof image === "string")
+          .map((image) => new URL(image, input.origin).searchParams.get("path"))
+          .filter((path): path is string => Boolean(path));
+        if (storagePaths.length === 0) return;
+        const removed = await supabase.storage.from("workspace-artifacts").remove(storagePaths);
+        if (removed.error) {
+          console.error("AdStudio rollback could not remove generated media", {
+            correlationId,
+            storagePaths,
+            error: removed.error,
+          });
         }
       },
     });

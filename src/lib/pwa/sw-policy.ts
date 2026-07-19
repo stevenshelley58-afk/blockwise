@@ -43,7 +43,6 @@ export const PROVIDER_HOST_KEYWORDS = [
   "googleadservices.com",
   "doubleclick.net",
   "openai.com",
-  "openrouter.ai",
   "vercel-insights.com",
 ] as const;
 

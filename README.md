@@ -7,7 +7,7 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 - Next.js App Router hosted on Vercel
 - Supabase Auth, Postgres, RLS, and Storage
 - Trigger.dev for durable jobs and schedules
-- OpenAI direct and OpenRouter-routed model profiles with operator-controlled swapping
+- Direct OpenAI and Gemini model profiles with operator-controlled swapping
 
 ## Local Setup
 
@@ -29,7 +29,7 @@ Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Op
 - `npm run typecheck` runs TypeScript checks.
 - `npm run build` verifies the Vercel/Next.js production build.
 
-Production-live paths now use Supabase-backed workspace data, live provider sync helpers, OpenAI/OpenRouter provider adapters, and approval-gated provider publish requests. Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google app review, provider account IDs, token vault entries, and human approval flows have been verified in production.
+Production-live paths use Supabase-backed workspace data, direct OpenAI/Gemini adapters, live provider sync helpers, and approval-gated provider publish requests. Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google app review, provider account IDs, token vault entries, and human approval flows have been verified in production.
 
 Security hardening docs live in `docs/security/agent-safety.md` and `docs/security/client-data-isolation.md`.
 
@@ -43,4 +43,4 @@ Security hardening docs live in `docs/security/agent-safety.md` and `docs/securi
 - `/leads` lead inbox, quality labels, and dedupe state
 - `/approvals` human approval gates
 - `/agents` agent workforce runs and permissions
-- `/model-control` grouped model profile dropdowns, OpenRouter readiness, and AI ledger
+- `/model-control` direct-provider readiness, pinned AdStudio modes, grouped model profiles, and AI ledger

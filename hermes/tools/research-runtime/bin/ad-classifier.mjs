@@ -1,6 +1,6 @@
 export const CLASSIFIER_VERSION = "ad-library-classifier-v2";
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const REAL_ESTATE_BRANDS =
   /\b(real estate|property|agent|agency|ray white|harcourts|realmark|haiven|whitefox|noble avenue|lj hooker|professionals|belle property|acton|reiwa)\b/iu;
 
@@ -55,80 +55,16 @@ const AD_CLASSIFICATION_RESPONSE_FORMAT = {
   },
 };
 
-export function classifyCreativeDeterministically(creative, options = {}) {
-  const text = creativeText(creative);
-  const lower = text.toLowerCase();
-  const hooks = [];
-  let adType = "other";
-
-  if (hasExplicitSoldResult(lower)) {
-    adType = "just_sold";
-    hooks.push("sold result");
-  } else if (hasOpenHomeSignal(lower)) {
-    adType = "open_home";
-    hooks.push("open home");
-  } else if (hasPropertyManagementSignal(lower)) {
-    adType = "property_management";
-    hooks.push("property management");
-  } else if (hasAppraisalSignal(lower)) {
-    adType = "appraisal";
-    hooks.push("appraisal");
-  } else if (hasListingSignal(lower)) {
-    adType = "listing";
-    hooks.push("listing");
-  } else if (hasMarketUpdateSignal(lower)) {
-    adType = "market_update";
-    hooks.push("market update");
-  } else if (hasAgencyBrandSignal(lower)) {
-    adType = "agency_brand";
-    hooks.push("agency brand");
-  }
-
-  return normaliseAdClassification(
-    {
-      is_real_estate_ad: adType !== "other",
-      industry: adType !== "other" ? "real_estate" : "unknown",
-      real_estate_relevance: relevanceForAdType(adType),
-      ad_type: adType,
-      primary_intent: adType,
-      property_or_agent_focus: propertyFocusForText(lower, adType),
-      hooks,
-      tone: "",
-      style: "",
-      audience: "",
-      suburb_signals: suburbSignalsForText(text),
-      confidence: adType === "other" ? 0.35 : options.confidence ?? 0.74,
-      rejection_reason: adType === "other" ? "No reliable real-estate creative type signal was found." : null,
-      rationale: deterministicRationale(adType),
-    },
-    { evidenceSource: options.evidenceSource ?? "fallback" },
-  );
-}
-
 export async function classifyCreativeWithModels(creative, capturedAssets = [], options = {}) {
   const evidenceSource = evidenceSourceForCreative(creative, capturedAssets);
-  const fallback = (reason) => ({
-    classification: classifyCreativeDeterministically(creative, { evidenceSource: "fallback" }),
-    model: "deterministic-fallback",
-    evidenceSource: "fallback",
-    usedFallback: true,
-    fallbackReason: reason,
-  });
+  if (evidenceSource === "unavailable") throw new Error("no_usable_text_or_captured_media");
 
-  if (evidenceSource === "fallback") return fallback("no_usable_text_or_captured_media");
-
-  try {
-    const result = await classifyWithOpenRouter(creative, capturedAssets, evidenceSource, options);
-    return {
-      classification: normaliseAdClassification(result.classification, { evidenceSource }),
-      model: result.model,
-      evidenceSource,
-      usedFallback: false,
-      fallbackReason: null,
-    };
-  } catch (error) {
-    return fallback(error.message);
-  }
+  const result = await classifyWithOpenAi(creative, capturedAssets, evidenceSource, options);
+  return {
+    classification: normaliseAdClassification(result.classification, { evidenceSource }),
+    model: result.model,
+    evidenceSource,
+  };
 }
 
 export function shouldWaitForMediaClassification(creative, capturedAssets = []) {
@@ -192,7 +128,7 @@ export function normaliseAdClassification(input, options = {}) {
     rejection_reason: rejectionReason,
     rationale: cleanString(source.rationale) ?? cleanString(source.reasoning) ?? "",
     classifier_version: CLASSIFIER_VERSION,
-    evidence_source: options.evidenceSource ?? cleanString(source.evidence_source) ?? cleanString(source.evidenceSource) ?? "fallback",
+    evidence_source: options.evidenceSource ?? cleanString(source.evidence_source) ?? cleanString(source.evidenceSource) ?? "unavailable",
   };
 }
 
@@ -329,7 +265,7 @@ export function shouldDisplayClassifiedCreative(creative, capturedAssets = [], c
   return Boolean(classification?.is_real_estate_ad) && mediaReady && !hasUnresolvedDynamicPlaceholder(creative);
 }
 
-async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, options) {
+async function classifyWithOpenAi(creative, capturedAssets, evidenceSource, options) {
   const env = options.env ?? process.env;
   const fetchImpl = options.fetchImpl ?? fetch;
   const task = evidenceSource === "vision" ? "vision_classification" : "ad_classification";
@@ -340,7 +276,7 @@ async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, 
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const output = await openRouterComplete({
+      const output = await openAiComplete({
         env,
         fetchImpl,
         model,
@@ -363,32 +299,28 @@ async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, 
   throw lastError ?? new Error("classification_model_failed");
 }
 
-async function openRouterComplete({ env, fetchImpl, model, messages }) {
-  const apiKey = cleanString(env.OPENROUTER_API_KEY);
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
-  const baseUrl = cleanString(env.OPENROUTER_BASE_URL) ?? OPENROUTER_BASE_URL;
+async function openAiComplete({ env, fetchImpl, model, messages }) {
+  const apiKey = cleanString(env.OPENAI_API_KEY);
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
   };
-  if (cleanString(env.OPENROUTER_SITE_URL)) headers["HTTP-Referer"] = cleanString(env.OPENROUTER_SITE_URL);
-  if (cleanString(env.OPENROUTER_APP_NAME)) headers["X-Title"] = cleanString(env.OPENROUTER_APP_NAME);
 
-  const response = await fetchImpl(`${baseUrl.replace(/\/$/u, "")}/chat/completions`, {
+  const response = await fetchImpl(OPENAI_CHAT_URL, {
     method: "POST",
     headers,
     body: JSON.stringify({
       model,
       messages,
-      temperature: 0,
-      max_tokens: 900,
+      max_completion_tokens: 900,
       response_format: AD_CLASSIFICATION_RESPONSE_FORMAT,
     }),
   });
   const raw = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(`OpenRouter request failed: ${response.status} ${JSON.stringify(raw)}`);
+  if (!response.ok) throw new Error(`OpenAI request failed: ${response.status} ${JSON.stringify(raw)}`);
   const content = raw?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("OpenRouter returned an empty classification");
+  if (typeof content !== "string" || !content.trim()) throw new Error("OpenAI returned an empty classification");
   return { model, content };
 }
 
@@ -442,10 +374,8 @@ function parseClassificationJson(content) {
 }
 
 function modelForTask(env, task) {
-  const taskModels = parseTaskModels(env.HERMES_OPENROUTER_MODELS_JSON);
-  const model = cleanString(taskModels[task]) ?? cleanString(env.HERMES_DEFAULT_MODEL) ?? cleanString(env.HERMES_OPENROUTER_MODEL);
-  if (!model) throw new Error(`No OpenRouter model configured for ${task}`);
-  return model;
+  const taskModels = parseTaskModels(env.HERMES_MODELS_JSON);
+  return cleanString(taskModels[task]) ?? cleanString(env.HERMES_DEFAULT_MODEL) ?? "gpt-5.5";
 }
 
 function parseTaskModels(value) {
@@ -461,7 +391,7 @@ function parseTaskModels(value) {
 function evidenceSourceForCreative(creative, capturedAssets) {
   if (hasUsableCreativeCopy(creative)) return "text";
   if (hasUsableCapturedMedia(capturedAssets)) return "vision";
-  return "fallback";
+  return "unavailable";
 }
 
 function firstMediaUrl(capturedAssets, options = {}) {

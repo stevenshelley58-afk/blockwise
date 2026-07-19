@@ -1,7 +1,7 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
-// "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
-export type ModelProvider = "openai" | "openrouter" | "azure" | "google";
+// "google" = the Gemini API, called directly with GOOGLE_AI_API_KEY.
+export type ModelProvider = "openai" | "google";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -36,7 +36,6 @@ export type ModelProfile = {
   maxRunCostUsd: number;
   defaultTemperature: number;
   primary: ModelCandidate;
-  fallbacks: ModelCandidate[];
 };
 
 export type UsageEstimate = {
@@ -48,7 +47,6 @@ export type UsageEstimate = {
 export type ResolvedModelProfile = {
   profile: ModelProfile;
   primary: ModelCandidate;
-  fallbacks: ModelCandidate[];
 };
 
 export type PersistedModelProfileVersion = {
@@ -68,8 +66,6 @@ const SENSITIVE_DATA_CLASSES: WorkforceDataClass[] = ["lead_pii", "provider_toke
 
 const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_only"> = {
   openai: "allowed",
-  openrouter: "allowed",
-  azure: "allowed",
   google: "allowed",
 };
 
@@ -92,18 +88,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 128_000,
       maxLatencyMs: 8_000,
     },
-    fallbacks: [
-      {
-        provider: "openrouter",
-        model: "google/gemini-2.0-flash-001",
-        inputUsdPerMillionTokens: 0.1,
-        outputUsdPerMillionTokens: 0.4,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 1_000_000,
-        maxLatencyMs: 8_000,
-      },
-    ],
   },
   high_quality_strategy: {
     key: "high_quality_strategy",
@@ -123,18 +107,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 1_000_000,
       maxLatencyMs: 12_000,
     },
-    fallbacks: [
-      {
-        provider: "openrouter",
-        model: "openai/gpt-5.5",
-        inputUsdPerMillionTokens: 5,
-        outputUsdPerMillionTokens: 30,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 1_000_000,
-        maxLatencyMs: 16_000,
-      },
-    ],
   },
   structured_json: {
     key: "structured_json",
@@ -155,28 +127,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 1_000_000,
       maxLatencyMs: 12_000,
     },
-    fallbacks: [
-      {
-        provider: "openai",
-        model: "gpt-4.1",
-        inputUsdPerMillionTokens: 2,
-        outputUsdPerMillionTokens: 8,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 128_000,
-        maxLatencyMs: 16_000,
-      },
-      {
-        provider: "openrouter",
-        model: "google/gemini-2.0-flash-001",
-        inputUsdPerMillionTokens: 0.1,
-        outputUsdPerMillionTokens: 0.4,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 1_000_000,
-        maxLatencyMs: 8_000,
-      },
-    ],
   },
   vision_classification: {
     key: "vision_classification",
@@ -197,7 +147,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 1_000_000,
       maxLatencyMs: 12_000,
     },
-    fallbacks: [],
   },
   image_draft: {
     key: "image_draft",
@@ -217,7 +166,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 131_072,
       maxLatencyMs: 30_000,
     },
-    fallbacks: [],
   },
   image_final: {
     key: "image_final",
@@ -237,28 +185,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 16_000,
       maxLatencyMs: 60_000,
     },
-    fallbacks: [
-      {
-        provider: "openai",
-        model: "gpt-image-1.5",
-        inputUsdPerMillionTokens: 5,
-        outputUsdPerMillionTokens: 10,
-        imageUsdPerUnit: 0.133,
-        supportsStructuredOutput: false,
-        maxContextTokens: 16_000,
-        maxLatencyMs: 60_000,
-      },
-      {
-        provider: "openrouter",
-        model: "google/gemini-3.1-flash-image-preview",
-        inputUsdPerMillionTokens: 0.5,
-        outputUsdPerMillionTokens: 3,
-        imageUsdPerUnit: 0.04,
-        supportsStructuredOutput: false,
-        maxContextTokens: 65_536,
-        maxLatencyMs: 30_000,
-      },
-    ],
   },
   compliance_review: {
     key: "compliance_review",
@@ -278,18 +204,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 128_000,
       maxLatencyMs: 8_000,
     },
-    fallbacks: [
-      {
-        provider: "openai",
-        model: "gpt-4.1",
-        inputUsdPerMillionTokens: 2,
-        outputUsdPerMillionTokens: 8,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 128_000,
-        maxLatencyMs: 16_000,
-      },
-    ],
   },
   disabled_profile: {
     key: "disabled_profile",
@@ -309,7 +223,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 0,
       maxLatencyMs: 0,
     },
-    fallbacks: [],
   },
 };
 
@@ -321,14 +234,7 @@ export function isModelProfileKey(value: string): value is ModelProfileKey {
   return Object.prototype.hasOwnProperty.call(MODEL_PROFILES, value);
 }
 
-export function normalizeModelSlug(provider: ModelProvider, model: string): string {
-  if (provider === "openrouter" && model.startsWith("openrouter/")) {
-    return model.replace(/^openrouter\//, "");
-  }
-  if (provider === "azure" && model.startsWith("azure/")) {
-    return model.replace(/^azure\//, "");
-  }
-
+export function normalizeModelSlug(_provider: ModelProvider, model: string): string {
   return model;
 }
 
@@ -342,7 +248,6 @@ export function resolveModelProfile(profileKey: ModelProfileKey): ResolvedModelP
   return {
     profile,
     primary: profile.primary,
-    fallbacks: profile.fallbacks,
   };
 }
 
@@ -377,7 +282,6 @@ export function resolveEffectiveModelProfile(
       primary,
     },
     primary,
-    fallbacks: resolved.fallbacks,
   };
 }
 
@@ -409,10 +313,7 @@ export function resolveModelProfileForData(
     throw new Error(`Primary model provider ${resolved.primary.provider} is not approved for sensitive client data.`);
   }
 
-  return {
-    ...resolved,
-    fallbacks: resolved.fallbacks.filter(canCandidateHandleSensitiveClientData),
-  };
+  return resolved;
 }
 
 export function estimateRunCostUsd(candidate: ModelCandidate, usage: UsageEstimate): number {

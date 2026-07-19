@@ -76,7 +76,7 @@ test("Google image provider edits with multiple inline references through the di
   assert.deepEqual(output.usage, { imageUnits: 1, complete: true });
 });
 
-test("Google direct API transient failures enter the existing provider fallback", async () => {
+test("Google direct API transient failures remain retryable on the same model", async () => {
   const provider = createGoogleImageProvider(accounting, {
     env: { GOOGLE_AI_API_KEY: "google-test-key" },
     fetchImpl: async () => new Response(JSON.stringify({ error: { message: "quota busy" } }), { status: 429 }),

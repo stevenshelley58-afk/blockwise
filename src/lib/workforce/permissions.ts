@@ -51,7 +51,7 @@ export const HUMAN_APPROVAL_ACTIONS: WorkforceAction[] = [
   "export_lead_pii",
 ];
 
-const MODEL_OUTBOUND_DOMAINS = ["api.openai.com", "gateway.ai.cloudflare.com", "openrouter.ai"];
+const MODEL_OUTBOUND_DOMAINS = ["api.openai.com", "generativelanguage.googleapis.com"];
 
 export const WORKFORCE_AGENTS: WorkforceAgent[] = [
   {

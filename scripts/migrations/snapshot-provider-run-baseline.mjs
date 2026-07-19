@@ -425,7 +425,7 @@ export function resolveModelProfileEvidence(versionRows, resolveProfile) {
         defaultTemperature: resolved.profile.defaultTemperature,
       },
       primary: candidateEvidence(resolved.primary),
-      fallbacks: resolved.fallbacks.map(candidateEvidence),
+      fallbacks: [],
     };
   });
 }
@@ -1077,7 +1077,7 @@ export function buildProviderBaselineManifest({
     },
     acceptanceEligible: !driftDetected && blockingAnomalies.blockingCount === 0,
     modelProfiles: {
-      resolution: "active-persisted-primary-with-committed-defaults-and-fallbacks",
+      resolution: "active-persisted-primary-with-committed-direct-default",
       query: {
         ...modelProfileQueryDefinition,
         sha256: sha256Canonical(modelProfileQueryDefinition),

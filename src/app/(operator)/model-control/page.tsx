@@ -31,10 +31,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
   ).size;
   const configuredProviderNames = Array.from(
     new Set(
-      modelControlData.modelProfiles.flatMap((profile) => [
-        profile.primary.provider,
-        ...profile.fallbacks.map((fallback) => fallback.provider),
-      ]),
+      modelControlData.modelProfiles.map((profile) => profile.primary.provider),
     ),
   ).map(formatProviderName);
 
@@ -43,7 +40,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
       <PageHeading
         eyebrow="Model governance"
         title="Model Control"
-        description="Task-specific model profiles keep provider choices, fallbacks, spend limits, structured-output requirements, image settings, and kill switches out of product code."
+        description="Task-specific model profiles call OpenAI or Gemini directly. AdStudio modes are pinned, observable, and have no hidden provider fallback."
       />
 
       <section className="grid cols-4">
@@ -150,8 +147,8 @@ function formatDate(value: string | null): string {
 }
 
 function formatProviderName(provider: string): string {
-  if (provider === "openai") return "Primary provider";
-  if (provider === "openrouter") return "Routing provider";
+  if (provider === "openai") return "OpenAI";
+  if (provider === "google") return "Gemini";
 
   return provider;
 }

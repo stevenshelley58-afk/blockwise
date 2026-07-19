@@ -9,11 +9,11 @@
 import { randomUUID } from "node:crypto";
 
 import { createTextProviderForCandidate } from "./ai-providers.ts";
+import type { ModelCandidate } from "../ai/model-registry.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
 import {
-  isRetryableProviderFailure,
-  modelCandidateAttempts,
+  modelCandidateForProfile,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptBundle } from "../operator/prompts/prompt-registry.ts";
@@ -36,6 +36,7 @@ export type CloneQaInput = {
   /** Distinguishes parallel feed/story QA reservations for one generation. */
   format: string;
   attempt: number;
+  candidate?: ModelCandidate;
 };
 
 /**
@@ -177,44 +178,39 @@ export async function runCloneQa(input: CloneQaInput): Promise<AdStudioCloneQa> 
     warnings: [],
   };
 
-  const profile = await resolveRuntimeModelProfile("vision_classification");
-  const candidates = modelCandidateAttempts(profile);
+  const candidate = input.candidate
+    ?? modelCandidateForProfile(await resolveRuntimeModelProfile("vision_classification"));
   const attempts: ProviderRunAttempt[] = [];
   let output: TextProviderResponse | null = null;
   let provider: TextProviderAdapter | null = null;
   let modelName = "unavailable";
   let lastError: unknown = null;
 
-  for (const [attemptIndex, candidate] of candidates.entries()) {
-    const candidateProvider = createTextProviderForCandidate(candidate);
-    try {
-      const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
-        workspaceId: input.workspaceId,
-        mutationId,
-        attemptIndex,
-        modelProfile: "vision_classification",
-        provider: candidateProvider,
-        execute: () => candidateProvider.generate({
-          system,
-          schemaName: "metaLeadAdPack",
-          imageUrl: input.imageUrl,
-          messages: [{ role: "user", content: user }],
-        }),
-      });
-      attempts.push(execution.attempt);
-      if (!execution.ok) {
-        lastError = execution.error;
-        if (!isRetryableProviderFailure(execution.error)) break;
-        continue;
-      }
+  const candidateProvider = createTextProviderForCandidate(candidate);
+  try {
+    const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+      workspaceId: input.workspaceId,
+      mutationId,
+      attemptIndex: 0,
+      modelProfile: "vision_classification",
+      provider: candidateProvider,
+      execute: () => candidateProvider.generate({
+        system,
+        schemaName: "metaLeadAdPack",
+        imageUrl: input.imageUrl,
+        messages: [{ role: "user", content: user }],
+      }),
+    });
+    attempts.push(execution.attempt);
+    if (execution.ok) {
       output = execution.output;
       provider = candidateProvider;
       modelName = String(output.providerMetadata.model ?? candidate.model);
-      break;
-    } catch (error) {
-      lastError = error;
-      break;
+    } else {
+      lastError = execution.error;
     }
+  } catch (error) {
+    lastError = error;
   }
 
   await recordAdStudioProviderRun({

@@ -8,9 +8,9 @@ if [ -n "${HERMES_DEFAULT_MODEL:-}" ]; then
   mkdir -p "${HERMES_HOME:-/opt/data}"
   cat > "${HERMES_HOME:-/opt/data}/config.yaml" <<EOF
 model:
-  provider: "${HERMES_PROVIDER:-openrouter}"
+  provider: "openai"
   default: "${HERMES_DEFAULT_MODEL}"
-  base_url: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+  base_url: "https://api.openai.com/v1"
 hooks_auto_accept: true
 EOF
   chown hermes:hermes "${HERMES_HOME:-/opt/data}/config.yaml" 2>/dev/null || true

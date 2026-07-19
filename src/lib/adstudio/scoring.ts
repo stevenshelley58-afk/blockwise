@@ -4,8 +4,7 @@ import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AssembledPrompt } from "../operator/prompts/assemble-prompt.ts";
 import {
-  isRetryableProviderFailure,
-  modelCandidateAttempts,
+  modelCandidateForProfile,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
 import { getActivePromptSection } from "../operator/prompts/prompt-registry.ts";
@@ -104,36 +103,25 @@ export async function scoreCampaignPackVariantsWithAi(input: {
     prompt = assembledPrompt;
 
     const profile = await resolveRuntimeModelProfile("structured_json");
-    let lastError: unknown = null;
-
-    for (const [attemptIndex, candidate] of modelCandidateAttempts(profile).entries()) {
-      const candidateProvider = createTextProviderForCandidate(candidate);
-      const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
-        workspaceId: input.workspaceId,
-        mutationId,
-        attemptIndex,
-        modelProfile: "structured_json",
-        provider: candidateProvider,
-        execute: () => candidateProvider.generate({
-          system: assembledPrompt.system,
-          schemaName: "metaLeadAdPack",
-          messages: [{ role: "user", content: assembledPrompt.user }],
-        }),
-      });
-      attempts.push(execution.attempt);
-      if (execution.ok) {
-        output = execution.output;
-        provider = candidateProvider;
-        modelName = String(output.providerMetadata.model ?? candidate.model);
-        break;
-      }
-      lastError = execution.error;
-      if (!isRetryableProviderFailure(execution.error)) break;
-    }
-
-    if (!output || !provider) {
-      throw lastError ?? new Error("Creative scoring is not configured.");
-    }
+    const candidate = modelCandidateForProfile(profile);
+    const candidateProvider = createTextProviderForCandidate(candidate);
+    const execution = await executeAdStudioProviderAttempt<TextProviderResponse>({
+      workspaceId: input.workspaceId,
+      mutationId,
+      attemptIndex: 0,
+      modelProfile: "structured_json",
+      provider: candidateProvider,
+      execute: () => candidateProvider.generate({
+        system: assembledPrompt.system,
+        schemaName: "metaLeadAdPack",
+        messages: [{ role: "user", content: assembledPrompt.user }],
+      }),
+    });
+    attempts.push(execution.attempt);
+    if (!execution.ok) throw execution.error;
+    output = execution.output;
+    provider = candidateProvider;
+    modelName = String(output.providerMetadata.model ?? candidate.model);
 
     finalizationStarted = true;
     await recordAdStudioProviderRun({

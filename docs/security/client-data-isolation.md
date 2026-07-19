@@ -16,10 +16,10 @@ Blockwise is a multi-tenant product. The security model is fail-closed: no data 
 ## Implemented Controls
 
 - `src/lib/agents/runtime-policy.ts` enforces allowed actions, data classes, destinations, outbound domains, row limits, and workspace scope.
-- `src/lib/ai/model-registry.ts` resolves approved model profiles, including OpenRouter selections saved by operators.
+- `src/lib/ai/model-registry.ts` resolves approved direct OpenAI or Gemini profiles saved by operators.
 - `supabase/migrations/202605270001_security_hardening.sql` creates `private.provider_token_vault`, removes token columns from `public.provider_connections`, denies client-side writes to server-owned security tables, adds agent policy columns, and records cross-workspace grants.
 - `scripts/verify-env.mjs` warns when recommended production security variables are missing.
-- Tests cover agent isolation, sensitive-data detection, model fallback filtering, and migration guardrails.
+- Tests cover agent isolation, sensitive-data detection, direct-provider validation, and migration guardrails.
 
 ## Cloudflare Production Checklist
 

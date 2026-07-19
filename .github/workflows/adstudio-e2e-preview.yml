@@ -4,7 +4,7 @@
 #
 # COST GATE (2026-07-05): every run generates a REAL ad with paid image/LLM
 # credits (~$0.30-0.60). It used to fire on every Preview deployment — dozens
-# of paid generations per dev day — which drained the OpenRouter/FAL balances.
+# of paid generations per dev day and exhausted provider budgets.
 # It is now MANUAL-ONLY (workflow_dispatch with the deployment URL to test).
 # Auto-running against Production is not possible anyway: the login form's
 # Turnstile captcha rejects Playwright there ("Verification failed"), so an

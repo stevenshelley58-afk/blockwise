@@ -165,6 +165,7 @@ export type AdStudioCampaign = {
   templateSnapshot?: Record<string, unknown> | null;
   platforms: AdStudioPlatform[];
   creativeFormats: AdStudioFormat[];
+  generationQuality: "fast" | "high";
   status: "draft" | "generating" | "ready" | "blocked" | "exported" | "archived";
 };
 

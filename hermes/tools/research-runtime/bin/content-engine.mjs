@@ -19,7 +19,7 @@ export const CONTENT_STEPS = [
   { skillName: "blockwise-artifact-packager", status: "final_review", defaultModelPolicy: "best_json" },
 ];
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_PROMPT_SET_NAME = "default-blockwise-authority-v1";
 const DEFAULT_APPROVAL_ACTIONS = ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"];
 
@@ -224,13 +224,11 @@ async function executeContentSkill(skillName, input) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let response;
   try {
-    response = await input.fetchImpl(`${(input.env.OPENROUTER_BASE_URL || OPENROUTER_BASE_URL).replace(/\/$/u, "")}/chat/completions`, {
+    response = await input.fetchImpl(OPENAI_CHAT_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${requiredOpenRouterKey(input.env)}`,
+        Authorization: `Bearer ${requiredOpenAiKey(input.env)}`,
         "Content-Type": "application/json",
-        ...(input.env.OPENROUTER_SITE_URL ? { "HTTP-Referer": input.env.OPENROUTER_SITE_URL } : {}),
-        ...(input.env.OPENROUTER_APP_NAME ? { "X-Title": input.env.OPENROUTER_APP_NAME } : {}),
       },
       body: JSON.stringify({
         model,
@@ -238,40 +236,36 @@ async function executeContentSkill(skillName, input) {
           { role: "system", content: "You are a Blockwise Hermes content skill. Return strict JSON only." },
           { role: "user", content: input.prompt },
         ],
-        temperature: 0.2,
         response_format: { type: "json_object" },
       }),
       signal: controller.signal,
     });
   } catch (error) {
     if (error?.name === "AbortError") {
-      throw new Error(`OpenRouter content request timed out after ${timeoutMs}ms for ${skillName}`);
+      throw new Error(`OpenAI content request timed out after ${timeoutMs}ms for ${skillName}`);
     }
     throw error;
   } finally {
     clearTimeout(timeout);
   }
   const raw = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(`OpenRouter content request failed ${response.status}: ${JSON.stringify(raw).slice(0, 700)}`);
+  if (!response.ok) throw new Error(`OpenAI content request failed ${response.status}: ${JSON.stringify(raw).slice(0, 700)}`);
   return {
-    provider: "openrouter",
+    provider: "openai",
     model,
     output: parseModelJson(extractContent(raw)),
   };
 }
 
 export function modelForContentSkill(env, modelPolicyId, skillName) {
-  const configured = parseJsonObject(env.HERMES_CONTENT_MODELS_JSON) || parseJsonObject(env.HERMES_OPENROUTER_MODELS_JSON) || {};
-  const model = configured[skillName] || configured[modelPolicyId] || configured.content_generation || env.HERMES_DEFAULT_MODEL || env.HERMES_OPENROUTER_MODEL;
-  if (!model) {
-    throw new Error(`No content model configured for ${skillName}; set HERMES_DEFAULT_MODEL or HERMES_CONTENT_MODELS_JSON`);
-  }
+  const configured = parseJsonObject(env.HERMES_CONTENT_MODELS_JSON) || parseJsonObject(env.HERMES_MODELS_JSON) || {};
+  const model = configured[skillName] || configured[modelPolicyId] || configured.content_generation || env.HERMES_DEFAULT_MODEL || "gpt-5.5";
   return String(model);
 }
 
-function requiredOpenRouterKey(env) {
-  if (!env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured for Hermes content generation");
-  return env.OPENROUTER_API_KEY;
+function requiredOpenAiKey(env) {
+  if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured for Hermes content generation");
+  return env.OPENAI_API_KEY;
 }
 
 function dryRunEnabled(env) {
@@ -279,7 +273,7 @@ function dryRunEnabled(env) {
 }
 
 function contentModelTimeoutMs(env) {
-  const configured = Number.parseInt(String(env.HERMES_CONTENT_MODEL_TIMEOUT_MS || env.OPENROUTER_TIMEOUT_MS || ""), 10);
+  const configured = Number.parseInt(String(env.HERMES_CONTENT_MODEL_TIMEOUT_MS || ""), 10);
   if (Number.isFinite(configured) && configured >= 1000) return configured;
   return 90000;
 }

@@ -39,7 +39,7 @@ test("budgetStatus with no budget configured stays ok", () => {
 });
 
 test("a failed check is critical so outages are never silent", () => {
-  const status = checkFailedStatus("openrouter-credits", "OpenRouter", "HTTP 500");
+  const status = checkFailedStatus("openai-api", "OpenAI", "HTTP 500");
   assert.equal(status.level, "critical");
   assert.match(status.summary, /check failed/);
 });
@@ -74,12 +74,12 @@ test("toState maps service to level for persistence", () => {
 
 test("formatAlert subject carries the worst escalated level", () => {
   const statuses: ServiceStatus[] = [
-    { service: "openrouter-credits", level: "critical", summary: "OpenRouter: $0.40 remaining", pctUsed: 99 },
+    { service: "openai-api", level: "critical", summary: "OpenAI: unavailable", pctUsed: 99 },
     { service: "openai-spend", level: "warn", summary: "Provider: 84%", pctUsed: 84 },
   ];
   const { subject, text } = formatAlert({ escalations: statuses, recoveries: [] }, statuses);
   assert.match(subject, /CRITICAL/);
-  assert.match(subject, /openrouter-credits/);
+  assert.match(subject, /openai-api/);
   assert.match(text, /Full picture/);
 });
 

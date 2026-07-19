@@ -81,14 +81,14 @@ test("Hermes content handler times out stalled provider calls", async () => {
         env: {
           HERMES_CONTENT_MODEL_TIMEOUT_MS: "1000",
           HERMES_DEFAULT_MODEL: "test-model",
-          OPENROUTER_API_KEY: "test-key",
+          OPENAI_API_KEY: "test-key",
         },
         fetchImpl: (_url: RequestInfo | URL, init: RequestInit = {}) => new Promise((_resolve, reject) => {
           init.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), { once: true });
         }),
       },
     ),
-    /OpenRouter content request timed out after 1000ms for blockwise-topic-researcher/u,
+    /OpenAI content request timed out after 1000ms for blockwise-topic-researcher/u,
   );
 
   assert.equal(db.tables.content_runs[0].status, "failed");

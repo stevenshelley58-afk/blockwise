@@ -11,10 +11,9 @@ host = "0.0.0.0"
 port = 8080
 
 [agent.model]
-provider_env = "HERMES_PROVIDER"
+provider = "openai"
 default_model_env = "HERMES_DEFAULT_MODEL"
-escalation_model_env = "HERMES_ESCALATION_MODEL"
-task_models_json_env = "HERMES_OPENROUTER_MODELS_JSON"
+task_models_json_env = "HERMES_MODELS_JSON"
 
 [agent.memory]
 # Postgres is the system of record for decisions. mem0 is fuzzy recall only.

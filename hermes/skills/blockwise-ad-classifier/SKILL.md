@@ -17,14 +17,13 @@ hook, style, audience, and local target signal.
 
 ## Model Config
 
-Use `hermes/tools/research-runtime` OpenRouter support. Model names must come
+Use the `hermes/tools/research-runtime` direct OpenAI client. Model names must come
 from env only:
 
 ```bash
-OPENROUTER_API_KEY=<key>
-HERMES_DEFAULT_MODEL=<cheap-default-model>
-HERMES_ESCALATION_MODEL=<stronger-escalation-model>
-HERMES_OPENROUTER_MODELS_JSON={"ad_classification":"<model-from-operator-config>"}
+OPENAI_API_KEY=<key>
+HERMES_DEFAULT_MODEL=gpt-5.5
+HERMES_MODELS_JSON={"ad_classification":"<model-from-operator-config>"}
 ```
 
 Do not hardcode model names in prompts, scripts, or skill config.
@@ -67,7 +66,7 @@ second attempt is invalid.
 ## Tools
 
 - `hermes/tools/research-runtime`
-- `hermes.openrouter.complete`
+- `hermes.openai.complete`
 - `blockwise.ingest.upsert_classification`
 - `blockwise.ingest.open_defect`
 - `hermes.write_decision`

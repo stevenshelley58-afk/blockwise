@@ -108,7 +108,7 @@ test("agent runtime policies deny unapproved PII exports and unlisted outbound d
   );
 });
 
-test("agent runtime policies allow curated OpenRouter model egress", () => {
+test("agent runtime policies allow curated direct Gemini model egress", () => {
   const policy = buildWorkforceRuntimePolicy({
     workspaceId: "workspace_a",
     agentRunId: "agent_run_3",
@@ -122,7 +122,7 @@ test("agent runtime policies allow curated OpenRouter model egress", () => {
       workspaceId: "workspace_a",
       dataClasses: ["campaign_draft"],
       destination: "model_prompt",
-      outboundDomain: "openrouter.ai",
+      outboundDomain: "generativelanguage.googleapis.com",
       rowCount: 1,
     }),
     { allowed: true },

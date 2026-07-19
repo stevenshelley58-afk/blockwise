@@ -20,7 +20,6 @@ Two mechanisms:
 
 | Service | Signal | Limit compared against |
 |---|---|---|
-| OpenRouter (Hermes + Ad Studio) | `GET /api/v1/credits`: usage vs purchased credits, remaining balance, key validity | `OPENROUTER_MIN_CREDITS_USD` floor (default $5) + 80/95% of purchased credits |
 | OpenAI spend | `GET /v1/organization/costs` month-to-date | `OPENAI_MONTHLY_BUDGET_USD` (default $50) |
 | OpenAI API health | `GET /v1/models` with the runtime key | 401/403/5xx -> critical, 429 -> warn |
 | Hermes paid capture | Supabase `research.v_health.apify_mtd_spend_usd` + circuit state written by Hermes | `apify_monthly_cap_usd` runtime setting ($25); circuit open -> warn |
@@ -115,11 +114,9 @@ schedule `0 */2 * * *`.
 
 ## Responding to an alert
 
-- **OpenRouter low/exhausted** - top up credits at openrouter.ai/credits.
-  Hermes also self-limits via `HERMES_DAILY_SPEND_LIMIT_USD`.
 - **OpenAI 80/95%** - review usage at platform.openai.com/usage; raise the
   budget or investigate runaway generation.
-- **OpenAI/OpenRouter key rejected or 5xx** - ad creation is failing now; check
+- **OpenAI key rejected or 5xx** - high-quality generation and Hermes are failing now; check
   provider status pages and key validity first.
 - **Hermes paid capture near cap / circuit open** - see
   `research.runtime_settings` (`apify_*` keys), the Hermes runtime logs, and
@@ -131,6 +128,6 @@ schedule `0 */2 * * *`.
 
 Call `/api/alerts/paid-service-watchdog` with `Authorization: Bearer
 $CRON_SECRET`. To force an alert end-to-end, temporarily set
-`OPENROUTER_MIN_CREDITS_USD` above your current balance and run it again; you
-should get both the email and the WhatsApp message, and a recovery note on the
-next run after reverting.
+`OPENAI_MONTHLY_BUDGET_USD` below current month-to-date spend and run it again;
+you should get both the email and the WhatsApp message, and a recovery note on
+the next run after reverting.

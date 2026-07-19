@@ -40,10 +40,9 @@ quality, classification, or stale public data.
 
 ## Model Config
 
-If an LLM is needed for evidence summarisation, use OpenRouter through
+If an LLM is needed for evidence summarisation, use OpenAI directly through
 `hermes/tools/research-runtime`. Model names must come from
-`HERMES_DEFAULT_MODEL`, `HERMES_ESCALATION_MODEL`, or
-`HERMES_OPENROUTER_MODELS_JSON`.
+`HERMES_DEFAULT_MODEL` or `HERMES_MODELS_JSON`.
 
 ## Tools
 

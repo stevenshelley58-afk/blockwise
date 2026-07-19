@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { validateModelProfileSelection } from "@/lib/ai/model-control-config";
+import { testDirectModel } from "@/lib/ai/direct-model-test";
 import { ensureOperatorSession } from "@/lib/ai/model-profile-store";
-import { testOpenRouterModel } from "@/lib/ai/openrouter-client";
-import { resolveModelProfile } from "@/lib/ai/model-registry";
-import type { ModelProfileKey } from "@/lib/ai/model-registry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -32,17 +30,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const profileKey = key as ModelProfileKey;
-    const { profile } = resolveModelProfile(profileKey);
-    const result = await testOpenRouterModel({
-      model: validation.option.model,
-      requireParameters: profile.requiresStructuredOutput,
-    });
+    const result = await testDirectModel(validation.option);
 
     return NextResponse.json({ ok: true, content: result.content });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "OpenRouter test failed." },
+      { ok: false, error: error instanceof Error ? error.message : "Direct model test failed." },
       { status: 503 },
     );
   }
