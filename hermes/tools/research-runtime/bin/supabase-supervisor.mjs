@@ -1056,13 +1056,13 @@ async function loadClassificationBackfillCandidates() {
   return candidates;
 }
 
-async function claimJobs() {
+async function claimJobs({ jobTypes = HANDLED_JOB_TYPES, limit = claimLimit } = {}) {
   try {
     const claimed = await rpc("claim_work_queue_jobs", {
       p_worker_id: workerId,
       p_queue_name: "research",
-      p_job_types: HANDLED_JOB_TYPES,
-      p_limit: claimLimit,
+      p_job_types: jobTypes,
+      p_limit: limit,
       p_claim_ttl_seconds: claimTtlSeconds,
     });
     for (const job of claimed) await recordEvent("claim", "work_queue", job.id, { job_type: job.job_type, workerId }, { work_queue_id: job.id });
@@ -1072,7 +1072,7 @@ async function claimJobs() {
     log("claim RPC unavailable, using direct REST fallback", { error: error.message }, "warning");
   }
 
-  const pending = await rest("research", `work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte.${encode(now())}&job_type=in.(${HANDLED_JOB_TYPES.map(encode).join(",")})&order=priority.asc,available_at.asc,created_at.asc&limit=${claimLimit}`);
+  const pending = await rest("research", `work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte.${encode(now())}&job_type=in.(${jobTypes.map(encode).join(",")})&order=priority.asc,available_at.asc,created_at.asc&limit=${limit}`);
   const claimed = [];
   for (const job of pending) {
     const token = randomUUID();
@@ -6081,12 +6081,12 @@ async function handleJob(job) {
   return { status: "blocked", blocked_reason: `unsupported_job_type:${job.job_type}`, result: { handler: "none", reason: "Hermes runtime does not handle this job type." } };
 }
 
-async function processClaimedJobs() {
+async function processClaimedJobs({ jobTypes = HANDLED_JOB_TYPES, batchLimit = claimLimit, maxJobs = maxJobsPerTick } = {}) {
   let handled = 0;
-  while (handled < maxJobsPerTick) {
-    const jobs = await claimJobs();
+  while (handled < maxJobs) {
+    const jobs = await claimJobs({ jobTypes, limit: Math.min(batchLimit, maxJobs - handled) });
     if (!jobs.length) break;
-    const batch = jobs.slice(0, maxJobsPerTick - handled);
+    const batch = jobs.slice(0, maxJobs - handled);
     await Promise.all(batch.map(processOneJob));
     handled += batch.length;
   }
@@ -6152,6 +6152,16 @@ async function tick() {
   let buildRunId = null;
   let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0, apifyBenchmark: null };
   let watchdogs = {};
+  let priorityContentHandled = 0;
+  try {
+    priorityContentHandled = await processClaimedJobs({
+      jobTypes: [CONTENT_RUN_JOB_TYPE],
+      batchLimit: 1,
+      maxJobs: 1,
+    });
+  } catch (error) {
+    log("priority content worker pass failed; continuing to supervisor", { error: error.message }, "error");
+  }
   try {
     buildRunId = await ensureBuildRun();
     const policySeed = await ensureSourceBackedRefreshPolicies();
@@ -6164,13 +6174,13 @@ async function tick() {
   } catch (error) {
     log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
   }
-  const handled = await processClaimedJobs();
+  const handled = priorityContentHandled + await processClaimedJobs();
   try {
     watchdogs = await runWatchdogs();
   } catch (error) {
     log("watchdog phase failed after worker pass", { error: error.message }, "error");
   }
-  log("tick complete", { mode, workerId, buildRunId, ...supervisor, handled, watchdogs });
+  log("tick complete", { mode, workerId, buildRunId, ...supervisor, priorityContentHandled, handled, watchdogs });
 }
 
 async function main() {
