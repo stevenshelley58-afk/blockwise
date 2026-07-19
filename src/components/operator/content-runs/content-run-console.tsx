@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { StatusPill, type StatusTone } from "@/components/status-pill";
-import type { ContentRunRow, PromptSetRow } from "@/lib/content-engine";
+import { compactSkillLabel, type ContentRunRow, type ContentSkillName, type PromptSetRow } from "@/lib/content-engine";
 
 type ContentRunConsoleProps = {
   runs: ContentRunRow[];
@@ -60,7 +60,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
           prompt_set_id: form.prompt_set_id || undefined,
           word_count: 1400,
           image_style: "premium SaaS, minimal, navy/off-white, no low-quality artifacts",
-          publish_target: "blockwise.sale/blog",
+          publish_target: "blockwise.sale/guides",
         }),
       });
       const payload = (await response.json()) as {
@@ -179,7 +179,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
                       <p className="item-meta">{run.offer} · {run.primary_cta}</p>
                     </td>
                     <td data-label="Status"><StatusPill tone={toneForStatus(run.status)}>{run.status.replace(/_/g, " ")}</StatusPill></td>
-                    <td data-label="Step">{run.current_step?.replace(/^blockwise-/u, "") ?? "—"}</td>
+                    <td data-label="Step">{run.current_step ? compactSkillLabel(run.current_step as ContentSkillName) : "—"}</td>
                     <td data-label="Created">{formatDate(run.created_at)}</td>
                     <td data-label="Open">
                       <Link className="icon-button" href={`/operator/content-runs/${run.id}`} aria-label={`Open ${run.topic}`} title="Open run">

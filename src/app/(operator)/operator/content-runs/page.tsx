@@ -32,7 +32,7 @@ export default async function OperatorContentRunsPage() {
       <PageHeading
         eyebrow="Hermes content engine"
         title="Content-to-Lead Runs"
-        description="Create one authority topic and review the complete draft package: blog, image briefs, social posts, Meta lead ad, Instant Form, compliance, and approval trace."
+        description="Create one authority topic and review the complete draft package: guide, image briefs, social posts, Meta lead ad, Instant Form, compliance, and approval trace."
       />
       <ContentRunConsole runs={runs} promptSets={promptSets} />
     </main>
