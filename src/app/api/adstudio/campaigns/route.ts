@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -18,12 +18,10 @@ import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// The synchronous degraded-mode pipeline (copy + clone + vision QA in one
-// request) regularly needs more than 120s; 300 is the Pro plan ceiling.
+// The synchronous degraded-mode pipeline (copy + both clone renders in one
+// request, plus the deferred advisory QA pass via after()) can exceed 120s;
+// 300 is the Pro plan ceiling.
 export const maxDuration = 300;
-
-// Headroom under maxDuration for the synchronous fallback path.
-const SYNC_GENERATION_DEADLINE_MS = 240_000;
 
 // Secrets pasted into the Vercel dashboard can pick up an invisible BOM
 // (U+FEFF), which makes every trigger call throw "Cannot convert argument to
@@ -284,12 +282,14 @@ export async function POST(request: NextRequest) {
         userId: context.access.userId,
         origin,
         body,
-        deadlineMs: SYNC_GENERATION_DEADLINE_MS,
-        maxCloneAttempts: 1,
         workspaceName: context.access.workspaceName,
         region: context.access.region,
         isTrialWorkspace: trialReservation.isTrialWorkspace,
       });
+
+      // The customer has the ad in this response; the advisory QA pass
+      // (editor regions + copy warnings) runs after the response is sent.
+      after(() => result.enrichQa());
 
       const liveResult = buildAdStudioLiveResult({
         data: compactAdStudioCampaignPackForTransport(result.campaignPack),

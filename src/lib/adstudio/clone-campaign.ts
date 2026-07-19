@@ -80,7 +80,7 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
       brandFit: 15,
       complianceSafety: 20,
       visualHierarchy: 10,
-      notes: ["Cloned from the selected sample", "Checked before editing"],
+      notes: ["Cloned from the selected sample", "Reviewed automatically after creation"],
       warnings: [],
     }),
     status: "approved" as const,

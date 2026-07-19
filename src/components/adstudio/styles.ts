@@ -239,6 +239,12 @@
 .studio-preview-fit-content>.studio-metachrome{width:500px}
 .studio-clone-stage{position:relative;display:grid;justify-items:center;gap:10px}
 .studio-clone-stage img{display:block;max-width:min(475px,82%);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+/* Editor-preparing chip: the render is on screen before the advisory QA pass
+   lands, so the chip sits exactly where the edit toolbar will appear. */
+.studio-editor-preparing{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:9999px;background:rgba(11,12,16,.92);color:#fff;font-size:12px;font-weight:650;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.studio-editor-preparing-spinner{width:12px;height:12px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:studio-editor-preparing-spin 1s linear infinite}
+@keyframes studio-editor-preparing-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.studio-editor-preparing-spinner{animation:none}}
 .studio-clone-warning-strip{width:min(520px,92vw);display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid rgba(245,158,11,.35);border-radius:8px;background:#fff8eb;color:#563407;padding:10px 12px;box-shadow:0 12px 28px rgba(30,41,59,.16)}
 .studio-clone-warning-strip p{margin:0;font-size:12.5px;line-height:1.35;font-weight:650}
 .studio-clone-warning-strip p+p{margin-top:5px}

@@ -12,6 +12,8 @@ export type InPlaceAdEditorProps = {
   creative: AdStudioCreative;
   onCreativeChange: (next: AdStudioCreative) => void;
   showToast: (msg: string) => void;
+  /** The ad is visible but its advisory QA pass (editor regions) hasn't landed yet. */
+  preparing?: boolean;
 };
 
 const MAX_TEXT_LENGTH = 200;
@@ -51,7 +53,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPlaceAdEditorProps) {
+export function InPlaceAdEditor({ creative, onCreativeChange, showToast, preparing }: InPlaceAdEditorProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [textDraft, setTextDraft] = useState("");
   const [instruction, setInstruction] = useState("");
@@ -194,7 +196,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
       showToast(`Keep the replacement text to ${MAX_TEXT_LENGTH} characters or less.`);
       return;
     }
-    void performMutation({ action: "edit", fieldKey: selectedRegion.key, newValue: value }, "Text updated and checked");
+    void performMutation({ action: "edit", fieldKey: selectedRegion.key, newValue: value }, "Text updated");
   }
 
   function applyImageInstruction() {
@@ -210,7 +212,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     }
     void performMutation(
       { action: "edit", fieldKey: selectedRegion.key, instruction: value },
-      "Image updated and checked",
+      "Image updated",
     );
   }
 
@@ -245,7 +247,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
           newImage: dataUrl,
           instruction: instruction.trim() || undefined,
         },
-        "Image replaced and checked",
+        "Image replaced",
       );
     } catch {
       showToast("The image could not be read. Try another file.");
@@ -256,15 +258,24 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
     if (busy) return;
     void performMutation(
       { action },
-      action === "undo" ? "Previous version restored and checked" : "Next version restored and checked",
+      action === "undo" ? "Previous version restored" : "Next version restored",
     );
   }
 
   if (regions.length === 0) {
+    // The finished render shows the moment it persists; the advisory QA pass
+    // that powers the hit-targets follows. The chip sits exactly where the
+    // edit toolbar will appear so nothing jumps when editing unlocks.
     return (
       <div className="studio-clone-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="AI-designed ad creative" />
+        {preparing ? (
+          <div className="studio-editor-preparing" role="status" aria-live="polite">
+            <span className="studio-editor-preparing-spinner" aria-hidden />
+            Preparing your editor…
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -421,7 +432,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
                 onChange={(event) => setInstruction(event.target.value)}
                 onKeyDown={handleEditorKeyDown}
               />
-              <small>Only this selected area can change. The rest of the ad is checked before saving.</small>
+              <small>Only this selected area can change. The rest of the ad is preserved pixel-for-pixel.</small>
               <button className="primary" type="button" onClick={applyImageInstruction} disabled={busy || !instruction.trim()}>
                 <WandSparkles aria-hidden size={16} />
                 Apply image edit
@@ -434,7 +445,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPla
           )}
 
           <p className="studio-inplace-preserve-note">
-            The current finished ad stays as the reference. Nothing is saved unless the updated ad passes the copy and visual checks.
+            Every change saves to your history — use Undo or Compare to step back. Anything that looks off after an edit is flagged for you.
           </p>
           {busy ? (
             <div className="studio-inplace-progress" role="status" aria-live="polite">

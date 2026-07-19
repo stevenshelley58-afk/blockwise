@@ -730,6 +730,61 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
+  // The finished ad shows the moment its renders persist; the advisory QA pass
+  // (editor regions + copy warnings) attaches to the persisted creatives a few
+  // seconds later. Poll the campaign until the verdicts land, merging ONLY the
+  // missing cloneQa so concurrent local state is never clobbered.
+  const editorPreparing = pack.creatives.some(
+    (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
+  );
+  const editorPreparingCampaignId = editorPreparing ? pack.campaign.campaignId : null;
+  useEffect(() => {
+    if (!editorPreparingCampaignId) return;
+    let cancelled = false;
+    let attempts = 0;
+    let timer = 0;
+
+    const poll = async () => {
+      if (cancelled || attempts >= 40) return;
+      attempts += 1;
+      try {
+        const response = await fetch(
+          `/api/adstudio/campaigns/${encodeURIComponent(editorPreparingCampaignId)}`,
+          { cache: "no-store" },
+        );
+        const payload = (await response.json().catch(() => null)) as
+          | { campaignPack?: AdStudioCampaignPack | null }
+          | null;
+        const freshCreatives = payload?.campaignPack?.creatives ?? [];
+        const qaByCreative = new Map(
+          freshCreatives.flatMap((creative) =>
+            creative.canvas.cloneQa ? [[creative.creativeId, creative.canvas.cloneQa] as const] : [],
+          ),
+        );
+        if (!cancelled && qaByCreative.size > 0) {
+          setPack((current) => ({
+            ...current,
+            creatives: current.creatives.map((creative) => {
+              const qa = qaByCreative.get(creative.creativeId);
+              return qa && !creative.canvas.cloneQa
+                ? { ...creative, canvas: { ...creative.canvas, cloneQa: qa } }
+                : creative;
+            }),
+          }));
+        }
+      } catch {
+        // Transient poll failure - the next tick retries.
+      }
+      if (!cancelled) timer = window.setTimeout(() => void poll(), 3000);
+    };
+
+    timer = window.setTimeout(() => void poll(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [editorPreparingCampaignId]);
+
   async function confirmMediaReplacement() {
     if (!pendingMediaReplacement) return;
     if (!currentCreative || !isCloneCreative(currentCreative)) {
@@ -901,11 +956,14 @@ export function AdStudioWorkbench({
                 creative={currentCreative}
                 onCreativeChange={updateCreative}
                 showToast={studio.showToast}
+                preparing={editorPreparing}
               />
             </MetaChromePreview>
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
             <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>
+          ) : editorPreparing ? (
+            <p className="studio-metachrome-edit-hint">Your ad is ready to preview - editing unlocks in a moment.</p>
           ) : null}
           {showCloneWarnings && (
             <div className="studio-clone-warning-strip" role="status" aria-live="polite">

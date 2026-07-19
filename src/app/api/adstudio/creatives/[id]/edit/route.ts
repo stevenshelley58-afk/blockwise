@@ -10,7 +10,7 @@ import {
   persistCloneRender,
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
-import { cloneQaCorrectionPrompt, runCloneQa } from "@/lib/adstudio/clone-qa";
+import { applyDeterministicTextEditQa, runCloneQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -45,7 +45,6 @@ type TargetedEditBody = {
 };
 
 // Every saved edit is a final-quality render, never a disposable preview.
-const MAX_ATTEMPTS = 2;
 const RENDER_HISTORY_LIMIT = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -171,40 +170,11 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       );
     }
     const currentImageRef = cloneObject.content || cloneObject.assetId || "";
-    const targetImage = await resolveAdStudioImageForModel(
-      context.supabase,
-      context.access.workspaceId,
-      targetImageRef,
-    );
-    if (!targetImage) {
-      await releaseClaim();
-      return NextResponse.json({ error: "That saved version could not be restored." }, { status: 400 });
-    }
-    const expectedCopy = Object.fromEntries(
-      (targetQa?.copyChecks ?? []).map((check) => [check.key, check.expected]),
-    );
-    let restoredQa: AdStudioCloneQa;
-    try {
-      restoredQa = await runCloneQa({
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        correlationId: mutationId,
-        imageUrl: targetImage,
-        expectedCopy,
-        format: String(row.format ?? "4:5"),
-        attempt: 1,
-      });
-    } catch (error) {
-      await releaseClaim();
-      return errorResponse(error, 502);
-    }
-    if (!restoredQa.passed) {
-      await releaseClaim();
-      return NextResponse.json(
-        { error: "That version no longer passes the ad checks, so it was not restored.", qa: restoredQa },
-        { status: 502 },
-      );
-    }
+    // Undo/redo restores a version the customer already had, with the QA
+    // verdict saved alongside it — no vision round-trip, so restores are
+    // instant. A version saved before its advisory pass landed restores with
+    // the current verdict carried forward.
+    const restoredQa: AdStudioCloneQa | undefined = targetQa ?? canvas.cloneQa;
     const nextCanvas: AdStudioCreative["canvas"] = {
       ...canvas,
       objects: [{ ...cloneObject, content: targetImageRef, assetId: targetImageRef }],
@@ -294,7 +264,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const correlationId = mutationId;
 
   let qa: AdStudioCloneQa | null = null;
-  let lastImage: { assetUrl: string; model: string; provider: string } | null = null;
+  let lastImage: { assetUrl: string; model: string; provider: string };
   {
     const fieldLabel = editFieldKey.replace(/_/g, " ");
     const baseRequest = buildTargetedEditRequest({
@@ -309,57 +279,50 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
     // All edits go through the image model. A previous deterministic text
     // fallback blurred the selected rectangle and painted generic Arial over
-    // the ad, permanently destroying the source design. The model now retains
-    // the original type treatment, while compositing and QA preserve the rest.
+    // the ad, permanently destroying the source design. The model retains the
+    // original type treatment, while compositing preserves the rest.
     const providers = (await resolveCloneProviders()).sort(
       (left, right) => Number(Boolean(right.capabilities.inpainting)) - Number(Boolean(left.capabilities.inpainting)),
     );
-    let correction = "";
 
     try {
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-        const generated = await generateCloneWithCascade({
-          providers,
-          request: {
-            ...baseRequest,
-            prompt: correction ? `${baseRequest.prompt} ${correction}` : baseRequest.prompt,
-            seed: attempt,
-          },
-          workspaceId: context.access.workspaceId,
-          userId: context.access.userId,
-          correlationId,
-          attempt,
-        });
-        const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
-        const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
-        lastImage = { ...generated, assetUrl: boundedModelEdit };
-
-        qa = await runCloneQa({
-          workspaceId: context.access.workspaceId,
-          userId: context.access.userId,
-          correlationId,
-          imageUrl: boundedModelEdit,
-          expectedCopy,
-          format: String(row.format ?? "4:5"),
-          attempt,
-        });
-
-        if (qa.passed) break;
-        if (attempt >= MAX_ATTEMPTS) break;
-        correction = cloneQaCorrectionPrompt(qa);
-      }
+      const generated = await generateCloneWithCascade({
+        providers,
+        request: { ...baseRequest, seed: 1 },
+        workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        correlationId,
+        attempt: 1,
+      });
+      const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
+      const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      lastImage = { ...generated, assetUrl: boundedModelEdit };
     } catch (error) {
       await releaseClaim();
       return errorResponse(error, 502);
     }
-  }
 
-  if (!lastImage || (qa && !qa.passed)) {
-    await releaseClaim();
-    return NextResponse.json(
-      { error: "The edit did not render correctly. Try again.", qa },
-      { status: 502 },
-    );
+    // Advisory verification: refreshes the editor regions and copy warnings
+    // for the updated render. The edit saves either way — history, Compare,
+    // and Undo are the safety net, and warnings surface anything off. If the
+    // vision pass is unavailable, a text edit's verdict updates
+    // deterministically (the requested string is the expected string) and an
+    // image edit carries the previous verdict forward.
+    try {
+      qa = await runCloneQa({
+        workspaceId: context.access.workspaceId,
+        userId: context.access.userId,
+        correlationId,
+        imageUrl: lastImage.assetUrl,
+        expectedCopy,
+        format: String(row.format ?? "4:5"),
+        attempt: 1,
+      });
+    } catch {
+      qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
+        ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
+        : canvas.cloneQa ?? null;
+    }
   }
 
   let image: string;

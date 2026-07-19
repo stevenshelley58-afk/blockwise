@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 
 import {
   applyDeterministicTextEditQa,
-  cloneQaCorrectionPrompt,
   cloneQaMutationId,
   cloneQaPassed,
   cloneQaWarnings,
@@ -337,17 +336,14 @@ function submittedProviderFailure(message: string, retryable: boolean): Provider
   return new ProviderRequestError(message, { requestSubmitted: true, retryable });
 }
 
-function qualityGateInput(providers: ImageProviderAdapter[], maxAttempts = 99) {
+function finalRenderInput(providers: ImageProviderAdapter[]) {
   return {
     format: "4:5",
     providers,
     request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
-    expectedCopy: { headline: "JUST LISTED" },
     workspaceId: "11111111-1111-4111-8111-111111111111",
     userId: "22222222-2222-4222-8222-222222222222",
-    correlationId: "quality-gate",
-    maxAttempts,
-    deadline: Date.now() + 60_000,
+    correlationId: "final-render",
   };
 }
 
@@ -361,22 +357,72 @@ const passingQa = {
   model: "qa-model",
 };
 
-async function qualityGateFunction() {
+async function finalRenderFunction() {
   const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
-  const fn = (module as Record<string, unknown>).generateQaAcceptedClone;
-  assert.equal(typeof fn, "function", "quality-attempt state machine must be directly testable");
-  const gate = fn as (input: unknown, dependencies: Record<string, unknown>) => Promise<unknown>;
-  return (input: unknown, dependencies: Record<string, unknown>) => gate(input, {
+  const fn = (module as Record<string, unknown>).generateFinalCloneRender;
+  assert.equal(typeof fn, "function", "final clone render must be directly testable");
+  const render = fn as (input: unknown, dependencies: Record<string, unknown>) => Promise<{ assetUrl: string }>;
+  return (input: unknown, dependencies: Record<string, unknown> = {}) => render(input, {
     normalize: async (assetUrl: string) => assetUrl,
     ...dependencies,
   });
 }
 
-async function verifiedPersistencePipelineFunction() {
+async function persistencePipelineFunction() {
   const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
-  const fn = (module as Record<string, unknown>).runVerifiedClonePersistencePipeline;
-  assert.equal(typeof fn, "function", "verified clone persistence pipeline must be directly testable");
+  const fn = (module as Record<string, unknown>).runClonePersistencePipeline;
+  assert.equal(typeof fn, "function", "clone persistence pipeline must be directly testable");
   return fn as (input: unknown) => Promise<unknown>;
+}
+
+async function enrichmentFunction() {
+  const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
+  const fn = (module as Record<string, unknown>).enrichCloneCreativesWithQa;
+  assert.equal(typeof fn, "function", "advisory QA enrichment must be directly testable");
+  return fn as (input: unknown) => Promise<unknown>;
+}
+
+/** Fake creatives table: select/update on canvas_json keyed by creative id. */
+function enrichmentSupabase(rows: Record<string, Record<string, unknown> | null>) {
+  const updates: Array<{ id: string; canvas: Record<string, unknown> }> = [];
+  const supabase = {
+    from(table: string) {
+      assert.equal(table, "adstudio_creatives");
+      return {
+        select() {
+          return {
+            eq() {
+              return {
+                eq(_column: string, id: string) {
+                  return {
+                    async maybeSingle() {
+                      const canvas = rows[id];
+                      return canvas === undefined
+                        ? { data: null, error: { message: "not found" } }
+                        : { data: { id, canvas_json: canvas }, error: null };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+        update(patch: { canvas_json: Record<string, unknown> }) {
+          return {
+            eq() {
+              return {
+                async eq(_column: string, id: string) {
+                  updates.push({ id, canvas: patch.canvas_json });
+                  return { data: null, error: null };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  return { supabase, updates };
 }
 
 test("normalizeRenderedText preserves case and punctuation", () => {
@@ -420,20 +466,6 @@ test("cloneQaPassed requires every copy check exact and zero defects", () => {
   );
 });
 
-test("correction prompt names each mismatch with the exact expected string", () => {
-  const prompt = cloneQaCorrectionPrompt({
-    copyChecks: [
-      { key: "headline", expected: "Scarborough open home", rendered: "Scarborough open home", exact: false },
-      { key: "cta_text", expected: "Book now", rendered: "Book now", exact: true },
-    ],
-    defects: ["cut-off text at bottom edge"],
-  });
-  assert.match(prompt, /headline must read EXACTLY "Scarborough open home"/);
-  assert.match(prompt, /previous attempt rendered "Scarborough open home"/);
-  assert.match(prompt, /fix: cut-off text at bottom edge/);
-  assert.doesNotMatch(prompt, /Book now.*EXACTLY/);
-});
-
 test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
   assert.deepEqual(
     cloneQaWarnings({
@@ -450,7 +482,7 @@ test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
   );
 });
 
-test("template campaign generation runs cascade + QA and never ships an unverified clone silently", () => {
+test("template campaign generation ships the render immediately with QA as advisory enrichment", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/clone-generation.ts", "utf8");
 
@@ -466,11 +498,14 @@ test("template campaign generation runs cascade + QA and never ships an unverifi
   assert.match(pipeline, /resolveCloneProviders\(generationQuality\)/);
   assert.doesNotMatch(pipeline, /createFalImageProvider|fal-image-provider|FAL_KEY/);
 
-  // Every generation is QA'd; failures reroll with a correction, and a clone
-  // that still fails returns 502 with the report instead of shipping.
+  // The blocking QA gate is gone: no reroll corrections, no verification
+  // failures that eat the customer's wait. The vision pass survives as
+  // post-persist enrichment that attaches editor regions and copy warnings.
+  assert.match(pipeline, /enrichCloneCreativesWithQa/);
   assert.match(pipeline, /runCloneQa/);
-  assert.match(pipeline, /cloneQaCorrectionPrompt/);
-  assert.match(pipeline, /TemplateCampaignQaError/);
+  assert.doesNotMatch(pipeline, /cloneQaCorrectionPrompt/);
+  assert.doesNotMatch(pipeline, /TemplateCampaignQaError/);
+  assert.doesNotMatch(pipeline, /qa\.passed/);
 });
 
 test("durable accounting failure after provider success never dispatches a fallback", async () => {
@@ -639,205 +674,124 @@ test("clone generation never invokes a second fallback candidate", async () => {
   assert.equal(thirdProviderCalls, 0);
 });
 
-test("template quality gate caps each format to the caller's QA budget", async () => {
-  const gate = await qualityGateFunction();
+test("final clone renders generate once, normalize to the exact ratio, and never wait on QA", async () => {
+  const render = await finalRenderFunction();
+  let generateCalls = 0;
+  let normalizedFrom = "";
+
+  const result = await render(finalRenderInput([]), {
+    generate: async () => {
+      generateCalls += 1;
+      return {
+        assetUrl: "data:image/png;base64,cmF3",
+        model: "image-model",
+        provider: "primary",
+        providerAttemptCount: 1,
+      };
+    },
+    normalize: async (assetUrl: string, format: string) => {
+      normalizedFrom = `${assetUrl}:${format}`;
+      return "data:image/png;base64,ZXhhY3Q=";
+    },
+  });
+
+  assert.equal(generateCalls, 1);
+  assert.equal(normalizedFrom, "data:image/png;base64,cmF3:4:5");
+  assert.equal(result.assetUrl, "data:image/png;base64,ZXhhY3Q=");
+});
+
+test("provider cascade failures still fail the render honestly", async () => {
+  const render = await finalRenderFunction();
   let providerCalls = 0;
   const failedProvider = (name: string) => accountedImageProvider(name, async () => {
     providerCalls += 1;
     throw submittedProviderFailure(`${name} unavailable`, true);
   });
 
-  await assert.rejects(() => gate(
-    qualityGateInput([failedProvider("primary"), failedProvider("fallback")], 1),
-    {
-      generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
-        ...input,
-        accounting: { executeAttempt, recordRun: async () => {} },
-      }),
-      review: async () => passingQa,
-    },
-  ));
+  await assert.rejects(() => render(finalRenderInput([failedProvider("primary"), failedProvider("fallback")]), {
+    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
+      ...input,
+      accounting: { executeAttempt, recordRun: async () => {} },
+    }),
+  }), /fallback unavailable/);
 
   assert.equal(providerCalls, 2);
 });
 
-test("provider failures do not consume the two QA-candidate attempts", async () => {
-  const gate = await qualityGateFunction();
-  let providerCalls = 0;
-  let qaCalls = 0;
-  const primary = accountedImageProvider("primary", async () => {
-    providerCalls += 1;
-    if (providerCalls === 1) throw submittedProviderFailure("primary unavailable", true);
-    return {
-      assetUrl: "data:image/png;base64,b2s=",
-      seed: 2,
-      model: "primary-model",
-      usage: { imageUnits: 1, complete: true },
-      providerMetadata: {},
-    };
-  });
-  const fallback = accountedImageProvider("fallback", async () => {
-    providerCalls += 1;
-    throw submittedProviderFailure("fallback unavailable", true);
+test("renders and the campaign persist with no QA involvement at all", async () => {
+  const pipeline = await persistencePipelineFunction();
+  let clonePersistenceCalls = 0;
+  let campaignPersistenceCalls = 0;
+
+  const { campaign } = (await pipeline({
+    formats: ["4:5", "9:16"],
+    generateAccepted: async (format: string) => ({ assetUrl: `render-${format}` }),
+    persistClone: async (format: string, generated: { assetUrl: string }) => {
+      clonePersistenceCalls += 1;
+      return { ...generated, image: `stored-${format}` };
+    },
+    buildCampaign: (byFormat: Record<string, { image: string }>) => ({
+      images: [byFormat["4:5"]?.image, byFormat["9:16"]?.image],
+    }),
+    persistCampaign: async () => {
+      campaignPersistenceCalls += 1;
+    },
+  })) as { campaign: { images: string[] } };
+
+  assert.equal(clonePersistenceCalls, 2);
+  assert.equal(campaignPersistenceCalls, 1);
+  assert.deepEqual(campaign.images, ["stored-4:5", "stored-9:16"]);
+});
+
+test("advisory enrichment attaches verdicts per format and survives vision failures", async () => {
+  const enrich = await enrichmentFunction();
+  const { supabase, updates } = enrichmentSupabase({
+    "creative-feed": { objects: [] },
+    "creative-story": { objects: [] },
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 2), {
-    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
-      ...input,
-      accounting: { executeAttempt, recordRun: async () => {} },
-    }),
-    review: async (input: { attempt: number }) => {
-      qaCalls += 1;
-      assert.equal(input.attempt, 1);
+  const qa = await enrich({
+    supabase,
+    workspaceId: "workspace",
+    userId: "user",
+    correlationId: "corr",
+    expectedCopy: { headline: "JUST LISTED" },
+    renders: [
+      { format: "4:5", creativeId: "creative-feed", imageUrl: "data:image/png;base64,feed" },
+      { format: "9:16", creativeId: "creative-story", imageUrl: "data:image/png;base64,story" },
+    ],
+    review: async (input: { format: string }) => {
+      if (input.format === "9:16") throw new Error("vision offline");
       return passingQa;
     },
   });
 
-  assert.ok(result);
-  assert.equal(providerCalls, 3);
-  assert.equal(qaCalls, 1);
+  // The primary verdict returns even though the story pass failed; only the
+  // feed creative gets an update, and the failure never throws.
+  assert.deepEqual(qa, passingQa);
+  assert.deepEqual(updates.map((update) => update.id), ["creative-feed"]);
+  assert.deepEqual(updates[0]?.canvas.cloneQa, passingQa);
 });
 
-test("the async budget leaves room for two QA candidates after one provider failure", async () => {
-  const gate = await qualityGateFunction();
-  let providerCalls = 0;
-  let qaCalls = 0;
-  const primary = accountedImageProvider("primary", async () => {
-    providerCalls += 1;
-    if (providerCalls === 1) {
-      throw submittedProviderFailure("request rejected", false);
-    }
-    return {
-      assetUrl: `data:image/png;base64,candidate-${providerCalls}`,
-      seed: providerCalls,
-      model: "primary-model",
-      usage: { imageUnits: 1, complete: true },
-      providerMetadata: {},
-    };
-  });
-  let fallbackCalls = 0;
-  const fallback = accountedImageProvider("fallback", async () => {
-    fallbackCalls += 1;
-    throw submittedProviderFailure("fallback unavailable", true);
+test("advisory enrichment never overwrites a fresher verdict already on the creative", async () => {
+  const enrich = await enrichmentFunction();
+  const fresher = { ...passingQa, model: "fresher-edit-verdict" };
+  const { supabase, updates } = enrichmentSupabase({
+    "creative-feed": { objects: [], cloneQa: fresher },
   });
 
-  const result = await gate(qualityGateInput([primary, fallback], 2), {
-    generate: (input: Parameters<typeof generateCloneWithCascade>[0]) => generateCloneWithCascade({
-      ...input,
-      accounting: { executeAttempt, recordRun: async () => {} },
-    }),
-    review: async () => {
-      qaCalls += 1;
-      return qaCalls === 1
-        ? { ...passingQa, passed: false, defects: ["copy drift"] }
-        : passingQa;
-    },
+  const qa = await enrich({
+    supabase,
+    workspaceId: "workspace",
+    userId: "user",
+    correlationId: "corr",
+    expectedCopy: { headline: "JUST LISTED" },
+    renders: [{ format: "4:5", creativeId: "creative-feed", imageUrl: "data:image/png;base64,feed" }],
+    review: async () => passingQa,
   });
 
-  assert.ok(result);
-  assert.equal(providerCalls, 3);
-  assert.equal(fallbackCalls, 0);
-  assert.equal(qaCalls, 2);
-});
-
-test("template quality gate evaluates at most two candidates and never persists failed or unavailable QA", async () => {
-  const gate = await qualityGateFunction();
-  let generateCalls = 0;
-  let reviewCalls = 0;
-  const failedQa = {
-    ...passingQa,
-    passed: false,
-    copyChecks: [{ key: "headline", expected: "JUST LISTED", rendered: "Just Listed", exact: false }],
-  };
-  const generate = async () => {
-    generateCalls += 1;
-    return {
-      assetUrl: "data:image/png;base64,b2s=",
-      model: "image-model",
-      provider: "primary",
-      providerAttemptCount: 1,
-    };
-  };
-
-  await assert.rejects(() => gate(qualityGateInput([]), {
-    generate,
-    review: async () => {
-      reviewCalls += 1;
-      return failedQa;
-    },
-  }), /did not pass verification/);
-  assert.equal(generateCalls, 2);
-  assert.equal(reviewCalls, 2);
-
-  generateCalls = 0;
-  reviewCalls = 0;
-  await assert.rejects(() => gate(qualityGateInput([], 1), {
-    generate,
-    review: async () => {
-      reviewCalls += 1;
-      return failedQa;
-    },
-  }), /did not pass verification/);
-  assert.equal(generateCalls, 1);
-  assert.equal(reviewCalls, 1);
-
-  generateCalls = 0;
-  reviewCalls = 0;
-  await assert.rejects(() => gate(qualityGateInput([]), {
-    generate,
-    review: async () => {
-      reviewCalls += 1;
-      throw new Error("QA offline");
-    },
-  }), /verification was unavailable/);
-  assert.equal(generateCalls, 1);
-  assert.equal(reviewCalls, 1);
-
-});
-
-test("failed or unavailable QA cannot reach clone or campaign persistence", async () => {
-  const gate = await qualityGateFunction();
-  const pipeline = await verifiedPersistencePipelineFunction();
-  const failedQa = {
-    ...passingQa,
-    passed: false,
-    copyChecks: [{ key: "headline", expected: "JUST LISTED", rendered: "Just Listed", exact: false }],
-  };
-
-  for (const unavailable of [false, true]) {
-    let clonePersistenceCalls = 0;
-    let campaignPersistenceCalls = 0;
-
-    await assert.rejects(() => pipeline({
-      formats: ["4:5", "9:16"],
-      generateAccepted: (format: string) => gate(
-        { ...qualityGateInput([]), format },
-        {
-          generate: async () => ({
-            assetUrl: "data:image/png;base64,b2s=",
-            model: "image-model",
-            provider: "primary",
-            providerAttemptCount: 1,
-          }),
-          review: async () => {
-            if (unavailable) throw new Error("QA offline");
-            return failedQa;
-          },
-        },
-      ),
-      persistClone: async () => {
-        clonePersistenceCalls += 1;
-        return {};
-      },
-      buildCampaign: () => ({}),
-      persistCampaign: async () => {
-        campaignPersistenceCalls += 1;
-      },
-    }), unavailable ? /verification was unavailable/ : /did not pass verification/);
-
-    assert.equal(clonePersistenceCalls, 0);
-    assert.equal(campaignPersistenceCalls, 0);
-  }
+  assert.deepEqual(qa, passingQa);
+  assert.equal(updates.length, 0);
 });
 
 test("post-commit audit failure is contained after durable accounting", async () => {
@@ -849,7 +803,7 @@ test("post-commit audit failure is contained after durable accounting", async ()
   assert.equal(calls, 1);
 });
 
-test("targeted edit endpoint model-edits selected regions and checks the whole ad", () => {
+test("targeted edit endpoint model-edits selected regions and verifies advisorily", () => {
   const route = readFileSync("src/app/api/adstudio/creatives/[id]/edit/route.ts", "utf8");
   const builder = readFileSync("src/lib/adstudio/reference-clone.ts", "utf8");
 
@@ -858,40 +812,39 @@ test("targeted edit endpoint model-edits selected regions and checks the whole a
   assert.match(builder, /Keep every other pixel unchanged/);
   assert.match(route, /buildTargetedEditRequest/);
   assert.doesNotMatch(route, /canRenderTextDirectly/);
-  assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
   assert.match(route, /resolveCloneProviders\(\)/);
   assert.match(route, /maxDuration = 300/);
 
   // Expected copy carries forward from the last verdict with the edited field
-  // overridden, so unrelated drift fails QA too.
+  // overridden, so the advisory check also flags unrelated drift.
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
   assert.match(route, /expectedCopy\[editFieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
   assert.match(route, /compositeCloneRegionEdit/);
   assert.match(route, /capabilities\.inpainting/);
 
-  // Undo/redo are saved revisions and receive a fresh QA verdict.
+  // Edits and restores are saved revisions; a failed verdict never rejects a
+  // save, and history is the safety net.
   assert.match(route, /renderHistory/);
   assert.match(route, /redoHistory/);
   assert.match(route, /action === "undo" \|\| action === "redo"/);
-  assert.match(route, /status: 502/);
+  assert.doesNotMatch(route, /qa && !qa\.passed/);
 });
 
-test("template generation accepts only QA-passing clone renders", () => {
+test("template generation persists unreviewed renders and defers verdicts to enrichment", () => {
   const builder = readFileSync("src/lib/adstudio/clone-campaign.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
 
+  // The pack builder still carries a verdict when one exists (saved campaigns,
+  // future callers), but generation no longer supplies one at build time.
   assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
-  // Generation may persist only after every format receives a passing verdict.
-  assert.match(generation, /templateCloneQa: primaryClone\.qa \?\? undefined/);
-  assert.match(generation, /templateCloneQaByFormat/);
-  assert.match(generation, /cloneQaCorrectionPrompt/);
-  assert.match(generation, /if \(qa\.passed\)/);
-  assert.match(generation, /throw new TemplateCampaignQaError/);
-  assert.match(generation, /error instanceof ProviderRunPersistenceError\) throw error/);
-  assert.doesNotMatch(generation, /shipping clone without QA annotation/);
-  assert.doesNotMatch(generation, /QA annotates each result but never blocks shipping/);
+  assert.doesNotMatch(generation, /templateCloneQaByFormat/);
+  assert.doesNotMatch(generation, /TemplateCampaignQaError/);
+  assert.match(generation, /enrichCloneCreativesWithQa/);
+  // Enrichment is per-creative and guarded: it never clobbers a verdict a
+  // faster in-place edit already wrote.
+  assert.match(generation, /if \(canvas\.cloneQa\) return qa/);
 });
 
 test("clone QA derives exactness from rendered copy instead of trusting the model flag", () => {
