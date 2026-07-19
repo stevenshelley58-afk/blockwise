@@ -40,6 +40,7 @@ jobs:
     timeout-minutes: 35
     env:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+      PLAYWRIGHT_USE_CHROME: "1"
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2
       ADSTUDIO_E2E_EMAIL: adstudio-e2e@blockwise.test
       ADSTUDIO_E2E_PASSWORD: ${{ secrets.ADSTUDIO_E2E_PASSWORD }}

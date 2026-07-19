@@ -4,6 +4,7 @@ const port = process.env.PORT ?? "3000";
 const localBaseUrl = `http://127.0.0.1:${port}`;
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL;
 const nodeExecutable = JSON.stringify(process.execPath);
+const chromeChannel = process.env.PLAYWRIGHT_USE_CHROME === "1" ? "chrome" : undefined;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,7 +15,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"], channel: chromeChannel } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: externalBaseUrl
