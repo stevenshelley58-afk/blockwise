@@ -1,0 +1,120 @@
+{
+  "id": "meta-offmarket-alerts-story-260",
+  "name": "Off-Market Property Alerts — Story 260",
+  "goal": "buyer_leads",
+  "offerId": "off-market-property-alerts",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Buyers wanting early access to local off-market opportunities",
+  "category": "buyer-registration-lead-generation",
+  "tags": [
+    "offmarket-alerts",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-offmarket-alerts-story-260-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-offmarket-alerts-story-260-sample.png",
+    "alt": "Generated sample for Off-Market Property Alerts — Story 260.",
+    "contentHash": "8c0ddb9e34a5f9dbfdd6290ee1a5c3600f7e90c7bfdffeecae71567476f3cfdc",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "hero_graphic",
+        "label": "Hero property image",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's hero property visual"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 54,
+        "sample": "SEE HOMES BEFORE THEY HIT THE MARKET",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 44,
+        "sample": "JOIN OUR OFF-MARKET ALERTS",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 86,
+        "sample": "Register your preferences and hear about suitable local homes first.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 37,
+        "sample": "REGISTER FOR ALERTS",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_260.png",
+    "contentHash": "0f66fdfa9a3efa10b3f74b9f8a60422ef1dc6d0bf97c15447d10c7f2f80c8e8e"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "off_market_buyer_registration",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

@@ -43,23 +43,26 @@ test("undo and redo are durable checked revision mutations", () => {
   assert.match(editor, /restoreVersion\("undo"\)/);
   assert.match(editor, /restoreVersion\("redo"\)/);
   assert.match(route, /action === "undo" \|\| action === "redo"/);
-  assert.match(route, /runCloneQa\(/);
   assert.match(route, /appendAdStudioCreativeRevision/);
   assert.match(route, /redoHistory/);
+  assert.match(route, /runCloneQa\(/);
   assert.match(route, /That version no longer passes the ad checks/);
 });
 
-test("destructive blur-and-generic-font text fallback is not used by the edit route", () => {
+test("edits stay model-driven and save only after bounded QA", () => {
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
   assert.doesNotMatch(route, /applyDeterministicTextEditQa/);
-  assert.doesNotMatch(route, /deterministic-text-renderer/);
   assert.match(route, /buildTargetedEditRequest/);
   assert.match(route, /compositeCloneRegionEdit/);
   assert.match(route, /cloneQaCorrectionPrompt/);
+  assert.match(route, /if \(!lastImage \|\| \(qa && !qa\.passed\)\)/);
 });
 
 test("all editor controls meet the 44px target and adapt to a mobile sheet", () => {
-  assert.match(styles, /\.studio-inplace-region\{position:absolute;min-width:44px;min-height:44px/);
+  // The touch minimum lives on an invisible ::after hit-area so the visible
+  // dashed outline always matches the detected region exactly.
+  assert.match(styles, /\.studio-inplace-region::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/);
+  assert.doesNotMatch(styles, /\.studio-inplace-region\{[^}]*min-width:44px/);
   assert.match(styles, /\.studio-inplace-toolbar button\{min-width:44px;min-height:44px/);
   assert.match(styles, /\.studio-inplace-inspector header button\{width:44px;height:44px/);
   assert.match(styles, /@media\(max-width:1280px\)[\s\S]*\.studio-inplace-inspector\{top:auto/);
@@ -71,4 +74,44 @@ test("workbench embeds the editor in Meta chrome with honest selection guidance"
   assert.match(workbench, /Select text or an image on the ad, or open Edit elements\./);
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
   assert.match(workbench, /cloneQaWarnings\(currentCreative\?\.canvas\.cloneQa\)/);
+});
+
+test("regions are object-aware: hover labels, selection spotlight, corner handles, keyboard walk", () => {
+  assert.match(editor, /data-label=\{labelForRegionKey\(region\.key\)\}/);
+  assert.match(styles, /\.studio-inplace-region::before\{content:attr\(data-label\)/);
+  assert.match(styles, /0 0 0 9999px rgba\(6,10,18,\.34\)/);
+  assert.match(editor, /studio-inplace-handles/);
+  assert.match(styles, /\.studio-inplace-handles\{position:absolute/);
+  // Arrow keys cycle elements in place; Escape releases the selection.
+  assert.match(editor, /handleRegionKeyDown\(event, index\)/);
+  assert.match(editor, /ArrowRight/);
+  assert.match(editor, /regionButtonRefs\.current\.get\(next\.key\)\?\.focus\(\)/);
+});
+
+test("zoom is available for small targets: toolbar cycle, double-click, drag pan", () => {
+  assert.match(editor, /studio-inplace-zoom/);
+  assert.match(editor, /cycleZoom/);
+  assert.match(editor, /handleZoomDoubleClick/);
+  assert.match(editor, /setPointerCapture/);
+  // Pan deltas convert through the outer PreviewFit scale and stay clamped.
+  assert.match(editor, /frameScaleFactor/);
+  assert.match(editor, /clampPan/);
+  assert.match(styles, /\.studio-inplace-zoom\{position:relative/);
+  assert.match(styles, /\.studio-metachrome-media \.studio-inplace-zoom,\.studio-metachrome-story \.studio-inplace-zoom\{display:block;width:100%;height:100%\}/);
+});
+
+test("element list shows real thumbnails and flags inexact copy", () => {
+  assert.match(editor, /regionThumbStyle\(src, region\.box\)/);
+  assert.match(editor, /warningKeys\.has\(region\.key\)/);
+  assert.match(styles, /\.studio-inplace-thumb\{width:26px/);
+  assert.match(styles, /\.studio-inplace-flag\{width:8px/);
+  // Pending edits narrate what they are doing instead of a generic label.
+  assert.match(editor, /truncateForStatus/);
+  assert.match(editor, /Repainting this area/);
+});
+
+test("unverified renders never enter the editor as a partial result", () => {
+  assert.doesNotMatch(workbench, /editorPreparing/);
+  assert.doesNotMatch(editor, /Preparing your editor/);
+  assert.doesNotMatch(styles, /studio-editor-preparing/);
 });

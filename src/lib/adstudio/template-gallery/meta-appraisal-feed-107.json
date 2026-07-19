@@ -1,0 +1,120 @@
+{
+  "id": "meta-appraisal-feed-107",
+  "name": "Free Property Appraisal — Feed 107",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners curious about their current property value or considering selling",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-appraisal-feed-107-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-appraisal-feed-107-sample.png",
+    "alt": "Generated sample for Free Property Appraisal — Feed 107.",
+    "contentHash": "d5b4ffcd2739b6adced37f452888d947b7f5f25a51caa86a446d0149f2fa5b5c",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 48,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 42,
+        "sample": "REQUEST A FREE APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 37,
+        "sample": "BOOK YOUR APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "social_handle",
+        "label": "Social Handle",
+        "maxLength": 29,
+        "sample": "@youragency",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_107.png",
+    "contentHash": "7fba1baf734009ea335852da8014b00ac8a1137a881d35b0a19d64ec310ee04a"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

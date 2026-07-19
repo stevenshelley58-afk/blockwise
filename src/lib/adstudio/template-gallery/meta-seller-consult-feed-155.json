@@ -1,0 +1,148 @@
+{
+  "id": "meta-seller-consult-feed-155",
+  "name": "Seller Consultation — Feed 155",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-155-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-155-sample.png",
+    "alt": "Generated sample for Seller Consultation — Feed 155.",
+    "contentHash": "10cd219b6db79f766a2ca5546359b680002ce02262bedebc13e53c203769d4cc",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 37,
+        "sample": "PLAN YOUR NEXT MOVE",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 90,
+        "sample": "Book a no-pressure seller consultation with a local property specialist.",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 32,
+        "sample": "PRICE STRATEGY",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 34,
+        "sample": "PREPARATION PLAN",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 34,
+        "sample": "CLEAR NEXT STEPS",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_155.png",
+    "contentHash": "3e8c84ef23578e2299a69975fbff29919f0e6196917ee4de7271d6810434e27c"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

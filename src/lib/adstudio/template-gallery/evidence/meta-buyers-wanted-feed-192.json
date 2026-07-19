@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-buyers-wanted-feed-192",
+  "requestHash": "9775e1cb6f342cf984fd3a584c277584daf12eb63f5ad2e4d077e69ce2207621",
+  "inputHashes": {
+    "source_ad": "3622fe6198b9b09421b46326fe90740bd6b6a5570881338034c7cce47a62d74a",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "84a48ecd6574814a6a5bbca6f354366269ff08610d6da541d9b5c8278556392c",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T09:38:30.255Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "ACTIVE BUYERS WANT HOMES LIKE YOURS",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "SEE IF YOUR PROPERTY MATCHES",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "We are speaking with qualified buyers looking in your area.",
+        "exact": true
+      },
+      {
+        "key": "benefit_1",
+        "expected": "QUALIFIED BUYERS",
+        "exact": true
+      },
+      {
+        "key": "benefit_2",
+        "expected": "LOCAL DEMAND",
+        "exact": true
+      },
+      {
+        "key": "benefit_3",
+        "expected": "NO-PRESSURE CHAT",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "CHECK BUYER DEMAND",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

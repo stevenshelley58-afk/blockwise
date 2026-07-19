@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-buyers-wanted-feed-126",
+  "requestHash": "deb53d63de67546c6a1a953b4f6eb6c7d3fe096f6c3f4ffe8b9ad1fb48c6ebb5",
+  "inputHashes": {
+    "source_ad": "13fcf5af5be5ebaeb1936dc52c3c060abad2065ae88bb39026a5d7a55fc2eace",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T09:38:30.233Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "ACTIVE BUYERS WANT HOMES LIKE YOURS",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "SEE IF YOUR PROPERTY MATCHES",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "We are speaking with qualified buyers looking in your area.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "CHECK BUYER DEMAND",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

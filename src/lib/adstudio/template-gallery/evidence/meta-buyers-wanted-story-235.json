@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-buyers-wanted-story-235",
+  "requestHash": "d4507e5d22dcf22db24719b7b4636343928fb02b45e1ca5b217d3f564ef76697",
+  "inputHashes": {
+    "source_ad": "19c7b60c144dd4ccfe1c7c8767a2281ab5935590166c63f83ce7a04f212f862f",
+    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1"
+  },
+  "outputHash": "7d7516c6c0ecc3f340fff414d95dd9b00e4375d7bc42a0cdae82a562476dfb1f",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T09:38:30.266Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "ACTIVE BUYERS WANT HOMES LIKE YOURS",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "SEE IF YOUR PROPERTY MATCHES",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "We are speaking with qualified buyers looking in your area.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "CHECK BUYER DEMAND",
+        "exact": true
+      },
+      {
+        "key": "website",
+        "expected": "youragency.com.au",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "background_photo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

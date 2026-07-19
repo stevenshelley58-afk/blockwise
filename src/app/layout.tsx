@@ -25,6 +25,7 @@ const manrope = Manrope({
 });
 
 const META_PIXEL_ID = "1699948581050851";
+const META_APP_ID = process.env.META_APP_ID;
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
@@ -62,6 +63,7 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
+  facebook: META_APP_ID ? { appId: META_APP_ID } : undefined,
   robots: { index: true, follow: true },
 };
 

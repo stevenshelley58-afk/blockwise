@@ -1,0 +1,113 @@
+{
+  "id": "meta-appraisal-story-240",
+  "name": "Free Property Appraisal — Story 240",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Homeowners curious about their current property value or considering selling",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-appraisal-story-240-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-appraisal-story-240-sample.png",
+    "alt": "Generated sample for Free Property Appraisal — Story 240.",
+    "contentHash": "313d8deba9e370151b605c5d395ebaff2ac990f5f99dea67f3ce4f8dbdd637a0",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 48,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 42,
+        "sample": "REQUEST A FREE APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 37,
+        "sample": "BOOK YOUR APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_240.png",
+    "contentHash": "d10fb48e8f4a19666c134e3a110b35fbc964388a462ab769a3ae48934473cd81"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

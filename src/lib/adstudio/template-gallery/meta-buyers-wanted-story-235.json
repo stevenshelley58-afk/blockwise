@@ -1,0 +1,120 @@
+{
+  "id": "meta-buyers-wanted-story-235",
+  "name": "Active Buyers Wanted — Story 235",
+  "goal": "seller_leads",
+  "offerId": "active-buyers-in-your-area",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Homeowners who may sell when matched with active local buyers",
+  "category": "buyer-demand-lead-generation",
+  "tags": [
+    "buyers-wanted",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-buyers-wanted-story-235-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-buyers-wanted-story-235-sample.png",
+    "alt": "Generated sample for Active Buyers Wanted — Story 235.",
+    "contentHash": "7d7516c6c0ecc3f340fff414d95dd9b00e4375d7bc42a0cdae82a562476dfb1f",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 53,
+        "sample": "ACTIVE BUYERS WANT HOMES LIKE YOURS",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 46,
+        "sample": "SEE IF YOUR PROPERTY MATCHES",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 77,
+        "sample": "We are speaking with qualified buyers looking in your area.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 36,
+        "sample": "CHECK BUYER DEMAND",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_235.png",
+    "contentHash": "19c7b60c144dd4ccfe1c7c8767a2281ab5935590166c63f83ce7a04f212f862f"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "buyers_wanted",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

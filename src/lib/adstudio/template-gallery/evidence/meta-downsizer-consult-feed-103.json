@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-downsizer-consult-feed-103",
+  "requestHash": "c0986aeedc10263a881efb26c76650390537fc15df4dd9a03db1d2372f9f1004",
+  "inputHashes": {
+    "source_ad": "6877f2b0081b56a5d510501f88a9855f9b3934bd29be62a637bc256e04838305",
+    "property_photo_1": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "property_photo_2": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "63bb71434075ba04aa5e0c9ab086f87b109d58efe30c4a680697039738819fe5",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T06:13:53.646Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "THINKING ABOUT DOWNSIZING?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "PLAN YOUR NEXT MOVE WITH CONFIDENCE",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Talk through timing, value and suitable next-home options with a local expert.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A DOWNSIZER CHAT",
+        "exact": true
+      },
+      {
+        "key": "phone",
+        "expected": "0400 123 456",
+        "exact": true
+      },
+      {
+        "key": "website",
+        "expected": "youragency.com.au",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo_1",
+        "used": true
+      },
+      {
+        "key": "property_photo_2",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

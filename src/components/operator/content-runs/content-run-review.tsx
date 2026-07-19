@@ -4,7 +4,7 @@ import { Check, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StatusPill, type StatusTone } from "@/components/status-pill";
-import { CONTENT_STEPS, type ContentArtifactRow, type ContentReviewRow, type ContentRunRow, type ContentSkillName } from "@/lib/content-engine";
+import { CONTENT_STEPS, compactSkillLabel, type ContentArtifactRow, type ContentReviewRow, type ContentRunRow, type ContentSkillName } from "@/lib/content-engine";
 
 type ContentRunReviewProps = {
   run: ContentRunRow;
@@ -100,7 +100,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
           <select onChange={(event) => event.target.value ? void rerun(event.target.value as ContentSkillName) : undefined} defaultValue="">
             <option value="">Choose step</option>
             {CONTENT_STEPS.map((step) => (
-              <option value={step.skillName} key={step.skillName}>{step.skillName.replace(/^blockwise-/u, "")}</option>
+              <option value={step.skillName} key={step.skillName}>{compactSkillLabel(step.skillName)}</option>
             ))}
           </select>
         </label>
@@ -116,7 +116,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
               key={type}
               onClick={() => setActiveType(type)}
             >
-              {type.replace(/_/g, " ")}
+              {artifactLabel(type)}
             </button>
           ))}
         </div>
@@ -164,7 +164,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
           <tbody>
             {promptRuns.slice(0, 12).map((runItem) => (
               <tr key={String(runItem.id)}>
-                <td data-label="Skill">{String(runItem.skill_name).replace(/^blockwise-/u, "")}</td>
+                <td data-label="Skill">{compactSkillLabel(String(runItem.skill_name) as ContentSkillName)}</td>
                 <td data-label="Model">{String(runItem.model_used ?? "—")}</td>
                 <td data-label="Prompt">{String(runItem.prompt_version ?? "—")}</td>
               </tr>
@@ -180,7 +180,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
         <div className="content-approval-list">
           {approvals.map((approval) => (
             <span className="status blue" key={`${approval.artifact_type}-${approval.approval_status}`}>
-              {String(approval.artifact_type).replace(/_/g, " ")}: {String(approval.approval_status)}
+              {artifactLabel(String(approval.artifact_type))}: {String(approval.approval_status)}
             </span>
           ))}
           {approvals.length === 0 ? <p className="item-meta">No operator approvals yet.</p> : null}
@@ -210,6 +210,10 @@ function latestByType(artifacts: ContentArtifactRow[]): Record<string, ContentAr
   const latest: Record<string, ContentArtifactRow> = {};
   for (const artifact of sorted) latest[artifact.artifact_type] = artifact;
   return latest;
+}
+
+function artifactLabel(type: string): string {
+  return type.replace(/^blog_/u, "guide_").replace(/_/gu, " ");
 }
 
 function toneForStatus(status: string): StatusTone {

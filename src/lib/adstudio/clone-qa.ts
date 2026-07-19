@@ -56,6 +56,37 @@ function clamp01(value: unknown): number {
   return Math.min(1, Math.max(0, num));
 }
 
+/**
+ * Vision models localize far more accurately in their native detection format
+ * (box_2d = [ymin, xmin, ymax, xmax] integers scaled 0-1000) than when asked
+ * for fractional x/y/width/height, which drifts and undersizes. Convert to the
+ * editor's fractional box here. Legacy fractional "box" objects (older prompt
+ * versions may still be active in the DB) remain accepted.
+ */
+function boxFromRegionEntry(item: Record<string, unknown>): AdStudioCloneRegion["box"] {
+  const box2d = item.box_2d;
+  if (Array.isArray(box2d) && box2d.length === 4) {
+    const values = box2d.map((value) => (typeof value === "number" && Number.isFinite(value) ? value : 0));
+    // A model that ignores the 0-1000 scale and answers in 0-1 fractions would
+    // otherwise collapse every box into the top-left 0.1% of the image.
+    const scale = values.every((value) => value <= 1) ? 1 : 1 / 1000;
+    const [ymin, xmin, ymax, xmax] = values.map((value) => clamp01(value * scale)) as [number, number, number, number];
+    return {
+      x: Math.min(xmin, xmax),
+      y: Math.min(ymin, ymax),
+      width: Math.abs(xmax - xmin),
+      height: Math.abs(ymax - ymin),
+    };
+  }
+  const box = (item.box ?? {}) as Record<string, unknown>;
+  return {
+    x: clamp01(box.x),
+    y: clamp01(box.y),
+    width: clamp01(box.width),
+    height: clamp01(box.height),
+  };
+}
+
 export function parseCloneRegions(
   raw: unknown,
   expectedCopy: Record<string, string>,
@@ -66,7 +97,6 @@ export function parseCloneRegions(
     if (!entry || typeof entry !== "object") continue;
     const item = entry as Record<string, unknown>;
     const key = typeof item.key === "string" ? item.key.trim() : "";
-    const box = (item.box ?? {}) as Record<string, unknown>;
     if (!key) continue;
     regions.push({
       key,
@@ -74,12 +104,7 @@ export function parseCloneRegions(
       // text box inside a large photo region as an image, which would open the
       // file picker instead of the text editor.
       kind: Object.hasOwn(expectedCopy, key) ? "text" : item.kind === "image" ? "image" : "text",
-      box: {
-        x: clamp01(box.x),
-        y: clamp01(box.y),
-        width: clamp01(box.width),
-        height: clamp01(box.height),
-      },
+      box: boxFromRegionEntry(item),
     });
   }
   return regions;
@@ -150,7 +175,7 @@ export function cloneQaMutationId(correlationId: string, format: string, attempt
   return `${correlationId}:adstudio.clone_qa:${format}:${attempt}`;
 }
 
-/** Human-readable correction fed back into the reroll prompt. */
+/** Human-readable correction fed back into the bounded same-model retry. */
 export function cloneQaCorrectionPrompt(qa: Pick<AdStudioCloneQa, "copyChecks" | "defects">): string {
   const mismatches = qa.copyChecks
     .filter((check) => !check.exact)

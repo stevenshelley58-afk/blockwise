@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-seller-consult-feed-166",
+  "requestHash": "4ce281b98d3738c93d279167f43f115cab1b49a2d1c3a24ccf8dec647f7eeed6",
+  "inputHashes": {
+    "source_ad": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b",
+    "background_photo": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "e734f93c52aeac753f78935639efb663cf6286065e50438d27f97da6883e549a",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T09:00:36.519Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "THINKING OF SELLING?",
+        "exact": true
+      },
+      {
+        "key": "check_1",
+        "expected": "CLARIFY YOUR TIMELINE",
+        "exact": true
+      },
+      {
+        "key": "check_2",
+        "expected": "PREPARE YOUR HOME",
+        "exact": true
+      },
+      {
+        "key": "check_3",
+        "expected": "REVIEW LOCAL SALES",
+        "exact": true
+      },
+      {
+        "key": "check_4",
+        "expected": "SET A PRICE STRATEGY",
+        "exact": true
+      },
+      {
+        "key": "check_5",
+        "expected": "PLAN YOUR CAMPAIGN",
+        "exact": true
+      },
+      {
+        "key": "check_6",
+        "expected": "CONFIRM NEXT STEPS",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A SELLER CONSULTATION",
+        "exact": true
+      },
+      {
+        "key": "phone",
+        "expected": "0400 123 456",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "background_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

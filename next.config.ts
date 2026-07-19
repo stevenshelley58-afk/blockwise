@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       { source: "/monitor", destination: "/results", permanent: false },
+      { source: "/blog", destination: "/guides", permanent: true },
+      { source: "/blog/:path*", destination: "/guides/:path*", permanent: true },
       { source: "/research", destination: "/ad-radar", permanent: false },
       { source: "/research/:path*", destination: "/ad-radar/:path*", permanent: false },
       { source: "/campaigns", destination: "/results", permanent: false },

@@ -77,8 +77,30 @@ export const contentModelPolicySchema = z.enum([
   "code_generation",
 ]);
 
+function emptyStringToUndefined(value: unknown): unknown {
+  return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
+
+export function deriveTranscriptTopic(transcript: string): string {
+  const firstUsefulLine = transcript
+    .split(/\r?\n/u)
+    .map((line) => line
+      .replace(/^\s*(?:\[[^\]]{1,24}\]\s*)?/u, "")
+      .replace(/^\s*(?:(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d+)?\s*)/u, "")
+      .replace(/^\s*[A-Z][A-Za-z0-9 .'-]{0,40}:\s*/u, "")
+      .replace(/\s+/gu, " ")
+      .trim())
+    .find((line) => line.length >= 8);
+
+  if (!firstUsefulLine) return "Transcript-led authority article";
+  if (firstUsefulLine.length <= 220) return firstUsefulLine;
+  return `${firstUsefulLine.slice(0, 217).trimEnd()}...`;
+}
+
 export const createContentRunInputSchema = z.object({
-  topic: z.string().min(8).max(220),
+  topic: z.preprocess(emptyStringToUndefined, z.string().trim().min(8).max(220).optional()),
+  source_transcript: z.preprocess(emptyStringToUndefined, z.string().trim().min(80).max(100_000).optional()),
+  source_url: z.preprocess(emptyStringToUndefined, z.string().trim().url().max(500).optional()),
   target_audience: z.string().min(3).max(160),
   business_goal: z.string().min(3).max(180),
   primary_cta: z.string().min(3).max(120),
@@ -98,7 +120,18 @@ export const createContentRunInputSchema = z.object({
   prompt_set_name: z.string().trim().max(120).optional(),
   model_policy_id: z.string().trim().max(120).optional(),
   operator_notes: z.string().trim().max(2000).optional(),
-});
+}).superRefine((value, context) => {
+  if (!value.topic && !value.source_transcript) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["source_transcript"],
+      message: "Paste a transcript or add a working topic.",
+    });
+  }
+}).transform((value) => ({
+  ...value,
+  topic: value.topic ?? deriveTranscriptTopic(value.source_transcript ?? ""),
+}));
 
 export const approvalPatchSchema = z.object({
   artifactType: contentArtifactTypeSchema,
@@ -141,6 +174,9 @@ export const CONTENT_STEPS: ContentStepDefinition[] = [
 ];
 
 export function compactSkillLabel(skillName: ContentSkillName): string {
-  return skillName.replace(/^blockwise-/u, "").replace(/-/gu, " ");
+  return skillName
+    .replace(/^blockwise-/u, "")
+    .replace(/^blog-/u, "guide-")
+    .replace(/-/gu, " ");
 }
 

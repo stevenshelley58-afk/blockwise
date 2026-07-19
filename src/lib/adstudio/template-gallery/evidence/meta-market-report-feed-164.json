@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-market-report-feed-164",
+  "requestHash": "3bbe56c74dd43af05d4659f652a54d6fce40525d6c9ba207761bc77fe209d3e6",
+  "inputHashes": {
+    "source_ad": "152a128aafd4d60567da3794f14cb02dbd7105f6913c73317f70ec8b786c655b",
+    "chart_graphic": "5cb71099b0b2ed52e609bd3473fd81af96d00df22932d5bf737b45f00f482e1e"
+  },
+  "outputHash": "73a6694942890c9dc6ebd9527acc3c3bb33c1a39850fae97506fb00f44cf0cc9",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T05:23:50.392Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "YOUR SUBURB MARKET UPDATE",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "LOCAL PRICES. CLEAR INSIGHT.",
+        "exact": true
+      },
+      {
+        "key": "stat_1",
+        "expected": "CURRENT MEDIAN PRICE",
+        "exact": true
+      },
+      {
+        "key": "stat_2",
+        "expected": "RECENT SALES",
+        "exact": true
+      },
+      {
+        "key": "stat_3",
+        "expected": "DAYS ON MARKET",
+        "exact": true
+      },
+      {
+        "key": "stat_4",
+        "expected": "BUYER DEMAND",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "chart_graphic",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

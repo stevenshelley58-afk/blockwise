@@ -57,6 +57,12 @@ test("Hermes content handler turns a work_queue job into draft artifacts and rev
   assert.equal(db.tables.content_artifacts.some((row: Record<string, unknown>) => row.artifact_type === "artifact_package"), true);
   assert.equal(db.tables.content_artifacts.some((row: Record<string, unknown>) => row.artifact_type === "lead_ad"), true);
   assert.equal(db.tables.content_reviews.length, CONTENT_STEPS.length);
+  assert.equal(
+    db.tables.prompt_runs.every((row: Record<string, unknown>) => (
+      row.input_json as Record<string, unknown>
+    ).source_transcript === "A source transcript with enough detail to drive a useful article draft."),
+    true,
+  );
 
   const artifactPackage = db.tables.content_artifacts.find((row: Record<string, unknown>) => row.artifact_type === "artifact_package");
   assert.deepEqual(artifactPackage?.data_json.approval_actions, ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"]);
@@ -109,7 +115,11 @@ function createFakeRestDb() {
       primary_cta: "Book a Blockwise demo",
       prompt_set_id: "prompt-set-1",
       model_policy_id: "best-available-balanced",
-      input_json: { tone_profile: "direct, expert, no hype" },
+      input_json: {
+        tone_profile: "direct, expert, no hype",
+        source_transcript: "A source transcript with enough detail to drive a useful article draft.",
+        source_url: "https://example.com/source",
+      },
       status: "queued",
     }],
     content_artifacts: [],
