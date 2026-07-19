@@ -37,7 +37,7 @@ jobs:
   real-loop:
     name: Real-loop against preview
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
       ADSTUDIO_E2E_WORKSPACE_ID: 00000000-0000-4000-8000-0000000000e2

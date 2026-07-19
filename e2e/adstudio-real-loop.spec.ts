@@ -24,7 +24,7 @@ if (!canRun && process.env.CI) {
 describeAdStudioRealLoop("Ad Studio real loop", () => {
   test.use({ storageState: storageStatePath });
   // Real AI generation + edit + export can take several minutes end to end.
-  test.setTimeout(600_000);
+  test.setTimeout(1_200_000);
 
   test("keeps the sample-first workspace usable at supported viewport sizes", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
@@ -52,7 +52,7 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
     }
   });
 
-  test("gates first-run, clones a sample, persists a targeted edit, reloads, and exports", async ({ page }, testInfo) => {
+  test("runs Fast and High quality through generation, edit, reload, and export", async ({ page }, testInfo) => {
     // The cookie banner renders late (post-hydration) and overlays the dialog
     // footer, intercepting the Generate Ad click — a click-if-visible dismissal
     // races it. Seeding the stored choice keeps it from ever rendering.
@@ -72,85 +72,96 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       await skipBrand.click();
     }
 
-    await openNewAd(page);
-    await chooseCloneSample(page);
-    await uploadRequiredSampleImages(
-      page,
-      testInfo.outputPath("listing.png"),
-      testInfo.outputPath("logo.png"),
-    );
-    await fillCustomerCopyFields(page);
-    // The brief label is sample-specific (e.g. "Listing details") and the
-    // dialog title can match the same words — target the textbox role so the
-    // locator can never resolve to the dialog container.
-    await page
-      .getByRole("dialog")
-      .getByRole("textbox", { name: /details|description/i })
-      .first()
-      .fill("Open home this Saturday, renovated family home in Scarborough.");
-    const generationResponse = page.waitForResponse(
-      (response) => {
-        const url = new URL(response.url());
-        return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
-      },
-      // The synchronous degraded-mode pipeline (copy + clone + vision QA in
-      // one request) runs against a 240s server deadline (route maxDuration
-      // 300) — wait past it so the server's own answer arrives, not a guess.
-      { timeout: 280_000 },
-    );
-    // If the click below stalls past this watcher's timeout, its rejection
-    // must not surface as an unhandled rejection that ends the whole test —
-    // it is consumed via the race and the await further down.
-    void generationResponse.catch(() => {});
-    // submit() bails out with a footer alert (requirement blockers) or an
-    // inline error instead of a disabled button, so a blocked submit produces
-    // NO network request at all. Racing the alert against the response turns
-    // that silent timeout into the dialog's own message.
-    const dialogBlocked = page
-      .locator(".studio-newad-requirements, .studio-newad-error")
-      .first()
-      .waitFor({ state: "visible", timeout: 280_000 })
-      .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
-      .then((text) => text?.trim() || "the dialog blocked the submit without a message")
-      .catch(() => null);
-    await page.getByRole("button", { name: /generate ad/i }).click();
-    const blockedMessage = await Promise.race([
-      generationResponse.then(() => null).catch(() => null),
-      dialogBlocked,
-    ]);
-    if (blockedMessage) {
-      throw new Error(`Generate ad never sent POST /api/adstudio/campaigns — dialog says: ${blockedMessage}`);
+    for (const quality of ["fast", "high"] as const) {
+      await exerciseGenerationMode(
+        page,
+        quality,
+        testInfo.outputPath(`${quality}-listing.png`),
+        testInfo.outputPath(`${quality}-logo.png`),
+      );
     }
-    const generated = await generationResponse;
-    expect(generated.ok(), await generated.text()).toBe(true);
-    const generatedPayload = (await generated.json()) as {
-      campaignPack?: { campaign?: { campaignId?: string } };
-      jobId?: string;
-    };
-    // Async path (202 + job polling) or sync fallback (201 + pack) — both valid.
-    const campaignId = generatedPayload.jobId
-      ? await waitForGenerationJob(page, generatedPayload.jobId)
-      : generatedPayload.campaignPack?.campaign?.campaignId;
-    expect(campaignId).toBeTruthy();
-
-    await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
-    const editedImage = await editGeneratedClone(page);
-    await waitForSavedStatus(page);
-
-    await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId)}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
-    // Reload intentionally returns to Home. Reopen the post-clone editor before
-    // asserting that the saved revision is the image mounted on its canvas.
-    await openPanel(page, "Text");
-    await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
-      "src",
-      editedImage,
-      { timeout: 30_000 },
-    );
-
-    await openPanel(page, "Publish");
-    await exportCreatives(page);
   });
 });
+
+async function exerciseGenerationMode(
+  page: Page,
+  quality: "fast" | "high",
+  listingPath: string,
+  logoPath: string,
+) {
+  await openNewAd(page);
+  await chooseCloneSample(page);
+  await uploadRequiredSampleImages(page, listingPath, logoPath);
+  await fillCustomerCopyFields(page);
+  await page.locator(`input[name="generation-quality"][value="${quality}"]`).check();
+  await page
+    .getByRole("dialog")
+    .getByRole("textbox", { name: /details|description/i })
+    .first()
+    .fill(`Open home this Saturday. ${quality} direct-provider verification.`);
+
+  const generationResponse = page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/adstudio/campaigns" && response.request().method() === "POST";
+    },
+    { timeout: 280_000 },
+  );
+  void generationResponse.catch(() => {});
+  const dialogBlocked = page
+    .locator(".studio-newad-requirements, .studio-newad-error")
+    .first()
+    .waitFor({ state: "visible", timeout: 280_000 })
+    .then(() => page.locator(".studio-newad-requirements, .studio-newad-error").first().textContent())
+    .then((text) => text?.trim() || "the dialog blocked the submit without a message")
+    .catch(() => null);
+  await page.getByRole("button", { name: /generate ad/i }).click();
+  const blockedMessage = await Promise.race([
+    generationResponse.then(() => null).catch(() => null),
+    dialogBlocked,
+  ]);
+  if (blockedMessage) {
+    throw new Error(`Generate ad never sent POST /api/adstudio/campaigns — dialog says: ${blockedMessage}`);
+  }
+
+  const generated = await generationResponse;
+  expect(generated.ok(), await generated.text()).toBe(true);
+  const generatedPayload = (await generated.json()) as {
+    campaignPack?: { campaign?: { campaignId?: string } };
+    jobId?: string;
+  };
+  const campaignId = generatedPayload.jobId
+    ? await waitForGenerationJob(page, generatedPayload.jobId)
+    : generatedPayload.campaignPack?.campaign?.campaignId;
+  expect(campaignId).toBeTruthy();
+  await assertCampaignModeAndFormats(page, campaignId ?? "", quality);
+
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 90_000 });
+  const editedImage = await editGeneratedClone(page);
+  await waitForSavedStatus(page);
+
+  await page.goto(`/ad-studio?campaignId=${encodeURIComponent(campaignId ?? "")}&workspaceId=${encodeURIComponent(workspaceId ?? "")}`);
+  await assertCampaignModeAndFormats(page, campaignId ?? "", quality);
+  await openPanel(page, "Text");
+  await expect(page.locator(".studio-inplace-frame img").filter({ visible: true }).first()).toHaveAttribute(
+    "src",
+    editedImage,
+    { timeout: 30_000 },
+  );
+  await openPanel(page, "Publish");
+  await exportCreatives(page);
+}
+
+async function assertCampaignModeAndFormats(page: Page, campaignId: string, quality: "fast" | "high") {
+  const response = await page.request.get(`/api/adstudio/campaigns/${encodeURIComponent(campaignId)}`);
+  expect(response.ok(), await response.text()).toBe(true);
+  const payload = (await response.json()) as {
+    campaign?: { generation_quality?: string };
+    creatives?: Array<{ format?: string }>;
+  };
+  expect(payload.campaign?.generation_quality).toBe(quality);
+  expect(new Set(payload.creatives?.map((creative) => creative.format))).toEqual(new Set(["4:5", "9:16"]));
+}
 
 test("Ad Studio real-loop E2E requires a preview URL, dedicated workspace, and auth fixture", async () => {
   test.skip(!previewUrl, "Set PLAYWRIGHT_BASE_URL to run the Ad Studio real-loop E2E against Vercel Preview.");
