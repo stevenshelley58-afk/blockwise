@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { queueContentRun } from "../../src/lib/content-engine/queue.ts";
+import { ResearchSupervisor } from "../../hermes/tools/research-runtime/src/supervisor.ts";
+import { CONTENT_RUN_QUEUE_PRIORITY, queueContentRun } from "../../src/lib/content-engine/queue.ts";
 
 test("queueContentRun writes a Hermes research work_queue job instead of Trigger work", async () => {
   const supabase = createFakeSupabase();
@@ -19,8 +20,20 @@ test("queueContentRun writes a Hermes research work_queue job instead of Trigger
   assert.equal(job.queue_name, "research");
   assert.equal(job.job_type, "blockwise-content-run-orchestrator");
   assert.equal(job.dedupe_key, "content-run:workspace-1:run-1");
+  assert.equal(job.priority, CONTENT_RUN_QUEUE_PRIORITY);
+  assert.ok(job.priority < 5, "interactive content must outrank research maintenance jobs");
   assert.equal(job.payload.contentRunId, "run-1");
   assert.equal(job.payload.fromStep, "blockwise-blog-writer");
+});
+
+test("ResearchSupervisor gives interactive content work the same front-of-queue priority", () => {
+  const job = new ResearchSupervisor().planContentRun({
+    workspaceId: "workspace-1",
+    contentRunId: "run-1",
+  });
+
+  assert.equal(job.priority, CONTENT_RUN_QUEUE_PRIORITY);
+  assert.ok(job.priority < 5, "interactive content must outrank research maintenance jobs");
 });
 
 function createFakeSupabase() {
