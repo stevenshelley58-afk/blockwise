@@ -21,6 +21,7 @@ Do not print real secret values in logs or docs.
 | `HERMES_DEFAULT_MODEL` | Hermes/OpenRouter | Required model slug unless task-specific model JSON covers every task. |
 | `HERMES_ESCALATION_MODEL` | Hermes/OpenRouter | Escalation model slug. |
 | `OPENROUTER_API_KEY` | OpenRouter client | Required for LLM-backed page resolution, classification, audits, and investigations. |
+| `OPENAI_API_KEY` | Hermes content engine | Required for transcript-to-blog and other content runs. |
 | `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
 | `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
@@ -39,6 +40,7 @@ Do not print real secret values in logs or docs.
 | `HERMES_PROVIDER` | `openrouter` | Only `openrouter` is accepted by the TypeScript config. |
 | `HERMES_OPENROUTER_MODEL` | none | Legacy fallback model variable. |
 | `HERMES_OPENROUTER_MODELS_JSON` | `{}` | Optional per-task model map for `page_resolution`, `ad_classification`, `coverage_audit`, and `defect_investigation`. |
+| `HERMES_CONTENT_DEFAULT_MODEL` | `gpt-5.5` | Direct OpenAI model used by content runs when `HERMES_CONTENT_MODELS_JSON` has no matching override. |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Optional override for the OpenRouter API base. |
 | `OPENROUTER_SITE_URL` | none | Optional OpenRouter attribution header. |
 | `OPENROUTER_APP_NAME` | none | Optional OpenRouter app title header. |

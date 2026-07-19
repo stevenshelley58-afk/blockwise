@@ -16,7 +16,7 @@ test("Hermes content model routing uses content policy overrides before defaults
           best_copywriting: "copy-model",
           "blockwise-blog-writer": "writer-model",
         }),
-        HERMES_DEFAULT_MODEL: "default-model",
+        HERMES_CONTENT_DEFAULT_MODEL: "default-model",
       },
       "best_copywriting",
       "blockwise-blog-writer",
@@ -27,7 +27,7 @@ test("Hermes content model routing uses content policy overrides before defaults
     modelForContentSkill(
       {
         HERMES_CONTENT_MODELS_JSON: JSON.stringify({ best_copywriting: "copy-model" }),
-        HERMES_DEFAULT_MODEL: "default-model",
+        HERMES_CONTENT_DEFAULT_MODEL: "default-model",
       },
       "best_copywriting",
       "blockwise-social-post-generator",
@@ -86,15 +86,16 @@ test("Hermes content handler times out stalled provider calls", async () => {
         now: () => "2026-06-04T00:00:00.000Z",
         env: {
           HERMES_CONTENT_MODEL_TIMEOUT_MS: "1000",
-          HERMES_DEFAULT_MODEL: "test-model",
-          OPENROUTER_API_KEY: "test-key",
+          HERMES_CONTENT_DEFAULT_MODEL: "test-model",
+          OPENAI_API_KEY: "test-key",
         },
-        fetchImpl: (_url: RequestInfo | URL, init: RequestInit = {}) => new Promise((_resolve, reject) => {
+        fetchImpl: (url: RequestInfo | URL, init: RequestInit = {}) => new Promise((_resolve, reject) => {
+          assert.equal(String(url), "https://api.openai.com/v1/chat/completions");
           init.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })), { once: true });
         }),
       },
     ),
-    /OpenRouter content request timed out after 1000ms for blockwise-topic-researcher/u,
+    /OpenAI content request timed out after 1000ms for blockwise-topic-researcher/u,
   );
 
   assert.equal(db.tables.content_runs[0].status, "failed");

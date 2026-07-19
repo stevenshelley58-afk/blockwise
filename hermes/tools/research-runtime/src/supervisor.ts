@@ -99,7 +99,8 @@ export class ResearchSupervisor {
       queue_name: "research",
       job_type: "blockwise-content-run-orchestrator",
       dedupe_key: `content-run:${input.workspaceId}:${input.contentRunId}`,
-      priority: 15,
+      // Interactive content runs must not sit behind the research backlog.
+      priority: 1,
       payload: {
         workspaceId: input.workspaceId,
         contentRunId: input.contentRunId,
