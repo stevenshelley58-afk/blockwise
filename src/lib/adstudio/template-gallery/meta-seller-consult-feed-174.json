@@ -1,0 +1,127 @@
+{
+  "id": "meta-seller-consult-feed-174",
+  "name": "Seller Consultation — Feed 174",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-174-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-174-sample.png",
+    "alt": "Generated sample for Seller Consultation — Feed 174.",
+    "contentHash": "4915554c22d68a93499d5356d40c4e0d7e451ad1bff3394c00099a589cd65dfd",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo_1",
+        "label": "Property photo 1",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's first property photograph"
+      },
+      {
+        "key": "property_photo_2",
+        "label": "Property photo 2",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's second property photograph"
+      },
+      {
+        "key": "property_photo_3",
+        "label": "Property photo 3",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's third property photograph"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 37,
+        "sample": "PLAN YOUR NEXT MOVE",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 90,
+        "sample": "Book a no-pressure seller consultation with a local property specialist.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_174.png",
+    "contentHash": "77c65c8e01558527417a316119fc76c2080b1182712da1b2e9e7f08549a8ef11"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

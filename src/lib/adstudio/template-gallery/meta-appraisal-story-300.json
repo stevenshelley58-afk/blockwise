@@ -1,0 +1,134 @@
+{
+  "id": "meta-appraisal-story-300",
+  "name": "Free Property Appraisal — Story 300",
+  "goal": "appraisal_bookings",
+  "offerId": "free-property-appraisal",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Homeowners curious about their current property value or considering selling",
+  "category": "appraisal-lead-generation",
+  "tags": [
+    "appraisal",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-appraisal-story-300-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-appraisal-story-300-sample.png",
+    "alt": "Generated sample for Free Property Appraisal — Story 300.",
+    "contentHash": "88c6a7e41e2d939b337d8035a07f300cadc9780d6c78a09db96519d1aa9a5b70",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "agent_portrait",
+        "label": "Agent portrait",
+        "required": true,
+        "aspect": "portrait",
+        "description": "the customer's professional agent portrait"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 48,
+        "sample": "WHAT COULD YOUR HOME BE WORTH?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 42,
+        "sample": "REQUEST A FREE APPRAISAL",
+        "required": true
+      },
+      {
+        "key": "agent_name",
+        "label": "Agent Name",
+        "maxLength": 29,
+        "sample": "ALEX MORGAN",
+        "required": true
+      },
+      {
+        "key": "agent_role",
+        "label": "Agent Role",
+        "maxLength": 43,
+        "sample": "LOCAL PROPERTY SPECIALIST",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "email",
+        "label": "Email",
+        "maxLength": 40,
+        "sample": "alex@youragency.com.au",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_300.png",
+    "contentHash": "c06d8aa44031b6a7c133187fbeadca33890c20b3a6dbbe1fd7768943c179f8e2"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "appraisal_leads",
+    "property_or_agent_focus": "agent"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

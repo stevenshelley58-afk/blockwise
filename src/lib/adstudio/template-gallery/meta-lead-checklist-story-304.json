@@ -1,0 +1,148 @@
+{
+  "id": "meta-lead-checklist-story-304",
+  "name": "Free Property Checklist — Story 304",
+  "goal": "seller_leads",
+  "offerId": "property-checklist-lead-magnet",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "category": "educational-lead-generation",
+  "tags": [
+    "education",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-lead-checklist-story-304-sample.png",
+    "alt": "Generated sample for Free Property Checklist — Story 304.",
+    "contentHash": "0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 50,
+        "sample": "FREE PROPERTY PLANNING CHECKLIST",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 45,
+        "sample": "MAKE YOUR NEXT MOVE CLEARER",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 35,
+        "sample": "PREPARE YOUR HOME",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 35,
+        "sample": "UNDERSTAND TIMING",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 38,
+        "sample": "ASK BETTER QUESTIONS",
+        "required": true
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "maxLength": 39,
+        "sample": "PREPARE YOUR PROPERTY",
+        "required": true
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "maxLength": 40,
+        "sample": "UNDERSTAND YOUR TIMING",
+        "required": true
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "maxLength": 41,
+        "sample": "REVIEW LOCAL CONDITIONS",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 40,
+        "sample": "GET THE FREE CHECKLIST",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_304.png",
+    "contentHash": "15db4d72f3b3af099d5555e5271a0f1cccd86d65068a4f7e2257742f1fcb1597"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "educational_lead_magnet",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

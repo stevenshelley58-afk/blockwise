@@ -1,0 +1,155 @@
+{
+  "id": "meta-seller-consult-feed-166",
+  "name": "Seller Consultation — Feed 166",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-166-sample.png",
+    "alt": "Generated sample for Seller Consultation — Feed 166.",
+    "contentHash": "e734f93c52aeac753f78935639efb663cf6286065e50438d27f97da6883e549a",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?",
+        "required": true
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "maxLength": 39,
+        "sample": "CLARIFY YOUR TIMELINE",
+        "required": true
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "maxLength": 35,
+        "sample": "PREPARE YOUR HOME",
+        "required": true
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "maxLength": 36,
+        "sample": "REVIEW LOCAL SALES",
+        "required": true
+      },
+      {
+        "key": "check_4",
+        "label": "Check 4",
+        "maxLength": 38,
+        "sample": "SET A PRICE STRATEGY",
+        "required": true
+      },
+      {
+        "key": "check_5",
+        "label": "Check 5",
+        "maxLength": 36,
+        "sample": "PLAN YOUR CAMPAIGN",
+        "required": true
+      },
+      {
+        "key": "check_6",
+        "label": "Check 6",
+        "maxLength": 36,
+        "sample": "CONFIRM NEXT STEPS",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_166.png",
+    "contentHash": "8d5be92bce991e7e107b8aa93ced81c46a8d1b0445759cdc831d4ffc8bb60d0b"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

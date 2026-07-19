@@ -1,0 +1,127 @@
+{
+  "id": "meta-seller-consult-feed-168",
+  "name": "Seller Consultation — Feed 168",
+  "goal": "seller_leads",
+  "offerId": "seller-consultation",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Homeowners thinking about selling and seeking expert guidance",
+  "category": "seller-lead-generation",
+  "tags": [
+    "seller-consult",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-seller-consult-feed-168-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-seller-consult-feed-168-sample.png",
+    "alt": "Generated sample for Seller Consultation — Feed 168.",
+    "contentHash": "b4bdf9a924d4bd9a67b633a4d469f429ea2da2fc8a216cb9a143f7a264c5c57b",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 38,
+        "sample": "THINKING OF SELLING?",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 37,
+        "sample": "PLAN YOUR NEXT MOVE",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 44,
+        "sample": "BOOK A SELLER CONSULTATION",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "social_handle",
+        "label": "Social Handle",
+        "maxLength": 29,
+        "sample": "@youragency",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_168.png",
+    "contentHash": "53180b93a24e4fa628bef61fa7c491e8586c53589622bb6699d1fdef9bb85b98"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "seller_consultation",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-seller-consult-story-270",
+  "requestHash": "ed271c523f1e5e460abde5ecc09141633b499dd0961157ad5552b8f5a8850c62",
+  "inputHashes": {
+    "source_ad": "7690271f39f161134f97a8debdb403ccf4d6da32990da3d1770b636aaecbd915",
+    "property_photo_1": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "property_photo_2": "4cb5d6d789da66561fb597399c539369a0f45b4a383ad16681b108ca52d0efc1",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "40c9043ba3c591b5cf43cf3a34221b9d66512c674799886a2192fbd8c62ebbad",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T09:00:36.598Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "THINKING OF SELLING?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "PLAN YOUR NEXT MOVE",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Book a no-pressure seller consultation with a local property specialist.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK A SELLER CONSULTATION",
+        "exact": true
+      },
+      {
+        "key": "website",
+        "expected": "youragency.com.au",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo_1",
+        "used": true
+      },
+      {
+        "key": "property_photo_2",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

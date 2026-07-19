@@ -1,0 +1,148 @@
+{
+  "id": "meta-market-report-story-242",
+  "name": "Suburb Market Report — Story 242",
+  "goal": "market_update_leads",
+  "offerId": "suburb-market-report",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Local homeowners seeking current suburb price and demand insights",
+  "category": "market-report-lead-generation",
+  "tags": [
+    "market-report",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-market-report-story-242-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-market-report-story-242-sample.png",
+    "alt": "Generated sample for Suburb Market Report — Story 242.",
+    "contentHash": "86e66da7bdfc40012731fd81f74614bc1ba7ea8d5753c2f741acbb4dbbc12185",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 43,
+        "sample": "YOUR SUBURB MARKET UPDATE",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 46,
+        "sample": "LOCAL PRICES. CLEAR INSIGHT.",
+        "required": true
+      },
+      {
+        "key": "stat_1",
+        "label": "Stat 1",
+        "maxLength": 38,
+        "sample": "CURRENT MEDIAN PRICE",
+        "required": true
+      },
+      {
+        "key": "stat_2",
+        "label": "Stat 2",
+        "maxLength": 30,
+        "sample": "RECENT SALES",
+        "required": true
+      },
+      {
+        "key": "stat_3",
+        "label": "Stat 3",
+        "maxLength": 32,
+        "sample": "DAYS ON MARKET",
+        "required": true
+      },
+      {
+        "key": "stat_4",
+        "label": "Stat 4",
+        "maxLength": 30,
+        "sample": "BUYER DEMAND",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 37,
+        "sample": "GET THE FREE REPORT",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_242.png",
+    "contentHash": "0eee2af2e649a1fc4f2c543cce4de3ac75baef44a6309f54e07280bd833066eb"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "market_report_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

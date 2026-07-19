@@ -1,0 +1,127 @@
+{
+  "id": "meta-agent-intro-feed-051",
+  "name": "Meet Your Local Agent — Feed 051",
+  "goal": "seller_leads",
+  "offerId": "agent-introduction-call",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Local property owners seeking a trusted agent relationship",
+  "category": "agent-introduction-lead-generation",
+  "tags": [
+    "agent-intro",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-agent-intro-feed-051-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-agent-intro-feed-051-sample.png",
+    "alt": "Generated sample for Meet Your Local Agent — Feed 051.",
+    "contentHash": "b149b5633ba59f6be2c39cb2b49fba6c42d24de6d2a9a2771469919f9406b49a",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 45,
+        "sample": "YOUR LOCAL PROPERTY PARTNER",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 41,
+        "sample": "BOOK A NO-PRESSURE CALL",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 95,
+        "sample": "Local insight, clear advice and a practical plan for your next property move.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 29,
+        "sample": "BOOK A CALL",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_051.png",
+    "contentHash": "86565ad6874566135bfabbac7c27b70fcd06b0cfe0c4378779f1d39448b188c5"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "agent_introduction",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

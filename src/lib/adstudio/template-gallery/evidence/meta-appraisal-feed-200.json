@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-appraisal-feed-200",
+  "requestHash": "c8697732c7b56193819ee3c1f96cdc33cb454265ab00510d2ef92f8ba3885229",
+  "inputHashes": {
+    "source_ad": "9f7909390f4a5cd3168f80ae24d5dccd1ebf3ba852e6c67a2e5cd53cce88cc01",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agent_portrait": "792c38064c18b2bf5845b4104c9f1ffc251af8461242132f27981472cf5cb8d0",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "c69880e33dec10dccd185f504158556870b3e1e81125543bba9c715dfe9ed4b5",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-15T08:40:19.454Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "WHAT COULD YOUR HOME BE WORTH?",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "REQUEST A FREE APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "BOOK YOUR APPRAISAL",
+        "exact": true
+      },
+      {
+        "key": "agent_name",
+        "expected": "ALEX MORGAN",
+        "exact": true
+      },
+      {
+        "key": "agent_role",
+        "expected": "LOCAL PROPERTY SPECIALIST",
+        "exact": true
+      },
+      {
+        "key": "phone",
+        "expected": "0400 123 456",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agent_portrait",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}

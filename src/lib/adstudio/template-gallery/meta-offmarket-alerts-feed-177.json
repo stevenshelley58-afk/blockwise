@@ -1,0 +1,155 @@
+{
+  "id": "meta-offmarket-alerts-feed-177",
+  "name": "Off-Market Property Alerts — Feed 177",
+  "goal": "buyer_leads",
+  "offerId": "off-market-property-alerts",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Buyers wanting early access to local off-market opportunities",
+  "category": "buyer-registration-lead-generation",
+  "tags": [
+    "offmarket-alerts",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-offmarket-alerts-feed-177-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-offmarket-alerts-feed-177-sample.png",
+    "alt": "Generated sample for Off-Market Property Alerts — Feed 177.",
+    "contentHash": "a1c558693a72587263dcdcc8ecdde43704684191db472a53e72e5522c0aecd61",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property photograph"
+      },
+      {
+        "key": "location_graphic",
+        "label": "Location visual",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's local area visual"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 54,
+        "sample": "SEE HOMES BEFORE THEY HIT THE MARKET",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 44,
+        "sample": "JOIN OUR OFF-MARKET ALERTS",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 30,
+        "sample": "EARLY ACCESS",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 31,
+        "sample": "MATCHED HOMES",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 31,
+        "sample": "LOCAL UPDATES",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 37,
+        "sample": "REGISTER FOR ALERTS",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Phone",
+        "maxLength": 30,
+        "sample": "0400 123 456",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Website",
+        "maxLength": 35,
+        "sample": "youragency.com.au",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_177.png",
+    "contentHash": "d0ecbb97ff564edce99b987ac8665e231f7227b627ca32349378282b5543351a"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "off_market_buyer_registration",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
