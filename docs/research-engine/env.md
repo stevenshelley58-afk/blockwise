@@ -36,6 +36,8 @@ Do not print real secret values in logs or docs.
 | `HERMES_DASHBOARD_HOST_PORT` | `9119` | Bound to localhost on the VPS. |
 | `HERMES_DASHBOARD_INSECURE` | `1` | Dashboard is not public; keep behind the VPS boundary. |
 | `HERMES_MODELS_JSON` | `{}` | Optional direct OpenAI per-task model map for `page_resolution`, `ad_classification`, `coverage_audit`, and `defect_investigation`. |
+| `HERMES_CONTENT_DEFAULT_MODEL` | `gpt-5.5` | Direct OpenAI model used by content runs when `HERMES_CONTENT_MODELS_JSON` has no matching override. |
+| `HERMES_CONTENT_MODELS_JSON` | `{}` | Optional direct OpenAI per-skill model map for content runs. |
 | `MEM0_API_KEY` | none | Passed through to Hermes when configured. |
 | `MEM0_PROJECT_ID` | `blockwise-research` | Passed through to Hermes. |
 | `RESEND_API_KEY` | none | Optional notification email provider key. |

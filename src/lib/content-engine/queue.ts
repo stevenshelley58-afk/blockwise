@@ -11,6 +11,10 @@ export type QueuedContentRun = {
   status: string;
 };
 
+// User-requested content must run ahead of the continuously replenished
+// research maintenance backlog. Queue claims sort lower numbers first.
+export const CONTENT_RUN_QUEUE_PRIORITY = 1;
+
 export async function queueContentRun(input: {
   supabase: ContentQueueClient;
   workspaceId: string;
@@ -46,7 +50,7 @@ export async function queueContentRun(input: {
       .from("work_queue")
       .update({
         job_type: "blockwise-content-run-orchestrator",
-        priority: 15,
+        priority: CONTENT_RUN_QUEUE_PRIORITY,
         payload,
         status: "pending",
         available_at: new Date().toISOString(),
@@ -75,7 +79,7 @@ export async function queueContentRun(input: {
       queue_name: "research",
       job_type: "blockwise-content-run-orchestrator",
       dedupe_key: dedupeKey,
-      priority: 15,
+      priority: CONTENT_RUN_QUEUE_PRIORITY,
       payload,
       status: "pending",
       max_attempts: 1,

@@ -259,7 +259,12 @@ async function executeContentSkill(skillName, input) {
 
 export function modelForContentSkill(env, modelPolicyId, skillName) {
   const configured = parseJsonObject(env.HERMES_CONTENT_MODELS_JSON) || parseJsonObject(env.HERMES_MODELS_JSON) || {};
-  const model = configured[skillName] || configured[modelPolicyId] || configured.content_generation || env.HERMES_DEFAULT_MODEL || "gpt-5.5";
+  const model = configured[skillName]
+    || configured[modelPolicyId]
+    || configured.content_generation
+    || env.HERMES_CONTENT_DEFAULT_MODEL
+    || env.HERMES_DEFAULT_MODEL
+    || "gpt-5.5";
   return String(model);
 }
 
