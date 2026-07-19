@@ -56,7 +56,9 @@ runs:
           fi
           echo "::add-mask::$value"
           for environment in production preview; do
-            npx vercel@54.6.1 env add "$variable" "$environment" \
+            # An explicit empty third argument means "all Preview branches" and
+            # avoids Vercel CLI's otherwise interactive branch prompt.
+            npx vercel@54.6.1 env add "$variable" "$environment" "" \
               --value "$value" \
               --force \
               --yes \
