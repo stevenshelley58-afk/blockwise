@@ -43,10 +43,14 @@ runs:
             '
         )"
         TRIGGER_SECRET_KEY="$trigger_key" node scripts/inspect-trigger-production-run.mjs "$failed_run"
-        printf '%s' "$trigger_key" | npx vercel@54.6.1 env add TRIGGER_SECRET_KEY production \
-          --force \
-          --scope "$VERCEL_ORG_ID" \
-          --token "$VERCEL_TOKEN"
+        for environment in production preview; do
+          npx vercel@54.6.1 env add TRIGGER_SECRET_KEY "$environment" "" \
+            --value "$trigger_key" \
+            --force \
+            --yes \
+            --scope "$VERCEL_ORG_ID" \
+            --token "$VERCEL_TOKEN"
+        done
 
         for variable in OPENAI_API_KEY GOOGLE_AI_API_KEY; do
           value="${!variable}"

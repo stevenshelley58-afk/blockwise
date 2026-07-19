@@ -26,4 +26,8 @@ test("preview E2E command requires Vercel URL credentials and auth state before 
   assert.match(seed, /ADSTUDIO_E2E_OPERATOR/);
   assert.match(seed, /Upsert approved E2E brand kit/);
   assert.match(readFileSync("playwright.config.ts", "utf8"), /channel: chromeChannel/);
+  assert.match(
+    readFileSync(".github/actions/sync-trigger-key-to-vercel/action.yml", "utf8"),
+    /env add TRIGGER_SECRET_KEY "\$environment" ""/,
+  );
 });
