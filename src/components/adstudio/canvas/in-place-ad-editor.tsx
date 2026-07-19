@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { Check, ChevronLeft, ChevronRight, ImagePlus, ListTree, Redo2, ScanEye, Sparkles, Undo2, WandSparkles, X, ZoomIn } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { AdStudioCloneRegion, AdStudioCreative } from "@/lib/adstudio/types.ts";
 import { downscaleImageForUpload } from "@/lib/upload/asset-file";
@@ -20,6 +20,7 @@ const MAX_TEXT_LENGTH = 200;
 const MAX_INSTRUCTION_LENGTH = 500;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const SLOW_EDIT_MS = 8000;
+const ZOOM_LEVELS = [1, 2, 3] as const;
 
 function labelForRegionKey(key: string): string {
   return key.replace(/_/g, " ");
@@ -34,6 +35,26 @@ function regionStyle(region: AdStudioCloneRegion): CSSProperties {
     height: `${height * 100}%`,
     zIndex: region.kind === "text" ? 2 : 1,
   };
+}
+
+/**
+ * Crop the full ad image down to one region for the element-list thumbnail,
+ * using background scaling only — no canvas work, stays crisp on data URLs.
+ */
+function regionThumbStyle(src: string, box: AdStudioCloneRegion["box"]): CSSProperties {
+  const width = Math.min(Math.max(box.width, 0.05), 1);
+  const height = Math.min(Math.max(box.height, 0.05), 1);
+  const positionX = width >= 1 ? 50 : (Math.min(box.x, 1 - width) / (1 - width)) * 100;
+  const positionY = height >= 1 ? 50 : (Math.min(box.y, 1 - height) / (1 - height)) * 100;
+  return {
+    backgroundImage: `url("${src}")`,
+    backgroundSize: `${100 / width}% ${100 / height}%`,
+    backgroundPosition: `${positionX}% ${positionY}%`,
+  };
+}
+
+function truncateForStatus(value: string): string {
+  return value.length > 18 ? `${value.slice(0, 18)}…` : value;
 }
 
 function expectedTextForKey(creative: AdStudioCreative, key: string): string {
@@ -58,12 +79,19 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
   const [textDraft, setTextDraft] = useState("");
   const [instruction, setInstruction] = useState("");
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [stillWorking, setStillWorking] = useState(false);
   const [comparePrevious, setComparePrevious] = useState(false);
+  const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [panning, setPanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const panPointerRef = useRef<{ pointerId: number; lastX: number; lastY: number } | null>(null);
   const elementListRef = useRef<HTMLDivElement | null>(null);
   const elementButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const regionButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const retryMutationRef = useRef<{ signature: string; mutationId: string } | null>(null);
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
@@ -79,6 +107,16 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
     () => regions.find((region) => region.key === selectedKey),
     [regions, selectedKey],
   );
+  // Copy checks that came back inexact get a quiet flag on their element pill,
+  // pointing at the exact place a one-tap fix applies.
+  const warningKeys = useMemo(
+    () => new Set(
+      (creative.canvas.cloneQa?.copyChecks ?? [])
+        .filter((check) => !check.exact)
+        .map((check) => check.key),
+    ),
+    [creative.canvas.cloneQa?.copyChecks],
+  );
 
   useEffect(() => {
     if (!busy) {
@@ -93,7 +131,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
     if (selectedRegion?.kind === "text") textInputRef.current?.focus();
   }, [selectedRegion]);
 
-  useEffect(() => setComparePrevious(false), [src]);
+  useEffect(() => {
+    setComparePrevious(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [src]);
 
   const updateElementScrollState = useCallback(() => {
     const list = elementListRef.current;
@@ -134,7 +176,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
     return () => cancelAnimationFrame(frame);
   }, [scrollSelectedElementToEnd, selectedKey]);
 
-  const performMutation = useCallback(async (mutation: CreativeEditMutation, successMessage: string) => {
+  const performMutation = useCallback(async (
+    mutation: CreativeEditMutation,
+    successMessage: string,
+    progressLabel?: string,
+  ) => {
     if (!creative.activeRevisionId) {
       showToast("This ad changed. Reload it before editing.");
       return;
@@ -149,6 +195,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
       : crypto.randomUUID();
     retryMutationRef.current = { signature, mutationId };
     setPendingKey(mutation.fieldKey ?? mutation.action ?? "edit");
+    setPendingLabel(progressLabel ?? null);
     try {
       const next = await requestCreativeEdit({ creative, mutation, mutationId });
       onCreativeChange(next);
@@ -159,6 +206,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
       showToast(error instanceof Error ? error.message : "The editor could not reach the server. Your previous version is unchanged.");
     } finally {
       setPendingKey(null);
+      setPendingLabel(null);
     }
   }, [cloneObject, creative, onCreativeChange, showToast]);
 
@@ -185,6 +233,95 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
     setInstruction("");
   }
 
+  // Arrow keys walk the ad's elements in place; Escape releases the selection.
+  function handleRegionKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeInspector();
+      return;
+    }
+    const delta = event.key === "ArrowRight" || event.key === "ArrowDown"
+      ? 1
+      : event.key === "ArrowLeft" || event.key === "ArrowUp"
+        ? -1
+        : 0;
+    if (delta === 0 || busy) return;
+    event.preventDefault();
+    const next = regions[(index + delta + regions.length) % regions.length];
+    if (!next) return;
+    selectRegion(next);
+    regionButtonRefs.current.get(next.key)?.focus();
+  }
+
+  /** Outer transforms (PreviewFit) scale client px; convert back to local px. */
+  function frameScaleFactor(): number {
+    const frame = frameRef.current;
+    if (!frame || frame.clientWidth === 0) return 1;
+    return frame.getBoundingClientRect().width / frame.clientWidth;
+  }
+
+  const clampPan = useCallback((value: { x: number; y: number }, zoomLevel: number) => {
+    const frame = frameRef.current;
+    if (!frame || zoomLevel <= 1) return { x: 0, y: 0 };
+    const maxX = ((zoomLevel - 1) * frame.clientWidth) / 2;
+    const maxY = ((zoomLevel - 1) * frame.clientHeight) / 2;
+    return {
+      x: Math.min(maxX, Math.max(-maxX, value.x)),
+      y: Math.min(maxY, Math.max(-maxY, value.y)),
+    };
+  }, []);
+
+  function cycleZoom() {
+    const currentIndex = ZOOM_LEVELS.indexOf(zoom as (typeof ZOOM_LEVELS)[number]);
+    const next = ZOOM_LEVELS[(currentIndex + 1) % ZOOM_LEVELS.length] ?? 1;
+    setZoom(next);
+    setPan((current) => clampPan(current, next));
+  }
+
+  // Double-click zooms in keeping the clicked detail under the cursor;
+  // double-click again to step back out.
+  function handleZoomDoubleClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).tagName !== "IMG") return;
+    if (zoom > 1) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const frame = frameRef.current;
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    const scale = frameScaleFactor();
+    const localX = (event.clientX - rect.left - rect.width / 2) / scale;
+    const localY = (event.clientY - rect.top - rect.height / 2) / scale;
+    setZoom(2);
+    setPan(clampPan({ x: localX * (1 - 2), y: localY * (1 - 2) }, 2));
+  }
+
+  function handlePanPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (zoom <= 1) return;
+    if ((event.target as HTMLElement).tagName !== "IMG") return;
+    panPointerRef.current = { pointerId: event.pointerId, lastX: event.clientX, lastY: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPanning(true);
+  }
+
+  function handlePanPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const active = panPointerRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const scale = frameScaleFactor();
+    const deltaX = (event.clientX - active.lastX) / scale;
+    const deltaY = (event.clientY - active.lastY) / scale;
+    active.lastX = event.clientX;
+    active.lastY = event.clientY;
+    setPan((current) => clampPan({ x: current.x + deltaX, y: current.y + deltaY }, zoom));
+  }
+
+  function handlePanPointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (panPointerRef.current?.pointerId !== event.pointerId) return;
+    panPointerRef.current = null;
+    setPanning(false);
+  }
+
   function applyTextEdit() {
     if (!selectedRegion || selectedRegion.kind !== "text") return;
     const value = textDraft.trim();
@@ -196,7 +333,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
       showToast(`Keep the replacement text to ${MAX_TEXT_LENGTH} characters or less.`);
       return;
     }
-    void performMutation({ action: "edit", fieldKey: selectedRegion.key, newValue: value }, "Text updated");
+    void performMutation(
+      { action: "edit", fieldKey: selectedRegion.key, newValue: value },
+      "Text updated",
+      `Writing "${truncateForStatus(value)}"…`,
+    );
   }
 
   function applyImageInstruction() {
@@ -213,6 +354,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
     void performMutation(
       { action: "edit", fieldKey: selectedRegion.key, instruction: value },
       "Image updated",
+      "Repainting this area…",
     );
   }
 
@@ -248,6 +390,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
           instruction: instruction.trim() || undefined,
         },
         "Image replaced",
+        "Placing your image…",
       );
     } catch {
       showToast("The image could not be read. Try another file.");
@@ -282,33 +425,52 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
 
   return (
     <div className="studio-inplace-stage" data-inspector-open={selectedRegion ? "true" : undefined}>
-      <div className="studio-inplace-frame">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={displaySrc} alt={comparePrevious ? "Previous ad version" : "AI-designed ad creative"} />
-        {regions.map((region) => {
-          const pending = pendingKey === region.key;
-          const selected = selectedKey === region.key;
-          return (
-            <button
-              key={`${region.kind}:${region.key}`}
-              type="button"
-              className={`studio-inplace-region ${region.kind}`}
-              style={regionStyle(region)}
-              data-pending={pending || undefined}
-              data-selected={selected || undefined}
-              disabled={comparePrevious || (busy && !pending)}
-              aria-label={`Edit ${labelForRegionKey(region.key)}`}
-              aria-pressed={selected}
-              onClick={() => selectRegion(region)}
-            >
-              {pending ? (
-                <span className="studio-inplace-status" role="status">
-                  {stillWorking ? "Still working…" : "Updating…"}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
+      <div className="studio-inplace-frame" ref={frameRef}>
+        <div
+          className="studio-inplace-zoom"
+          data-zoomed={zoom > 1 || undefined}
+          data-panning={panning || undefined}
+          style={zoom > 1 ? { transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined}
+          onDoubleClick={handleZoomDoubleClick}
+          onPointerDown={handlePanPointerDown}
+          onPointerMove={handlePanPointerMove}
+          onPointerUp={handlePanPointerEnd}
+          onPointerCancel={handlePanPointerEnd}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={displaySrc} alt={comparePrevious ? "Previous ad version" : "AI-designed ad creative"} draggable={false} />
+          {regions.map((region, index) => {
+            const pending = pendingKey === region.key;
+            const selected = selectedKey === region.key;
+            return (
+              <button
+                key={`${region.kind}:${region.key}`}
+                ref={(node) => {
+                  if (node) regionButtonRefs.current.set(region.key, node);
+                  else regionButtonRefs.current.delete(region.key);
+                }}
+                type="button"
+                className={`studio-inplace-region ${region.kind}`}
+                style={regionStyle(region)}
+                data-label={labelForRegionKey(region.key)}
+                data-pending={pending || undefined}
+                data-selected={selected || undefined}
+                disabled={comparePrevious || (busy && !pending)}
+                aria-label={`Edit ${labelForRegionKey(region.key)}`}
+                aria-pressed={selected}
+                onClick={() => selectRegion(region)}
+                onKeyDown={(event) => handleRegionKeyDown(event, index)}
+              >
+                {selected ? <span className="studio-inplace-handles" aria-hidden /> : null}
+                {pending ? (
+                  <span className="studio-inplace-status" role="status">
+                    {stillWorking ? "Still working…" : pendingLabel ?? "Updating…"}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="studio-inplace-toolbar" aria-label="Edit history">
@@ -331,6 +493,15 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
         >
           <ScanEye aria-hidden size={15} />
           {comparePrevious ? "Current" : "Compare"}
+        </button>
+        <button
+          type="button"
+          aria-label={`Zoom, currently ${zoom}x`}
+          aria-pressed={zoom > 1}
+          onClick={cycleZoom}
+        >
+          <ZoomIn aria-hidden size={15} />
+          {zoom}×
         </button>
         <button
           type="button"
@@ -383,8 +554,11 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
                   onClick={() => selectRegion(region)}
                   disabled={busy}
                 >
-                  {region.kind === "text" ? <Sparkles aria-hidden size={15} /> : <ImagePlus aria-hidden size={15} />}
+                  <i className="studio-inplace-thumb" style={regionThumbStyle(src, region.box)} aria-hidden />
                   {labelForRegionKey(region.key)}
+                  {warningKeys.has(region.key) ? (
+                    <em className="studio-inplace-flag" title="Check this text on the ad" aria-label="Needs review" />
+                  ) : null}
                 </button>
               ))}
             </div>

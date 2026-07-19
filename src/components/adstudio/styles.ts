@@ -594,8 +594,11 @@
 /* Finished-ad editor: selectable QA regions, persistent history controls, and
    one inspector shared by pointer, keyboard, and touch users. */
 .studio-inplace-stage{position:relative;display:grid;justify-items:center;gap:10px}
-.studio-inplace-frame{position:relative;display:inline-block;line-height:0}
-.studio-inplace-frame img{display:block;max-width:min(475px,82vw);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-inplace-frame{position:relative;display:inline-block;line-height:0;overflow:hidden;border-radius:12px;box-shadow:0 30px 70px rgba(0,0,0,.42)}
+.studio-inplace-frame img{display:block;max-width:min(475px,82vw);max-height:calc(100vh - 250px);width:auto;height:auto;border-radius:12px}
+.studio-inplace-zoom{position:relative;display:inline-block;line-height:0;transform-origin:center;transition:transform .22s cubic-bezier(.22,1,.36,1)}
+.studio-inplace-zoom[data-zoomed]{cursor:grab}
+.studio-inplace-zoom[data-panning]{transition:none;cursor:grabbing}
 .studio-inplace-region{position:absolute;margin:0;padding:0;display:grid;place-items:center;border:1.5px dashed rgba(255,255,255,.28);border-radius:8px;background:transparent;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
 /* The 44px touch minimum lives on an invisible hit-area so the visible dashed
    outline always matches the detected region exactly, even for small text. */
@@ -603,6 +606,15 @@
 .studio-inplace-region.image{border-color:transparent}
 .studio-inplace-region:hover:not(:disabled),.studio-inplace-region:focus-visible,.studio-inplace-region[data-selected]{border-color:rgba(255,255,255,.92);background:rgba(255,255,255,.05);box-shadow:0 0 0 2px rgba(22,24,29,.7)}
 .studio-inplace-region:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,.95),0 0 0 5px rgba(22,24,29,.72)}
+/* Hover intelligence: each region names itself before you commit to a click. */
+.studio-inplace-region::before{content:attr(data-label);position:absolute;top:6px;left:6px;z-index:3;padding:2px 8px;border-radius:9999px;background:rgba(11,12,16,.92);color:#fff;font-size:10px;font-weight:650;line-height:1.4;text-transform:capitalize;white-space:nowrap;opacity:0;transform:translateY(2px);transition:opacity .15s ease,transform .15s ease;pointer-events:none}
+.studio-inplace-region:hover:not(:disabled)::before,.studio-inplace-region:focus-visible::before{opacity:1;transform:none}
+.studio-inplace-region[data-selected]::before{opacity:0}
+/* Selection spotlight: the rest of the ad dims so the chosen element reads instantly. */
+.studio-inplace-region[data-selected]{box-shadow:0 0 0 2px rgba(22,24,29,.7),0 0 0 9999px rgba(6,10,18,.34)}
+.studio-inplace-handles{position:absolute;inset:-3px;pointer-events:none;background-image:linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#fff,#fff);background-size:8px 8px;background-repeat:no-repeat;background-position:left top,right top,left bottom,right bottom;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+@keyframes studio-inplace-region-in{from{opacity:0}}
+.studio-inplace-region{animation:studio-inplace-region-in .25s ease}
 .studio-inplace-region:disabled{cursor:not-allowed}
 .studio-inplace-region[data-pending]{border-color:#fff;cursor:progress;background:linear-gradient(100deg,rgba(255,255,255,.06) 30%,rgba(255,255,255,.24) 50%,rgba(255,255,255,.06) 70%);background-size:200% 100%;animation:studio-inplace-shimmer 1.2s ease infinite}
 @keyframes studio-inplace-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
@@ -625,6 +637,9 @@
 .studio-inplace-element-list{position:relative;display:flex;min-width:0;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;padding:4px 1px;scrollbar-width:thin}
 .studio-inplace-element-list button{flex:0 0 auto;min-height:44px;border:1px solid var(--line-heavy);border-radius:9999px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;padding:0 13px;font-size:12.5px;font-weight:650;text-transform:capitalize}
 .studio-inplace-element-list button[aria-pressed="true"]{border-color:#16181d;background:#16181d;color:#fff}
+.studio-inplace-thumb{width:26px;height:26px;flex:none;border-radius:7px;border:1px solid rgba(22,24,29,.18);background-color:#e8eaee;background-repeat:no-repeat}
+.studio-inplace-element-list button[aria-pressed="true"] .studio-inplace-thumb{border-color:rgba(255,255,255,.4)}
+.studio-inplace-flag{width:8px;height:8px;flex:none;border-radius:50%;background:#d97706}
 .studio-inplace-field{display:grid;gap:10px;padding-top:4px}
 .studio-inplace-field label{font-size:13px;font-weight:700}
 .studio-inplace-field textarea{width:100%;min-height:112px;resize:vertical;border:1px solid var(--line-heavy);border-radius:10px;background:#fff;padding:11px 12px;color:var(--ink);font:inherit;font-size:14px;line-height:1.5}
@@ -644,6 +659,7 @@
   .studio-inplace-toolbar button:last-child{width:auto;padding:0 12px;font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){.studio-media-grid button,.studio-inplace-region,.studio-inplace-element-nav{transition:none}.studio-media-grid button:hover{transform:none}.studio-inplace-region[data-pending]{animation:none}}
+@media(prefers-reduced-motion:reduce){.studio-inplace-region{animation:none}.studio-inplace-region::before,.studio-inplace-zoom{transition:none}}
 
 /* Meta chrome: the stage shows the clone creative exactly as Meta renders it.
    Reuses the .studio-feed-card / .studio-story-card visual language; the creative
@@ -674,6 +690,8 @@
 .studio-metachrome-story .studio-inplace-stage{width:100%;height:100%;gap:0}
 .studio-metachrome-story .studio-inplace-frame,.studio-metachrome-story .studio-clone-stage{width:100%;height:100%;overflow:hidden}
 .studio-metachrome-story .studio-inplace-frame img,.studio-metachrome-story .studio-clone-stage img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;border-radius:0;box-shadow:none}
+.studio-metachrome-media .studio-inplace-frame,.studio-metachrome-story .studio-inplace-frame{border-radius:0;box-shadow:none}
+.studio-metachrome-media .studio-inplace-zoom,.studio-metachrome-story .studio-inplace-zoom{display:block;width:100%;height:100%}
 .studio-metachrome-story .studio-inplace-hint,.studio-metachrome-story .studio-inplace-undo{display:none}
 .studio-metachrome-story-chrome{position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:0;overflow:hidden;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 78%,rgba(0,0,0,.45) 100%)}
 .studio-metachrome-story-progress{position:absolute;top:10px;left:12px;right:12px;display:flex;gap:4px}
