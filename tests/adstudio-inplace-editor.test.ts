@@ -59,7 +59,10 @@ test("destructive blur-and-generic-font text fallback is not used by the edit ro
 });
 
 test("all editor controls meet the 44px target and adapt to a mobile sheet", () => {
-  assert.match(styles, /\.studio-inplace-region\{position:absolute;min-width:44px;min-height:44px/);
+  // The touch minimum lives on an invisible ::after hit-area so the visible
+  // dashed outline always matches the detected region exactly.
+  assert.match(styles, /\.studio-inplace-region::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/);
+  assert.doesNotMatch(styles, /\.studio-inplace-region\{[^}]*min-width:44px/);
   assert.match(styles, /\.studio-inplace-toolbar button\{min-width:44px;min-height:44px/);
   assert.match(styles, /\.studio-inplace-inspector header button\{width:44px;height:44px/);
   assert.match(styles, /@media\(max-width:1280px\)[\s\S]*\.studio-inplace-inspector\{top:auto/);
