@@ -29,6 +29,7 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(keySyncAction, /env add TRIGGER_SECRET_KEY production/);
   assert.match(keySyncAction, /for variable in OPENAI_API_KEY GOOGLE_AI_API_KEY/);
   assert.match(keySyncAction, /for environment in production preview/);
+  assert.match(keySyncAction, /stdin\+=\$'\\n\\n'/);
   assert.match(keySyncAction, /env add "\$variable" "\$environment"/);
   assert.match(keySyncAction, /env add "\$variable" "\$environment"[\s\S]*--yes/);
   assert.match(keySyncAction, /node scripts\/sync-trigger-production-env\.mjs/);
