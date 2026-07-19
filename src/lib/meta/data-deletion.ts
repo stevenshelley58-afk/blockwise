@@ -237,6 +237,7 @@ async function deleteMetaLeadsByExternalIds(
 async function disconnectProviderConnectionsForMetaUser(
   supabase: ReturnType<typeof createSupabaseServiceClient>,
   metaUserId: string,
+  revocationSource: "meta_data_deletion" | "meta_deauthorize" = "meta_data_deletion",
 ) {
   const { data, error } = await supabase
     .from("provider_connections")
@@ -252,45 +253,68 @@ async function disconnectProviderConnectionsForMetaUser(
   );
   const processedAt = new Date().toISOString();
 
-  await Promise.all(
-    matches.map(async (connection) => {
-      await supabase
-        .schema("private")
-        .from("provider_token_vault")
-        .update({
-          encrypted_access_token: null,
-          encrypted_refresh_token: null,
-          token_nonce: null,
-          token_last_four: null,
-          updated_at: processedAt,
-        })
-        .eq("provider_connection_id", connection.id);
+  for (const connection of matches) {
+    const { error: vaultError } = await supabase
+      .schema("private")
+      .from("provider_token_vault")
+      .update({
+        encrypted_access_token: null,
+        encrypted_refresh_token: null,
+        token_nonce: null,
+        token_last_four: null,
+        updated_at: processedAt,
+      })
+      .eq("provider_connection_id", connection.id);
 
-      return supabase
-        .from("provider_connections")
-        .update({
-          encrypted_access_token: null,
-          encrypted_refresh_token: null,
-          token_nonce: null,
-          token_last_four: null,
-          token_expires_at: null,
-          status: "not_connected",
-          health_status: "revoked_by_meta_data_deletion",
-          health_checked_at: processedAt,
-          updated_at: processedAt,
-          metadata_json: {
-            ...(connection.metadata_json ?? {}),
-            dataDeletion: {
-              requestedByMetaUserId: metaUserId,
-              processedAt,
-            },
+    if (vaultError) {
+      throw new Error(vaultError.message);
+    }
+
+    // public.provider_connections no longer carries token columns (dropped by
+    // 202605270001_security_hardening); only connection state and metadata
+    // live on the public row.
+    const { error: connectionError } = await supabase
+      .from("provider_connections")
+      .update({
+        token_expires_at: null,
+        status: "not_connected",
+        health_status: `revoked_by_${revocationSource}`,
+        health_checked_at: processedAt,
+        updated_at: processedAt,
+        metadata_json: {
+          ...(connection.metadata_json ?? {}),
+          revocation: {
+            source: revocationSource,
+            requestedByMetaUserId: metaUserId,
+            processedAt,
           },
-        })
-        .eq("id", connection.id);
-    }),
-  );
+        },
+      })
+      .eq("id", connection.id);
+
+    if (connectionError) {
+      throw new Error(connectionError.message);
+    }
+  }
 
   return matches.length;
+}
+
+/**
+ * Meta Deauthorize Callback support: when a user removes the app from their
+ * Facebook Business Integrations, Meta notifies us that access was revoked.
+ * We null the vault tokens and mark the connection revoked, but we do not
+ * delete lead rows — data deletion has its own callback and request trail.
+ */
+export async function processMetaDeauthorizeRequest(metaUserId: string) {
+  const supabase = createSupabaseServiceClient();
+  const disconnectedProviderConnections = await disconnectProviderConnectionsForMetaUser(
+    supabase,
+    metaUserId,
+    "meta_deauthorize",
+  );
+
+  return { disconnectedProviderConnections };
 }
 
 function metadataMatchesMetaUserId(metadata: Record<string, unknown>, metaUserId: string): boolean {
