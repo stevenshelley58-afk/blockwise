@@ -49,6 +49,47 @@ test("declared copy regions stay editable as text when vision misclassifies them
   assert.equal(regions.find((region) => region.key === "property_photo")?.kind, "image");
 });
 
+function roundedBox(box: { x: number; y: number; width: number; height: number } | undefined) {
+  assert.ok(box);
+  return {
+    x: Math.round(box.x * 1000),
+    y: Math.round(box.y * 1000),
+    width: Math.round(box.width * 1000),
+    height: Math.round(box.height * 1000),
+  };
+}
+
+test("native box_2d detections convert to fractional editor regions", () => {
+  const regions = parseCloneRegions([
+    { key: "headline", kind: "text", box_2d: [40, 70, 260, 530] },
+    { key: "primary_image", kind: "image", box_2d: [0, 550, 1000, 1000] },
+    { key: "price", kind: "text", box_2d: [440, 530, 290, 70] },
+  ], { headline: "JUST LISTED", price: "$895,000" });
+
+  assert.deepEqual(roundedBox(regions[0]?.box), { x: 70, y: 40, width: 460, height: 220 });
+  assert.deepEqual(roundedBox(regions[1]?.box), { x: 550, y: 0, width: 450, height: 1000 });
+  // Swapped min/max corners still produce a positive box.
+  assert.deepEqual(roundedBox(regions[2]?.box), { x: 70, y: 290, width: 460, height: 150 });
+});
+
+test("box_2d answered as 0-1 fractions is not collapsed into the top-left corner", () => {
+  const regions = parseCloneRegions([
+    { key: "headline", kind: "text", box_2d: [0.04, 0.07, 0.26, 0.53] },
+  ], { headline: "JUST LISTED" });
+
+  assert.deepEqual(roundedBox(regions[0]?.box), { x: 70, y: 40, width: 460, height: 220 });
+});
+
+test("out-of-range and malformed box_2d values clamp instead of breaking the editor", () => {
+  const regions = parseCloneRegions([
+    { key: "headline", kind: "text", box_2d: [-50, 200, 1400, "oops"] },
+  ], { headline: "JUST LISTED" });
+
+  // ymin clamps to 0, ymax clamps to 1000; the malformed xmax coerces to 0 and
+  // the swapped corners still yield x from the smaller value.
+  assert.deepEqual(roundedBox(regions[0]?.box), { x: 0, y: 0, width: 200, height: 1000 });
+});
+
 test("provider-native portrait renders are cropped to exact Meta placement ratios", async () => {
   const { default: sharp } = await import("sharp");
   const nativePortrait = await sharp({
