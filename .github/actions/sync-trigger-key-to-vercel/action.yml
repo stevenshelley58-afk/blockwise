@@ -56,11 +56,8 @@ runs:
           fi
           echo "::add-mask::$value"
           for environment in production preview; do
-            stdin="$value"
-            if [ "$environment" = preview ]; then
-              stdin+=$'\n\n'
-            fi
-            printf '%s' "$stdin" | npx vercel@54.6.1 env add "$variable" "$environment" \
+            npx vercel@54.6.1 env add "$variable" "$environment" \
+              --value "$value" \
               --force \
               --yes \
               --scope "$VERCEL_ORG_ID" \
