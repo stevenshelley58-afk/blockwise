@@ -92,7 +92,8 @@ test("mobile flow no longer exposes a separate ad details sheet", () => {
   assert.doesNotMatch(workbench, /mobileAdDetailsOpen/);
   assert.doesNotMatch(workbench, /renderCampaignPanel/);
   assert.doesNotMatch(workbench, /studio-mobile-campaign/);
-  assert.match(styles, /grid-template-columns:repeat\(7,minmax\(44px,1fr\)\)/);
+  assert.match(styles, /grid-template-columns:repeat\(5,minmax\(56px,1fr\)\)/);
+  assert.match(workbench, /studio\.saveState !== "saved"/);
 });
 
 test("Brand Pack and campaign settings have separate desktop and mobile sections", () => {
