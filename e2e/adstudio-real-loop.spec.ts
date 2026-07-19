@@ -22,6 +22,7 @@ if (!canRun && process.env.CI) {
 }
 
 describeAdStudioRealLoop("Ad Studio real loop", () => {
+  test.describe.configure({ mode: "serial" });
   test.use({ storageState: storageStatePath });
   // Real AI generation + edit + export can take several minutes end to end.
   test.setTimeout(1_200_000);
