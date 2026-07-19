@@ -30,6 +30,7 @@ test("GitHub deploys Trigger.dev tasks after main branch checks pass", () => {
   assert.match(keySyncAction, /for variable in OPENAI_API_KEY GOOGLE_AI_API_KEY/);
   assert.match(keySyncAction, /for environment in production preview/);
   assert.match(keySyncAction, /env add "\$variable" "\$environment"/);
+  assert.match(keySyncAction, /env add "\$variable" "\$environment"[\s\S]*--yes/);
   assert.match(keySyncAction, /node scripts\/sync-trigger-production-env\.mjs/);
   assert.match(manualWorkflow, /GOOGLE_AI_API_KEY:\s*\$\{\{ secrets\.GOOGLE_AI_API_KEY \}\}/);
   assert.match(workflow, /SUPABASE_SECRET_KEY:\s*\$\{\{ secrets\.SUPABASE_SECRET_KEY \}\}/);
