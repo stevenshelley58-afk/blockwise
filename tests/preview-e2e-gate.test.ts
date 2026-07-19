@@ -19,4 +19,7 @@ test("preview E2E command requires Vercel URL credentials and auth state before 
   assert.match(workflow, /node scripts\/e2e\/seed-adstudio-e2e\.mjs/);
   assert.match(workflow, /vercel@54\.6\.1 env pull \.vercel\/e2e-preview\.env/);
   assert.match(workflow, /secrets\.VERCEL_TOKEN/);
+  assert.match(workflow, /ADSTUDIO_E2E_OPERATOR: "true"/);
+  assert.match(workflow, /ADSTUDIO_E2E_OPERATOR=false/);
+  assert.match(readFileSync("scripts/e2e/seed-adstudio-e2e.mjs", "utf8"), /ADSTUDIO_E2E_OPERATOR/);
 });

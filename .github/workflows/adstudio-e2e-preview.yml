@@ -70,6 +70,7 @@ jobs:
 
       - name: Refresh dedicated E2E fixture
         env:
+          ADSTUDIO_E2E_OPERATOR: "true"
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -109,3 +110,10 @@ jobs:
           name: adstudio-e2e-report
           path: playwright-report
           retention-days: 7
+
+      - name: Restore E2E fixture to least privilege
+        if: always()
+        run: |
+          if [ -f .vercel/e2e-preview.env ]; then
+            ADSTUDIO_E2E_OPERATOR=false node --env-file=.vercel/e2e-preview.env scripts/e2e/seed-adstudio-e2e.mjs
+          fi

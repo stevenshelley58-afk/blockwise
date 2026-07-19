@@ -81,6 +81,26 @@ describeAdStudioRealLoop("Ad Studio real loop", () => {
       );
     }
   });
+
+  test("keeps pinned Model Control readable at desktop and mobile sizes", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/model-control");
+      await expect(page.getByRole("heading", { name: "Model Control" })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: "AdStudio generation modes" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Fast", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "High quality", exact: true })).toBeVisible();
+      await expect(page.getByText(/gemini-2\.5-flash-lite/i).first()).toBeVisible();
+      await expect(page.getByText(/gpt-image-2/i).first()).toBeVisible();
+      await expect(page.getByText(/live, billable generation request/i)).toBeVisible();
+      await expect(page.getByText(/OpenRouter|Azure OpenAI/i)).toHaveCount(0);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+        `Model Control should not overflow horizontally at ${viewport.width}x${viewport.height}`,
+      ).toBe(true);
+    }
+  });
 });
 
 async function exerciseGenerationMode(

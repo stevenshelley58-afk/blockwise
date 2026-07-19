@@ -29,6 +29,7 @@ const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env
 const serverCredential = resolveSupabaseServerCredential(process.env);
 const email = (cleanEnv(process.env.ADSTUDIO_E2E_EMAIL) ?? "adstudio-e2e@blockwise.test").toLowerCase();
 const password = cleanEnv(process.env.ADSTUDIO_E2E_PASSWORD);
+const isOperator = /^(1|true|yes)$/iu.test(cleanEnv(process.env.ADSTUDIO_E2E_OPERATOR) ?? "");
 
 if (!supabaseUrl || !serverCredential) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY.");
@@ -70,7 +71,7 @@ const authUser = existing
 
 requireNoError(
   await supabase.from("profiles").upsert(
-    { id: authUser.id, email, full_name: "AdStudio E2E", is_operator: false },
+    { id: authUser.id, email, full_name: "AdStudio E2E", is_operator: isOperator },
     { onConflict: "id" },
   ),
   "Upsert profile",
