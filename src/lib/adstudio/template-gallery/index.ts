@@ -61,6 +61,10 @@ import metaRentalAppraisalFeed135 from "./meta-rental-appraisal-feed-135.json" w
 import metaRentalAppraisalFeed146 from "./meta-rental-appraisal-feed-146.json" with { type: "json" };
 import metaRentalAppraisalStory234 from "./meta-rental-appraisal-story-234.json" with { type: "json" };
 import metaInvestorConsultStory280 from "./meta-investor-consult-story-280.json" with { type: "json" };
+import metaDownsizerConsultFeed103 from "./meta-downsizer-consult-feed-103.json" with { type: "json" };
+import metaDownsizerConsultFeed178 from "./meta-downsizer-consult-feed-178.json" with { type: "json" };
+import metaDownsizerConsultStory266 from "./meta-downsizer-consult-story-266.json" with { type: "json" };
+import metaDownsizerConsultStory314 from "./meta-downsizer-consult-story-314.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -123,4 +127,8 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaRentalAppraisalFeed146 as AdStudioGalleryTemplate,
   metaRentalAppraisalStory234 as AdStudioGalleryTemplate,
   metaInvestorConsultStory280 as AdStudioGalleryTemplate,
+  metaDownsizerConsultFeed103 as AdStudioGalleryTemplate,
+  metaDownsizerConsultFeed178 as AdStudioGalleryTemplate,
+  metaDownsizerConsultStory266 as AdStudioGalleryTemplate,
+  metaDownsizerConsultStory314 as AdStudioGalleryTemplate,
 ];
