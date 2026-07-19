@@ -6,7 +6,7 @@
 //   - its profile row
 //   - a dedicated self-serve workspace (deterministic id below)
 //   - owner membership
-// Brand-kit approval is exercised by the spec itself through the real UI.
+//   - one deterministic approved brand kit for reliable provider acceptance
 //
 // Env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL, SUPABASE_SECRET_KEY
 //      (preferred) or SUPABASE_SERVICE_ROLE_KEY,
@@ -20,6 +20,7 @@ import {
 } from "../lib/supabase-server-credential.mjs";
 
 export const ADSTUDIO_E2E_WORKSPACE_ID = "00000000-0000-4000-8000-0000000000e2";
+export const ADSTUDIO_E2E_BRAND_KIT_ID = "00000000-0000-4000-8000-0000000000e3";
 
 function cleanEnv(value) {
   return value?.replace(/^﻿/, "").trim();
@@ -105,6 +106,66 @@ requireNoError(
     { onConflict: "workspace_id,profile_id" },
   ),
   "Upsert workspace member",
+);
+
+requireNoError(
+  await supabase.from("adstudio_brand_kits").upsert(
+    {
+      id: ADSTUDIO_E2E_BRAND_KIT_ID,
+      workspace_id: ADSTUDIO_E2E_WORKSPACE_ID,
+      source_type: "manual",
+      source_url: null,
+      business_name: "AdStudio E2E Realty",
+      market_country: "AU",
+      market_region: "WA",
+      identity_json: {
+        businessName: "AdStudio E2E Realty",
+        tradingName: "AdStudio E2E Realty",
+        marketCountry: "AU",
+        marketRegion: "WA",
+        licenceText: null,
+      },
+      logos_json: { primaryLogoUrl: null, darkLogoUrl: null, lightLogoUrl: null, faviconUrl: null },
+      colours_json: {
+        primary: "#123E75",
+        secondary: "#F1F5F9",
+        accent: "#31C46F",
+        background: "#FFFFFF",
+        text: "#131B2E",
+        confidence: { primary: 1, secondary: 1 },
+      },
+      typography_json: {
+        headingFont: "Inter",
+        bodyFont: "Inter",
+        fallbackHeading: "sans-serif",
+        fallbackBody: "sans-serif",
+      },
+      tone_json: {
+        voice: "professional local expert",
+        avoid: ["hype", "unsupported guarantees"],
+        preferredPhrases: ["local property advice"],
+        sampleCopy: ["Practical property advice from AdStudio E2E Realty."],
+      },
+      visual_style_json: {
+        styleTags: ["professional", "local", "clean"],
+        imageTreatment: "Bright local property imagery with clean brand typography.",
+        layoutDensity: "low",
+        cornerRadius: "medium",
+      },
+      compliance_json: {
+        disclaimers: ["Information is general only. Speak with a licensed local agent."],
+        privacyPolicyUrl: null,
+        termsUrl: null,
+      },
+      contact_json: { phone: null, email: null, address: null, socialLinks: [] },
+      review_status: "approved",
+      locked_fields_json: [],
+      created_by: authUser.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  ),
+  "Upsert approved E2E brand kit",
 );
 
 console.log(`Seeded AdStudio e2e fixture: ${email} → workspace ${ADSTUDIO_E2E_WORKSPACE_ID}`);

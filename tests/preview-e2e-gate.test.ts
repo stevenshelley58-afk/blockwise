@@ -22,6 +22,8 @@ test("preview E2E command requires Vercel URL credentials and auth state before 
   assert.match(workflow, /ADSTUDIO_E2E_OPERATOR: "true"/);
   assert.match(workflow, /ADSTUDIO_E2E_OPERATOR=false/);
   assert.match(workflow, /PLAYWRIGHT_USE_CHROME: "1"/);
-  assert.match(readFileSync("scripts/e2e/seed-adstudio-e2e.mjs", "utf8"), /ADSTUDIO_E2E_OPERATOR/);
+  const seed = readFileSync("scripts/e2e/seed-adstudio-e2e.mjs", "utf8");
+  assert.match(seed, /ADSTUDIO_E2E_OPERATOR/);
+  assert.match(seed, /Upsert approved E2E brand kit/);
   assert.match(readFileSync("playwright.config.ts", "utf8"), /channel: chromeChannel/);
 });
