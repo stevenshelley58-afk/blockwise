@@ -69,6 +69,10 @@ import metaAgentIntroFeed037 from "./meta-agent-intro-feed-037.json" with { type
 import metaAgentIntroFeed051 from "./meta-agent-intro-feed-051.json" with { type: "json" };
 import metaAgentIntroFeed131 from "./meta-agent-intro-feed-131.json" with { type: "json" };
 import metaAgentIntroStory310 from "./meta-agent-intro-story-310.json" with { type: "json" };
+import metaLeadChecklistFeed157 from "./meta-lead-checklist-feed-157.json" with { type: "json" };
+import metaLeadChecklistFeed175 from "./meta-lead-checklist-feed-175.json" with { type: "json" };
+import metaLeadChecklistStory304 from "./meta-lead-checklist-story-304.json" with { type: "json" };
+import metaLeadChecklistStory316 from "./meta-lead-checklist-story-316.json" with { type: "json" };
 import type { AdStudioGalleryTemplate } from "../templates.ts";
 
 export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
@@ -139,4 +143,8 @@ export const RAW_ADSTUDIO_GALLERY_TEMPLATES: AdStudioGalleryTemplate[] = [
   metaAgentIntroFeed051 as AdStudioGalleryTemplate,
   metaAgentIntroFeed131 as AdStudioGalleryTemplate,
   metaAgentIntroStory310 as AdStudioGalleryTemplate,
+  metaLeadChecklistFeed157 as AdStudioGalleryTemplate,
+  metaLeadChecklistFeed175 as AdStudioGalleryTemplate,
+  metaLeadChecklistStory304 as AdStudioGalleryTemplate,
+  metaLeadChecklistStory316 as AdStudioGalleryTemplate,
 ];

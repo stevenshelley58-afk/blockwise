@@ -1,0 +1,120 @@
+{
+  "id": "meta-lead-checklist-feed-157",
+  "name": "Free Property Checklist — Feed 157",
+  "goal": "seller_leads",
+  "offerId": "property-checklist-lead-magnet",
+  "source": "builtin",
+  "status": "approved",
+  "format": "4:5",
+  "dimensions": {
+    "width": 1080,
+    "height": 1350
+  },
+  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "category": "educational-lead-generation",
+  "tags": [
+    "education",
+    "lead-generation",
+    "feed"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-feed-157-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-lead-checklist-feed-157-sample.png",
+    "alt": "Generated sample for Free Property Checklist — Feed 157.",
+    "contentHash": "4942183d3e6ca300d37d2e5020fd47509f086deca2cc33907c861e45f3d931d2",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 50,
+        "sample": "FREE PROPERTY PLANNING CHECKLIST",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 45,
+        "sample": "MAKE YOUR NEXT MOVE CLEARER",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Body",
+        "maxLength": 98,
+        "sample": "Get a practical checklist covering preparation, timing and the questions to ask.",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 40,
+        "sample": "GET THE FREE CHECKLIST",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "01_feed_4x5_best/meta_157.png",
+    "contentHash": "9b6e5b39b6aeb5e9bf15d5e180d435ff4dda3b331144535d8651f905517dbc19"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "educational_lead_magnet",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

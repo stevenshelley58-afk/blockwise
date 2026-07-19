@@ -1,0 +1,155 @@
+{
+  "id": "meta-lead-checklist-story-316",
+  "name": "Free Property Checklist — Story 316",
+  "goal": "seller_leads",
+  "offerId": "property-checklist-lead-magnet",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Property owners seeking practical guidance before their next move",
+  "category": "educational-lead-generation",
+  "tags": [
+    "education",
+    "lead-generation",
+    "story"
+  ],
+  "sample": {
+    "imageSrc": "/adstudio-samples/meta/meta-lead-checklist-story-316-sample.png",
+    "thumbnailSrc": "/adstudio-samples/meta/meta-lead-checklist-story-316-sample.png",
+    "alt": "Generated sample for Free Property Checklist — Story 316.",
+    "contentHash": "b97602fa4522579f5c206ab82ad24a611ac49cbcef1cd2e3c1f67a970cb019da",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "background_photo",
+        "label": "Background photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's background property or lifestyle photograph"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "square",
+        "description": "the customer's agency logo"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 50,
+        "sample": "FREE PROPERTY PLANNING CHECKLIST",
+        "required": true
+      },
+      {
+        "key": "subheadline",
+        "label": "Subheadline",
+        "maxLength": 45,
+        "sample": "MAKE YOUR NEXT MOVE CLEARER",
+        "required": true
+      },
+      {
+        "key": "benefit_1",
+        "label": "Benefit 1",
+        "maxLength": 35,
+        "sample": "PREPARE YOUR HOME",
+        "required": true
+      },
+      {
+        "key": "benefit_2",
+        "label": "Benefit 2",
+        "maxLength": 35,
+        "sample": "UNDERSTAND TIMING",
+        "required": true
+      },
+      {
+        "key": "benefit_3",
+        "label": "Benefit 3",
+        "maxLength": 38,
+        "sample": "ASK BETTER QUESTIONS",
+        "required": true
+      },
+      {
+        "key": "check_1",
+        "label": "Check 1",
+        "maxLength": 39,
+        "sample": "PREPARE YOUR PROPERTY",
+        "required": true
+      },
+      {
+        "key": "check_2",
+        "label": "Check 2",
+        "maxLength": 40,
+        "sample": "UNDERSTAND YOUR TIMING",
+        "required": true
+      },
+      {
+        "key": "check_3",
+        "label": "Check 3",
+        "maxLength": 41,
+        "sample": "REVIEW LOCAL CONDITIONS",
+        "required": true
+      },
+      {
+        "key": "cta",
+        "label": "Cta",
+        "maxLength": 40,
+        "sample": "GET THE FREE CHECKLIST",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_316.png",
+    "contentHash": "3220c9384dd6f8bc19bea23b86edc3215ab1132acf717f480c24b9e86d7fef2a"
+  },
+  "classification": {
+    "ad_type": "lead_generation",
+    "primary_intent": "educational_lead_magnet",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "feed"
+    ],
+    "instagramPositions": [
+      "stream"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}
