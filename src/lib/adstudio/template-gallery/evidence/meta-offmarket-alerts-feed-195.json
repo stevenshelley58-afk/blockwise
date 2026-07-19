@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-offmarket-alerts-feed-195",
+  "requestHash": "88e518131e1cc23ab0e8d3420607a10d7eadeb80ecb53acfd1e4957aa4bd5923",
+  "inputHashes": {
+    "source_ad": "4e4abdd1d821249a17f3e91352e6f3d3d726826657682ee0433ba10a765e6614",
+    "property_photo": "b0dc48d057ef6a9a0077a054b4d7aff9636fa7e08c6e15f594b27f2c759cf986",
+    "agency_logo": "7d735a9ebddd710205edbdba4925e15ab952ba0ad52bb6e6a60a264553f1bcb3"
+  },
+  "outputHash": "af5e4a330fa85df44e5eca6da82ce34c4340b4d625ae0c91ad7a31a00c5212a1",
+  "executionTransport": "codex_subscription_image_generation",
+  "reviewedAt": "2026-07-19T05:38:42.572Z",
+  "correctionCount": 0,
+  "qa": {
+    "passed": true,
+    "fullSizeReviewed": true,
+    "contractReview": {
+      "passed": true,
+      "notes": "Only source-visible customer inputs were declared."
+    },
+    "requestIntegrity": {
+      "passed": true,
+      "notes": "Executed the locked buildCloneImageRequest prompt with references in contractual order."
+    },
+    "copyChecks": [
+      {
+        "key": "headline",
+        "expected": "SEE HOMES BEFORE THEY HIT THE MARKET",
+        "exact": true
+      },
+      {
+        "key": "subheadline",
+        "expected": "JOIN OUR OFF-MARKET ALERTS",
+        "exact": true
+      },
+      {
+        "key": "body",
+        "expected": "Register your preferences and hear about suitable local homes first.",
+        "exact": true
+      },
+      {
+        "key": "cta",
+        "expected": "REGISTER FOR ALERTS",
+        "exact": true
+      }
+    ],
+    "assetChecks": [
+      {
+        "key": "property_photo",
+        "used": true
+      },
+      {
+        "key": "agency_logo",
+        "used": true
+      }
+    ],
+    "identityLeakage": [],
+    "defects": []
+  }
+}
