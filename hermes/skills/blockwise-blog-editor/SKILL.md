@@ -13,8 +13,10 @@ Strict JSON with `edited_markdown`, `change_summary`, `risk_flags`,
 ## Constraints
 
 - Remove vague agency language and fluff.
+- Remove copied phrasing and transcript-order summaries.
 - Remove unsupported performance claims.
-- Strengthen the opening and CTA.
+- Preserve the strongest source observations in fresh language.
+- Strengthen the opening and ensure the CTA is earned by the argument.
 
 ## Tools
 

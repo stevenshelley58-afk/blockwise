@@ -14,9 +14,9 @@ export default async function OperatorContentRunsPage() {
     return (
       <main className="content">
         <PageHeading
-          eyebrow="Hermes content engine"
-          title="Content-to-Lead Runs"
-          description="Create one authority topic and review the complete draft package before anything can leave draft state."
+          eyebrow="Blockwise field guides"
+          title="Transcript to blog"
+          description="Paste source material and create a review-ready field guide. Nothing can leave draft state without operator approval."
         />
         <ServiceRoleRequired />
       </main>
@@ -30,9 +30,9 @@ export default async function OperatorContentRunsPage() {
   return (
     <main className="content">
       <PageHeading
-        eyebrow="Hermes content engine"
-        title="Content-to-Lead Runs"
-        description="Create one authority topic and review the complete draft package: guide, image briefs, social posts, Meta lead ad, Instant Form, compliance, and approval trace."
+        eyebrow="Blockwise field guides"
+        title="Transcript to blog"
+        description="Turn one transcript into a sourced, structured field guide and its supporting draft package. Every claim, asset, and publish action stays in operator review."
       />
       <ContentRunConsole runs={runs} promptSets={promptSets} />
     </main>
