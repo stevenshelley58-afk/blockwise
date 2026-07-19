@@ -70,9 +70,21 @@ jobs:
 
       - name: Refresh dedicated E2E fixture
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-        run: node scripts/e2e/seed-adstudio-e2e.mjs
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npx vercel@54.6.1 link --yes \
+            --project "$VERCEL_PROJECT_ID" \
+            --scope "$VERCEL_ORG_ID" \
+            --token "$VERCEL_TOKEN"
+          npx vercel@54.6.1 env pull .vercel/e2e-preview.env \
+            --environment preview \
+            --git-branch "$GITHUB_REF_NAME" \
+            --yes \
+            --scope "$VERCEL_ORG_ID" \
+            --token "$VERCEL_TOKEN"
+          node --env-file=.vercel/e2e-preview.env scripts/e2e/seed-adstudio-e2e.mjs
 
       - name: Log in and capture storage state
         run: node scripts/e2e/login-storage-state.mjs
