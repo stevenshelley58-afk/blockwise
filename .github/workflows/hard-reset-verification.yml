@@ -119,5 +119,5 @@ jobs:
       - name: Deploy Trigger.dev tasks
         run: npm run trigger:deploy
 
-      - name: Sync production Trigger key to Vercel
+      - name: Sync runtime keys to Vercel
         uses: ./.github/actions/sync-trigger-key-to-vercel

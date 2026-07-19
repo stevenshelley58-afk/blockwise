@@ -1,5 +1,5 @@
-name: Sync Trigger key to Vercel
-description: Refreshes Vercel's production Trigger secret after a task deployment.
+name: Sync runtime keys to Vercel
+description: Refreshes Vercel's Trigger and direct AI credentials after a task deployment.
 
 runs:
   using: composite
@@ -47,3 +47,18 @@ runs:
           --force \
           --scope "$VERCEL_ORG_ID" \
           --token "$VERCEL_TOKEN"
+
+        for variable in OPENAI_API_KEY GOOGLE_AI_API_KEY; do
+          value="${!variable}"
+          if [ -z "$value" ]; then
+            echo "::error::$variable is required for direct AI routing."
+            exit 1
+          fi
+          echo "::add-mask::$value"
+          for environment in production preview; do
+            printf '%s' "$value" | npx vercel@54.6.1 env add "$variable" "$environment" \
+              --force \
+              --scope "$VERCEL_ORG_ID" \
+              --token "$VERCEL_TOKEN"
+          done
+        done

@@ -73,6 +73,6 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: npx trigger.dev@4.4.6 deploy --project-ref "$TRIGGER_PROJECT_ID"
 
-      - name: Sync production Trigger key to Vercel
+      - name: Sync runtime keys to Vercel
         if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/sync-trigger-key-to-vercel
