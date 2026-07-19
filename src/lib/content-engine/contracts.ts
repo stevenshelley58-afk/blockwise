@@ -141,6 +141,9 @@ export const CONTENT_STEPS: ContentStepDefinition[] = [
 ];
 
 export function compactSkillLabel(skillName: ContentSkillName): string {
-  return skillName.replace(/^blockwise-/u, "").replace(/-/gu, " ");
+  return skillName
+    .replace(/^blockwise-/u, "")
+    .replace(/^blog-/u, "guide-")
+    .replace(/-/gu, " ");
 }
 

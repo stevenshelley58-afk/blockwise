@@ -53,7 +53,7 @@ export function DesktopHeader() {
           <a href="#start">How it works</a>
           <a href="#property-check">Property Check</a>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/blog">Guides</Link>
+          <Link href="/guides">Guides</Link>
         </nav>
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
@@ -765,7 +765,7 @@ export function DesktopFooter() {
               <a href="#property-check">Property Check</a>
               <a href="#free-trial">Free trial</a>
               <Link href="/pricing">Pricing</Link>
-              <Link href="/blog">Guides</Link>
+              <Link href="/guides">Guides</Link>
             </div>
           </div>
           <div>

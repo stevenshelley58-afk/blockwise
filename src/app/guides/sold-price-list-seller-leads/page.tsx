@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ArticleProgress } from "@/components/blog/article-progress";
-import { BlogShell } from "@/components/blog/blog-shell";
+import { ArticleProgress } from "@/components/guides/article-progress";
+import { GuidesShell } from "@/components/guides/guides-shell";
 
-import "../blog.css";
+import "../guides.css";
 
 const title = "How to generate seller leads with a sold-price list";
 const description =
   "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with Australian homeowners without leading with an appraisal request.";
-const canonical = "/blog/sold-price-list-seller-leads";
+const canonical = "/guides/sold-price-list-seller-leads";
 
 export const metadata: Metadata = {
   title,
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     title,
     description,
     url: canonical,
-    images: [{ url: "/blog/sold-price-list/hero.webp", width: 1920, height: 1080, alt: "Established Australian homes along a tree-lined suburban street" }],
+    images: [{ url: "/guides/sold-price-list/hero.webp", width: 1920, height: 1080, alt: "Established Australian homes along a tree-lined suburban street" }],
   },
-  twitter: { card: "summary_large_image", title, description, images: ["/blog/sold-price-list/hero.webp"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/guides/sold-price-list/hero.webp"] },
 };
 
 const articleSchema = {
@@ -35,7 +35,7 @@ const articleSchema = {
   dateModified: "2026-07-15",
   author: { "@type": "Organization", name: "Blockwise" },
   publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" },
-  image: "https://blockwise.sale/blog/sold-price-list/hero.webp",
+  image: "https://blockwise.sale/guides/sold-price-list/hero.webp",
   mainEntityOfPage: `https://blockwise.sale${canonical}`,
 };
 
@@ -63,18 +63,18 @@ const faqSchema = {
 
 export default function SoldPriceListGuidePage() {
   return (
-    <BlogShell>
+    <GuidesShell>
       <ArticleProgress />
-      <main>
+      <main id="main-content">
         <article className="bw-article">
           <header className="bw-article-hero">
             <div className="bw-article-hero-copy">
               <div className="bw-article-breadcrumbs">
-                <Link href="/blog">Field guides</Link>
+                <Link href="/guides">Guides</Link>
                 <span aria-hidden>/</span>
                 <span>Seller leads</span>
               </div>
-              <p className="bw-blog-label">The practical playbook</p>
+              <p className="bw-guides-label">The practical playbook</p>
               <h1>{title}</h1>
               <p className="bw-article-deck">
                 Stop asking homeowners to declare they are selling. Give them the local evidence they are already looking for.
@@ -87,7 +87,7 @@ export default function SoldPriceListGuidePage() {
             </div>
             <div className="bw-article-hero-media">
               <Image
-                src="/blog/sold-price-list/hero.webp"
+                src="/guides/sold-price-list/hero.webp"
                 alt="Established Australian homes along a tree-lined suburban street"
                 fill
                 priority
@@ -171,7 +171,7 @@ export default function SoldPriceListGuidePage() {
 
                 <div className="bw-field-image">
                   <Image
-                    src="/blog/sold-price-list/field-notes.webp"
+                    src="/guides/sold-price-list/field-notes.webp"
                     alt="Printed photos of Australian homes arranged with a map and working notes"
                     fill
                     sizes="(max-width: 800px) 100vw, 64vw"
@@ -341,6 +341,6 @@ export default function SoldPriceListGuidePage() {
       </main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-    </BlogShell>
+    </GuidesShell>
   );
 }
