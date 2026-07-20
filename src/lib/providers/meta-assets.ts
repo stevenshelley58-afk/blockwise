@@ -113,7 +113,7 @@ export async function fetchMetaAssetCatalog(input: FetchInput & { selectedAdAcco
 }
 
 export function pickDefaultMetaSetupFromAssets(catalog: MetaAssetCatalog): MetaConnectionSetup {
-  const adAccount = catalog.adAccounts[0];
+  const adAccount = catalog.adAccounts.find((account) => account.status === "active") ?? catalog.adAccounts[0];
   const page = catalog.pages[0];
   const instagramActor = catalog.instagramActors.find((actor) => actor.pageId === page?.id) ?? catalog.instagramActors[0];
   const pixel = catalog.pixels[0];
@@ -124,10 +124,16 @@ export function pickDefaultMetaSetupFromAssets(catalog: MetaAssetCatalog): MetaC
     instagramActorId: instagramActor?.id ?? null,
     pixelId: pixel?.id ?? null,
     leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },
-    privacyPolicyUrl: "",
+    privacyPolicyUrl: defaultPrivacyPolicyUrl(),
     currency: adAccount?.currency ?? "",
     timezone: adAccount?.timezone ?? "",
   };
+}
+
+function defaultPrivacyPolicyUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  return appUrl ? `${appUrl.replace(/\/$/, "")}/privacy` : "";
 }
 
 export async function checkMetaConnectionHealth(input: FetchInput & { tokenExpiresAt?: string | null; now?: string }): Promise<MetaConnectionHealth> {
