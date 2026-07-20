@@ -20,6 +20,10 @@ export async function GET(request: NextRequest) {
     serviceSupabase,
     workspaceId: access.workspaceId,
     range: parseMonitorRange(request.nextUrl.searchParams.get("range")),
+    customRange: {
+      since: request.nextUrl.searchParams.get("since"),
+      until: request.nextUrl.searchParams.get("until"),
+    },
   });
 
   return NextResponse.json(payload);
