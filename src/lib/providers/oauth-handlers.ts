@@ -116,8 +116,16 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   const longLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(longLivedUrl.toString()).catch(() => shortLived);
   const accessToken = longLived.access_token ?? shortLived.access_token;
   const tokenExpiresAt = expiresInToIso(longLived.expires_in ?? shortLived.expires_in);
-  const accounts = await fetchMetaAdAccounts(accessToken).catch(() => []);
-  const account = accounts[0];
+  const [accounts, pages] = await Promise.all([
+    fetchMetaAdAccounts(accessToken).catch(() => []),
+    fetchMetaPages(accessToken).catch(() => []),
+  ]);
+  // Honor what the user granted in the Meta dialog: when a single ad account
+  // or Page was shared there is no choice left to make, so configure it
+  // directly instead of asking again in Settings. With multiple grants,
+  // prefer an active account over disabled/closed ones.
+  const account = accounts.length === 1 ? accounts[0] : (accounts.find((candidate) => candidate.isActive) ?? accounts[0]);
+  const page = pages.length === 1 ? pages[0] : undefined;
 
   return {
     accessToken,
@@ -130,17 +138,36 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     metadata: {
       meta: {
         metaAdAccountId: account?.id ?? "",
-        pageId: "",
+        pageId: page?.id ?? "",
         instagramActorId: null,
         pixelId: null,
         leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },
-        privacyPolicyUrl: "",
+        privacyPolicyUrl: defaultPrivacyPolicyUrl(),
         currency: account?.currency ?? "AUD",
         timezone: account?.timezone ?? "Australia/Perth",
         tokenExpiresAt,
       },
     },
   };
+}
+
+async function fetchMetaPages(accessToken: string): Promise<Array<{ id: string; name: string }>> {
+  const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/accounts`);
+  url.searchParams.set("fields", "id,name");
+  url.searchParams.set("limit", "25");
+  url.searchParams.set("access_token", accessToken);
+
+  const response = await fetchJson<{ data?: Array<{ id?: string; name?: string | null }> }>(url.toString());
+
+  return (response.data ?? [])
+    .filter((page): page is { id: string; name?: string | null } => Boolean(page.id))
+    .map((page) => ({ id: page.id, name: page.name ?? page.id }));
+}
+
+function defaultPrivacyPolicyUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  return appUrl ? `${appUrl.replace(/\/$/, "")}/privacy` : "";
 }
 
 async function exchangeGoogleCode(request: NextRequest, code: string): Promise<OAuthTokenExchange> {
