@@ -7,7 +7,31 @@ const RANGE_OPTIONS: Array<{ value: MonitorRange; label: string }> = [
   { value: "yesterday", label: "Yesterday" },
   { value: "last_7", label: "7d" },
   { value: "last_30", label: "30d" },
+  { value: "maximum", label: "Max" },
 ];
+
+const customRangeStyles = {
+  container: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    border: "1px solid var(--line)",
+    borderRadius: 999,
+    background: "var(--surface-subtle)",
+    padding: "3px 10px",
+    color: "var(--muted)",
+  },
+  input: {
+    minHeight: 30,
+    border: 0,
+    background: "transparent",
+    color: "var(--ink)",
+    font: "inherit",
+    fontSize: 12.5,
+    fontWeight: 600,
+    outline: "none",
+  },
+} as const;
 
 export function MetaMark({ size = 26 }: { size?: number }) {
   return (
@@ -32,10 +56,12 @@ export function MetaMark({ size = 26 }: { size?: number }) {
 export function MetaMonitorHeader(props: {
   range: MonitorDateRange;
   rangeKey: MonitorRange;
+  customRange: { since: string; until: string };
   lastSyncedAt: string | null;
   isRefreshing: boolean;
   isSample: boolean;
   onRangeChange: (range: MonitorRange) => void;
+  onCustomRangeChange: (range: { since: string; until: string }) => void;
   onRefresh: () => void;
 }) {
   return (
@@ -66,7 +92,35 @@ export function MetaMonitorHeader(props: {
                 {option.label}
               </button>
             ))}
+            <button
+              type="button"
+              className={props.rangeKey === "custom" ? "active" : undefined}
+              onClick={() => props.onCustomRangeChange(props.customRange)}
+            >
+              Custom
+            </button>
           </div>
+          {props.rangeKey === "custom" ? (
+            <div style={customRangeStyles.container} role="group" aria-label="Custom date range">
+              <input
+                type="date"
+                aria-label="From date"
+                style={customRangeStyles.input}
+                value={props.customRange.since}
+                max={props.customRange.until || undefined}
+                onChange={(event) => props.onCustomRangeChange({ ...props.customRange, since: event.target.value })}
+              />
+              <span aria-hidden>–</span>
+              <input
+                type="date"
+                aria-label="To date"
+                style={customRangeStyles.input}
+                value={props.customRange.until}
+                min={props.customRange.since || undefined}
+                onChange={(event) => props.onCustomRangeChange({ ...props.customRange, until: event.target.value })}
+              />
+            </div>
+          ) : null}
           <button
             className="button secondary mm-refresh-button"
             type="button"
