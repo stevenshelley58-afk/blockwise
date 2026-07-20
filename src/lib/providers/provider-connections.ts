@@ -140,6 +140,24 @@ export async function upsertProviderConnectionWithTokens(input: {
     throw new Error(error?.message ?? "Unable to save provider connection.");
   }
 
+  // Rows are keyed on (workspace, provider, external_account_id), so
+  // connecting a different account creates a fresh row while older rows for
+  // other accounts linger. Exactly one row may stay live per
+  // workspace+provider, otherwise the dashboard and settings can pick a stale
+  // connection. Demotion is best-effort: the new connection must not fail
+  // because cleanup of historical rows did.
+  const { error: demoteError } = await input.serviceSupabase
+    .from("provider_connections")
+    .update({ status: "not_connected" })
+    .eq("workspace_id", input.workspaceId)
+    .eq("provider", input.provider)
+    .neq("id", connection.id)
+    .neq("status", "not_connected");
+
+  if (demoteError) {
+    console.warn("[provider-connections] failed to demote sibling connection rows:", demoteError.message);
+  }
+
   const { error: vaultError } = await input.serviceSupabase.schema("private").from("provider_token_vault").upsert(
     {
       provider_connection_id: connection.id,

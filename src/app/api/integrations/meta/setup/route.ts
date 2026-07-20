@@ -111,6 +111,35 @@ export async function PATCH(request: NextRequest) {
   const currentSetup = resolveMetaConnectionSetup(connection.metadata_json ?? {}, connection.external_account_id);
   const nextSetup = mergeSetup(currentSetup, body.setup ?? {});
   const blockers = validateMetaConnectionSetup(nextSetup);
+
+  // Switching the ad account can collide with a historical row that already
+  // holds the target account id (unique workspace+provider+account). Those
+  // rows are FK-referenced by publish plans, so archive them (rename +
+  // demote) instead of deleting to free the slot for the active connection.
+  if (nextSetup.metaAdAccountId && nextSetup.metaAdAccountId !== connection.external_account_id) {
+    const { data: conflictRows } = await serviceSupabase
+      .from("provider_connections")
+      .select("id, external_account_id")
+      .eq("workspace_id", access.workspaceId)
+      .eq("provider", "meta")
+      .eq("external_account_id", nextSetup.metaAdAccountId)
+      .neq("id", connection.id);
+
+    for (const conflict of (conflictRows ?? []) as Array<{ id: string; external_account_id: string | null }>) {
+      const { error: archiveError } = await serviceSupabase
+        .from("provider_connections")
+        .update({
+          external_account_id: `${conflict.external_account_id}#archived-${conflict.id.slice(0, 8)}`,
+          status: "not_connected",
+        })
+        .eq("id", conflict.id);
+
+      if (archiveError) {
+        return NextResponse.json({ error: archiveError.message }, { status: 500 });
+      }
+    }
+  }
+
   const nextMetadata = {
     ...(connection.metadata_json ?? {}),
     meta: nextSetup,

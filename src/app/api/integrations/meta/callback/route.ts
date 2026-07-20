@@ -131,11 +131,16 @@ async function loadFreshMetaConnection(
   serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
   workspaceId: string,
 ): Promise<{ external_account_id: string | null } | null> {
+  // Latest row only: historical sibling rows can exist for a workspace, and
+  // maybeSingle() without limit(1) errors on multiples, which would silently
+  // disable this idempotent success path.
   const { data } = await serviceSupabase
     .from("provider_connections")
     .select("external_account_id, status, updated_at")
     .eq("workspace_id", workspaceId)
     .eq("provider", "meta")
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const row = data as { external_account_id: string | null; status: string; updated_at: string | null } | null;
