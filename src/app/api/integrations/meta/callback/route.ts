@@ -76,6 +76,25 @@ async function handleCallback(request: NextRequest) {
       tokenExpiresAt: exchanged.tokenExpiresAt,
     });
   } catch (error) {
+    // Duplicate callback requests (double navigation, browser re-requests)
+    // re-exchange an already-used code, which Meta rejects. The first request
+    // has usually saved the connection by then, so a duplicate must not
+    // surface a false "connection failed" error. If a fresh connection exists
+    // for this workspace, treat the duplicate as a success.
+    const recent = await loadFreshMetaConnection(serviceSupabase, verified.payload.workspaceId);
+
+    if (recent) {
+      return NextResponse.redirect(
+        providerReturnUrl(
+          verified.payload.returnPath,
+          origin,
+          recent.external_account_id === "meta_account_pending"
+            ? { connected: "1", status: "needs_account" }
+            : { connected: "1" },
+        ),
+      );
+    }
+
     const message = error instanceof Error ? error.message : "Meta connection failed.";
     return NextResponse.redirect(providerReturnUrl(verified.payload.returnPath, origin, { error: message }));
   }
@@ -104,6 +123,34 @@ async function handleCallback(request: NextRequest) {
         : { connected: "1" },
     ),
   );
+}
+
+const FRESH_CONNECTION_WINDOW_MS = 2 * 60 * 1000;
+
+async function loadFreshMetaConnection(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+): Promise<{ external_account_id: string | null } | null> {
+  const { data } = await serviceSupabase
+    .from("provider_connections")
+    .select("external_account_id, status, updated_at")
+    .eq("workspace_id", workspaceId)
+    .eq("provider", "meta")
+    .maybeSingle();
+
+  const row = data as { external_account_id: string | null; status: string; updated_at: string | null } | null;
+
+  if (!row || (row.status !== "connected" && row.status !== "needs_attention")) {
+    return null;
+  }
+
+  const updatedMs = row.updated_at ? Date.parse(row.updated_at) : Number.NaN;
+
+  if (!Number.isFinite(updatedMs) || Date.now() - updatedMs > FRESH_CONNECTION_WINDOW_MS) {
+    return null;
+  }
+
+  return row;
 }
 
 function providerReturnUrl(returnPath: string, origin: string, params: Record<string, string>): URL {
