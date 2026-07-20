@@ -1,4 +1,4 @@
-import { resolveMonitorDateRange } from "../monitor/dashboard-data.ts";
+import { resolveMonitorDateRange, type MonitorCustomRange } from "../monitor/dashboard-data.ts";
 import { safeCpl, safeRate } from "./calculations.ts";
 import type { MetaAdPerformance, MetaDailyPoint, MetaMonitorPayload, MonitorRange } from "./types.ts";
 
@@ -93,17 +93,20 @@ const SAMPLE_ADS: SampleAd[] = [
 const SAMPLE_CREATIVES = ["/ads/ad-northstar.jpg", "/ads/ad-coastline.jpg", "/ads/ad-hillview.jpg", "/ads/ad-hillco.jpg"];
 
 export function buildSampleMetaMonitorPayload(
-  input: { range?: MonitorRange; now?: Date; connected?: boolean } = {},
+  input: { range?: MonitorRange; customRange?: MonitorCustomRange; now?: Date; connected?: boolean } = {},
 ): MetaMonitorPayload {
-  const range = resolveMonitorDateRange(input.range ?? "last_30", input.now ?? new Date());
+  const range = resolveMonitorDateRange(input.range ?? "last_30", input.now ?? new Date(), input.customRange);
   const days = Math.min(range.days, 30);
+  // Anchor the demo series to the end of the range so wide ranges (Maximum,
+  // long custom spans) still chart the most recent 30 sample days.
+  const seriesStart = addDays(range.until, -(days - 1));
   const spendSeries = SPEND_30.slice(30 - days);
   const validSeries = VALID_30.slice(30 - days);
   const leadsSeries = LEADS_30.slice(30 - days);
   const scale = sum(spendSeries) / sum(SPEND_30);
 
   const daily: MetaDailyPoint[] = spendSeries.map((spend, index) => {
-    const date = addDays(range.since, index);
+    const date = addDays(seriesStart, index);
 
     return {
       date,
