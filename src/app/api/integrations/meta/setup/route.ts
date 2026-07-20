@@ -111,12 +111,13 @@ export async function PATCH(request: NextRequest) {
   const currentSetup = resolveMetaConnectionSetup(connection.metadata_json ?? {}, connection.external_account_id);
   const nextSetup = mergeSetup(currentSetup, body.setup ?? {});
   const blockers = validateMetaConnectionSetup(nextSetup);
+  const accountChanged = Boolean(nextSetup.metaAdAccountId) && nextSetup.metaAdAccountId !== connection.external_account_id;
 
   // Switching the ad account can collide with a historical row that already
   // holds the target account id (unique workspace+provider+account). Those
   // rows are FK-referenced by publish plans, so archive them (rename +
   // demote) instead of deleting to free the slot for the active connection.
-  if (nextSetup.metaAdAccountId && nextSetup.metaAdAccountId !== connection.external_account_id) {
+  if (accountChanged) {
     const { data: conflictRows } = await serviceSupabase
       .from("provider_connections")
       .select("id, external_account_id")
@@ -140,6 +141,22 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // Keep the connection card label in sync when the account changes; the
+  // asset catalog gives the human name, falling back to the account id.
+  let nextAccountName: string | null = null;
+  if (accountChanged) {
+    const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+    if (tokens.accessToken) {
+      const assets = await fetchMetaAssetCatalog({
+        accessToken: tokens.accessToken,
+        selectedAdAccountId: nextSetup.metaAdAccountId,
+        selectedPageId: nextSetup.pageId,
+      }).catch(() => null);
+      nextAccountName = assets?.adAccounts.find((account) => account.id === nextSetup.metaAdAccountId)?.name ?? null;
+    }
+    nextAccountName = nextAccountName ?? nextSetup.metaAdAccountId;
+  }
+
   const nextMetadata = {
     ...(connection.metadata_json ?? {}),
     meta: nextSetup,
@@ -148,6 +165,7 @@ export async function PATCH(request: NextRequest) {
     .from("provider_connections")
     .update({
       external_account_id: nextSetup.metaAdAccountId,
+      ...(nextAccountName ? { external_account_name: nextAccountName } : {}),
       metadata_json: nextMetadata,
       status: blockers.length === 0 ? "connected" : "needs_attention",
       updated_at: new Date().toISOString(),

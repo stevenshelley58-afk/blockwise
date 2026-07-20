@@ -3,22 +3,18 @@ import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import type { MetaMonitorPayload } from "./types.ts";
 
 /**
- * Results payload with an empty-state guard. A connected workspace that has no
- * meaningful delivery yet (a new, empty, or test account) shows the clearly
- * labelled sample preview instead of an ugly empty dashboard — real numbers
- * take over automatically the moment ads start delivering. Disconnected
- * workspaces already get the sample preview from getMetaMonitorData itself.
+ * Results payload with an empty-state guard. A connected workspace whose
+ * selected range contains no ads at all (a brand-new or empty account) shows
+ * the clearly labelled sample preview instead of an ugly empty dashboard.
+ * Any real delivery — however small — renders live: hiding a genuine account
+ * behind demo data is worse than showing modest numbers.
  */
 export async function getResultsPayload(
   input: Parameters<typeof getMetaMonitorData>[0],
 ): Promise<MetaMonitorPayload> {
   const payload = await getMetaMonitorData(input);
-  const summary = payload.summary;
 
-  const hasNoMeaningfulDelivery =
-    payload.ads.length === 0 || (summary != null && summary.leads === 0 && summary.spend < 20);
-
-  if (payload.source === "live" && payload.connected && summary != null && hasNoMeaningfulDelivery) {
+  if (payload.source === "live" && payload.connected && payload.summary != null && payload.ads.length === 0) {
     return buildSampleMetaMonitorPayload({ range: input.range, customRange: input.customRange, now: input.now, connected: true });
   }
 
