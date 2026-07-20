@@ -113,7 +113,7 @@ export async function fetchMetaAssetCatalog(input: FetchInput & { selectedAdAcco
 }
 
 export function pickDefaultMetaSetupFromAssets(catalog: MetaAssetCatalog): MetaConnectionSetup {
-  const adAccount = catalog.adAccounts[0];
+  const adAccount = catalog.adAccounts.find((account) => account.status === "active") ?? catalog.adAccounts[0];
   const page = catalog.pages[0];
   const instagramActor = catalog.instagramActors.find((actor) => actor.pageId === page?.id) ?? catalog.instagramActors[0];
   const pixel = catalog.pixels[0];

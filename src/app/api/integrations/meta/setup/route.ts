@@ -162,7 +162,14 @@ async function loadMetaConnection(
 function mergeSetupWithAssetDefaults(setup: MetaConnectionSetup, defaults: MetaConnectionSetup | null): MetaConnectionSetup {
   if (!defaults) return setup;
 
-  return mergeSetup(defaults, setup);
+  // Empty stored values must not clobber asset-derived defaults, otherwise a
+  // connection saved before setup always shows blank Page/privacy fields even
+  // when the granted assets leave only one sensible choice.
+  const patch = Object.fromEntries(
+    Object.entries(setup).filter(([, value]) => value !== "" && value != null),
+  ) as Partial<MetaConnectionSetup>;
+
+  return mergeSetup(defaults, patch);
 }
 
 function mergeSetup(current: MetaConnectionSetup, patch: Partial<MetaConnectionSetup>): MetaConnectionSetup {

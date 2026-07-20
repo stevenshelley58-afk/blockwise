@@ -59,16 +59,30 @@ export function MetaMonitorDashboard({
 }) {
   const [payload, setPayload] = useState(initialPayload);
   const [rangeKey, setRangeKey] = useState<MonitorRange>(initialPayload.range.key);
+  const [customRange, setCustomRange] = useState<{ since: string; until: string }>({
+    since: initialPayload.range.since,
+    until: initialPayload.range.until,
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
 
-  async function refresh(nextRange: MonitorRange = rangeKey) {
+  async function refresh(
+    nextRange: MonitorRange = rangeKey,
+    nextCustomRange: { since: string; until: string } = customRange,
+  ) {
     setIsRefreshing(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/monitor-dashboard?range=${nextRange}`, { cache: "no-store" });
+      const params = new URLSearchParams({ range: nextRange });
+
+      if (nextRange === "custom") {
+        params.set("since", nextCustomRange.since);
+        params.set("until", nextCustomRange.until);
+      }
+
+      const response = await fetch(`/api/monitor-dashboard?${params.toString()}`, { cache: "no-store" });
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -87,6 +101,15 @@ export function MetaMonitorDashboard({
   function handleRangeChange(nextRange: MonitorRange) {
     setRangeKey(nextRange);
     void refresh(nextRange);
+  }
+
+  function handleCustomRangeChange(nextCustomRange: { since: string; until: string }) {
+    setRangeKey("custom");
+    setCustomRange(nextCustomRange);
+
+    if (nextCustomRange.since && nextCustomRange.until) {
+      void refresh("custom", nextCustomRange);
+    }
   }
 
   function scrollToAd(adId: string) {
@@ -108,10 +131,12 @@ export function MetaMonitorDashboard({
       <MetaMonitorHeader
         range={payload.range}
         rangeKey={rangeKey}
+        customRange={customRange}
         lastSyncedAt={summary?.lastSyncedAt ?? null}
         isRefreshing={isRefreshing}
         isSample={payload.source === "sample"}
         onRangeChange={handleRangeChange}
+        onCustomRangeChange={handleCustomRangeChange}
         onRefresh={() => void refresh()}
       />
 

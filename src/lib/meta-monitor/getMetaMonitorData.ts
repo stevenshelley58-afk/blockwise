@@ -1,7 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-import { resolveMonitorDateRange } from "../monitor/dashboard-data.ts";
+import { resolveMonitorDateRange, type MonitorCustomRange } from "../monitor/dashboard-data.ts";
 import {
   extractMetaLeadCount,
   fetchMetaAdEntities,
@@ -58,13 +58,14 @@ export async function getMetaMonitorData(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
   range: MonitorRange;
+  customRange?: MonitorCustomRange;
   now?: Date;
 }): Promise<MetaMonitorPayload> {
   const now = input.now ?? new Date();
-  const range = resolveMonitorDateRange(input.range, now);
+  const range = resolveMonitorDateRange(input.range, now, input.customRange);
 
   if (process.env.NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA === "true") {
-    return buildSampleMetaMonitorPayload({ range: input.range, now });
+    return buildSampleMetaMonitorPayload({ range: input.range, customRange: input.customRange, now });
   }
 
   const connections = await listProviderConnections(input.supabase, input.workspaceId);
@@ -75,7 +76,7 @@ export async function getMetaMonitorData(input: {
   if (!metaConnection) {
     // No ad account yet: show clearly-labelled demo data so the dashboard is
     // alive on day one. It is replaced by live data the moment Meta connects.
-    return buildSampleMetaMonitorPayload({ range: input.range, now, connected: false });
+    return buildSampleMetaMonitorPayload({ range: input.range, customRange: input.customRange, now, connected: false });
   }
 
   const tokens = await loadStoredProviderTokens(input.serviceSupabase, metaConnection.id).catch(() => ({

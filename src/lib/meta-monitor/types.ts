@@ -1,6 +1,6 @@
-import type { MonitorDateRange, MonitorRange } from "../monitor/dashboard-data.ts";
+import type { MonitorCustomRange, MonitorDateRange, MonitorRange } from "../monitor/dashboard-data.ts";
 
-export type { MonitorDateRange, MonitorRange };
+export type { MonitorCustomRange, MonitorDateRange, MonitorRange };
 
 export type MetaMonitorSummary = {
   dateRange: { start: string; end: string; label: string };

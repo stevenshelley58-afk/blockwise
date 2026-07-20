@@ -29,6 +29,36 @@ test("resolveMonitorDateRange returns inclusive AU dashboard periods", () => {
   assert.equal(resolveMonitorDateRange("last_30", now).since, "2026-04-28");
 });
 
+test("resolveMonitorDateRange supports maximum and custom ranges", () => {
+  const now = new Date("2026-05-27T01:15:00.000Z");
+
+  const maximum = resolveMonitorDateRange("maximum", now);
+  assert.equal(maximum.key, "maximum");
+  assert.equal(maximum.until, "2026-05-27");
+  assert.equal(maximum.days, 37 * 30);
+
+  const custom = resolveMonitorDateRange("custom", now, { since: "2026-01-01", until: "2026-01-31" });
+  assert.deepEqual(custom, {
+    key: "custom",
+    label: "Custom range",
+    since: "2026-01-01",
+    until: "2026-01-31",
+    days: 31,
+  });
+
+  // Reversed bounds are swapped, future bounds clamp to today.
+  const swapped = resolveMonitorDateRange("custom", now, { since: "2026-01-31", until: "2026-01-01" });
+  assert.equal(swapped.since, "2026-01-01");
+  assert.equal(swapped.until, "2026-01-31");
+
+  const clamped = resolveMonitorDateRange("custom", now, { since: "2026-05-20", until: "2027-01-01" });
+  assert.equal(clamped.until, "2026-05-27");
+
+  // Invalid custom input falls back to last 30 days.
+  const fallback = resolveMonitorDateRange("custom", now, { since: "not-a-date", until: null });
+  assert.equal(fallback.key, "last_30");
+});
+
 test("resolveMonitorDateRange uses the AU dashboard day before UTC rolls over", () => {
   const now = new Date("2026-06-04T16:30:00.000Z");
 

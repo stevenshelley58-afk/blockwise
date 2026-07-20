@@ -19,7 +19,7 @@ export async function getResultsPayload(
     payload.ads.length === 0 || (summary != null && summary.leads === 0 && summary.spend < 20);
 
   if (payload.source === "live" && payload.connected && summary != null && hasNoMeaningfulDelivery) {
-    return buildSampleMetaMonitorPayload({ range: input.range, now: input.now, connected: true });
+    return buildSampleMetaMonitorPayload({ range: input.range, customRange: input.customRange, now: input.now, connected: true });
   }
 
   return payload;
