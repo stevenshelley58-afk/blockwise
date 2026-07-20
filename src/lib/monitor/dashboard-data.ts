@@ -1,4 +1,9 @@
-export type MonitorRange = "today" | "yesterday" | "last_7" | "last_30";
+export type MonitorRange = "today" | "yesterday" | "last_7" | "last_30" | "maximum" | "custom";
+
+export type MonitorCustomRange = {
+  since?: string | null;
+  until?: string | null;
+};
 export type MonitorProvider = "meta" | "google";
 export type MonitorProviderStatus = "connected" | "needs_attention" | "not_connected" | "degraded";
 export type MonitorDataSource = "demo" | "live";
@@ -93,17 +98,63 @@ const RANGE_LABELS: Record<MonitorRange, string> = {
   yesterday: "Yesterday",
   last_7: "Last 7 days",
   last_30: "Last 30 days",
+  maximum: "Maximum",
+  custom: "Custom range",
 };
+
+/** Meta insights allow roughly 37 months of lookback. */
+const MAX_LOOKBACK_DAYS = 37 * 30;
 
 const RANGE_DAYS: Record<MonitorRange, number> = {
   today: 1,
   yesterday: 1,
   last_7: 7,
   last_30: 30,
+  maximum: MAX_LOOKBACK_DAYS,
+  custom: 30,
 };
 
-export function resolveMonitorDateRange(range: MonitorRange = "last_30", now = new Date()): MonitorDateRange {
+export function resolveMonitorDateRange(
+  range: MonitorRange = "last_30",
+  now = new Date(),
+  custom?: MonitorCustomRange,
+): MonitorDateRange {
   const normalizedNow = parseDateKey(toAuDashboardDateKey(now));
+
+  if (range === "custom") {
+    const since = parseOptionalDateKey(custom?.since);
+    const until = parseOptionalDateKey(custom?.until);
+
+    if (!since || !until) {
+      return resolveMonitorDateRange("last_30", now);
+    }
+
+    const [start, rawEnd] = since.getTime() <= until.getTime() ? [since, until] : [until, since];
+    const end = rawEnd.getTime() > normalizedNow.getTime() ? normalizedNow : rawEnd;
+    const clampedStart = start.getTime() > end.getTime() ? end : start;
+    const days = Math.floor((end.getTime() - clampedStart.getTime()) / DAY_MS) + 1;
+
+    return {
+      key: "custom",
+      label: RANGE_LABELS.custom,
+      since: toDateKey(clampedStart),
+      until: toDateKey(end),
+      days,
+    };
+  }
+
+  if (range === "maximum") {
+    const start = new Date(normalizedNow.getTime() - (MAX_LOOKBACK_DAYS - 1) * DAY_MS);
+
+    return {
+      key: "maximum",
+      label: RANGE_LABELS.maximum,
+      since: toDateKey(start),
+      until: toDateKey(normalizedNow),
+      days: MAX_LOOKBACK_DAYS,
+    };
+  }
+
   const days = RANGE_DAYS[range];
   let end = normalizedNow;
 
@@ -123,11 +174,28 @@ export function resolveMonitorDateRange(range: MonitorRange = "last_30", now = n
 }
 
 export function parseMonitorRange(value: string | null | undefined): MonitorRange {
-  if (value === "today" || value === "yesterday" || value === "last_7" || value === "last_30") {
+  if (
+    value === "today" ||
+    value === "yesterday" ||
+    value === "last_7" ||
+    value === "last_30" ||
+    value === "maximum" ||
+    value === "custom"
+  ) {
     return value;
   }
 
   return "last_30";
+}
+
+function parseOptionalDateKey(value: string | null | undefined): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const parsed = parseDateKey(value);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export function calculateValidLeadRate(leads: number, validLeads: number): number {
