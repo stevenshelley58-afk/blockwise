@@ -124,16 +124,10 @@ export function pickDefaultMetaSetupFromAssets(catalog: MetaAssetCatalog): MetaC
     instagramActorId: instagramActor?.id ?? null,
     pixelId: pixel?.id ?? null,
     leadDestination: { type: "manual", label: "Manual review", config: { endpoint: "" } },
-    privacyPolicyUrl: defaultPrivacyPolicyUrl(),
+    privacyPolicyUrl: "",
     currency: adAccount?.currency ?? "",
     timezone: adAccount?.timezone ?? "",
   };
-}
-
-function defaultPrivacyPolicyUrl(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  return appUrl ? `${appUrl.replace(/\/$/, "")}/privacy` : "";
 }
 
 export async function checkMetaConnectionHealth(input: FetchInput & { tokenExpiresAt?: string | null; now?: string }): Promise<MetaConnectionHealth> {
