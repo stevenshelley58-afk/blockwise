@@ -1,8 +1,2 @@
-.tools
-.next
-node_modules
-playwright-report
-test-results
-blockwise-clean
-blockwise-subsignals
-extracted_templates_highres_merged
+.secrets/
+mockups/
