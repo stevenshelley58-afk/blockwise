@@ -130,6 +130,31 @@ export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProvi
   };
 }
 
+/**
+ * Build the one-time clean-plate pass for the embedded design editor: remove
+ * every rendered text value from the finished ad and reconstruct what sits
+ * behind it. The result is never shown to customers directly — real text
+ * layers are always drawn over it — so the request optimizes for a natural,
+ * text-free background rather than copy fidelity.
+ */
+export function buildCleanPlateRequest(inputs: { currentImage: string; aspectRatio: string; seed?: number }): ImageProviderRequest {
+  return {
+    prompt:
+      "Reference image 1 is a finished ad. Remove every piece of rendered text, wording, lettering, and numbers from it, and reconstruct the underlying background, panels, shapes, and photos naturally where the text used to be. Keep the layout, colours, logos, photos, and every other visual element exactly as they are. Produce the same ad with all text removed.",
+    negativePrompt: [
+      "no text, letters, words, numbers, or typography anywhere",
+      "no new elements, logos, watermarks, captions, or borders",
+      "do not distort, repaint, relight, or restructure photos, logos, or faces",
+      "do not change the layout, colours, or composition",
+    ].join("; "),
+    referenceAssets: [inputs.currentImage],
+    aspectRatio: inputs.aspectRatio,
+    stylePreset: "real_estate_clone",
+    requiresReferenceAssets: true,
+    seed: inputs.seed ?? 0,
+  };
+}
+
 /** Build the quality pass without changing the finished design. */
 export function buildRefineRequest(inputs: { currentImage: string; aspectRatio: string; seed?: number }): ImageProviderRequest {
   return {

@@ -44,14 +44,19 @@ Before creating, changing, or reviewing a template, follow
    The public sample must have a different hash from the source.
 4. Customer generation sends that public sample, the customer's declared image
    inputs, and their exact text through the same `buildCloneImageRequest`.
-5. The result is one finished image. Only after QA passes may the Stitch-style
-   editor target a text or image region; every edit uses the latest finished ad
-   as reference image 1 and preserves the rest.
+5. The result is one finished image. After QA passes, the same pass produces a
+   text-free clean plate (one bounded inpaint over the QA text regions). The
+   embedded design editor (`polotno-ad-editor.tsx`) renders the customer's text
+   as real layers over that plate: text edits are deterministic and instant,
+   never an image-model round trip. Image-region edits still use
+   `buildTargetedEditRequest` against the plate, bounded to the selected region.
 
-There is no alternate template version, layout recipe, layer-based creation
-path, or second full-ad generator. Diversity is measured by the AI ad-radar
-classification. `node scripts/verify/adstudio-templates.mjs` and
-`npm run verify:hard-reset` must pass; never weaken or special-case either gate.
+There is no alternate template version, layout recipe, or second full-ad
+generator, and no layer-based GENERATION path — layers exist only post-QA as
+the editing representation of a finished clone (owner-directed change,
+2026-07). Diversity is measured by the AI ad-radar classification.
+`node scripts/verify/adstudio-templates.mjs` and `npm run verify:hard-reset`
+must pass; never weaken or special-case either gate.
 
 ## Mandatory UI workflow
 

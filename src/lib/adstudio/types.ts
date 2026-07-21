@@ -238,6 +238,21 @@ export type AdStudioCloneQa = {
   model?: string;
 };
 
+/**
+ * Layered-edit state for an AI-cloned creative. The clean plate is the
+ * finished ad with every editable text region removed by one inpaint pass at
+ * generation time; the embedded design editor renders real text layers over it
+ * so text edits are instant, deterministic, and never need an AI round trip.
+ */
+export type AdStudioCloneEdit = {
+  version: 1;
+  /** Text-free background render (media path) the editor draws under text layers. */
+  cleanPlate: string;
+  /** Last saved editor scene JSON (stored verbatim). */
+  editorScene?: Record<string, unknown>;
+  editorSceneUpdatedAt?: string;
+};
+
 export type AdStudioCreative = {
   creativeId: string;
   /** Server-issued compare-and-swap base for immutable targeted edits. */
@@ -260,6 +275,8 @@ export type AdStudioCreative = {
     redoHistory?: string[];
     /** QA snapshots paired by index with redoHistory. */
     redoQaHistory?: AdStudioCloneQa[];
+    /** Layered-edit state for the embedded design editor (clean plate + scene). */
+    cloneEdit?: AdStudioCloneEdit;
   };
   safeZones: {
     metaStory: boolean;

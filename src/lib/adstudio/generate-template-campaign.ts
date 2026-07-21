@@ -13,12 +13,14 @@
 import { randomUUID } from "node:crypto";
 
 import { applyProvidedCopyToCampaignPack } from "./campaign-copy-enrichment.ts";
+import { cleanPlateFileNameSeed, generateCleanPlate } from "./clean-plate.ts";
 import {
   cloneModelProfileForQuality,
   generateCloneWithCascade,
   normalizeCloneRenderAspect,
   persistCloneRender,
   resolveCloneProviders,
+  type AdGenerationQuality,
   type CloneGenerationResult,
 } from "./clone-generation.ts";
 import { runCloneQa } from "./clone-qa.ts";
@@ -167,7 +169,9 @@ export type CloneQaEnrichmentInput = {
   expectedCopy: Record<string, string>;
   /** Primary format first; its verdict becomes the return value. */
   renders: Array<{ format: TemplateCloneRenderFormat; creativeId: string; imageUrl: string }>;
+  quality?: AdGenerationQuality;
   review?: typeof runCloneQa;
+  producePlate?: typeof generateCleanPlate;
 };
 
 /**
@@ -176,11 +180,17 @@ export type CloneQaEnrichmentInput = {
  * Failures are contained per format — the customer keeps the ad either way,
  * and a creative that already has a verdict (a fast in-place edit) is never
  * overwritten with a stale one.
+ *
+ * The same pass produces each format's clean plate (the text-free background
+ * the embedded design editor draws real text layers over). Plate production is
+ * best-effort: a missing plate only means that creative keeps the in-place
+ * editor until the lazy prepare-editor backfill supplies one.
  */
 export async function enrichCloneCreativesWithQa(
   input: CloneQaEnrichmentInput,
 ): Promise<AdStudioCloneQa | null> {
   const review = input.review ?? runCloneQa;
+  const producePlate = input.producePlate ?? generateCleanPlate;
   const supabase = input.supabase as SupabaseServerClient;
 
   const verdicts = await Promise.all(input.renders.map(async (render) => {
@@ -195,6 +205,18 @@ export async function enrichCloneCreativesWithQa(
         attempt: 1,
       });
 
+      const cleanPlate = await producePlate({
+        supabase,
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        correlationId: input.correlationId,
+        format: render.format,
+        renderImage: render.imageUrl,
+        regions: qa.regions,
+        quality: input.quality ?? "fast",
+        fileNameSeed: cleanPlateFileNameSeed(input.correlationId, render.format),
+      });
+
       const { data: row, error } = await supabase
         .from("adstudio_creatives")
         .select("id, canvas_json")
@@ -206,7 +228,14 @@ export async function enrichCloneCreativesWithQa(
       if (canvas.cloneQa) return qa;
       await supabase
         .from("adstudio_creatives")
-        .update({ canvas_json: { ...canvas, cloneQa: qa }, updated_at: new Date().toISOString() })
+        .update({
+          canvas_json: {
+            ...canvas,
+            cloneQa: qa,
+            ...(cleanPlate && !canvas.cloneEdit ? { cloneEdit: { version: 1, cleanPlate } } : {}),
+          },
+          updated_at: new Date().toISOString(),
+        })
         .eq("workspace_id", input.workspaceId)
         .eq("id", render.creativeId);
       return qa;
@@ -433,6 +462,7 @@ export async function runTemplateCampaignGeneration(
     userId: input.userId,
     correlationId,
     expectedCopy,
+    quality: generationQuality,
     renders: [PRIMARY_CLONE_FORMAT, STORY_CLONE_FORMAT].flatMap((format) => {
       const creative = pack.creatives.find((candidate) => candidate.format === format);
       const render = cloneRendersByFormat[format];

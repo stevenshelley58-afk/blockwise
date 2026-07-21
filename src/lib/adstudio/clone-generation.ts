@@ -99,16 +99,38 @@ export async function normalizeCloneRenderAspect(
   return `data:image/png;base64,${png.toString("base64")}`;
 }
 
+export type CloneEditRegionBox = { x: number; y: number; width: number; height: number };
+
+// Give text antialiasing and image edges a small amount of breathing room.
+const EDIT_REGION_PADDING = 0.02;
+
+function usableBoxes(boxes: Array<CloneEditRegionBox | undefined>): CloneEditRegionBox[] {
+  return boxes.filter((box): box is CloneEditRegionBox => Boolean(box && box.width > 0 && box.height > 0));
+}
+
+function pixelRect(
+  box: CloneEditRegionBox,
+  imageWidth: number,
+  imageHeight: number,
+): { left: number; top: number; width: number; height: number } {
+  const left = Math.max(0, Math.floor((box.x - EDIT_REGION_PADDING) * imageWidth));
+  const top = Math.max(0, Math.floor((box.y - EDIT_REGION_PADDING) * imageHeight));
+  const right = Math.min(imageWidth, Math.ceil((box.x + box.width + EDIT_REGION_PADDING) * imageWidth));
+  const bottom = Math.min(imageHeight, Math.ceil((box.y + box.height + EDIT_REGION_PADDING) * imageHeight));
+  return { left, top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
+}
+
 /**
- * Build a same-size inpainting mask for one QA-detected edit region.
+ * Build a same-size inpainting mask for one or more QA-detected edit regions.
  * Transparent pixels are repaintable; every opaque pixel must be preserved.
  */
-export async function createCloneRegionEditMask(
+export async function createCloneRegionsEditMask(
   assetUrl: string,
-  box?: { x: number; y: number; width: number; height: number },
+  boxes: Array<CloneEditRegionBox | undefined>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | undefined> {
-  if (!box || box.width <= 0 || box.height <= 0) return undefined;
+  const targets = usableBoxes(boxes);
+  if (targets.length === 0) return undefined;
 
   let bytes: Uint8Array;
   if (assetUrl.startsWith("data:image/")) {
@@ -123,26 +145,33 @@ export async function createCloneRegionEditMask(
   const metadata = await sharp(bytes).metadata();
   if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for editing.");
 
-  // Give text antialiasing and image edges a small amount of breathing room.
-  const paddingX = 0.02;
-  const paddingY = 0.02;
-  const x = Math.max(0, Math.floor((box.x - paddingX) * metadata.width));
-  const y = Math.max(0, Math.floor((box.y - paddingY) * metadata.height));
-  const right = Math.min(metadata.width, Math.ceil((box.x + box.width + paddingX) * metadata.width));
-  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height + paddingY) * metadata.height));
-  const width = Math.max(1, right - x);
-  const height = Math.max(1, bottom - y);
+  const rects = targets
+    .map((box) => pixelRect(box, metadata.width!, metadata.height!))
+    .map((rect) => `<rect x="${rect.left}" y="${rect.top}" width="${rect.width}" height="${rect.height}" fill="black"/>`)
+    .join("");
   const svg = Buffer.from(
     `<svg width="${metadata.width}" height="${metadata.height}" xmlns="http://www.w3.org/2000/svg">`
       + '<defs><mask id="edit-region">'
       + '<rect width="100%" height="100%" fill="white"/>'
-      + `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="black"/>`
+      + rects
       + "</mask></defs>"
       + '<rect width="100%" height="100%" fill="white" mask="url(#edit-region)"/>'
       + "</svg>",
   );
   const png = await sharp(svg).ensureAlpha().png().toBuffer();
   return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+/**
+ * Build a same-size inpainting mask for one QA-detected edit region.
+ * Transparent pixels are repaintable; every opaque pixel must be preserved.
+ */
+export async function createCloneRegionEditMask(
+  assetUrl: string,
+  box?: CloneEditRegionBox,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | undefined> {
+  return createCloneRegionsEditMask(assetUrl, [box], fetchImpl);
 }
 
 async function cloneImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array> {
@@ -157,13 +186,14 @@ async function cloneImageBytes(assetUrl: string, fetchImpl: typeof fetch): Promi
  * Stitch-style edits deterministic: pixels outside the clicked element come
  * from the original finished ad even if the image model tries to redraw them.
  */
-export async function compositeCloneRegionEdit(
+export async function compositeCloneRegionsEdit(
   originalAssetUrl: string,
   editedAssetUrl: string,
-  box?: { x: number; y: number; width: number; height: number },
+  boxes: Array<CloneEditRegionBox | undefined>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
-  if (!box || box.width <= 0 || box.height <= 0) return editedAssetUrl;
+  const targets = usableBoxes(boxes);
+  if (targets.length === 0) return editedAssetUrl;
   const [originalBytes, editedBytes] = await Promise.all([
     cloneImageBytes(originalAssetUrl, fetchImpl),
     cloneImageBytes(editedAssetUrl, fetchImpl),
@@ -172,24 +202,34 @@ export async function compositeCloneRegionEdit(
   const metadata = await sharp(originalBytes).metadata();
   if (!metadata.width || !metadata.height) throw new Error("Creative image dimensions could not be read for editing.");
 
-  const paddingX = 0.02;
-  const paddingY = 0.02;
-  const left = Math.max(0, Math.floor((box.x - paddingX) * metadata.width));
-  const top = Math.max(0, Math.floor((box.y - paddingY) * metadata.height));
-  const right = Math.min(metadata.width, Math.ceil((box.x + box.width + paddingX) * metadata.width));
-  const bottom = Math.min(metadata.height, Math.ceil((box.y + box.height + paddingY) * metadata.height));
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  const editedRegion = await sharp(editedBytes)
+  const editedFull = await sharp(editedBytes)
     .resize(metadata.width, metadata.height, { fit: "fill" })
-    .extract({ left, top, width, height })
     .png()
     .toBuffer();
+  const patches = await Promise.all(
+    targets.map(async (box) => {
+      const rect = pixelRect(box, metadata.width!, metadata.height!);
+      const input = await sharp(editedFull)
+        .extract({ left: rect.left, top: rect.top, width: rect.width, height: rect.height })
+        .png()
+        .toBuffer();
+      return { input, left: rect.left, top: rect.top };
+    }),
+  );
   const composited = await sharp(originalBytes)
-    .composite([{ input: editedRegion, left, top }])
+    .composite(patches)
     .png()
     .toBuffer();
   return `data:image/png;base64,${composited.toString("base64")}`;
+}
+
+export async function compositeCloneRegionEdit(
+  originalAssetUrl: string,
+  editedAssetUrl: string,
+  box?: CloneEditRegionBox,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  return compositeCloneRegionsEdit(originalAssetUrl, editedAssetUrl, [box], fetchImpl);
 }
 
 function escapeSvgText(value: string): string {

@@ -170,6 +170,41 @@ export function applyDeterministicTextEditQa(
   return { ...next, passed: cloneQaPassed(next) };
 }
 
+/**
+ * An editor save renders every text value itself (real text layers over the
+ * clean plate), so all copy checks are deterministic — no vision round trip.
+ * The submitted regions replace the model-estimated text boxes so hit targets
+ * stay truthful after the customer moves or resizes a layer.
+ */
+export function applyEditorSceneQa(
+  previous: AdStudioCloneQa,
+  textByKey: Record<string, string>,
+  regions?: AdStudioCloneRegion[],
+): AdStudioCloneQa {
+  let next = Object.entries(textByKey).reduce(
+    (qa, [fieldKey, value]) => applyDeterministicTextEditQa(qa, fieldKey, value),
+    previous,
+  );
+  if (regions?.length) {
+    const submitted = regions.map((region) => ({
+      key: region.key,
+      kind: region.kind,
+      box: {
+        x: clamp01(region.box.x),
+        y: clamp01(region.box.y),
+        width: clamp01(region.box.width),
+        height: clamp01(region.box.height),
+      },
+    }));
+    // Keep image regions the editor does not manage; replace text regions.
+    const imageRegions = next.regions.filter(
+      (region) => region.kind === "image" && !submitted.some((candidate) => candidate.key === region.key),
+    );
+    next = { ...next, regions: [...submitted, ...imageRegions] };
+  }
+  return { ...next, model: "editor-scene-renderer", passed: cloneQaPassed(next) };
+}
+
 export function cloneQaMutationId(correlationId: string, format: string, attempt: number): string {
   return `${correlationId}:adstudio.clone_qa:${format}:${attempt}`;
 }

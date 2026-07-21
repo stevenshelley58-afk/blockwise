@@ -702,4 +702,34 @@
 .studio-metachrome-story-brand strong{font-size:13px;font-weight:700}
 .studio-metachrome-story-brand small{font-size:11px}
 .studio-metachrome-story-cta{left:50%;right:auto;bottom:28px;min-height:34px;transform:translateX(-50%);border-radius:999px;background:rgba(255,255,255,.92);color:#050505;padding:0 16px;font-size:13px;font-weight:700;pointer-events:none}
+
+/* Embedded design editor (clean plate + real text layers) */
+.studio-design-editor{position:relative;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;gap:10px}
+.studio-design-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--st-sh-1)}
+.studio-design-toolbar button{height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:0 10px;font-weight:600;font-size:13px}
+.studio-design-toolbar button:hover:not(:disabled){background:var(--surface-subtle)}
+.studio-design-toolbar button:disabled{opacity:.45;cursor:not-allowed}
+.studio-design-toolbar button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.studio-design-toolbar button.primary:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong)}
+.studio-design-toolbar select{min-height:34px;height:34px;max-width:150px;padding:0 30px 0 10px;font-size:13px;background-position:right 8px center}
+.studio-design-toolbar input[type=color]{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:3px;cursor:pointer}
+.studio-design-toolbar-divider{width:1px;height:22px;background:var(--line)}
+.studio-design-toolbar-spacer{flex:1}
+.studio-design-toolbar-hint{font-size:12.5px;color:var(--st-faint);font-weight:600;padding:0 4px}
+.studio-design-stage{position:relative;flex:1;min-height:320px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--st-stage)}
+.studio-design-stage .polotno-workspace-container{background:transparent!important}
+.studio-design-image-panel{position:absolute;top:56px;right:10px;z-index:6;width:min(300px,calc(100% - 20px));display:flex;flex-direction:column;gap:9px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--st-sh-2);padding:14px}
+.studio-design-image-panel header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.studio-design-image-panel header strong{font-size:14px}
+.studio-design-image-panel header button{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:#fff}
+.studio-design-image-panel label{font-size:12.5px;font-weight:700;color:var(--ink)}
+.studio-design-image-panel textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;resize:vertical;min-height:64px}
+.studio-design-image-panel button.primary{height:38px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
+.studio-design-image-panel>button:not(.primary){height:38px;border-radius:9px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
+.studio-design-image-panel button:disabled{opacity:.5;cursor:not-allowed}
+.studio-design-image-regions{display:flex;flex-wrap:wrap;gap:6px}
+.studio-design-image-regions button{height:30px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:0 12px;font-size:12.5px;font-weight:600;text-transform:capitalize}
+.studio-design-image-regions button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.studio-design-image-status,.studio-design-image-note{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--st-faint);margin:0}
+@media(max-width:760px){.studio-design-toolbar{padding:6px}.studio-design-stage{min-height:260px}}
 `;

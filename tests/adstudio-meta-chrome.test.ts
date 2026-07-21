@@ -45,8 +45,12 @@ test("primary text and headline/description click through to the Text panel", ()
   assert.match(workbench, /onSelectText=\{\(\) => goToSection\("text"\)\}/);
 });
 
-test("workbench wraps the post-clone editor in MetaChromePreview", () => {
-  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{\s*return \(\s*<div className="studio-clone-editor-wrap">/);
+test("workbench routes plate-backed clones to the design editor and wraps the fallback in MetaChromePreview", () => {
+  // Plate-backed creatives (clean plate + text layers) open the embedded
+  // design editor; creatives without a plate keep the in-place editor inside
+  // real Meta chrome until the one-time backfill lands.
+  assert.match(workbench, /if \(isCloneCreative\(currentCreative\)\) \{/);
+  assert.match(workbench, /currentCreative\.canvas\.cloneEdit\?\.cleanPlate[\s\S]*?<PolotnoAdEditor[\s\S]*?creative=\{currentCreative\}/);
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?creative=\{currentCreative\}[\s\S]*?<\/MetaChromePreview>/);
   assert.doesNotMatch(workbench, /FabricAdEditor|fabric-ad-editor/);
 });

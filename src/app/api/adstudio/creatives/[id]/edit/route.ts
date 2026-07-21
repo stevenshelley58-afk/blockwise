@@ -40,6 +40,12 @@ type TargetedEditBody = {
   newImage?: string;
   /** Natural-language direction applied only inside the selected region. */
   instruction?: string;
+  /**
+   * Which render the AI edit applies to. "plate" edits the text-free clean
+   * plate behind the design editor's text layers; the client re-flattens and
+   * calls editor-save afterwards. Defaults to the finished render.
+   */
+  target?: "render" | "plate";
   expectedRevisionId?: string;
   mutationId?: string;
 };
@@ -67,6 +73,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   const body = await readJsonBody<TargetedEditBody>(request);
   const action = body.action ?? "edit";
+  const target = body.target ?? "render";
   const fieldKey = body.fieldKey?.trim();
   const newValue = body.newValue?.trim() ?? "";
   const newImageRef = body.newImage?.trim();
@@ -75,6 +82,15 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   const mutationId = body.mutationId?.trim() ?? "";
   if (!(action === "edit" || action === "undo" || action === "redo")) {
     return NextResponse.json({ error: "Unsupported edit action." }, { status: 400 });
+  }
+  if (!(target === "render" || target === "plate")) {
+    return NextResponse.json({ error: "Unsupported edit target." }, { status: 400 });
+  }
+  if (target === "plate" && newValue) {
+    return NextResponse.json(
+      { error: "Text edits happen instantly in the design editor, not through the image model." },
+      { status: 400 },
+    );
   }
   if (action === "edit" && !fieldKey) {
     return NextResponse.json({ error: "fieldKey is required." }, { status: 400 });
@@ -100,6 +116,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       creativeId: id,
       baseRevisionId: expectedRevisionId,
       action,
+      target,
       fieldKey,
       newValue: newValue || null,
       newImage: newImageRef || null,
@@ -225,7 +242,27 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   // The edit-only validation above guarantees this after history actions return.
   const editFieldKey = fieldKey!;
 
-  const currentImageRef = cloneObject.content || cloneObject.assetId || "";
+  // Plate-backed creatives edit text as real layers in the design editor;
+  // routing a text change through the image model would only reintroduce the
+  // slow, lossy path the editor replaced.
+  if (target === "render" && newValue && canvas.cloneEdit?.cleanPlate) {
+    await releaseClaim();
+    return NextResponse.json(
+      { error: "Edit this text directly in the design editor - it applies instantly." },
+      { status: 400 },
+    );
+  }
+  if (target === "plate" && !canvas.cloneEdit?.cleanPlate) {
+    await releaseClaim();
+    return NextResponse.json(
+      { error: "This ad is not set up for the design editor yet." },
+      { status: 400 },
+    );
+  }
+
+  const currentImageRef = target === "plate"
+    ? canvas.cloneEdit!.cleanPlate
+    : cloneObject.content || cloneObject.assetId || "";
   const currentImage = await resolveAdStudioImageForModel(context.supabase, context.access.workspaceId, currentImageRef);
   if (!currentImage) {
     await releaseClaim();
@@ -241,19 +278,29 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
 
   // Expected copy carries forward from the last QA verdict, with the edited
   // field overridden — so the verifier re-checks the WHOLE ad, catching drift
-  // in elements the edit was not supposed to touch.
+  // in elements the edit was not supposed to touch. The clean plate carries no
+  // text by definition, so plate edits verify defects only.
   const expectedCopy: Record<string, string> = {};
-  for (const check of canvas.cloneQa?.copyChecks ?? []) {
-    expectedCopy[check.key] = check.expected;
+  if (target !== "plate") {
+    for (const check of canvas.cloneQa?.copyChecks ?? []) {
+      expectedCopy[check.key] = check.expected;
+    }
+    if (newValue) expectedCopy[editFieldKey] = newValue;
   }
-  if (newValue) expectedCopy[editFieldKey] = newValue;
 
   const selectedRegion = canvas.cloneQa?.regions.find((region) => region.key === editFieldKey);
   if (!selectedRegion) {
     await releaseClaim();
     return NextResponse.json({ error: "That editable area is no longer available. Reload the ad." }, { status: 409 });
   }
-  if (selectedRegion.kind === "text" && !newValue) {
+  if (target === "plate" && selectedRegion.kind !== "image") {
+    await releaseClaim();
+    return NextResponse.json(
+      { error: "Only image areas can be changed through the AI. Edit text directly in the design editor." },
+      { status: 400 },
+    );
+  }
+  if (target !== "plate" && selectedRegion.kind === "text" && !newValue) {
     await releaseClaim();
     return NextResponse.json({ error: "Type the exact replacement text for this area." }, { status: 400 });
   }
@@ -307,21 +354,26 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     // and Undo are the safety net, and warnings surface anything off. If the
     // vision pass is unavailable, a text edit's verdict updates
     // deterministically (the requested string is the expected string) and an
-    // image edit carries the previous verdict forward.
-    try {
-      qa = await runCloneQa({
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        correlationId,
-        imageUrl: lastImage.assetUrl,
-        expectedCopy,
-        format: String(row.format ?? "4:5"),
-        attempt: 1,
-      });
-    } catch {
-      qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
-        ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
-        : canvas.cloneQa ?? null;
+    // image edit carries the previous verdict forward. Plate edits skip the
+    // pass entirely: the plate has no copy to verify, compositing bounds the
+    // change to the selected region, and the customer-facing render is only
+    // updated by the deterministic editor-save that follows.
+    if (target !== "plate") {
+      try {
+        qa = await runCloneQa({
+          workspaceId: context.access.workspaceId,
+          userId: context.access.userId,
+          correlationId,
+          imageUrl: lastImage.assetUrl,
+          expectedCopy,
+          format: String(row.format ?? "4:5"),
+          attempt: 1,
+        });
+      } catch {
+        qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
+          ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
+          : canvas.cloneQa ?? null;
+      }
     }
   }
 
@@ -331,28 +383,41 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       supabase: context.supabase,
       workspaceId: context.access.workspaceId,
       assetUrl: lastImage.assetUrl,
-      fileNameSeed: `${correlationId}-edit`,
+      fileNameSeed: target === "plate" ? `${correlationId}-plate-edit` : `${correlationId}-edit`,
     });
   } catch (error) {
     await releaseClaim();
     return errorResponse(error, 500);
   }
 
-  // Previous render goes to history (undo); the new render becomes current.
-  const renderHistory = [...(canvas.renderHistory ?? []), currentImageRef]
-    .filter(Boolean)
-    .slice(-RENDER_HISTORY_LIMIT);
-  const renderQaHistory = [...(canvas.renderQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])]
-    .slice(-RENDER_HISTORY_LIMIT);
-  const nextCanvas: AdStudioCreative["canvas"] = {
-    ...canvas,
-    objects: [{ ...cloneObject, content: image, assetId: image }],
-    cloneQa: qa ?? canvas.cloneQa,
-    renderHistory,
-    renderQaHistory,
-    redoHistory: [],
-    redoQaHistory: [],
-  };
+  // A plate edit changes only the background behind the editor's text layers.
+  // The finished render, histories, and QA verdict stay untouched — the client
+  // re-flattens the scene over the new plate and saves deterministically.
+  // A render edit sends the previous render to history (undo) and the new
+  // render becomes current.
+  const renderHistory = target === "plate"
+    ? canvas.renderHistory ?? []
+    : [...(canvas.renderHistory ?? []), currentImageRef]
+      .filter(Boolean)
+      .slice(-RENDER_HISTORY_LIMIT);
+  const renderQaHistory = target === "plate"
+    ? canvas.renderQaHistory ?? []
+    : [...(canvas.renderQaHistory ?? []), ...(canvas.cloneQa ? [canvas.cloneQa] : [])]
+      .slice(-RENDER_HISTORY_LIMIT);
+  const nextCanvas: AdStudioCreative["canvas"] = target === "plate"
+    ? {
+      ...canvas,
+      cloneEdit: { ...canvas.cloneEdit!, cleanPlate: image },
+    }
+    : {
+      ...canvas,
+      objects: [{ ...cloneObject, content: image, assetId: image }],
+      cloneQa: qa ?? canvas.cloneQa,
+      renderHistory,
+      renderQaHistory,
+      redoHistory: [],
+      redoQaHistory: [],
+    };
 
   let revision;
   try {
@@ -382,6 +447,23 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
     throw new Error("Creative revision append failed without a recognized reason.");
   }
 
+  if (target === "plate") {
+    return NextResponse.json({
+      creativeId: id,
+      image: nextCanvas.objects[0]?.content ?? currentImageRef,
+      qa: nextCanvas.cloneQa,
+      cleanPlate: image,
+      cloneEdit: nextCanvas.cloneEdit,
+      renderHistory,
+      renderQaHistory,
+      redoHistory: canvas.redoHistory ?? [],
+      redoQaHistory: canvas.redoQaHistory ?? [],
+      revisionId: revision.revisionId,
+      revisionNumber: revision.revisionNumber,
+      model: lastImage.model,
+      provider: lastImage.provider,
+    });
+  }
   return NextResponse.json({
     creativeId: id,
     image,

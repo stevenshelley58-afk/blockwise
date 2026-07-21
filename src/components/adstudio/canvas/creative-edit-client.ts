@@ -7,6 +7,7 @@ type CreativeEditResponse = {
   renderQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
   redoHistory?: string[];
   redoQaHistory?: NonNullable<AdStudioCreative["canvas"]["cloneQa"]>[];
+  cloneEdit?: AdStudioCreative["canvas"]["cloneEdit"];
   revisionId?: string;
   error?: string;
 };
@@ -17,6 +18,8 @@ export type CreativeEditMutation = {
   newValue?: string;
   newImage?: string;
   instruction?: string;
+  /** "plate" edits the design editor's text-free background instead of the render. */
+  target?: "render" | "plate";
 };
 
 export async function requestCreativeEdit(input: {
@@ -53,6 +56,7 @@ export async function requestCreativeEdit(input: {
       renderQaHistory: data.renderQaHistory ?? creative.canvas.renderQaHistory,
       redoHistory: data.redoHistory ?? creative.canvas.redoHistory,
       redoQaHistory: data.redoQaHistory ?? creative.canvas.redoQaHistory,
+      cloneEdit: data.cloneEdit ?? creative.canvas.cloneEdit,
     },
   };
 }

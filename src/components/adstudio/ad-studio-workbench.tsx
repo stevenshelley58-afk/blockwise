@@ -149,6 +149,11 @@ const InPlaceAdEditor = dynamic(
   { ssr: false, loading: () => <div className="studio-editor-loading">Loading editor...</div> },
 );
 
+const PolotnoAdEditor = dynamic(
+  () => import("./canvas/polotno-ad-editor").then((mod) => mod.PolotnoAdEditor),
+  { ssr: false, loading: () => <div className="studio-editor-loading">Loading editor...</div> },
+);
+
 const GOAL_LABELS: Record<string, string> = {
   seller_leads: "Generate vendor leads",
   appraisal_bookings: "Get appraisal leads",
@@ -294,6 +299,8 @@ export function AdStudioWorkbench({
   showBrandSetupPrompt = false,
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
+  const packRef = useRef(initialPack);
+  packRef.current = pack;
   const searchParams = useSearchParams();
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
@@ -783,6 +790,40 @@ export function AdStudioWorkbench({
     };
   }, [editorPreparingCampaignId]);
 
+  // One-time backfill: creatives generated before clean plates existed get one
+  // prepared on first open, then the design editor (instant text edits) takes
+  // over. Failure is silent and non-fatal — the in-place editor still works.
+  const platePreparedRef = useRef(new Set<string>());
+  const plateBackfillCandidateId =
+    currentCreative &&
+    isCloneCreative(currentCreative) &&
+    !currentCreative.canvas.cloneEdit?.cleanPlate &&
+    currentCreative.activeRevisionId &&
+    currentCreative.canvas.cloneQa?.regions.some((region) => region.kind === "text")
+      ? currentCreative.creativeId
+      : null;
+  useEffect(() => {
+    if (!plateBackfillCandidateId || platePreparedRef.current.has(plateBackfillCandidateId)) return;
+    platePreparedRef.current.add(plateBackfillCandidateId);
+    let cancelled = false;
+    void (async () => {
+      const creative = packRef.current.creatives.find(
+        (candidate) => candidate.creativeId === plateBackfillCandidateId,
+      );
+      if (!creative) return;
+      try {
+        const { requestPrepareEditor } = await import("./canvas/editor-save-client");
+        const next = await requestPrepareEditor({ creative, mutationId: crypto.randomUUID() });
+        if (!cancelled) updateCreative(next);
+      } catch {
+        // Non-fatal: the in-place editor remains available for this creative.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [plateBackfillCandidateId, updateCreative]);
+
   async function confirmMediaReplacement() {
     if (!pendingMediaReplacement) return;
     if (!currentCreative || !isCloneCreative(currentCreative)) {
@@ -940,6 +981,25 @@ export function AdStudioWorkbench({
     // text above the creative, headline/description strip, real CTA enum label)
     // so the stage shows the ad exactly as Meta renders it.
     if (isCloneCreative(currentCreative)) {
+      // Plate-backed creatives use the embedded design editor: real text
+      // layers over the clean plate, so edits are instant and exact. Creatives
+      // without a plate (older, or plate production failed) keep the in-place
+      // editor while the one-time backfill runs.
+      if (currentCreative.canvas.cloneEdit?.cleanPlate) {
+        return (
+          <div className="studio-clone-editor-wrap">
+            <PolotnoAdEditor
+              creative={currentCreative}
+              brandKit={brandKit}
+              onCreativeChange={updateCreative}
+              showToast={studio.showToast}
+            />
+            <p className="studio-metachrome-edit-hint">
+              Click any text to retype it instantly. Image changes run through AI from &quot;Change images&quot;.
+            </p>
+          </div>
+        );
+      }
       return (
         <div className="studio-clone-editor-wrap">
           <PreviewFit enabled={!isMobileViewport}>
@@ -959,7 +1019,11 @@ export function AdStudioWorkbench({
             </MetaChromePreview>
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
-            <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>
+            <p className="studio-metachrome-edit-hint">
+              {plateBackfillCandidateId === currentCreative.creativeId
+                ? "Preparing the design editor - you can keep editing in place meanwhile."
+                : "Select text or an image on the ad, or open Edit elements."}
+            </p>
           ) : editorPreparing ? (
             <p className="studio-metachrome-edit-hint">Your ad is ready to preview - editing unlocks in a moment.</p>
           ) : null}

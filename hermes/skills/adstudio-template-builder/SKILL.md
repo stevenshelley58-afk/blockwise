@@ -20,12 +20,16 @@ AdStudio has one template contract and one full-ad generation request.
 4. Customer generation uses the same `buildCloneImageRequest`, with the approved
    public sample as reference image 1, followed by the customer's declared image
    inputs and exact text.
-5. Generation returns one finished image and must pass clone QA. Editing starts
-   only after that. A text or image edit uses the latest finished ad as reference
-   image 1, changes one target, preserves the rest, runs QA, and appends history.
+5. Generation returns one finished image and must pass clone QA. The QA pass
+   also produces a text-free clean plate (bounded inpaint over the text
+   regions). Editing starts only after that: text edits are real layers over
+   the plate in the embedded design editor (deterministic, no AI); an image
+   edit uses the latest plate as reference image 1, changes one target,
+   preserves the rest, and appends history.
 
-There is no alternate version, layer-based creation path, shared layout recipe,
-or second full-ad generator.
+There is no alternate version, shared layout recipe, second full-ad generator,
+or layer-based GENERATION path — layers exist only post-QA as the editing
+representation of a finished clone (owner-directed change, 2026-07).
 
 ## Template manifest
 
@@ -79,7 +83,9 @@ with several text values is valid. Do not invent fields the source does not use.
 - The dialog asks for every declared required input and no undeclared input.
 - A customer request is sample + customer images + exact customer text.
 - No template can open for editing before a clone exists.
-- The finished clone uses the image-anchored in-place editor and edit history.
+- The finished clone uses the embedded design editor (clean plate + text
+  layers) once a plate exists, with the image-anchored in-place editor as the
+  fallback, and keeps edit history either way.
 - The gallery remains diverse by ad-radar classification at portfolio scale.
 
 ## Files
@@ -89,7 +95,9 @@ with several text values is valid. Do not invent fields the source does not use.
 - Template contract: `src/lib/adstudio/templates.ts`
 - Gallery: `src/lib/adstudio/template-gallery/`
 - Customer generation: `src/lib/adstudio/generate-template-campaign.ts`
-- Post-clone editor: `src/components/adstudio/canvas/in-place-ad-editor.tsx`
+- Post-clone editor: `src/components/adstudio/canvas/polotno-ad-editor.tsx`
+  (fallback: `src/components/adstudio/canvas/in-place-ad-editor.tsx`)
+- Clean-plate production: `src/lib/adstudio/clean-plate.ts`
 - Gate: `scripts/verify/adstudio-templates.mjs`
 
 Finish with `hermes/skills/blockwise-agent-cleanup/SKILL.md`.
