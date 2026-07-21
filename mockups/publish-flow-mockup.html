@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Blockwise · Publish to Meta — guided flow mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#f8fafc; --ink:#131b2e; --muted:#475569;
+    --line:#dfe6f0; --line-soft:#edf1f6; --line-heavy:#cbd5e1;
+    --accent:#123e75; --accent-strong:#0d3263; --accent-tint:#eef3fb;
+    --stage:#001b3d; --good:#006d38; --good-tint:#ecfdf5; --good-line:#b7e7cd;
+    --warn:#8a5a00; --warn-tint:#fff8e6; --warn-line:#f3e2ae;
+    --rose:#ba1a1a; --rose-tint:#fdf1ef; --rose-line:#f3b4ad;
+    --faint:#94a3b8;
+    --display:"Manrope",ui-sans-serif,system-ui,sans-serif;
+    --body:"Inter",ui-sans-serif,system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+    --sh-1:0 1px 2px rgba(15,23,42,.05),0 0 0 1px rgba(15,23,42,.03);
+    --sh-2:0 18px 50px rgba(2,10,28,.45),0 2px 6px rgba(2,10,28,.35);
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{
+    min-height:100vh; font-family:var(--body); color:var(--ink);
+    background:
+      radial-gradient(1100px 520px at 12% -10%, rgba(37,99,190,.28), transparent 60%),
+      radial-gradient(900px 600px at 95% 110%, rgba(13,50,99,.55), transparent 55%),
+      var(--stage);
+    display:grid; place-items:center; padding:34px 18px 56px; position:relative; overflow-x:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background-image:radial-gradient(rgba(148,184,226,.14) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+  .stage{ width:min(1180px,100%); display:grid; gap:16px; position:relative; z-index:1; }
+  .stage-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .stage-head h1{ font-family:var(--display); color:#eaf1fb; font-size:22px; letter-spacing:-.3px; margin:0 0 4px; }
+  .stage-head h1 em{ font-style:normal; color:#8fb3e6; }
+  .stage-head p{ margin:0; color:#9db4d6; font-size:13px; line-height:1.55; max-width:66ch; }
+  .anno-toggle{
+    border:1px solid rgba(143,179,230,.4); background:rgba(18,62,117,.35); color:#dce8f8;
+    font:600 12.5px/1 var(--body); border-radius:999px; padding:10px 16px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; transition:background .16s, transform .16s;
+  }
+  .anno-toggle:hover{ background:rgba(37,99,190,.45); transform:translateY(-1px); }
+  .anno-toggle .dot{ width:8px; height:8px; border-radius:50%; background:#5b7ba6; transition:background .16s; }
+  .anno-toggle.on .dot{ background:#4ade80; box-shadow:0 0 10px rgba(74,222,128,.7); }
+
+  .device{ background:var(--bg); border-radius:16px; box-shadow:var(--sh-2); overflow:hidden; border:1px solid rgba(148,184,226,.18); }
+  .topbar{ height:60px; background:#fff; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:14px; padding:0 20px; }
+  .mark{ display:flex; align-items:center; gap:10px; }
+  .mark svg{ display:block; }
+  .wordmark{ font-family:var(--display); font-weight:800; font-size:18px; letter-spacing:-.4px; }
+  .crumb-sep{ width:1px; height:22px; background:var(--line); }
+  .crumb{ font-size:13.5px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .crumb b{ color:var(--ink); font-weight:700; }
+  .topbar-right{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .avatar{ width:32px; height:32px; border-radius:999px; background:var(--stage); color:#cfe0f7; display:grid; place-items:center; font:700 12px var(--display); letter-spacing:.4px; }
+
+  .wizard{ display:grid; grid-template-columns:262px 1fr; min-height:620px; }
+  .rail{ background:#fff; border-right:1px solid var(--line-soft); padding:22px 16px 18px; display:flex; flex-direction:column; gap:4px; }
+  .rail-meta{ display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--faint); padding:0 10px 14px; }
+  .rail-meta svg{ flex-shrink:0; }
+  .progress-track{ height:3px; border-radius:99px; background:var(--line-soft); margin:0 10px 18px; overflow:hidden; }
+  .progress-fill{ height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .55s cubic-bezier(.22,1,.36,1); }
+  .step-item{ display:grid; grid-template-columns:30px 1fr; gap:12px; padding:9px 10px; border-radius:10px; border:0; background:transparent; text-align:left; cursor:pointer; position:relative; font-family:var(--body); }
+  .step-item:not(.locked):hover{ background:var(--bg); }
+  .step-item.locked{ cursor:default; opacity:.55; }
+  .step-item .chip{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center; margin-top:1px;
+    border:1px dashed var(--line-heavy); color:var(--faint); font:700 12px var(--display); background:#fff; transition:all .25s;
+  }
+  .step-item.current .chip{ border:1.5px solid var(--accent); border-style:solid; color:var(--accent); background:var(--accent-tint); box-shadow:0 0 0 4px rgba(18,62,117,.09); }
+  .step-item.done .chip{ border:0; background:var(--stage); color:#fff; }
+  .step-item.done .chip .num{ display:none; }
+  .step-item .chip .tick{ display:none; }
+  .step-item.done .chip .tick{ display:block; animation:pop .3s cubic-bezier(.34,1.56,.64,1); }
+  .step-item strong{ display:block; font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.25; }
+  .step-item small{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.35; }
+  .step-item.current strong{ color:var(--accent); }
+  .step-item.locked strong{ color:var(--muted); font-weight:600; }
+  .connector{ position:absolute; left:22px; top:38px; width:2px; height:14px; background:var(--line-soft); border-radius:2px; }
+  .step-item.done .connector{ background:var(--stage); }
+
+  .panel{ padding:30px clamp(24px,4vw,52px) 34px; display:flex; flex-direction:column; min-width:0; background:linear-gradient(180deg,#fff 0, var(--bg) 130px); }
+  .panel-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .step-count{ font:700 12px var(--display); letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+  .panel-head h2{ font-family:var(--display); font-weight:800; font-size:27px; letter-spacing:-.5px; margin:0; line-height:1.1; }
+  .panel-sub{ color:var(--muted); font-size:13.5px; line-height:1.6; margin:6px 0 22px; max-width:62ch; }
+
+  .steps-viewport{ flex:1; position:relative; }
+  .step-pane{ display:none; flex-direction:column; gap:16px; }
+  .step-pane.active{ display:flex; animation:rise .4s cubic-bezier(.22,1,.36,1); }
+  .step-pane.active .reveal{ animation:rise .45s cubic-bezier(.22,1,.36,1) both; }
+  .step-pane.active .reveal:nth-child(1){ animation-delay:.03s } .step-pane.active .reveal:nth-child(2){ animation-delay:.08s }
+  .step-pane.active .reveal:nth-child(3){ animation-delay:.13s } .step-pane.active .reveal:nth-child(4){ animation-delay:.18s }
+  .step-pane.active .reveal:nth-child(5){ animation-delay:.23s } .step-pane.active .reveal:nth-child(6){ animation-delay:.28s }
+  .step-pane.active .reveal:nth-child(7){ animation-delay:.33s }
+  @keyframes rise{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none;} }
+  @keyframes pop{ from{ transform:scale(.4);} to{ transform:scale(1);} }
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:var(--sh-1); padding:18px; }
+  .card-title{ font-family:var(--display); font-weight:700; font-size:14.5px; letter-spacing:-.1px; display:flex; align-items:center; gap:9px; margin:0 0 4px; }
+  .card-hint{ font-size:12.5px; color:var(--muted); line-height:1.55; margin:0 0 14px; }
+
+  .from-settings{ display:inline-flex; align-items:center; gap:6px; font:700 10.5px var(--body); letter-spacing:.5px; text-transform:uppercase; color:var(--accent); background:var(--accent-tint); border:1px solid color-mix(in srgb,var(--accent) 22%, var(--line)); border-radius:999px; padding:4px 10px; margin-left:auto; }
+
+  .kv{ display:grid; grid-template-columns:150px 1fr; gap:8px 14px; font-size:13px; }
+  .kv dt{ color:var(--muted); font-weight:600; } .kv dd{ margin:0; font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .pill{ font-size:10.5px; font-weight:700; border-radius:999px; padding:2.5px 9px; letter-spacing:.3px; }
+  .pill.green{ background:var(--good-tint); color:var(--good); border:1px solid var(--good-line); }
+  .pill.blue{ background:var(--accent-tint); color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 22%, var(--line)); }
+  .pill.amber{ background:var(--warn-tint); color:var(--warn); border:1px solid var(--warn-line); }
+  .linkish{ border:0; background:none; color:var(--accent); font:600 12px var(--body); cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:3px; }
+
+  .field{ display:grid; gap:6px; }
+  .field > span{ font-size:12px; font-weight:700; color:var(--ink); }
+  .field .box{ min-height:44px; border:1px solid var(--line); border-radius:10px; background:#fff; display:flex; align-items:center; gap:9px; padding:0 13px; transition:border-color .15s, box-shadow .15s; }
+  .field .box:focus-within{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-tint); }
+  .field input{ border:0; outline:0; background:transparent; width:100%; font:600 13.5px var(--body); color:var(--ink); }
+  .field input[type="date"]{ font-family:var(--body); }
+  .field .box svg{ color:var(--faint); flex-shrink:0; }
+  .field-err{ font-size:12px; color:var(--rose); font-weight:600; display:none; }
+  .field.invalid .box{ border-color:var(--rose-line); box-shadow:0 0 0 3px var(--rose-tint); }
+  .field.invalid .field-err{ display:block; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .mono{ font-family:var(--mono); font-size:11.5px; font-weight:600; }
+
+  /* ---- placement choice (step 1) ---- */
+  .place-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .place{ border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:16px; cursor:pointer; text-align:left; display:grid; gap:9px; position:relative; transition:all .18s; font-family:var(--body); }
+  .place:hover{ border-color:var(--line-heavy); transform:translateY(-2px); }
+  .place.selected{ border-color:var(--accent); background:var(--accent-tint); box-shadow:0 0 0 3px rgba(18,62,117,.08); }
+  .place .ic{ width:38px; height:38px; border-radius:10px; background:var(--bg); display:grid; place-items:center; color:var(--accent); border:1px solid var(--line); transition:all .18s; }
+  .place.selected .ic{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .place strong{ font-size:14px; font-weight:750; display:block; }
+  .place small{ font-size:12px; color:var(--muted); line-height:1.45; display:block; }
+  .place .rec{ position:absolute; top:-9px; right:12px; font:700 9.5px var(--body); letter-spacing:.7px; text-transform:uppercase; background:var(--stage); color:#9fd0ff; border-radius:999px; padding:4px 10px; }
+
+  .suggest-chips{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .suggest-chips .lbl{ font-size:11.5px; font-weight:700; color:var(--faint); text-transform:uppercase; letter-spacing:.5px; }
+  .name-chip{ border:1px dashed var(--accent); background:var(--accent-tint); color:var(--accent); border-radius:8px; padding:7px 11px; font:600 12px var(--mono); cursor:pointer; transition:all .15s; }
+  .name-chip:hover{ background:var(--accent); color:#fff; border-style:solid; }
+
+  .camp-list{ display:grid; gap:9px; }
+  .camp-row{ display:flex; align-items:center; gap:12px; border:1.5px solid var(--line); border-radius:11px; background:#fff; padding:12px 14px; cursor:pointer; transition:all .16s; }
+  .camp-row:hover{ border-color:var(--line-heavy); transform:translateY(-1px); }
+  .camp-row.selected{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-tint); }
+  .camp-row .radio{ width:18px; height:18px; border-radius:50%; border:2px solid var(--line-heavy); flex-shrink:0; display:grid; place-items:center; transition:all .15s; }
+  .camp-row.selected .radio{ border-color:var(--accent); }
+  .camp-row.selected .radio::after{ content:""; width:8px; height:8px; border-radius:50%; background:var(--accent); }
+  .camp-row .cname{ font-size:13px; font-weight:750; }
+  .camp-row .csub{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .camp-row .cstat{ margin-left:auto; text-align:right; }
+
+  .learning-note{ display:flex; gap:10px; align-items:flex-start; border:1px solid var(--warn-line); background:var(--warn-tint); border-radius:10px; padding:12px 14px; font-size:12.5px; line-height:1.55; color:#6b5518; }
+  .learning-note svg{ flex-shrink:0; margin-top:2px; }
+  .learning-note b{ color:var(--warn); }
+
+  /* ---- variants (step 2) ---- */
+  .variant-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .variant{ border:1.5px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; cursor:pointer; padding:0; text-align:left; position:relative; transition:transform .18s, border-color .18s, box-shadow .18s; font-family:var(--body); }
+  .variant:hover{ transform:translateY(-3px); box-shadow:0 10px 26px rgba(15,23,42,.12); }
+  .variant.selected{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-tint), 0 10px 26px rgba(18,62,117,.14); }
+  .variant .thumb{ aspect-ratio:4/5; display:grid; place-items:center; position:relative; }
+  .v-a .thumb{ background:linear-gradient(150deg,#0e2f5c,#1d5aa8); }
+  .v-b .thumb{ background:linear-gradient(150deg,#0f3f3a,#177a6d); }
+  .v-c .thumb{ background:linear-gradient(150deg,#5c3a0e,#b8812f); }
+  .variant .thumb::after{ content:""; position:absolute; inset:0; background-image:radial-gradient(rgba(255,255,255,.16) 1px, transparent 1px); background-size:14px 14px; }
+  .variant .thumb .house{ font-family:var(--display); font-weight:800; font-size:54px; color:rgba(255,255,255,.92); letter-spacing:-2px; z-index:1; }
+  .variant .thumb .fmt{ position:absolute; bottom:9px; left:9px; z-index:1; font:700 9.5px var(--body); letter-spacing:.6px; text-transform:uppercase; color:#fff; background:rgba(2,10,28,.55); border-radius:999px; padding:3.5px 9px; backdrop-filter:blur(2px); }
+  .variant .vmeta{ padding:11px 12px 13px; display:grid; gap:3px; }
+  .variant .angle{ font:700 10.5px var(--body); letter-spacing:.7px; text-transform:uppercase; color:var(--faint); }
+  .variant .headline{ font-size:13px; font-weight:700; color:var(--ink); line-height:1.35; }
+  .variant .adname{ font:600 10px var(--mono); color:var(--faint); margin-top:4px; word-break:break-all; }
+  .variant .vcheck{ position:absolute; top:9px; right:9px; width:26px; height:26px; border-radius:999px; background:#fff; border:1.5px solid var(--line-heavy); display:grid; place-items:center; color:transparent; transition:all .18s; z-index:2; }
+  .variant.selected .vcheck{ background:var(--accent); border-color:var(--accent); color:#fff; animation:pop .25s; }
+  .select-hint{ font-size:12.5px; font-weight:700; color:var(--rose); }
+  .select-count{ font-size:12.5px; color:var(--muted); }
+  .select-count b{ color:var(--accent); }
+
+  /* ---- objective ---- */
+  .obj-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .obj{ border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:16px; cursor:pointer; text-align:left; display:grid; gap:9px; position:relative; transition:all .18s; font-family:var(--body); }
+  .obj:hover{ border-color:var(--line-heavy); transform:translateY(-2px); }
+  .obj.selected{ border-color:var(--accent); background:var(--accent-tint); box-shadow:0 0 0 3px rgba(18,62,117,.08); }
+  .obj .ic{ width:38px; height:38px; border-radius:10px; background:var(--bg); display:grid; place-items:center; color:var(--accent); border:1px solid var(--line); transition:all .18s; }
+  .obj.selected .ic{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .obj strong{ font-size:14px; font-weight:750; display:block; }
+  .obj small{ font-size:12px; color:var(--muted); line-height:1.45; display:block; }
+  .obj .rec{ position:absolute; top:-9px; right:12px; font:700 9.5px var(--body); letter-spacing:.7px; text-transform:uppercase; background:var(--stage); color:#9fd0ff; border-radius:999px; padding:4px 10px; }
+
+  /* ---- budget ---- */
+  .budget-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .b-card{ border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:15px 16px; cursor:pointer; text-align:left; display:grid; gap:2px; transition:all .18s; font-family:var(--body); }
+  .b-card:hover{ border-color:var(--line-heavy); transform:translateY(-2px); }
+  .b-card.selected{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-tint); }
+  .b-card .amt{ font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:-.5px; }
+  .b-card .amt span{ font-size:12px; font-weight:700; color:var(--muted); letter-spacing:0; }
+  .b-card .lbl{ font-size:12px; font-weight:700; color:var(--muted); }
+  .b-card.selected .lbl{ color:var(--accent); }
+  .dur-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .dur{ border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:9px 18px; font:700 13px var(--body); color:var(--muted); cursor:pointer; transition:all .15s; }
+  .dur:hover{ border-color:var(--line-heavy); }
+  .dur.selected{ border-color:var(--stage); background:var(--stage); color:#fff; }
+  .date-pair{ display:none; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px; }
+  .date-pair.show{ display:grid; animation:rise .3s; }
+  .est-strip{ display:flex; gap:26px; flex-wrap:wrap; align-items:center; border:1px solid var(--good-line); background:var(--good-tint); border-radius:12px; padding:14px 18px; }
+  .est{ display:grid; }
+  .est b{ font-family:var(--display); font-weight:800; font-size:19px; color:var(--good); letter-spacing:-.3px; }
+  .est span{ font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--good); opacity:.85; }
+  .est-note{ font-size:11.5px; color:var(--muted); margin-left:auto; max-width:26ch; line-height:1.5; }
+  .pulse{ animation:pulse .35s; }
+  @keyframes pulse{ 0%{ transform:scale(1);} 40%{ transform:scale(1.06);} 100%{ transform:scale(1);} }
+
+  /* ---- readiness / review ---- */
+  .review-cols{ display:grid; grid-template-columns:1.15fr .85fr; gap:16px; align-items:start; }
+  .checklist{ display:grid; gap:9px; }
+  .check-row{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; opacity:0; }
+  .step-pane.active .check-row{ animation:rise .4s both; }
+  .step-pane.active .check-row:nth-child(1){ animation-delay:.05s } .step-pane.active .check-row:nth-child(2){ animation-delay:.12s }
+  .step-pane.active .check-row:nth-child(3){ animation-delay:.19s } .step-pane.active .check-row:nth-child(4){ animation-delay:.26s }
+  .step-pane.active .check-row:nth-child(5){ animation-delay:.33s } .step-pane.active .check-row:nth-child(6){ animation-delay:.4s }
+  .step-pane.active .check-row:nth-child(7){ animation-delay:.47s } .step-pane.active .check-row:nth-child(8){ animation-delay:.54s }
+  .check-row .cic{ width:20px; height:20px; border-radius:999px; display:grid; place-items:center; flex-shrink:0; }
+  .check-row.done .cic{ background:var(--good-tint); border:1px solid var(--good-line); color:var(--good); }
+  .check-row.warn .cic{ background:var(--warn-tint); border:1px solid var(--warn-line); color:var(--warn); }
+  .check-row .cdet{ margin-left:auto; font-size:11.5px; font-weight:600; color:var(--faint); text-align:right; max-width:46%; }
+  .summary-rows{ display:grid; gap:0; }
+  .srow{ display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-top:1px solid var(--line-soft); font-size:13px; }
+  .srow:first-child{ border-top:0; }
+  .srow span{ color:var(--muted); font-weight:600; } .srow b{ font-weight:750; text-align:right; }
+
+  /* ---- education (per-step, collapsed by default) ---- */
+  .edu{ border:1px dashed var(--line-heavy); border-radius:12px; background:#fff; }
+  .edu > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; padding:13px 16px; font:700 13px var(--body); color:var(--accent); }
+  .edu > summary::-webkit-details-marker{ display:none; }
+  .edu > summary .car{ transition:transform .2s; }
+  .edu[open] > summary .car{ transform:rotate(90deg); }
+  .edu .body{ padding:0 16px 15px 42px; font-size:12.5px; line-height:1.7; color:var(--muted); }
+  .edu .body b{ color:var(--ink); }
+  .edu .body ul{ margin:8px 0; padding-left:18px; }
+  .edu .body li{ margin:4px 0; }
+  .edu .blog-link{ display:inline-flex; align-items:center; gap:6px; margin-top:10px; font:700 12.5px var(--body); color:var(--accent); text-decoration:none; border-bottom:1.5px solid var(--accent-tint); padding-bottom:1px; transition:border-color .15s; }
+  .edu .blog-link:hover{ border-color:var(--accent); }
+  .edu .src{ display:block; margin-top:8px; font-size:10.5px; color:var(--faint); }
+
+  .annotation{ display:none; border:1px dashed #d9c07a; background:#fffbe9; border-radius:10px; padding:11px 14px; font-size:12px; line-height:1.6; color:#6b5518; }
+  .annotation b{ color:var(--warn); }
+  body.show-annotations .annotation{ display:block; animation:rise .3s; }
+
+  .panel-nav{ display:flex; align-items:center; gap:12px; margin-top:26px; padding-top:18px; border-top:1px solid var(--line-soft); }
+  .btn{ border-radius:9px; font:700 13.5px var(--body); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:all .16s; border:1px solid var(--line); background:#fff; color:var(--ink); height:42px; padding:0 19px; box-shadow:var(--sh-1); }
+  .btn:hover:not(:disabled){ background:var(--bg); }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 3px 10px rgba(18,62,117,.3); }
+  .btn.primary:hover:not(:disabled){ background:var(--accent-strong); transform:translateY(-1px); box-shadow:0 6px 16px rgba(18,62,117,.35); }
+  .btn.ghost{ border-color:transparent; box-shadow:none; color:var(--muted); }
+  .btn.ghost:hover:not(:disabled){ color:var(--ink); background:var(--line-soft); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn .spin{ width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .nav-hint{ font-size:12px; color:var(--faint); font-weight:600; }
+
+  /* ---- success ---- */
+  .success-wrap{ display:grid; place-items:center; text-align:center; padding:26px 0 10px; }
+  .success-ring{ width:96px; height:96px; position:relative; margin-bottom:22px; }
+  .success-ring svg circle{ stroke:var(--good-line); }
+  .success-ring .draw{ stroke:var(--good); stroke-dasharray:264; stroke-dashoffset:264; animation:draw 0.9s .15s cubic-bezier(.65,0,.45,1) forwards; }
+  .success-ring .tick-path{ stroke:var(--good); stroke-dasharray:60; stroke-dashoffset:60; animation:draw .45s .85s ease-out forwards; }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  .success-ring .halo{ position:absolute; inset:-14px; border-radius:50%; border:2px solid var(--good-line); animation:halo 1.8s .3s ease-out infinite; }
+  @keyframes halo{ 0%{ transform:scale(.82); opacity:.9;} 100%{ transform:scale(1.28); opacity:0;} }
+  .success-wrap h2{ font-family:var(--display); font-weight:800; font-size:26px; letter-spacing:-.5px; margin:0 0 8px; }
+  .success-wrap .sub{ color:var(--muted); font-size:14px; line-height:1.65; max-width:54ch; margin:0 auto 20px; }
+  .live-tag{ display:inline-flex; align-items:center; gap:8px; background:var(--good-tint); border:1px solid var(--good-line); color:var(--good); font:700 12px var(--body); border-radius:999px; padding:7px 15px; margin-bottom:20px; }
+  .live-tag .ldot{ width:8px; height:8px; border-radius:50%; background:var(--good); animation:blink 1.6s infinite; }
+  @keyframes blink{ 0%,100%{ opacity:1;} 50%{ opacity:.35;} }
+  .next-steps{ display:grid; gap:10px; width:min(440px,100%); margin:0 auto 24px; text-align:left; }
+  .next{ display:flex; gap:12px; align-items:flex-start; background:#fff; border:1px solid var(--line); border-radius:11px; padding:13px 15px; box-shadow:var(--sh-1); }
+  .next .n{ width:24px; height:24px; border-radius:7px; background:var(--stage); color:#9fd0ff; font:700 11.5px var(--display); display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
+  .next b{ display:block; font-size:13px; font-weight:750; } .next small{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+  .stage-foot{ color:#7d97bd; font-size:12px; text-align:center; line-height:1.6; }
+  .stage-foot b{ color:#a9c4e8; }
+
+  @media (max-width:900px){
+    .wizard{ grid-template-columns:1fr; }
+    .rail{ flex-direction:row; flex-wrap:wrap; align-items:center; border-right:0; border-bottom:1px solid var(--line-soft); padding:14px; gap:6px; }
+    .rail-meta,.connector,.step-item small{ display:none; }
+    .progress-track{ flex-basis:100%; margin:4px 0 8px; }
+    .step-item{ padding:6px 8px; grid-template-columns:26px auto; }
+    .variant-grid,.obj-grid,.place-grid,.review-cols,.grid-2,.date-pair{ grid-template-columns:1fr; }
+    .budget-grid{ grid-template-columns:1fr 1fr; }
+    .crumb{ display:none; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ animation-duration:.001s !important; transition-duration:.001s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="stage-head">
+    <div>
+      <h1>Publish to Meta — <em>guided flow v2</em> for Blockwise Ad Studio</h1>
+      <p>Clickable mockup. Adds campaign placement (create new / use existing / Blockwise suggested), suggested naming, per-step education, scheduling options and a readiness checklist that matches the live app. Toggle annotations to see the mapping to your 20-step Meta reference.</p>
+    </div>
+    <button class="anno-toggle" id="annoToggle" type="button"><span class="dot"></span>Build annotations</button>
+  </div>
+
+  <div class="device">
+    <div class="topbar">
+      <div class="mark">
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+          <rect x="1" y="1" width="10.5" height="10.5" rx="2.5" fill="#123e75"/>
+          <rect x="14.5" y="1" width="10.5" height="10.5" rx="2.5" fill="#123e75" opacity=".55"/>
+          <rect x="1" y="14.5" width="10.5" height="10.5" rx="2.5" fill="#123e75" opacity=".55"/>
+          <rect x="14.5" y="14.5" width="10.5" height="10.5" rx="2.5" fill="#123e75"/>
+        </svg>
+        <span class="wordmark">Blockwise</span>
+      </div>
+      <div class="crumb-sep"></div>
+      <div class="crumb">Ad Studio &nbsp;/&nbsp; <b>Winter seller campaign</b> &nbsp;/&nbsp; Publish</div>
+      <div class="topbar-right">
+        <div class="avatar">SS</div>
+      </div>
+    </div>
+
+    <div class="wizard" id="wizard">
+      <aside class="rail" aria-label="Publish steps">
+        <div class="rail-meta">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          6 steps · ~90 seconds
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div id="railSteps"></div>
+      </aside>
+
+      <main class="panel">
+        <div class="steps-viewport" id="viewport">
+
+          <!-- ================= STEP 1 · Basics ================= -->
+          <section class="step-pane" data-step="0">
+            <div class="reveal">
+              <div class="panel-head"><span class="step-count">Step 1 of 6</span></div>
+              <h2>Campaign basics</h2>
+              <p class="panel-sub">Decide where these ads live. One campaign per goal per market keeps Meta's learning consolidated — that's what makes your budget go further.</p>
+            </div>
+
+            <div class="card reveal">
+              <h3 class="card-title">Where should these ads go?
+                <span class="from-settings">⚡ Account &amp; Page from Settings</span>
+              </h3>
+              <p class="card-hint">Meta rewards consolidated spend. If a live campaign already targets the same audience, adding your ads to it usually beats starting a new one.</p>
+              <div class="place-grid" id="placeGrid">
+                <button type="button" class="place" data-p="new">
+                  <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                  <span><strong>Create new</strong><small>Start a fresh campaign for a new goal, market or season.</small></span>
+                </button>
+                <button type="button" class="place selected" data-p="existing">
+                  <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4zM4 14h16v6H4z"/></svg></span>
+                  <span><strong>Use existing</strong><small>Add ads into a campaign that's already running.</small></span>
+                </button>
+                <button type="button" class="place" data-p="suggested">
+                  <span class="rec">Smart pick</span>
+                  <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+                  <span><strong>Blockwise suggested</strong><small>We match your creatives to your best live campaign automatically.</small></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- existing-campaign picker -->
+            <div class="card reveal" id="existingCard">
+              <h3 class="card-title">Pick the campaign</h3>
+              <p class="card-hint">Leads campaigns on Southshore Ads, most recent first.</p>
+              <div class="camp-list" id="campList">
+                <div class="camp-row selected" data-camp="c1" role="button" tabindex="0">
+                  <span class="radio"></span>
+                  <div><div class="cname">WA_SellerLeads_Winter_Jul26</div><div class="csub">Leads · $20/day · started 4 days ago · 3 ads</div></div>
+                  <div class="cstat"><span class="pill amber">Learning</span><div class="csub" style="margin-top:3px;">21 / 50 events</div></div>
+                </div>
+                <div class="camp-row" data-camp="c2" role="button" tabindex="0">
+                  <span class="radio"></span>
+                  <div><div class="cname">WA_SellerLeads_Autumn_Apr26</div><div class="csub">Leads · $20/day · evergreen · 2 ads</div></div>
+                  <div class="cstat"><span class="pill green">Active</span><div class="csub" style="margin-top:3px;">Learning complete</div></div>
+                </div>
+                <div class="camp-row" data-camp="c3" role="button" tabindex="0">
+                  <span class="radio"></span>
+                  <div><div class="cname">WA_ListingTraffic_Brand_May26</div><div class="csub">Traffic · $10/day · evergreen · 1 ad</div></div>
+                  <div class="cstat"><span class="pill green">Active</span><div class="csub" style="margin-top:3px;">Learning complete</div></div>
+                </div>
+              </div>
+              <div class="learning-note" id="learningNote" style="margin-top:14px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a5a00" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+                <span><b>Heads up:</b> adding new ads puts an ad set back into Meta's learning phase (~7 days of less-stable results). That's normal and usually worth it — just don't judge performance during the first week.</span>
+              </div>
+            </div>
+
+            <!-- suggested-campaign card -->
+            <div class="card reveal" id="suggestedCard" style="display:none;">
+              <h3 class="card-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#123e75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                Blockwise suggests: WA_SellerLeads_Winter_Jul26
+              </h3>
+              <p class="card-hint">Matched on objective (Leads), market (WA) and audience. Adding your 3 creatives here consolidates spend instead of splitting it across two learning campaigns.</p>
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <span class="pill amber">Currently learning · 21/50 events</span>
+                <span class="pill blue">$20/day</span>
+                <button class="linkish" type="button" id="whyMatch">Why this match?</button>
+              </div>
+            </div>
+
+            <!-- name + suggestions (only for "create new") -->
+            <div class="card reveal" id="nameCard" style="display:none;">
+              <div class="field" id="nameField">
+                <span>Campaign name</span>
+                <div class="box">
+                  <input id="campaignName" type="text" value="WA_SellerLeads_Winter_Jul26_v2" />
+                </div>
+                <span class="field-err">Give the campaign a name first.</span>
+              </div>
+              <div class="suggest-chips" style="margin-top:12px;">
+                <span class="lbl">Suggested</span>
+                <button type="button" class="name-chip" data-name="WA_SellerLeads_Winter_Jul26">WA_SellerLeads_Winter_Jul26</button>
+                <button type="button" class="name-chip" data-name="WA_SellerLeads_Spring_Sep26">WA_SellerLeads_Spring_Sep26</button>
+                <button type="button" class="name-chip" data-name="WA_VendorLeads_Offer_Aug26">WA_VendorLeads_Offer_Aug26</button>
+                <button class="linkish" type="button" id="whyName" style="margin-left:4px;">Naming pattern</button>
+              </div>
+            </div>
+
+            <!-- where it runs -->
+            <div class="card reveal">
+              <h3 class="card-title">Where this campaign runs
+                <span class="from-settings">⚡ From Settings</span>
+              </h3>
+              <p class="card-hint">Connected via Settings → Ad &amp; API connections → Meta.</p>
+              <dl class="kv">
+                <dt>Ad account</dt><dd>Southshore Ads <span class="pill blue">act_2384-9917-0042</span></dd>
+                <dt>Facebook Page</dt><dd>Southshore Realty WA <span class="pill green">Connected</span></dd>
+                <dt>Instagram</dt><dd>@southshore.realty <span class="pill green">Linked</span></dd>
+                <dt>Currency · Timezone</dt><dd>AUD · Australia/Perth</dd>
+                <dt></dt><dd><button class="linkish" type="button">Change in Settings</button></dd>
+              </dl>
+            </div>
+
+            <details class="edu reveal">
+              <summary><svg class="car" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>Learn more: campaign structure &amp; naming</summary>
+              <div class="body">
+                <b>Why one campaign per goal?</b> Meta's delivery system (Andromeda) learns from every dollar spent. Splitting the same audience across several campaigns fragments that learning, so each one stays in the learning phase longer and costs more per lead.
+                <ul>
+                  <li><b>Consolidate:</b> combine similar ad sets instead of creating new ones — Meta's own guidance.</li>
+                  <li><b>Learning phase:</b> an ad set needs ~50 optimisation events in the week after its last significant edit to exit learning.</li>
+                  <li><b>Significant edits reset learning:</b> targeting, creative, optimisation event, adding a new ad, pausing 7+ days, or a big budget jump.</li>
+                </ul>
+                <b>Naming pattern:</b> <span class="mono">[Market]_[Objective]_[Theme]_[Period]</span> — e.g. <span class="mono">WA_SellerLeads_Winter_Jul26</span>. It keeps your account scannable when you have ten campaigns next winter.
+                <a class="blog-link" href="#" onclick="return false;">Read the full guide on the Blockwise blog <span aria-hidden="true">↗</span></a>
+                <span class="src">Sources: Meta Business Help — About the learning phase · Significant edits and learning phase · Combine ad sets to reduce audience fragmentation.</span>
+              </div>
+            </details>
+
+            <div class="annotation reveal"><b>Maps to reference steps 1–6</b> (open Ads Manager → account → Page). New in v2: campaign placement choice, suggested names, and structure rules derived from Meta's consolidation + learning-phase docs.</div>
+          </section>
+
+          <!-- ================= STEP 2 · Creative ================= -->
+          <section class="step-pane" data-step="1">
+            <div class="reveal">
+              <div class="panel-head"><span class="step-count">Step 2 of 6</span></div>
+              <h2>Pick your creatives</h2>
+              <p class="panel-sub">Tick the creatives to include. Each one becomes its own ad inside the campaign's ad set, so Meta can favour the strongest performer with your budget.</p>
+            </div>
+            <div class="variant-grid reveal" id="variantGrid">
+              <button type="button" class="variant v-a selected" data-v="0">
+                <span class="vcheck"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+                <span class="thumb"><span class="house">Sc</span><span class="fmt">Story · video</span></span>
+                <span class="vmeta"><span class="angle">Suburb spotlight</span><span class="headline">"Sold in 19 days on average across your suburb."</span><span class="adname">WA_Winter26_SuburbSpotlight</span></span>
+              </button>
+              <button type="button" class="variant v-b selected" data-v="1">
+                <span class="vcheck"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+                <span class="thumb"><span class="house">Ap</span><span class="fmt">Feed · static</span></span>
+                <span class="vmeta"><span class="angle">Appraisal urgency</span><span class="headline">"Winter listings are thin — priced-right homes move first."</span><span class="adname">WA_Winter26_AppraisalUrgency</span></span>
+              </button>
+              <button type="button" class="variant v-c selected" data-v="2">
+                <span class="vcheck"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+                <span class="thumb"><span class="house">Lp</span><span class="fmt">Feed · carousel</span></span>
+                <span class="vmeta"><span class="angle">Local proof</span><span class="headline">"127 homeowners got a free appraisal last quarter."</span><span class="adname">WA_Winter26_LocalProof</span></span>
+              </button>
+            </div>
+            <div class="reveal" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+              <span class="select-count" id="selectCount"><b>3</b> of 3 creatives selected</span>
+              <span class="select-hint" id="selectHint" hidden>Select at least one creative.</span>
+            </div>
+
+            <details class="edu reveal">
+              <summary><svg class="car" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>Tips &amp; education: why 3–5 creatives?</summary>
+              <div class="body">
+                In roughly the first <b>7–12 days</b>, Meta tests your ads with different people and placements. After that learning phase, <b>most of your budget flows to the ad performing best</b> — the others keep running lightly so Meta can keep comparing.
+                <ul>
+                  <li>More creatives = more for Meta to test, and a better chance of a clear winner.</li>
+                  <li>Mix formats (video + static) — they win in different placements.</li>
+                  <li>Refreshing creative every 4–6 weeks fights fatigue without resetting everything at once.</li>
+                </ul>
+                <a class="blog-link" href="#" onclick="return false;">Read the full guide on the Blockwise blog <span aria-hidden="true">↗</span></a>
+                <span class="src">Source: Meta Business Help — About the learning phase.</span>
+              </div>
+            </details>
+
+            <div class="annotation reveal"><b>Maps to reference steps 7–17</b> (add media → pick → apply → "continue with 1 media"). v2: no brand-pack copy, no A/B-test framing, education collapsed behind a button, suggested ad names shown per creative.</div>
+          </section>
+
+          <!-- ================= STEP 3 · Destination + objective ================= -->
+          <section class="step-pane" data-step="2">
+            <div class="reveal">
+              <div class="panel-head"><span class="step-count">Step 3 of 6</span></div>
+              <h2>Destination &amp; objective</h2>
+              <p class="panel-sub">Where the ad sends people, and what Meta optimises for. Changing the objective on a live campaign resets its learning, so Blockwise steers you to the objective the campaign already uses.</p>
+            </div>
+            <div class="card reveal">
+              <div class="grid-2">
+                <div class="field" id="urlField">
+                  <span>Destination URL</span>
+                  <div class="box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.7 2.6 4 5.6 4 9s-1.3 6.4-4 9c-2.7-2.6-4-5.6-4-9s1.3-6.4 4-9z"/></svg>
+                    <input id="destUrl" type="url" value="https://southshorerealty.com.au/free-appraisal" />
+                  </div>
+                  <span class="field-err">Enter a full link starting with https://</span>
+                </div>
+                <div class="field">
+                  <span>Lead destination</span>
+                  <div class="box" style="background:var(--bg); color:var(--muted); font-weight:600; font-size:13px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#006d38" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6l-8-4z"/><path d="m9 12 2.2 2.2L15.5 9.5"/></svg>
+                    Webhook · CRM sync <span class="pill green" style="margin-left:auto;">From Settings</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="obj-grid reveal" id="objGrid">
+              <button type="button" class="obj selected" data-o="Leads">
+                <span class="rec">Recommended</span>
+                <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 8.5 19 10.5 22.5 7"/></svg></span>
+                <span><strong>Leads</strong><small>Meta lead forms. Names, emails &amp; phone numbers sync straight into your CRM.</small></span>
+              </button>
+              <button type="button" class="obj" data-o="Traffic">
+                <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13M12 6l6 6-6 6"/></svg></span>
+                <span><strong>Traffic</strong><small>Send clicks to your website. Good for awareness, weaker for booked appraisals.</small></span>
+              </button>
+              <button type="button" class="obj" data-o="Sales">
+                <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M14 7h6v6"/></svg></span>
+                <span><strong>Sales</strong><small>Optimise for purchases. Needs a Pixel with purchase events firing.</small></span>
+              </button>
+            </div>
+
+            <details class="edu reveal">
+              <summary><svg class="car" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>Learn more: picking an objective</summary>
+              <div class="body">
+                Your objective tells Meta's delivery system <b>which outcome to optimise for</b> — it's the single biggest lever on results, and it's a significant edit if changed on a live campaign.
+                <ul>
+                  <li><b>Leads</b> is right when you want names &amp; phone numbers (appraisals, vendor packs).</li>
+                  <li><b>Traffic</b> is right for awareness — clicks, not enquiries.</li>
+                  <li>Keep one objective per campaign. Two campaigns with the same audience but different objectives compete against each other in auction.</li>
+                </ul>
+                <a class="blog-link" href="#" onclick="return false;">Read the full guide on the Blockwise blog <span aria-hidden="true">↗</span></a>
+                <span class="src">Source: Meta Business Help — About performance goals.</span>
+              </div>
+            </details>
+
+            <div class="annotation reveal"><b>Maps to reference steps 8, 10–12</b> (destination link → objective picker). v2 adds the objective-vs-learning guardrail copy.</div>
+          </section>
+
+          <!-- ================= STEP 4 · Budget ================= -->
+          <section class="step-pane" data-step="3">
+            <div class="reveal">
+              <div class="panel-head"><span class="step-count">Step 4 of 6</span></div>
+              <h2>Budget &amp; schedule</h2>
+              <p class="panel-sub">One daily budget and a run window. Broad targeting is set automatically. Big budget swings re-enter the learning phase, so Blockwise nudges you toward the steady range.</p>
+            </div>
+            <div class="card reveal">
+              <h3 class="card-title">Daily budget <span style="color:var(--faint); font-weight:600; font-size:12px;">(AUD)</span></h3>
+              <div class="budget-grid" id="budgetGrid">
+                <button type="button" class="b-card" data-b="10"><span class="amt">$10<span>/day</span></span><span class="lbl">Starter test</span></button>
+                <button type="button" class="b-card selected" data-b="20"><span class="amt">$20<span>/day</span></span><span class="lbl">Recommended</span></button>
+                <button type="button" class="b-card" data-b="50"><span class="amt">$50<span>/day</span></span><span class="lbl">Stronger test</span></button>
+                <button type="button" class="b-card" data-b="custom"><span class="amt">Custom</span><span class="lbl">Your own amount</span></button>
+              </div>
+              <div class="date-pair" id="customBudgetWrap" style="margin-top:12px;">
+                <div class="field" id="customBudgetField">
+                  <span>Custom daily budget ($)</span>
+                  <div class="box"><input id="customBudget" type="number" min="1" placeholder="e.g. 35" /></div>
+                  <span class="field-err">Enter a daily budget of at least $1.</span>
+                </div>
+              </div>
+            </div>
+            <div class="card reveal">
+              <h3 class="card-title">Schedule</h3>
+              <div class="dur-row" id="durRow">
+                <button type="button" class="dur selected" data-d="7">7 days</button>
+                <button type="button" class="dur" data-d="14">14 days</button>
+                <button type="button" class="dur" data-d="30">30 days</button>
+                <button type="button" class="dur" data-d="until">Run until closed</button>
+                <button type="button" class="dur" data-d="custom">Custom dates</button>
+              </div>
+              <div class="date-pair" id="customDates">
+                <div class="field" id="startDateField">
+                  <span>Start date</span>
+                  <div class="box"><input id="startDate" type="date" /></div>
+                  <span class="field-err">Pick a start date.</span>
+                </div>
+                <div class="field" id="endDateField">
+                  <span>End date</span>
+                  <div class="box"><input id="endDate" type="date" /></div>
+                  <span class="field-err">End date must be after the start date.</span>
+                </div>
+              </div>
+            </div>
+            <div class="est-strip reveal" id="estStrip">
+              <div class="est" id="estTotal"><b>$140</b><span>Total spend</span></div>
+              <div class="est" id="estLeads"><b>25–55</b><span>Est. leads</span></div>
+              <div class="est" id="estCpl"><b>$2.55–5.60</b><span>Est. cost / lead</span></div>
+              <span class="est-note" id="estNote">Illustrative planning range from similar past campaigns — not a Meta guarantee.</span>
+            </div>
+
+            <details class="edu reveal">
+              <summary><svg class="car" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>Learn more: budget &amp; the learning phase</summary>
+              <div class="body">
+                <ul>
+                  <li><b>Rule of thumb:</b> daily budget ≥ 5× your target cost per lead, so the ad set can hit ~50 results a week and exit learning. At ~$4/lead that's ≈ $20/day.</li>
+                  <li><b>Run 7+ days</b> before judging — Meta explicitly says don't evaluate CPA in days 1–3.</li>
+                  <li><b>Small budget tweaks are fine</b> ($100 → $101). Big jumps ($100 → $1,000) can restart learning.</li>
+                  <li>"Run until closed" suits always-on seller lead flow; pause from Results any time.</li>
+                </ul>
+                <a class="blog-link" href="#" onclick="return false;">Read the full guide on the Blockwise blog <span aria-hidden="true">↗</span></a>
+                <span class="src">Source: Meta Business Help — About the learning phase · Significant edits.</span>
+              </div>
+            </details>
+
+            <div class="annotation reveal"><b>Maps to reference step 20</b> ($100 total budget). v2 adds custom budget, "run until closed", and custom date scheduling on top of the day-pills.</div>
+          </section>
+
+          <!-- ================= STEP 5 · Review ================= -->
+          <section class="step-pane" data-step="4">
+            <div class="reveal">
+              <div class="panel-head"><span class="step-count">Step 5 of 6</span></div>
+              <h2>Review &amp; publish</h2>
+              <p class="panel-sub">Everything below is exactly what Meta will receive. Publishing sends it straight to Meta and starts delivery.</p>
+            </div>
+            <div class="review-cols reveal">
+              <div class="card">
+                <h3 class="card-title">Campaign summary</h3>
+                <div class="summary-rows" id="summaryRows"></div>
+              </div>
+              <div class="card">
+                <h3 class="card-title" style="color:var(--good);">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6l-8-4z"/><path d="m9 12 2.2 2.2L15.5 9.5"/></svg>
+                  Publish readiness
+                </h3>
+                <div class="checklist" id="checklist">
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Goal &amp; offer<span class="cdet">Seller leads / Free appraisal</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Location<span class="cdet">WA · Perth metro</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Property type<span class="cdet">Houses &amp; units</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Landing page<span class="cdet">southshorerealty.com.au</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Primary media<span class="cdet">Image uploaded</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Ad copy<span class="cdet">Headline within 40 chars</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Call to action<span class="cdet">LEARN_MORE</span></div>
+                  <div class="check-row done"><span class="cic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>Compliance<span class="cdet">Checked</span></div>
+                </div>
+              </div>
+            </div>
+
+            <details class="edu reveal">
+              <summary><svg class="car" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>Learn more: what happens after you publish</summary>
+              <div class="body">
+                Meta reviews most ads within <b>24 hours</b>, then delivery starts. Expect the delivery status to read <b>Learning</b> for the first ~50 results — that's the system finding your best audience, and costs settle after it. Blockwise flags you the moment the campaign leaves learning.
+                <a class="blog-link" href="#" onclick="return false;">Read the full guide on the Blockwise blog <span aria-hidden="true">↗</span></a>
+                <span class="src">Source: Meta Business Help — About ad delivery.</span>
+              </div>
+            </details>
+
+            <div class="annotation reveal"><b>New in v2:</b> readiness checklist now mirrors the live app's <span class="mono">buildReadinessItems()</span> (Goal &amp; offer, Location, Property type, Landing page, Primary media, Ad copy, CTA, Compliance). Approvals removed — publish goes straight to Meta.</div>
+          </section>
+
+          <!-- ================= STEP 6 · Live ================= -->
+          <section class="step-pane" data-step="5">
+            <div class="success-wrap">
+              <div class="success-ring">
+                <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                  <circle cx="48" cy="48" r="42" stroke-width="3"/>
+                  <circle class="draw" cx="48" cy="48" r="42" stroke-width="3"/>
+                  <path class="tick-path" d="M31 49.5 43 61.5 66 36.5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <span class="halo"></span>
+              </div>
+              <span class="live-tag"><span class="ldot"></span>Live on Meta</span>
+              <h2>Your campaign is live</h2>
+              <p class="sub" id="successSub">Meta is reviewing your ads — most are approved within 24 hours, then delivery starts and the learning phase begins. You can now monitor this campaign in <b>Results</b>.</p>
+              <div class="next-steps">
+                <div class="next"><span class="n">1</span><span><b>Watch it in Results</b><small>Spend, leads and cost per lead update here as Meta delivers. We flag you when learning completes.</small></span></div>
+                <div class="next"><span class="n">2</span><span><b>Leads land in your CRM</b><small>Names, emails and phone numbers sync automatically from the lead form.</small></span></div>
+                <div class="next"><span class="n">3</span><span><b>Leave it 7 days</b><small>Resist early edits — changes during learning reset it and delay stable results.</small></span></div>
+              </div>
+              <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button class="btn primary" type="button">View in Results
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M14 7h6v6"/></svg>
+                </button>
+                <button class="btn ghost" type="button" id="backToStudio">Back to Ad Studio</button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <div class="panel-nav">
+          <button class="btn ghost" id="backBtn" type="button">← Back</button>
+          <span class="nav-hint" id="navHint"></span>
+          <button class="btn primary" id="nextBtn" type="button" style="margin-left:auto;">Continue →</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <p class="stage-foot"><b>Static mockup</b> — not wired to Supabase or Meta. State is demo data only.</p>
+</div>
+
+<script>
+(function(){
+  const $ = (s, el) => (el||document).querySelector(s);
+  const $$ = (s, el) => Array.from((el||document).querySelectorAll(s));
+
+  const RAIL = [
+    ["Basics","Placement, name & account"],
+    ["Creatives","Pick what runs"],
+    ["Destination","URL & objective"],
+    ["Budget","Spend & schedule"],
+    ["Review","Confirm & publish"],
+    ["Live","Monitor in Results"]
+  ];
+  const HINTS = ["","Select your creatives","Where the ad sends people","Set spend & schedule","Confirm everything",""];
+  const CPL = [2.55, 5.60];
+
+  const state = {
+    step: 0, maxReached: 0,
+    placement: "existing",
+    campaign: "c1",
+    variants: new Set([0,1,2]),
+    objective: "Leads",
+    budget: 20,          // number or "custom"
+    customBudget: "",
+    duration: 7,         // 7|14|30|"until"|"custom"
+    start: "", end: ""
+  };
+
+  /* ---- rail ---- */
+  const railSteps = $("#railSteps");
+  RAIL.forEach((r,i)=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "step-item"; b.dataset.i = i;
+    b.innerHTML = `<span class="chip"><span class="num">${i+1}</span><svg class="tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span><span><strong>${r[0]}</strong><small>${r[1]}</small>${i<5?'<span class="connector"></span>':''}</span>`;
+    b.addEventListener("click", ()=>{ if(i<=state.maxReached && state.step<5) go(i); });
+    railSteps.appendChild(b);
+  });
+
+  function campaignName(){
+    if(state.placement==="existing"){
+      const row = $(`.camp-row[data-camp="${state.campaign}"] .cname`);
+      return row ? row.textContent.trim() : "—";
+    }
+    return $("#campaignName").value.trim() || "—";
+  }
+  function dailyBudget(){
+    if(state.budget==="custom"){ const v = parseFloat(state.customBudget); return isFinite(v)&&v>0 ? v : 0; }
+    return state.budget;
+  }
+  function days(){
+    if(state.duration==="until") return 30;
+    if(state.duration==="custom"){
+      if(state.start && state.end){
+        const d = Math.round((new Date(state.end)-new Date(state.start))/86400000)+1;
+        return d>0 ? d : 0;
+      }
+      return 0;
+    }
+    return state.duration;
+  }
+  function scheduleLabel(){
+    if(state.duration==="until") return "Run until closed";
+    if(state.duration==="custom"){
+      const fmt = d => { const p=d.split("-"); return `${p[2]}/${p[1]}/${p[0]}`; };
+      return state.start&&state.end ? `${fmt(state.start)} → ${fmt(state.end)}` : "Custom dates";
+    }
+    return state.duration + " days";
+  }
+  function placementLabel(){
+    return state.placement==="new" ? "New campaign"
+      : state.placement==="existing" ? "Existing · " + campaignName()
+      : "Blockwise suggested · " + "WA_SellerLeads_Winter_Jul26";
+  }
+
+  /* ---- estimates ---- */
+  function recalcEst(){
+    const db = dailyBudget(), d = days();
+    const strip = $("#estStrip");
+    const total = db && d ? db*d : null;
+    $("#estTotal b").textContent = total ? "$"+total.toLocaleString() : "—";
+    if(total){
+      const lo = Math.floor(total/CPL[1]), hi = Math.ceil(total/CPL[0]);
+      $("#estLeads b").textContent = lo+"–"+hi;
+    } else $("#estLeads b").textContent = "—";
+    $("#estCpl b").textContent = "$"+CPL[0].toFixed(2)+"–"+CPL[1].toFixed(2);
+    $("#estNote").textContent = state.duration==="until"
+      ? "Based on the first 30 days of an open-ended run — not a Meta guarantee."
+      : "Illustrative planning range from similar past campaigns — not a Meta guarantee.";
+    strip.classList.remove("pulse"); void strip.offsetWidth; strip.classList.add("pulse");
+  }
+
+  /* ---- step 1 wiring ---- */
+  $$("#placeGrid .place").forEach(p=>{
+    p.addEventListener("click", ()=>{
+      $$("#placeGrid .place").forEach(x=>x.classList.remove("selected"));
+      p.classList.add("selected");
+      state.placement = p.dataset.p;
+      $("#existingCard").style.display = state.placement==="existing" ? "" : "none";
+      $("#suggestedCard").style.display = state.placement==="suggested" ? "" : "none";
+      // name field only matters when creating a fresh campaign
+      $("#nameCard").style.display = state.placement==="new" ? "" : "none";
+    });
+  });
+  $$("#campList .camp-row").forEach(r=>{
+    r.addEventListener("click", ()=>{
+      $$("#campList .camp-row").forEach(x=>x.classList.remove("selected"));
+      r.classList.add("selected"); state.campaign = r.dataset.camp;
+      $("#learningNote").style.display = state.campaign==="c1" ? "" : "none";
+    });
+  });
+  $$(".name-chip").forEach(c=>{
+    c.addEventListener("click", ()=>{
+      $("#campaignName").value = c.dataset.name;
+      $("#nameField").classList.remove("invalid");
+    });
+  });
+  $("#campaignName").addEventListener("input", ()=> $("#nameField").classList.remove("invalid"));
+  $("#whyName").addEventListener("click", ()=>{ const d=$('[data-step="0"] .edu'); d.open = true; d.scrollIntoView({behavior:"smooth",block:"center"}); });
+  $("#whyMatch").addEventListener("click", ()=>{ const d=$('[data-step="0"] .edu'); d.open = true; d.scrollIntoView({behavior:"smooth",block:"center"}); });
+
+  /* ---- step 2 wiring ---- */
+  $$("#variantGrid .variant").forEach(v=>{
+    v.addEventListener("click", ()=>{
+      const i = +v.dataset.v;
+      if(state.variants.has(i)){ state.variants.delete(i); v.classList.remove("selected"); }
+      else { state.variants.add(i); v.classList.add("selected"); }
+      $("#selectCount").innerHTML = `<b>${state.variants.size}</b> of 3 creatives selected`;
+      if(state.variants.size>0) $("#selectHint").hidden = true;
+    });
+  });
+
+  /* ---- step 3 wiring ---- */
+  $$("#objGrid .obj").forEach(o=>{
+    o.addEventListener("click", ()=>{
+      $$("#objGrid .obj").forEach(x=>x.classList.remove("selected"));
+      o.classList.add("selected"); state.objective = o.dataset.o;
+    });
+  });
+  $("#destUrl").addEventListener("input", ()=> $("#urlField").classList.remove("invalid"));
+
+  /* ---- step 4 wiring ---- */
+  $$("#budgetGrid .b-card").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      $$("#budgetGrid .b-card").forEach(x=>x.classList.remove("selected"));
+      b.classList.add("selected");
+      state.budget = b.dataset.b==="custom" ? "custom" : +b.dataset.b;
+      $("#customBudgetWrap").classList.toggle("show", state.budget==="custom");
+      if(state.budget==="custom") $("#customBudget").focus();
+      recalcEst();
+    });
+  });
+  $("#customBudget").addEventListener("input", e=>{
+    state.customBudget = e.target.value;
+    $("#customBudgetField").classList.remove("invalid");
+    recalcEst();
+  });
+  $$("#durRow .dur").forEach(d=>{
+    d.addEventListener("click", ()=>{
+      $$("#durRow .dur").forEach(x=>x.classList.remove("selected"));
+      d.classList.add("selected");
+      state.duration = isNaN(+d.dataset.d) ? d.dataset.d : +d.dataset.d;
+      $("#customDates").classList.toggle("show", state.duration==="custom");
+      recalcEst();
+    });
+  });
+  $("#startDate").addEventListener("change", e=>{ state.start=e.target.value; $("#startDateField").classList.remove("invalid"); $("#endDateField").classList.remove("invalid"); recalcEst(); });
+  $("#endDate").addEventListener("change", e=>{ state.end=e.target.value; $("#endDateField").classList.remove("invalid"); recalcEst(); });
+
+  /* ---- summary ---- */
+  function buildSummary(){
+    const db = dailyBudget(), d = days();
+    const total = db && d ? db*d : null;
+    const rows = [
+      ["Placement", placementLabel()],
+      ["Objective", state.objective + (state.objective==="Leads" ? " (lead form → CRM)" : "")],
+      ["Creatives", state.variants.size + " ad" + (state.variants.size>1?"s":"")],
+      ["Destination", $("#destUrl").value.replace(/^https?:\/\//,"").split("?")[0]],
+      ["Daily budget", db ? "$"+db+"/day" : "—"],
+      ["Schedule", scheduleLabel()],
+      ["Estimated spend", total ? "$"+total.toLocaleString() : "—"]
+    ];
+    $("#summaryRows").innerHTML = rows.map(r=>`<div class="srow"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("");
+  }
+
+  /* ---- validation ---- */
+  function validate(i){
+    if(i===0){
+      if(state.placement==="new" && !$("#campaignName").value.trim()){
+        $("#nameField").classList.add("invalid"); $("#campaignName").focus(); return false;
+      }
+      if(state.placement==="existing" && !state.campaign) return false;
+      return true;
+    }
+    if(i===1){
+      if(state.variants.size===0){ $("#selectHint").hidden=false; return false; }
+      return true;
+    }
+    if(i===2){
+      const u = $("#destUrl").value.trim();
+      if(!/^https:\/\/.+\..+/.test(u)){ $("#urlField").classList.add("invalid"); $("#destUrl").focus(); return false; }
+      return true;
+    }
+    if(i===3){
+      if(state.budget==="custom"){
+        const v = parseFloat(state.customBudget);
+        if(!(isFinite(v)&&v>=1)){ $("#customBudgetField").classList.add("invalid"); $("#customBudget").focus(); return false; }
+      }
+      if(state.duration==="custom"){
+        let ok = true;
+        if(!state.start){ $("#startDateField").classList.add("invalid"); ok=false; }
+        if(!state.end || (state.start && new Date(state.end)<=new Date(state.start))){ $("#endDateField").classList.add("invalid"); ok=false; }
+        if(!ok) return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  /* ---- navigation ---- */
+  const nextBtn = $("#nextBtn"), backBtn = $("#backBtn");
+  function render(){
+    $$(".step-pane").forEach(p=>p.classList.toggle("active", +p.dataset.step===state.step));
+    $$(".step-item").forEach((s,i)=>{
+      s.classList.toggle("current", i===state.step && state.step<5);
+      s.classList.toggle("done", i<state.step || state.step===5);
+      s.classList.toggle("locked", i>state.maxReached && state.step<5);
+    });
+    $("#progressFill").style.width = (state.step===5?100:(state.step/5)*100)+"%";
+    backBtn.style.visibility = state.step===0||state.step===5 ? "hidden" : "visible";
+    nextBtn.style.display = state.step===5 ? "none" : "";
+    nextBtn.innerHTML = state.step===4 ? 'Publish to Meta <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>' : "Continue →";
+    $("#navHint").textContent = state.step<5 ? HINTS[state.step] : "";
+    if(state.step===4) buildSummary();
+  }
+  function go(i){ state.step=i; state.maxReached=Math.max(state.maxReached,i); render(); $("#viewport").scrollIntoView({behavior:"smooth",block:"nearest"}); }
+
+  nextBtn.addEventListener("click", ()=>{
+    if(!validate(state.step)) return;
+    if(state.step===4){
+      nextBtn.disabled = true; backBtn.disabled = true;
+      nextBtn.innerHTML = '<span class="spin"></span> Sending to Meta…';
+      setTimeout(()=>{
+        $("#successSub").innerHTML = `<b>${campaignName()}</b> is now with Meta — most ads are approved within 24 hours, then delivery starts and the learning phase begins. You can now monitor this campaign in <b>Results</b>.`;
+        go(5);
+        nextBtn.disabled=false; backBtn.disabled=false;
+      }, 1300);
+      return;
+    }
+    go(state.step+1);
+  });
+  backBtn.addEventListener("click", ()=>{ if(state.step>0 && state.step<5) go(state.step-1); });
+  $("#backToStudio").addEventListener("click", ()=>{ state.step=0; state.maxReached=0; render(); });
+
+  /* ---- annotations toggle ---- */
+  $("#annoToggle").addEventListener("click", function(){
+    this.classList.toggle("on");
+    document.body.classList.toggle("show-annotations", this.classList.contains("on"));
+  });
+
+  recalcEst();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { Fingerprint, Tags, UsersRound } from "lucide-react";
+import { Clock, Fingerprint, Tags, UsersRound } from "lucide-react";
 import Link from "next/link";
 
 import { MetricCard } from "@/components/metric-card";
@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listLeadRowsWithDedupe, type LeadQualityLabel } from "@/lib/operator/overview";
 import { LeadQualitySelect } from "./lead-quality-select";
+import { LeadSyncButton } from "./lead-sync-button";
 
 type LeadQualityValue = LeadQualityLabel | "unlabelled";
 
