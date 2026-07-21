@@ -8,9 +8,9 @@ if [ -n "${HERMES_DEFAULT_MODEL:-}" ]; then
   mkdir -p "${HERMES_HOME:-/opt/data}"
   cat > "${HERMES_HOME:-/opt/data}/config.yaml" <<EOF
 model:
-  provider: "${HERMES_PROVIDER:-openrouter}"
+  provider: "openai"
   default: "${HERMES_DEFAULT_MODEL}"
-  base_url: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+  base_url: "${HERMES_AGENT_BASE_URL:-https://api.moonshot.ai/v1}"
 hooks_auto_accept: true
 EOF
   chown hermes:hermes "${HERMES_HOME:-/opt/data}/config.yaml" 2>/dev/null || true
@@ -31,6 +31,14 @@ fi
 
 cd /opt/data
 . /opt/hermes/.venv/bin/activate
+
+# The agent-core (Python Hermes) reads OPENAI_API_KEY and speaks the
+# OpenAI-compatible protocol against Moonshot (base_url above). Map the Kimi
+# key onto that name ONLY for the exec'd agent-core process. The supervisor
+# loop above runs with the inherited environment and must NOT see this alias:
+# the research-runtime resolver reads MOONSHOT_API_KEY / DASHSCOPE_API_KEY
+# directly and has no OpenAI fallback.
+export OPENAI_API_KEY="${MOONSHOT_API_KEY}"
 
 if [ $# -eq 0 ]; then
   exec s6-setuidgid hermes hermes

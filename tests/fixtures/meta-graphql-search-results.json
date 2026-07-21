@@ -1,0 +1,106 @@
+{
+  "data": {
+    "ad_library_main": {
+      "search_results_connection": {
+        "edges": [
+          {
+            "node": {
+              "collated_results": [
+                {
+                  "ad_archive_id": "123456789",
+                  "page_id": "111",
+                  "page_name": "Test Page",
+                  "is_active": true,
+                  "start_date": 1700000000,
+                  "end_date": null,
+                  "publisher_platform": ["facebook"],
+                  "snapshot": {
+                    "title": "t",
+                    "body": { "text": "b" },
+                    "cta_text": "Learn more",
+                    "link_url": "https://x.com",
+                    "images": [
+                      { "original_image_url": "https://img/1.jpg" }
+                    ],
+                    "videos": [],
+                    "cards": [],
+                    "display_format": "single_image"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "node": {
+              "collated_results": [
+                {
+                  "ad_archive_id": "987654321",
+                  "page_id": "222",
+                  "page_name": "Second Page",
+                  "is_active": false,
+                  "start_date": 1700100000,
+                  "end_date": 1700200000,
+                  "publisher_platform": ["facebook", "instagram"],
+                  "snapshot": {
+                    "title": "second title",
+                    "body": { "text": "second body" },
+                    "cta_text": "Shop now",
+                    "link_url": "https://y.com",
+                    "images": [
+                      { "original_image_url": "https://img/2.jpg" }
+                    ],
+                    "videos": [
+                      { "video_hd_url": "https://vid/2.mp4", "video_sd_url": "https://vid/2-sd.mp4" }
+                    ],
+                    "cards": [],
+                    "display_format": "video"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "node": {
+              "collated_results": [
+                {
+                  "ad_archive_id": "bad-id",
+                  "page_id": "333",
+                  "page_name": "Bad Id Page",
+                  "is_active": true,
+                  "start_date": 1700000000,
+                  "end_date": null,
+                  "publisher_platform": ["facebook"],
+                  "snapshot": {
+                    "title": "should be skipped",
+                    "body": { "text": "invalid ad_archive_id" },
+                    "cta_text": "Learn more",
+                    "link_url": "https://z.com",
+                    "images": [],
+                    "videos": [],
+                    "cards": [],
+                    "display_format": "single_image"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "node": {
+              "collated_results": [
+                {
+                  "page_id": "444",
+                  "page_name": "Missing Id Page",
+                  "is_active": true,
+                  "snapshot": {
+                    "title": "no id at all",
+                    "body": { "text": "missing ad_archive_id" }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

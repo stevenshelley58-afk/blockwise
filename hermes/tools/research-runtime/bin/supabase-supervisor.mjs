@@ -9,30 +9,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   CLASSIFIER_VERSION,
+  assessCapturedImageQuality,
   classifyCreativeWithModels,
   hasUnresolvedDynamicPlaceholder,
   hasUsableCapturedMedia,
+  readImageDimensions,
   shouldDisplayClassifiedCreative,
   shouldReclassifyCreative,
   shouldWaitForMediaClassification,
 } from "./ad-classifier.mjs";
-import {
-  APIFY_CIRCUIT_OPEN_UNTIL_SETTING,
-  apifyCircuitOpenUntilIso,
-  createApifyRun,
-  ensureApifyAccountLimit,
-  evaluateApifyCircuitRecovery,
-  extractApifyRunCost,
-  fetchApifyDatasetItems,
-  guardApifyBudget,
-  inferApifySchemaMap,
-  mapApifyDatasetItems,
-  normaliseApifySettings,
-  pollApifyRun,
-  runApifyCapture,
-  selectCheapestApifyActor,
-  summariseBenchmarkItems,
-} from "./apify-capture.mjs";
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
 
@@ -99,6 +84,9 @@ const locationAdSearchIntervalMinutes = positiveInt("HERMES_LOCATION_AD_SEARCH_I
 const locationAdSearchBatchSize = positiveInt("HERMES_LOCATION_AD_SEARCH_BATCH_SIZE", mode === "build" ? 40 : 12);
 const locationAdSearchMaxActive = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE", mode === "build" ? 120 : 40);
 const locationAdSearchMaxSuburbsPerPostcode = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_SUBURBS_PER_POSTCODE", 8);
+// Provider for the suburb/keyword discovery search. "hermes_browser" (default) enumerates
+// via the Meta Ad Library capture CLI driven through the Steel browser.
+const locationAdSearchProvider = String(env.HERMES_LOCATION_AD_SEARCH_PROVIDER || "hermes_browser").toLowerCase();
 const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const classificationBackfillWeakBatchSize = positiveInt(
   "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
@@ -111,7 +99,6 @@ const censusPolicySeedBatchSize = positiveInt("HERMES_CENSUS_POLICY_SEED_BATCH_S
 const censusRecycleBlockedEnabled = env.HERMES_CENSUS_RECYCLE_BLOCKED_ENABLED !== "false";
 const metaCaptureProvider = env.HERMES_META_CAPTURE_PROVIDER || (env.HERMES_META_CAPTURE_ENDPOINT ? "http_json" : "hermes_browser");
 const metaCaptureEndpoint = env.HERMES_META_CAPTURE_ENDPOINT || "";
-const apifyToken = env.APIFY_TOKEN || env.APIFY_API_TOKEN || "";
 const metaOfficialAccessToken = env.HERMES_META_AD_LIBRARY_ACCESS_TOKEN || env.META_AD_LIBRARY_ACCESS_TOKEN || env.META_AD_LIBRARY_TOKEN || "";
 const metaOfficialApiEnabled = env.HERMES_META_OFFICIAL_API_ENABLED !== "false" && Boolean(metaOfficialAccessToken.trim());
 const metaOfficialApiVersion = env.HERMES_META_OFFICIAL_API_VERSION || env.META_AD_LIBRARY_API_VERSION || "v20.0";
@@ -126,23 +113,8 @@ const mediaBucket = env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-crea
 const META_OFFICIAL_SOURCE_PROVIDER = "official_meta_archive";
 const META_BROWSER_SOURCE_PROVIDER = "hermes_meta_page_capture";
 const META_STRUCTURED_SOURCE_PROVIDER = "structured_meta_page_provider";
-const META_APIFY_SOURCE_PROVIDER = "apify";
-const META_APIFY_SOURCE_PROVIDER_PREFIX = "apify:";
 const META_LOCATION_SEARCH_SOURCE_PROVIDER = "hermes_meta_location_search";
 const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research-raw-evidence";
-const APIFY_RUNTIME_SETTING_KEYS = [
-  "apify_enabled",
-  "apify_state",
-  "apify_circuit_open_until",
-  "apify_monthly_cap_usd",
-  "apify_per_run_cap_usd",
-  "apify_account_limit_usd",
-  "apify_actor_id",
-  "apify_result_limit",
-  "apify_canary_max_results",
-  "apify_canary_per_run_cap_usd",
-  "apify_canary_page_id",
-];
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
 const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
@@ -354,7 +326,7 @@ function runtimeSettingAuditRowId(settingKey) {
   return `${hex.slice(0, 8).join("")}-${hex.slice(8, 12).join("")}-${hex.slice(12, 16).join("")}-${hex.slice(16, 20).join("")}-${hex.slice(20, 32).join("")}`;
 }
 
-async function readRuntimeSettings(settingKeys = APIFY_RUNTIME_SETTING_KEYS) {
+async function readRuntimeSettings(settingKeys = []) {
   try {
     const rows = await rest(
       "research",
@@ -412,55 +384,6 @@ function runtimeSettingPositiveInt(settings, key, fallback) {
 function runtimeSettingPositiveNumber(settings, key, fallback) {
   const value = Number(runtimeSettingValue(settings, key, fallback));
   return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-async function readApifyLedgerSpendUsd({ since, until } = {}) {
-  const params = [
-    "select=cost_usd",
-    `source_provider=like.${encode(`${META_APIFY_SOURCE_PROVIDER_PREFIX}%`)}`,
-    since ? `started_at=gte.${encode(new Date(since).toISOString())}` : null,
-    until ? `started_at=lt.${encode(new Date(until).toISOString())}` : null,
-    "limit=10000",
-  ].filter(Boolean);
-  const legacyParams = [
-    "select=cost_usd",
-    `source_provider=eq.${encode(META_APIFY_SOURCE_PROVIDER)}`,
-    since ? `started_at=gte.${encode(new Date(since).toISOString())}` : null,
-    until ? `started_at=lt.${encode(new Date(until).toISOString())}` : null,
-    "limit=10000",
-  ].filter(Boolean);
-  const [rows, legacyRows] = await Promise.all([
-    rest("research", `ad_fetch_runs?${params.join("&")}`),
-    rest("research", `ad_fetch_runs?${legacyParams.join("&")}`),
-  ]);
-  return [...(rows || []), ...(legacyRows || [])].reduce((total, row) => total + (Number(row.cost_usd) || 0), 0);
-}
-
-async function readApifyCaptureActors(actorId = null) {
-  try {
-    const filter = actorId
-      ? `actor_id=eq.${encode(actorId)}`
-      : "status=in.(approved,banned)";
-    return await rest(
-      "research",
-      `capture_actors?select=actor_id,status,price_per_1k_usd,schema_map,last_benchmark,notes&${filter}&order=price_per_1k_usd.asc.nullslast`,
-    ) || [];
-  } catch (error) {
-    if (missingSchemaRelation(error, "capture_actors")) return [];
-    throw error;
-  }
-}
-
-async function readApifyBenchmarkCandidates(limit = 3) {
-  try {
-    return await rest(
-      "research",
-      `capture_actors?select=actor_id,status,price_per_1k_usd,schema_map,last_benchmark,notes&status=eq.candidate&order=price_per_1k_usd.asc.nullslast&limit=${limit}`,
-    ) || [];
-  } catch (error) {
-    if (missingSchemaRelation(error, "capture_actors")) return [];
-    throw error;
-  }
 }
 
 async function recordEvent(eventType, tableName, rowId, payload = {}, extra = {}) {
@@ -2360,9 +2283,6 @@ function coverageDefectReason(row) {
   if (resolution.reason) return String(resolution.reason);
   if (note.includes("census could not verify")) return "census_requires_verified_evidence";
   if (note.includes("page resolver could not find")) return "page_resolver_no_verified_meta_page";
-  if (note.includes("budget guard blocked candidate actor")) return "apify_canary_budget_guard_blocked";
-  if (note.includes("budget guard blocked meta ad library capture")) return "apify_budget_guard_blocked";
-  if (note.includes("spent money without ingesting ads")) return "apify_spend_without_ingest";
   if (note.includes("location ad search could not fetch")) return "location_ad_search_capture_failed";
   if (note.includes("ad collector could not fetch")) return "ad_collector_capture_failed";
   if (note.includes("still had more pages") || note.includes("hit resultslimit")) return "ad_collector_truncated";
@@ -2843,90 +2763,55 @@ function normalizeCaptureOutcome(body, input, provider, startedAt) {
   };
 }
 
-async function runHermesBrowserCapture(input) {
+const META_CAPTURE_CLI_PATH = env.HERMES_META_CAPTURE_CLI_PATH || "/app/meta-library-capture/bin/capture.mjs";
+const META_CAPTURE_CLI_TIMEOUT_MS = positiveInt("HERMES_META_CAPTURE_CLI_TIMEOUT_MS", 180_000);
+const META_CAPTURE_CLI_MAX_STDOUT_BYTES = 10_000_000;
+
+async function runMetaLibraryCaptureCli({ url, kind, metaPageId, country, activeStatus, resultsLimit, timeoutMs, proxyUrl }) {
   const startedAt = now();
-  const url = metaAdLibraryPageUrl(input);
+  const cliTimeout = timeoutMs || META_CAPTURE_CLI_TIMEOUT_MS;
+  const input = JSON.stringify({ url, kind, metaPageId, country, activeStatus, resultsLimit, timeoutMs: cliTimeout, ...(proxyUrl ? { proxyUrl } : {}) });
   try {
-    const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
-    const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: input.metaPageId, limit: input.resultsLimit });
-    if (parsed.challengeDetected) await recordMetaBrowserChallenge("page-capture", input);
-    const errorMessage = parsed.warnings.join("; ") || null;
-    const rawEvidence = errorMessage
-      ? await safeWriteBrowserRawEvidence("page-capture", input, {
-        url,
-        html: stdout,
-        warnings: parsed.warnings,
-        html_bytes: Buffer.byteLength(stdout),
-        confirmed_absence: parsed.confirmedAbsence,
-        challenge_detected: parsed.challengeDetected,
-        connection_count: parsed.connectionCount,
-      })
-      : null;
-    return {
-      runId: `hermes-browser-${input.metaPageId}-${Date.now()}`,
-      provider: META_BROWSER_SOURCE_PROVIDER,
-      status: parsed.warnings.length ? "FAILED" : "SUCCEEDED",
-      startedAt,
-      finishedAt: now(),
-      costUsd: 0,
-      itemCount: parsed.items.length,
-      items: parsed.items,
-      rawDatasetId: null,
-      errorMessage,
-      metadata: {
-        url,
-        html_bytes: Buffer.byteLength(stdout),
-        confirmed_absence: parsed.confirmedAbsence,
-        challenge_detected: parsed.challengeDetected,
-        connection_count: parsed.connectionCount,
-        advertiserPageId: input.advertiserPageId,
-        resolverDecisionId: input.resolverDecisionId,
-        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
-        raw_evidence_error: rawEvidence?.error || null,
-      },
-    };
-  } catch (error) {
-    const rawEvidence = await safeWriteBrowserRawEvidence("page-capture-error", input, {
-      url,
-      error: error.message,
-      executable: metaBrowserExecutable,
+    const stdout = await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [META_CAPTURE_CLI_PATH, "--input", input], { stdio: ["ignore", "pipe", "pipe"] });
+      let out = ""; let err = "";
+      const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new Error(`capture CLI timed out after ${cliTimeout}ms`)); }, cliTimeout);
+      child.stdout.on("data", (c) => { if (Buffer.byteLength(out) < META_CAPTURE_CLI_MAX_STDOUT_BYTES) out += c; });
+      child.stderr.on("data", (c) => { err += String(c).slice(0, 4096); });
+      child.on("close", (code) => { clearTimeout(timer); code !== 0 ? reject(new Error(`capture CLI exited ${code}: ${err.slice(0, 500)}`)) : resolve(out); });
+      child.on("error", (e) => { clearTimeout(timer); reject(e); });
     });
-    return {
-      runId: `hermes-browser-failed-${input.metaPageId}-${Date.now()}`,
-      provider: META_BROWSER_SOURCE_PROVIDER,
-      status: "FAILED",
-      startedAt,
-      finishedAt: now(),
-      costUsd: 0,
-      itemCount: 0,
-      items: [],
-      rawDatasetId: null,
-      errorMessage: error.message,
-      metadata: {
-        executable: metaBrowserExecutable,
-        advertiserPageId: input.advertiserPageId,
-        resolverDecisionId: input.resolverDecisionId,
-        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
-        raw_evidence_error: rawEvidence?.error || null,
-      },
-    };
+    const parsed = JSON.parse(stdout);
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {
+      return { runId: `cli-${Date.now()}`, provider: META_BROWSER_SOURCE_PROVIDER, status: "FAILED", startedAt, finishedAt: now(), costUsd: 0, itemCount: 0, items: [], rawDatasetId: null, errorMessage: "capture CLI returned invalid outcome shape", metadata: {} };
+    }
+    return { ...parsed, provider: META_BROWSER_SOURCE_PROVIDER, costUsd: 0, rawDatasetId: parsed.rawDatasetId ?? null };
+  } catch (error) {
+    return { runId: `cli-failed-${Date.now()}`, provider: META_BROWSER_SOURCE_PROVIDER, status: "FAILED", startedAt, finishedAt: now(), costUsd: 0, itemCount: 0, items: [], rawDatasetId: null, errorMessage: error.message, metadata: {} };
   }
 }
 
+async function runHermesBrowserCapture(input) {
+  const url = metaAdLibraryPageUrl(input);
+  return runMetaLibraryCaptureCli({
+    url,
+    kind: "page",
+    metaPageId: input.metaPageId,
+    country: input.country || "AU",
+    activeStatus: input.activeStatus || "all",
+    resultsLimit: input.resultsLimit,
+    timeoutMs: metaCaptureTimeoutMs,
+    proxyUrl: env.RESIDENTIAL_PROXY_URL || env.HERMES_META_CAPTURE_PROXY_URL || "",
+  });
+}
+
 function configuredMetaFallbackSourceProvider() {
-  if (metaCaptureProvider === META_APIFY_SOURCE_PROVIDER) {
-    return META_APIFY_SOURCE_PROVIDER;
-  }
   return metaCaptureProvider === "http_json" && metaCaptureEndpoint
     ? META_STRUCTURED_SOURCE_PROVIDER
     : META_BROWSER_SOURCE_PROVIDER;
 }
 
 async function runFallbackMetaPageCapture(input, sourceProvider = configuredMetaFallbackSourceProvider()) {
-  if (sourceProvider === META_APIFY_SOURCE_PROVIDER) {
-    return await runApifyMetaPageCapture(input, null, { explicit: true });
-  }
-
   if (sourceProvider === META_STRUCTURED_SOURCE_PROVIDER) {
     const startedAt = now();
     const response = await fetch(metaCaptureEndpoint, {
@@ -2982,625 +2867,12 @@ async function runMetaPageCapture(input) {
 }
 
 function captureModeForSourceProvider(sourceProvider, suffix = "") {
-  const modeName = sourceProvider?.startsWith(META_APIFY_SOURCE_PROVIDER_PREFIX)
-    ? "apify"
+  const modeName = sourceProvider === META_OFFICIAL_SOURCE_PROVIDER
+    ? "official_api"
     : sourceProvider === META_STRUCTURED_SOURCE_PROVIDER
       ? "http_json"
-      : sourceProvider === META_OFFICIAL_SOURCE_PROVIDER
-        ? "official_api"
-        : "browser";
+      : "browser";
   return suffix ? `${modeName}_${suffix}` : modeName;
-}
-
-// Self-heal the paid-capture circuit: once the cooldown elapses (and we are under
-// the monthly spend cap), flip apify_state back to "ready" so the already-approved
-// actor resumes serving. Without this the circuit stays open forever once tripped.
-async function recoverApifyCircuitIfDue(settings) {
-  if (runtimeSettingString(settings, "apify_state") !== "circuit_open") return settings;
-
-  let monthlySpendUsd = null;
-  try {
-    const reference = new Date();
-    const monthStart = new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1));
-    monthlySpendUsd = await readApifyLedgerSpendUsd({ since: monthStart, until: reference });
-  } catch {
-    monthlySpendUsd = null;
-  }
-
-  const decision = evaluateApifyCircuitRecovery(settings, { monthlySpendUsd });
-  if (!decision.recover) return settings;
-
-  await setRuntimeSetting("apify_state", "ready", {
-    reason: "apify_circuit_auto_recovered",
-    recovery_reason: decision.reason,
-    monthly_spend_usd: monthlySpendUsd,
-  });
-  log("Apify paid circuit auto-recovered", { recovery_reason: decision.reason, monthly_spend_usd: monthlySpendUsd });
-  return { ...settings, apify_state: "ready" };
-}
-
-async function runApifyMetaPageCapture(input, previousOutcome = null, { explicit = false } = {}) {
-  const startedAt = now();
-  if (!apifyToken) {
-    return explicit ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, "APIFY_TOKEN is not configured", { explicit }) : null;
-  }
-
-  let settings = await readRuntimeSettings(APIFY_RUNTIME_SETTING_KEYS);
-  settings = await recoverApifyCircuitIfDue(settings);
-  const parsedSettings = normaliseApifySettings(settings);
-  if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
-    return explicit
-      ? skippedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, `Apify paid capture is ${parsedSettings.enabled ? parsedSettings.state : "disabled"}`, {
-        explicit,
-        apify_state: parsedSettings.state,
-        skip_reason: parsedSettings.enabled ? "apify_circuit_open" : "apify_disabled",
-      })
-      : null;
-  }
-
-  const selection = await resolveApifyCaptureActor(settings);
-  if (!selection.actor) {
-    const metadata = { explicit, selection_reason: selection.reason, selection_scores: selection.scores || [] };
-    return explicit
-      ? failedCaptureOutcome(META_APIFY_SOURCE_PROVIDER, input, startedAt, selection.errorMessage || "No approved Apify actor is configured", metadata)
-      : null;
-  }
-
-  const actorId = selection.actor.actor_id;
-  const sourceProvider = `${META_APIFY_SOURCE_PROVIDER_PREFIX}${actorId}`;
-  if (!hasApifySchemaMap(selection.actor.schema_map)) {
-    return failedCaptureOutcome(sourceProvider, input, startedAt, `Apify actor ${actorId} has no schema_map`, {
-      explicit,
-      selection_reason: selection.reason,
-      previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
-    });
-  }
-
-  let accountLimitCheck;
-  try {
-    accountLimitCheck = await ensureApifyAccountLimit({
-      settings,
-      token: apifyToken,
-    });
-  } catch (error) {
-    return failedCaptureOutcome(sourceProvider, input, startedAt, `Apify account limit check failed: ${error.message}`, {
-      explicit,
-      previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
-    });
-  }
-
-  const guard = await guardApifyBudget({
-    settings,
-    limits: accountLimitCheck.limits,
-    token: apifyToken,
-    readLedgerSpendUsd: readApifyLedgerSpendUsd,
-    setRuntimeSetting,
-      fileDefect: (defect) => insertCoverageDefect({
-        platform: "facebook",
-        reason: "apify_budget_guard_blocked",
-        notes: "Apify paid fallback budget guard blocked Meta Ad Library capture.",
-      reported_by: "system",
-      reporter_identity: workerId,
-      status: "open",
-      resolution: { ...defect, advertiser_page_id: input.advertiserPageId, meta_page_id: input.metaPageId },
-      resolved_advertiser_page_id: input.advertiserPageId,
-    }),
-  });
-  if (!guard.allowed) {
-    return failedCaptureOutcome(sourceProvider, input, startedAt, `Apify budget guard blocked capture: ${guard.reason}`, {
-      explicit,
-      guard,
-      account_limit_check: accountLimitCheck,
-      previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
-    });
-  }
-
-  const resultLimit = Math.min(input.resultsLimit, runtimeSettingPositiveInt(settings, "apify_result_limit", input.resultsLimit));
-  try {
-    const captured = await runApifyCapture({
-      actorId,
-      input: apifyMetaPageInput(input, resultLimit),
-      schemaMap: selection.actor.schema_map,
-      maxTotalChargedUsd: guard.perRunCapUsd,
-      resultLimit,
-      timeoutSecs: Math.max(60, Math.ceil(metaCaptureTimeoutMs / 1000)),
-      token: apifyToken,
-      writeRawEvidence: (evidence) => writeApifyRawEvidence(input, actorId, evidence),
-    });
-    const items = normaliseApifyMappedMetaItems(captured.items || [], input, resultLimit);
-    return {
-      runId: captured.metadata?.run_id || `apify-${hash(`${actorId}:${input.metaPageId}:${startedAt}`).slice(0, 16)}`,
-      provider: sourceProvider,
-      status: "SUCCEEDED",
-      startedAt,
-      finishedAt: now(),
-      costUsd: Number(captured.costUsd || 0) || 0,
-      itemCount: items.length,
-      items,
-      rawDatasetId: captured.rawDatasetId || null,
-      errorMessage: null,
-      metadata: {
-        ...(captured.metadata || {}),
-        actor_id: actorId,
-        selection_reason: selection.reason,
-        account_limit_check: accountLimitCheck,
-        confirmed_absence: captured.confirmed_absence === true && items.length === 0,
-        previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
-      },
-    };
-  } catch (error) {
-    const costUsd = costUsdFromApifyError(error);
-    // Transient infrastructure failures (run timed out, network interruption) should not
-    // trip the circuit — they are not evidence of a broken actor spending money without
-    // returning results. Only open the circuit for deliberate FAILED/ABORTED outcomes.
-    const isTransientTimeout = /TIMED-OUT|did not finish within/i.test(error.message);
-    if (costUsd > 0 && !isTransientTimeout) {
-      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason: error.message, scope: "page_capture_failure" });
-    }
-    return failedCaptureOutcome(sourceProvider, input, startedAt, error.message, {
-      explicit,
-      actor_id: actorId,
-      selection_reason: selection.reason,
-      previous_capture_failure: previousCaptureFailureMetadata(previousOutcome),
-      details: error.details || null,
-    }, costUsd);
-  }
-}
-
-async function resolveApifyCaptureActor(settings) {
-  const configuredActorId = runtimeSettingString(settings, "apify_actor_id");
-  if (configuredActorId) {
-    const rows = await readApifyCaptureActors(configuredActorId);
-    const actor = rows.find((row) => row.actor_id === configuredActorId);
-    if (actor?.status === "approved") return { actor, reason: "runtime_setting" };
-    return {
-      actor: null,
-      reason: actor?.status === "banned" ? "configured_actor_banned" : "configured_actor_not_approved",
-      errorMessage: `Configured Apify actor ${configuredActorId} is not approved`,
-    };
-  }
-
-  const actors = await readApifyCaptureActors();
-  const selected = selectCheapestApifyActor(actors);
-  if (selected.actor) return { actor: selected.actor, reason: selected.reason, scores: selected.scores };
-  return { actor: null, reason: selected.reason, scores: selected.scores, errorMessage: "No approved Apify actor passed benchmark selection" };
-}
-
-async function runApifyCandidateBenchmarkIfNeeded(buildRunId) {
-  if (!apifyToken) return { status: "skipped", reason: "token_missing" };
-
-  const settings = await readRuntimeSettings(APIFY_RUNTIME_SETTING_KEYS);
-  const parsedSettings = normaliseApifySettings(settings);
-  if (!parsedSettings.enabled || parsedSettings.state === "circuit_open") {
-    return { status: "skipped", reason: parsedSettings.enabled ? "circuit_open" : "disabled" };
-  }
-
-  const currentSelection = await resolveApifyCaptureActor(settings);
-  if (currentSelection.actor) {
-    return { status: "skipped", reason: "approved_actor_available", actor_id: currentSelection.actor.actor_id };
-  }
-
-  const candidates = await readApifyBenchmarkCandidates(6);
-  const actor = candidates.find(apifyBenchmarkDue);
-  if (!actor) return { status: "skipped", reason: candidates.length ? "candidate_recently_benchmarked" : "no_candidate_actor" };
-
-  const input = await readApifyCanaryCaptureInput(settings);
-  if (!input) {
-    return { status: "skipped", reason: "no_known_good_canary_page" };
-  }
-
-  return benchmarkApifyCandidateActor({ actor, input, settings, buildRunId });
-}
-
-function apifyBenchmarkDue(actor) {
-  const benchmark = actor?.last_benchmark && typeof actor.last_benchmark === "object" && !Array.isArray(actor.last_benchmark)
-    ? actor.last_benchmark
-    : {};
-  if (benchmark.status === "passed" || benchmark.passed === true) return false;
-  const startedAt = Date.parse(String(benchmark.started_at || benchmark.startedAt || benchmark.finished_at || benchmark.finishedAt || ""));
-  if (!Number.isFinite(startedAt)) return true;
-  const retryMs = benchmark.status === "running" ? 30 * 60 * 1000 : 24 * 60 * 60 * 1000;
-  return Date.now() - startedAt > retryMs;
-}
-
-async function readApifyCanaryCaptureInput(settings) {
-  const resultLimit = Math.min(runtimeSettingPositiveInt(settings, "apify_canary_max_results", 50), 50);
-  const explicitPageId = runtimeSettingString(settings, "apify_canary_page_id");
-  if (explicitPageId) {
-    const explicitPage = await readCanaryAdvertiserPage({ pageId: explicitPageId });
-    if (explicitPage) return canaryInputFromPage(explicitPage, { resultLimit, knownAdId: null });
-  }
-
-  const activeAds = await rest(
-    "research",
-    "observed_ads?select=advertiser_page_id,external_ad_id,last_seen_at&active_status=eq.active&order=last_seen_at.desc.nullslast&limit=25",
-  );
-  for (const ad of activeAds || []) {
-    const page = await readCanaryAdvertiserPage({ advertiserPageId: ad.advertiser_page_id });
-    if (page) return canaryInputFromPage(page, { resultLimit, knownAdId: ad.external_ad_id });
-  }
-
-  const recentAds = await rest(
-    "research",
-    "observed_ads?select=advertiser_page_id,external_ad_id,last_seen_at&order=last_seen_at.desc.nullslast&limit=25",
-  );
-  for (const ad of recentAds || []) {
-    const page = await readCanaryAdvertiserPage({ advertiserPageId: ad.advertiser_page_id });
-    if (page) return canaryInputFromPage(page, { resultLimit, knownAdId: ad.external_ad_id });
-  }
-
-  return null;
-}
-
-async function readCanaryAdvertiserPage({ advertiserPageId = null, pageId = null } = {}) {
-  const filter = advertiserPageId
-    ? `id=eq.${encode(advertiserPageId)}`
-    : `page_id=eq.${encode(pageId)}`;
-  const rows = await rest(
-    "research",
-    `advertiser_pages?select=id,page_id,page_name,resolution_decision_id,status&${filter}&page_id=not.is.null&limit=1`,
-  );
-  return rows?.[0] || null;
-}
-
-function canaryInputFromPage(page, { resultLimit, knownAdId }) {
-  const input = captureInput({
-    advertiserPageId: page.id,
-    metaPageId: page.page_id,
-    country: "AU",
-    activeStatus: "active",
-    resultsLimit: resultLimit,
-    resolverDecisionId: page.resolution_decision_id || null,
-    realEstateGate: { verified: true, source: "known_good_canary" },
-  });
-  return {
-    ...input,
-    canaryKnownAdId: knownAdId || null,
-    canaryPageName: page.page_name || null,
-    canaryPageStatus: page.status || null,
-  };
-}
-
-async function benchmarkApifyCandidateActor({ actor, input, settings, buildRunId }) {
-  const actorId = actor.actor_id;
-  const sourceProvider = `${META_APIFY_SOURCE_PROVIDER_PREFIX}${actorId}`;
-  const resultLimit = Math.min(input.resultsLimit, runtimeSettingPositiveInt(settings, "apify_canary_max_results", 50), 50);
-  const canaryPerRunCapUsd = Math.min(
-    runtimeSettingPositiveNumber(settings, "apify_canary_per_run_cap_usd", 0.25),
-    runtimeSettingPositiveNumber(settings, "apify_per_run_cap_usd", 1),
-  );
-  const startedAt = now();
-  let adFetchRunId = null;
-  let costUsd = 0;
-
-  await patchApifyCaptureActor(actorId, {
-    last_benchmark: {
-      status: "running",
-      started_at: startedAt,
-      canary_page_id: input.metaPageId,
-      known_external_ad_id: input.canaryKnownAdId || null,
-      result_limit: resultLimit,
-      max_total_charged_usd: canaryPerRunCapUsd,
-    },
-  });
-
-  try {
-    const accountLimitCheck = await ensureApifyAccountLimit({ settings, token: apifyToken });
-    const guard = await guardApifyBudget({
-      settings,
-      limits: accountLimitCheck.limits,
-      token: apifyToken,
-      readLedgerSpendUsd: readApifyLedgerSpendUsd,
-      setRuntimeSetting,
-      fileDefect: (defect) => insertCoverageDefect({
-        platform: "facebook",
-        reason: "apify_canary_budget_guard_blocked",
-        notes: "Apify canary budget guard blocked candidate actor benchmarking.",
-        reported_by: "system",
-        reporter_identity: workerId,
-        status: "open",
-        resolution: { ...defect, actor_id: actorId, meta_page_id: input.metaPageId },
-        resolved_advertiser_page_id: input.advertiserPageId,
-      }),
-    });
-    if (!guard.allowed) {
-      const benchmark = apifyBenchmarkFailure("budget_guard_blocked", startedAt, {
-        guard,
-        account_limit_check: accountLimitCheck,
-        canary_page_id: input.metaPageId,
-        known_external_ad_id: input.canaryKnownAdId || null,
-      });
-      await patchApifyCaptureActor(actorId, { last_benchmark: benchmark });
-      return { status: "blocked", actor_id: actorId, reason: benchmark.reason };
-    }
-
-    adFetchRunId = await insertApifyBenchmarkFetchRun(buildRunId, input, actorId, resultLimit);
-    if (!adFetchRunId) throw new Error("Apify canary ledger row was not created");
-    const run = await createApifyRun({
-      actorId,
-      input: apifyMetaPageInput(input, resultLimit),
-      maxTotalChargedUsd: canaryPerRunCapUsd,
-      resultLimit,
-      timeoutSecs: Math.max(60, Math.ceil(metaCaptureTimeoutMs / 1000)),
-      token: apifyToken,
-    });
-    const detail = await pollApifyRun({
-      runId: run.id,
-      token: apifyToken,
-      timeoutMs: Math.max(metaCaptureTimeoutMs * 3, 120_000),
-    });
-    const cost = extractApifyRunCost(detail);
-    costUsd = Number(cost.costUsd || 0) || 0;
-    const datasetId = detail?.defaultDatasetId || run?.defaultDatasetId;
-    if (!datasetId) throw new Error("Apify canary run did not expose a default dataset id");
-
-    const rawItems = await fetchApifyDatasetItems({ datasetId, limit: resultLimit, token: apifyToken });
-    const schemaMap = inferApifySchemaMap(rawItems);
-    const mapped = await mapApifyDatasetItems({
-      actorId,
-      items: rawItems,
-      schemaMap,
-      writeRawEvidence: (evidence) => writeApifyRawEvidence(input, actorId, { ...evidence, canary: true }),
-    });
-    const normalisedAds = normaliseApifyMappedMetaItems(mapped.items || [], input, resultLimit);
-    const benchmarkSummary = summariseBenchmarkItems(mapped.items || []);
-    const ingested = [];
-    for (const ad of normalisedAds) {
-      const item = await ingestMetaAd({ ad, advertiserPageId: input.advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob: null });
-      ingested.push(item);
-      await enqueuePostIngestJobs(item, input.advertiserPageId, buildRunId, null);
-    }
-
-    const mappingPassRate = 1 - Number(mapped.metadata?.mapping_failure_rate || 0);
-    const duplicateRatio = Number(benchmarkSummary.duplicateRatio || 0);
-    const passed = ingested.length > 0 && mappingPassRate >= 0.95 && duplicateRatio < 0.1;
-    const reason = passed
-      ? "passed"
-      : ingested.length === 0
-        ? "no_ingestable_ads"
-        : mappingPassRate < 0.95
-          ? "mapping_pass_rate_too_low"
-          : "duplicate_ratio_too_high";
-    const benchmark = {
-      status: passed ? "passed" : "failed",
-      passed,
-      reason,
-      started_at: startedAt,
-      finished_at: now(),
-      canary_page_id: input.metaPageId,
-      canary_page_name: input.canaryPageName || null,
-      known_external_ad_id: input.canaryKnownAdId || null,
-      run_id: run.id,
-      raw_dataset_id: datasetId,
-      item_count: normalisedAds.length,
-      raw_item_count: rawItems.length,
-      mapped_item_count: mapped.items.length,
-      valid_ad_count: normalisedAds.length,
-      ingested_count: ingested.length,
-      failure_rate: 1 - mappingPassRate,
-      mapping_pass_rate: mappingPassRate,
-      duplicate_ratio: duplicateRatio,
-      cost_usd: costUsd,
-      cost_per_valid_ad_usd: ingested.length ? costUsd / ingested.length : null,
-      max_total_charged_usd: canaryPerRunCapUsd,
-    };
-    await updateFetchRun(adFetchRunId, {
-      status: ingested.length ? "success" : "failed",
-      source_provider: sourceProvider,
-      result_summary: { ...benchmark, schema_map: schemaMap, account_limit_check: accountLimitCheck },
-      error: passed ? null : reason,
-      cost_usd: costUsd,
-    });
-
-    await patchApifyCaptureActor(actorId, {
-      status: passed ? "approved" : "candidate",
-      schema_map: passed ? schemaMap : actor.schema_map || {},
-      last_benchmark: benchmark,
-    });
-    if (passed) await setRuntimeSetting("apify_actor_id", actorId, { reason: "apify_canary_passed", benchmark });
-    else if (costUsd > 0) {
-      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason, scope: "canary_benchmark" });
-    }
-    log("Apify candidate benchmark complete", { actor_id: actorId, status: benchmark.status, reason, ingested_count: ingested.length, cost_usd: costUsd });
-    return { status: benchmark.status, actor_id: actorId, reason, ingested_count: ingested.length, cost_usd: costUsd };
-  } catch (error) {
-    const failedCostUsd = costUsdFromApifyError(error);
-    if (failedCostUsd > 0) costUsd = failedCostUsd;
-    const benchmark = apifyBenchmarkFailure(error.message, startedAt, {
-      canary_page_id: input.metaPageId,
-      known_external_ad_id: input.canaryKnownAdId || null,
-      cost_usd: costUsd,
-      details: error.details || null,
-    });
-    await patchApifyCaptureActor(actorId, { last_benchmark: benchmark });
-    if (adFetchRunId) {
-      await updateFetchRun(adFetchRunId, {
-        status: "failed",
-        source_provider: sourceProvider,
-        result_summary: benchmark,
-        error: error.message,
-        cost_usd: costUsd,
-      });
-    }
-    if (costUsd > 0) {
-      await openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason: error.message, scope: "canary_benchmark_failure" });
-    }
-    log("Apify candidate benchmark failed", { actor_id: actorId, error: error.message, cost_usd: costUsd }, "warn");
-    return { status: "failed", actor_id: actorId, reason: error.message, cost_usd: costUsd };
-  }
-}
-
-function apifyBenchmarkFailure(reason, startedAt, metadata = {}) {
-  return {
-    status: "failed",
-    passed: false,
-    reason,
-    started_at: startedAt,
-    finished_at: now(),
-    ...metadata,
-  };
-}
-
-function costUsdFromApifyError(error) {
-  const explicitCost = Number(error?.details?.costUsd || error?.details?.cost_usd || 0);
-  if (Number.isFinite(explicitCost) && explicitCost > 0) return explicitCost;
-  const detail = error?.details?.detail || error?.details?.runDetail || error?.details;
-  return Number(extractApifyRunCost(detail).costUsd || 0) || 0;
-}
-
-async function patchApifyCaptureActor(actorId, patch) {
-  await rest("research", `capture_actors?actor_id=eq.${encode(actorId)}`, {
-    method: "PATCH",
-    body: json(patch),
-  });
-}
-
-async function openApifyCircuitAfterSpendWithoutIngest({ actorId, input, costUsd, reason, scope }) {
-  const defect = {
-    reason: "apify_spend_without_ingest",
-    actor_id: actorId,
-    meta_page_id: input?.metaPageId || null,
-    advertiser_page_id: input?.advertiserPageId || null,
-    cost_usd: costUsd,
-    scope,
-    error: reason,
-  };
-  await setRuntimeSetting("apify_state", "circuit_open", defect);
-  await setRuntimeSetting(APIFY_CIRCUIT_OPEN_UNTIL_SETTING, apifyCircuitOpenUntilIso(), { reason: "apify_spend_without_ingest", scope });
-  await insertCoverageDefect({
-    platform: "facebook",
-    reason: "apify_spend_without_ingest",
-    notes: "Apify paid capture spent money without ingesting ads; paid circuit opened.",
-    reported_by: "system",
-    reporter_identity: workerId,
-    status: "open",
-    resolution: defect,
-    resolved_advertiser_page_id: input?.advertiserPageId || null,
-  });
-}
-
-async function openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd, ingestedCount, reason, scope }) {
-  if (!isApifySourceProvider(sourceProvider)) return;
-  if (!(Number(costUsd) > 0) || Number(ingestedCount) > 0) return;
-  await openApifyCircuitAfterSpendWithoutIngest({
-    actorId: sourceProvider.slice(META_APIFY_SOURCE_PROVIDER_PREFIX.length),
-    input,
-    costUsd: Number(costUsd),
-    reason,
-    scope,
-  });
-}
-
-function isApifySourceProvider(sourceProvider) {
-  return typeof sourceProvider === "string" && sourceProvider.startsWith(META_APIFY_SOURCE_PROVIDER_PREFIX);
-}
-
-async function insertApifyBenchmarkFetchRun(buildRunId, input, actorId, resultLimit) {
-  const sourceProvider = `${META_APIFY_SOURCE_PROVIDER_PREFIX}${actorId}`;
-  const row = {
-    build_run_id: buildRunId,
-    source_provider: sourceProvider,
-    role: "verifier",
-    trigger: "watchdog",
-    target_kind: "advertiser_page",
-    target_value: input.advertiserPageId,
-    input_payload: {
-      provider: sourceProvider,
-      benchmark: true,
-      meta_page_id: input.metaPageId,
-      known_external_ad_id: input.canaryKnownAdId || null,
-      result_limit: resultLimit,
-    },
-    input_hash: hash(json({ actorId, input, resultLimit, benchmark: true })),
-    status: "running",
-    result_summary: {},
-  };
-  const created = await writeFetchRunWithMissingColumnFallback("ad_fetch_runs", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-  }, row);
-  return created?.[0]?.id || null;
-}
-
-function hasApifySchemaMap(schemaMap) {
-  const fields = schemaMap && typeof schemaMap === "object" && !Array.isArray(schemaMap)
-    ? schemaMap.fields && typeof schemaMap.fields === "object" && !Array.isArray(schemaMap.fields)
-      ? schemaMap.fields
-      : schemaMap
-    : null;
-  return Boolean(fields && Object.keys(fields).length);
-}
-
-function apifyMetaPageInput(input, resultLimit) {
-  const url = metaAdLibraryPageUrl(input);
-  return {
-    searchUrl: url,
-    url,
-    urls: [url],
-    startUrls: [{ url }],
-    pageId: input.metaPageId,
-    country: input.country,
-    activeStatus: input.activeStatus,
-    maxResults: resultLimit,
-    count: resultLimit,
-    maxAds: resultLimit,
-  };
-}
-
-function normaliseApifyMappedMetaItems(items, input, limit) {
-  const hosted = normaliseHostedMetaItems({ body: items, pageId: input.metaPageId, limit }).items;
-  if (hosted.length) return hosted;
-
-  const out = [];
-  const seen = new Set();
-  for (const item of items.slice(0, limit)) {
-    const ad = normaliseApifyMappedMetaAd(item, input);
-    if (!looksLikeAdId(ad.adArchiveID) || seen.has(ad.adArchiveID)) continue;
-    seen.add(ad.adArchiveID);
-    out.push(ad);
-  }
-  return out;
-}
-
-function normaliseApifyMappedMetaAd(item, input) {
-  const imageUrls = collectStrings(
-    pick(item, "primary_image_url", "image_url", "media_url"),
-    pick(item, "image_urls", "media_urls"),
-  );
-  const videoUrls = collectStrings(pick(item, "video_url"), pick(item, "video_urls"));
-  const thumbnailUrls = collectStrings(pick(item, "video_thumbnail_url", "thumbnail_url"));
-  const adId = firstString(pick(item, "adArchiveID", "adArchiveId", "ad_archive_id", "external_ad_id", "id"));
-  const pageId = firstString(pick(item, "pageID", "pageId", "page_id")) || input.metaPageId;
-  const pageName = firstString(pick(item, "pageName", "page_name"));
-  const body = firstString(pick(item, "creative_text", "body", "text", "ad_creative_body"));
-  const headline = firstString(pick(item, "headline", "title"));
-  const landingUrl = firstString(pick(item, "landing_url", "link_url", "url"));
-  return {
-    adArchiveID: adId,
-    id: adId,
-    pageID: pageId,
-    pageName,
-    isActive: deriveIsActive(item),
-    status: firstString(pick(item, "status", "active_status", "ad_active_status")),
-    startDate: pick(item, "startDate", "start_date", "ad_delivery_start_time"),
-    endDate: pick(item, "endDate", "end_date", "ad_delivery_stop_time"),
-    publisherPlatform: normalisePlatforms(pick(item, "publisherPlatform", "publisher_platforms", "platforms")),
-    snapshot: {
-      title: headline,
-      body,
-      caption: firstString(pick(item, "description", "caption")),
-      ctaText: firstString(pick(item, "cta", "cta_text")),
-      linkUrl: landingUrl,
-      cards: [],
-      images: imageUrls.map((url) => ({ originalImageUrl: url })),
-      videos: videoUrls.map((url) => ({ videoHdUrl: url })),
-      thumbnails: thumbnailUrls.map((url) => ({ thumbnailUrl: url })),
-      pageName,
-      pageId,
-    },
-    inputUrl: firstString(pick(item, "ad_snapshot_url", "snapshot_url")) || (adId ? `https://www.facebook.com/ads/library/?id=${adId}` : null),
-    rawHostedProvider: item,
-  };
 }
 
 function failedCaptureOutcome(provider, input, startedAt, errorMessage, metadata = {}, costUsd = 0) {
@@ -3841,99 +3113,41 @@ function locationSearchInput(payload) {
 }
 
 async function runHermesLocationSearchCapture(input, job) {
-  const startedAt = now();
   const url = metaAdLibraryLocationSearchUrl(input);
-  try {
-    const stdout = await browserDumpDom(url, metaCaptureTimeoutMs);
-    const sourceDocumentId = await sourceDocument("meta_ad_library_location_search", url, stdout.slice(0, 2_500_000), {
-      work_queue_id: job.id,
+  const cliResult = await runMetaLibraryCaptureCli({
+    url,
+    kind: "location_search",
+    metaPageId: input.metaPageId,
+    country: input.country || "AU",
+    activeStatus: input.activeStatus || "all",
+    resultsLimit: input.resultsLimit || 25,
+    timeoutMs: metaCaptureTimeoutMs,
+    proxyUrl: env.RESIDENTIAL_PROXY_URL || env.HERMES_META_CAPTURE_PROXY_URL || "",
+  });
+
+  // Map CLI output (snake_case metadata) to the supervisor's camelCase contract.
+  return {
+    runId: cliResult.runId,
+    provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
+    status: cliResult.status,
+    startedAt: cliResult.startedAt,
+    finishedAt: cliResult.finishedAt,
+    costUsd: cliResult.costUsd || 0,
+    itemCount: (cliResult.items || []).length,
+    items: cliResult.items || [],
+    rawDatasetId: cliResult.rawDatasetId || null,
+    errorMessage: cliResult.errorMessage || null,
+    metadata: {
+      ...(cliResult.metadata || {}),
+      sourceDocumentId: (cliResult.metadata && cliResult.metadata.source_document_id) || null,
+      confirmed_absence: Boolean(cliResult.metadata && cliResult.metadata.confirmed_absence),
+      blocked_reason: (cliResult.metadata && cliResult.metadata.blocked_reason) || null,
       postcode: input.postcode,
       suburb: input.suburb,
       state: input.state,
       query: input.query,
-      location_search_allowed: true,
-    });
-    const parsed = normaliseMetaAdLibraryHtml({ html: stdout, pageId: null, limit: input.resultsLimit });
-    if (parsed.challengeDetected) await recordMetaBrowserChallenge("location-search", input);
-    const countOnly = parsed.items.length === 0 && !parsed.confirmedAbsence && Number(parsed.connectionCount) > 0;
-    const errorMessage = countOnly ? null : parsed.warnings.join("; ") || null;
-    const rawEvidence = errorMessage
-      ? await safeWriteBrowserRawEvidence("location-search", input, {
-        url,
-        html: stdout,
-        warnings: parsed.warnings,
-        html_bytes: Buffer.byteLength(stdout),
-        sourceDocumentId,
-        confirmed_absence: parsed.confirmedAbsence,
-        challenge_detected: parsed.challengeDetected,
-        connection_count: parsed.connectionCount,
-        count_only: countOnly,
-        postcode: input.postcode,
-        suburb: input.suburb,
-        state: input.state,
-        query: input.query,
-      })
-      : null;
-    return {
-      runId: `hermes-location-search-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
-      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
-      status: errorMessage ? "FAILED" : "SUCCEEDED",
-      startedAt,
-      finishedAt: now(),
-      costUsd: 0,
-      itemCount: parsed.items.length,
-      items: parsed.items,
-      rawDatasetId: null,
-      errorMessage,
-      metadata: {
-        url,
-        html_bytes: Buffer.byteLength(stdout),
-        sourceDocumentId,
-        confirmed_absence: parsed.confirmedAbsence,
-        challenge_detected: parsed.challengeDetected,
-        connection_count: parsed.connectionCount,
-        count_only: countOnly,
-        postcode: input.postcode,
-        suburb: input.suburb,
-        state: input.state,
-        query: input.query,
-        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
-        raw_evidence_error: rawEvidence?.error || null,
-      },
-    };
-  } catch (error) {
-    const rawEvidence = await safeWriteBrowserRawEvidence("location-search-error", input, {
-      url,
-      error: error.message,
-      executable: metaBrowserExecutable,
-      postcode: input.postcode,
-      suburb: input.suburb,
-      state: input.state,
-      query: input.query,
-    });
-    return {
-      runId: `hermes-location-search-failed-${hash(`${input.state}:${input.postcode}:${input.query}`).slice(0, 16)}-${Date.now()}`,
-      provider: META_LOCATION_SEARCH_SOURCE_PROVIDER,
-      status: "FAILED",
-      startedAt,
-      finishedAt: now(),
-      costUsd: 0,
-      itemCount: 0,
-      items: [],
-      rawDatasetId: null,
-      errorMessage: error.message,
-      metadata: {
-        executable: metaBrowserExecutable,
-        postcode: input.postcode,
-        suburb: input.suburb,
-        state: input.state,
-        query: input.query,
-        url,
-        raw_evidence: rawEvidence?.bucket ? rawEvidence : null,
-        raw_evidence_error: rawEvidence?.error || null,
-      },
-    };
-  }
+    },
+  };
 }
 
 function normaliseMetaAdLibraryHtml({ html, pageId, limit }) {
@@ -5086,21 +4300,6 @@ async function handleAdCollector(job) {
     });
     return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, confirmed_absence: true, reconciliation, ingest_tables: ingestTables } };
   }
-  if (isApifySourceProvider(sourceProvider)) {
-    await updateFetchRun(adFetchRunId, {
-      source_provider: sourceProvider,
-      status: "partial",
-      result_summary: {
-        provider: sourceProvider,
-        item_count: outcome.itemCount,
-        ingested_count: 0,
-        raw_dataset_id: outcome.rawDatasetId,
-        metadata: outcome.metadata || {},
-        ingest_pending: true,
-      },
-      cost_usd: outcome.costUsd || 0,
-    });
-  }
   const ingested = [];
   try {
     for (const ad of outcome.items) {
@@ -5207,10 +4406,30 @@ async function handleMediaCollector(job) {
   let failed = 0;
   let deduped = 0;
   let refreshed = 0;
+  let qualityBlocked = 0;
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
   for (const asset of assets) {
     try {
       const stored = await captureMediaAsset(asset, buildRunId);
+      if (stored.rejected) {
+        await patchMediaAsset(asset.id, {
+          storage_bucket: null,
+          storage_path: null,
+          content_type: stored.contentType,
+          byte_size: stored.byteSize,
+          width: stored.width,
+          height: stored.height,
+          capture_status: "blocked",
+          captured_at: now(),
+          last_error: `Media quality rejected: ${stored.rejectionReason}`,
+          metadata: {
+            ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
+            media_quality_rejection: stored.rejectionReason,
+          },
+        });
+        qualityBlocked += 1;
+        continue;
+      }
       const existingStoredAsset = await findCapturedMediaAssetByStorage({
         creativeId: payload.adCreativeId,
         storagePath: stored.storagePath,
@@ -5222,6 +4441,8 @@ async function handleMediaCollector(job) {
           storage_path: null,
           content_type: stored.contentType,
           byte_size: stored.byteSize,
+          width: stored.width,
+          height: stored.height,
           checksum: stored.checksum,
           content_hash: stored.contentHash,
           capture_status: "blocked",
@@ -5241,6 +4462,8 @@ async function handleMediaCollector(job) {
         storage_path: stored.storagePath,
         content_type: stored.contentType,
         byte_size: stored.byteSize,
+        width: stored.width,
+        height: stored.height,
         checksum: stored.checksum,
         content_hash: stored.contentHash,
         capture_status: "captured",
@@ -5277,7 +4500,7 @@ async function handleMediaCollector(job) {
     status: "pending",
     max_attempts: 3,
   }, job);
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, failed } };
+  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, quality_blocked: qualityBlocked, failed } };
 }
 
 async function findCapturedMediaAssetByStorage({ creativeId, storagePath, excludeId }) {
@@ -5352,7 +4575,7 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
   if (shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
   }
@@ -5377,9 +4600,7 @@ async function handleAdClassifier(job) {
       rationale:
         classification.rationale ||
         classification.rejection_reason ||
-        (classificationResult.usedFallback
-          ? `Deterministic fallback classification: ${classificationResult.fallbackReason || "model unavailable"}.`
-          : "Model-backed Hermes classification for verified real-estate page creative."),
+        "Model-backed Hermes classification for verified real-estate page creative.",
       confidence: Math.round((classification.confidence || 0) * 100),
       evidence: {
         headline: creative.headline,
@@ -5443,6 +4664,20 @@ async function captureMediaAsset(asset, buildRunId) {
     const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
     const buffer = Buffer.from(await response.arrayBuffer());
     if (!buffer.length) throw new Error("media fetch returned an empty body");
+    const imageDimensions = asset.kind === "image" ? readImageDimensions(buffer, contentType) : null;
+    const imageQuality = asset.kind === "image"
+      ? assessCapturedImageQuality({ byteSize: buffer.length, ...imageDimensions })
+      : { displayable: true, reason: null };
+    if (!imageQuality.displayable) {
+      return {
+        rejected: true,
+        rejectionReason: imageQuality.reason,
+        contentType,
+        byteSize: buffer.length,
+        width: imageDimensions?.width ?? null,
+        height: imageDimensions?.height ?? null,
+      };
+    }
     const checksum = hash(buffer);
     const existingBlob = await findMediaBlob(checksum);
     if (existingBlob) {
@@ -5451,6 +4686,8 @@ async function captureMediaAsset(asset, buildRunId) {
         storagePath: existingBlob.storage_path,
         contentType: existingBlob.content_type || contentType,
         byteSize: existingBlob.byte_size || buffer.length,
+        width: imageDimensions?.width ?? null,
+        height: imageDimensions?.height ?? null,
         checksum,
         contentHash: checksum,
         deduped: true,
@@ -5466,7 +4703,17 @@ async function captureMediaAsset(asset, buildRunId) {
       asset,
       buildRunId,
     });
-    return { storagePath, contentType, byteSize: buffer.length, checksum, contentHash: checksum, deduped: false };
+    return {
+      storagePath,
+      contentType,
+      byteSize: buffer.length,
+      width: imageDimensions?.width ?? null,
+      height: imageDimensions?.height ?? null,
+      checksum,
+      contentHash: checksum,
+      deduped: false,
+      rejected: false,
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -5566,22 +4813,6 @@ async function ensureRawEvidenceBucket() {
   }
 }
 
-async function writeApifyRawEvidence(input, actorId, evidence) {
-  await ensureRawEvidenceBucket();
-  const objectPath = [
-    "apify",
-    input.metaPageId || "unknown-page",
-    `${Date.now()}-${hash(json({ actorId, evidence })).slice(0, 16)}.json`,
-  ].join("/");
-  await uploadStorageObject(
-    RAW_EVIDENCE_BUCKET,
-    objectPath,
-    Buffer.from(json({ actorId, input, evidence }), "utf8"),
-    "application/json",
-  );
-  return { bucket: RAW_EVIDENCE_BUCKET, objectPath };
-}
-
 async function safeWriteBrowserRawEvidence(kind, input, evidence) {
   try {
     return await writeBrowserRawEvidence(kind, input, evidence);
@@ -5658,6 +4889,9 @@ async function refreshCreativeStoredMedia(adCreativeId) {
         storagePath: asset.storage_path,
         contentType: asset.content_type || asset.mime_type || null,
         byteSize: asset.byte_size,
+        width: asset.width,
+        height: asset.height,
+        captureStatus: asset.capture_status,
         capturedAt: asset.captured_at,
       })),
     }),
@@ -6040,7 +5274,7 @@ async function processOneJob(job) {
 
 async function tick() {
   let buildRunId = null;
-  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0, apifyBenchmark: null };
+  let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
   let watchdogs = {};
   try {
     buildRunId = await ensureBuildRun();
@@ -6049,8 +5283,7 @@ async function tick() {
     await refreshMetaBrowserChallengeCooldownFromSettings();
     const adRefresh = await enqueueDueAdPageRefreshJobs(buildRunId);
     const locationSearch = await enqueueDueLocationAdSearchJobs(buildRunId);
-    const apifyBenchmark = await runApifyCandidateBenchmarkIfNeeded(buildRunId);
-    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch, apifyBenchmark };
+    supervisor = { ...policySeed, ...census, ...adRefresh, ...locationSearch };
   } catch (error) {
     log("supervisor phase failed; continuing to queue worker", { error: error.message }, "error");
   }

@@ -13,7 +13,7 @@ const paths = {
   commonSchema: "src/lib/research/schemas/common.ts",
   entitiesSchema: "src/lib/research/schemas/entities.ts",
   hardResetMigration: "supabase/migrations/202605300003_blockwise_hard_reset_clean_schema.sql",
-  metaCapture: "hermes/tools/meta-library-capture/src/capture.ts",
+  metaCapture: "hermes/tools/meta-library-capture/bin/capture.mjs",
   metaCard: "src/components/research/meta-ad-library-card.tsx",
   censusSources: "src/lib/research/census-sources.ts",
   coverageSchema: "src/lib/research/schemas/coverage.ts",
@@ -155,7 +155,6 @@ test("customer research APIs read the customer-safe history view", () => {
   const sources = [
     read("src/app/api/research/ads/search/route.ts"),
     read("src/app/api/research/swipe-file/route.ts"),
-    read("src/app/api/research/swipe-file/[id]/send-to-adstudio/route.ts"),
     read("src/lib/research/customer-ad-library-pages.ts"),
   ].join("\n");
 
@@ -194,7 +193,7 @@ test("customer research page ranks specific location searches before direct text
 
 test("legacy worker runtime is archived only and active collectors are page-first", () => {
   const sourceSchema = stripComments(read(paths.commonSchema));
-  const capture = `${stripComments(read(paths.metaCapture))}\n${stripComments(read("hermes/tools/meta-library-capture/src/types.ts"))}`;
+  const capture = stripComments(read(paths.metaCapture));
   const forbidden = [
     "apify",
     "apify_discovery",

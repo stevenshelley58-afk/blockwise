@@ -68,17 +68,6 @@ const hostedMetaParser = [
 const captureInput = functionBody(supervisor, "captureInput");
 const metaAdLibraryPageUrl = functionBody(supervisor, "metaAdLibraryPageUrl");
 const configuredMetaPageCapture = functionBody(supervisor, "runMetaPageCapture");
-const apifyMetaPageCapture = functionBody(supervisor, "runApifyMetaPageCapture");
-const apifyActorResolution = functionBody(supervisor, "resolveApifyCaptureActor");
-const apifyCandidateBenchmark = functionBody(supervisor, "runApifyCandidateBenchmarkIfNeeded");
-const apifyActorBenchmark = functionBody(supervisor, "benchmarkApifyCandidateActor");
-const apifyCanaryInput = functionBody(supervisor, "readApifyCanaryCaptureInput");
-const apifyPageInput = functionBody(supervisor, "apifyMetaPageInput");
-const apifyErrorCost = functionBody(supervisor, "costUsdFromApifyError");
-const apifySpendCircuit = functionBody(supervisor, "openApifyCircuitAfterSpendWithoutIngest");
-const apifySpendCircuitGuard = functionBody(supervisor, "openCircuitIfPaidSpendWithoutIngest");
-const apifyLedgerSpend = functionBody(supervisor, "readApifyLedgerSpendUsd");
-const apifyRawEvidence = functionBody(supervisor, "writeApifyRawEvidence");
 const browserPageCapture = functionBody(supervisor, "runHermesBrowserCapture");
 const browserLocationSearchCapture = functionBody(supervisor, "runHermesLocationSearchCapture");
 const browserRawEvidence = functionBody(supervisor, "writeBrowserRawEvidence");
@@ -152,42 +141,6 @@ test("Hermes active ad collector supports browser/http_json capture", () => {
   );
 });
 
-test("Hermes paid Apify capture is budget guarded and ledger backed", () => {
-  const apifySource = `${apifyMetaPageCapture}\n${apifyActorResolution}\n${apifyLedgerSpend}\n${apifyRawEvidence}`;
-  assert.match(supervisor, /from\s+["']\.\/apify-capture\.mjs["']/u, "supervisor must import the standalone Apify adapter");
-  assert.match(supervisor, /\benv\.APIFY_TOKEN\s*\|\|\s*env\.APIFY_API_TOKEN\b/u, "supervisor must accept the operator-owned Apify token aliases");
-  assert.match(researchCompose, /\bAPIFY_TOKEN:\s*\$\{APIFY_TOKEN:-\}/u, "Hermes compose service must pass APIFY_TOKEN into the container");
-  assert.match(researchCompose, /\bAPIFY_API_TOKEN:\s*\$\{APIFY_API_TOKEN:-\}/u, "Hermes compose service must pass APIFY_API_TOKEN into the container");
-  assert.match(apifyMetaPageCapture, /\bguardApifyBudget\b/u, "paid capture must run the budget guard before dispatch");
-  assert.match(apifyMetaPageCapture, /\bensureApifyAccountLimit\b/u, "paid capture must assert the account-level spend backstop before dispatch");
-  assert.match(apifyMetaPageCapture, /\breadLedgerSpendUsd:\s*readApifyLedgerSpendUsd/u, "budget guard must read the local ad_fetch_runs ledger");
-  assert.match(apifyLedgerSpend, /source_provider=like/u, "ledger spend must use a provider-prefix filter");
-  assert.match(apifyLedgerSpend, /META_APIFY_SOURCE_PROVIDER_PREFIX/u, "ledger spend must be scoped to apify providers");
-  assert.match(apifyMetaPageCapture, /\brunApifyCapture\b/u, "supervisor must call the standalone adapter rather than duplicating Apify fetch code");
-  assert.match(apifyMetaPageCapture, /\bhasApifySchemaMap\b/u, "paid capture must not spend against actors without a schema map");
-  assert.match(apifyPageInput, /\burls:\s*\[\s*url\s*\]/u, "Apify actors that require input.urls must receive the Meta Ad Library URL");
-  assert.match(apifyPageInput, /\bmaxAds:\s*resultLimit\b/u, "Apify actor-specific maxAds defaults must be capped with the shared result limit");
-  assert.match(apifyMetaPageCapture, /\bcostUsdFromApifyError\(error\)/u, "failed Apify captures must still ledger any charged run cost");
-  assert.match(apifyMetaPageCapture, /\bopenApifyCircuitAfterSpendWithoutIngest\b/u, "charged failed Apify captures must open the paid circuit");
-  assert.match(apifyErrorCost, /\bextractApifyRunCost\b/u, "Apify error cost extraction must reuse the run-detail cost parser");
-  assert.match(apifySpendCircuit, /\bsetRuntimeSetting\(["']apify_state["'],\s*["']circuit_open["']/u, "spend without ingest must open the Apify circuit");
-  assert.match(apifySpendCircuit, /\binsertCoverageDefect\b/u, "spend without ingest must leave an operator defect");
-  assert.match(apifySpendCircuitGuard, /\bisApifySourceProvider\b/u, "generic circuit helper must only react to Apify providers");
-  assert.match(apifySpendCircuitGuard, /Number\(costUsd\)\s*>\s*0[\s\S]*Number\(ingestedCount\)\s*>\s*0/u, "paid circuit helper must require positive spend and zero ingested rows");
-  assert.match(apifyActorResolution, /\bselectCheapestApifyActor\b/u, "approved actor selection should use the cheapest passing actor helper");
-  assert.match(apifyRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "schema failures should save raw Apify payload evidence");
-  assert.match(apifyActorBenchmark, /item_count:\s*normalisedAds\.length[\s\S]*raw_item_count:\s*rawItems\.length[\s\S]*valid_ad_count:\s*normalisedAds\.length/u, "Apify canaries should write the canonical item_count used by zero-ad watchdogs");
-});
-
-test("Hermes browser parse failures store raw evidence pointers", () => {
-  assert.match(browserPageCapture, /safeWriteBrowserRawEvidence\(["']page-capture["']/u, "page capture parse failures must save browser raw evidence");
-  assert.match(browserPageCapture, /\braw_evidence\b/u, "page capture metadata must expose raw evidence pointers");
-  assert.match(browserLocationSearchCapture, /safeWriteBrowserRawEvidence\(["']location-search["']/u, "location search parse failures must save browser raw evidence");
-  assert.match(browserLocationSearchCapture, /\braw_evidence\b/u, "location search metadata must expose raw evidence pointers");
-  assert.match(browserRawEvidence, /\bRAW_EVIDENCE_BUCKET\b/u, "browser evidence must use the configured raw evidence bucket");
-  assert.match(browserRawEvidence, /["']browser["']/u, "browser evidence should be stored under a browser prefix for operator review");
-});
-
 test("Hermes Meta browser challenges cool down capture instead of masquerading as no ads", () => {
   assert.match(
     metaChallengeDetector,
@@ -200,9 +153,14 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
     "challenge captures should be labelled explicitly instead of as generic parser failures",
   );
   assert.match(
-    `${browserPageCapture}\n${browserLocationSearchCapture}`,
-    /recordMetaBrowserChallenge[\s\S]*challenge_detected/u,
-    "browser capture paths must record challenge cooldowns and keep challenge evidence visible",
+    browserPageCapture,
+    /runMetaLibraryCaptureCli[\s\S]*kind:\s*["']page["']/u,
+    "page capture must delegate to the shared capture CLI",
+  );
+  assert.match(
+    browserLocationSearchCapture,
+    /runMetaLibraryCaptureCli[\s\S]*kind:\s*["']location_search["'][\s\S]*blocked_reason/u,
+    "location capture must delegate to the CLI and surface bot-challenge/blocked signals",
   );
   assert.match(
     `${adPageRefresh}\n${locationAdSearchQueue}`,
@@ -239,47 +197,6 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
     /resume_spread_ms:\s*META_BROWSER_CHALLENGE_RESUME_SPREAD_MS[\s\S]*hash\(`\$\{job\?\.[\s\S]*job_type[\s\S]*META_BROWSER_CHALLENGE_RESUME_SPREAD_MS/u,
     "challenge deferral should stagger resume times so cooled-down capture jobs do not all become due at once",
   );
-});
-
-test("Hermes active ad collector only spends on Apify when Apify is explicitly configured", () => {
-  assert.doesNotMatch(configuredMetaPageCapture, /\bcaptureWithPaidApifyFailover\b/u, "browser/http_json failures must not automatically spend on Apify");
-  assert.doesNotMatch(configuredMetaPageCapture, /\brunApifyMetaPageCapture\(input,\s*fallback/u, "free capture failure must not trigger hidden paid fallback");
-  assert.match(fallbackMetaPageCapture, /sourceProvider === META_APIFY_SOURCE_PROVIDER[\s\S]*runApifyMetaPageCapture\(input,\s*null,\s*\{\s*explicit:\s*true\s*\}\)/u, "Apify page capture should only run when Apify is the configured provider");
-  assert.match(configuredMetaPageCapture, /\bcaptureModeForSourceProvider\b/u, "capture metadata should reflect the configured provider");
-});
-
-test("Hermes treats disabled explicit Apify capture as skipped work, not a blocked job", () => {
-  assert.match(
-    apifyMetaPageCapture,
-    /skippedCaptureOutcome\(META_APIFY_SOURCE_PROVIDER[\s\S]*skip_reason:\s*parsedSettings\.enabled \? ["']apify_circuit_open["'] : ["']apify_disabled["']/u,
-    "disabled or circuit-open explicit Apify capture should return a skipped outcome without paid dispatch",
-  );
-  assert.match(
-    collector,
-    /outcome\.status === ["']SKIPPED["'][\s\S]*status:\s*["']failed["'][\s\S]*skipped:\s*true[\s\S]*status:\s*["']complete["']/u,
-    "skipped capture should complete the work queue job while recording a failed/skipped fetch run",
-  );
-  assert.doesNotMatch(
-    collector,
-    /outcome\.status === ["']SKIPPED["'][\s\S]*finishJob\([^)]*["']blocked["']/u,
-    "skipped paid capture must not create health-critical blocked queue work",
-  );
-});
-
-test("Hermes Apify fallback only promotes actors after capped known-good canaries", () => {
-  assert.match(apifyCandidateBenchmark, /\bif \(!apifyToken\) return \{ status: ["']skipped["'], reason: ["']token_missing["'] \}/u, "benchmark must not run without an Apify token");
-  assert.match(apifyCandidateBenchmark, /\bresolveApifyCaptureActor\(settings\)/u, "benchmark should skip when an approved actor already exists");
-  assert.match(apifyCandidateBenchmark, /\breadApifyCanaryCaptureInput\(settings\)/u, "benchmark must target a known-good canary page from stored ads");
-  assert.match(apifyCanaryInput, /observed_ads\?select=advertiser_page_id,external_ad_id[\s\S]*active_status=eq\.active/u, "canary input should come from ads already observed as active");
-  assert.match(apifyActorBenchmark, /\bensureApifyAccountLimit\b/u, "canary benchmark must keep the account-level spend backstop");
-  assert.match(apifyActorBenchmark, /\bguardApifyBudget\b/u, "canary benchmark must use the same ledger budget guard as paid fallback");
-  assert.match(apifyActorBenchmark, /maxTotalChargedUsd:\s*canaryPerRunCapUsd/u, "canary benchmark must pass the small canary cap to Apify");
-  assert.match(apifyActorBenchmark, /\bcostUsdFromApifyError\(error\)/u, "failed canary runs must still ledger any charged run cost");
-  assert.match(apifyActorBenchmark, /\bopenApifyCircuitAfterSpendWithoutIngest\b/u, "charged failed canaries must open the paid circuit");
-  assert.match(apifyActorBenchmark, /\binferApifySchemaMap\b[\s\S]*\bmapApifyDatasetItems\b/u, "canary benchmark must infer and validate the actor schema map");
-  assert.match(apifyActorBenchmark, /\bingestMetaAd\b[\s\S]*\bingested\.length > 0/u, "actor promotion must require at least one ingested ad");
-  assert.match(apifyActorBenchmark, /status:\s*passed \? ["']approved["'] : ["']candidate["']/u, "failed canaries must stay candidate, not become selectable");
-  assert.match(apifyActorBenchmark, /\bsetRuntimeSetting\(["']apify_actor_id["'], actorId/u, "a passing canary should select the approved actor for future fallback");
 });
 
 test("Hermes active ad collector can prefer official paginated Meta page API", () => {
@@ -592,6 +509,21 @@ test("Hermes page resolver collects agency Facebook pages linked from verified a
 
 test("Hermes location ad search is explicit, gated, and separate from page collection", () => {
   assert.match(
+    researchCompose,
+    /HERMES_LOCATION_AD_SEARCH_PROVIDER:\s*\$\{HERMES_LOCATION_AD_SEARCH_PROVIDER:-hermes_browser\}/u,
+    "location search provider selection must be explicit in the VPS runtime",
+  );
+  assert.match(
+    locationAdSearch,
+    /runHermesLocationSearchCapture\(input,\s*job\)/u,
+    "location ad search must dispatch through the Hermes browser capture path (no Apify)",
+  );
+  assert.doesNotMatch(
+    `${locationAdSearch}`,
+    /apify/iu,
+    "location ad search must not reference Apify after the model/capture cutover",
+  );
+  assert.match(
     supervisor,
     /const LOCATION_AD_SEARCH_JOB_TYPE = ["']blockwise-location-ad-search["']/u,
     "location ad search must be an explicit job type",
@@ -628,8 +560,8 @@ test("Hermes location ad search is explicit, gated, and separate from page colle
   );
   assert.match(
     browserLocationSearchCapture,
-    /const countOnly = parsed\.items\.length === 0[\s\S]*Number\(parsed\.connectionCount\) > 0[\s\S]*status:\s*errorMessage \? ["']FAILED["'] : ["']SUCCEEDED["']/u,
-    "count-only location search shells should complete instead of retrying a parser failure with no ad rows",
+    /runMetaLibraryCaptureCli[\s\S]*kind:\s*["']location_search["'][\s\S]*confirmed_absence/u,
+    "location search capture must delegate to the CLI and surface confirmed-absence semantics",
   );
   assert.match(
     locationAdSearch,
@@ -1279,24 +1211,6 @@ test("Hermes active ad collector queues media and classifier follow-up jobs", ()
   }
 });
 
-test("Hermes active ad collector ledgers paid capture cost before ingest can fail", () => {
-  assert.match(
-    collector,
-    /if \(isApifySourceProvider\(sourceProvider\)\)[\s\S]*status:\s*["']partial["'][\s\S]*ingest_pending:\s*true[\s\S]*cost_usd:\s*outcome\.costUsd \|\| 0/u,
-    "paid capture cost must be written before ingesting ads",
-  );
-  assert.match(
-    collector,
-    /catch \(error\)[\s\S]*ingest failed after capture[\s\S]*cost_usd:\s*outcome\.costUsd \|\| 0[\s\S]*openCircuitIfPaidSpendWithoutIngest/u,
-    "ingest failures after paid capture must retain cost and open circuit when no ads were ingested",
-  );
-  assert.match(
-    collector,
-    /updateFetchRun\(adFetchRunId,[\s\S]*status:\s*["']success["'][\s\S]*openCircuitIfPaidSpendWithoutIngest/u,
-    "paid successful captures with zero ingested ads must still open the paid circuit",
-  );
-});
-
 test("Hermes active ad collector reconciles disappeared ads after successful captures", () => {
   assert.match(
     collector,
@@ -1410,6 +1324,24 @@ test("Hermes media collector globally dedupes stored media by content hash", () 
     mediaSource,
     /capture_status:\s*["']blocked["'][\s\S]*deduped_to_media_asset_id/u,
     "duplicate stored blobs should be folded into the existing captured media row instead of creating another captured row",
+  );
+});
+
+test("Hermes blocks thumbnail-sized images before storage and records their dimensions", () => {
+  assert.match(
+    supervisor,
+    /assessCapturedImageQuality[\s\S]*readImageDimensions/u,
+    "the media collector must use the shared image-quality contract",
+  );
+  assert.match(
+    captureMediaAsset,
+    /readImageDimensions\(buffer[\s\S]*assessCapturedImageQuality[\s\S]*rejected:\s*true/u,
+    "image bytes must be dimension-checked before they can become captured media",
+  );
+  assert.match(
+    mediaCollector,
+    /stored\.rejected[\s\S]*capture_status:\s*["']blocked["'][\s\S]*width:\s*stored\.width[\s\S]*height:\s*stored\.height/u,
+    "quality-rejected images must become blocked rows with diagnostic dimensions",
   );
 });
 
