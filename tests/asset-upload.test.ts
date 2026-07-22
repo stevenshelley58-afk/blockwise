@@ -66,7 +66,18 @@ test("asset upload UI supports picker, drop, paste, previews, and editable-targe
   assert.match(mediaHook, /committedPrimaryImageRef/);
   assert.match(workbench, /getVariantPrimaryImage/);
   assert.match(workbench, /variantImage\?\.src/);
-  assert.match(globals, /studio-newad-upload\[data-has-file="true"\]/);
+  assert.match(
+    globals,
+    /\.studio-newad-upload\[data-has-file="true"\] \.asset-upload-trigger \{\s*min-height: 112px;/,
+  );
+  assert.match(
+    globals,
+    /\.studio-newad-upload\[data-has-file="true"\] \.asset-upload-preview img \{\s*object-fit: contain;/,
+  );
+  assert.doesNotMatch(
+    globals,
+    /\.studio-newad-upload\[data-has-file="true"\] \.asset-upload-preview \{\s*width: 100%;/,
+  );
   assert.match(globals, /studio-media-upload\[data-has-file="true"\]/);
   assert.match(onboarding, /<AssetUploadDropzone[\s\S]*Upload logo/);
   assert.match(brandStudio, /workspace-artifacts/);
