@@ -86,6 +86,26 @@ type PublishSetupPanelProps = {
 };
 
 const STEPS = ["Campaign setup", "Creatives", "Destination", "Budget", "Review", "Live"] as const;
+const BUDGET_PRESETS = [10, 20, 50] as const;
+const DURATION_PRESETS = [7, 14, 30] as const;
+
+type ScheduleMode = `${(typeof DURATION_PRESETS)[number]}` | "custom" | "ongoing";
+
+function formatLocalDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateInputToIso(value: string, endOfDay = false): string | null {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = endOfDay
+    ? new Date(year, month - 1, day, 23, 59, 59, 999)
+    : new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 export function PublishSetupPanel({
   campaignId,
@@ -114,7 +134,9 @@ export function PublishSetupPanel({
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
-  const [durationDays, setDurationDays] = useState(7);
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("7");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +237,38 @@ export function PublishSetupPanel({
   const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
   const campaignStepReady = campaignMode === "new" || Boolean(selectedCampaign);
   const destinationReady = isWebUrl(destinationUrl);
+  const selectedBudgetPreset = BUDGET_PRESETS.includes(dailyBudgetAud as (typeof BUDGET_PRESETS)[number])
+    ? dailyBudgetAud
+    : null;
+  const parsedCustomStart = dateInputToIso(customStartDate);
+  const parsedCustomEnd = dateInputToIso(customEndDate, true);
+  const budgetError = Number.isFinite(dailyBudgetAud) && dailyBudgetAud >= 1
+    ? ""
+    : "Enter a daily budget of at least $1.";
+  const scheduleError = scheduleMode === "custom"
+    ? !parsedCustomStart || !parsedCustomEnd
+      ? "Choose both a start date and an end date."
+      : new Date(parsedCustomEnd).getTime() <= new Date(parsedCustomStart).getTime()
+        ? "End date must be after the start date."
+        : ""
+    : "";
+  const budgetStepReady = !budgetError && !scheduleError;
+  const presetDurationDays = scheduleMode === "custom" || scheduleMode === "ongoing"
+    ? null
+    : Number(scheduleMode);
+  const customDurationDays = parsedCustomStart && parsedCustomEnd
+    ? Math.max(1, Math.ceil((new Date(parsedCustomEnd).getTime() - new Date(parsedCustomStart).getTime()) / 86_400_000))
+    : null;
+  const plannedSpend = !budgetError
+    ? dailyBudgetAud * (presetDurationDays ?? customDurationDays ?? 0)
+    : null;
+  const scheduleSummary = scheduleMode === "ongoing"
+    ? "Runs until stopped"
+    : scheduleMode === "custom"
+      ? customStartDate && customEndDate
+        ? `${formatInputDate(customStartDate)} to ${formatInputDate(customEndDate)}`
+        : "Custom dates"
+      : `${scheduleMode} days`;
 
   function toggleVariant(variantId: string) {
     setDeselectedVariantIds((current) => {
@@ -225,14 +279,31 @@ export function PublishSetupPanel({
     });
   }
 
+  function chooseSchedule(mode: ScheduleMode) {
+    if (mode === "custom" && (!customStartDate || !customEndDate)) {
+      const start = new Date();
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      setCustomStartDate(formatLocalDateInput(start));
+      setCustomEndDate(formatLocalDateInput(end));
+    }
+    setScheduleMode(mode);
+  }
+
   function buildControls(): MetaPublishControls {
     const start = new Date();
     const end = new Date(start);
-    end.setDate(start.getDate() + durationDays);
+    if (presetDurationDays) end.setDate(start.getDate() + presetDurationDays);
+    const startTime = scheduleMode === "custom" ? parsedCustomStart : start.toISOString();
+    const endTime = scheduleMode === "ongoing"
+      ? null
+      : scheduleMode === "custom"
+        ? parsedCustomEnd
+        : end.toISOString();
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
       geo: { type: "country", country: campaignPack.campaign.market.country },
-      schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
+      schedule: { startTime, endTime },
       placements: {
         publisherPlatforms: ["facebook", "instagram"],
         facebookPositions: [],
@@ -242,7 +313,7 @@ export function PublishSetupPanel({
   }
 
   async function handlePublishLive() {
-    if (!allMet || selectionHint || !campaignStepReady || !destinationReady) return;
+    if (!allMet || selectionHint || !campaignStepReady || !destinationReady || !budgetStepReady) return;
     setPublishing(true);
     setPublishError("");
     setPublishDone(false);
@@ -296,7 +367,9 @@ export function PublishSetupPanel({
       ? Boolean(selectionHint)
       : stepIndex === 2
         ? !destinationReady
-        : false;
+        : stepIndex === 3
+          ? !budgetStepReady
+          : false;
 
   return (
     <div className="studio-publish-flow">
@@ -471,25 +544,117 @@ export function PublishSetupPanel({
           {stepIndex === 3 && (
             <section className="studio-publish-screen" aria-labelledby="budget-title">
               <h1 id="budget-title">Budget</h1>
-              <div className="studio-publish-field-grid">
-                <label className="studio-publish-field">
-                  <span>Daily budget</span>
-                  <select value={dailyBudgetAud} onChange={(event) => setDailyBudgetAud(Number(event.target.value))}>
-                    <option value={10}>$10/day</option>
-                    <option value={20}>$20/day</option>
-                    <option value={50}>$50/day</option>
-                  </select>
+
+              <fieldset className="studio-budget-section">
+                <legend>Daily budget <span>AUD</span></legend>
+                <div className="studio-budget-presets" aria-label="Daily budget presets">
+                  {BUDGET_PRESETS.map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      className={selectedBudgetPreset === amount ? "selected" : ""}
+                      aria-pressed={selectedBudgetPreset === amount}
+                      onClick={() => setDailyBudgetAud(amount)}
+                    >
+                      <strong>${amount}<small>/day</small></strong>
+                      <span>{amount === 10 ? "Starter" : amount === 20 ? "Recommended" : "Stronger test"}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="studio-budget-amount">
+                  <span>Enter amount</span>
+                  <span className="studio-currency-input">
+                    <i aria-hidden>$</i>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="decimal"
+                      value={Number.isFinite(dailyBudgetAud) ? dailyBudgetAud : ""}
+                      aria-invalid={Boolean(budgetError)}
+                      aria-describedby={budgetError ? "budget-error" : undefined}
+                      onChange={(event) => setDailyBudgetAud(event.target.value === "" ? Number.NaN : Number(event.target.value))}
+                    />
+                    <i aria-hidden>/ day</i>
+                  </span>
                 </label>
-                <label className="studio-publish-field">
-                  <span>Duration</span>
-                  <select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}>
-                    <option value={7}>7 days</option>
-                    <option value={14}>14 days</option>
-                    <option value={30}>30 days</option>
-                  </select>
-                </label>
+                {budgetError && <p className="studio-field-error" id="budget-error">{budgetError}</p>}
+              </fieldset>
+
+              <fieldset className="studio-budget-section">
+                <legend>Schedule</legend>
+                <div className="studio-duration-presets" aria-label="Schedule presets">
+                  {DURATION_PRESETS.map((days) => {
+                    const value = String(days) as ScheduleMode;
+                    return (
+                      <button
+                        key={days}
+                        type="button"
+                        className={scheduleMode === value ? "selected" : ""}
+                        aria-pressed={scheduleMode === value}
+                        onClick={() => chooseSchedule(value)}
+                      >
+                        {days} days
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={scheduleMode === "custom" ? "selected" : ""}
+                    aria-pressed={scheduleMode === "custom"}
+                    onClick={() => chooseSchedule("custom")}
+                  >
+                    Custom dates
+                  </button>
+                </div>
+
+                {scheduleMode === "custom" && (
+                  <div className="studio-date-range">
+                    <label>
+                      <span>Start date</span>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        aria-invalid={Boolean(scheduleError)}
+                        onChange={(event) => setCustomStartDate(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>End date</span>
+                      <input
+                        type="date"
+                        min={customStartDate || undefined}
+                        value={customEndDate}
+                        aria-invalid={Boolean(scheduleError)}
+                        aria-describedby={scheduleError ? "schedule-error" : undefined}
+                        onChange={(event) => setCustomEndDate(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className={`studio-run-ongoing ${scheduleMode === "ongoing" ? "selected" : ""}`}
+                  aria-pressed={scheduleMode === "ongoing"}
+                  onClick={() => chooseSchedule("ongoing")}
+                >
+                  <span aria-hidden />
+                  <span><strong>Run until stopped</strong><small>No end date. Pause the campaign whenever you need to.</small></span>
+                </button>
+                {scheduleError && <p className="studio-field-error" id="schedule-error">{scheduleError}</p>}
+              </fieldset>
+
+              <div className="studio-publish-total">
+                <span>{scheduleMode === "ongoing" ? "Daily spend limit" : "Planned spend"}</span>
+                <strong>
+                  {scheduleMode === "ongoing"
+                    ? `$${Number.isFinite(dailyBudgetAud) ? dailyBudgetAud.toLocaleString("en-AU") : "—"} AUD / day`
+                    : plannedSpend
+                      ? `$${plannedSpend.toLocaleString("en-AU")} AUD`
+                      : "—"}
+                </strong>
               </div>
-              <div className="studio-publish-total"><span>Planned spend</span><strong>${dailyBudgetAud * durationDays} AUD</strong></div>
             </section>
           )}
 
@@ -500,7 +665,7 @@ export function PublishSetupPanel({
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
                 <div><span>Destination</span><strong>{destinationUrl}</strong></div>
-                <div><span>Budget</span><strong>${dailyBudgetAud}/day · {durationDays} days</strong></div>
+                <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
               </div>
               <details className="studio-readiness-details" open={!allMet}>
                 <summary>
@@ -615,4 +780,9 @@ function formatDate(value: string | null) {
   return Number.isNaN(date.valueOf())
     ? "Not available"
     : new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+
+function formatInputDate(value: string) {
+  const iso = dateInputToIso(value);
+  return iso ? formatDate(iso) : value;
 }
