@@ -13,6 +13,7 @@ import {
   type CreateCampaignBody,
 } from "@/lib/adstudio/generate-template-campaign";
 import { compactAdStudioCampaignPackForTransport } from "@/lib/adstudio/persistence";
+import { buildAdStudioCreativeLibrary } from "@/lib/adstudio/creative-library";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { FIRST_AD_FORMATS, type FirstAdInput } from "@/lib/adstudio";
@@ -125,7 +126,34 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ campaigns: data ?? [] });
+  const campaigns = data ?? [];
+  if (request.nextUrl.searchParams.get("include") !== "creativeLibrary") {
+    return NextResponse.json({ campaigns });
+  }
+  const campaignIds = campaigns.flatMap((campaign) => typeof campaign.id === "string" ? [campaign.id] : []);
+  if (campaignIds.length === 0) return NextResponse.json({ campaigns, creativeLibrary: [] });
+
+  const [creativeResult, publishPlanResult] = await Promise.all([
+    context.supabase
+      .from("adstudio_creatives")
+      .select("campaign_id,format,canvas_json,preview_url,updated_at")
+      .eq("workspace_id", context.access.workspaceId)
+      .in("campaign_id", campaignIds)
+      .order("updated_at", { ascending: false }),
+    context.supabase
+      .from("meta_publish_plans")
+      .select("adstudio_campaign_id,status")
+      .eq("workspace_id", context.access.workspaceId)
+      .in("adstudio_campaign_id", campaignIds),
+  ]);
+
+  const creativeLibrary = buildAdStudioCreativeLibrary(
+    campaigns,
+    creativeResult.error ? [] : creativeResult.data ?? [],
+    publishPlanResult.error ? [] : publishPlanResult.data ?? [],
+  );
+
+  return NextResponse.json({ campaigns, creativeLibrary });
 }
 
 type SupabaseAccessClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
