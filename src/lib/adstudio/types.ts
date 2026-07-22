@@ -145,6 +145,13 @@ export type AdStudioOfferTemplate = {
   expectedLeadIntent: string;
 };
 
+export type AdStudioTargetLocation = {
+  /** Meta's stable ad-geolocation key, resolved before the campaign can continue. */
+  key: string;
+  name: string;
+  region: string | null;
+};
+
 export type AdStudioCampaign = {
   campaignId: string;
   workspaceId: string;
@@ -156,6 +163,8 @@ export type AdStudioCampaign = {
     state: string;
     city: string;
     suburb: string;
+    targetSuburbs?: AdStudioTargetLocation[];
+    includeSurroundingSuburbs?: boolean;
   };
   audienceIntent: string;
   offerId: string;

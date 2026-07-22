@@ -17,6 +17,26 @@ type MetaCampaignListResponse = {
   error?: { message?: string };
 };
 
+type MetaTargetingLocationRow = {
+  key?: string | number;
+  name?: string | null;
+  type?: string | null;
+  country_code?: string | null;
+  region?: string | null;
+  supports_city?: boolean | null;
+};
+
+type MetaTargetingLocationResponse = {
+  data?: MetaTargetingLocationRow[];
+  error?: { message?: string };
+};
+
+export type MetaTargetingLocation = {
+  key: string;
+  name: string;
+  region: string | null;
+};
+
 export type EligibleMetaCampaign = {
   id: string;
   name: string;
@@ -85,4 +105,42 @@ export async function fetchEligibleMetaCampaigns(input: {
   }
 
   return normalizeEligibleMetaCampaigns(rows);
+}
+
+export function normalizeMetaTargetingLocations(rows: MetaTargetingLocationRow[]): MetaTargetingLocation[] {
+  const seen = new Set<string>();
+  return rows.flatMap((row): MetaTargetingLocation[] => {
+    const key = String(row.key ?? "").trim();
+    const name = row.name?.trim();
+    const countryCode = row.country_code?.trim().toUpperCase();
+    const type = row.type?.trim().toLowerCase();
+    if (!key || !name || countryCode !== "AU" || row.supports_city === false || !type || !["city", "subcity", "neighborhood", "small_geo_area"].includes(type)) {
+      return [];
+    }
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ key, name, region: row.region?.trim() || null }];
+  });
+}
+
+export async function fetchMetaTargetingLocations(input: {
+  accessToken: string;
+  query: string;
+  fetchImpl?: typeof fetch;
+}): Promise<MetaTargetingLocation[]> {
+  const query = input.query.trim();
+  if (query.length < 2) return [];
+
+  const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/search`);
+  url.searchParams.set("access_token", input.accessToken);
+  url.searchParams.set("type", "adgeolocation");
+  url.searchParams.set("location_types", JSON.stringify(["city"]));
+  url.searchParams.set("country_code", "AU");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "10");
+
+  const response = await (input.fetchImpl ?? fetch)(url, { cache: "no-store" });
+  const payload = (await response.json()) as MetaTargetingLocationResponse;
+  if (!response.ok) throw new Error(payload.error?.message ?? `Meta request failed with ${response.status}.`);
+  return normalizeMetaTargetingLocations(payload.data ?? []).slice(0, 6);
 }
