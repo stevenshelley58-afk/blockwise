@@ -94,8 +94,8 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
         <form className="panel content-run-form" onSubmit={submitRun}>
           <div className="content-run-form-heading">
             <div>
-              <h2>Create a blog from a transcript</h2>
-              <p>Paste the source material. Blockwise will extract the argument, check claim risk, write the draft, and hold everything for review.</p>
+              <h2>Create a guide from a transcript</h2>
+              <p>Paste the source material. Blockwise will extract the argument, check claim risk, write the guide, and hold everything for review.</p>
             </div>
             <StatusPill tone="blue">Draft only</StatusPill>
           </div>
@@ -190,7 +190,7 @@ export function ContentRunConsole({ runs, promptSets }: ContentRunConsoleProps) 
           <div className="content-run-submit-row">
             <button className="button" type="submit" disabled={isSubmitting}>
               {isSubmitting ? <RefreshCw aria-hidden size={16} /> : <Play aria-hidden size={16} />}
-              {isSubmitting ? "Creating blog draft..." : "Create blog draft"}
+              {isSubmitting ? "Creating guide draft..." : "Create guide draft"}
             </button>
             <p>Nothing is published until an operator approves the finished package.</p>
           </div>

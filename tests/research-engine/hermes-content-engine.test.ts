@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   CONTENT_RUN_JOB_TYPE,
   CONTENT_STEPS,
+  artifactsForContentSkill,
+  deterministicContentSkillOutput,
   handleHermesContentRun,
   modelForContentSkill,
 } from "../../hermes/tools/research-runtime/bin/content-engine.mjs";
@@ -60,15 +62,43 @@ test("Hermes content handler turns a work_queue job into draft artifacts and rev
   assert.equal(
     db.tables.prompt_runs.every((row: Record<string, unknown>) => (
       row.input_json as Record<string, unknown>
-    ).source_transcript === "A source transcript with enough detail to drive a useful article draft."),
+    ).source_transcript === "A source transcript with enough detail to drive a useful guide draft."),
     true,
   );
 
   const artifactPackage = db.tables.content_artifacts.find((row: Record<string, unknown>) => row.artifact_type === "artifact_package");
-  assert.deepEqual(artifactPackage?.data_json.approval_actions, ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"]);
+  assert.deepEqual(artifactPackage?.data_json.approval_actions, ["approve_guide", "approve_images", "approve_social", "approve_ad", "request_changes"]);
+  assert.equal(typeof artifactPackage?.data_json.guide, "object");
+  assert.equal(artifactPackage?.data_json.blog, undefined);
   assert.equal(artifactPackage?.data_json.prompt_versions_used.length, CONTENT_STEPS.length);
   assert.equal(artifactPackage?.data_json.models_used.length, CONTENT_STEPS.length);
   assert.equal(artifactPackage?.data_json.models_used.every((row: Record<string, unknown>) => row.model_used === "hermes-deterministic-content"), true);
+});
+
+test("Hermes guide fallbacks use guide routes and titles while retaining legacy artifact types", () => {
+  const run = {
+    id: "run-1",
+    topic: "A practical seller lead guide",
+    target_audience: "Australian real estate agents",
+    offer: "A practical Blockwise field guide",
+    primary_cta: "Start a free Blockwise trial",
+  };
+  const input = { run, artifacts: {}, env: {} };
+  const strategy = deterministicContentSkillOutput("blockwise-content-strategist", input);
+  const seo = deterministicContentSkillOutput("blockwise-seo-schema-builder", input);
+  const page = deterministicContentSkillOutput("blockwise-page-builder", input);
+  const writerArtifact = artifactsForContentSkill("blockwise-blog-writer", {});
+  const editorArtifact = artifactsForContentSkill("blockwise-blog-editor", {});
+
+  assert.equal(strategy.guide_title, run.topic);
+  assert.equal(strategy.blog_title, undefined);
+  assert.match(String(seo.canonical), /^https:\/\/blockwise\.sale\/guides\//u);
+  assert.match(String(page.page_path), /^\/guides\//u);
+  assert.match(String(page.preview_url), /#guide-preview$/u);
+  assert.equal(writerArtifact[0]?.artifactType, "blog_draft");
+  assert.equal(writerArtifact[0]?.title, "Guide draft");
+  assert.equal(editorArtifact[0]?.artifactType, "blog_final");
+  assert.equal(editorArtifact[0]?.title, "Edited guide");
 });
 
 test("Hermes content handler times out stalled provider calls", async () => {
@@ -118,7 +148,7 @@ function createFakeRestDb() {
       model_policy_id: "best-available-balanced",
       input_json: {
         tone_profile: "direct, expert, no hype",
-        source_transcript: "A source transcript with enough detail to drive a useful article draft.",
+        source_transcript: "A source transcript with enough detail to drive a useful guide draft.",
         source_url: "https://example.com/source",
       },
       status: "queued",

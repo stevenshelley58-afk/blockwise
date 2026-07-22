@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Convert edited markdown into website-ready content blocks.
+Convert an edited field guide into website-ready content blocks.
 
 ## Output
 
@@ -11,12 +11,12 @@ Strict JSON with page metadata, Open Graph metadata, `content_blocks`,
 
 ## Constraints
 
-- Keep one dominant reading path with a clear hero and scannable sections.
-- Choose only the structures the article earns: evidence, framework, steps,
+- Keep one dominant reading path with a clear opening and scannable sections.
+- Choose only the structures the guide earns: evidence, framework, steps,
   comparison, checklist, timeline, decision table, specimen, compliance note,
   FAQ, sources, and CTA.
 - Do not force the same framework, table, FAQ, or image pattern into every
-  article.
+  guide.
 - Avoid walls of text.
 
 ## Tools

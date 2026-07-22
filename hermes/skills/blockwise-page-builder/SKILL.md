@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Prepare a draft blog page package from formatted content, approved assets, SEO
+Prepare a draft guide page package from formatted content, approved assets, SEO
 data, and CTA mapping.
 
 ## Output
@@ -14,7 +14,7 @@ and `build_notes`.
 
 - Phase 1 creates draft page data only.
 - Do not publish public pages automatically.
-- Prefer content-driven page data over one hardcoded React page per blog.
+- Prefer content-driven page data over one hardcoded React page per guide.
 
 ## Tools
 
