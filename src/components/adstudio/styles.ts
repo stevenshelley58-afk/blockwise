@@ -700,7 +700,8 @@
   .studio-newad-sources{grid-template-columns:1fr}
   .studio-newad-source{min-height:112px}
   .studio-tpl-grid{grid-template-columns:repeat(2,1fr)}
-  .studio-newad-foot.has-alert{flex-wrap:wrap}
+  .studio-newad-foot{flex-wrap:wrap;justify-content:flex-end}
+  .studio-newad-foot .studio-newad-sel,.studio-newad-foot .studio-newad-error{flex:1 0 100%;line-height:1.45}
   .studio-newad-foot.has-alert .studio-newad-requirements{flex-basis:100%}
 }
 @media(max-width:380px){

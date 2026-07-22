@@ -76,6 +76,16 @@ test("the customer chooses fast or high quality without provider jargon", () => 
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
 });
 
+test("the generation footer gives its status a full row on mobile", () => {
+  const styles = readFileSync("src/components/adstudio/styles.ts", "utf8");
+
+  assert.match(styles, /\.studio-newad-foot\{flex-wrap:wrap;justify-content:flex-end\}/);
+  assert.match(
+    styles,
+    /\.studio-newad-foot \.studio-newad-sel,\.studio-newad-foot \.studio-newad-error\{flex:1 0 100%;line-height:1\.45\}/,
+  );
+});
+
 test("goal-specific guidance does not introduce a second template recipe", () => {
   const template = AD_STUDIO_TEMPLATES[0]!;
   const guidance = briefGuidanceForTemplate(template);
