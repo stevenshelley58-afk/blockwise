@@ -14,9 +14,10 @@ import {
   RefreshCw,
   Send,
   Trash2,
+  X,
 } from "lucide-react";
 
-import type { AdStudioCampaignPack, AdStudioFormat } from "@/lib/adstudio";
+import type { AdStudioCampaignPack, AdStudioFormat, AdStudioTargetLocation } from "@/lib/adstudio";
 import type { MetaPublishControls } from "@/lib/providers/meta-execution";
 
 import type { ExportFormatStatus } from "../use-campaign-actions";
@@ -44,6 +45,11 @@ type MetaCampaignsResponse = {
   account?: { id: string; name: string };
   campaigns?: MetaCampaign[];
   issue?: string;
+};
+
+type MetaTargetingLocationsResponse = {
+  locations?: AdStudioTargetLocation[];
+  error?: string;
 };
 
 type PublishResponse = {
@@ -78,6 +84,7 @@ type PublishSetupPanelProps = {
   campaignPack: AdStudioCampaignPack;
   destinationUrl: string;
   onChangeDestinationUrl?: (value: string) => void;
+  onChangeTargeting?: (locations: AdStudioTargetLocation[], includeSurroundingSuburbs: boolean | undefined) => void;
   onExport: () => void;
   onDelete?: () => void;
   brandApproved?: boolean;
@@ -92,6 +99,7 @@ export function PublishSetupPanel({
   campaignPack,
   destinationUrl,
   onChangeDestinationUrl,
+  onChangeTargeting,
   onExport,
   onDelete,
   brandApproved = true,
@@ -115,6 +123,14 @@ export function PublishSetupPanel({
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
   const [durationDays, setDurationDays] = useState(7);
+  const [targetQuery, setTargetQuery] = useState("");
+  const [targetSuggestions, setTargetSuggestions] = useState<AdStudioTargetLocation[]>([]);
+  const [targetSuggestionsLoading, setTargetSuggestionsLoading] = useState(false);
+  const [targetSuggestionsError, setTargetSuggestionsError] = useState("");
+
+  const targetSuburbs = campaignPack.campaign.market.targetSuburbs ?? [];
+  const targetSuburbKeys = targetSuburbs.map((location) => location.key).join("|");
+  const includeSurroundingSuburbs = campaignPack.campaign.market.includeSurroundingSuburbs;
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +152,41 @@ export function PublishSetupPanel({
       cancelled = true;
     };
   }, [metaCampaignRefresh]);
+
+  useEffect(() => {
+    const query = targetQuery.trim();
+    if (query.length < 2) {
+      setTargetSuggestions([]);
+      setTargetSuggestionsLoading(false);
+      setTargetSuggestionsError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setTargetSuggestionsLoading(true);
+      setTargetSuggestionsError("");
+      fetch(`/api/adstudio/meta-targeting-locations?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then(async (response) => ({ response, body: (await response.json().catch(() => ({}))) as MetaTargetingLocationsResponse }))
+        .then(({ response, body }) => {
+          if (!response.ok) throw new Error(body.error ?? "Suburbs could not be loaded.");
+          setTargetSuggestions((body.locations ?? []).filter((location) => !targetSuburbs.some((selected) => selected.key === location.key)));
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setTargetSuggestions([]);
+          setTargetSuggestionsError(error instanceof Error ? error.message : "Suburbs could not be loaded.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setTargetSuggestionsLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [targetQuery, targetSuburbKeys]);
 
   useEffect(() => {
     if (!campaignId) return;
@@ -213,7 +264,9 @@ export function PublishSetupPanel({
     || campaignPack.brandKit.identity.businessName
     || "Your brand";
   const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
-  const campaignStepReady = campaignMode === "new" || Boolean(selectedCampaign);
+  const campaignStepReady = campaignMode === "existing"
+    ? Boolean(selectedCampaign)
+    : targetSuburbs.length > 0 && includeSurroundingSuburbs !== undefined;
   const destinationReady = isWebUrl(destinationUrl);
 
   function toggleVariant(variantId: string) {
@@ -225,13 +278,29 @@ export function PublishSetupPanel({
     });
   }
 
+  function addTargetSuburb(location: AdStudioTargetLocation) {
+    onChangeTargeting?.([...targetSuburbs, location], includeSurroundingSuburbs);
+    setTargetQuery("");
+    setTargetSuggestions([]);
+  }
+
+  function removeTargetSuburb(key: string) {
+    onChangeTargeting?.(targetSuburbs.filter((location) => location.key !== key), includeSurroundingSuburbs);
+  }
+
+  function chooseSurroundingSuburbs(value: boolean) {
+    onChangeTargeting?.(targetSuburbs, value);
+  }
+
   function buildControls(): MetaPublishControls {
     const start = new Date();
     const end = new Date(start);
     end.setDate(start.getDate() + durationDays);
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
-      geo: { type: "country", country: campaignPack.campaign.market.country },
+      geo: campaignMode === "new" && targetSuburbs.length > 0
+        ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: includeSurroundingSuburbs === true }
+        : { type: "country", country: campaignPack.campaign.market.country },
       schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
       placements: {
         publisherPlatforms: ["facebook", "instagram"],
@@ -318,7 +387,7 @@ export function PublishSetupPanel({
       <div className="studio-publish-main">
         <div className="studio-publish-mobile-progress" aria-label={`Step ${stepIndex + 1} of ${STEPS.length}`}>
           <span>{stepIndex + 1} / {STEPS.length}</span>
-          <div><i style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }} /></div>
+          <div><i style={{ transform: `scaleX(${(stepIndex + 1) / STEPS.length})` }} /></div>
         </div>
 
         <div className="studio-publish-content">
@@ -396,6 +465,61 @@ export function PublishSetupPanel({
                     <span>{campaignPack.campaign.name}</span>
                     <span className="studio-status-chip paused">paused</span>
                   </div>
+
+                  <div className="studio-targeting-setup">
+                    <div className="studio-targeting-heading">
+                      <strong>Target suburbs</strong>
+                      <span>Choose every suburb this campaign should reach.</span>
+                    </div>
+                    {targetSuburbs.length > 0 && (
+                      <div className="studio-targeting-chips" aria-label="Selected target suburbs">
+                        {targetSuburbs.map((location) => (
+                          <span key={location.key}>
+                            {location.name}{location.region ? `, ${location.region}` : ""}
+                            <button type="button" aria-label={`Remove ${location.name}`} onClick={() => removeTargetSuburb(location.key)}>
+                              <X aria-hidden size={14} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="studio-targeting-search">
+                      <label htmlFor="campaign-target-suburb">Search for a suburb</label>
+                      <input
+                        id="campaign-target-suburb"
+                        type="search"
+                        autoComplete="off"
+                        value={targetQuery}
+                        placeholder="Start typing a suburb"
+                        aria-describedby={targetSuggestionsError ? "campaign-target-error" : undefined}
+                        onChange={(event) => setTargetQuery(event.target.value)}
+                      />
+                      {targetSuggestionsLoading && <span className="studio-targeting-loading"><RefreshCw aria-hidden size={15} /> Searching Meta</span>}
+                      {!targetSuggestionsLoading && targetSuggestions.length > 0 && (
+                        <div className="studio-targeting-results" role="listbox" aria-label="Suburb suggestions">
+                          {targetSuggestions.map((location) => (
+                            <button key={location.key} type="button" role="option" aria-selected="false" onClick={() => addTargetSuburb(location)}>
+                              <strong>{location.name}</strong>
+                              <span>{location.region ?? "Australia"}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {targetSuggestionsError && <p id="campaign-target-error" className="studio-field-error"><CircleAlert aria-hidden size={15} /> {targetSuggestionsError}</p>}
+                    </div>
+
+                    <fieldset className="studio-surrounding-choice">
+                      <legend>Include surrounding suburbs?</legend>
+                      <label className={includeSurroundingSuburbs === true ? "selected" : ""}>
+                        <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === true} onChange={() => chooseSurroundingSuburbs(true)} />
+                        <span><strong>Yes, include nearby suburbs</strong><small>Add a 10 km area around each selected suburb.</small></span>
+                      </label>
+                      <label className={includeSurroundingSuburbs === false ? "selected" : ""}>
+                        <input type="radio" name="surrounding-suburbs" checked={includeSurroundingSuburbs === false} onChange={() => chooseSurroundingSuburbs(false)} />
+                        <span><strong>No, selected suburbs only</strong><small>Keep targeting to the suburbs listed above.</small></span>
+                      </label>
+                    </fieldset>
+                  </div>
                 </div>
               )}
 
@@ -464,7 +588,6 @@ export function PublishSetupPanel({
                 />
               </label>
               {destinationUrl.length > 0 && !destinationReady && <p className="studio-field-error">Enter a full http or https URL.</p>}
-              <div className="studio-publish-summary-row"><span>Location</span><strong>{campaignPack.campaign.market.country}</strong></div>
             </section>
           )}
 
@@ -500,6 +623,7 @@ export function PublishSetupPanel({
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
                 <div><span>Destination</span><strong>{destinationUrl}</strong></div>
+                <div><span>Audience</span><strong>{campaignMode === "existing" ? "Existing campaign targeting" : formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {durationDays} days</strong></div>
               </div>
               <details className="studio-readiness-details" open={!allMet}>
@@ -615,4 +739,10 @@ function formatDate(value: string | null) {
   return Number.isNaN(date.valueOf())
     ? "Not available"
     : new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+
+function formatTargetAudience(locations: AdStudioTargetLocation[], includeSurroundingSuburbs: boolean | undefined) {
+  if (locations.length === 0) return "No suburbs selected";
+  const names = locations.map((location) => location.name).join(", ");
+  return includeSurroundingSuburbs ? `${names} + nearby suburbs` : names;
 }

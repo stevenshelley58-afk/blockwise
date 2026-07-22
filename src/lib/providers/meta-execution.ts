@@ -34,13 +34,14 @@ export type MetaConnectionSetup = {
 
 export type MetaPublishControls = {
   dailyBudgetMinorUnits?: number;
-  geo?: {
-    type: "country" | "custom_radius";
-    country?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-  };
+  geo?:
+    | { type: "country"; country: string }
+    | { type: "custom_radius"; latitude: number; longitude: number; radiusKm: number }
+    | {
+        type: "cities";
+        locations: Array<{ key: string; name: string; region: string | null }>;
+        includeSurroundingSuburbs: boolean;
+      };
   schedule?: {
     startTime?: string | null;
     endTime?: string | null;
@@ -781,11 +782,17 @@ function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishContro
 }
 
 function buildTargeting(controls: MetaPublishControls): Record<string, unknown> {
-  const geoLocations =
-    controls.geo?.type === "custom_radius" &&
-    typeof controls.geo.latitude === "number" &&
-    typeof controls.geo.longitude === "number" &&
-    typeof controls.geo.radiusKm === "number"
+  const geoLocations = controls.geo?.type === "cities" && controls.geo.locations.length > 0
+    ? {
+        cities: controls.geo.locations.map((location) => ({
+          key: location.key,
+          ...(controls.geo?.type === "cities" && controls.geo.includeSurroundingSuburbs
+            ? { radius: 10, distance_unit: "kilometer" }
+            : {}),
+        })),
+        location_types: ["home", "recent"],
+      }
+    : controls.geo?.type === "custom_radius"
       ? {
           custom_locations: [
             {
@@ -798,7 +805,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
           location_types: ["home", "recent"],
         }
       : {
-          countries: [controls.geo?.country ?? "AU"],
+          countries: [controls.geo?.type === "country" ? controls.geo.country : "AU"],
           location_types: ["home", "recent"],
         };
 
