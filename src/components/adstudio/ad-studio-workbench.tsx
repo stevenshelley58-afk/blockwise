@@ -1269,6 +1269,7 @@ export function AdStudioWorkbench({
 
       <TopBar
         campaignName={campaignName}
+        minimal={studio.section === "publish"}
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onSave={saveDraft}

@@ -839,7 +839,7 @@
   .studio-campaign-details{grid-template-columns:1fr;gap:11px;padding:13px 42px}
   .studio-campaign-details div{grid-template-columns:72px 1fr;align-items:center}
   .studio-connection-row{grid-template-columns:auto minmax(0,1fr) auto;padding:12px 0}
-  .studio-connection-row .studio-connected,.studio-connection-row .studio-disconnected{grid-column:2}
+  .studio-connection-row .studio-connected,.studio-connection-row .studio-disconnected{grid-column:2;justify-self:start}
   .studio-connection-row>a{grid-column:2;min-height:32px;display:flex;align-items:center}
   .studio-publish-help summary{min-height:68px}
   .studio-publish-help>div{padding-left:30px}
