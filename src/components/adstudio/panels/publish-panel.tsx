@@ -322,7 +322,7 @@ export function PublishSetupPanel({
 
       <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
         <span style={{ color: "var(--muted)" }}>Audience and location</span>
-        <strong style={{ display: "block", marginTop: 2 }}>Audience: Australia-wide</strong>
+        <strong style={{ display: "block", marginTop: 2 }}>Audience: Nationwide</strong>
         <span style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>
           Broad targeting is recommended for housing ads.
         </span>

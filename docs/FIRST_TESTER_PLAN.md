@@ -119,7 +119,7 @@ The theme: never show the tester a state that is fake, dead, or unactionable.
 ### T2-8: Dead controls in publish/settings — remove or wire 🟠 MEDIUM
 - (a) **"Require approval before publishing" toggle does nothing** (`src/app/(customer)/settings/workspace-section.tsx` ~51–57; column read nowhere). Replace with static copy "All campaigns are reviewed before going live during early access."
 - (b) **"Lead destination" selector in Ad settings does nothing** (`src/components/adstudio/panels/campaign-panel.tsx` ~145–151; local state only). Remove it; replace with a read-only link to Settings → Connections where the real one lives.
-- (c) **Suburb targeting claim is false** (`publish-panel.tsx` ~250–256 says "local audience — {suburb}" but `buildControls` hardcodes country targeting). Change the copy to "Audience: Australia-wide (broad targeting recommended for housing ads)" until radius targeting ships.
+- (c) **Suburb targeting claim is false** (`publish-panel.tsx` ~250–256 says "local audience — {suburb}" but `buildControls` hardcodes country targeting). Change the copy to "Audience: Nationwide (broad targeting recommended for housing ads)" until radius targeting ships.
 - **Accept:** No visible control that has zero effect.
 
 ### T2-9: Meta OAuth cancel/failure lands on /results with zero feedback 🟠 MEDIUM

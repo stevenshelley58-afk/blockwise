@@ -474,7 +474,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 function operatorResearchErrorMessage(code: string | undefined): string | null {
   switch (code) {
     case "invalid_postcode":
-      return "Postcode refresh needs a four-digit Australian postcode.";
+      return "Enter a four-digit postcode.";
     case "invalid_request":
       return "Refresh request was incomplete. Choose a scope and enter a target.";
     case "refresh_failed":

@@ -534,7 +534,7 @@ async function ensureSourceBackedRefreshPolicies() {
       refresh_cadence_minutes: 1440,
       next_refresh_at: new Date(seededAt + index * 1_000).toISOString(),
       active: true,
-      notes: "Auto-seeded by Hermes from source-backed Australian postcode data.",
+      notes: "Auto-seeded by Hermes from source-backed postcode data.",
     }))),
   });
   return { policySeedCandidates: candidates.length, policySeeded: missing.length };

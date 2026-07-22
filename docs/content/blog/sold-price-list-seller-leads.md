@@ -3,7 +3,7 @@ title: "How to generate seller leads with a sold-price list"
 subtitle: "A practical Meta ads playbook for turning recent local sales into useful homeowner conversations."
 slug: "sold-price-list-seller-leads"
 seo_title: "Generate Seller Leads With a Sold-Price List | Blockwise"
-meta_description: "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with Australian homeowners without leading with an appraisal request."
+meta_description: "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with homeowners without leading with an appraisal request."
 excerpt: "A specific, current sold-price list gives local homeowners a useful reason to raise their hand before they are ready to request an appraisal."
 canonical: "https://blockwise.sale/blog/sold-price-list-seller-leads"
 og_title: "How to generate seller leads with a sold-price list"
@@ -20,8 +20,8 @@ author: "Blockwise"
 publisher: "Blockwise"
 status: "draft"
 last_updated: "2026-07-15"
-hero_image_brief: "An Australian suburban street seen from slightly above, with three ordinary detached homes and restrained sold-result annotations. No agent portrait, no fake portal interface, no oversized price stickers."
-hero_image_alt: "Three recently sold homes on an Australian suburban street"
+hero_image_brief: "A suburban street seen from slightly above, with three ordinary detached homes and restrained sold-result annotations. No agent portrait, no fake portal interface, no oversized price stickers."
+hero_image_alt: "Three recently sold homes on a suburban street"
 ---
 
 # How to generate seller leads with a sold-price list
@@ -172,7 +172,7 @@ For example:
 
 > Yes, send me the sold-price list and occasional [Suburb] property updates from [Agency]. I can unsubscribe at any time.
 
-[Australian commercial email and SMS rules](https://www.acma.gov.au/avoid-sending-spam) require consent, accurate sender identification and a working unsubscribe method. An unsubscribe request must be honoured within five working days.
+[Commercial email and SMS rules](https://www.acma.gov.au/avoid-sending-spam) require consent, accurate sender identification and a working unsubscribe method. An unsubscribe request must be honoured within five working days.
 
 ## 7. Deliver first, then start the conversation
 

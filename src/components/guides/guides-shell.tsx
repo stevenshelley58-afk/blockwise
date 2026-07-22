@@ -28,7 +28,7 @@ export function GuidesShell({ children }: { children: ReactNode }) {
             <Link href="/" className="bw-guides-brand bw-guides-brand-light">
               <BlockwiseLogo />
             </Link>
-            <p>Practical advertising guides for Australian real-estate teams.</p>
+            <p>Practical advertising guides for real-estate teams.</p>
           </div>
           <div className="bw-guides-footer-links">
             <Link href="/guides">Guides</Link>

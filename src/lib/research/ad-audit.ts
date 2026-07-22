@@ -131,7 +131,7 @@ export async function buildAdAudit(
 
   if (!guess) {
     return {
-      location: { query: searchTerm, label: searchTerm || "Australia", state: null, matched: false },
+      location: { query: searchTerm, label: searchTerm || "All locations", state: null, matched: false },
       generatedAt: new Date(now).toISOString(),
       stats: computeAuditStats([], { now }),
       topAds: [],

@@ -316,7 +316,7 @@ test("public Ad Radar loader uses longest-running coverage when location is empt
     ["old-active", "newer-active"],
   );
   assert.equal(response.location.query, "");
-  assert.equal(response.location.label, "Australia");
+  assert.equal(response.location.label, "All locations");
   assert.equal(response.location.matched, false);
   assert.equal(response.nextCursor, null);
 
