@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
     {
       id: "provider_writes",
       label: writesEnabled
-        ? "Live publishing is available"
-        : "Live publishing is in final platform review - export your creatives, or we'll email you when it opens.",
+        ? "Live publishing enabled"
+        : "Live publishing unavailable",
       done: writesEnabled,
       automatic: true,
       blocked: !writesEnabled,

@@ -207,6 +207,7 @@ export function buildMetaPlanIdempotencyKey(input: {
   adStudioCampaignId: string;
   adapter: MetaExecutionAdapter;
   approvalRequestId?: string | null;
+  existingMetaCampaignId?: string | null;
 }) {
   return [
     "meta_publish",
@@ -214,6 +215,7 @@ export function buildMetaPlanIdempotencyKey(input: {
     input.adStudioCampaignId,
     input.adapter,
     input.approvalRequestId ?? "draft",
+    input.existingMetaCampaignId ? `campaign_${input.existingMetaCampaignId}` : "campaign_new",
   ].join(":");
 }
 
@@ -228,6 +230,7 @@ export function buildMetaPublishPlan(input: {
   legacyCampaignId?: string | null;
   adStudioExportId?: string | null;
   includeCreativeAssets?: boolean;
+  existingMetaCampaignId?: string | null;
   /**
    * A/B publish (A6): when set, only these variants are planned — one campaign,
    * one ad set, one tagged ad per variant. Absent/empty keeps the existing
@@ -246,6 +249,7 @@ export function buildMetaPublishPlan(input: {
     adStudioCampaignId: campaignPack.campaign.campaignId,
     adapter,
     approvalRequestId: input.approvalRequestId,
+    existingMetaCampaignId: input.existingMetaCampaignId,
   });
   const campaign: MetaPublishCampaignPlan = {
     localId: "campaign_main",
@@ -281,7 +285,10 @@ export function buildMetaPublishPlan(input: {
     },
     requestLog: [],
     responseLog: [],
-    reconciledObjects: emptyReconciledObjects(),
+    reconciledObjects: {
+      ...emptyReconciledObjects(),
+      ...(input.existingMetaCampaignId?.trim() ? { campaignId: input.existingMetaCampaignId.trim() } : {}),
+    },
     lastError: null,
     createdAt: now,
     updatedAt: now,

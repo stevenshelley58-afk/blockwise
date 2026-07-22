@@ -1269,6 +1269,7 @@ export function AdStudioWorkbench({
 
       <TopBar
         campaignName={campaignName}
+        minimal={studio.section === "publish"}
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
@@ -1278,7 +1279,7 @@ export function AdStudioWorkbench({
       />
 
       <div className="studio-desktop-body">
-        <aside className="studio-rail" aria-label="Ad Studio sections">
+        {studio.section !== "publish" && <aside className="studio-rail" aria-label="Ad Studio sections">
           <span className="studio-rail-label">Create ad</span>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -1323,7 +1324,7 @@ export function AdStudioWorkbench({
               </button>
             );
           })}
-        </aside>
+        </aside>}
 
         {studio.section === "home" ? (
           <section className="studio-home-shell" aria-label="Ad Studio home">
@@ -1334,6 +1335,10 @@ export function AdStudioWorkbench({
               </Link>
             )}
             {renderHomePanel()}
+          </section>
+        ) : studio.section === "publish" ? (
+          <section className="studio-publish-shell" aria-label="Publish campaign">
+            {!isMobileViewport ? renderPanel() : null}
           </section>
         ) : (
           <>
@@ -1397,7 +1402,7 @@ export function AdStudioWorkbench({
       </div>
 
       <div className="studio-mobile-body">
-        {brandIsDraft && studio.mobileTab !== "home" && (
+        {brandIsDraft && studio.mobileTab !== "home" && studio.mobileTab !== "publish" && (
           <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
             <CircleAlert aria-hidden size={15} />
             <span><b>Draft brand in use.</b> Confirm your brand before publishing.</span>
@@ -1427,8 +1432,8 @@ export function AdStudioWorkbench({
           </>
         )}
 
-        {studio.mobileTab === "publish" && (
-          <div className="studio-mobile-panel">
+        {studio.mobileTab === "publish" && isMobileViewport && (
+          <div className="studio-mobile-panel studio-mobile-publish-panel">
             <PublishSetupPanel
               campaignId={pack.campaign.campaignId}
               campaignPack={pack}
@@ -1460,7 +1465,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text" || studio.mobileTab === "publish") && (
+        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}

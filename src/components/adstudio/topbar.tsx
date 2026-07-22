@@ -9,6 +9,7 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 type TopBarProps = {
   campaignId?: string;
   campaignName: string;
+  minimal?: boolean;
   showMore: boolean;
   setShowMore: (value: boolean | ((prev: boolean) => boolean)) => void;
   onSave: () => void | Promise<unknown>;
@@ -19,6 +20,7 @@ type TopBarProps = {
 export function TopBar({
   campaignId = "",
   campaignName,
+  minimal = false,
   showMore,
   setShowMore,
   onSave,
@@ -111,9 +113,9 @@ export function TopBar({
         <Link className="studio-home-link" href="/self-serve" aria-label="Go to Blockwise home">
           <BlockwiseLogo />
         </Link>
-        <span className="studio-divider" />
-        <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>
-        {campaigns.length > 1 && (
+        {!minimal && <span className="studio-divider" />}
+        {!minimal && <span className="studio-breadcrumb">Ad Studio / {campaignName}</span>}
+        {!minimal && campaigns.length > 1 && (
           <select
             className="studio-campaign-select"
             aria-label="Switch campaign"

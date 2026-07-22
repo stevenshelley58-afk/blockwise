@@ -26,7 +26,7 @@ test("publish review state is not treated as a hard publish error", () => {
   assert.match(panel, /!item\.met && \(!item\.review \|\| item\.blocked\)/);
   assert.match(panel, /needsApprovalReview/);
   assert.match(panel, /Send for review/);
-  assert.match(panel, /Submitted for review - your campaign will be queued once approved/);
+  assert.match(panel, /Submitted for review/);
 });
 
 test("Meta setup API captures concrete lead delivery endpoint config", () => {
