@@ -128,6 +128,54 @@ test("buildMetaPublishPlan applies user budget, geo, schedule, and placement con
   assert.deepEqual(plan.adSets[0]?.targeting.facebook_positions, ["feed"]);
 });
 
+test("buildMetaPublishPlan targets selected suburbs and can include their surrounding area", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls: {
+      geo: {
+        type: "cities",
+        locations: [
+          { key: "101", name: "Subiaco", region: "Western Australia" },
+          { key: "102", name: "Shenton Park", region: "Western Australia" },
+        ],
+        includeSurroundingSuburbs: true,
+      },
+    },
+  });
+
+  assert.deepEqual(plan.adSets[0]?.targeting.geo_locations, {
+    cities: [
+      { key: "101", radius: 10, distance_unit: "kilometer" },
+      { key: "102", radius: 10, distance_unit: "kilometer" },
+    ],
+    location_types: ["home", "recent"],
+  });
+});
+
+test("buildMetaPublishPlan keeps exact selected suburbs when surrounding areas are disabled", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls: {
+      geo: {
+        type: "cities",
+        locations: [{ key: "101", name: "Subiaco", region: "Western Australia" }],
+        includeSurroundingSuburbs: false,
+      },
+    },
+  });
+
+  assert.deepEqual(plan.adSets[0]?.targeting.geo_locations, {
+    cities: [{ key: "101" }],
+    location_types: ["home", "recent"],
+  });
+});
+
 test("validateMetaConnectionSetup requires production Meta assets", () => {
   assert.deepEqual(validateMetaConnectionSetup({ ...setup, pageId: "" }), [
     "Meta Page is not configured.",

@@ -29,6 +29,7 @@ import type {
   AdStudioCreative,
   AdStudioFormat,
   AdStudioOfferTemplate,
+  AdStudioTargetLocation,
   AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
@@ -318,6 +319,20 @@ export function AdStudioWorkbench({
   }
   function updateDestinationUrl(value: string) {
     setDestinationUrl(value);
+    studio.setSaveState("saving");
+  }
+  function updateCampaignTargeting(locations: AdStudioTargetLocation[], includeSurroundingSuburbs: boolean | undefined) {
+    setPack((current) => ({
+      ...current,
+      campaign: {
+        ...current.campaign,
+        market: {
+          ...current.campaign.market,
+          targetSuburbs: locations,
+          includeSurroundingSuburbs,
+        },
+      },
+    }));
     studio.setSaveState("saving");
   }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
@@ -1230,6 +1245,7 @@ export function AdStudioWorkbench({
           initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
           destinationUrl={destinationUrl}
           onChangeDestinationUrl={updateDestinationUrl}
+          onChangeTargeting={updateCampaignTargeting}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
           brandApproved={!brandIsDraft}
@@ -1448,6 +1464,7 @@ export function AdStudioWorkbench({
               initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
               destinationUrl={destinationUrl}
               onChangeDestinationUrl={updateDestinationUrl}
+              onChangeTargeting={updateCampaignTargeting}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
               brandApproved={!brandIsDraft}
