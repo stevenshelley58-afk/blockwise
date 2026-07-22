@@ -334,7 +334,7 @@ async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, 
   const fetchImpl = options.fetchImpl ?? fetch;
   const task = evidenceSource === "vision" ? "vision_classification" : "ad_classification";
   const model = modelForTask(env, task);
-  const messages = messagesForCreative(creative, capturedAssets, evidenceSource, options);
+  const messages = await messagesForCreative(creative, capturedAssets, evidenceSource, options);
   let lastContent = "";
   let lastError = null;
 
@@ -392,7 +392,7 @@ async function openRouterComplete({ env, fetchImpl, model, messages }) {
   return { model, content };
 }
 
-function messagesForCreative(creative, capturedAssets, evidenceSource, options) {
+async function messagesForCreative(creative, capturedAssets, evidenceSource, options) {
   const system = [
     "Classify a Meta real-estate ad for Blockwise filters.",
     "Use exactly one adType and primaryIntent from: appraisal, listing, open_home, just_sold, property_management, agency_brand, market_update, other.",
@@ -419,13 +419,18 @@ function messagesForCreative(creative, capturedAssets, evidenceSource, options) 
 
   const imageUrl = firstMediaUrl(capturedAssets, options);
   if (!imageUrl) throw new Error("vision classification requested without media");
+  const imageDataUrl = await fetchImageAsDataUrl(imageUrl, options.fetchImpl);
+  if (!imageDataUrl) {
+    // Image download failed (Meta CDN block/expiry) — fall back to text-only
+    return [{ role: "system", content: system }, { role: "user", content: `${userText}\n(Image unavailable — classify from text only.)` }];
+  }
   return [
     { role: "system", content: system },
     {
       role: "user",
       content: [
         { type: "text", text: `${userText}\nUse the attached creative image because copy is missing or too thin.` },
-        { type: "image_url", image_url: { url: imageUrl } },
+        { type: "image_url", image_url: { url: imageDataUrl } },
       ],
     },
   ];
@@ -462,6 +467,20 @@ function evidenceSourceForCreative(creative, capturedAssets) {
   if (hasUsableCreativeCopy(creative)) return "text";
   if (hasUsableCapturedMedia(capturedAssets)) return "vision";
   return "fallback";
+}
+
+async function fetchImageAsDataUrl(url, fetchImpl = fetch) {
+  try {
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) return null;
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    if (!contentType.startsWith("image/")) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length < 1024) return null;
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }
 
 function firstMediaUrl(capturedAssets, options = {}) {

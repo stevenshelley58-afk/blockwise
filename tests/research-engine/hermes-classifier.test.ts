@@ -162,7 +162,14 @@ test("Hermes classifier uses vision classification when copy is missing and medi
           vision_classification: "vision-model",
         }),
       },
-      fetchImpl: async (_url: string | URL | Request, init?: RequestInit) => {
+      fetchImpl: async (url: string | URL | Request, init?: RequestInit) => {
+        // First call: image download from CDN
+        if (String(url).includes("cdn.example.test")) {
+          return new Response(Buffer.alloc(2048, 0xff), {
+            headers: { "content-type": "image/jpeg" },
+          });
+        }
+        // Second call: LLM API
         const body = JSON.parse(String(init?.body));
         calls.push({ body });
         return Response.json({
