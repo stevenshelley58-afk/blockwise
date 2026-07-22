@@ -29,6 +29,18 @@ test("publish review state is not treated as a hard publish error", () => {
   assert.match(panel, /Submitted for review/);
 });
 
+test("publish budget supports presets, custom dates, and campaigns without an end date", () => {
+  const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
+
+  assert.match(panel, /const BUDGET_PRESETS = \[10, 20, 50\]/);
+  assert.match(panel, /const DURATION_PRESETS = \[7, 14, 30\]/);
+  assert.match(panel, /Enter amount/);
+  assert.match(panel, /Custom dates/);
+  assert.match(panel, /Run until stopped/);
+  assert.match(panel, /scheduleMode === "ongoing"[\s\S]*?null/);
+  assert.match(panel, /End date must be after the start date/);
+});
+
 test("Meta setup API captures concrete lead delivery endpoint config", () => {
   const setupRoute = readFileSync("src/app/api/integrations/meta/setup/route.ts", "utf8");
 
