@@ -10,6 +10,8 @@ import { templatePreviewDataUrl } from "@/lib/adstudio/template-preview.ts";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES } from "@/lib/upload/asset-file";
 
 import { uploadAdStudioMedia } from "./media-upload";
+import { GenerationAdStream, preloadGenerationAdStream } from "./generation-ad-stream";
+import { generationAdLocation } from "./generation-ad-stream-data";
 import { briefGuidanceForTemplate } from "./new-ad-dialog-brief";
 import {
   DEFAULT_IMAGE_SLOT,
@@ -265,6 +267,7 @@ export function NewAdDialog({
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
+  const adStreamLocation = useMemo(() => generationAdLocation(brandKit), [brandKit]);
 
   const selectedTemplate = templates.find((template) => template.id === templateId);
   const imageRequirements = useMemo(
@@ -364,6 +367,11 @@ export function NewAdDialog({
     if (!open) return;
     setDialogMediaAssets((current) => dedupeImageLibraryAssets([...current, ...mediaAssets]));
   }, [mediaAssets, open]);
+
+  useEffect(() => {
+    if (!open || step !== "brief") return;
+    preloadGenerationAdStream(adStreamLocation);
+  }, [adStreamLocation, open, step]);
 
   useEffect(() => {
     if (!open) return;
@@ -586,6 +594,24 @@ export function NewAdDialog({
       ? `Select an image for ${activeImageSlot.label}.`
       : "Blockwise will create your ad from the selected template, using your images and text.";
   const showFooter = step === "brief";
+
+  if (submitting) {
+    return (
+      <div className="studio-newad-overlay">
+        <div
+          ref={dialogRef}
+          className="studio-newad studio-newad--generating"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-busy="true"
+          tabIndex={-1}
+        >
+          <GenerationAdStream location={adStreamLocation} quality={generationQuality} titleId={titleId} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="studio-newad-overlay" onMouseDown={(event) => event.target === event.currentTarget && closeCurrentView()}>
