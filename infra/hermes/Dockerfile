@@ -23,7 +23,7 @@ COPY hermes/skills /app/skills
 COPY hermes/data /app/data
 COPY hermes/tools/research-runtime /app/research-runtime
 COPY hermes/tools/meta-library-capture /app/meta-library-capture
-RUN cd /app/meta-library-capture && npm ci --omit=dev
+RUN cd /app/meta-library-capture && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --omit=dev
 COPY infra/hermes/hermes.toml /app/hermes.toml
 COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh
 
