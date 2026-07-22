@@ -39,6 +39,7 @@ test("publish budget supports presets, custom dates, and campaigns without an en
   assert.match(panel, /Run until stopped/);
   assert.match(panel, /scheduleMode === "ongoing"[\s\S]*?null/);
   assert.match(panel, /End date must be after the start date/);
+  assert.match(panel, /end\.setDate\(end\.getDate\(\) \+ 6\)/);
 });
 
 test("Meta setup API captures concrete lead delivery endpoint config", () => {

@@ -283,7 +283,7 @@ export function PublishSetupPanel({
     if (mode === "custom" && (!customStartDate || !customEndDate)) {
       const start = new Date();
       const end = new Date(start);
-      end.setDate(end.getDate() + 7);
+      end.setDate(end.getDate() + 6);
       setCustomStartDate(formatLocalDateInput(start));
       setCustomEndDate(formatLocalDateInput(end));
     }
