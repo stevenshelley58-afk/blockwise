@@ -6,7 +6,7 @@ Prepare all generated draft outputs for the operator review screen.
 
 ## Output
 
-Strict JSON with blog, images, social posts, lead ad, Instant Form, review
+Strict JSON with guide, images, social posts, lead ad, Instant Form, review
 report, prompt versions, models used, and approval actions.
 
 ## Constraints

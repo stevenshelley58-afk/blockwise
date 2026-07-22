@@ -15,7 +15,7 @@ export default async function OperatorContentRunsPage() {
       <main className="content">
         <PageHeading
           eyebrow="Blockwise field guides"
-          title="Transcript to blog"
+          title="Transcript to guide"
           description="Paste source material and create a review-ready field guide. Nothing can leave draft state without operator approval."
         />
         <ServiceRoleRequired />
@@ -31,7 +31,7 @@ export default async function OperatorContentRunsPage() {
     <main className="content">
       <PageHeading
         eyebrow="Blockwise field guides"
-        title="Transcript to blog"
+        title="Transcript to guide"
         description="Turn one transcript into a sourced, structured field guide and its supporting draft package. Every claim, asset, and publish action stays in operator review."
       />
       <ContentRunConsole runs={runs} promptSets={promptSets} />

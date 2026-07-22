@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Turn a researched topic into a commercial content plan that connects the blog
+Turn a researched topic into a commercial content plan that connects the guide
 to a lead magnet, Meta lead ad, Instant Form, and follow-up path.
 
 ## Output

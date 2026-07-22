@@ -122,7 +122,7 @@ export function ContentRunReview({ run, artifacts, reviews, approvals, promptRun
         </div>
 
         {activeArtifact ? (
-          <article className="content-artifact-panel" id={activeArtifact.artifact_type === "blog_final" ? "blog-preview" : undefined}>
+          <article className="content-artifact-panel" id={activeArtifact.artifact_type === "blog_final" ? "guide-preview" : undefined}>
             <div className="row-between">
               <div>
                 <h2>{activeArtifact.title}</h2>

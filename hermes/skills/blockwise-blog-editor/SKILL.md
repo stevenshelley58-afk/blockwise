@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Improve the draft for clarity, specificity, claims, tone, commercial strength,
-and Blockwise positioning.
+Improve the guide draft for clarity, specificity, claims, tone, commercial
+strength, and Blockwise positioning.
 
 ## Output
 
