@@ -422,6 +422,22 @@ test("provider HTTP errors are retryable only for explicitly transient statuses"
     });
   }
 
+  const depletedProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
+    env: { OPENAI_API_KEY: "oa_test" },
+    fetchImpl: async () => new Response(JSON.stringify({ error: { message: "Insufficient credits" } }), { status: 402 }),
+  });
+  await assert.rejects(() => depletedProvider.generate({
+    prompt: "Premium local real estate appraisal creative",
+    referenceAssets: [],
+    aspectRatio: "1:1",
+    stylePreset: "real_estate_photography",
+  }), (error: unknown) => {
+    assert.ok(error instanceof ProviderRequestError);
+    assert.equal(error.retryable, false, "the same depleted provider should not be retried");
+    assert.equal(error.fallbackEligible, true, "another configured provider should be attempted");
+    return true;
+  });
+
   const nonJsonProvider = createImageProviderForCandidate(candidate("openai", "gpt-image-2"), {
     env: { OPENAI_API_KEY: "oa_test" },
     fetchImpl: async () => new Response("overloaded", { status: 503 }),

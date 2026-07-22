@@ -638,6 +638,7 @@ function submittedError(
   message: string,
   options: {
     retryable: boolean;
+    fallbackEligible?: boolean;
     usage?: ProviderUsage;
     providerRequestId?: string | null;
     cause?: unknown;
@@ -658,11 +659,18 @@ function submittedHttpError(
   return submittedError(message, {
     ...options,
     retryable: isRetryableProviderStatus(status),
+    fallbackEligible: isProviderFallbackEligibleStatus(status),
   });
 }
 
 function isRetryableProviderStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isProviderFallbackEligibleStatus(status: number): boolean {
+  // A depleted account will not recover by retrying the same request, but it
+  // must not strand the customer when the profile has another provider.
+  return status === 402 || isRetryableProviderStatus(status);
 }
 
 function supportsCustomTemperature(model: string): boolean {

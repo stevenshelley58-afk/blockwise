@@ -5,7 +5,7 @@ import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
 import {
-  isRetryableProviderFailure,
+  isProviderFallbackEligible,
   modelCandidateAttempts,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
@@ -403,7 +403,7 @@ async function generateCopyWithProfile(
       };
     }
 
-    if (!isRetryableProviderFailure(execution.error)) break;
+    if (!isProviderFallbackEligible(execution.error)) break;
 
     // A configured model just failed — tell the owner their chosen model is down.
     // De-duped by stage+toModel, so a burst of requests sends one alert.

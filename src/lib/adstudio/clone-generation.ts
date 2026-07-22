@@ -5,7 +5,7 @@ import { createImageProviderForCandidate } from "./ai-providers.ts";
 import { dataUrlToUploadBytes } from "./generated-media.ts";
 import type { ImageProviderAdapter, ImageProviderRequest, ImageProviderResponse } from "./providers.ts";
 import {
-  isRetryableProviderFailure,
+  isProviderFallbackEligible,
   modelCandidateAttempts,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
@@ -348,7 +348,7 @@ export async function generateCloneWithCascade(input: {
       attempts.push(execution.attempt);
       if (!execution.ok) {
         lastError = execution.error;
-        if (!isRetryableProviderFailure(execution.error)) break;
+        if (!isProviderFallbackEligible(execution.error)) break;
         continue;
       }
       result = execution.output;

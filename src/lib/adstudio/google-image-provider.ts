@@ -82,6 +82,7 @@ export function createGoogleImageProvider(
           {
             requestSubmitted: true,
             retryable: isRetryableProviderStatus(response.status),
+            fallbackEligible: isProviderFallbackEligibleStatus(response.status),
             providerRequestId: payload.id,
           },
         );
@@ -150,4 +151,8 @@ async function googleImageInput(reference: string, fetchImpl: typeof fetch, sign
 
 function isRetryableProviderStatus(status: number): boolean {
   return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isProviderFallbackEligibleStatus(status: number): boolean {
+  return status === 402 || isRetryableProviderStatus(status);
 }
