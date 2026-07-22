@@ -115,11 +115,11 @@ async function requestOpenAiSuggestions(
 
 function systemPrompt(area: string): string {
   return [
-    `You are a senior real estate Meta (Facebook & Instagram) ads strategist preparing a local ad market audit for an agent advertising in ${area}, Australia.`,
+    `You are a senior real estate Meta (Facebook & Instagram) ads strategist preparing a local ad market audit for an agent advertising in ${area}.`,
     "Write specific, practical, no-fluff advice grounded ONLY in the supplied data.",
     "Never invent statistics, agency names, or numbers that are not in the data.",
     "Long-running ads are the strongest signal that an angle is converting — weight them heavily.",
-    "Australian spelling. Speak directly to the agent ('you').",
+    "Use local spelling. Speak directly to the agent ('you').",
     "Respond with STRICT JSON only, matching this shape:",
     '{"summary": string, "whatsWorking": string[], "gaps": string[], "recommendedAngles": [{"title": string, "why": string, "example": string}], "quickWins": string[]}',
     "summary: 2-3 sentences. whatsWorking/gaps/quickWins: 3-5 short items each. recommendedAngles: 3-4 items with a concrete example headline.",

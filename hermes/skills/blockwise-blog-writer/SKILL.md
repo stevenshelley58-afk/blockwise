@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Write the first long-form expert article draft for Australian real estate
-agents from an operator brief and, when supplied, a source transcript.
+Write the first long-form expert article draft for real estate agents from an
+operator brief and, when supplied, a source transcript.
 
 ## Output
 
