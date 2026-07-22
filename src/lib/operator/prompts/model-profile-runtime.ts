@@ -35,9 +35,9 @@ export function modelCandidateAttempts(profile: RuntimeModelProfile): ModelCandi
   return [profile.primary, ...profile.fallbacks.slice(0, 1)];
 }
 
-export function isRetryableProviderFailure(error: unknown): boolean {
+export function isProviderFallbackEligible(error: unknown): boolean {
   return typeof error === "object"
     && error !== null
-    && "retryable" in error
-    && error.retryable === true;
+    && (("fallbackEligible" in error && error.fallbackEligible === true)
+      || ("retryable" in error && error.retryable === true));
 }

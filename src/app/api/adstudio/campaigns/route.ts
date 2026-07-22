@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 
 import { buildAdStudioLiveResult } from "@/lib/adstudio";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
+import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
 import {
   refundReservedTrialCredit,
   reserveAdStudioGenerationCredit,
@@ -307,7 +308,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     await refundReservedTrialCredit(trialReservation);
-    return errorResponse(error, 400);
+    console.error("adstudio campaign generation failed", error);
+    return errorResponse(new Error(publicAdStudioGenerationError(error)), 400);
   } finally {
     inFlightGenerations.delete(dedupKey);
     await releaseGenerationLock(context.supabase, dedupKey);

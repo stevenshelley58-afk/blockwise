@@ -70,6 +70,9 @@ test("the customer chooses fast or high quality without provider jargon", () => 
   assert.match(dialog, /High quality/);
   assert.match(dialog, /Usually ready in about 2–3 minutes/);
   assert.match(dialog, /generationQuality/);
+  assert.match(dialog, /We couldn't create this ad/);
+  assert.match(dialog, /error \? "Try again" : "Generate ad"/);
+  assert.match(dialog, /selectGenerationQuality/);
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
 });
 

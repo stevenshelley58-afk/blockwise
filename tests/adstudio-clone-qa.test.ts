@@ -582,6 +582,40 @@ test("clone generation does not fallback after a non-retryable provider failure"
   assert.equal(fallbackCalls, 0);
 });
 
+test("clone generation falls back when a provider account is depleted", async () => {
+  let fallbackCalls = 0;
+  const primary = accountedImageProvider("primary", async () => {
+    throw new ProviderRequestError("Insufficient credits", {
+      requestSubmitted: true,
+      retryable: false,
+      fallbackEligible: true,
+    });
+  });
+  const fallback = accountedImageProvider("fallback", async () => {
+    fallbackCalls += 1;
+    return {
+      assetUrl: "data:image/png;base64,b2s=",
+      seed: 1,
+      model: "fallback-model",
+      usage: { imageUnits: 1, complete: true },
+      providerMetadata: {},
+    };
+  });
+
+  const result = await generateCloneWithCascade({
+    providers: [primary, fallback],
+    request: { prompt: "clone", referenceAssets: [], aspectRatio: "4:5", stylePreset: "test" },
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    userId: "22222222-2222-4222-8222-222222222222",
+    correlationId: "depleted-primary-clone",
+    attempt: 1,
+    accounting: { executeAttempt, recordRun: async () => {} },
+  });
+
+  assert.equal(result.provider, "fallback");
+  assert.equal(fallbackCalls, 1);
+});
+
 test("clone generation invokes one fallback after a retryable provider failure", async () => {
   let fallbackCalls = 0;
   const primary = accountedImageProvider("primary", async () => {

@@ -319,7 +319,7 @@ export function NewAdDialog({
   const showFooterAlert = step === "brief" && mediaSourceMode === "details" && footerAlertItems.length > 0;
   const footerAlertTitle = visibleRequirementBlockers.length > 0
     ? "Add the missing details before generating"
-    : "Fix this before generating";
+    : "We couldn't create this ad";
 
   const closeCurrentView = useCallback(() => {
     if (step === "brief" && mediaSourceMode !== "details") {
@@ -523,6 +523,11 @@ export function NewAdDialog({
   function useBriefExample() {
     setDescription(briefGuidance.placeholder.replace(/^Example:\s*/u, ""));
     setShowRequirementsAlert(false);
+  }
+
+  function selectGenerationQuality(quality: GenerationQuality) {
+    setGenerationQuality(quality);
+    setError("");
   }
 
   async function submit() {
@@ -757,7 +762,7 @@ export function NewAdDialog({
                       name="generation-quality"
                       value="fast"
                       checked={generationQuality === "fast"}
-                      onChange={() => setGenerationQuality("fast")}
+                      onChange={() => selectGenerationQuality("fast")}
                     />
                     <span>
                       <strong>Fast</strong>
@@ -771,7 +776,7 @@ export function NewAdDialog({
                       name="generation-quality"
                       value="high"
                       checked={generationQuality === "high"}
-                      onChange={() => setGenerationQuality("high")}
+                      onChange={() => selectGenerationQuality("high")}
                     />
                     <span>
                       <strong>High quality</strong>
@@ -839,7 +844,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting ? "Creating ad" : "Generate ad"}
+                {uploadingImage ? "Uploading" : submitting ? "Creating ad" : error ? "Try again" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}

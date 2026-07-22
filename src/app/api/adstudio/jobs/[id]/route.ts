@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import { publicAdStudioGenerationError } from "@/lib/adstudio/generation-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,5 +34,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Job not found." }, { status: 404 });
 
-  return NextResponse.json({ job: data });
+  return NextResponse.json({
+    job: {
+      ...data,
+      error: data.status === "failed" ? publicAdStudioGenerationError(data.error) : data.error,
+    },
+  });
 }
