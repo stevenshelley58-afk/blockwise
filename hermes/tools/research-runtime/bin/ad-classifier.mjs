@@ -1,7 +1,6 @@
-import { modelForResearchTask, resolveLlmEndpoint } from "./llm-provider.mjs";
-
 export const CLASSIFIER_VERSION = "ad-library-classifier-v2";
 
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const REAL_ESTATE_BRANDS =
   /\b(real estate|property|agent|agency|ray white|harcourts|realmark|haiven|whitefox|noble avenue|lj hooker|professionals|belle property|acton|reiwa)\b/iu;
 
@@ -56,16 +55,80 @@ const AD_CLASSIFICATION_RESPONSE_FORMAT = {
   },
 };
 
+export function classifyCreativeDeterministically(creative, options = {}) {
+  const text = creativeText(creative);
+  const lower = text.toLowerCase();
+  const hooks = [];
+  let adType = "other";
+
+  if (hasExplicitSoldResult(lower)) {
+    adType = "just_sold";
+    hooks.push("sold result");
+  } else if (hasOpenHomeSignal(lower)) {
+    adType = "open_home";
+    hooks.push("open home");
+  } else if (hasPropertyManagementSignal(lower)) {
+    adType = "property_management";
+    hooks.push("property management");
+  } else if (hasAppraisalSignal(lower)) {
+    adType = "appraisal";
+    hooks.push("appraisal");
+  } else if (hasListingSignal(lower)) {
+    adType = "listing";
+    hooks.push("listing");
+  } else if (hasMarketUpdateSignal(lower)) {
+    adType = "market_update";
+    hooks.push("market update");
+  } else if (hasAgencyBrandSignal(lower)) {
+    adType = "agency_brand";
+    hooks.push("agency brand");
+  }
+
+  return normaliseAdClassification(
+    {
+      is_real_estate_ad: adType !== "other",
+      industry: adType !== "other" ? "real_estate" : "unknown",
+      real_estate_relevance: relevanceForAdType(adType),
+      ad_type: adType,
+      primary_intent: adType,
+      property_or_agent_focus: propertyFocusForText(lower, adType),
+      hooks,
+      tone: "",
+      style: "",
+      audience: "",
+      suburb_signals: suburbSignalsForText(text),
+      confidence: adType === "other" ? 0.35 : options.confidence ?? 0.74,
+      rejection_reason: adType === "other" ? "No reliable real-estate creative type signal was found." : null,
+      rationale: deterministicRationale(adType),
+    },
+    { evidenceSource: options.evidenceSource ?? "fallback" },
+  );
+}
+
 export async function classifyCreativeWithModels(creative, capturedAssets = [], options = {}) {
   const evidenceSource = evidenceSourceForCreative(creative, capturedAssets);
-  if (evidenceSource === "unavailable") throw new Error("no_usable_text_or_captured_media");
+  const fallback = (reason) => ({
+    classification: classifyCreativeDeterministically(creative, { evidenceSource: "fallback" }),
+    model: "deterministic-fallback",
+    evidenceSource: "fallback",
+    usedFallback: true,
+    fallbackReason: reason,
+  });
 
-  const result = await classifyWithLlm(creative, capturedAssets, evidenceSource, options);
-  return {
-    classification: normaliseAdClassification(result.classification, { evidenceSource }),
-    model: result.model,
-    evidenceSource,
-  };
+  if (evidenceSource === "fallback") return fallback("no_usable_text_or_captured_media");
+
+  try {
+    const result = await classifyWithOpenRouter(creative, capturedAssets, evidenceSource, options);
+    return {
+      classification: normaliseAdClassification(result.classification, { evidenceSource }),
+      model: result.model,
+      evidenceSource,
+      usedFallback: false,
+      fallbackReason: null,
+    };
+  } catch (error) {
+    return fallback(error.message);
+  }
 }
 
 export function shouldWaitForMediaClassification(creative, capturedAssets = []) {
@@ -129,7 +192,7 @@ export function normaliseAdClassification(input, options = {}) {
     rejection_reason: rejectionReason,
     rationale: cleanString(source.rationale) ?? cleanString(source.reasoning) ?? "",
     classifier_version: CLASSIFIER_VERSION,
-    evidence_source: options.evidenceSource ?? cleanString(source.evidence_source) ?? cleanString(source.evidenceSource) ?? "unavailable",
+    evidence_source: options.evidenceSource ?? cleanString(source.evidence_source) ?? cleanString(source.evidenceSource) ?? "fallback",
   };
 }
 
@@ -266,18 +329,18 @@ export function shouldDisplayClassifiedCreative(creative, capturedAssets = [], c
   return Boolean(classification?.is_real_estate_ad) && mediaReady && !hasUnresolvedDynamicPlaceholder(creative);
 }
 
-async function classifyWithLlm(creative, capturedAssets, evidenceSource, options) {
+async function classifyWithOpenRouter(creative, capturedAssets, evidenceSource, options) {
   const env = options.env ?? process.env;
   const fetchImpl = options.fetchImpl ?? fetch;
   const task = evidenceSource === "vision" ? "vision_classification" : "ad_classification";
-  const model = modelForResearchTask(env, task);
-  const messages = messagesForCreative(creative, capturedAssets, evidenceSource, options);
+  const model = modelForTask(env, task);
+  const messages = await messagesForCreative(creative, capturedAssets, evidenceSource, options);
   let lastContent = "";
   let lastError = null;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const output = await llmComplete({
+      const output = await openRouterComplete({
         env,
         fetchImpl,
         model,
@@ -300,31 +363,36 @@ async function classifyWithLlm(creative, capturedAssets, evidenceSource, options
   throw lastError ?? new Error("classification_model_failed");
 }
 
-async function llmComplete({ env, fetchImpl, model, messages }) {
-  const endpoint = resolveLlmEndpoint(env, model);
+async function openRouterComplete({ env, fetchImpl, model, messages }) {
+  const apiKey = cleanString(env.OPENROUTER_API_KEY);
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
+  const baseUrl = cleanString(env.OPENROUTER_BASE_URL) ?? OPENROUTER_BASE_URL;
   const headers = {
-    Authorization: `Bearer ${endpoint.apiKey}`,
+    Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
   };
+  if (cleanString(env.OPENROUTER_SITE_URL)) headers["HTTP-Referer"] = cleanString(env.OPENROUTER_SITE_URL);
+  if (cleanString(env.OPENROUTER_APP_NAME)) headers["X-Title"] = cleanString(env.OPENROUTER_APP_NAME);
 
-  const response = await fetchImpl(endpoint.chatUrl, {
+  const response = await fetchImpl(`${baseUrl.replace(/\/$/u, "")}/chat/completions`, {
     method: "POST",
     headers,
     body: JSON.stringify({
       model,
       messages,
-      max_completion_tokens: 900,
+      temperature: 0,
+      max_tokens: 900,
       response_format: AD_CLASSIFICATION_RESPONSE_FORMAT,
     }),
   });
   const raw = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(`${endpoint.provider} request failed: ${response.status} ${JSON.stringify(raw)}`);
+  if (!response.ok) throw new Error(`OpenRouter request failed: ${response.status} ${JSON.stringify(raw)}`);
   const content = raw?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error(`${endpoint.provider} returned an empty classification`);
+  if (typeof content !== "string" || !content.trim()) throw new Error("OpenRouter returned an empty classification");
   return { model, content };
 }
 
-function messagesForCreative(creative, capturedAssets, evidenceSource, options) {
+async function messagesForCreative(creative, capturedAssets, evidenceSource, options) {
   const system = [
     "Classify a Meta real-estate ad for Blockwise filters.",
     "Use exactly one adType and primaryIntent from: appraisal, listing, open_home, just_sold, property_management, agency_brand, market_update, other.",
@@ -351,13 +419,18 @@ function messagesForCreative(creative, capturedAssets, evidenceSource, options) 
 
   const imageUrl = firstMediaUrl(capturedAssets, options);
   if (!imageUrl) throw new Error("vision classification requested without media");
+  const imageDataUrl = await fetchImageAsDataUrl(imageUrl, options.fetchImpl);
+  if (!imageDataUrl) {
+    // Image download failed (Meta CDN block/expiry) — fall back to text-only
+    return [{ role: "system", content: system }, { role: "user", content: `${userText}\n(Image unavailable — classify from text only.)` }];
+  }
   return [
     { role: "system", content: system },
     {
       role: "user",
       content: [
         { type: "text", text: `${userText}\nUse the attached creative image because copy is missing or too thin.` },
-        { type: "image_url", image_url: { url: imageUrl } },
+        { type: "image_url", image_url: { url: imageDataUrl } },
       ],
     },
   ];
@@ -373,10 +446,41 @@ function parseClassificationJson(content) {
   }
 }
 
+function modelForTask(env, task) {
+  const taskModels = parseTaskModels(env.HERMES_OPENROUTER_MODELS_JSON);
+  const model = cleanString(taskModels[task]) ?? cleanString(env.HERMES_DEFAULT_MODEL) ?? cleanString(env.HERMES_OPENROUTER_MODEL);
+  if (!model) throw new Error(`No OpenRouter model configured for ${task}`);
+  return model;
+}
+
+function parseTaskModels(value) {
+  if (!cleanString(value)) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return isObject(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function evidenceSourceForCreative(creative, capturedAssets) {
   if (hasUsableCreativeCopy(creative)) return "text";
   if (hasUsableCapturedMedia(capturedAssets)) return "vision";
-  return "unavailable";
+  return "fallback";
+}
+
+async function fetchImageAsDataUrl(url, fetchImpl = fetch) {
+  try {
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) return null;
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    if (!contentType.startsWith("image/")) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length < 1024) return null;
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }
 
 function firstMediaUrl(capturedAssets, options = {}) {
