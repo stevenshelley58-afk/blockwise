@@ -295,6 +295,7 @@ export function AdStudioWorkbench({
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const searchParams = useSearchParams();
+  const openPublishOnLoad = searchParams.get("publish") === "1";
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -327,6 +328,7 @@ export function AdStudioWorkbench({
   const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
+  const [publishCreativeSource, setPublishCreativeSource] = useState<"current" | "library">("current");
   const [dismissedCloneWarningKeys, setDismissedCloneWarningKeys] = useState<Set<string>>(() => new Set());
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
@@ -335,7 +337,7 @@ export function AdStudioWorkbench({
   const linkedSamplePromptedRef = useRef(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
-  const studio = useAdStudio();
+  const studio = useAdStudio(openPublishOnLoad ? "publish" : "home");
   const { brand, initials } = useBrandKit(brandKit);
   // B2: an unapproved extracted kit can generate and edit, but is flagged as a
   // draft everywhere and keeps publish blocked until it is confirmed.
@@ -510,12 +512,14 @@ export function AdStudioWorkbench({
 
   function goToSection(section: import("./use-ad-studio").StudioSection) {
     setSelectedElement("canvas");
+    if (section !== "publish") setPublishCreativeSource("current");
     studio.setSection(section);
     studio.setMobileTab(section as import("./use-ad-studio").MobileTab);
   }
 
   function openSamplePicker(initialSampleId?: string) {
     setSelectedElement("canvas");
+    setPublishCreativeSource("library");
     setSamplePickerInitialId(initialSampleId);
     setSamplePickerOpen(true);
   }
@@ -830,6 +834,7 @@ export function AdStudioWorkbench({
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
     await generateFirstAd(input);
+    setPublishCreativeSource("current");
     setActiveSampleId(input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
@@ -1221,6 +1226,8 @@ export function AdStudioWorkbench({
         <PublishSetupPanel
           campaignId={pack.campaign.campaignId}
           campaignPack={pack}
+          creativeSource={publishCreativeSource}
+          initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
           destinationUrl={destinationUrl}
           onChangeDestinationUrl={updateDestinationUrl}
           onExport={exportCreatives}
@@ -1437,6 +1444,8 @@ export function AdStudioWorkbench({
             <PublishSetupPanel
               campaignId={pack.campaign.campaignId}
               campaignPack={pack}
+              creativeSource={publishCreativeSource}
+              initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
               destinationUrl={destinationUrl}
               onChangeDestinationUrl={updateDestinationUrl}
               onExport={exportCreatives}
@@ -1523,9 +1532,7 @@ export function AdStudioWorkbench({
                   openSamplePicker();
                   return;
                 }
-                setSelectedElement("canvas");
-                studio.setSection(item.id);
-                studio.setMobileTab(item.id);
+                goToSection(item.id);
               }}
             >
               <Icon aria-hidden size={22} />

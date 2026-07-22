@@ -11,12 +11,14 @@ import {
   CircleAlert,
   CircleHelp,
   Download,
+  Image as ImageIcon,
   RefreshCw,
   Send,
   Trash2,
 } from "lucide-react";
 
 import type { AdStudioCampaignPack, AdStudioFormat } from "@/lib/adstudio";
+import type { AdStudioCreativeLibraryItem } from "@/lib/adstudio/creative-library";
 import type { MetaPublishControls } from "@/lib/providers/meta-execution";
 
 import type { ExportFormatStatus } from "../use-campaign-actions";
@@ -76,6 +78,8 @@ type PublishPlanStatus = {
 type PublishSetupPanelProps = {
   campaignId: string;
   campaignPack: AdStudioCampaignPack;
+  creativeSource?: "current" | "library";
+  initialStep?: number;
   destinationUrl: string;
   onChangeDestinationUrl?: (value: string) => void;
   onExport: () => void;
@@ -90,6 +94,8 @@ const STEPS = ["Campaign setup", "Creatives", "Destination", "Budget", "Review",
 export function PublishSetupPanel({
   campaignId,
   campaignPack,
+  creativeSource = "current",
+  initialStep = 0,
   destinationUrl,
   onChangeDestinationUrl,
   onExport,
@@ -98,7 +104,7 @@ export function PublishSetupPanel({
   exportStatus = null,
   onRetryExportFormat,
 }: PublishSetupPanelProps) {
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(initialStep);
   const [campaignMode, setCampaignMode] = useState<"existing" | "new">("new");
   const [selectedMetaCampaignId, setSelectedMetaCampaignId] = useState("");
   const [expandedMetaCampaignId, setExpandedMetaCampaignId] = useState("");
@@ -115,6 +121,36 @@ export function PublishSetupPanel({
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
   const [durationDays, setDurationDays] = useState(7);
+  const [creativeLibrary, setCreativeLibrary] = useState<AdStudioCreativeLibraryItem[]>([]);
+  const [creativeLibraryLoading, setCreativeLibraryLoading] = useState(creativeSource === "library");
+  const [creativeLibraryError, setCreativeLibraryError] = useState("");
+  const [creativeLibraryRefresh, setCreativeLibraryRefresh] = useState(0);
+
+  useEffect(() => {
+    if (creativeSource !== "library") return;
+    let cancelled = false;
+    setCreativeLibraryLoading(true);
+    setCreativeLibraryError("");
+    fetch("/api/adstudio/campaigns?include=creativeLibrary", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "Your ad library could not be loaded.");
+        return Array.isArray(body?.creativeLibrary) ? body.creativeLibrary as AdStudioCreativeLibraryItem[] : [];
+      })
+      .then((items) => {
+        if (!cancelled) setCreativeLibrary(items);
+      })
+      .catch(() => {
+        if (!cancelled) setCreativeLibraryError("We couldn't load your ads. Check your connection and try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setCreativeLibraryLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [creativeLibraryRefresh, creativeSource]);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +251,7 @@ export function PublishSetupPanel({
   const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
   const campaignStepReady = campaignMode === "new" || Boolean(selectedCampaign);
   const destinationReady = isWebUrl(destinationUrl);
+  const creativeStepReady = creativeSource === "current" && !selectionHint;
 
   function toggleVariant(variantId: string) {
     setDeselectedVariantIds((current) => {
@@ -293,7 +330,7 @@ export function PublishSetupPanel({
   const continueDisabled = stepIndex === 0
     ? !campaignStepReady
     : stepIndex === 1
-      ? Boolean(selectionHint)
+      ? !creativeStepReady
       : stepIndex === 2
         ? !destinationReady
         : false;
@@ -426,26 +463,83 @@ export function PublishSetupPanel({
           {stepIndex === 1 && (
             <section className="studio-publish-screen" aria-labelledby="creatives-title">
               <h1 id="creatives-title">Creatives</h1>
-              <div className="studio-creative-selection">
-                {variants.map((variant) => (
-                  <article className={!deselectedVariantIds.has(variant.variantId) ? "selected" : ""} key={variant.variantId}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={!deselectedVariantIds.has(variant.variantId)}
-                        onChange={() => toggleVariant(variant.variantId)}
-                      />
-                      <span>{variant.angle}</span>
-                    </label>
-                    <details>
-                      <summary>Details <ChevronDown aria-hidden size={16} /></summary>
-                      <p>{variant.headline}</p>
-                      <dl><div><dt>CTA</dt><dd>{variant.cta}</dd></div></dl>
-                    </details>
-                  </article>
-                ))}
-              </div>
-              {selectionHint && <p className="studio-field-error"><CircleAlert aria-hidden size={15} /> {selectionHint}</p>}
+              {creativeSource === "current" ? (
+                <>
+                  <div className="studio-creative-intro">
+                    <strong>Current ad</strong>
+                    <span>This is the ad you were working on. Check the artwork before continuing.</span>
+                  </div>
+                  <div className="studio-creative-selection studio-creative-selection-visual">
+                    {variants.map((variant) => {
+                      const preview = previewForVariant(campaignPack, variant.variantId);
+                      const selected = !deselectedVariantIds.has(variant.variantId);
+                      return (
+                        <article className={selected ? "selected" : ""} key={variant.variantId}>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => toggleVariant(variant.variantId)}
+                            />
+                            <span>{variant.angle}</span>
+                            <em>Current ad</em>
+                          </label>
+                          <div className="studio-current-creative">
+                            <CreativeThumbnail src={preview?.src ?? null} alt={`${variant.angle} ad preview`} />
+                            <div>
+                              <strong>{variant.headline}</strong>
+                              <dl>
+                                <div><dt>Format</dt><dd>{preview?.format ? formatCreativeFormat(preview.format) : "Feed"}</dd></div>
+                                <div><dt>CTA</dt><dd>{variant.cta}</dd></div>
+                              </dl>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  {selectionHint && <p className="studio-field-error"><CircleAlert aria-hidden size={15} /> {selectionHint}</p>}
+                </>
+              ) : (
+                <div className="studio-ad-library" aria-live="polite">
+                  <div className="studio-creative-intro">
+                    <strong>Reuse an existing ad</strong>
+                    <span>Unpublished ads appear first. Each group is sorted newest to oldest.</span>
+                  </div>
+                  {creativeLibraryLoading ? (
+                    <div className="studio-ad-library-loading" role="status">
+                      <RefreshCw aria-hidden size={18} />
+                      <span>Loading your ads</span>
+                    </div>
+                  ) : creativeLibraryError ? (
+                    <div className="studio-publish-empty">
+                      <strong>Ads couldn't be loaded</strong>
+                      <span>{creativeLibraryError}</span>
+                      <button type="button" onClick={() => setCreativeLibraryRefresh((value) => value + 1)}>Try again</button>
+                    </div>
+                  ) : creativeLibrary.length === 0 ? (
+                    <div className="studio-publish-empty">
+                      <strong>No saved ads yet</strong>
+                      <span>Create an ad from a template, then return here to reuse it.</span>
+                    </div>
+                  ) : (
+                    <div className="studio-ad-library-list">
+                      {creativeLibrary.map((item) => (
+                        <article key={item.campaignId}>
+                          <CreativeThumbnail src={item.previewSrc} alt={`${item.name} ad preview`} compact />
+                          <div className="studio-ad-library-copy">
+                            <strong title={item.name}>{item.name}</strong>
+                            <span>{item.format ? formatCreativeFormat(item.format) : "Ad creative"}</span>
+                          </div>
+                          <span className={`studio-library-status ${item.status}`}>{capitalize(item.status)}</span>
+                          <time dateTime={item.updatedAt ?? undefined}>Updated {formatDate(item.updatedAt)}</time>
+                          <Link href={`/ad-studio?campaignId=${encodeURIComponent(item.campaignId)}&publish=1`}>Use this ad</Link>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 
@@ -603,6 +697,44 @@ function isWebUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function CreativeThumbnail({ src, alt, compact = false }: { src: string | null; alt: string; compact?: boolean }) {
+  return (
+    <div className={`studio-creative-thumbnail${compact ? " compact" : ""}`}>
+      <span><ImageIcon aria-hidden size={compact ? 17 : 22} /> Preview unavailable</span>
+      {src && (
+        <img
+          src={src}
+          alt={alt}
+          loading={compact ? "lazy" : "eager"}
+          onError={(event) => { event.currentTarget.hidden = true; }}
+        />
+      )}
+    </div>
+  );
+}
+
+function previewForVariant(pack: AdStudioCampaignPack, variantId: string): { src: string; format: AdStudioFormat } | null {
+  const creative = pack.creatives.find((item) => item.variantId === variantId && item.format === "4:5")
+    ?? pack.creatives.find((item) => item.variantId === variantId);
+  if (!creative) return null;
+  const imageObject = creative.canvas.objects.find((object) => object.role === "primary_image");
+  const imageSource = imageObject?.content || imageObject?.assetId;
+  if (imageSource) return { src: imageSource, format: creative.format };
+  if (!creative.previewSvg) return null;
+  return {
+    src: creative.previewSvg.startsWith("data:image/")
+      ? creative.previewSvg
+      : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(creative.previewSvg)}`,
+    format: creative.format,
+  };
+}
+
+function formatCreativeFormat(format: string) {
+  if (format === "4:5") return "Feed · 1080 × 1350";
+  if (format === "9:16") return "Story · 1080 × 1920";
+  return format;
 }
 
 function capitalize(value: string) {
