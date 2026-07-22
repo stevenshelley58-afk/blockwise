@@ -11,8 +11,8 @@ product
 
 ## Users
 
-Blockwise serves Australian real-estate agents, agency teams, and workspace
-operators. AdStudio users are usually preparing a Meta lead ad around a live
+Blockwise serves real-estate agents, agency teams, and workspace operators.
+AdStudio users are usually preparing a Meta lead ad around a live
 property, appraisal offer, open home, market update, or agency message. They
 need to move from brief and customer media to a trustworthy, editable ad without
 learning design software or interpreting internal AI/provider mechanics.

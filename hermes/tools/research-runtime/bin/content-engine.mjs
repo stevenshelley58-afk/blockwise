@@ -452,7 +452,7 @@ export function deterministicContentSkillOutput(skillName, input) {
   switch (skillName) {
     case "blockwise-topic-researcher":
       return {
-        research_summary: `${topic} should be framed around lead quality, signal quality, follow-up, and outcome tracking for Australian real estate agents.`,
+        research_summary: `${topic} should be framed around lead quality, signal quality, follow-up, and outcome tracking for real estate agents.`,
         source_claims: [{ claim: "Lead quality improves when campaigns optimise toward qualified outcomes instead of raw form volume.", source_type: "official_docs", confidence: "medium" }],
         must_include_points: ["Value-first lead magnet", "Qualified lead signal", "CRM outcome feedback", "Retargeting loop"],
         do_not_claim: ["Guaranteed listings", "Guaranteed lead volume", "Unsupported performance statistics"],

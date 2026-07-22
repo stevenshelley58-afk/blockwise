@@ -30,7 +30,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
       <PageHeading
         eyebrow="Competitor intelligence"
         title="Ad Radar"
-        description="Search live Australian real-estate ads by postcode, suburb, page, Library ID, or ad copy."
+        description="Search live real-estate ads by postcode, suburb, page, Library ID, or ad copy."
       />
       <AdRadarSearchPanel
         initialIncludeSurrounding={includeSurrounding}

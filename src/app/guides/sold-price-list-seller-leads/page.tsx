@@ -9,7 +9,7 @@ import "../guides.css";
 
 const title = "How to generate seller leads with a sold-price list";
 const description =
-  "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with Australian homeowners without leading with an appraisal request.";
+  "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with homeowners without leading with an appraisal request.";
 const canonical = "/guides/sold-price-list-seller-leads";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title,
     description,
     url: canonical,
-    images: [{ url: "/guides/sold-price-list/hero.webp", width: 1920, height: 1080, alt: "Established Australian homes along a tree-lined suburban street" }],
+    images: [{ url: "/guides/sold-price-list/hero.webp", width: 1920, height: 1080, alt: "Established homes along a tree-lined suburban street" }],
   },
   twitter: { card: "summary_large_image", title, description, images: ["/guides/sold-price-list/hero.webp"] },
 };
@@ -88,7 +88,7 @@ export default function SoldPriceListGuidePage() {
             <div className="bw-article-hero-media">
               <Image
                 src="/guides/sold-price-list/hero.webp"
-                alt="Established Australian homes along a tree-lined suburban street"
+                alt="Established homes along a tree-lined suburban street"
                 fill
                 priority
                 sizes="100vw"
@@ -172,7 +172,7 @@ export default function SoldPriceListGuidePage() {
                 <div className="bw-field-image">
                   <Image
                     src="/guides/sold-price-list/field-notes.webp"
-                    alt="Printed photos of Australian homes arranged with a map and working notes"
+                    alt="Printed photos of homes arranged with a map and working notes"
                     fill
                     sizes="(max-width: 800px) 100vw, 64vw"
                   />
@@ -233,7 +233,7 @@ export default function SoldPriceListGuidePage() {
                     <strong>A$350–A$420</strong>
                     <p>A$25–A$30 a day across a 14-day test. This is a planning range, not a universal benchmark.</p>
                   </figcaption>
-                  <div className="bw-budget-bars" aria-label="Fourteen daily budget bars between 25 and 30 Australian dollars">
+                  <div className="bw-budget-bars" aria-label="Fourteen daily budget bars from A$25 to A$30">
                     {Array.from({ length: 14 }, (_, index) => (
                       <div key={index}><span style={{ height: `${54 + (index % 4) * 7}%` }} /><b>{index + 1}</b></div>
                     ))}
@@ -273,7 +273,7 @@ export default function SoldPriceListGuidePage() {
                   <div><b>Next update</b><span /><section><h3>Send only with consent</h3><p>Identify the sender and include a working opt-out.</p></section></div>
                 </div>
                 <aside className="bw-compliance-note">
-                  <strong>Australian consent check</strong>
+                  <strong>Consent check</strong>
                   <p>Commercial email and SMS require consent, accurate sender identification and a working unsubscribe method. ACMA says unsubscribe requests must be honoured within five working days.</p>
                   <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Read the ACMA guidance →</a>
                 </aside>

@@ -314,7 +314,7 @@ async function loadLongestRunningResponse(
     .slice(0, limit)
     .map((card) => toPublicAdRadarCard(card, now));
 
-  return publicResponse("", "Australia", false, cards, null);
+  return publicResponse("", "All locations", false, cards, null);
 }
 
 async function fetchLongestRunningRows(

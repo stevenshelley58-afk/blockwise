@@ -92,7 +92,7 @@ test("active prompt lookup falls back to bundled prompt when no service client i
   assert.equal(section.source, "fallback");
   assert.equal(section.version, 0);
   assert.equal(section.metadata.section_type, "system");
-  assert.match(section.body, /Australian residential real-estate/);
+  assert.match(section.body, /residential real-estate/);
 });
 
 test("fallback prompt sections include canonical section_type metadata", async () => {
