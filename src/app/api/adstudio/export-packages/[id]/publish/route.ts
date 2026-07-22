@@ -23,8 +23,10 @@ import {
 import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
 import {
   listProviderConnections,
+  loadStoredProviderTokens,
   type ProviderConnectionMetadata,
 } from "@/lib/providers/provider-connections";
+import { fetchEligibleMetaCampaigns } from "@/lib/providers/meta-campaigns";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -44,6 +46,7 @@ type PublishBody = {
   requestApproval?: boolean;
   /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
   variantIds?: string[];
+  existingMetaCampaignId?: string;
 };
 
 type ApprovalRecord = {
@@ -101,6 +104,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
     connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
     ?? connections.find((connection) => connection.provider === "meta");
   const googleConnection = connections.find((connection) => connection.provider === "google");
+  const existingMetaCampaignId = body.existingMetaCampaignId?.trim() || null;
+
+  if (existingMetaCampaignId) {
+    if (!metaConnection?.externalAccountId) {
+      return NextResponse.json({ error: "Connect Meta before choosing an existing campaign." }, { status: 422 });
+    }
+
+    const tokens = await loadStoredProviderTokens(serviceSupabase, metaConnection.id);
+    if (!tokens.accessToken) {
+      return NextResponse.json({ error: "Reconnect Meta before choosing an existing campaign." }, { status: 422 });
+    }
+
+    const eligibleCampaigns = await fetchEligibleMetaCampaigns({
+      accessToken: tokens.accessToken,
+      accountId: metaConnection.externalAccountId,
+    }).catch(() => []);
+    if (!eligibleCampaigns.some((campaign) => campaign.id === existingMetaCampaignId)) {
+      return NextResponse.json({ error: "Choose an active or paused housing lead campaign from the connected Meta account." }, { status: 422 });
+    }
+  }
   const providerStatuses = {
     ...(firstCopyPack?.meta ? { meta: publishableConnectionStatus(metaConnection?.status) } : {}),
     ...(firstCopyPack?.googleSearch ? { google: publishableConnectionStatus(googleConnection?.status) } : {}),
@@ -134,6 +157,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         controls: body.controls,
         requestApproval: body.requestApproval ?? !body.dryRun,
         variantIds: body.variantIds,
+        existingMetaCampaignId,
       })
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
@@ -212,6 +236,7 @@ async function createAndPersistMetaPlan(input: {
   controls?: MetaPublishControls;
   requestApproval: boolean;
   variantIds?: string[];
+  existingMetaCampaignId?: string | null;
 }): Promise<MetaPlanPersistenceResult> {
   const setup = mergeConnectionSetup(
     resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId),
@@ -227,6 +252,7 @@ async function createAndPersistMetaPlan(input: {
     adapter: input.adapter,
     approvalRequestId: approval.id,
     variantIds: input.variantIds,
+    existingMetaCampaignId: input.existingMetaCampaignId,
   });
 
   if (!approval.id && input.requestApproval) {
@@ -247,6 +273,7 @@ async function createAndPersistMetaPlan(input: {
       adapter: input.adapter,
       approvalRequestId: approval.id,
       variantIds: input.variantIds,
+      existingMetaCampaignId: input.existingMetaCampaignId,
     });
     await input.serviceSupabase
       .from("approval_requests")

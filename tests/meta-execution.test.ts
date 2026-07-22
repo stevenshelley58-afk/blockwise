@@ -77,6 +77,29 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.leadForms.every((form) => form.privacyPolicyUrl === setup.privacyPolicyUrl), true);
 });
 
+test("buildMetaPublishPlan reuses an explicitly selected Meta campaign", () => {
+  const pack = buildPack();
+  const newCampaignPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const existingCampaignPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+    existingMetaCampaignId: "meta_campaign_456",
+  });
+
+  assert.equal(existingCampaignPlan.reconciledObjects.campaignId, "meta_campaign_456");
+  assert.notEqual(existingCampaignPlan.idempotencyKey, newCampaignPlan.idempotencyKey);
+  assert.notEqual(existingCampaignPlan.planId, newCampaignPlan.planId);
+});
+
 test("buildMetaPublishPlan applies user budget, geo, schedule, and placement controls", () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",

@@ -1,12 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, CircleAlert, Download, RefreshCw, Send, Trash2 } from "lucide-react";
+import {
+  Building2,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  CircleHelp,
+  Download,
+  RefreshCw,
+  Send,
+  Trash2,
+} from "lucide-react";
 
 import type { AdStudioCampaignPack, AdStudioFormat } from "@/lib/adstudio";
 import type { MetaPublishControls } from "@/lib/providers/meta-execution";
 
-import { PanelHeader } from "../inspector";
 import type { ExportFormatStatus } from "../use-campaign-actions";
 
 type ReadinessEntry = {
@@ -16,6 +28,22 @@ type ReadinessEntry = {
   automatic?: boolean;
   blocked?: boolean;
   review?: boolean;
+};
+
+type MetaCampaign = {
+  id: string;
+  name: string;
+  status: "active" | "paused";
+  objective: "leads";
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type MetaCampaignsResponse = {
+  connected?: boolean;
+  account?: { id: string; name: string };
+  campaigns?: MetaCampaign[];
+  issue?: string;
 };
 
 type PublishResponse = {
@@ -28,7 +56,6 @@ type PublishResponse = {
     id?: string;
     status?: string;
     approvalRequestId?: string | null;
-    /** A6 (additive): the Ad Studio variants the planned ads map to — confirms an A/B selection. */
     variantIds?: string[];
   } | null;
   error?: string;
@@ -53,12 +80,12 @@ type PublishSetupPanelProps = {
   onChangeDestinationUrl?: (value: string) => void;
   onExport: () => void;
   onDelete?: () => void;
-  /** B2: false while the brand kit is still a draft — publish stays blocked until it is confirmed. */
   brandApproved?: boolean;
-  /** B4: per-format export progress; failed formats show a retry chip. */
   exportStatus?: ExportFormatStatus[] | null;
   onRetryExportFormat?: (format: AdStudioFormat) => void;
 };
+
+const STEPS = ["Campaign setup", "Creatives", "Destination", "Budget", "Review", "Live"] as const;
 
 export function PublishSetupPanel({
   campaignId,
@@ -71,24 +98,49 @@ export function PublishSetupPanel({
   exportStatus = null,
   onRetryExportFormat,
 }: PublishSetupPanelProps) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [campaignMode, setCampaignMode] = useState<"existing" | "new">("new");
+  const [selectedMetaCampaignId, setSelectedMetaCampaignId] = useState("");
+  const [expandedMetaCampaignId, setExpandedMetaCampaignId] = useState("");
+  const [metaCampaigns, setMetaCampaigns] = useState<MetaCampaignsResponse | null>(null);
+  const [metaCampaignsLoading, setMetaCampaignsLoading] = useState(true);
+  const [metaCampaignRefresh, setMetaCampaignRefresh] = useState(0);
   const [readiness, setReadiness] = useState<ReadinessEntry[] | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [publishDone, setPublishDone] = useState(false);
   const [publishMessage, setPublishMessage] = useState("Published");
   const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
-  // A6: variant ids the user unticked. Empty set = full pack = existing publish behaviour.
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
-  // A6: set only when a subset was published, to confirm the A/B selection on success.
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
   const [dailyBudgetAud, setDailyBudgetAud] = useState(20);
   const [durationDays, setDurationDays] = useState(7);
 
-  // M1: fetch readiness from the existing endpoint
+  useEffect(() => {
+    let cancelled = false;
+    setMetaCampaignsLoading(true);
+    fetch("/api/adstudio/meta-campaigns")
+      .then(async (response) => ({ response, body: (await response.json().catch(() => ({}))) as MetaCampaignsResponse }))
+      .then(({ response, body }) => {
+        if (cancelled) return;
+        setMetaCampaigns(response.ok ? body : { campaigns: [], issue: "Campaigns could not be loaded." });
+      })
+      .catch(() => {
+        if (!cancelled) setMetaCampaigns({ campaigns: [], issue: "Campaigns could not be loaded." });
+      })
+      .finally(() => {
+        if (!cancelled) setMetaCampaignsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metaCampaignRefresh]);
+
   useEffect(() => {
     if (!campaignId) return;
     fetch(`/api/adstudio/publish-readiness?campaignId=${encodeURIComponent(campaignId)}`)
-      .then((res) => res.json().catch(() => null))
+      .then((response) => response.json().catch(() => null))
       .then((data) => {
         if (!data) return;
         const source = Array.isArray(data)
@@ -98,17 +150,16 @@ export function PublishSetupPanel({
             : Array.isArray(data.checklist)
               ? data.checklist
               : [];
-        const items: ReadinessEntry[] = source.map((item: { id?: string; label: string; met?: boolean; done?: boolean; automatic?: boolean; blocked?: boolean; review?: boolean }) => ({
+        setReadiness(source.map((item: ReadinessEntry & { done?: boolean }) => ({
           id: item.id,
           label: item.label,
           met: item.met ?? Boolean(item.done),
           automatic: item.automatic,
           blocked: item.blocked,
           review: item.review,
-        }));
-        setReadiness(items);
+        })));
       })
-      .catch(() => {});
+      .catch(() => setReadiness([]));
   }, [campaignId]);
 
   useEffect(() => {
@@ -123,19 +174,12 @@ export function PublishSetupPanel({
 
       if (plan.status === "failed") {
         setPublishDone(false);
-        setPublishError(plan.lastError ?? "Meta publish failed. Retry from Approvals or contact support.");
-        return;
-      }
-
-      if (plan.status === "paused_live") {
-        setPublishMessage("Live on Meta (paused) - activate after review");
-        return;
-      }
-
-      if (plan.status === "publishing" || plan.status === "approved") {
-        const counts = plan.reconciledObjects;
-        const suffix = counts && counts.ads > 0 ? ` - ${counts.ads} paused ad${counts.ads === 1 ? "" : "s"} in progress` : "";
-        setPublishMessage(`Queued - creating your paused Meta campaign${suffix}`);
+        setPublishError(plan.lastError ?? "Meta publish failed.");
+      } else if (plan.status === "paused_live") {
+        setPublishMessage("Live on Meta (paused)");
+      } else if (plan.status === "publishing" || plan.status === "approved") {
+        const ads = plan.reconciledObjects?.ads ?? 0;
+        setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"}` : "Creating your paused ads");
       }
     }
 
@@ -147,58 +191,48 @@ export function PublishSetupPanel({
     };
   }, [publishDone, publishPlanId]);
 
-  // Brand approval is a publish requirement, shown alongside the fetched checks.
   const brandItem: ReadinessEntry | null = brandApproved
     ? null
-    : { id: "brand_kit_approved", label: "Confirm your brand kit in Brand Studio", met: false };
-  const checklist: ReadinessEntry[] = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
+    : { id: "brand_kit_approved", label: "Confirm brand kit", met: false };
+  const checklist = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
   const blockingItems = checklist.filter((item) => !item.met && (!item.review || item.blocked));
-  const allMet = readiness ? blockingItems.length === 0 : false;
-  const unmetItems = blockingItems;
-  const onlyBlockedProviderWrite = unmetItems.length === 1 && unmetItems[0]?.id === "provider_writes" && unmetItems[0]?.blocked;
+  const allMet = readiness !== null && blockingItems.length === 0;
+  const onlyBlockedProviderWrite = blockingItems.length === 1
+    && blockingItems[0]?.id === "provider_writes"
+    && blockingItems[0]?.blocked;
   const needsApprovalReview = checklist.some((item) => item.id === "approval_ready" && item.review && !item.met && !item.blocked);
-
-  // A6: A/B publish selection. All variants ticked (the default) keeps the
-  // existing publish-everything behaviour — `variantIds` is omitted from the
-  // request body. Unticking down to a 1–3 variant subset sends `variantIds`,
-  // and the server plans one campaign + one ad set + one tagged ad per variant.
   const variants = campaignPack.variants;
-  const selectedVariantIds = variants
-    .map((variant) => variant.variantId)
-    .filter((variantId) => !deselectedVariantIds.has(variantId));
+  const selectedVariantIds = variants.map((variant) => variant.variantId).filter((id) => !deselectedVariantIds.has(id));
   const fullSelection = selectedVariantIds.length === variants.length;
   const selectionHint = selectedVariantIds.length === 0
-    ? "Select at least one variant to publish."
+    ? "Select at least one creative."
     : !fullSelection && selectedVariantIds.length > 3
-      ? "Pick up to 3 variants for an A/B test."
+      ? "Select up to three creatives."
       : "";
+  const brandName = campaignPack.brandKit.identity.tradingName?.trim()
+    || campaignPack.brandKit.identity.businessName
+    || "Your brand";
+  const selectedCampaign = metaCampaigns?.campaigns?.find((campaign) => campaign.id === selectedMetaCampaignId);
+  const campaignStepReady = campaignMode === "new" || Boolean(selectedCampaign);
+  const destinationReady = isWebUrl(destinationUrl);
 
   function toggleVariant(variantId: string) {
-    setDeselectedVariantIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(variantId)) {
-        next.delete(variantId);
-      } else {
-        next.add(variantId);
-      }
+    setDeselectedVariantIds((current) => {
+      const next = new Set(current);
+      if (next.has(variantId)) next.delete(variantId);
+      else next.add(variantId);
       return next;
     });
   }
 
   function buildControls(): MetaPublishControls {
-    const now = new Date();
-    const end = new Date(now);
-    end.setDate(now.getDate() + durationDays);
+    const start = new Date();
+    const end = new Date(start);
+    end.setDate(start.getDate() + durationDays);
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
-      geo: {
-        type: "country",
-        country: campaignPack.campaign.market.country,
-      },
-      schedule: {
-        startTime: now.toISOString(),
-        endTime: end.toISOString(),
-      },
+      geo: { type: "country", country: campaignPack.campaign.market.country },
+      schedule: { startTime: start.toISOString(), endTime: end.toISOString() },
       placements: {
         publisherPlatforms: ["facebook", "instagram"],
         facebookPositions: [],
@@ -207,17 +241,16 @@ export function PublishSetupPanel({
     };
   }
 
-  // M1: live publish gated behind readiness
   async function handlePublishLive() {
-    if (!allMet || selectionHint) return;
+    if (!allMet || selectionHint || !campaignStepReady || !destinationReady) return;
     setPublishing(true);
     setPublishError("");
     setPublishDone(false);
-    setPublishMessage("Published");
     setPublishPlanId(null);
     setPublishedVariantCount(null);
+
     try {
-      const res = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
+      const response = await fetch(`/api/adstudio/export-packages/${campaignId}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -225,43 +258,30 @@ export function PublishSetupPanel({
           controls: buildControls(),
           requestApproval: true,
           dryRun: false,
-          // A6: only send variantIds for an explicit subset — absent means full pack (unchanged behaviour).
+          ...(campaignMode === "existing" ? { existingMetaCampaignId: selectedMetaCampaignId } : {}),
           ...(fullSelection ? {} : { variantIds: selectedVariantIds }),
         }),
       });
-      const body = (await res.json().catch(() => ({}))) as PublishResponse;
-      if (!res.ok) {
-        throw new Error(body.error ?? "Publish failed.");
-      }
+      const body = (await response.json().catch(() => ({}))) as PublishResponse;
+      if (!response.ok) throw new Error(body.error ?? "Publish failed.");
+
       if (body.metaPublishPlan?.approvalRequestId && !body.triggerRunId) {
-        setPublishMessage("Submitted for review - your campaign will be queued once approved");
+        setPublishMessage("Submitted for review");
         setPublishPlanId(body.metaPublishPlan.id ?? null);
         setPublishDone(true);
         return;
       }
-      const backendPublished = Boolean(body.triggerRunId)
-        || body.metaPublishPlan?.status === "paused_live";
 
-      if (!backendPublished) {
-        const blockers = body.blockers?.filter(Boolean) ?? [];
-        if (blockers.length > 0) {
-          throw new Error("Publish is not ready. Resolve the missing requirements above.");
-        }
-        if (body.providerWritesEnabled === false) {
-          throw new Error("Live publishing is ready, but provider writes are not enabled yet.");
-        }
-        throw new Error("Publish was prepared, but the backend did not confirm a queued or completed publish.");
+      const queued = Boolean(body.triggerRunId) || body.metaPublishPlan?.status === "paused_live";
+      if (!queued) {
+        if (body.blockers?.length) throw new Error("Resolve the readiness items before publishing.");
+        if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled.");
+        throw new Error("Meta did not confirm the publish request.");
       }
-      if (!fullSelection) {
-        // Confirm the A/B selection from the server echo (additive field); fall back to what we sent.
-        setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
-      }
+
+      if (!fullSelection) setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
       setPublishPlanId(body.metaPublishPlan?.id ?? null);
-      setPublishMessage(
-        body.metaPublishPlan?.status === "paused_live"
-          ? "Live on Meta (paused) - activate after review"
-          : "Queued - creating your paused Meta campaign",
-      );
+      setPublishMessage(body.metaPublishPlan?.status === "paused_live" ? "Live on Meta (paused)" : "Creating your paused ads");
       setPublishDone(true);
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
@@ -270,197 +290,329 @@ export function PublishSetupPanel({
     }
   }
 
+  const continueDisabled = stepIndex === 0
+    ? !campaignStepReady
+    : stepIndex === 1
+      ? Boolean(selectionHint)
+      : stepIndex === 2
+        ? !destinationReady
+        : false;
+
   return (
-    <>
-      {/* M1: title is "Export" — the download action is the manual export */}
-      <PanelHeader title="Publish" detail="Check readiness, export creatives, or publish." />
+    <div className="studio-publish-flow">
+      <nav className="studio-publish-stepnav" aria-label="Publish steps">
+        {STEPS.map((step, index) => (
+          <button
+            key={step}
+            type="button"
+            className={index === stepIndex ? "active" : index < stepIndex ? "done" : ""}
+            aria-current={index === stepIndex ? "step" : undefined}
+            onClick={() => setStepIndex(index)}
+          >
+            <span>{index < stepIndex ? <Check aria-hidden size={14} /> : index + 1}</span>
+            {step}
+          </button>
+        ))}
+      </nav>
 
-      {/* M1: Readiness section */}
-      {checklist.length > 0 && (
-        <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
-          <strong style={{ fontSize: 13, fontWeight: 750 }}>Publish readiness</strong>
-          {checklist.map((item) => (
-            <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-              {item.met
-                ? <Check size={14} style={{ color: "#31c46f", flexShrink: 0 }} aria-hidden />
-                : <CircleAlert size={14} style={{ color: item.blocked || item.review ? "#2563eb" : "#8a5a00", flexShrink: 0 }} aria-hidden />}
-              <span style={{ color: item.met ? "var(--ink)" : "var(--muted)" }}>{item.label}</span>
-            </div>
-          ))}
-        </section>
-      )}
+      <div className="studio-publish-main">
+        <div className="studio-publish-mobile-progress" aria-label={`Step ${stepIndex + 1} of ${STEPS.length}`}>
+          <span>{stepIndex + 1} / {STEPS.length}</span>
+          <div><i style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }} /></div>
+        </div>
 
-      {/* A6: A/B publish — pick which variants become ads (one tagged ad per variant). */}
-      {variants.length > 1 && (
-        <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14, display: "grid", gap: 10 }}>
-          <strong style={{ fontSize: 13, fontWeight: 750 }}>Variants to publish</strong>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>
-            Untick variants to run a 2–3 variant A/B test. Each ticked variant becomes its own ad in one ad set.
-          </span>
-          {variants.map((variant) => (
-            <label
-              key={variant.variantId}
-              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}
-            >
-              <input
-                type="checkbox"
-                checked={!deselectedVariantIds.has(variant.variantId)}
-                onChange={() => toggleVariant(variant.variantId)}
-                style={{ flexShrink: 0 }}
-              />
-              <span style={{ fontWeight: 650, flexShrink: 0 }}>{variant.angle}</span>
-              <span style={{ color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {variant.headline}
-              </span>
-            </label>
-          ))}
-          {selectionHint && (
-            <span style={{ fontSize: 12, color: "#8a5a00", fontWeight: 700 }}>{selectionHint}</span>
-          )}
-        </section>
-      )}
+        <div className="studio-publish-content">
+          {stepIndex === 0 && (
+            <section className="studio-publish-screen" aria-labelledby="campaign-setup-title">
+              <h1 id="campaign-setup-title">Campaign setup</h1>
 
-      <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-        <span style={{ color: "var(--muted)" }}>Audience and location</span>
-        <strong style={{ display: "block", marginTop: 2 }}>Audience: Nationwide</strong>
-        <span style={{ display: "block", marginTop: 4, color: "var(--muted)" }}>
-          Broad targeting is recommended for housing ads.
-        </span>
-      </section>
-
-      {/* Destination: editable when the workbench provides a setter, read-only otherwise */}
-      <div style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-        <label style={{ display: "grid", gap: 4 }}>
-          <span style={{ color: "var(--muted)" }}>Destination URL</span>
-          {onChangeDestinationUrl ? (
-            <input
-              type="url"
-              value={destinationUrl}
-              placeholder="https://your-agency.com.au/appraisal"
-              onChange={(event) => onChangeDestinationUrl(event.target.value)}
-              style={{ border: 0, background: "transparent", outline: "none", fontWeight: 700, wordBreak: "break-all" }}
-            />
-          ) : (
-            <strong style={{ display: "block", wordBreak: "break-all" }}>{destinationUrl || "Not set"}</strong>
-          )}
-        </label>
-      </div>
-
-      <section style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 14, display: "grid", gap: 12 }}>
-        <strong style={{ fontSize: 13, fontWeight: 750 }}>Budget and duration</strong>
-        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
-          Daily budget
-          <select value={dailyBudgetAud} onChange={(event) => setDailyBudgetAud(Number(event.target.value))}>
-            <option value={10}>$10/day starter</option>
-            <option value={20}>$20/day recommended</option>
-            <option value={50}>$50/day stronger test</option>
-          </select>
-        </label>
-        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
-          Duration
-          <select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}>
-            <option value={7}>7 days</option>
-            <option value={14}>14 days</option>
-            <option value={30}>30 days</option>
-          </select>
-        </label>
-      </section>
-
-      {/* M1: Export (manual download) button — always the primary action */}
-      <button className={`studio-btn ${onlyBlockedProviderWrite ? "publish" : "secondary"} block`} type="button" onClick={onExport}>
-        <Download aria-hidden size={17} />
-        Export creatives
-      </button>
-
-      {/* B4: per-format export status — successful formats download even when one fails */}
-      {exportStatus && exportStatus.length > 0 && (
-        <div style={{ display: "grid", gap: 6 }}>
-          {exportStatus.map((item) => (
-            <div
-              key={item.format}
-              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px" }}
-            >
-              {item.state === "done" && <Check size={14} style={{ color: "#31c46f", flexShrink: 0 }} aria-hidden />}
-              {item.state === "failed" && <CircleAlert size={14} style={{ color: "#ba1a1a", flexShrink: 0 }} aria-hidden />}
-              {item.state === "rendering" && <RefreshCw size={14} style={{ color: "var(--muted)", flexShrink: 0 }} aria-hidden />}
-              <span style={{ flex: 1, fontWeight: 600 }}>
-                {item.label} <span style={{ color: "var(--muted)", fontWeight: 550 }}>({item.format})</span>
-              </span>
-              {item.state === "rendering" && <span style={{ color: "var(--muted)" }}>Rendering...</span>}
-              {item.state === "done" && <span style={{ color: "#006d38" }}>Exported</span>}
-              {item.state === "failed" && onRetryExportFormat && (
-                <button
-                  type="button"
-                  onClick={() => onRetryExportFormat(item.format)}
-                  style={{ border: "1px solid var(--line)", borderRadius: 999, background: "#fff", color: "var(--accent)", fontWeight: 650, fontSize: 12, padding: "4px 12px", cursor: "pointer" }}
-                >
-                  Retry
+              <div className="studio-segmented" aria-label="Campaign choice">
+                <button type="button" className={campaignMode === "existing" ? "active" : ""} onClick={() => setCampaignMode("existing")}>
+                  {campaignMode === "existing" && <Check aria-hidden size={15} />}
+                  Use existing
                 </button>
+                <button type="button" className={campaignMode === "new" ? "active" : ""} onClick={() => setCampaignMode("new")}>
+                  Create new
+                </button>
+              </div>
+
+              {campaignMode === "existing" ? (
+                <div className="studio-publish-choice">
+                  <h2>Use an existing campaign</h2>
+                  {metaCampaignsLoading ? (
+                    <div className="studio-publish-loading"><RefreshCw aria-hidden size={17} /> Loading campaigns</div>
+                  ) : (metaCampaigns?.campaigns?.length ?? 0) > 0 ? (
+                    <div className="studio-campaign-list">
+                      {metaCampaigns?.campaigns?.map((campaign) => {
+                        const expanded = expandedMetaCampaignId === campaign.id;
+                        return (
+                          <article className={selectedMetaCampaignId === campaign.id ? "selected" : ""} key={campaign.id}>
+                            <div className="studio-campaign-row">
+                              <label>
+                                <input
+                                  type="radio"
+                                  name="meta-campaign"
+                                  value={campaign.id}
+                                  checked={selectedMetaCampaignId === campaign.id}
+                                  onChange={() => setSelectedMetaCampaignId(campaign.id)}
+                                />
+                                <span>{campaign.name}</span>
+                              </label>
+                              <span className={`studio-status-chip ${campaign.status}`}>{campaign.status}</span>
+                              <button
+                                type="button"
+                                aria-label={`${expanded ? "Hide" : "Show"} details for ${campaign.name}`}
+                                aria-expanded={expanded}
+                                onClick={() => setExpandedMetaCampaignId(expanded ? "" : campaign.id)}
+                              >
+                                <ChevronDown aria-hidden size={17} />
+                              </button>
+                            </div>
+                            {expanded && (
+                              <dl className="studio-campaign-details">
+                                <div><dt>Goal</dt><dd>Leads</dd></div>
+                                <div><dt>Status</dt><dd>{capitalize(campaign.status)}</dd></div>
+                                <div><dt>Updated</dt><dd>{formatDate(campaign.updatedAt ?? campaign.createdAt)}</dd></div>
+                              </dl>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="studio-publish-empty">
+                      <strong>No reusable lead campaigns</strong>
+                      <span>{metaCampaigns?.issue ?? "Create a new campaign to continue."}</span>
+                      {metaCampaigns?.issue && (
+                        <button type="button" onClick={() => setMetaCampaignRefresh((value) => value + 1)}>Retry</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="studio-publish-choice">
+                  <h2>Create a new campaign</h2>
+                  <div className="studio-new-campaign-row">
+                    <span>{campaignPack.campaign.name}</span>
+                    <span className="studio-status-chip paused">paused</span>
+                  </div>
+                </div>
               )}
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* M1: Publish is gated behind readiness */}
-      {publishDone ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", borderRadius: 8, background: "#ecfdf5", color: "#006d38", border: "1px solid #b7e7cd", fontWeight: 750 }}>
-          <Check size={16} aria-hidden />
-          {publishedVariantCount ? `${publishMessage} - ${publishedVariantCount} variant A/B test` : publishMessage}
-        </div>
-      ) : (
-        <>
-          {publishError && (
-            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#fdf3f2", color: "#ba1a1a", border: "1px solid #ffdad6", fontSize: 13, fontWeight: 700 }}>
-              {publishError}
-            </div>
-          )}
-          <button
-            className="studio-btn publish block"
-            type="button"
-            disabled={!allMet || publishing || Boolean(selectionHint)}
-            onClick={handlePublishLive}
-          >
-            <Send aria-hidden size={17} />
-            {publishing ? "Submitting..." : needsApprovalReview ? "Send for review" : "Publish"}
-          </button>
-          {checklist.length > 0 && !allMet && (
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
-              {onlyBlockedProviderWrite
-                ? "Live publishing isn't available yet - use Export creatives to launch manually."
-                : "Resolve all readiness items above to enable publishing."}
-            </p>
-          )}
-        </>
-      )}
+              <div className="studio-connection-row">
+                <Building2 aria-hidden size={18} />
+                <span>{metaCampaigns?.account?.name ?? "Meta Ads"} · {brandName}</span>
+                <span className={metaCampaigns?.connected ? "studio-connected" : "studio-disconnected"}>
+                  {metaCampaigns?.connected ? "Connected" : "Not connected"}
+                </span>
+                <Link href="/settings#connections">Settings</Link>
+              </div>
 
-      {/* H9: Delete campaign — danger zone at the bottom of publish panel */}
-      {onDelete && (
-        <div style={{ marginTop: 8, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
-          <button
-            type="button"
-            style={{
-              width: "100%",
-              border: "1px solid #ffdad6",
-              borderRadius: 8,
-              background: "#fff",
-              color: "#ba1a1a",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              minHeight: 40,
-              fontWeight: 750,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-            onClick={onDelete}
-          >
-            <Trash2 aria-hidden size={15} />
-            Delete campaign
-          </button>
+              <details className="studio-publish-help">
+                <summary>
+                  <CircleHelp aria-hidden size={18} />
+                  <span><strong>Questions about campaigns?</strong><small>Short answers and the full guide</small></span>
+                  <ChevronDown aria-hidden size={17} />
+                </summary>
+                <div>
+                  <p><b>Use existing</b> when it already has the same lead goal.</p>
+                  <p><b>Create new</b> when the goal or setup is different.</p>
+                  <Link href="/guides/sold-price-list-seller-leads">Read the campaign guide</Link>
+                </div>
+              </details>
+            </section>
+          )}
+
+          {stepIndex === 1 && (
+            <section className="studio-publish-screen" aria-labelledby="creatives-title">
+              <h1 id="creatives-title">Creatives</h1>
+              <div className="studio-creative-selection">
+                {variants.map((variant) => (
+                  <article className={!deselectedVariantIds.has(variant.variantId) ? "selected" : ""} key={variant.variantId}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={!deselectedVariantIds.has(variant.variantId)}
+                        onChange={() => toggleVariant(variant.variantId)}
+                      />
+                      <span>{variant.angle}</span>
+                    </label>
+                    <details>
+                      <summary>Details <ChevronDown aria-hidden size={16} /></summary>
+                      <p>{variant.headline}</p>
+                      <dl><div><dt>CTA</dt><dd>{variant.cta}</dd></div></dl>
+                    </details>
+                  </article>
+                ))}
+              </div>
+              {selectionHint && <p className="studio-field-error"><CircleAlert aria-hidden size={15} /> {selectionHint}</p>}
+            </section>
+          )}
+
+          {stepIndex === 2 && (
+            <section className="studio-publish-screen" aria-labelledby="destination-title">
+              <h1 id="destination-title">Destination</h1>
+              <label className="studio-publish-field">
+                <span>Destination URL</span>
+                <input
+                  type="url"
+                  value={destinationUrl}
+                  placeholder="https://your-agency.com.au/appraisal"
+                  aria-invalid={destinationUrl.length > 0 && !destinationReady}
+                  onChange={(event) => onChangeDestinationUrl?.(event.target.value)}
+                  readOnly={!onChangeDestinationUrl}
+                />
+              </label>
+              {destinationUrl.length > 0 && !destinationReady && <p className="studio-field-error">Enter a full http or https URL.</p>}
+              <div className="studio-publish-summary-row"><span>Location</span><strong>{campaignPack.campaign.market.country}</strong></div>
+            </section>
+          )}
+
+          {stepIndex === 3 && (
+            <section className="studio-publish-screen" aria-labelledby="budget-title">
+              <h1 id="budget-title">Budget</h1>
+              <div className="studio-publish-field-grid">
+                <label className="studio-publish-field">
+                  <span>Daily budget</span>
+                  <select value={dailyBudgetAud} onChange={(event) => setDailyBudgetAud(Number(event.target.value))}>
+                    <option value={10}>$10/day</option>
+                    <option value={20}>$20/day</option>
+                    <option value={50}>$50/day</option>
+                  </select>
+                </label>
+                <label className="studio-publish-field">
+                  <span>Duration</span>
+                  <select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))}>
+                    <option value={7}>7 days</option>
+                    <option value={14}>14 days</option>
+                    <option value={30}>30 days</option>
+                  </select>
+                </label>
+              </div>
+              <div className="studio-publish-total"><span>Planned spend</span><strong>${dailyBudgetAud * durationDays} AUD</strong></div>
+            </section>
+          )}
+
+          {stepIndex === 4 && (
+            <section className="studio-publish-screen" aria-labelledby="review-title">
+              <h1 id="review-title">Review</h1>
+              <div className="studio-review-list">
+                <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
+                <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
+                <div><span>Destination</span><strong>{destinationUrl}</strong></div>
+                <div><span>Budget</span><strong>${dailyBudgetAud}/day · {durationDays} days</strong></div>
+              </div>
+              <details className="studio-readiness-details" open={!allMet}>
+                <summary>
+                  <span>Readiness</span>
+                  <strong className={allMet ? "ready" : "needs-work"}>{readiness === null ? "Checking" : allMet ? "Ready" : `${blockingItems.length} to fix`}</strong>
+                  <ChevronDown aria-hidden size={17} />
+                </summary>
+                <div>
+                  {checklist.map((item) => (
+                    <p key={item.id ?? item.label}>
+                      {item.met ? <Check aria-hidden size={15} /> : <CircleAlert aria-hidden size={15} />}
+                      {item.label}
+                    </p>
+                  ))}
+                </div>
+              </details>
+              <button className="studio-btn secondary" type="button" onClick={onExport}><Download aria-hidden size={17} /> Export creatives</button>
+              {exportStatus && exportStatus.length > 0 && (
+                <div className="studio-export-status">
+                  {exportStatus.map((item) => (
+                    <div key={item.format}>
+                      <span>{item.label}</span><strong>{capitalize(item.state)}</strong>
+                      {item.state === "failed" && onRetryExportFormat && (
+                        <button type="button" onClick={() => onRetryExportFormat(item.format)}>Retry</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {stepIndex === 5 && (
+            <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
+              <h1 id="live-title">Live</h1>
+              {publishDone ? (
+                <div className="studio-publish-success">
+                  <span><Check aria-hidden size={24} /></span>
+                  <strong>{publishMessage}</strong>
+                  {publishedVariantCount && <small>{publishedVariantCount} creatives selected</small>}
+                </div>
+              ) : (
+                <>
+                  <div className={`studio-live-status ${allMet ? "ready" : "blocked"}`}>
+                    {allMet ? <Check aria-hidden size={20} /> : <CircleAlert aria-hidden size={20} />}
+                    <span><strong>{allMet ? "Ready to publish" : "Not ready"}</strong><small>{allMet ? "Ads will be created paused." : `${blockingItems.length} item${blockingItems.length === 1 ? "" : "s"} need attention.`}</small></span>
+                  </div>
+                  {publishError && <p className="studio-publish-error">{publishError}</p>}
+                  <button
+                    className="studio-btn publish studio-publish-live-button"
+                    type="button"
+                    disabled={!allMet || publishing || Boolean(selectionHint)}
+                    onClick={handlePublishLive}
+                  >
+                    {publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />}
+                    {publishing ? "Submitting" : needsApprovalReview ? "Send for review" : "Publish paused"}
+                  </button>
+                  {onlyBlockedProviderWrite && <button className="studio-btn secondary" type="button" onClick={onExport}>Export creatives</button>}
+                </>
+              )}
+
+              {onDelete && (
+                <details className="studio-campaign-options">
+                  <summary>Campaign options <ChevronDown aria-hidden size={16} /></summary>
+                  <button type="button" onClick={onDelete}><Trash2 aria-hidden size={15} /> Delete campaign</button>
+                </details>
+              )}
+            </section>
+          )}
         </div>
-      )}
-    </>
+
+        <footer className="studio-publish-actions">
+          {stepIndex === 0 ? (
+            <Link href="/ad-studio"><ChevronLeft aria-hidden size={17} /> Back to Ad Studio</Link>
+          ) : (
+            <button type="button" className="studio-publish-back" onClick={() => setStepIndex((index) => Math.max(0, index - 1))}>
+              <ChevronLeft aria-hidden size={17} /> Back
+            </button>
+          )}
+          {stepIndex < STEPS.length - 1 && (
+            <button
+              type="button"
+              className="studio-publish-continue"
+              disabled={continueDisabled}
+              onClick={() => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
+            >
+              Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} />
+            </button>
+          )}
+        </footer>
+      </div>
+    </div>
   );
+}
+
+function isWebUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function capitalize(value: string) {
+  return value ? `${value[0]?.toUpperCase()}${value.slice(1)}` : value;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf())
+    ? "Not available"
+    : new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
