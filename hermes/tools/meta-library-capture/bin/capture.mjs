@@ -18,8 +18,19 @@
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 
-import { runMetaCapture } from "../src/crawler.mjs";
 import { OUTCOME_STATUS, buildOutcome } from "../src/outcome.mjs";
+
+/**
+ * The crawler pulls in crawlee/playwright, which are installed inside the
+ * tool's own node_modules (never shipped to the Vercel build). Import it lazily
+ * so input validation and the FAILED-outcome contract work even where the
+ * browser stack is absent — a missing browser must yield a structured FAILED
+ * outcome, never a module-load crash.
+ */
+async function loadCrawler() {
+  const { runMetaCapture } = await import("../src/crawler.mjs");
+  return runMetaCapture;
+}
 
 const require = createRequire(import.meta.url);
 
@@ -150,10 +161,13 @@ async function main() {
 
   let result;
   try {
+    const runMetaCapture = await loadCrawler();
     result = await runMetaCapture({ input, runId, logLine: logErr });
   } catch (error) {
-    // runMetaCapture is designed not to throw, but guard the outcome contract anyway.
-    logErr(`unexpected capture error: ${error?.message || error}`);
+    // A missing browser stack (crawlee/playwright not installed) throws here on
+    // import; any runtime error throws from the crawler itself. Either way the
+    // outcome contract holds: exactly one FAILED JSON object on stdout, exit 2.
+    logErr(`capture error: ${error?.message || error}`);
     const outcome = buildOutcome({
       runId,
       startedAt,
