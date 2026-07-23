@@ -56,7 +56,8 @@ test("edits save always; verification is advisory and rendering stays model-driv
   // deterministic path below is verdict bookkeeping only.
   assert.doesNotMatch(route, /renderExactCloneTextEdit/);
   assert.match(route, /buildTargetedEditRequest/);
-  assert.match(route, /compositeCloneRegionEdit/);
+  assert.match(route, /cropRegionWithPadding/);
+  assert.match(route, /compositeRegionBack/);
   // No reroll loop, no QA gate on saving: one render, one advisory check,
   // and a vision outage falls back to deterministic verdict bookkeeping.
   assert.doesNotMatch(route, /cloneQaCorrectionPrompt/);
@@ -79,7 +80,10 @@ test("workbench embeds the editor in Meta chrome with honest selection guidance"
   assert.match(workbench, /<MetaChromePreview[\s\S]*?<InPlaceAdEditor[\s\S]*?<\/MetaChromePreview>/);
   assert.match(workbench, /Select text or an image on the ad, or open Edit elements\./);
   assert.match(workbench, /onCreativeChange=\{updateCreative\}/);
-  assert.match(workbench, /cloneQaWarnings\(currentCreative\?\.canvas\.cloneQa\)/);
+  // The QA-warnings strip and preparing spinner are gone: the finished ad
+  // renders immediately with no advisory copy-mismatch banner.
+  assert.doesNotMatch(workbench, new RegExp("cloneQa" + "Warnings"));
+  assert.doesNotMatch(workbench, /Preparing your editor/);
 });
 
 test("regions are object-aware: hover labels, selection spotlight, corner handles, keyboard walk", () => {
@@ -114,15 +118,4 @@ test("element list shows real thumbnails and flags inexact copy", () => {
   // Pending edits narrate what they are doing instead of a generic label.
   assert.match(editor, /truncateForStatus/);
   assert.match(editor, /Repainting this area/);
-});
-
-test("the ad shows before its advisory QA pass and the editor announces it is preparing", () => {
-  // The workbench polls the campaign until verdicts land, merging only the
-  // missing cloneQa so local edits are never clobbered.
-  assert.match(workbench, /const editorPreparing = pack\.creatives\.some/);
-  assert.match(workbench, /preparing=\{editorPreparing\}/);
-  assert.match(workbench, /qa && !creative\.canvas\.cloneQa/);
-  assert.match(editor, /preparing \?/);
-  assert.match(editor, /Preparing your editor/);
-  assert.match(styles, /\.studio-editor-preparing\{position:absolute/);
 });

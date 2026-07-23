@@ -23,6 +23,7 @@ export type RedactedProviderRunInput = {
     | "adstudio.image"
     | "adstudio.clone"
     | "adstudio.clone_qa"
+    | "adstudio.clone_regions"
     | "adstudio.background"
     | "adstudio.scoring";
   modelProfile: ModelProfileKey;

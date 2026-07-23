@@ -1,9 +1,9 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { fetchOpenRouterModelCatalog } from "./openrouter-client.ts";
 import { hasOperatorAccessFromRows } from "../auth/workspace-access.ts";
 import {
   type EnvLike,
+  type ModelCatalogOption,
   buildModelControlViewData,
   buildModelProfileVersionInsert,
   optionToCandidate,
@@ -47,7 +47,7 @@ export async function getModelControlViewData(
   const versions = await loadPersistedModelProfileVersions(supabase);
   const profiles = resolveEffectiveModelProfiles(versions).filter((profile) => profile.key !== "disabled_profile");
   const env = process.env as EnvLike;
-  const catalogOptions = env.OPENROUTER_API_KEY ? await fetchOpenRouterModelCatalog({ env }).catch(() => []) : [];
+  const catalogOptions: ModelCatalogOption[] = [];
 
   return buildModelControlViewData({ profiles, env, catalogOptions });
 }
@@ -104,7 +104,7 @@ export async function loadPersistedModelProfileVersions(
 }
 
 function parsePersistedProvider(value: string): ModelProvider {
-  if (["openai", "openrouter", "azure", "google"].includes(value)) {
+  if (["openai", "azure", "google"].includes(value)) {
     return value as ModelProvider;
   }
   throw new Error(`Active model profile version has unsupported provider: ${value || "(empty)"}.`);

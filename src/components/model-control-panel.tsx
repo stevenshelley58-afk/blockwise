@@ -34,7 +34,6 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   const [pendingByProfile, setPendingByProfile] = useState<Record<string, boolean>>({});
   const [statusByProfile, setStatusByProfile] = useState<Record<string, RowStatus>>({});
 
-  const readiness = initialData.readiness.openrouter;
   const profileCount = useMemo(
     () => new Set(sections.flatMap((section) => section.profiles.map((profile) => profile.key))).size,
     [sections],
@@ -43,12 +42,12 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   async function saveProfile(profile: ModelControlProfileRow) {
     const option = getSelectedOption(profile, selectedByProfile[profile.key]);
 
-    if (!option || option.provider !== "openrouter") {
+    if (!option) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
           tone: "amber",
-          message: "Choose an OpenRouter model before saving.",
+          message: "Choose a model before saving.",
         },
       }));
       return;
@@ -93,12 +92,12 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
   async function testProfile(profile: ModelControlProfileRow) {
     const option = getSelectedOption(profile, selectedByProfile[profile.key]);
 
-    if (!option || option.provider !== "openrouter") {
+    if (!option) {
       setStatusByProfile((current) => ({
         ...current,
         [profile.key]: {
           tone: "amber",
-          message: "Choose an OpenRouter model before testing.",
+          message: "Choose a model before testing.",
         },
       }));
       return;
@@ -115,7 +114,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
       const payload = (await response.json()) as { content?: string; error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "OpenRouter test failed.");
+        throw new Error(payload.error ?? "Model test failed.");
       }
 
       setStatusByProfile((current) => ({
@@ -130,7 +129,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
         ...current,
         [profile.key]: {
           tone: "rose",
-          message: error instanceof Error ? error.message : "OpenRouter test failed.",
+          message: error instanceof Error ? error.message : "Model test failed.",
         },
       }));
     } finally {
@@ -140,28 +139,14 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
 
   return (
     <div className="stack">
-      <section className="panel model-readiness">
-        <div>
-          <h2>OpenRouter</h2>
-          <p className="item-meta">
-            {readiness.configured
-              ? "OpenRouter API key is configured for server-side model tests and routing."
-              : `Missing ${readiness.missing.join(", ")}. Dropdowns still render, but live tests and saved OpenRouter runs need the key.`}
-          </p>
-        </div>
-        <StatusPill tone={readiness.configured ? "green" : "amber"}>
-          {readiness.configured ? "Ready" : "Key missing"}
-        </StatusPill>
-      </section>
-
       <section className="grid cols-3">
         <article className="item-card">
           <h3>{profileCount}</h3>
           <p className="item-meta">Runtime profiles with selectable primary models.</p>
         </article>
         <article className="item-card">
-          <h3>OpenRouter</h3>
-          <p className="item-meta">Curated model slugs are stored without legacy prefixes.</p>
+          <h3>Providers</h3>
+          <p className="item-meta">Models are routed directly to OpenAI, Azure, and Google.</p>
         </article>
         <article className="item-card">
           <h3>Fallbacks</h3>
@@ -252,7 +237,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                             type="button"
                             aria-label={`Save ${profile.label} model`}
                             title="Save model"
-                            disabled={!changed || pending || option?.provider !== "openrouter"}
+                            disabled={!changed || pending}
                             onClick={() => saveProfile(profile)}
                           >
                             <Save aria-hidden size={18} />
@@ -262,7 +247,7 @@ export function ModelControlPanel({ initialData }: ModelControlPanelProps) {
                             type="button"
                             aria-label={`Test ${profile.label} model`}
                             title="Test model"
-                            disabled={pending || option?.provider !== "openrouter"}
+                            disabled={pending}
                             onClick={() => testProfile(profile)}
                           >
                             <Play aria-hidden size={18} />

@@ -18,7 +18,7 @@ test("resolveModelProfile defaults structured copy to the best text model with a
   assert.equal(resolved.primary.model, "gpt-5.5");
   assert.deepEqual(
     resolved.fallbacks.map((candidate) => candidate.model),
-    ["gpt-4.1", "google/gemini-2.0-flash-001"],
+    ["gpt-4.1"],
   );
   assert.equal(resolved.profile.requiresStructuredOutput, true);
 });
@@ -36,17 +36,10 @@ test("client-facing strategy profile uses the premium copywriting model", () => 
 
   assert.equal(resolved.primary.provider, "openai");
   assert.equal(resolved.primary.model, "gpt-5.5");
-  assert.deepEqual(
-    resolved.fallbacks.map((candidate) => `${candidate.provider}/${candidate.model}`),
-    ["openrouter/openai/gpt-5.5"],
-  );
+  assert.deepEqual(resolved.fallbacks, []);
 });
 
-test("normalizeModelSlug stores OpenRouter model ids without the legacy openrouter prefix", () => {
-  assert.equal(
-    normalizeModelSlug("openrouter", "openrouter/google/gemini-2.0-flash-001"),
-    "google/gemini-2.0-flash-001",
-  );
+test("normalizeModelSlug strips the azure deployment prefix and leaves other providers untouched", () => {
   assert.equal(normalizeModelSlug("azure", "azure/gpt-4.1-mini-vision"), "gpt-4.1-mini-vision");
   assert.equal(normalizeModelSlug("openai", "gpt-4.1-mini"), "gpt-4.1-mini");
 });
@@ -83,8 +76,8 @@ test("resolveEffectiveModelProfile prefers a saved model version over static def
     {
       id: "33333333-3333-4333-8333-333333333333",
       profileKey: "cheap_draft_text",
-      provider: "openrouter",
-      model: "openrouter/google/gemini-2.0-flash-001",
+      provider: "google",
+      model: "gemini-2.0-flash-001",
       inputUsdPerMillionTokens: 0.1,
       outputUsdPerMillionTokens: 0.4,
       imageUsdPerUnit: 0,
@@ -94,8 +87,8 @@ test("resolveEffectiveModelProfile prefers a saved model version over static def
     },
   ]);
 
-  assert.equal(resolved.primary.provider, "openrouter");
-  assert.equal(resolved.primary.model, "google/gemini-2.0-flash-001");
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-2.0-flash-001");
 });
 
 test("estimateRunCostUsd accounts for text input, text output, and image units", () => {
@@ -116,7 +109,7 @@ test("resolveModelProfileForData removes public-only fallbacks for sensitive cli
 
   assert.deepEqual(
     publicResolved.fallbacks.map((candidate) => candidate.model),
-    ["gpt-4.1", "google/gemini-2.0-flash-001"],
+    ["gpt-4.1"],
   );
 
   const sensitiveResolved = resolveModelProfileForData("structured_json", {
@@ -125,7 +118,7 @@ test("resolveModelProfileForData removes public-only fallbacks for sensitive cli
 
   assert.deepEqual(
     sensitiveResolved.fallbacks.map((candidate) => candidate.model),
-    ["gpt-4.1", "google/gemini-2.0-flash-001"],
+    ["gpt-4.1"],
   );
 });
 

@@ -48,14 +48,18 @@ test("the server owns clone generation and the client waits for the finished ad"
   const actions = readFileSync("src/components/adstudio/use-campaign-actions.ts", "utf8");
   const route = readFileSync("src/app/api/adstudio/campaigns/route.ts", "utf8");
   const generation = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
-  assert.doesNotMatch(dialog, /templateCloneImage|\/api\/adstudio\/copy/);
+  // The client never renders clones locally; the server owns generation. The
+  // dialog MAY call the copy route for an optional "AI from brief" copy draft
+  // (Point 10), so that endpoint is no longer banned from the dialog — but local
+  // clone rendering is.
+  assert.doesNotMatch(dialog, /templateCloneImage/);
   assert.match(route, /runTemplateCampaignGeneration/);
   assert.match(route, /status: 202/);
   assert.doesNotMatch(route, /generateAdStudioCampaignPack\(\{/);
   assert.match(actions, /\/api\/adstudio\/jobs\//);
   assert.match(actions, /Your ad is ready to edit/);
   assert.match(generation, /buildTemplateCloneRequestsByFormat/);
-  assert.match(generation, /runCloneQa/);
+  assert.match(generation, /detectCloneRegions/);
   assert.match(generation, /persistAdStudioCampaignPack/);
 });
 

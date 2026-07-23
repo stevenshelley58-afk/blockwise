@@ -70,9 +70,8 @@ export const generateAdStudioTemplateCampaignTask = task({
         isTrialWorkspace: reservation?.isTrialWorkspace ?? false,
       });
 
-      // "done" the moment the renders persist — the polling client shows the
-      // ad now. The advisory QA pass (editor regions + copy warnings) runs
-      // after, attaching to the persisted creatives as it lands.
+      // "done" the moment the feed (4:5) persists — the polling client shows
+      // the ad now. The story (9:16) render and advisory QA pass run after.
       await supabase
         .from("adstudio_creative_jobs")
         .update({
@@ -85,14 +84,13 @@ export const generateAdStudioTemplateCampaignTask = task({
         .eq("workspace_id", payload.workspaceId)
         .eq("id", payload.jobId);
 
-      const qa = await result.enrichQa();
-      if (qa) {
-        await supabase
-          .from("adstudio_creative_jobs")
-          .update({ qa, updated_at: now() })
-          .eq("workspace_id", payload.workspaceId)
-          .eq("id", payload.jobId);
-      }
+      // Fire-and-forget region detection for the feed creative.
+      await result.enrichRegions();
+
+      // Await the story (9:16) background persist so it lands before the
+      // trigger task completes (the job is already marked "done" above).
+      // Never throws outward — story failure is contained inside the task.
+      if (result.storyTask) await result.storyTask;
 
       return { jobId: payload.jobId, status: "done" as const, campaignId: result.campaignId };
     } catch (error) {

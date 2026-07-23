@@ -84,8 +84,8 @@ test("production exports expose only explicitly priced provider candidates", () 
 
 test("candidate adapters retain exact runtime version, price, currency, and billing basis", () => {
   const provider = createImageProviderForCandidate({
-    provider: "openrouter",
-    model: "google/gemini-2.5-flash-image",
+    provider: "google",
+    model: "gemini-2.5-flash-image",
     modelProfileVersionId: "11111111-1111-4111-8111-111111111111",
     pricingSnapshotId: "11111111-1111-4111-8111-111111111111",
     pricingSource: "persisted",
@@ -120,40 +120,6 @@ test("candidate adapters reject missing or invalid explicit pricing before dispa
     () => createImageProviderForCandidate(candidate("openai", "   ")),
     /must declare a model/,
   );
-});
-
-test("priced OpenRouter candidate posts structured prompts and parses JSON responses", async () => {
-  const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createTextProviderForCandidate(candidate("openrouter", "openai/gpt-5.5"), {
-    env: {
-      OPENROUTER_API_KEY: "or_test",
-      NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
-    },
-    fetchImpl: async (url, init) => {
-      calls.push({ url: String(url), init: init ?? {} });
-
-      return new Response(
-        JSON.stringify({
-          choices: [{ message: { content: JSON.stringify({ platform: "meta", primaryText: ["ok"] }) } }],
-          usage: { prompt_tokens: 12, completion_tokens: 4, cost: 0.000321 },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    },
-  });
-
-  const output = await provider.generate({
-    system: "Return JSON",
-    messages: [{ role: "user", content: "Build copy" }],
-    schemaName: "metaLeadAdPack",
-  });
-
-  assert.equal(calls[0].url, "https://openrouter.ai/api/v1/chat/completions");
-  assert.equal((calls[0].init.headers as Record<string, string>).Authorization, "Bearer or_test");
-  assert.deepEqual(output.json, { platform: "meta", primaryText: ["ok"] });
-  assert.equal(output.usage.inputTokens, 12);
-  assert.equal(output.usage.actualCostUsd, 0.000321);
-  assert.equal(output.providerMetadata.model, "openai/gpt-5.5");
 });
 
 test("priced Azure candidate posts structured multimodal prompts to the deployment endpoint", async () => {
@@ -222,56 +188,6 @@ test("resolveAzureOpenAiChatUrl supports explicit URLs and deployment URLs", () 
     ),
     "https://custom.azure.test/chat",
   );
-});
-
-test("priced OpenRouter image candidate uses the native image API with explicit references and quality", async () => {
-  const calls: Array<{ url: string; init: RequestInit }> = [];
-  const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
-    env: {
-      OPENROUTER_API_KEY: "or_test",
-      NEXT_PUBLIC_APP_URL: "https://app.blockwise.test",
-    },
-    model: "google/gemini-2.5-flash-image",
-    fetchImpl: async (url, init) => {
-      calls.push({ url: String(url), init: init ?? {} });
-
-      return new Response(
-        JSON.stringify({
-          data: [{ b64_json: "b3V0" }],
-          usage: { prompt_tokens: 900, completion_tokens: 1, cost: 0.039 },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    },
-  });
-
-  const references = [
-    "data:image/png;base64,cmVmZXJlbmNl",
-    "data:image/jpeg;base64,cGhvdG8=",
-  ];
-  const output = await provider.generate({
-    prompt: "Clone the reference ad with the supplied photo",
-    referenceAssets: references,
-    aspectRatio: "4:5",
-    stylePreset: "real_estate_clone",
-    requiresReferenceAssets: true,
-  });
-
-  const body = JSON.parse(String(calls[0].init.body));
-  assert.equal(calls[0].url, "https://openrouter.ai/api/v1/images");
-  assert.equal(body.aspect_ratio, "4:5");
-  assert.equal(body.quality, "high");
-  assert.equal(body.output_format, "png");
-  // A data URL inside the text prompt is tokenized as text and blows the
-  // image model's context window — references belong in input_references only.
-  assert.doesNotMatch(String(body.prompt), /data:image/);
-  assert.deepEqual(
-    body.input_references.map((part: { image_url: { url: string } }) => part.image_url.url),
-    references,
-  );
-  assert.equal(output.assetUrl, "data:image/png;base64,b3V0");
-  assert.equal(output.usage.imageUnits, 1);
-  assert.equal(output.usage.actualCostUsd, 0.039);
 });
 
 test("priced OpenAI image candidate uses GPT Image 2", async () => {
@@ -353,53 +269,6 @@ test("OpenAI 2xx response without an image preserves submitted billing evidence"
   assert.equal(attempt.providerRequestId, "oa-image-request-1");
   assert.equal(attempt.billingStatus, "actual");
   assert.equal(attempt.actualCostUsd, 0.047);
-});
-
-test("OpenRouter 2xx response without an image preserves submitted billing evidence", async () => {
-  const provider = createImageProviderForCandidate(candidate("openrouter", "google/gemini-2.5-flash-image"), {
-    env: { OPENROUTER_API_KEY: "or_test" },
-    fetchImpl: async () => new Response(JSON.stringify({
-      id: "or-image-request-1",
-      choices: [{ message: { content: "No image generated" } }],
-      usage: { prompt_tokens: 700, completion_tokens: 15, cost: 0.039 },
-    }), { status: 200 }),
-  });
-
-  let caught: unknown;
-  try {
-    await provider.generate({
-      prompt: "Premium local real estate appraisal creative",
-      referenceAssets: [],
-      aspectRatio: "1:1",
-      stylePreset: "real_estate_photography",
-    });
-  } catch (error) {
-    caught = error;
-  }
-
-  assert.ok(caught instanceof ProviderRequestError);
-  assert.equal(caught.requestSubmitted, true);
-  assert.equal(caught.retryable, false);
-  assert.equal(caught.providerRequestId, "or-image-request-1");
-  assert.deepEqual(caught.usage, {
-    imageUnits: 0,
-    providerRequestId: "or-image-request-1",
-    complete: true,
-    inputTokens: 700,
-    outputTokens: 15,
-    actualCostUsd: 0.039,
-  });
-
-  const attempt = buildProviderRunAttempt({
-    attemptIndex: 0,
-    provider,
-    modelProfile: "image_final",
-    status: "failed",
-    error: caught,
-  });
-  assert.equal(attempt.providerRequestId, "or-image-request-1");
-  assert.equal(attempt.billingStatus, "actual");
-  assert.equal(attempt.actualCostUsd, 0.039);
 });
 
 test("provider HTTP errors are retryable only for explicitly transient statuses", async () => {

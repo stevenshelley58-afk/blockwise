@@ -1,7 +1,7 @@
 import type { WorkforceDataClass } from "../workforce/permissions.ts";
 
 // "google" = Google AI Studio direct (free tier, OpenAI-compatible endpoint);
-export type ModelProvider = "openai" | "openrouter" | "azure" | "google";
+export type ModelProvider = "openai" | "azure" | "google";
 
 export type ModelProfileKey =
   | "cheap_draft_text"
@@ -68,7 +68,6 @@ const SENSITIVE_DATA_CLASSES: WorkforceDataClass[] = ["lead_pii", "provider_toke
 
 const PROVIDER_CLIENT_DATA_POLICY: Record<ModelProvider, "allowed" | "public_only"> = {
   openai: "allowed",
-  openrouter: "allowed",
   azure: "allowed",
   google: "allowed",
 };
@@ -94,8 +93,8 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     },
     fallbacks: [
       {
-        provider: "openrouter",
-        model: "google/gemini-2.0-flash-001",
+        provider: "google",
+        model: "gemini-2.0-flash-001",
         inputUsdPerMillionTokens: 0.1,
         outputUsdPerMillionTokens: 0.4,
         imageUsdPerUnit: 0,
@@ -123,18 +122,7 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       maxContextTokens: 1_000_000,
       maxLatencyMs: 12_000,
     },
-    fallbacks: [
-      {
-        provider: "openrouter",
-        model: "openai/gpt-5.5",
-        inputUsdPerMillionTokens: 5,
-        outputUsdPerMillionTokens: 30,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 1_000_000,
-        maxLatencyMs: 16_000,
-      },
-    ],
+    fallbacks: [],
   },
   structured_json: {
     key: "structured_json",
@@ -165,16 +153,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
         supportsStructuredOutput: true,
         maxContextTokens: 128_000,
         maxLatencyMs: 16_000,
-      },
-      {
-        provider: "openrouter",
-        model: "google/gemini-2.0-flash-001",
-        inputUsdPerMillionTokens: 0.1,
-        outputUsdPerMillionTokens: 0.4,
-        imageUsdPerUnit: 0,
-        supportsStructuredOutput: true,
-        maxContextTokens: 1_000_000,
-        maxLatencyMs: 8_000,
       },
     ],
   },
@@ -248,16 +226,6 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
         maxContextTokens: 16_000,
         maxLatencyMs: 60_000,
       },
-      {
-        provider: "openrouter",
-        model: "google/gemini-3.1-flash-image-preview",
-        inputUsdPerMillionTokens: 0.5,
-        outputUsdPerMillionTokens: 3,
-        imageUsdPerUnit: 0.04,
-        supportsStructuredOutput: false,
-        maxContextTokens: 65_536,
-        maxLatencyMs: 30_000,
-      },
     ],
   },
   compliance_review: {
@@ -322,9 +290,6 @@ export function isModelProfileKey(value: string): value is ModelProfileKey {
 }
 
 export function normalizeModelSlug(provider: ModelProvider, model: string): string {
-  if (provider === "openrouter" && model.startsWith("openrouter/")) {
-    return model.replace(/^openrouter\//, "");
-  }
   if (provider === "azure" && model.startsWith("azure/")) {
     return model.replace(/^azure\//, "");
   }

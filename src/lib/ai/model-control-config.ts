@@ -19,15 +19,8 @@ export type ModelCatalogOption = {
   supportsImageOutput: boolean;
 };
 
-export type OpenRouterReadiness = {
-  configured: boolean;
-  missing: string[];
-  appUrl: string;
-};
-
 export type EnvLike = {
   NEXT_PUBLIC_APP_URL?: string;
-  OPENROUTER_API_KEY?: string;
 };
 
 export type ModelProfileVersionInsert = {
@@ -64,9 +57,7 @@ export type ModelControlSection = {
 export type ModelControlViewData = {
   sections: ModelControlSection[];
   modelProfiles: ModelProfile[];
-  readiness: {
-    openrouter: OpenRouterReadiness;
-  };
+  readiness: Record<string, never>;
 };
 
 type SelectionRequest = {
@@ -85,207 +76,7 @@ type SelectionValidationResult =
       error: string;
     };
 
-const DEFAULT_APP_URL = "http://localhost:3000";
 const DEFAULT_MAX_LATENCY_MS = 12_000;
-
-const CURATED_OPENROUTER_OPTIONS: Record<ModelProfileKey, ModelCatalogOption[]> = {
-  cheap_draft_text: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-lite-001",
-      label: "Google Gemini 2.0 Flash Lite",
-      inputUsdPerMillionTokens: 0.075,
-      outputUsdPerMillionTokens: 0.3,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "qwen/qwen3.5-flash-02-23",
-      label: "Qwen Qwen3.5 Flash",
-      inputUsdPerMillionTokens: 0.065,
-      outputUsdPerMillionTokens: 0.26,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  high_quality_strategy: [
-    createOpenRouterOption({
-      model: "openai/gpt-5.5",
-      label: "GPT-5.5",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-5.5-pro",
-      label: "GPT-5.5 Pro",
-      inputUsdPerMillionTokens: 30,
-      outputUsdPerMillionTokens: 180,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3.1-pro-preview",
-      label: "Google Gemini 3.1 Pro Preview",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  structured_json: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-2.5-flash-lite",
-      label: "Google Gemini 2.5 Flash Lite",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_048_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  vision_classification: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      imageUsdPerUnit: 0.01,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "qwen/qwen3-vl-32b-instruct",
-      label: "Qwen Qwen3 VL 32B Instruct",
-      inputUsdPerMillionTokens: 0.104,
-      outputUsdPerMillionTokens: 0.416,
-      maxContextTokens: 262_144,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  image_draft: [
-    {
-      provider: "google",
-      model: "gemini-3.1-flash-image",
-      label: "Google Gemini 3.1 Flash Image (direct)",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0.04,
-      maxContextTokens: 131_072,
-      supportsStructuredOutput: false,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    },
-  ],
-  image_final: [
-    createOpenRouterOption({
-      model: "openai/gpt-5.4-image-2",
-      label: "GPT-5.4 Image 2",
-      inputUsdPerMillionTokens: 8,
-      outputUsdPerMillionTokens: 15,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 400_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3.1-flash-image-preview",
-      label: "Google Nano Banana 2",
-      inputUsdPerMillionTokens: 0.5,
-      outputUsdPerMillionTokens: 3,
-      imageUsdPerUnit: 0,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "google/gemini-3-pro-image-preview",
-      label: "Google Nano Banana Pro",
-      inputUsdPerMillionTokens: 2,
-      outputUsdPerMillionTokens: 12,
-      imageUsdPerUnit: 2,
-      maxContextTokens: 65_536,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-      supportsImageOutput: true,
-    }),
-  ],
-  compliance_review: [
-    createOpenRouterOption({
-      model: "google/gemini-2.0-flash-001",
-      label: "Google Gemini 2.0 Flash",
-      inputUsdPerMillionTokens: 0.1,
-      outputUsdPerMillionTokens: 0.4,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-    createOpenRouterOption({
-      model: "anthropic/claude-sonnet-4.6",
-      label: "Anthropic Claude Sonnet 4.6",
-      inputUsdPerMillionTokens: 3,
-      outputUsdPerMillionTokens: 15,
-      maxContextTokens: 1_000_000,
-      supportsStructuredOutput: true,
-    }),
-    createOpenRouterOption({
-      model: "openai/gpt-4.1-mini",
-      label: "GPT-4.1 Mini",
-      inputUsdPerMillionTokens: 0.4,
-      outputUsdPerMillionTokens: 1.6,
-      maxContextTokens: 1_047_576,
-      supportsStructuredOutput: true,
-      supportsVisionInput: true,
-    }),
-  ],
-  disabled_profile: [],
-};
 
 const PROFILE_SECTION_MAP: Array<{
   key: string;
@@ -331,33 +122,9 @@ const PROFILE_SECTION_MAP: Array<{
   },
 ];
 
-function createOpenRouterOption(
-  option: Omit<ModelCatalogOption, "provider" | "imageUsdPerUnit" | "supportsStructuredOutput" | "supportsVisionInput" | "supportsImageOutput"> &
-    Partial<Pick<ModelCatalogOption, "imageUsdPerUnit" | "supportsStructuredOutput" | "supportsVisionInput" | "supportsImageOutput">>,
-): ModelCatalogOption {
-  return {
-    provider: "openrouter",
-    imageUsdPerUnit: 0,
-    supportsStructuredOutput: false,
-    supportsVisionInput: false,
-    supportsImageOutput: false,
-    ...option,
-    model: normalizeModelSlug("openrouter", option.model),
-  };
-}
-
-export function getOpenRouterReadiness(env: EnvLike = process.env as EnvLike): OpenRouterReadiness {
-  const missing = env.OPENROUTER_API_KEY ? [] : ["OPENROUTER_API_KEY"];
-
-  return {
-    configured: missing.length === 0,
-    missing,
-    appUrl: env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL,
-  };
-}
-
-export function getCuratedModelOptionsForProfile(profileKey: ModelProfileKey): ModelCatalogOption[] {
-  return CURATED_OPENROUTER_OPTIONS[profileKey].map((option) => ({ ...option }));
+export function getCuratedModelOptionsForProfile(_profileKey: ModelProfileKey): ModelCatalogOption[] {
+  // No curated third-party catalog options remain.
+  return [];
 }
 
 export function getCuratedModelOptionsWithCatalog(
@@ -372,6 +139,8 @@ export function getCuratedModelOptionsWithCatalog(
   }));
 }
 
+const SAVED_PROVIDERS: ModelProvider[] = ["openai", "azure", "google"];
+
 export function validateModelProfileSelection(
   profileKeyValue: string,
   request: SelectionRequest,
@@ -384,7 +153,7 @@ export function validateModelProfileSelection(
     };
   }
 
-  if (request.provider !== "openrouter" && request.provider !== "google") {
+  if (typeof request.provider !== "string" || !SAVED_PROVIDERS.includes(request.provider as ModelProvider)) {
     return {
       ok: false,
       status: 400,
@@ -400,14 +169,18 @@ export function validateModelProfileSelection(
     };
   }
 
-  const normalizedModel = normalizeModelSlug(request.provider, request.model.trim());
-  const option = getCuratedModelOptionsForProfile(profileKeyValue).find(
-    (candidate) => candidate.provider === request.provider && candidate.model === normalizedModel,
+  const provider = request.provider as ModelProvider;
+  const normalizedModel = normalizeModelSlug(provider, request.model.trim());
+
+  // Validate against the profile's own configured candidates (primary + fallbacks).
+  const profile = listModelProfiles().find((candidate) => candidate.key === profileKeyValue);
+  const candidates = profile ? [profile.primary, ...profile.fallbacks] : [];
+  const matched = candidates.find(
+    (candidate) =>
+      candidate.provider === provider && normalizeModelSlug(candidate.provider, candidate.model) === normalizedModel,
   );
 
-  if (!option) {
-    const profile = listModelProfiles().find((candidate) => candidate.key === profileKeyValue);
-
+  if (!matched) {
     return {
       ok: false,
       status: 400,
@@ -417,7 +190,7 @@ export function validateModelProfileSelection(
 
   return {
     ok: true,
-    option,
+    option: modelCandidateToOption(matched, "Approved"),
   };
 }
 
@@ -469,9 +242,7 @@ export function buildModelControlViewData(
   return {
     sections,
     modelProfiles,
-    readiness: {
-      openrouter: getOpenRouterReadiness(args.env),
-    },
+    readiness: {},
   };
 }
 

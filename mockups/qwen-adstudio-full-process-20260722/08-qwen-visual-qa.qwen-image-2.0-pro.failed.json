@@ -1,0 +1,13 @@
+{
+  "sample_preserves_composition": true,
+  "sample_removed_source_identity": true,
+  "sample_uses_generic_property": true,
+  "sample_uses_generic_logo": true,
+  "customer_preserves_sample_composition": true,
+  "customer_uses_supplied_property": true,
+  "customer_uses_supplied_logo": false,
+  "customer_exact_text": false,
+  "no_unapproved_identity": false,
+  "no_obvious_visual_defects": true,
+  "overall_pass": false
+}

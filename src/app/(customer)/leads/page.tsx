@@ -1,4 +1,4 @@
-import { Fingerprint, Tags, UsersRound } from "lucide-react";
+import { Clock, Fingerprint, Tags, UsersRound } from "lucide-react";
 import Link from "next/link";
 
 import { MetricCard } from "@/components/metric-card";
@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listLeadRowsWithDedupe, type LeadQualityLabel } from "@/lib/operator/overview";
 import { LeadQualitySelect } from "./lead-quality-select";
+import { LeadSyncButton } from "./lead-sync-button";
 
 type LeadQualityValue = LeadQualityLabel | "unlabelled";
 
@@ -19,12 +20,31 @@ export default async function LeadsPage() {
   const duplicateCount = rows.filter((lead) => lead.duplicateCandidate).length;
   const canEditLeadQuality = access.role === "owner" || access.role === "admin" || access.role === "operator";
 
+  const { data: workspaceRow } = await supabase
+    .from("workspaces")
+    .select("last_meta_lead_sync_at")
+    .eq("id", access.workspaceId)
+    .maybeSingle();
+  const lastSyncedAt = (workspaceRow as { last_meta_lead_sync_at?: string | null } | null)?.last_meta_lead_sync_at ?? null;
+  const lastSyncedLabel = lastSyncedAt
+    ? `Last synced ${new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "Australia/Perth" }).format(new Date(lastSyncedAt))}`
+    : "Never synced";
+
   return (
     <main className="content">
       <PageHeading
         eyebrow="Your leads"
         title="Leads"
         description="Every Meta lead in one place. We flag duplicates, highlight high-intent leads, and keep your data secure."
+        actions={
+          <div className="leads-heading-actions">
+            <LeadSyncButton workspaceId={access.workspaceId} />
+            <span className="sync-last-at">
+              <Clock size={14} aria-hidden="true" />
+              {lastSyncedLabel}
+            </span>
+          </div>
+        }
       />
 
       <section className="grid cols-3">

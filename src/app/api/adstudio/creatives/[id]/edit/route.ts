@@ -3,14 +3,13 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-  compositeCloneRegionEdit,
   createCloneRegionEditMask,
   generateCloneWithCascade,
-  normalizeCloneRenderAspect,
   persistCloneRender,
   resolveCloneProviders,
 } from "@/lib/adstudio/clone-generation";
-import { applyDeterministicTextEditQa, runCloneQa } from "@/lib/adstudio/clone-qa";
+import { compositeRegionBack, cropRegionWithPadding, rebaseBoxToCrop } from "@/lib/adstudio/region-edit";
+import { applyDeterministicTextEditQa } from "@/lib/adstudio/clone-qa";
 import {
   appendAdStudioCreativeRevision,
   executeAdStudioCreativeRevisionMutation,
@@ -267,8 +266,21 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
   let lastImage: { assetUrl: string; model: string; provider: string };
   {
     const fieldLabel = editFieldKey.replace(/_/g, " ");
+    // Crop-region edit: send the model ONLY a padded window around the selected
+    // region instead of the full ad. This drastically cuts model pixels (and
+    // latency/cost); the composite below keeps every outside pixel from the
+    // original, exactly like the legacy full-image path.
+    const crop = await cropRegionWithPadding(currentImage, selectedRegion?.box);
+    // The selected box re-based into the crop's normalized coordinate space so
+    // the mask marks the right spot inside the (smaller) crop canvas.
+    const cropLocalBox = rebaseBoxToCrop(
+      selectedRegion?.box,
+      crop.cropRect,
+      crop.originalWidth,
+      crop.originalHeight,
+    );
     const baseRequest = buildTargetedEditRequest({
-      currentImage,
+      currentImage: crop.croppedDataUrl,
       fieldLabel,
       newValue,
       newImage,
@@ -276,7 +288,7 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
       expectedCopy,
       aspectRatio: String(row.format ?? "4:5"),
     });
-    baseRequest.maskImage = await createCloneRegionEditMask(currentImage, selectedRegion?.box);
+    baseRequest.maskImage = await createCloneRegionEditMask(crop.croppedDataUrl, cropLocalBox);
     // All edits go through the image model. A previous deterministic text
     // fallback blurred the selected rectangle and painted generic Arial over
     // the ad, permanently destroying the source design. The model retains the
@@ -294,35 +306,29 @@ export async function POST(request: NextRequest, routeContext: RouteContext) {
         correlationId,
         attempt: 1,
       });
-      const exactAssetUrl = await normalizeCloneRenderAspect(generated.assetUrl, String(row.format ?? "4:5"));
-      const boundedModelEdit = await compositeCloneRegionEdit(currentImage, exactAssetUrl, selectedRegion?.box);
+      // normalizeCloneRenderAspect is intentionally SKIPPED for cropped edits:
+      // it force-resizes the render to the ad's exact placement ratio, which
+      // would distort a region crop. The composite preserves the original
+      // (already ratio-correct) full-image aspect anyway.
+      const boundedModelEdit = await compositeRegionBack(
+        currentImage,
+        generated.assetUrl,
+        crop.cropRect,
+        selectedRegion?.box,
+      );
       lastImage = { ...generated, assetUrl: boundedModelEdit };
     } catch (error) {
       await releaseClaim();
       return errorResponse(error, 502);
     }
 
-    // Advisory verification: refreshes the editor regions and copy warnings
-    // for the updated render. The edit saves either way — history, Compare,
-    // and Undo are the safety net, and warnings surface anything off. If the
-    // vision pass is unavailable, a text edit's verdict updates
-    // deterministically (the requested string is the expected string) and an
-    // image edit carries the previous verdict forward.
-    try {
-      qa = await runCloneQa({
-        workspaceId: context.access.workspaceId,
-        userId: context.access.userId,
-        correlationId,
-        imageUrl: lastImage.assetUrl,
-        expectedCopy,
-        format: String(row.format ?? "4:5"),
-        attempt: 1,
-      });
-    } catch {
-      qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
-        ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
-        : canvas.cloneQa ?? null;
-    }
+    // No QA re-run on edit. Text edits update the verdict deterministically
+    // (the requested string IS the expected string, so no model round-trip is
+    // needed). Image edits carry the previous verdict forward unchanged. The
+    // edit saves either way — history, Compare, and Undo are the safety net.
+    qa = selectedRegion.kind === "text" && newValue && canvas.cloneQa
+      ? applyDeterministicTextEditQa(canvas.cloneQa, editFieldKey, newValue)
+      : canvas.cloneQa ?? null;
   }
 
   let image: string;

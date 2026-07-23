@@ -1,0 +1,7 @@
+{
+  "source": "meta_ad_candidates/02_stories_reels_9x16/meta_293.png",
+  "sha256": "3d3e12dff0ba6a91edf2004767eb9d9985a1f6468e63d40b057c6b626e6a7539",
+  "model": "qwen3-vl-plus",
+  "requestId": "chatcmpl-c287d553-a991-9d1d-9d92-5d7c988ed626",
+  "analysisFile": "01-qwen-vision-analysis.raw.json"
+}
