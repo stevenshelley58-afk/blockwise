@@ -89,6 +89,7 @@ type PublishSetupPanelProps = {
   destinationUrl: string;
   onChangeDestinationUrl?: (value: string) => void;
   onChangeTargeting?: (locations: AdStudioTargetLocation[], includeSurroundingSuburbs: boolean | undefined) => void;
+  onChangeLeadForm?: (leadForm: { headline: string; questions: string[]; thankYouScreen: { title: string; body: string } }) => void;
   onExport: () => void;
   onDelete?: () => void;
   brandApproved?: boolean;
@@ -96,7 +97,7 @@ type PublishSetupPanelProps = {
   onRetryExportFormat?: (format: AdStudioFormat) => void;
 };
 
-const STEPS = ["Campaign setup", "Creatives", "Destination", "Budget", "Review", "Live"] as const;
+const STEPS = ["Campaign setup", "Creatives", "Lead form", "Destination", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
 const DURATION_PRESETS = [7, 14, 30] as const;
 
@@ -126,6 +127,7 @@ export function PublishSetupPanel({
   destinationUrl,
   onChangeDestinationUrl,
   onChangeTargeting,
+  onChangeLeadForm,
   onExport,
   onDelete,
   brandApproved = true,
@@ -133,6 +135,25 @@ export function PublishSetupPanel({
   onRetryExportFormat,
 }: PublishSetupPanelProps) {
   const [stepIndex, setStepIndex] = useState(initialStep);
+  const leadFormTemplate = campaignPack.copyPacks[0]?.meta.leadForm;
+  const [leadForm, setLeadForm] = useState(() => ({
+    headline: leadFormTemplate?.headline ?? "",
+    questions: leadFormTemplate?.questions?.length ? [...leadFormTemplate.questions] : [],
+    thankYouTitle: leadFormTemplate?.thankYouScreen.title ?? "",
+    thankYouBody: leadFormTemplate?.thankYouScreen.body ?? "",
+  }));
+  const leadFormStepReady = leadForm.headline.trim().length > 0 && leadForm.questions.filter((q) => q.trim()).length > 0;
+  function updateLeadForm(patch: Partial<typeof leadForm>) {
+    setLeadForm((prev) => {
+      const next = { ...prev, ...patch };
+      onChangeLeadForm?.({
+        headline: next.headline,
+        questions: next.questions.filter((q) => q.trim()),
+        thankYouScreen: { title: next.thankYouTitle, body: next.thankYouBody },
+      });
+      return next;
+    });
+  }
   const [campaignMode, setCampaignMode] = useState<"existing" | "new">("new");
   const [selectedMetaCampaignId, setSelectedMetaCampaignId] = useState("");
   const [expandedMetaCampaignId, setExpandedMetaCampaignId] = useState("");
@@ -473,10 +494,12 @@ export function PublishSetupPanel({
     : stepIndex === 1
       ? !creativeStepReady
       : stepIndex === 2
-        ? !destinationReady
+        ? !leadFormStepReady
         : stepIndex === 3
-          ? !budgetStepReady
-          : false;
+          ? !destinationReady
+          : stepIndex === 4
+            ? !budgetStepReady
+            : false;
 
   return (
     <div className="studio-publish-flow">
@@ -742,6 +765,76 @@ export function PublishSetupPanel({
           )}
 
           {stepIndex === 2 && (
+            <section className="studio-publish-screen" aria-labelledby="leadform-title">
+              <h1 id="leadform-title">Lead form</h1>
+              <p className="studio-leadform-intro">This is the form people see when they tap your ad. Confirm the questions, or edit them before publishing.</p>
+
+              <label className="studio-publish-field">
+                <span>Form headline</span>
+                <input
+                  type="text"
+                  value={leadForm.headline}
+                  placeholder="Request the property details"
+                  aria-invalid={!leadForm.headline.trim()}
+                  onChange={(event) => updateLeadForm({ headline: event.target.value })}
+                />
+              </label>
+
+              <div className="studio-leadform-questions">
+                <strong>Questions</strong>
+                <span className="studio-leadform-hint">Standard fields (name, email) are added automatically by Meta. Add your custom questions below.</span>
+                {leadForm.questions.map((question, index) => (
+                  <div className="studio-leadform-q-row" key={index}>
+                    <input
+                      type="text"
+                      value={question}
+                      placeholder="e.g. What is your best contact number?"
+                      onChange={(event) => {
+                        const questions = [...leadForm.questions];
+                        questions[index] = event.target.value;
+                        updateLeadForm({ questions });
+                      }}
+                    />
+                    <button type="button" className="studio-leadform-del" aria-label={`Remove question ${index + 1}`} onClick={() => {
+                      const questions = leadForm.questions.filter((_, i) => i !== index);
+                      updateLeadForm({ questions });
+                    }}>&times;</button>
+                  </div>
+                ))}
+                {leadForm.questions.length < 5 && (
+                  <button type="button" className="studio-leadform-add" onClick={() => {
+                    updateLeadForm({ questions: [...leadForm.questions, ""] });
+                  }}>+ Add a question</button>
+                )}
+                {leadForm.questions.length >= 5 && (
+                  <span className="studio-leadform-max">Maximum 5 custom questions (Meta limit).</span>
+                )}
+              </div>
+
+              <div className="studio-publish-field-grid">
+                <label className="studio-publish-field">
+                  <span>Thank-you title</span>
+                  <input
+                    type="text"
+                    value={leadForm.thankYouTitle}
+                    placeholder="Request received"
+                    onChange={(event) => updateLeadForm({ thankYouTitle: event.target.value })}
+                  />
+                </label>
+                <label className="studio-publish-field">
+                  <span>Thank-you message</span>
+                  <input
+                    type="text"
+                    value={leadForm.thankYouBody}
+                    placeholder="The agency will be in touch shortly."
+                    onChange={(event) => updateLeadForm({ thankYouBody: event.target.value })}
+                  />
+                </label>
+              </div>
+            </section>
+          )}
+
+          {stepIndex === 3 && (
             <section className="studio-publish-screen" aria-labelledby="destination-title">
               <h1 id="destination-title">Destination</h1>
               <label className="studio-publish-field">
@@ -759,7 +852,7 @@ export function PublishSetupPanel({
             </section>
           )}
 
-          {stepIndex === 3 && (
+          {stepIndex === 4 && (
             <section className="studio-publish-screen" aria-labelledby="budget-title">
               <h1 id="budget-title">Budget</h1>
 
@@ -876,12 +969,13 @@ export function PublishSetupPanel({
             </section>
           )}
 
-          {stepIndex === 4 && (
+          {stepIndex === 5 && (
             <section className="studio-publish-screen" aria-labelledby="review-title">
               <h1 id="review-title">Review</h1>
               <div className="studio-review-list">
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
+                <div><span>Lead form</span><strong>{leadForm.questions.filter((q) => q.trim()).length} question{leadForm.questions.filter((q) => q.trim()).length === 1 ? "" : "s"}</strong></div>
                 <div><span>Destination</span><strong>{destinationUrl}</strong></div>
                 <div><span>Audience</span><strong>{campaignMode === "existing" ? "Existing campaign targeting" : formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
@@ -917,7 +1011,7 @@ export function PublishSetupPanel({
             </section>
           )}
 
-          {stepIndex === 5 && (
+          {stepIndex === 6 && (
             <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
               <h1 id="live-title">Live</h1>
               {publishDone ? (

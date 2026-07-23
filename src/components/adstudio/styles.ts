@@ -172,6 +172,18 @@
 .studio-publish-field input:focus{outline:none;border-color:#16181d;box-shadow:0 0 0 3px rgba(22,24,29,.12)}
 .studio-publish-field input[aria-invalid="true"]{border-color:#ba1a1a;box-shadow:0 0 0 3px rgba(186,26,26,.1)}
 .studio-publish-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.studio-leadform-intro{margin:-12px 0 0;color:var(--muted);font-size:14px;line-height:1.55}
+.studio-leadform-questions{display:grid;gap:12px}
+.studio-leadform-questions>strong{font-size:14px;font-weight:750}
+.studio-leadform-hint{font-size:12.5px;color:var(--st-faint);line-height:1.5;margin-top:-6px}
+.studio-leadform-q-row{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:8px;align-items:center}
+.studio-leadform-q-row input{min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);padding:0 14px;font-size:13.5px;box-shadow:0 1px 2px rgba(16,18,23,.04)}
+.studio-leadform-q-row input:focus{outline:none;border-color:#16181d;box-shadow:0 0 0 3px rgba(22,24,29,.12)}
+.studio-leadform-del{width:40px;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--st-faint);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background .14s,color .14s,border-color .14s}
+.studio-leadform-del:hover{background:#fef2f2;color:#ba1a1a;border-color:#f3c6c6}
+.studio-leadform-add{justify-self:start;min-height:40px;border:1px dashed var(--line-heavy,#d3d7df);border-radius:10px;background:transparent;color:var(--accent);font-weight:650;font-size:13px;padding:0 16px;cursor:pointer;transition:background .14s,border-color .14s}
+.studio-leadform-add:hover{background:var(--accent-tint);border-color:var(--accent)}
+.studio-leadform-max{font-size:12.5px;color:var(--st-faint)}
 .studio-budget-section{min-width:0;margin:0;padding:0;border:0;display:grid;gap:12px}
 .studio-budget-section legend{margin:0 0 2px;padding:0;color:var(--ink);font-size:14px;font-weight:750}
 .studio-budget-section legend span{color:var(--muted);font-size:12px;font-weight:600}
