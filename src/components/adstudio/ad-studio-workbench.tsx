@@ -335,6 +335,16 @@ export function AdStudioWorkbench({
     }));
     studio.setSaveState("saving");
   }
+  function updateLeadForm(leadForm: { headline: string; questions: string[]; thankYouScreen: { title: string; body: string } }) {
+    setPack((current) => ({
+      ...current,
+      copyPacks: current.copyPacks.map((copy) => ({
+        ...copy,
+        meta: { ...copy.meta, leadForm: { ...copy.meta.leadForm, ...leadForm } },
+      })),
+    }));
+    studio.setSaveState("saving");
+  }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [pendingMediaReplacement, setPendingMediaReplacement] = useState<{ src: string; label: string } | null>(null);
@@ -1215,6 +1225,7 @@ export function AdStudioWorkbench({
           destinationUrl={destinationUrl}
           onChangeDestinationUrl={updateDestinationUrl}
           onChangeTargeting={updateCampaignTargeting}
+          onChangeLeadForm={updateLeadForm}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
           brandApproved={!brandIsDraft}
@@ -1434,6 +1445,7 @@ export function AdStudioWorkbench({
               destinationUrl={destinationUrl}
               onChangeDestinationUrl={updateDestinationUrl}
               onChangeTargeting={updateCampaignTargeting}
+              onChangeLeadForm={updateLeadForm}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
               brandApproved={!brandIsDraft}
