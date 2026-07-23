@@ -23,12 +23,17 @@ test("resolveModelProfile defaults structured copy to the best text model with a
   assert.equal(resolved.profile.requiresStructuredOutput, true);
 });
 
-test("vision_classification defaults to the best vision-capable model", () => {
+test("vision_classification defaults to Gemini vision with an OpenAI fallback", () => {
   const resolved = resolveModelProfile("vision_classification");
 
-  assert.equal(resolved.primary.provider, "openai");
-  assert.equal(resolved.primary.model, "gpt-5.5");
+  assert.equal(resolved.primary.provider, "google");
+  assert.equal(resolved.primary.model, "gemini-2.5-flash");
   assert.equal(resolved.primary.imageUsdPerUnit > 0, true);
+  // OpenAI stays as the fallback so a Google outage never strands the pass.
+  assert.deepEqual(
+    resolved.fallbacks.map((candidate) => candidate.model),
+    ["gpt-5.5"],
+  );
 });
 
 test("client-facing strategy profile uses the premium copywriting model", () => {

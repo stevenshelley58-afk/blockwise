@@ -162,20 +162,34 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     task: "Observed ad screenshots, landing page captures, and creative classification",
     enabled: true,
     requiresStructuredOutput: true,
-    // best now, cost-tune later. gpt-5.5 is natively vision-capable.
+    // Vision QA reads the customer's exact copy back off the generated image.
+    // Gemini's vision models localize and OCR rendered text more reliably than
+    // a reasoning model, and cost a fraction as much per QA pass. OpenAI stays
+    // as the fallback so a Google outage never strands the advisory QA pass.
     maxRunCostUsd: 0.6,
     defaultTemperature: 0.1,
     primary: {
-      provider: "openai",
-      model: "gpt-5.5",
-      inputUsdPerMillionTokens: 5,
-      outputUsdPerMillionTokens: 30,
-      imageUsdPerUnit: 0.01,
+      provider: "google",
+      model: "gemini-2.5-flash",
+      inputUsdPerMillionTokens: 0.3,
+      outputUsdPerMillionTokens: 2.5,
+      imageUsdPerUnit: 0.004,
       supportsStructuredOutput: true,
       maxContextTokens: 1_000_000,
-      maxLatencyMs: 12_000,
+      maxLatencyMs: 20_000,
     },
-    fallbacks: [],
+    fallbacks: [
+      {
+        provider: "openai",
+        model: "gpt-5.5",
+        inputUsdPerMillionTokens: 5,
+        outputUsdPerMillionTokens: 30,
+        imageUsdPerUnit: 0.01,
+        supportsStructuredOutput: true,
+        maxContextTokens: 1_000_000,
+        maxLatencyMs: 16_000,
+      },
+    ],
   },
   image_draft: {
     key: "image_draft",
