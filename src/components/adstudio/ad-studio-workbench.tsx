@@ -967,7 +967,6 @@ export function AdStudioWorkbench({
                 creative={currentCreative}
                 onCreativeChange={updateCreative}
                 showToast={studio.showToast}
-                preparing={editorPreparing}
               />
             </MetaChromePreview>
           </PreviewFit>
