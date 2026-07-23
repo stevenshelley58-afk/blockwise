@@ -5272,10 +5272,35 @@ async function processOneJob(job) {
   }
 }
 
+async function claimContentFastLaneJobs({ jobTypes, limit }) {
+  try {
+    const claimed = await rpc("claim_work_queue_jobs", {
+      p_worker_id: workerId,
+      p_queue_name: "research",
+      p_job_types: jobTypes,
+      p_limit: limit,
+      p_claim_ttl_seconds: claimTtlSeconds,
+    });
+    for (const job of claimed) await recordEvent("claim", "work_queue", job.id, { job_type: job.job_type, workerId }, { work_queue_id: job.id });
+    return claimed;
+  } catch (error) {
+    if (!/claim_work_queue_jobs|PGRST202|404/i.test(error.message)) throw error;
+    return [];
+  }
+}
+
 async function tick() {
   let buildRunId = null;
   let supervisor = { policySeedCandidates: 0, policySeeded: 0, duePolicies: 0, enqueued: 0, recycledCensus: 0, deferredCensus: 0, adRefreshCandidates: 0, adRefreshEnqueued: 0, locationSearchCandidates: 0, locationSearchEnqueued: 0 };
   let watchdogs = {};
+  let priorityContentHandled = 0;
+  try {
+    const fastLaneJobs = await claimContentFastLaneJobs({ jobTypes: [CONTENT_RUN_JOB_TYPE], limit: 1 });
+    await Promise.all(fastLaneJobs.map(processOneJob));
+    priorityContentHandled = fastLaneJobs.length;
+  } catch (error) {
+    log("priority content worker pass failed; continuing to supervisor", { error: error.message }, "error");
+  }
   try {
     buildRunId = await ensureBuildRun();
     const policySeed = await ensureSourceBackedRefreshPolicies();
@@ -5293,7 +5318,7 @@ async function tick() {
   } catch (error) {
     log("watchdog phase failed after worker pass", { error: error.message }, "error");
   }
-  log("tick complete", { mode, workerId, buildRunId, ...supervisor, handled, watchdogs });
+  log("tick complete", { mode, workerId, buildRunId, priorityContentHandled, ...supervisor, handled, watchdogs });
 }
 
 async function main() {
