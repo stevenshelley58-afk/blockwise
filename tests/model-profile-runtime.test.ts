@@ -56,8 +56,8 @@ test("runtime profiles distinguish declared defaults from persisted version and 
   const persisted = resolveRuntimeProfileFromVersions("image_draft", [{
     id: "22222222-2222-4222-8222-222222222222",
     profileKey: "image_draft",
-    provider: "openrouter",
-    model: "google/gemini-2.5-flash-image",
+    provider: "google",
+    model: "gemini-2.5-flash-image",
     inputUsdPerMillionTokens: 0.3,
     outputUsdPerMillionTokens: 2.5,
     imageUsdPerUnit: 0.039,
@@ -75,7 +75,7 @@ test("runtime profiles distinguish declared defaults from persisted version and 
 test("runtime model attempts expose one primary and at most one declared fallback", () => {
   const profile = resolveRuntimeProfileFromVersions("image_final", []);
 
-  assert.equal(profile.fallbacks.length, 2, "the registry may retain additional recovery choices");
+  assert.equal(profile.fallbacks.length, 1, "the registry retains one recovery choice per profile");
   assert.deepEqual(
     modelCandidateAttempts(profile).map((candidate) => candidate.model),
     [profile.primary.model, profile.fallbacks[0].model],

@@ -34,13 +34,18 @@ export type BuildCloneCampaignPackInput = {
 export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdStudioCampaignPack {
   const template = requireGalleryTemplate(input.firstAd.templateId);
   const cloneImages = input.firstAd.templateCloneImagesByFormat;
-  if (!cloneImages?.["4:5"] || !cloneImages["9:16"]) {
-    throw new Error("Both finished clone formats are required before an ad can be created.");
+  // Feed-first contract: the 4:5 ad is the customer-facing headline and is
+  // REQUIRED to create the campaign. The 9:16 story is OPTIONAL — it renders
+  // in parallel and is patched into the already-persisted campaign once it
+  // lands (Point 8: feed returns immediately, story persists in background).
+  if (!cloneImages?.["4:5"]) {
+    throw new Error("The finished feed (4:5) clone is required before an ad can be created.");
   }
 
   const campaignId = deterministicUuid(
     `${input.workspaceId}:${template.id}:${input.suburb}:${input.firstAd.description}`,
   );
+  const readyFormats = CLONE_FORMATS.filter((format) => Boolean(cloneImages[format]));
   const campaign: AdStudioCampaign = {
     campaignId,
     workspaceId: input.workspaceId,
@@ -60,7 +65,9 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     sourceObservedAdId: null,
     templateSnapshot: templateSnapshot(template),
     platforms: ["meta"],
-    creativeFormats: [...CLONE_FORMATS],
+    // Only formats that exist right now are declared; the story format is added
+    // to this set when the background story render patches in.
+    creativeFormats: [...readyFormats],
     status: "ready",
   };
 
@@ -87,7 +94,7 @@ export function buildCloneCampaignPack(input: BuildCloneCampaignPackInput): AdSt
     lockedFields: [],
   };
   const copyPack = buildCopyPack({ campaign, variantId, template, brandKit: input.brandKit });
-  const creatives = CLONE_FORMATS.map((format) => buildCloneCreative({
+  const creatives = readyFormats.map((format) => buildCloneCreative({
     campaignId,
     variantId,
     template,
@@ -173,7 +180,7 @@ function buildCopyPack(input: {
   };
 }
 
-function buildCloneCreative(input: {
+export function buildCloneCreative(input: {
   campaignId: string;
   variantId: string;
   template: AdStudioGalleryTemplate;

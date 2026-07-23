@@ -1,0 +1,68 @@
+{
+  "reviewedAt": "2026-07-22T12:40:00Z",
+  "reviewer": "Codex visual inspection",
+  "publishDecision": "quarantined",
+  "reason": "Neither Qwen image model satisfied the mandatory reference-clone contract.",
+  "models": {
+    "qwen-image-2.0-pro": {
+      "publicSample": {
+        "preservesSourceComposition": true,
+        "removesSourceIdentity": false,
+        "usesGenericProperty": true,
+        "usesGenericLogoFaithfully": false,
+        "exactSafeCopy": true,
+        "notes": [
+          "The source identity REALLYGREATSITE remains at the top.",
+          "The generic NORTHSTAR PROPERTY logo text is malformed."
+        ]
+      },
+      "customerAd": {
+        "preservesPublicSampleComposition": true,
+        "usesSuppliedProperty": false,
+        "usesSuppliedLogoFaithfully": false,
+        "exactDeclaredCopy": true,
+        "removesUnapprovedIdentity": false,
+        "notes": [
+          "The generated generic house was retained instead of the supplied Spearwood house.",
+          "The Blockwise icon was altered and an invented RUTCE wordmark appeared.",
+          "The source identity REALLYGREATSITE remains."
+        ]
+      },
+      "overallPass": false
+    },
+    "qwen-image-edit-max": {
+      "publicSample": {
+        "preservesSourceComposition": false,
+        "removesSourceIdentity": true,
+        "usesGenericProperty": false,
+        "usesGenericLogoFaithfully": false,
+        "exactSafeCopy": false,
+        "notes": [
+          "The source layout was substantially reinterpreted.",
+          "The requested generic property and logo were not used faithfully.",
+          "The address and website are malformed."
+        ]
+      },
+      "customerAd": {
+        "preservesPublicSampleComposition": false,
+        "usesSuppliedProperty": true,
+        "usesSuppliedLogoFaithfully": false,
+        "exactDeclaredCopy": false,
+        "removesUnapprovedIdentity": true,
+        "notes": [
+          "The supplied house is visible.",
+          "SPEARWOOD, WA 6163, the phone number, and BLOCKWISE.SALE are malformed.",
+          "The supplied logo geometry was changed."
+        ]
+      },
+      "overallPass": false
+    }
+  },
+  "automatedQaReliability": {
+    "pass": false,
+    "notes": [
+      "The qwen3-vl-plus QA response reported false positives for source-identity removal and supplied-image usage.",
+      "Manual inspection therefore remains required for this provider path."
+    ]
+  }
+}

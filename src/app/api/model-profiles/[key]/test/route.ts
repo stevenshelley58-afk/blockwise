@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { validateModelProfileSelection } from "@/lib/ai/model-control-config";
 import { ensureOperatorSession } from "@/lib/ai/model-profile-store";
-import { testOpenRouterModel } from "@/lib/ai/openrouter-client";
-import { resolveModelProfile } from "@/lib/ai/model-registry";
-import type { ModelProfileKey } from "@/lib/ai/model-registry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -31,19 +28,5 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: validation.error }, { status: validation.status });
   }
 
-  try {
-    const profileKey = key as ModelProfileKey;
-    const { profile } = resolveModelProfile(profileKey);
-    const result = await testOpenRouterModel({
-      model: validation.option.model,
-      requireParameters: profile.requiresStructuredOutput,
-    });
-
-    return NextResponse.json({ ok: true, content: result.content });
-  } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "OpenRouter test failed." },
-      { status: 503 },
-    );
-  }
+  return NextResponse.json({ ok: false, error: "Model testing is not configured." });
 }

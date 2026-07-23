@@ -42,6 +42,40 @@ type RequirementBlocker = {
 
 const FIRST_AD_FORMATS: FirstAdInput["formats"] = ["9:16", "4:5"];
 
+/**
+ * Point 10 — editable Meta feed copy (the text shown around the ad image).
+ * Char limits mirror ADSTUDIO_COPY_LIMITS on the server so the UI never lets a
+ * customer type past what the pipeline would keep. Kept client-local because
+ * copy-generation.ts is server-only (node:crypto, providers).
+ */
+type FeedCopy = {
+  primaryText: string;
+  headline: string;
+  description: string;
+  cta: string;
+};
+const EMPTY_FEED_COPY: FeedCopy = { primaryText: "", headline: "", description: "", cta: "" };
+const FEED_COPY_LIMITS: Record<keyof FeedCopy, number> = {
+  primaryText: 125,
+  headline: 40,
+  description: 90,
+  cta: 19,
+};
+type FeedCopyFieldKey = keyof FeedCopy;
+const FEED_COPY_FIELDS: ReadonlyArray<{ key: FeedCopyFieldKey; label: string; hint: string; multiline?: boolean }> = [
+  { key: "headline", label: "Headline", hint: "Shown next to the button" },
+  { key: "primaryText", label: "Primary text", hint: "The main caption above the image", multiline: true },
+  { key: "description", label: "Description", hint: "A short supporting line" },
+  { key: "cta", label: "Call to action", hint: "The button label" },
+];
+
+type CopyMode = "ai" | "write" | "sample";
+const COPY_MODES: ReadonlyArray<{ id: CopyMode; label: string }> = [
+  { id: "ai", label: "AI from brief" },
+  { id: "write", label: "Write my own" },
+  { id: "sample", label: "Use template sample" },
+];
+
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "listings", label: "Listings" },
@@ -255,6 +289,16 @@ export function NewAdDialog({
   const [description, setDescription] = useState("");
   const [generationQuality, setGenerationQuality] = useState<GenerationQuality>("fast");
   const [imageDataUrlsBySlot, setImageDataUrlsBySlot] = useState<Record<string, string>>({});
+  // Point 9 — background image scaling: the slot shows a raw `URL.createObjectURL`
+  // preview INSTANTLY while the heavier storage upload (which downscales big
+  // photos on the way up) runs off to the side. `uploadingImage` gates Generate
+  // so the server always gets the final downscaled URL, not a transient blob.
+  // Preview object URLs are tracked so they can be revoked (no blob leaks).
+  const previewUrlsRef = useRef<Record<string, string>>({});
+  const [copyMode, setCopyMode] = useState<CopyMode>("ai");
+  const [feedCopy, setFeedCopy] = useState<FeedCopy>(EMPTY_FEED_COPY);
+  const [generatingCopy, setGeneratingCopy] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [imageNamesBySlot, setImageNamesBySlot] = useState<Record<string, string>>({});
   const [onImageCopy, setOnImageCopy] = useState<Record<string, string>>({});
   const [activeImageSlotId, setActiveImageSlotId] = useState(DEFAULT_IMAGE_SLOT.id);
@@ -435,6 +479,10 @@ export function NewAdDialog({
     setImageDataUrlsBySlot({});
     setImageNamesBySlot({});
     setOnImageCopy(brandTextDefaultsForTemplate(template, brandKit));
+    setFeedCopy(EMPTY_FEED_COPY);
+    setCopyMode("ai");
+    setCopyError(null);
+    setGeneratingCopy(false);
     setActiveImageSlotId(DEFAULT_IMAGE_SLOT.id);
     setMediaSourceMode("details");
     setStep("brief");
@@ -458,7 +506,52 @@ export function NewAdDialog({
     setImageNamesBySlot((current) => ({ ...current, [slotId]: label }));
   }
 
+  /**
+   * Point 9 — the customer sees their photo the instant they pick it. A raw
+   * `URL.createObjectURL` blob preview drops into the slot right away while the
+   * heavier storage upload (which downscales big photos on the way up) runs in
+   * the background. The blob is replaced by the final storage URL when the
+   * upload settles. Generate awaits any in-flight upload so the server always
+   * receives the real, downscaled URL — never a transient blob:.
+   */
+  async function selectImage(file: File, slotId: string) {
+    setError("");
+    const previewUrl = URL.createObjectURL(file);
+    previewUrlsRef.current[slotId] = previewUrl;
+    setImageDataUrlsBySlot((current) => ({ ...current, [slotId]: previewUrl }));
+    setImageNamesBySlot((current) => ({ ...current, [slotId]: file.name }));
+    setUploadingImage(true);
+    try {
+      const uploaded = await uploadAdStudioMedia({
+        file,
+        workspaceId,
+        brandKitId: brandKit.brandKitId,
+      });
+      // Blob preview served its purpose; swap to the real URL and release it.
+      revokeSlotPreview(slotId);
+      setSlotImage(slotId, uploaded.src, file.name);
+      rememberLibraryAsset({ src: uploaded.src, label: file.name, type: "Uploaded", ratio: "Just now", role: "property" });
+      setError("");
+    } catch (caught) {
+      revokeSlotPreview(slotId);
+      clearSlotImage(slotId);
+      setError(caught instanceof Error ? caught.message : "Could not upload that image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  /** Release a single slot's blob preview URL (idempotent). */
+  function revokeSlotPreview(slotId: string) {
+    const url = previewUrlsRef.current[slotId];
+    if (url) {
+      URL.revokeObjectURL(url);
+      delete previewUrlsRef.current[slotId];
+    }
+  }
+
   function clearSlotImage(slotId: string) {
+    revokeSlotPreview(slotId);
     setImageDataUrlsBySlot((current) => {
       const next = { ...current };
       delete next[slotId];
@@ -469,26 +562,6 @@ export function NewAdDialog({
       delete next[slotId];
       return next;
     });
-  }
-
-  async function selectImage(file: File, slotId: string) {
-    setError("");
-    setUploadingImage(true);
-    try {
-      const uploaded = await uploadAdStudioMedia({
-        file,
-        workspaceId,
-        brandKitId: brandKit.brandKitId,
-      });
-      setSlotImage(slotId, uploaded.src, file.name);
-      rememberLibraryAsset({ src: uploaded.src, label: file.name, type: "Uploaded", ratio: "Just now", role: "property" });
-      setError("");
-    } catch (caught) {
-      clearSlotImage(slotId);
-      setError(caught instanceof Error ? caught.message : "Could not upload that image.");
-    } finally {
-      setUploadingImage(false);
-    }
   }
 
   function openLibrary(slotId: string) {
@@ -525,6 +598,76 @@ export function NewAdDialog({
     setShowRequirementsAlert(false);
   }
 
+  async function runAiCopy() {
+    if (!selectedTemplate) return;
+    if (!description.trim()) {
+      setCopyError("Write a brief first so the AI knows what to say.");
+      return;
+    }
+    setGeneratingCopy(true);
+    setCopyError(null);
+    try {
+      const response = await fetch("/api/adstudio/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "templateFields",
+          brief: description.trim(),
+          sourceImageUrl: imageDataUrl,
+          templateFields: selectedTemplate.inputs.text.map((field) => ({
+            key: field.key,
+            label: field.label,
+            maxLength: field.maxLength,
+            sample: field.sample,
+          })),
+        }),
+      });
+      const result = (await response.json()) as {
+        onImage?: Record<string, string>;
+        copy?: { primaryText: string; headline: string; description: string; cta: string };
+        error?: string;
+      };
+      if (!response.ok || result.error) {
+        setCopyError(result.error ?? "Copy generation failed. Try again.");
+        return;
+      }
+      if (result.copy) {
+        setFeedCopy({
+          primaryText: result.copy.primaryText ?? "",
+          headline: result.copy.headline ?? "",
+          description: result.copy.description ?? "",
+          cta: result.copy.cta ?? "",
+        });
+      }
+      if (result.onImage) {
+        setOnImageCopy((current) => ({ ...current, ...result.onImage }));
+      }
+      setCopyMode("write");
+    } catch {
+      setCopyError("Copy generation failed. Try again.");
+    } finally {
+      setGeneratingCopy(false);
+    }
+  }
+
+  function useSampleCopy() {
+    if (!selectedTemplate) return;
+    const sample = templateAdCopy(selectedTemplate);
+    setFeedCopy({
+      primaryText: sample.primaryText,
+      headline: sample.headline,
+      description: sample.description,
+      cta: sample.cta,
+    });
+    setOnImageCopy((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        selectedTemplate.inputs.text.map((field) => [field.key, field.sample]).filter(([, v]) => v),
+      ),
+    }));
+    setCopyError(null);
+  }
+
   async function submit() {
     const trimmed = description.trim();
     const blockers = buildRequirementBlockers({ description, missingImageLabels, missingCopyLabels, uploadingImage });
@@ -559,6 +702,18 @@ export function NewAdDialog({
             .map(([key, value]) => [key, value.trim()])
             .filter(([, value]) => value),
         ),
+        // Forward customer-written feed copy only when the two required fields
+        // are present — otherwise the server generates copy as before.
+        ...(feedCopy.headline.trim() && feedCopy.primaryText.trim()
+          ? {
+              copy: {
+                primaryText: feedCopy.primaryText.trim(),
+                headline: feedCopy.headline.trim(),
+                description: feedCopy.description.trim(),
+                cta: feedCopy.cta.trim(),
+              },
+            }
+          : {}),
         formats: FIRST_AD_FORMATS,
       });
       onClose();
@@ -726,6 +881,81 @@ export function NewAdDialog({
                   </div>
                 </section>
               )}
+              <section className="studio-newad-copyfields" aria-label="Ad copy">
+                <div className="studio-newad-copyfields-head">
+                  <span>
+                    <strong>Ad copy</strong>
+                    <small>The caption and button text that appear with your ad on Facebook and Instagram.</small>
+                  </span>
+                </div>
+                <div className="studio-newad-copymodes" role="tablist" aria-label="Copy source">
+                  {COPY_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={copyMode === mode.id}
+                      className={copyMode === mode.id ? "studio-copymode-tab is-active" : "studio-copymode-tab"}
+                      onClick={() => {
+                        setCopyMode(mode.id);
+                        setCopyError(null);
+                        if (mode.id === "sample") useSampleCopy();
+                      }}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                {copyMode === "ai" && (
+                  <div className="studio-newad-ai-copy">
+                    <p className="studio-newad-ai-hint">Write your brief above, then let AI draft the ad copy. You can still edit every field afterwards.</p>
+                    <button
+                      type="button"
+                      className="studio-btn accent"
+                      onClick={() => void runAiCopy()}
+                      disabled={generatingCopy || !description.trim()}
+                    >
+                      {generatingCopy ? "Writing copy…" : "Write copy from brief"}
+                    </button>
+                    {copyError && <p className="studio-newad-copy-error" role="alert">{copyError}</p>}
+                  </div>
+                )}
+                <div className="studio-newad-copyfields-list">
+                  {FEED_COPY_FIELDS.map((field) => {
+                    const inputId = `feedcopy-${field.key}`;
+                    const limit = FEED_COPY_LIMITS[field.key];
+                    const value = feedCopy[field.key];
+                    return (
+                      <div className="studio-newad-field" key={field.key}>
+                        <div className="studio-newad-field-head">
+                          <label htmlFor={inputId}>
+                            {field.label}
+                            <small>{field.hint}</small>
+                          </label>
+                          <span className="studio-newad-charcount" aria-live="polite">{value.length}/{limit}</span>
+                        </div>
+                        {field.multiline ? (
+                          <textarea
+                            id={inputId}
+                            rows={2}
+                            value={value}
+                            maxLength={limit}
+                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                          />
+                        ) : (
+                          <input
+                            id={inputId}
+                            type="text"
+                            value={value}
+                            maxLength={limit}
+                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
               <div className="studio-newad-field studio-newad-brief-field">
                 <div className="studio-newad-field-head">
                   <label htmlFor={descriptionInputId}>{briefGuidance.fieldLabel}</label>
@@ -839,7 +1069,7 @@ export function NewAdDialog({
             <button className="studio-btn secondary" type="button" onClick={closeCurrentView}>Close</button>
             {step === "brief" && mediaSourceMode === "details" && (
               <button className="studio-btn accent" type="button" onClick={() => void submit()} disabled={submitting} aria-describedby={showFooterAlert ? requirementsAlertId : undefined}>
-                {uploadingImage ? "Uploading" : submitting ? "Creating ad" : "Generate ad"}
+                {uploadingImage ? "Preparing image…" : submitting ? "Creating ad" : "Generate ad"}
                 <ArrowUpRight aria-hidden size={16} />
               </button>
             )}
@@ -1077,6 +1307,14 @@ button.studio-explore-card{padding:0;cursor:pointer}
 .studio-newad-library-grid span{display:grid;gap:2px;min-width:0}
 .studio-newad-library-grid strong{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .studio-newad-library-grid small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-newad-copymodes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.studio-copymode-tab{border:1px solid var(--line-soft);border-radius:999px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:6px 14px;cursor:pointer;transition:all .15s ease}
+.studio-copymode-tab:hover{border-color:var(--line);color:var(--ink)}
+.studio-copymode-tab.is-active{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.studio-newad-ai-copy{display:grid;gap:10px;margin:8px 0 14px}
+.studio-newad-ai-hint{font-size:12.5px;line-height:1.5;color:var(--muted);margin:0}
+.studio-newad-copy-error{font-size:12.5px;color:var(--danger,#c0392b);margin:0}
+.studio-newad-charcount{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:900px){
   .studio-explore-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .studio-explore-thumb{height:210px}

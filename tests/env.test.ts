@@ -15,8 +15,7 @@ import {
   parseEnvFile,
 } from "../src/lib/config/env.ts";
 
-test("required environment keys include OpenRouter for live model routing", () => {
-  assert.equal(REQUIRED_ENV_KEYS.includes("OPENROUTER_API_KEY"), true);
+test("required environment keys include Meta credentials", () => {
   assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET"), true);
 });
 
@@ -140,10 +139,9 @@ test("getInvalidEnvKeys treats placeholder production secrets as invalid", () =>
     getInvalidEnvKeys({
       ...base,
       OPENAI_API_KEY: "replace_me",
-      OPENROUTER_API_KEY: "",
       META_APP_SECRET: "proj_replace_me",
     }),
-    ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "META_APP_SECRET"],
+    ["OPENAI_API_KEY", "META_APP_SECRET"],
   );
 });
 

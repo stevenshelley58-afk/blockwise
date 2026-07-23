@@ -25,7 +25,7 @@ test("clone campaign contains exactly one ad in the two finished formats", () =>
   assert.equal(pack.creatives.every((creative) => creative.canvas.objects[0]?.objectId === "template_clone_image"), true);
 });
 
-test("clone campaign refuses to create an ad before both clone images exist", () => {
+test("clone campaign refuses to create an ad before the feed (4:5) clone exists", () => {
   const complete = buildCloneTestPack();
   assert.throws(() => buildCloneCampaignPack({
     workspaceId: complete.campaign.workspaceId,
@@ -36,10 +36,32 @@ test("clone campaign refuses to create an ad before both clone images exist", ()
     firstAd: {
       source: "gallery",
       templateId: "meta-feed-020",
-      description: "Missing story clone",
+      description: "Missing feed clone",
+      imageDataUrl: "data:image/png;base64,cHJvcGVydHk=",
+      templateCloneImagesByFormat: { "9:16": "data:image/png;base64,c3Rvcnk=" },
+      formats: ["9:16", "4:5"],
+    },
+  }), /The finished feed \(4:5\) clone is required/);
+});
+
+test("clone campaign builds with feed-only when story is not yet rendered", () => {
+  const complete = buildCloneTestPack();
+  const pack = buildCloneCampaignPack({
+    workspaceId: complete.campaign.workspaceId,
+    brandKit: complete.brandKit,
+    suburb: "Scarborough",
+    city: "Perth",
+    state: "WA",
+    firstAd: {
+      source: "gallery",
+      templateId: "meta-feed-020",
+      description: "Feed only",
       imageDataUrl: "data:image/png;base64,cHJvcGVydHk=",
       templateCloneImagesByFormat: { "4:5": "data:image/png;base64,ZmVlZA==" },
       formats: ["9:16", "4:5"],
     },
-  }), /Both finished clone formats are required/);
+  });
+  // Only the feed creative should be present; story patches in later.
+  assert.deepEqual(pack.creatives.map((c) => c.format), ["4:5"]);
+  assert.deepEqual(pack.campaign.creativeFormats, ["4:5"]);
 });

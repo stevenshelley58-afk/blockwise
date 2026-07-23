@@ -1,0 +1,121 @@
+{
+  "id": "qwen-just-listed-story-293",
+  "name": "Just Listed Story",
+  "goal": "buyer_leads",
+  "offerId": "qwen-just-listed-story-293",
+  "source": "builtin",
+  "status": "approved",
+  "format": "9:16",
+  "dimensions": {
+    "width": 1080,
+    "height": 1920
+  },
+  "audienceIntent": "Home buyers interested in a newly listed property",
+  "category": "listings",
+  "tags": [
+    "just-listed",
+    "property",
+    "story",
+    "buyer-leads"
+  ],
+  "sample": {
+    "imageSrc": "./05-public-template-sample.png",
+    "thumbnailSrc": "./05-public-template-sample.png",
+    "alt": "Generated sample for Just Listed Story.",
+    "contentHash": "0e57d8c81d8f1279252defeaa44da0dc09cb12a40609587988d501e27bc7bca7",
+    "generatedBy": "reference_clone"
+  },
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property exterior photo"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's agency logo or wordmark"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 20,
+        "sample": "JUST LISTED",
+        "required": true
+      },
+      {
+        "key": "address",
+        "label": "Property address",
+        "maxLength": 60,
+        "sample": "COASTAL HEIGHTS, WA",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Contact phone number",
+        "maxLength": 20,
+        "sample": "08 6000 1234",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Agency website",
+        "maxLength": 50,
+        "sample": "NORTHSTARPROPERTY.EXAMPLE",
+        "required": true
+      }
+    ]
+  },
+  "sourceAd": {
+    "file": "02_stories_reels_9x16/meta_293.png",
+    "contentHash": "3d3e12dff0ba6a91edf2004767eb9d9985a1f6468e63d40b057c6b626e6a7539"
+  },
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  },
+  "meta": {
+    "platform": "meta",
+    "objective": "OUTCOME_LEADS",
+    "specialAdCategory": "housing",
+    "publisherPlatforms": [
+      "facebook",
+      "instagram"
+    ],
+    "facebookPositions": [
+      "story"
+    ],
+    "instagramPositions": [
+      "story"
+    ],
+    "primaryText": [
+      "Ask for the property details."
+    ],
+    "headlines": [
+      "Property details"
+    ],
+    "descriptions": [
+      "Request more information"
+    ],
+    "cta": "LEARN_MORE",
+    "leadForm": {
+      "headline": "Request the property details",
+      "questions": [
+        "What is your best contact number?"
+      ],
+      "privacyPolicyUrl": null,
+      "thankYouScreen": {
+        "title": "Request received",
+        "body": "The agency will be in touch shortly."
+      }
+    }
+  }
+}

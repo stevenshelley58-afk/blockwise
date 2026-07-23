@@ -1,0 +1,66 @@
+{
+  "name": "Just Listed Story",
+  "goal": "buyer_leads",
+  "offerId": "qwen-just-listed-story-293",
+  "audienceIntent": "Home buyers interested in a newly listed property",
+  "category": "listings",
+  "tags": [
+    "just-listed",
+    "property",
+    "story",
+    "buyer-leads"
+  ],
+  "inputs": {
+    "images": [
+      {
+        "key": "property_photo",
+        "label": "Property photo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's property exterior photo"
+      },
+      {
+        "key": "agency_logo",
+        "label": "Agency logo",
+        "required": true,
+        "aspect": "landscape",
+        "description": "the customer's agency logo or wordmark"
+      }
+    ],
+    "text": [
+      {
+        "key": "headline",
+        "label": "Headline",
+        "maxLength": 20,
+        "sample": "JUST LISTED",
+        "required": true
+      },
+      {
+        "key": "address",
+        "label": "Property address",
+        "maxLength": 60,
+        "sample": "123 ANYWHERE ST, ANY CITY, ST 12345",
+        "required": true
+      },
+      {
+        "key": "phone",
+        "label": "Contact phone number",
+        "maxLength": 20,
+        "sample": "123-456-7890",
+        "required": true
+      },
+      {
+        "key": "website",
+        "label": "Agency website",
+        "maxLength": 50,
+        "sample": "www.reallygreatsite.com",
+        "required": true
+      }
+    ]
+  },
+  "classification": {
+    "ad_type": "property_listing",
+    "primary_intent": "buyer_leads",
+    "property_or_agent_focus": "property"
+  }
+}

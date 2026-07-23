@@ -287,9 +287,11 @@ export async function POST(request: NextRequest) {
         isTrialWorkspace: trialReservation.isTrialWorkspace,
       });
 
-      // The customer has the ad in this response; the advisory QA pass
-      // (editor regions + copy warnings) runs after the response is sent.
-      after(() => result.enrichQa());
+      // The customer has the ad in this response; region detection
+      // (editor hit-boxes) and the story (9:16) background patch run
+      // after the response is sent.
+      after(() => result.enrichRegions());
+      if (result.storyTask) after(() => result.storyTask);
 
       const liveResult = buildAdStudioLiveResult({
         data: compactAdStudioCampaignPackForTransport(result.campaignPack),

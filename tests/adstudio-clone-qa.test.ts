@@ -4,10 +4,6 @@ import { readFileSync } from "node:fs";
 
 import {
   applyDeterministicTextEditQa,
-  cloneQaMutationId,
-  cloneQaPassed,
-  cloneQaWarnings,
-  normalizeRenderedText,
   parseCloneRegions,
 } from "../src/lib/adstudio/clone-qa.ts";
 import {
@@ -29,14 +25,6 @@ import {
   ProviderRunPersistenceError,
   runAuditAfterDurableAccounting,
 } from "../src/lib/operator/prompts/redact-prompt-run.ts";
-
-test("parallel clone formats receive distinct QA mutation identities", () => {
-  const correlationId = "11111111-1111-4111-8111-111111111111";
-  assert.notEqual(
-    cloneQaMutationId(correlationId, "4:5", 1),
-    cloneQaMutationId(correlationId, "9:16", 1),
-  );
-});
 
 test("declared copy regions stay editable as text when vision misclassifies them", () => {
   const regions = parseCloneRegions([
@@ -347,16 +335,6 @@ function finalRenderInput(providers: ImageProviderAdapter[]) {
   };
 }
 
-const passingQa = {
-  passed: true,
-  attempts: 1,
-  checkedAt: "2026-07-13T00:00:00.000Z",
-  copyChecks: [{ key: "headline", expected: "JUST LISTED", rendered: "JUST LISTED", exact: true }],
-  defects: [],
-  regions: [],
-  model: "qa-model",
-};
-
 async function finalRenderFunction() {
   const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
   const fn = (module as Record<string, unknown>).generateFinalCloneRender;
@@ -374,113 +352,6 @@ async function persistencePipelineFunction() {
   assert.equal(typeof fn, "function", "clone persistence pipeline must be directly testable");
   return fn as (input: unknown) => Promise<unknown>;
 }
-
-async function enrichmentFunction() {
-  const module = await import("../src/lib/adstudio/generate-template-campaign.ts");
-  const fn = (module as Record<string, unknown>).enrichCloneCreativesWithQa;
-  assert.equal(typeof fn, "function", "advisory QA enrichment must be directly testable");
-  return fn as (input: unknown) => Promise<unknown>;
-}
-
-/** Fake creatives table: select/update on canvas_json keyed by creative id. */
-function enrichmentSupabase(rows: Record<string, Record<string, unknown> | null>) {
-  const updates: Array<{ id: string; canvas: Record<string, unknown> }> = [];
-  const supabase = {
-    from(table: string) {
-      assert.equal(table, "adstudio_creatives");
-      return {
-        select() {
-          return {
-            eq() {
-              return {
-                eq(_column: string, id: string) {
-                  return {
-                    async maybeSingle() {
-                      const canvas = rows[id];
-                      return canvas === undefined
-                        ? { data: null, error: { message: "not found" } }
-                        : { data: { id, canvas_json: canvas }, error: null };
-                    },
-                  };
-                },
-              };
-            },
-          };
-        },
-        update(patch: { canvas_json: Record<string, unknown> }) {
-          return {
-            eq() {
-              return {
-                async eq(_column: string, id: string) {
-                  updates.push({ id, canvas: patch.canvas_json });
-                  return { data: null, error: null };
-                },
-              };
-            },
-          };
-        },
-      };
-    },
-  };
-  return { supabase, updates };
-}
-
-test("normalizeRenderedText preserves case and punctuation", () => {
-  assert.notEqual(
-    normalizeRenderedText("Open Home — Saturday, 10:30am!"),
-    normalizeRenderedText("open home — Saturday, 10:30am!"),
-  );
-  assert.notEqual(
-    normalizeRenderedText("Open Home — Saturday, 10:30am!"),
-    normalizeRenderedText("Open Home Saturday, 10:30am"),
-  );
-});
-
-test("normalizeRenderedText only normalizes Unicode and layout whitespace", () => {
-  assert.equal(
-    normalizeRenderedText("Cafe\u0301\r\nOpen   Home"),
-    normalizeRenderedText("Café Open Home"),
-  );
-  assert.notEqual(
-    normalizeRenderedText("18 Smith St Scarborough"),
-    normalizeRenderedText("18 Smyth St Scarborough"),
-  );
-});
-
-test("cloneQaPassed requires every copy check exact and zero defects", () => {
-  const good = {
-    copyChecks: [
-      { key: "headline", expected: "A", rendered: "A", exact: true },
-      { key: "cta_text", expected: "B", rendered: "B", exact: true },
-    ],
-    defects: [],
-  };
-  assert.equal(cloneQaPassed(good), true);
-  assert.equal(cloneQaPassed({ ...good, defects: ["warped roofline"] }), false);
-  assert.equal(
-    cloneQaPassed({
-      ...good,
-      copyChecks: [{ key: "headline", expected: "A", rendered: "typo", exact: false }],
-    }),
-    false,
-  );
-});
-
-test("cloneQaWarnings formats copy mismatches as editable warnings", () => {
-  assert.deepEqual(
-    cloneQaWarnings({
-      copyChecks: [
-        { key: "headline", expected: "just isted", rendered: "JUST LISTED", exact: false },
-        { key: "phone", expected: "0412 000 000", rendered: "", exact: false },
-        { key: "address", expected: "18 Smith St", rendered: "18 Smith St", exact: true },
-      ],
-    }),
-    [
-      'You typed "just isted" - the ad shows "JUST LISTED". Click the text on the ad to change it.',
-      '"Phone" may be missing from the ad - check the image.',
-    ],
-  );
-});
 
 test("template campaign generation ships the render immediately with QA as advisory enrichment", () => {
   const pipeline = readFileSync("src/lib/adstudio/generate-template-campaign.ts", "utf8");
@@ -500,9 +371,8 @@ test("template campaign generation ships the render immediately with QA as advis
 
   // The blocking QA gate is gone: no reroll corrections, no verification
   // failures that eat the customer's wait. The vision pass survives as
-  // post-persist enrichment that attaches editor regions and copy warnings.
-  assert.match(pipeline, /enrichCloneCreativesWithQa/);
-  assert.match(pipeline, /runCloneQa/);
+  // post-persist region detection that attaches editor regions.
+  assert.match(pipeline, /enrichCloneCreativesWithRegions/);
   assert.doesNotMatch(pipeline, /cloneQaCorrectionPrompt/);
   assert.doesNotMatch(pipeline, /TemplateCampaignQaError/);
   assert.doesNotMatch(pipeline, /qa\.passed/);
@@ -743,57 +613,6 @@ test("renders and the campaign persist with no QA involvement at all", async () 
   assert.deepEqual(campaign.images, ["stored-4:5", "stored-9:16"]);
 });
 
-test("advisory enrichment attaches verdicts per format and survives vision failures", async () => {
-  const enrich = await enrichmentFunction();
-  const { supabase, updates } = enrichmentSupabase({
-    "creative-feed": { objects: [] },
-    "creative-story": { objects: [] },
-  });
-
-  const qa = await enrich({
-    supabase,
-    workspaceId: "workspace",
-    userId: "user",
-    correlationId: "corr",
-    expectedCopy: { headline: "JUST LISTED" },
-    renders: [
-      { format: "4:5", creativeId: "creative-feed", imageUrl: "data:image/png;base64,feed" },
-      { format: "9:16", creativeId: "creative-story", imageUrl: "data:image/png;base64,story" },
-    ],
-    review: async (input: { format: string }) => {
-      if (input.format === "9:16") throw new Error("vision offline");
-      return passingQa;
-    },
-  });
-
-  // The primary verdict returns even though the story pass failed; only the
-  // feed creative gets an update, and the failure never throws.
-  assert.deepEqual(qa, passingQa);
-  assert.deepEqual(updates.map((update) => update.id), ["creative-feed"]);
-  assert.deepEqual(updates[0]?.canvas.cloneQa, passingQa);
-});
-
-test("advisory enrichment never overwrites a fresher verdict already on the creative", async () => {
-  const enrich = await enrichmentFunction();
-  const fresher = { ...passingQa, model: "fresher-edit-verdict" };
-  const { supabase, updates } = enrichmentSupabase({
-    "creative-feed": { objects: [], cloneQa: fresher },
-  });
-
-  const qa = await enrich({
-    supabase,
-    workspaceId: "workspace",
-    userId: "user",
-    correlationId: "corr",
-    expectedCopy: { headline: "JUST LISTED" },
-    renders: [{ format: "4:5", creativeId: "creative-feed", imageUrl: "data:image/png;base64,feed" }],
-    review: async () => passingQa,
-  });
-
-  assert.deepEqual(qa, passingQa);
-  assert.equal(updates.length, 0);
-});
-
 test("post-commit audit failure is contained after durable accounting", async () => {
   let calls = 0;
   await runAuditAfterDurableAccounting(async () => {
@@ -821,7 +640,10 @@ test("targeted edit endpoint model-edits selected regions and verifies advisoril
   assert.match(route, /canvas\.cloneQa\?\.copyChecks/);
   assert.match(route, /expectedCopy\[editFieldKey\] = newValue/);
   assert.match(route, /createCloneRegionEditMask/);
-  assert.match(route, /compositeCloneRegionEdit/);
+  // Crop-region edit: the model edits a padded window around the selected
+  // region, then compositeRegionBack pastes only the box onto the original.
+  assert.match(route, /cropRegionWithPadding/);
+  assert.match(route, /compositeRegionBack/);
   assert.match(route, /capabilities\.inpainting/);
 
   // Edits and restores are saved revisions; a failed verdict never rejects a
@@ -841,16 +663,10 @@ test("template generation persists unreviewed renders and defers verdicts to enr
   assert.match(builder, /cloneQa: input\.firstAd\.templateCloneQaByFormat\?\.\[format\]/);
   assert.doesNotMatch(generation, /templateCloneQaByFormat/);
   assert.doesNotMatch(generation, /TemplateCampaignQaError/);
-  assert.match(generation, /enrichCloneCreativesWithQa/);
-  // Enrichment is per-creative and guarded: it never clobbers a verdict a
+  assert.match(generation, /enrichCloneCreativesWithRegions/);
+  // Enrichment is per-creative and guarded: it never clobbers regions a
   // faster in-place edit already wrote.
-  assert.match(generation, /if \(canvas\.cloneQa\) return qa/);
-});
-
-test("clone QA derives exactness from rendered copy instead of trusting the model flag", () => {
-  const source = readFileSync("src/lib/adstudio/clone-qa.ts", "utf8");
-  assert.doesNotMatch(source, /reported\?\.exact === true\s*\|\|/);
-  assert.match(source, /normalizeRenderedText\(rendered\) === normalizeRenderedText\(expected\)/);
+  assert.match(generation, /existing\.regions\.length > 0\) return/);
 });
 
 test("provided copy updates metadata without creating a second image-generation path", () => {
