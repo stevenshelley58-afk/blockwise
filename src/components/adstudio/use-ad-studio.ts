@@ -12,8 +12,8 @@ export type StudioSection =
 export type SaveState = "saved" | "saving" | "error";
 export type MobileTab = "home" | "media" | "text" | "publish" | "brand" | "settings";
 
-export function useAdStudio() {
-  const [section, setSection] = useState<StudioSection>("home");
+export function useAdStudio(initialSection: StudioSection = "home") {
+  const [section, setSection] = useState<StudioSection>(initialSection);
   const [showMore, setShowMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const [busyMessage, setBusyMessage] = useState("Generating ad");
@@ -23,7 +23,7 @@ export function useAdStudio() {
   // during SSR caused a hydration text mismatch on every page load.
   const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
-  const [mobileTab, setMobileTab] = useState<MobileTab>("home");
+  const [mobileTab, setMobileTab] = useState<MobileTab>(initialSection);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
