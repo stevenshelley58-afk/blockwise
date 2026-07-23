@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-07-22T12:24:13.788Z",
+  "source": {
+    "file": "02_stories_reels_9x16/meta_293.png",
+    "hash": "3d3e12dff0ba6a91edf2004767eb9d9985a1f6468e63d40b057c6b626e6a7539"
+  },
+  "publicSample": {
+    "file": "05-public-template-sample.png",
+    "hash": "0e57d8c81d8f1279252defeaa44da0dc09cb12a40609587988d501e27bc7bca7",
+    "model": "qwen-image-edit-max",
+    "requestId": "9d4b8836-34c2-9ebc-b6f9-5c9c3b0d2d6f"
+  },
+  "customerAd": {
+    "file": "07-customer-ad.png",
+    "hash": "34fc4f1efc9410b9976a04dd833257e2ff9377002729d65f8ac68846d8d67313",
+    "model": "qwen-image-edit-max",
+    "requestId": "c12bbcef-e836-9476-b67f-f325f7be4195",
+    "inputImages": [
+      "C:\\Users\\steve\\Downloads\\2026-06-05_16-53-45.png",
+      "C:\\Users\\steve\\Downloads\\blockwise-logo-pack\\blockwise-logo-pack\\png\\blockwise-icon-midnight.png"
+    ],
+    "copy": {
+      "headline": "JUST LISTED",
+      "address": "SPEARWOOD, WA 6163",
+      "phone": "08 6102 1840",
+      "website": "BLOCKWISE.SALE"
+    }
+  },
+  "hashesDiffer": true,
+  "qa": {
+    "sample_preserves_composition": true,
+    "sample_removed_source_identity": true,
+    "sample_uses_generic_property": true,
+    "sample_uses_generic_logo": true,
+    "customer_preserves_sample_composition": false,
+    "customer_uses_supplied_property": false,
+    "customer_uses_supplied_logo": false,
+    "customer_exact_text": false,
+    "no_unapproved_identity": false,
+    "no_obvious_visual_defects": false,
+    "overall_pass": false
+  }
+}

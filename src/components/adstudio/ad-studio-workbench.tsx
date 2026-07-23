@@ -34,7 +34,6 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
-import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
@@ -344,13 +343,14 @@ export function AdStudioWorkbench({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
   const [publishCreativeSource, setPublishCreativeSource] = useState<"current" | "library">("current");
-  const [dismissedCloneWarningKeys, setDismissedCloneWarningKeys] = useState<Set<string>>(() => new Set());
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
   const saveStateRef = useRef<"saved" | "saving" | "error">("saved");
   const linkedSamplePromptedRef = useRef(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [healthNotice, setHealthNotice] = useState<string | null>(null);
+  const [longWait, setLongWait] = useState(false);
 
   const studio = useAdStudio(openPublishOnLoad ? "publish" : "home");
   const { brand, initials } = useBrandKit(brandKit);
@@ -661,6 +661,40 @@ export function AdStudioWorkbench({
     setBrandPromptOpen(false);
   }
 
+  // Non-blocking provider health probe on open. If any provider is down we show
+  // an informational amber banner — the workbench itself is never blocked and a
+  // failed/slow fetch is simply treated as "no banner".
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/adstudio/health")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { openai?: { ok: boolean }; google?: { ok: boolean }; image?: { ok: boolean } } | null) => {
+        if (cancelled || !data) return;
+        const down: string[] = [];
+        if (data.openai && !data.openai.ok) down.push("OpenAI");
+        if (data.google && !data.google.ok) down.push("Google");
+        if (data.image && !data.image.ok) down.push("image generation");
+        setHealthNotice(down.length ? down.join(", ") : null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Generation/edit runs are long but bounded (no hard client timeout). After
+  // 60s of an in-flight run we surface a reassuring, non-blocking note so the
+  // user is never left staring at a bare spinner with no feedback.
+  const longRunPending = studio.busy || (generation !== null && !generation.error);
+  useEffect(() => {
+    if (!longRunPending) {
+      setLongWait(false);
+      return;
+    }
+    const timer = setTimeout(() => setLongWait(true), 60000);
+    return () => clearTimeout(timer);
+  }, [longRunPending]);
+
   // M6: derive per-section completion state from readiness items for rail indicators
   // Computed inline at render time; no extra memo needed (readinessItems is already memoised)
   const format = FORMAT_META[previewFormat];
@@ -676,14 +710,6 @@ export function AdStudioWorkbench({
       null
     );
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
-  const cloneWarningKey = currentCreative?.canvas.cloneQa
-    ? `${currentCreative.creativeId}:${currentCreative.canvas.cloneQa.checkedAt}`
-    : "";
-  const cloneWarnings = useMemo(
-    () => cloneQaWarnings(currentCreative?.canvas.cloneQa),
-    [currentCreative?.canvas.cloneQa],
-  );
-  const showCloneWarnings = cloneWarningKey.length > 0 && cloneWarnings.length > 0 && !dismissedCloneWarningKeys.has(cloneWarningKey);
 
   const getVariantPrimaryImage = useCallback((variantId: string | undefined, sourcePack: AdStudioCampaignPack = pack) => {
     return primaryImageForVariant(sourcePack, variantId, editorFormat);
@@ -747,60 +773,9 @@ export function AdStudioWorkbench({
     setSaveState("saving");
   }, [setSaveState]);
 
-  // The finished ad shows the moment its renders persist; the advisory QA pass
-  // (editor regions + copy warnings) attaches to the persisted creatives a few
-  // seconds later. Poll the campaign until the verdicts land, merging ONLY the
-  // missing cloneQa so concurrent local state is never clobbered.
-  const editorPreparing = pack.creatives.some(
-    (creative) => isCloneCreative(creative) && !creative.canvas.cloneQa,
-  );
-  const editorPreparingCampaignId = editorPreparing ? pack.campaign.campaignId : null;
-  useEffect(() => {
-    if (!editorPreparingCampaignId) return;
-    let cancelled = false;
-    let attempts = 0;
-    let timer = 0;
-
-    const poll = async () => {
-      if (cancelled || attempts >= 40) return;
-      attempts += 1;
-      try {
-        const response = await fetch(
-          `/api/adstudio/campaigns/${encodeURIComponent(editorPreparingCampaignId)}`,
-          { cache: "no-store" },
-        );
-        const payload = (await response.json().catch(() => null)) as
-          | { campaignPack?: AdStudioCampaignPack | null }
-          | null;
-        const freshCreatives = payload?.campaignPack?.creatives ?? [];
-        const qaByCreative = new Map(
-          freshCreatives.flatMap((creative) =>
-            creative.canvas.cloneQa ? [[creative.creativeId, creative.canvas.cloneQa] as const] : [],
-          ),
-        );
-        if (!cancelled && qaByCreative.size > 0) {
-          setPack((current) => ({
-            ...current,
-            creatives: current.creatives.map((creative) => {
-              const qa = qaByCreative.get(creative.creativeId);
-              return qa && !creative.canvas.cloneQa
-                ? { ...creative, canvas: { ...creative.canvas, cloneQa: qa } }
-                : creative;
-            }),
-          }));
-        }
-      } catch {
-        // Transient poll failure - the next tick retries.
-      }
-      if (!cancelled) timer = window.setTimeout(() => void poll(), 3000);
-    };
-
-    timer = window.setTimeout(() => void poll(), 3000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [editorPreparingCampaignId]);
+  // The finished ad shows the moment its renders persist. Editor regions are
+  // detected in the background after the response; when they land the pack
+  // re-fetches and editing unlocks — no blocking spinner in the meantime.
 
   async function confirmMediaReplacement() {
     if (!pendingMediaReplacement) return;
@@ -974,38 +949,13 @@ export function AdStudioWorkbench({
                 creative={currentCreative}
                 onCreativeChange={updateCreative}
                 showToast={studio.showToast}
-                preparing={editorPreparing}
               />
             </MetaChromePreview>
           </PreviewFit>
           {currentCreative.canvas.cloneQa?.regions.length ? (
             <p className="studio-metachrome-edit-hint">Select text or an image on the ad, or open Edit elements.</p>
-          ) : editorPreparing ? (
-            <p className="studio-metachrome-edit-hint">Your ad is ready to preview - editing unlocks in a moment.</p>
-          ) : null}
-          {showCloneWarnings && (
-            <div className="studio-clone-warning-strip" role="status" aria-live="polite">
-              <CircleAlert aria-hidden size={16} />
-              <div>
-                {cloneWarnings.map((warning) => (
-                  <p key={warning}>{warning}</p>
-                ))}
-              </div>
-              <button
-                type="button"
-                aria-label="Dismiss text warnings"
-                onClick={() => {
-                  if (!cloneWarningKey) return;
-                  setDismissedCloneWarningKeys((current) => {
-                    const next = new Set(current);
-                    next.add(cloneWarningKey);
-                    return next;
-                  });
-                }}
-              >
-                <X aria-hidden size={14} />
-              </button>
-            </div>
+          ) : (
+            <p className="studio-metachrome-edit-hint">Your ad is ready - editing unlocks shortly.</p>
           )}
         </div>
       );
@@ -1279,6 +1229,28 @@ export function AdStudioWorkbench({
   return (
     <main className="studio-screen" aria-label="Ad Studio workspace">
       <style>{STYLES}</style>
+      {healthNotice && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            background: "#FDF8EE",
+            borderBottom: "1px solid #F0E2BD",
+            fontSize: "14px",
+            color: "#8A5A00",
+            lineHeight: 1.4,
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <CircleAlert aria-hidden size={16} style={{ flexShrink: 0 }} />
+          <span>
+            Heads up: <b>{healthNotice}</b> is unavailable — some features may be slower.
+          </span>
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -1389,6 +1361,9 @@ export function AdStudioWorkbench({
                       <RefreshCw aria-hidden size={22} />
                       <strong>{studio.busyMessage}</strong>
                       <span>No changes were made until generation completes.</span>
+                      {longWait && (
+                        <span role="status" aria-live="polite">Still working… this can take a minute.</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1513,6 +1488,7 @@ export function AdStudioWorkbench({
         <div className="studio-mobile-busy">
           <RefreshCw aria-hidden size={20} />
           <strong>{studio.busyMessage}</strong>
+          {longWait && <span role="status" aria-live="polite">Still working… this can take a minute.</span>}
         </div>
       )}
 
@@ -1520,6 +1496,7 @@ export function AdStudioWorkbench({
         <div className="studio-mobile-busy">
           <RefreshCw aria-hidden size={20} />
           <strong>{generation.phase}</strong>
+          {longWait && <span role="status" aria-live="polite">Still working… this can take a minute.</span>}
         </div>
       )}
 

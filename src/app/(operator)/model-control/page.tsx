@@ -151,7 +151,6 @@ function formatDate(value: string | null): string {
 
 function formatProviderName(provider: string): string {
   if (provider === "openai") return "Primary provider";
-  if (provider === "openrouter") return "Routing provider";
 
   return provider;
 }

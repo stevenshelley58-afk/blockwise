@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Blockwise · Ad generation waiting state</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f6f7f9;
+      --surface: #ffffff;
+      --ink: #16181d;
+      --ink-strong: #0b0c10;
+      --muted: #545a66;
+      --faint: #767d89;
+      --line: #e9ebef;
+      --line-heavy: #d3d7df;
+      --tint: #f1f2f4;
+      --success: #006d38;
+      --success-bg: #eaf7ef;
+      --warning: #8a5a00;
+      --shadow-rest: 0 1px 2px rgba(16, 18, 23, .04), 0 5px 18px rgba(16, 18, 23, .05);
+      --shadow-float: 0 22px 70px rgba(9, 12, 18, .26);
+      --ease: cubic-bezier(.22, 1, .36, 1);
+      --font-display: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; background: #101319; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background: #101319;
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    h1, h2, h3, h4 { font-family: var(--font-display); }
+
+    .review-shell {
+      min-height: 100vh;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+      justify-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(255, 255, 255, .07), transparent 28rem),
+        #101319;
+    }
+
+    .review-toolbar {
+      width: min(1180px, 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #fff;
+    }
+
+    .review-copy { min-width: 0; }
+    .review-copy h1 {
+      margin: 0;
+      font: 700 19px/1.25 var(--font-display);
+      letter-spacing: -.02em;
+    }
+    .review-copy p {
+      max-width: 65ch;
+      margin: 4px 0 0;
+      color: #b7bdc8;
+      font-size: 12.5px;
+    }
+
+    .review-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .review-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .review-group button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: #cbd0d8;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .review-group button[aria-pressed="true"] {
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .review-group button:focus-visible,
+    .icon-button:focus-visible,
+    .carousel-control:focus-visible,
+    .ad-card:focus-visible,
+    .dialog-action:focus-visible,
+    .ready-action:focus-visible {
+      outline: 3px solid rgba(255, 255, 255, .92);
+      outline-offset: 2px;
+    }
+
+    .device {
+      position: relative;
+      width: min(1180px, 100%);
+      height: min(760px, calc(100vh - 124px));
+      min-height: 650px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 20px;
+      background: var(--canvas);
+      box-shadow: 0 32px 100px rgba(0, 0, 0, .48);
+      transition: border-radius .45s var(--ease);
+    }
+
+    body[data-view="mobile"] .device {
+      width: 390px;
+      height: min(844px, calc(100vh - 112px));
+      min-height: 650px;
+      border-radius: 30px;
+    }
+
+    .app-chrome {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: 62px 1fr;
+      background: var(--canvas);
+    }
+
+    .app-topbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      padding: 0 20px;
+    }
+
+    .wordmark {
+      font: 800 17px/1 var(--font-display);
+      letter-spacing: -.03em;
+    }
+
+    .crumb {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .topbar-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .topbar-actions span {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+    }
+
+    .app-body {
+      display: grid;
+      grid-template-columns: 188px 1fr;
+      min-height: 0;
+    }
+
+    .rail {
+      border-right: 1px solid var(--line);
+      background: #fff;
+      padding: 20px 14px;
+    }
+
+    .rail-label {
+      display: block;
+      margin: 0 10px 12px;
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .rail-item {
+      height: 42px;
+      margin-bottom: 5px;
+      border-radius: 10px;
+      background: var(--tint);
+    }
+
+    .rail-item:nth-child(3), .rail-item:nth-child(4), .rail-item:nth-child(5) { background: transparent; }
+
+    .workspace-ghost {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 22px;
+      padding: 28px;
+    }
+
+    .ghost-panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow-rest);
+      padding: 22px;
+    }
+
+    .ghost-line {
+      height: 12px;
+      margin-bottom: 12px;
+      border-radius: 99px;
+      background: var(--tint);
+    }
+    .ghost-line.short { width: 45%; }
+    .ghost-line.medium { width: 70%; }
+    .ghost-image {
+      aspect-ratio: 4 / 5;
+      margin-top: 24px;
+      border-radius: 14px;
+      background: #e8eaee;
+    }
+
+    .scrim {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: rgba(10, 13, 19, .66);
+      backdrop-filter: blur(3px);
+    }
+
+    .generation-dialog {
+      position: absolute;
+      inset: 28px;
+      z-index: 20;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      border-radius: 20px;
+      background: var(--canvas);
+      box-shadow: var(--shadow-float);
+    }
+
+    .generation-head {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      padding: 23px 76px 19px;
+      text-align: center;
+    }
+
+    .generation-head h2 {
+      max-width: 680px;
+      margin: 0;
+      font: 750 28px/1.15 var(--font-display);
+      letter-spacing: -.025em;
+      text-wrap: balance;
+    }
+
+    .generation-head > p {
+      max-width: 62ch;
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-wrap: pretty;
+    }
+
+    .phase-status {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: var(--tint);
+      color: #3f444e;
+      padding: 5px 12px 5px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .phase-spinner {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+    }
+
+    .phase-spinner::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border: 1.5px solid rgba(255, 255, 255, .42);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+
+    .ready-check {
+      display: none;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--success);
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .ready-action {
+      display: none;
+      min-height: 44px;
+      margin-top: 5px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .generation-dialog[data-mode="complete"] .phase-spinner { display: none; }
+    .generation-dialog[data-mode="complete"] .ready-check { display: grid; }
+    .generation-dialog[data-mode="complete"] .ready-action { display: inline-flex; align-items: center; }
+    .generation-dialog[data-mode="complete"] .phase-status { background: var(--success-bg); color: var(--success); }
+
+    .carousel-region {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      overflow: hidden;
+      padding: 17px 0 15px;
+    }
+
+    .carousel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+    }
+
+    .carousel-heading-copy { min-width: 0; }
+    .carousel-heading h3 {
+      margin: 0;
+      font: 750 15px/1.25 var(--font-display);
+      letter-spacing: -.01em;
+    }
+    .carousel-heading p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+
+    .pause-button {
+      min-width: 92px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 1px solid var(--line-heavy);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .pause-button:hover { background: var(--tint); }
+    .pause-icon { width: 12px; display: inline-grid; grid-template-columns: repeat(2, 3px); justify-content: center; gap: 2px; }
+    .pause-icon i { width: 3px; height: 10px; border-radius: 2px; background: currentColor; }
+    .pause-button[data-paused="true"] .pause-icon { display: block; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid currentColor; }
+    .pause-button[data-paused="true"] .pause-icon i { display: none; }
+
+    .carousel-viewport {
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-inline: contain;
+      scrollbar-width: none;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      padding: 0 max(24px, calc(50% - 225px));
+    }
+    .carousel-viewport::-webkit-scrollbar { display: none; }
+
+    .carousel-track {
+      min-width: max-content;
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+      gap: 15px;
+    }
+
+    .ad-slide {
+      width: min(450px, 48vw);
+      height: 100%;
+      min-height: 300px;
+      flex: 0 0 auto;
+      scroll-snap-align: center;
+      opacity: .56;
+      transform: scale(.955);
+      transition: opacity .45s var(--ease), transform .45s var(--ease);
+    }
+
+    .ad-slide[data-active="true"] { opacity: 1; transform: scale(1); }
+
+    .ad-card {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 176px;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      border: 1px solid var(--line-heavy);
+      border-radius: 16px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0;
+      text-align: left;
+      box-shadow: var(--shadow-rest);
+    }
+
+    .ad-card:hover { border-color: #aeb4be; }
+
+    .ad-head {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 13px;
+    }
+
+    .ad-avatar {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .ad-account { min-width: 0; display: grid; gap: 1px; }
+    .ad-account strong { overflow: hidden; font-size: 13px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+    .ad-account small { color: var(--muted); font-size: 10.5px; }
+
+    .active-pill {
+      border-radius: 999px;
+      background: var(--success-bg);
+      color: var(--success);
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .ad-copy {
+      min-width: 0;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      padding: 16px;
+    }
+
+    .source-pill {
+      justify-self: start;
+      border-radius: 999px;
+      background: var(--tint);
+      color: #454b55;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .source-pill.local::before { content: "•"; color: var(--success); margin-right: 5px; }
+
+    .ad-copy h4 {
+      display: -webkit-box;
+      overflow: hidden;
+      margin: 0;
+      font: 750 17px/1.2 var(--font-display);
+      letter-spacing: -.02em;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .ad-copy p {
+      display: -webkit-box;
+      overflow: hidden;
+      margin: 0;
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.45;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .ad-media {
+      min-height: 0;
+      overflow: hidden;
+      border-left: 1px solid var(--line);
+      background: #e8eaee;
+    }
+    .ad-media img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+    .ad-foot {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+      background: #fafafa;
+      padding: 10px 13px;
+      color: var(--muted);
+      font-size: 10.5px;
+    }
+    .ad-foot strong { color: var(--ink); font-size: 11px; }
+
+    .carousel-footer {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+    }
+
+    .carousel-control {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-heavy);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--ink);
+      font-size: 20px;
+    }
+    .carousel-control:hover { background: var(--tint); }
+
+    .carousel-dots {
+      min-width: 0;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+    }
+    .carousel-dots button {
+      width: 8px;
+      height: 8px;
+      border: 0;
+      border-radius: 99px;
+      background: #c7cbd2;
+      padding: 0;
+      transition: transform .25s var(--ease), background-color .25s var(--ease);
+    }
+    .carousel-dots button[aria-current="true"] { transform: scaleX(3); background: var(--ink); }
+
+    .loading-state {
+      display: none;
+      min-height: 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 15px;
+      padding: 0 24px;
+    }
+
+    .skeleton-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      padding: 14px;
+    }
+    .skeleton-card i { display: block; margin-bottom: 12px; border-radius: 8px; background: linear-gradient(90deg, #eceef1 25%, #f7f8f9 50%, #eceef1 75%); background-size: 220% 100%; animation: shimmer 1.4s ease infinite; }
+    .skeleton-card i:first-child { width: 62%; height: 36px; }
+    .skeleton-card i:nth-child(2) { height: calc(100% - 84px); min-height: 190px; }
+    .skeleton-card i:last-child { width: 78%; height: 12px; }
+
+    .generation-dialog[data-mode="loading"] .carousel-viewport,
+    .generation-dialog[data-mode="loading"] .carousel-footer { display: none; }
+    .generation-dialog[data-mode="loading"] .loading-state { display: grid; }
+
+    .confirm-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(11, 12, 16, .62);
+    }
+    .confirm-backdrop[data-open="true"] { display: grid; }
+
+    .confirm-dialog {
+      width: min(430px, 100%);
+      border: 0;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: var(--shadow-float);
+      padding: 22px;
+    }
+    .confirm-dialog h3 { margin: 0; font: 750 20px/1.25 var(--font-display); letter-spacing: -.02em; }
+    .confirm-dialog p { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
+    .confirm-ad-name { margin-top: 14px; border-radius: 10px; background: var(--tint); padding: 10px 12px; color: #3f444e; font-size: 12px; font-weight: 700; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+    .dialog-action { min-height: 44px; border: 1px solid var(--line-heavy); border-radius: 999px; background: #fff; color: var(--ink); padding: 0 16px; font-size: 13px; font-weight: 750; }
+    .dialog-action.primary { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    body[data-view="mobile"] .app-topbar { padding: 0 15px; }
+    body[data-view="mobile"] .crumb { display: none; }
+    body[data-view="mobile"] .app-body { grid-template-columns: 1fr; }
+    body[data-view="mobile"] .rail { display: none; }
+    body[data-view="mobile"] .workspace-ghost { grid-template-columns: 1fr; padding: 18px; }
+    body[data-view="mobile"] .workspace-ghost .ghost-panel:last-child { display: none; }
+    body[data-view="mobile"] .generation-dialog { inset: 0; border-radius: 0; }
+    body[data-view="mobile"] .generation-head { padding: 25px 18px 18px; }
+    body[data-view="mobile"] .generation-head h2 { font-size: 23px; }
+    body[data-view="mobile"] .generation-head > p { max-width: 34ch; font-size: 12.5px; }
+    body[data-view="mobile"] .carousel-region { gap: 10px; padding: 14px 0 max(14px, env(safe-area-inset-bottom)); }
+    body[data-view="mobile"] .carousel-heading { padding: 0 15px; }
+    body[data-view="mobile"] .carousel-heading h3 { font-size: 14px; }
+    body[data-view="mobile"] .pause-button { min-width: 82px; }
+    body[data-view="mobile"] .carousel-viewport { padding: 0 24px; }
+    body[data-view="mobile"] .carousel-track { gap: 12px; }
+    body[data-view="mobile"] .ad-slide { width: 308px; min-height: 360px; }
+    body[data-view="mobile"] .ad-card { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+    body[data-view="mobile"] .ad-copy { padding: 12px 13px 10px; }
+    body[data-view="mobile"] .ad-copy p { display: none; }
+    body[data-view="mobile"] .ad-copy h4 { font-size: 15px; -webkit-line-clamp: 2; }
+    body[data-view="mobile"] .ad-media { min-height: 0; border-top: 1px solid var(--line); border-left: 0; }
+    body[data-view="mobile"] .ad-media img { object-position: center; }
+    body[data-view="mobile"] .carousel-footer { padding: 0 15px; }
+    body[data-view="mobile"] .loading-state { grid-template-columns: 1fr; padding: 0 24px; }
+    body[data-view="mobile"] .skeleton-card:not(:first-child) { display: none; }
+    body[data-view="mobile"] .confirm-backdrop { align-items: end; padding: 10px; }
+    body[data-view="mobile"] .confirm-dialog { border-radius: 20px; padding: 20px; }
+    body[data-view="mobile"] .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; }
+
+    @media (max-width: 820px) {
+      .review-shell { padding: 14px; }
+      .review-toolbar { align-items: flex-start; flex-direction: column; }
+      .review-controls { justify-content: flex-start; }
+      .device { height: 760px; min-height: 650px; }
+    }
+
+    @media (max-width: 440px) {
+      .review-shell { padding: 0; gap: 0; }
+      .review-toolbar { width: 100%; min-width: 0; overflow: hidden; padding: 14px; background: #101319; }
+      .review-copy p { display: none; }
+      .review-controls {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        padding-bottom: 2px;
+      }
+      .review-group { flex: 0 0 auto; }
+      .device, body[data-view="mobile"] .device { width: 100%; height: calc(100vh - 124px); min-height: 640px; border: 0; border-radius: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body data-view="desktop">
+  <main class="review-shell">
+    <header class="review-toolbar">
+      <div class="review-copy">
+        <h1>Ad generation waiting state</h1>
+        <p>Interactive HTML mockup. Switch viewport and data states, pause the carousel, or select an ad.</p>
+      </div>
+      <div class="review-controls" aria-label="Mockup controls">
+        <div class="review-group" aria-label="Viewport">
+          <button type="button" data-view-button="desktop" aria-pressed="true">Desktop</button>
+          <button type="button" data-view-button="mobile" aria-pressed="false">Mobile</button>
+        </div>
+        <div class="review-group" aria-label="Carousel data state">
+          <button type="button" data-mode-button="local" aria-pressed="true">Local</button>
+          <button type="button" data-mode-button="mixed" aria-pressed="false">Local + fallback</button>
+          <button type="button" data-mode-button="fallback" aria-pressed="false">Fallback</button>
+          <button type="button" data-mode-button="loading" aria-pressed="false">Loading</button>
+          <button type="button" data-mode-button="complete" aria-pressed="false">Complete</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="device" aria-label="Ad Studio mockup">
+      <div class="app-chrome" aria-hidden="true">
+        <div class="app-topbar">
+          <span class="wordmark">blockwise</span>
+          <span class="crumb">Ad Studio / New campaign</span>
+          <span class="topbar-actions"><span></span><span></span></span>
+        </div>
+        <div class="app-body">
+          <aside class="rail">
+            <span class="rail-label">Create ad</span>
+            <div class="rail-item"></div><div class="rail-item"></div><div class="rail-item"></div><div class="rail-item"></div><div class="rail-item"></div>
+          </aside>
+          <div class="workspace-ghost">
+            <div class="ghost-panel"><div class="ghost-line short"></div><div class="ghost-line medium"></div><div class="ghost-line"></div><div class="ghost-line medium"></div></div>
+            <div class="ghost-panel"><div class="ghost-line short"></div><div class="ghost-image"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <section class="generation-dialog" data-mode="local" aria-labelledby="generation-title" aria-busy="true">
+        <header class="generation-head">
+          <h2 id="generation-title">Your ad is being generated</h2>
+          <p id="generation-description">This usually takes about a minute. Browse ads from your area while Blockwise works.</p>
+          <div class="phase-status" role="status" aria-live="polite">
+            <span class="phase-spinner" aria-hidden="true"></span>
+            <span class="ready-check" aria-hidden="true">✓</span>
+            <span id="phase-text">Writing your ad copy</span>
+          </div>
+          <button class="ready-action" type="button">Edit your ad</button>
+        </header>
+
+        <div class="carousel-region" aria-labelledby="carousel-title">
+          <div class="carousel-heading">
+            <div class="carousel-heading-copy">
+              <h3 id="carousel-title">Ads around Scarborough, WA</h3>
+              <p id="carousel-subtitle">From your workspace’s Brand Pack address</p>
+            </div>
+            <button class="pause-button" id="pause-button" type="button" data-paused="false" aria-label="Pause carousel">
+              <span class="pause-icon" aria-hidden="true"><i></i><i></i></span>
+              <span class="pause-label">Pause</span>
+            </button>
+          </div>
+
+          <div class="loading-state" aria-hidden="true">
+            <div class="skeleton-card"><i></i><i></i><i></i></div>
+            <div class="skeleton-card"><i></i><i></i><i></i></div>
+            <div class="skeleton-card"><i></i><i></i><i></i></div>
+          </div>
+
+          <div class="carousel-viewport" id="carousel" role="region" aria-roledescription="carousel" aria-label="Local ads" tabindex="0">
+            <div class="carousel-track" id="carousel-track"></div>
+          </div>
+
+          <div class="carousel-footer">
+            <button class="carousel-control" id="previous" type="button" aria-label="Previous ad">‹</button>
+            <div class="carousel-dots" id="carousel-dots" aria-label="Choose an ad"></div>
+            <button class="carousel-control" id="next" type="button" aria-label="Next ad">›</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="confirm-backdrop" id="confirm-backdrop" data-open="false">
+        <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-copy">
+          <h3 id="confirm-title">Open this ad in Ad Radar?</h3>
+          <p id="confirm-copy">Your ad will keep generating in the background.</p>
+          <div class="confirm-ad-name" id="confirm-ad-name"></div>
+          <div class="confirm-actions">
+            <button class="dialog-action" id="stay" type="button">Stay here</button>
+            <button class="dialog-action primary" id="open-radar" type="button">Open Ad Radar</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const localAds = [
+      { id: "local-1", agency: "West & Co Property", location: "Scarborough, WA", duration: "Running for 74 days", headline: "What could your home be worth?", body: "A clear local appraisal offer using recent market knowledge.", image: "../../public/adstudio-samples/meta/meta-appraisal-feed-082-sample.png", source: "Local ad" },
+      { id: "local-2", agency: "Coastal Property Group", location: "Scarborough, WA", duration: "Running for 51 days", headline: "Your suburb market update", body: "Local sales and price insights presented as a useful market report.", image: "../../public/adstudio-samples/meta/meta-market-report-feed-139-sample.png", source: "Local ad" },
+      { id: "local-3", agency: "North Shore Realty", location: "Karrinyup, WA", duration: "Running for 43 days", headline: "Thinking of selling?", body: "A low-pressure seller consultation framed around planning the next move.", image: "../../public/adstudio-samples/meta/meta-seller-consult-feed-174-sample.png", source: "Nearby ad" },
+      { id: "local-4", agency: "Oceanline Real Estate", location: "Doubleview, WA", duration: "Running for 39 days", headline: "Active buyers are looking nearby", body: "A demand-led campaign aimed at owners considering a sale.", image: "../../public/adstudio-samples/meta/meta-buyers-wanted-feed-126-sample.png", source: "Nearby ad" },
+      { id: "local-5", agency: "Mason & Field", location: "Innaloo, WA", duration: "Running for 31 days", headline: "Meet your local property team", body: "An agency introduction focused on local experience and direct contact.", image: "../../public/adstudio-samples/meta/meta-agent-intro-feed-131-sample.png", source: "Nearby ad" },
+      { id: "local-6", agency: "Cove Realty", location: "Trigg, WA", duration: "Running for 27 days", headline: "See off-market opportunities first", body: "An alert campaign for buyers who want early access to local properties.", image: "../../public/adstudio-samples/meta/meta-offmarket-alerts-feed-177-sample.png", source: "Nearby ad" }
+    ];
+
+    const longestAds = [
+      { id: "longest-1", agency: "Harbour & Home", location: "Perth, WA", duration: "Running for 186 days", headline: "Request a free property appraisal", body: "One of the longest-running appraisal campaigns in Ad Radar.", image: "../../public/adstudio-samples/meta/meta-appraisal-feed-170-sample.png", source: "Longest running" },
+      { id: "longest-2", agency: "Foundry Property", location: "Fremantle, WA", duration: "Running for 163 days", headline: "Plan your next move", body: "A persistent consultation campaign with a clear seller action.", image: "../../public/adstudio-samples/meta/meta-seller-consult-feed-168-sample.png", source: "Longest running" },
+      { id: "longest-3", agency: "Parkside Realty", location: "South Perth, WA", duration: "Running for 147 days", headline: "Know your rental value", body: "A long-running rental appraisal offer for local landlords.", image: "../../public/adstudio-samples/meta/meta-rental-appraisal-feed-146-sample.png", source: "Longest running" },
+      { id: "longest-4", agency: "Oak Lane Property", location: "Mount Lawley, WA", duration: "Running for 132 days", headline: "Your free property checklist", body: "An evergreen lead magnet that gives sellers a practical next step.", image: "../../public/adstudio-samples/meta/meta-lead-checklist-feed-175-sample.png", source: "Longest running" },
+      { id: "longest-5", agency: "Move West", location: "Subiaco, WA", duration: "Running for 119 days", headline: "Downsizing starts with a plan", body: "A consultation campaign built for homeowners considering a smaller home.", image: "../../public/adstudio-samples/meta/meta-downsizer-consult-feed-178-sample.png", source: "Longest running" },
+      { id: "longest-6", agency: "Local Market Co", location: "Nedlands, WA", duration: "Running for 104 days", headline: "See what is changing in your suburb", body: "A repeatable market report campaign with strong local relevance.", image: "../../public/adstudio-samples/meta/meta-market-report-feed-167-sample.png", source: "Longest running" }
+    ];
+
+    const phaseLabels = ["Writing your ad copy", "Creating your Feed and Story ads", "Saving your ad"];
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const body = document.body;
+    const generationDialog = document.querySelector(".generation-dialog");
+    const generationTitle = document.getElementById("generation-title");
+    const generationDescription = document.getElementById("generation-description");
+    const phaseText = document.getElementById("phase-text");
+    const carouselTitle = document.getElementById("carousel-title");
+    const carouselSubtitle = document.getElementById("carousel-subtitle");
+    const carousel = document.getElementById("carousel");
+    const track = document.getElementById("carousel-track");
+    const dots = document.getElementById("carousel-dots");
+    const pauseButton = document.getElementById("pause-button");
+    const pauseLabel = pauseButton.querySelector(".pause-label");
+    const confirmBackdrop = document.getElementById("confirm-backdrop");
+    const confirmAdName = document.getElementById("confirm-ad-name");
+    const stayButton = document.getElementById("stay");
+    const openRadarButton = document.getElementById("open-radar");
+
+    let activeAds = localAds;
+    let activeIndex = 0;
+    let manualPaused = reducedMotion;
+    let temporaryPaused = false;
+    let autoTimer = null;
+    let phaseTimer = null;
+    let phaseIndex = 0;
+    let selectedAd = null;
+    let lastTrigger = null;
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+    }
+
+    function preloadAds(ads) {
+      return Promise.all(ads.map(ad => new Promise(resolve => {
+        const image = new Image();
+        image.onload = resolve;
+        image.onerror = resolve;
+        image.src = ad.image;
+      })));
+    }
+
+    function renderAds(ads) {
+      activeAds = ads;
+      activeIndex = 0;
+      track.innerHTML = ads.map((ad, index) => `
+        <article class="ad-slide" data-index="${index}" data-active="${index === 0}">
+          <button class="ad-card" type="button" data-ad-id="${ad.id}" aria-label="View ${escapeHtml(ad.agency)} ad in Ad Radar">
+            <span class="ad-head">
+              <span class="ad-avatar" aria-hidden="true">${escapeHtml(ad.agency.slice(0, 1))}</span>
+              <span class="ad-account"><strong>${escapeHtml(ad.agency)}</strong><small>Sponsored · ${escapeHtml(ad.location)}</small></span>
+              <span class="active-pill">Active</span>
+            </span>
+            <span class="ad-copy">
+              <span class="source-pill ${ad.source === "Longest running" ? "" : "local"}">${escapeHtml(ad.source)}</span>
+              <h4>${escapeHtml(ad.headline)}</h4>
+              <p>${escapeHtml(ad.body)}</p>
+            </span>
+            <span class="ad-media"><img src="${ad.image}" alt="${escapeHtml(ad.headline)}" width="1080" height="1350" /></span>
+            <span class="ad-foot"><strong>${escapeHtml(ad.duration)}</strong><span>Facebook · Instagram</span></span>
+          </button>
+        </article>`).join("");
+
+      dots.innerHTML = ads.map((ad, index) => `<button type="button" data-dot-index="${index}" aria-label="Show ad ${index + 1}: ${escapeHtml(ad.agency)}" aria-current="${index === 0}"></button>`).join("");
+      requestAnimationFrame(() => goTo(0, false));
+      restartAutoplay();
+    }
+
+    function goTo(index, smooth = true) {
+      if (!activeAds.length) return;
+      activeIndex = (index + activeAds.length) % activeAds.length;
+      const slides = [...track.querySelectorAll(".ad-slide")];
+      const target = slides[activeIndex];
+      slides.forEach((slide, slideIndex) => slide.dataset.active = String(slideIndex === activeIndex));
+      [...dots.children].forEach((dot, dotIndex) => dot.setAttribute("aria-current", String(dotIndex === activeIndex)));
+      if (target) {
+        carousel.scrollTo({
+          left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2,
+          behavior: smooth && !reducedMotion ? "smooth" : "auto"
+        });
+      }
+    }
+
+    function restartAutoplay() {
+      clearInterval(autoTimer);
+      if (manualPaused || temporaryPaused || reducedMotion || generationDialog.dataset.mode === "loading" || generationDialog.dataset.mode === "complete") return;
+      autoTimer = setInterval(() => goTo(activeIndex + 1), 5000);
+    }
+
+    function updatePauseButton() {
+      pauseButton.dataset.paused = String(manualPaused);
+      pauseButton.setAttribute("aria-label", manualPaused ? "Play carousel" : "Pause carousel");
+      pauseLabel.textContent = manualPaused ? "Play" : "Pause";
+    }
+
+    function setDataMode(mode) {
+      document.querySelectorAll("[data-mode-button]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.modeButton === mode)));
+      generationDialog.dataset.mode = mode;
+      generationDialog.setAttribute("aria-busy", String(mode !== "complete"));
+
+      if (mode === "complete") {
+        generationTitle.textContent = "Your ad is ready";
+        generationDescription.textContent = "Your Feed and Story ads are saved and ready to edit.";
+        phaseText.textContent = "Generation complete";
+        carouselTitle.textContent = "Ads around Scarborough, WA";
+        carouselSubtitle.textContent = "You can keep browsing or edit your finished ad";
+      } else {
+        generationTitle.textContent = "Your ad is being generated";
+        generationDescription.textContent = "This usually takes about a minute. Browse ads from your area while Blockwise works.";
+        phaseText.textContent = phaseLabels[phaseIndex];
+      }
+
+      if (mode === "local") {
+        carouselTitle.textContent = "Ads around Scarborough, WA";
+        carouselSubtitle.textContent = "From your workspace’s Brand Pack address";
+        renderAds(localAds);
+      } else if (mode === "mixed") {
+        carouselTitle.textContent = "Ads around Scarborough, WA";
+        carouselSubtitle.textContent = "Local ads first, then proven longest-running ads";
+        renderAds([...localAds.slice(0, 3), ...longestAds.slice(0, 3)]);
+      } else if (mode === "fallback") {
+        carouselTitle.textContent = "Longest-running property ads";
+        carouselSubtitle.textContent = "No local matches yet, so Ad Radar is showing enduring campaigns";
+        renderAds(longestAds);
+      } else if (mode === "loading") {
+        carouselTitle.textContent = "Finding ads around Scarborough, WA";
+        carouselSubtitle.textContent = "The ad generation has already started";
+        clearInterval(autoTimer);
+      }
+      restartAutoplay();
+    }
+
+    function openConfirm(ad, trigger) {
+      selectedAd = ad;
+      lastTrigger = trigger;
+      temporaryPaused = true;
+      restartAutoplay();
+      confirmAdName.textContent = `${ad.agency} · ${ad.location} · ${ad.duration}`;
+      confirmBackdrop.dataset.open = "true";
+      stayButton.focus();
+    }
+
+    function closeConfirm() {
+      confirmBackdrop.dataset.open = "false";
+      temporaryPaused = false;
+      restartAutoplay();
+      lastTrigger?.focus();
+    }
+
+    document.querySelectorAll("[data-view-button]").forEach(button => button.addEventListener("click", () => {
+      body.dataset.view = button.dataset.viewButton;
+      document.querySelectorAll("[data-view-button]").forEach(candidate => candidate.setAttribute("aria-pressed", String(candidate === button)));
+      window.setTimeout(() => goTo(activeIndex, false), 470);
+    }));
+
+    document.querySelectorAll("[data-mode-button]").forEach(button => button.addEventListener("click", () => setDataMode(button.dataset.modeButton)));
+    document.getElementById("previous").addEventListener("click", () => { goTo(activeIndex - 1); restartAutoplay(); });
+    document.getElementById("next").addEventListener("click", () => { goTo(activeIndex + 1); restartAutoplay(); });
+
+    pauseButton.addEventListener("click", () => {
+      manualPaused = !manualPaused;
+      updatePauseButton();
+      restartAutoplay();
+    });
+
+    dots.addEventListener("click", event => {
+      const dot = event.target.closest("[data-dot-index]");
+      if (!dot) return;
+      goTo(Number(dot.dataset.dotIndex));
+      restartAutoplay();
+    });
+
+    track.addEventListener("click", event => {
+      const card = event.target.closest("[data-ad-id]");
+      if (!card) return;
+      const ad = activeAds.find(candidate => candidate.id === card.dataset.adId);
+      if (ad) openConfirm(ad, card);
+    });
+
+    carousel.addEventListener("mouseenter", () => { temporaryPaused = true; restartAutoplay(); });
+    carousel.addEventListener("mouseleave", () => { temporaryPaused = false; restartAutoplay(); });
+    carousel.addEventListener("focusin", () => { temporaryPaused = true; restartAutoplay(); });
+    carousel.addEventListener("focusout", event => {
+      if (!carousel.contains(event.relatedTarget)) { temporaryPaused = false; restartAutoplay(); }
+    });
+    carousel.addEventListener("keydown", event => {
+      if (event.key === "ArrowLeft") { event.preventDefault(); goTo(activeIndex - 1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); goTo(activeIndex + 1); }
+    });
+
+    stayButton.addEventListener("click", closeConfirm);
+    confirmBackdrop.addEventListener("click", event => { if (event.target === confirmBackdrop) closeConfirm(); });
+    openRadarButton.addEventListener("click", () => {
+      const query = encodeURIComponent(selectedAd?.location || "Scarborough, WA");
+      window.open(`https://blockwise.sale/ad-radar?q=${query}`, "_blank", "noopener,noreferrer");
+      closeConfirm();
+    });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && confirmBackdrop.dataset.open === "true") closeConfirm(); });
+    window.addEventListener("resize", () => goTo(activeIndex, false));
+
+    if (reducedMotion) {
+      manualPaused = true;
+      updatePauseButton();
+    }
+
+    phaseTimer = setInterval(() => {
+      if (generationDialog.dataset.mode === "complete") return;
+      phaseIndex = (phaseIndex + 1) % phaseLabels.length;
+      phaseText.textContent = phaseLabels[phaseIndex];
+    }, 8000);
+
+    preloadAds([...localAds, ...longestAds]).then(() => renderAds(localAds));
+    updatePauseButton();
+  </script>
+</body>
+</html>

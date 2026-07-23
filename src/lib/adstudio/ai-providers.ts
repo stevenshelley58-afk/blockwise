@@ -28,53 +28,15 @@ type ProviderOptions = {
 
 // Hard cap on completion tokens for copy/QA chat calls. Outputs are small
 // JSON packs; this bounds worst-case spend per call and keeps requests viable
-// on low OpenRouter balances (it reserves credits against the requested max).
+// on constrained balances.
 const MAX_COMPLETION_TOKENS = 4096;
 
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_IMAGE_URL = "https://openrouter.ai/api/v1/images";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
 const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
 // best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
-
-function createOpenRouterTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
-  const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENROUTER_TEXT_MODEL ?? "openai/gpt-5.5";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "openrouter",
-    providerType: "text_generation",
-    capabilities: {
-      structuredJson: true,
-      longContext: true,
-      toolCalling: true,
-      visionInput: true,
-    },
-    async generate(input) {
-      const apiKey = env.OPENROUTER_API_KEY;
-
-      if (!apiKey) {
-        throw preflightError("OPENROUTER_API_KEY is not configured.");
-      }
-
-      return postChatCompletion({
-        url: OPENROUTER_CHAT_URL,
-        apiKey,
-        model,
-        input,
-        fetchImpl,
-        headers: {
-          "HTTP-Referer": env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-          "X-Title": "Blockwise",
-        },
-      });
-    },
-  };
-}
 
 function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
@@ -383,106 +345,9 @@ function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProvider
   };
 }
 
-function createOpenRouterImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
-  const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENROUTER_IMAGE_MODEL ?? "google/gemini-3.1-flash-image-preview";
-  const fetchImpl = options.fetchImpl ?? fetch;
-
-  return {
-    providerName: "openrouter",
-    providerType: "image_generation",
-    capabilities: {
-      textToImage: true,
-      imageToImage: true,
-      multiReference: true,
-    },
-    async generate(input) {
-      const apiKey = env.OPENROUTER_API_KEY;
-
-      if (!apiKey) {
-        throw preflightError("OPENROUTER_API_KEY is not configured.");
-      }
-      if (input.requiresReferenceAssets && input.referenceAssets.length === 0) {
-        throw preflightError("Reference-image repair requires at least one image.");
-      }
-
-      const response = await fetchProviderRequest(fetchImpl, OPENROUTER_IMAGE_URL, {
-        method: "POST",
-        signal: input.signal,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-          "X-Title": "Blockwise",
-        },
-        body: JSON.stringify({
-          model,
-          prompt: buildImagePrompt(input, { includeReferenceList: false }),
-          n: 1,
-          aspect_ratio: input.aspectRatio,
-          quality: options.quality ?? DEFAULT_OPENAI_IMAGE_QUALITY,
-          output_format: "png",
-          seed: input.seed,
-          input_references: input.referenceAssets.map((url) => ({
-            type: "image_url",
-            image_url: { url },
-          })),
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        id?: string;
-        data?: Array<{ b64_json?: string; media_type?: string }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
-        error?: { message?: string };
-      };
-      const providerRequestId = payload.id ?? response.headers.get("x-request-id") ?? undefined;
-
-      if (!response.ok) {
-        throw submittedHttpError(payload.error?.message ?? `OpenRouter image request failed with ${response.status}.`, response.status, {
-          providerRequestId,
-          usage: usageFromProviderPayload(payload.usage, { imageUnits: 0, complete: false }),
-        });
-      }
-
-      const image = payload.data?.[0];
-      if (!image?.b64_json) {
-        throw submittedError("OpenRouter returned no image.", {
-          retryable: false,
-          providerRequestId,
-          usage: usageFromProviderPayload(payload.usage, {
-            imageUnits: 0,
-            providerRequestId,
-            complete: true,
-          }),
-        });
-      }
-      const assetUrl = `data:${image.media_type ?? "image/png"};base64,${image.b64_json}`;
-
-      return {
-        assetUrl,
-        seed: input.seed ?? 0,
-        model,
-        usage: usageFromProviderPayload(payload.usage, {
-          imageUnits: 1,
-          providerRequestId,
-          complete: true,
-        }),
-        providerMetadata: {
-          provider: "openrouter",
-          referenceAssets: input.referenceAssets.length,
-          inputTokens: payload.usage?.prompt_tokens ?? 0,
-          outputTokens: payload.usage?.completion_tokens ?? 0,
-        },
-      };
-    },
-  };
-}
-
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
   let provider: TextProviderAdapter;
-  if (candidate.provider === "openrouter") {
-    provider = createOpenRouterTextProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "azure") {
+  if (candidate.provider === "azure") {
     provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
   } else if (candidate.provider === "google") {
     provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
@@ -494,9 +359,7 @@ export function createTextProviderForCandidate(candidate: ModelCandidate, option
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
   let provider: ImageProviderAdapter;
-  if (candidate.provider === "openrouter") {
-    provider = createOpenRouterImageProvider({ ...options, model: candidate.model });
-  } else if (candidate.provider === "google") {
+  if (candidate.provider === "google") {
     provider = createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
   } else {
     provider = createOpenAiImageProvider({ ...options, model: candidate.model });
@@ -529,7 +392,10 @@ async function postChatCompletion(input: {
       // Reasoning models (gpt-5*, o*) accept only the default temperature and
       // reject the request outright when any other value is sent.
       ...(supportsCustomTemperature(input.model) ? { temperature: 0.4 } : {}),
-      // Without an explicit cap, OpenRouter reserves credits for the model's
+      // Reasoning models (gpt-5.x): use the cheapest thinking tier so the small
+      // structured outputs return fast and cheap.
+      ...(wantsMinimalReasoning(input.model) ? { reasoning_effort: "minimal" } : {}),
+      // Without an explicit cap the provider reserves credits for the model's
       // absolute max completion (65k+ tokens) — requests fail on low balances
       // and a bad loop can drain the account. Copy/QA outputs are small JSON;
       // 4096 is generous. Reasoning models only accept max_completion_tokens.
@@ -676,6 +542,13 @@ function isProviderFallbackEligibleStatus(status: number): boolean {
 function supportsCustomTemperature(model: string): boolean {
   const name = model.split("/").pop() ?? model;
   return !/^(gpt-5|o\d)/i.test(name);
+}
+
+// Reasoning models (gpt-5.x) think before answering; the copy/QA outputs are
+// small structured JSON, so asking for the cheapest reasoning tier keeps calls
+// fast and cheap without sacrificing quality.
+function wantsMinimalReasoning(model: string): boolean {
+  return /^gpt-5/i.test(model);
 }
 
 // Builds the chat payload. When an image is supplied, it is attached to the final

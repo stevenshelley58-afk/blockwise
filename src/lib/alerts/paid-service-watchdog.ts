@@ -4,7 +4,6 @@
  * Polls every paid service that exposes usage programmatically and converts
  * each one into a ServiceStatus with an alert level:
  *
- *   - OpenRouter  – GET https://openrouter.ai/api/v1/credits
  *   - Provider cost – GET https://api.openai.com/v1/organization/costs (admin key)
  *   - Provider API  – GET https://api.openai.com/v1/models (the key ad creation uses)
  *   - Apify       – research.v_health (apify_mtd_spend_usd) vs runtime_settings caps
@@ -22,7 +21,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type AlertLevel = "ok" | "warn" | "critical";
 
 export type ServiceStatus = {
-  /** Stable key used for alert de-duplication, e.g. "openrouter-credits". */
+  /** Stable key used for alert de-duplication, e.g. "openai-spend". */
   service: string;
   level: AlertLevel;
   summary: string;
@@ -214,56 +213,6 @@ export async function checkHttpHealthTarget(
   }
 }
 
-/**
- * OpenRouter funds Hermes and Ad Studio generation. Alerts on the lifetime
- * usage ratio and on an absolute remaining-credit floor, and goes critical on
- * auth failure because that means generation requests are already failing.
- */
-export async function checkOpenRouterCredits(): Promise<ServiceStatus | null> {
-  const service = "openrouter-credits";
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
-
-  const minRemaining = Number(process.env.OPENROUTER_MIN_CREDITS_USD ?? "5");
-
-  try {
-    const { status, body } = await fetchJson("https://openrouter.ai/api/v1/credits", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (status === 401 || status === 403) {
-      return checkFailedStatus(service, "OpenRouter", `auth rejected (${status}) — generation will fail`);
-    }
-    if (status !== 200) {
-      return checkFailedStatus(service, "OpenRouter", `HTTP ${status}`);
-    }
-    const data = (body as { data?: { total_credits?: number; total_usage?: number } })?.data;
-    const credits = Number(data?.total_credits ?? 0);
-    const usage = Number(data?.total_usage ?? 0);
-    const remaining = credits - usage;
-
-    if (remaining <= 0) {
-      return {
-        service,
-        level: "critical",
-        summary: `OpenRouter: $${remaining.toFixed(2)} remaining — generation will fail`,
-        pctUsed: 100,
-      };
-    }
-    if (remaining < minRemaining) {
-      return {
-        service,
-        level: "critical",
-        summary: `OpenRouter: only $${remaining.toFixed(2)} remaining (floor $${minRemaining})`,
-        pctUsed: credits > 0 ? (usage / credits) * 100 : null,
-      };
-    }
-    const base = budgetStatus(service, "OpenRouter credits used", usage, credits);
-    return { ...base, summary: `${base.summary}, $${remaining.toFixed(2)} remaining` };
-  } catch (err) {
-    return checkFailedStatus(service, "OpenRouter", err instanceof Error ? err.message : String(err));
-  }
-}
-
 /** Month-to-date provider organization cost vs OPENAI_MONTHLY_BUDGET_USD. */
 export async function checkOpenAiSpend(): Promise<ServiceStatus | null> {
   const service = "openai-spend";
@@ -365,14 +314,13 @@ export async function checkVpsHealth(): Promise<ServiceStatus[]> {
 
 /** Runs every poller; unconfigured services are skipped, failures become statuses. */
 export async function collectPaidServiceStatuses(supabase: SupabaseClient): Promise<ServiceStatus[]> {
-  const [openRouter, openAiSpend, openAiApi, apifySpend, vpsHealth] = await Promise.all([
-    checkOpenRouterCredits(),
+  const [openAiSpend, openAiApi, apifySpend, vpsHealth] = await Promise.all([
     checkOpenAiSpend(),
     checkOpenAiApiHealth(),
     checkApifySpend(supabase),
     checkVpsHealth(),
   ]);
-  return [openRouter, openAiSpend, openAiApi, apifySpend, ...vpsHealth].filter(
+  return [openAiSpend, openAiApi, apifySpend, ...vpsHealth].filter(
     (status): status is ServiceStatus => status !== null,
   );
 }

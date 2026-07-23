@@ -484,14 +484,22 @@ async function fetchImageAsDataUrl(url, fetchImpl = fetch) {
 }
 
 function firstMediaUrl(capturedAssets, options = {}) {
-  for (const asset of capturedAssets) {
+  // Prefer thumbnails (video previews) and images — never raw video URLs (Qwen can't read MP4).
+  // For carousels, the first image card is a representative sample for classification.
+  const prioritised = [
+    ...capturedAssets.filter((a) => cleanString(a?.kind)?.toLowerCase() === "thumbnail"),
+    ...capturedAssets.filter((a) => cleanString(a?.kind)?.toLowerCase() === "image"),
+    ...capturedAssets.filter((a) => !["video", "thumbnail", "image"].includes(cleanString(a?.kind)?.toLowerCase())),
+  ];
+  for (const asset of prioritised) {
+    // Prefer our own Supabase Storage copy over the Meta CDN (more reliable, no hotlink blocks)
     const value =
-      cleanString(asset.url) ??
-      cleanString(asset.public_url) ??
-      cleanString(asset.source_url) ??
       (cleanString(asset.storage_path) && typeof options.storagePublicUrlForPath === "function"
         ? options.storagePublicUrlForPath(asset.storage_path)
-        : null);
+        : null) ??
+      cleanString(asset.url) ??
+      cleanString(asset.public_url) ??
+      cleanString(asset.source_url);
     if (value) return value;
   }
   return null;

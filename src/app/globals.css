@@ -1734,6 +1734,40 @@ article.card a[href]:focus-visible,
 
 }
 
+.leads-heading-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.lead-sync-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.sync-feedback {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted, #6b7280);
+  max-width: 320px;
+  text-align: right;
+}
+
+.sync-feedback.sync-error {
+  color: #dc2626;
+}
+
+.sync-last-at {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted, #9ca3af);
+}
+
 .leads-table-wrap {
   max-width: 100%;
   overflow-x: auto;

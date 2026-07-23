@@ -12,14 +12,12 @@ export type InPlaceAdEditorProps = {
   creative: AdStudioCreative;
   onCreativeChange: (next: AdStudioCreative) => void;
   showToast: (msg: string) => void;
-  /** The ad is visible but its advisory QA pass (editor regions) hasn't landed yet. */
-  preparing?: boolean;
 };
 
 const MAX_TEXT_LENGTH = 200;
 const MAX_INSTRUCTION_LENGTH = 500;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const SLOW_EDIT_MS = 8000;
+const SLOW_EDIT_MS = 60000;
 const ZOOM_LEVELS = [1, 2, 3] as const;
 
 function labelForRegionKey(key: string): string {
@@ -74,7 +72,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function InPlaceAdEditor({ creative, onCreativeChange, showToast, preparing }: InPlaceAdEditorProps) {
+export function InPlaceAdEditor({ creative, onCreativeChange, showToast }: InPlaceAdEditorProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [textDraft, setTextDraft] = useState("");
   const [instruction, setInstruction] = useState("");
@@ -406,19 +404,13 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
   }
 
   if (regions.length === 0) {
-    // The finished render shows the moment it persists; the advisory QA pass
-    // that powers the hit-targets follows. The chip sits exactly where the
-    // edit toolbar will appear so nothing jumps when editing unlocks.
+    // The finished render shows the moment it persists; editor regions are
+    // detected in the background and unlock editing once they land. Until
+    // then the ad is shown plainly with no overlay or spinner.
     return (
       <div className="studio-clone-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="AI-designed ad creative" />
-        {preparing ? (
-          <div className="studio-editor-preparing" role="status" aria-live="polite">
-            <span className="studio-editor-preparing-spinner" aria-hidden />
-            Preparing your editor…
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -464,7 +456,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
                 {selected ? <span className="studio-inplace-handles" aria-hidden /> : null}
                 {pending ? (
                   <span className="studio-inplace-status" role="status">
-                    {stillWorking ? "Still working…" : pendingLabel ?? "Updating…"}
+                    {stillWorking ? "Still working… this can take a minute." : pendingLabel ?? "Updating…"}
                   </span>
                 ) : null}
               </button>
@@ -624,7 +616,7 @@ export function InPlaceAdEditor({ creative, onCreativeChange, showToast, prepari
           {busy ? (
             <div className="studio-inplace-progress" role="status" aria-live="polite">
               <Sparkles aria-hidden size={16} />
-              {stillWorking ? "Checking the updated ad…" : "Creating the scoped edit…"}
+              {stillWorking ? "Still working… this can take a minute." : "Creating the scoped edit…"}
             </div>
           ) : null}
         </aside>
