@@ -18,13 +18,37 @@ Do not print real secret values in logs or docs.
 | `STEEL_IMAGE` | Compose image | Must be a pinned Steel browser tag or digest. |
 | `UPTIME_KUMA_IMAGE` | Compose image | Pinned uptime monitor image. |
 | `HERMES_API_SERVER_KEY` | Hermes gateway | Required by compose. Can mirror `HERMES_WEBHOOK_SECRET` when rotating from older reset scripts. |
-| `HERMES_DEFAULT_MODEL` | Hermes/OpenRouter | Required model slug unless task-specific model JSON covers every task. |
-| `HERMES_ESCALATION_MODEL` | Hermes/OpenRouter | Escalation model slug. |
-| `OPENROUTER_API_KEY` | OpenRouter client | Required for LLM-backed page resolution, classification, audits, and investigations. |
-| `OPENAI_API_KEY` | Hermes content engine | Required for transcript-to-guide and other content runs. |
+| `HERMES_DEFAULT_MODEL` | Hermes resolver | Default non-image model slug. Defaults to `kimi-k2.6` (Moonshot/Kimi). Slugs route by prefix: `kimi-*`/`moonshot-*` -> Moonshot, `qwen-*` -> Alibaba DashScope. |
+| `MOONSHOT_API_KEY` | LLM resolver | Required. Authenticates Kimi/Moonshot models (`kimi-*`/`moonshot-*`) used for page resolution, classification, audits, investigations, and content generation. |
+| `DASHSCOPE_API_KEY` | LLM resolver | Required when any configured model is a `qwen-*` slug (e.g. `best_json`/`critic_review` defaults route here). |
 | `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
 | `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |
+
+## Default Model Routing
+
+All non-image models are OpenAI-compatible and route by slug prefix. Image
+generation models are configured separately and are unaffected by this cutover.
+
+| Task / policy slot | Default model | Provider | Key required |
+| --- | --- | --- | --- |
+| `page_resolution` | `qwen3.5-plus` | DashScope | `DASHSCOPE_API_KEY` |
+| `ad_classification` | `kimi-k2.5` (vision) | Moonshot | `MOONSHOT_API_KEY` |
+| `vision_classification` | `kimi-k2.5` (vision) | Moonshot | `MOONSHOT_API_KEY` |
+| `coverage_audit` | `qwen3.5-plus` | DashScope | `DASHSCOPE_API_KEY` |
+| `defect_investigation` | `kimi-k2.6` | Moonshot | `MOONSHOT_API_KEY` |
+| `best_copywriting` | `kimi-k2.6` | Moonshot | `MOONSHOT_API_KEY` |
+| `best_reasoning` | `kimi-k2.6` | Moonshot | `MOONSHOT_API_KEY` |
+| `best_json` | `qwen3.5-plus` | DashScope | `DASHSCOPE_API_KEY` |
+| `critic_review` | `qwen3.5-plus` | DashScope | `DASHSCOPE_API_KEY` |
+| `code_generation` | `kimi-k2.7-code` | Moonshot | `MOONSHOT_API_KEY` |
+| `best_image_prompting` | `kimi-k2.5` | Moonshot | `MOONSHOT_API_KEY` |
+| (fallback) | `kimi-k2.6` | Moonshot | `MOONSHOT_API_KEY` |
+
+`HERMES_MODELS_JSON` and `HERMES_CONTENT_MODELS_JSON` overrides always win over
+these built-in defaults. Unknown model slugs (anything not starting with
+`kimi`/`moonshot`/`qwen`) are a hard configuration error — there is no OpenAI
+fallback.
 
 ## Hermes Gateway And Models
 
@@ -37,13 +61,11 @@ Do not print real secret values in logs or docs.
 | `HERMES_GATEWAY_HOST_PORT` | `8642` | Bound to localhost on the VPS. |
 | `HERMES_DASHBOARD_HOST_PORT` | `9119` | Bound to localhost on the VPS. |
 | `HERMES_DASHBOARD_INSECURE` | `1` | Dashboard is not public; keep behind the VPS boundary. |
-| `HERMES_PROVIDER` | `openrouter` | Only `openrouter` is accepted by the TypeScript config. |
-| `HERMES_OPENROUTER_MODEL` | none | Legacy fallback model variable. |
-| `HERMES_OPENROUTER_MODELS_JSON` | `{}` | Optional per-task model map for `page_resolution`, `ad_classification`, `coverage_audit`, and `defect_investigation`. |
-| `HERMES_CONTENT_DEFAULT_MODEL` | `gpt-5.5` | Direct OpenAI model used by content runs when `HERMES_CONTENT_MODELS_JSON` has no matching override. |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Optional override for the OpenRouter API base. |
-| `OPENROUTER_SITE_URL` | none | Optional OpenRouter attribution header. |
-| `OPENROUTER_APP_NAME` | none | Optional OpenRouter app title header. |
+| `HERMES_MODELS_JSON` | `{}` | Optional per-task model map for `page_resolution`, `ad_classification`, `vision_classification`, `coverage_audit`, and `defect_investigation`. Overrides always win over the built-in Kimi/Qwen defaults. |
+| `HERMES_CONTENT_MODELS_JSON` | `{}` | Optional content policy-slot map (`best_copywriting`, `best_reasoning`, `best_json`, `critic_review`, `code_generation`, `best_image_prompting`) plus per-skill overrides. Wins over built-in defaults. |
+| `HERMES_MOONSHOT_BASE_URL` | `https://api.moonshot.ai/v1` | Override the Moonshot/Kimi OpenAI-compatible base URL. |
+| `HERMES_DASHSCOPE_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | Override the Alibaba DashScope (Qwen) OpenAI-compatible base URL. |
+| `HERMES_AGENT_BASE_URL` | `https://api.moonshot.ai/v1` | Base URL written into the agent-core `config.yaml` by `main-wrapper.sh`. |
 | `MEM0_API_KEY` | none | Passed through to Hermes when configured. |
 | `MEM0_PROJECT_ID` | `blockwise-research` | Passed through to Hermes. |
 | `RESEND_API_KEY` | none | Optional notification email provider key. |
@@ -166,3 +188,8 @@ Do not configure these for the active reset runtime:
 5. `META_COLLECTOR_*`
 6. `SEARCHAPI_*`
 7. `AD_COLLECTOR_*`
+8. `OPENAI_API_KEY` — no longer a user-configured secret. The research runtime
+   reads `MOONSHOT_API_KEY` / `DASHSCOPE_API_KEY` directly. The agent-core
+   (Python Hermes) still reads `OPENAI_API_KEY`, but `main-wrapper.sh` derives it
+   from `MOONSHOT_API_KEY` at exec time; do not set it in `.env`.
+9. `HERMES_ESCALATION_MODEL` — removed; escalation uses the standard resolver.

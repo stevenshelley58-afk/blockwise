@@ -11,10 +11,14 @@ host = "0.0.0.0"
 port = 8080
 
 [agent.model]
-provider_env = "HERMES_PROVIDER"
+# "openai" here means the OpenAI-compatible wire protocol, NOT api.openai.com.
+# The actual endpoint is resolved from model slug + base_url env:
+#   kimi-*/moonshot-* -> Moonshot (HERMES_AGENT_BASE_URL, default https://api.moonshot.ai/v1)
+#   qwen-*            -> Alibaba DashScope compatible mode
+# The runtime reads MOONSHOT_API_KEY / DASHSCOPE_API_KEY; there is no OpenAI provider.
+provider = "openai"
 default_model_env = "HERMES_DEFAULT_MODEL"
-escalation_model_env = "HERMES_ESCALATION_MODEL"
-task_models_json_env = "HERMES_OPENROUTER_MODELS_JSON"
+task_models_json_env = "HERMES_MODELS_JSON"
 
 [agent.memory]
 # Postgres is the system of record for decisions. mem0 is fuzzy recall only.

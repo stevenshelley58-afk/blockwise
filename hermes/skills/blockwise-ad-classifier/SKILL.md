@@ -17,17 +17,22 @@ hook, style, audience, and local target signal.
 
 ## Model Config
 
-Use `hermes/tools/research-runtime` OpenRouter support. Model names must come
-from env only:
+Use the `hermes/tools/research-runtime` OpenAI-compatible client. The provider
+and base URL are resolved from the model slug (Kimi/Moonshot or Qwen/DashScope);
+there is no OpenAI endpoint. Model names must come from env only — current
+defaults are Kimi/Qwen:
 
 ```bash
-OPENROUTER_API_KEY=<key>
-HERMES_DEFAULT_MODEL=<cheap-default-model>
-HERMES_ESCALATION_MODEL=<stronger-escalation-model>
-HERMES_OPENROUTER_MODELS_JSON={"ad_classification":"<model-from-operator-config>"}
+MOONSHOT_API_KEY=<key>          # required for kimi-*/moonshot-* models
+DASHSCOPE_API_KEY=<key>         # required for qwen-* models
+HERMES_DEFAULT_MODEL=kimi-k2.6
+HERMES_MODELS_JSON={"ad_classification":"<model-from-operator-config>"}
 ```
 
-Do not hardcode model names in prompts, scripts, or skill config.
+`ad_classification` defaults to a vision-capable Kimi model (`kimi-k2.5`) so the
+classifier can read captured creative images when copy is missing.
+`HERMES_MODELS_JSON` overrides always win. Do not hardcode model names in
+prompts, scripts, or skill config.
 
 ## Classification Shape
 
@@ -67,7 +72,7 @@ second attempt is invalid.
 ## Tools
 
 - `hermes/tools/research-runtime`
-- `hermes.openrouter.complete`
+- `hermes.openai.complete`
 - `blockwise.ingest.upsert_classification`
 - `blockwise.ingest.open_defect`
 - `hermes.write_decision`

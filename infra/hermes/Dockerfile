@@ -17,11 +17,13 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g agent-browser@0.27.1
+RUN npm install -g agent-browser@0.27.1 playwright-core@1.45.3
 
 COPY hermes/skills /app/skills
 COPY hermes/data /app/data
 COPY hermes/tools/research-runtime /app/research-runtime
+COPY hermes/tools/meta-library-capture /app/meta-library-capture
+RUN cd /app/meta-library-capture && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --omit=dev
 COPY infra/hermes/hermes.toml /app/hermes.toml
 COPY infra/hermes/main-wrapper.sh /opt/hermes/docker/main-wrapper.sh
 

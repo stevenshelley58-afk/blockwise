@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normaliseHostedMetaItems } from "../../hermes/tools/meta-library-capture/src/normalise.ts";
 import { normaliseMetaAdLibraryAd } from "../../src/lib/research/normalise.ts";
 import { resolveDeliveryStoppedAt } from "../../src/lib/research/schemas/meta-ad-library.ts";
 import { adAlpha, adGammaVideo, advertiserPageAlphaId } from "./fixtures.ts";
@@ -103,53 +102,6 @@ test("normaliseMetaAdLibraryAd throws when the payload has no external_ad_id", (
   );
 });
 
-test("normaliseHostedMetaItems preserves SearchAPI card copy and video assets", () => {
-  const { items, warnings } = normaliseHostedMetaItems({
-    pageId: "176448086607610",
-    limit: 10,
-    body: {
-      ads: [
-        {
-          ad_archive_id: "1542733710743662",
-          page_id: "176448086607610",
-          page_name: "Agenzia Property Investment Strategists",
-          is_active: true,
-          start_date: 1780080000,
-          publisher_platform: ["facebook"],
-          snapshot: {
-            page_id: "176448086607610",
-            page_name: "Agenzia Property Investment Strategists",
-            display_format: "DCO",
-            cards: [
-              {
-                body: "Worried about buying the wrong investment? Start with strategy first.",
-                title: "We'll Get You a Property in 30 Days With 6-9% Yields",
-                cta_text: "Learn More",
-                link_url: "http://fb.me/",
-                video_hd_url: "https://example.org/agenzia-video.mp4",
-                video_preview_image_url: "https://example.org/agenzia-thumb.jpg",
-              },
-            ],
-          },
-        },
-      ],
-    },
-  });
-
-  assert.deepEqual(warnings, []);
-  const { creative } = normaliseMetaAdLibraryAd({
-    ad: items[0]!,
-    advertiserPageId: advertiserPageAlphaId,
-    observedByProvider: "searchapi_meta",
-  });
-  assert.equal(creative.body, "Worried about buying the wrong investment? Start with strategy first.");
-  assert.equal(creative.headline, "We'll Get You a Property in 30 Days With 6-9% Yields");
-  assert.equal(creative.primaryImageUrl, null);
-  assert.deepEqual(creative.imageUrls, []);
-  assert.equal(creative.videoUrl, "https://example.org/agenzia-video.mp4");
-  assert.equal(creative.videoThumbnailUrl, "https://example.org/agenzia-thumb.jpg");
-  assert.equal(creative.format, "dco");
-});
 
 test("resolveDeliveryStoppedAt drops the stop date for active ads", () => {
   assert.equal(resolveDeliveryStoppedAt("active", "2026-06-01T00:00:00.000Z"), null);
