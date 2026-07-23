@@ -34,7 +34,7 @@ import type {
   FirstAdInput,
 } from "@/lib/adstudio";
 import { builtInAdStudioTemplates } from "@/lib/adstudio";
-import { cloneQaWarnings } from "@/lib/adstudio/clone-qa-warnings.ts";
+
 
 import { requestCreativeEdit } from "./canvas/creative-edit-client";
 import { FORMAT_META, MetaChromePreview, PreviewControls, VariantStrip } from "./preview";
@@ -676,14 +676,7 @@ export function AdStudioWorkbench({
       null
     );
   }, [editorFormat, pack.creatives, selectedVariant?.variantId]);
-  const cloneWarningKey = currentCreative?.canvas.cloneQa
-    ? `${currentCreative.creativeId}:${currentCreative.canvas.cloneQa.checkedAt}`
-    : "";
-  const cloneWarnings = useMemo(
-    () => cloneQaWarnings(currentCreative?.canvas.cloneQa),
-    [currentCreative?.canvas.cloneQa],
-  );
-  const showCloneWarnings = cloneWarningKey.length > 0 && cloneWarnings.length > 0 && !dismissedCloneWarningKeys.has(cloneWarningKey);
+
 
   const getVariantPrimaryImage = useCallback((variantId: string | undefined, sourcePack: AdStudioCampaignPack = pack) => {
     return primaryImageForVariant(sourcePack, variantId, editorFormat);
@@ -983,30 +976,7 @@ export function AdStudioWorkbench({
           ) : editorPreparing ? (
             <p className="studio-metachrome-edit-hint">Your ad is ready to preview - editing unlocks in a moment.</p>
           ) : null}
-          {showCloneWarnings && (
-            <div className="studio-clone-warning-strip" role="status" aria-live="polite">
-              <CircleAlert aria-hidden size={16} />
-              <div>
-                {cloneWarnings.map((warning) => (
-                  <p key={warning}>{warning}</p>
-                ))}
-              </div>
-              <button
-                type="button"
-                aria-label="Dismiss text warnings"
-                onClick={() => {
-                  if (!cloneWarningKey) return;
-                  setDismissedCloneWarningKeys((current) => {
-                    const next = new Set(current);
-                    next.add(cloneWarningKey);
-                    return next;
-                  });
-                }}
-              >
-                <X aria-hidden size={14} />
-              </button>
-            </div>
-          )}
+
         </div>
       );
     }
