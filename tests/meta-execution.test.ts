@@ -77,6 +77,29 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.leadForms.every((form) => form.privacyPolicyUrl === setup.privacyPolicyUrl), true);
 });
 
+test("buildMetaPublishPlan reuses an explicitly selected Meta campaign", () => {
+  const pack = buildPack();
+  const newCampaignPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const existingCampaignPlan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+    existingMetaCampaignId: "meta_campaign_456",
+  });
+
+  assert.equal(existingCampaignPlan.reconciledObjects.campaignId, "meta_campaign_456");
+  assert.notEqual(existingCampaignPlan.idempotencyKey, newCampaignPlan.idempotencyKey);
+  assert.notEqual(existingCampaignPlan.planId, newCampaignPlan.planId);
+});
+
 test("buildMetaPublishPlan applies user budget, geo, schedule, and placement controls", () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
@@ -103,6 +126,54 @@ test("buildMetaPublishPlan applies user budget, geo, schedule, and placement con
     location_types: ["home", "recent"],
   });
   assert.deepEqual(plan.adSets[0]?.targeting.facebook_positions, ["feed"]);
+});
+
+test("buildMetaPublishPlan targets selected suburbs and can include their surrounding area", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls: {
+      geo: {
+        type: "cities",
+        locations: [
+          { key: "101", name: "Subiaco", region: "Western Australia" },
+          { key: "102", name: "Shenton Park", region: "Western Australia" },
+        ],
+        includeSurroundingSuburbs: true,
+      },
+    },
+  });
+
+  assert.deepEqual(plan.adSets[0]?.targeting.geo_locations, {
+    cities: [
+      { key: "101", radius: 10, distance_unit: "kilometer" },
+      { key: "102", radius: 10, distance_unit: "kilometer" },
+    ],
+    location_types: ["home", "recent"],
+  });
+});
+
+test("buildMetaPublishPlan keeps exact selected suburbs when surrounding areas are disabled", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls: {
+      geo: {
+        type: "cities",
+        locations: [{ key: "101", name: "Subiaco", region: "Western Australia" }],
+        includeSurroundingSuburbs: false,
+      },
+    },
+  });
+
+  assert.deepEqual(plan.adSets[0]?.targeting.geo_locations, {
+    cities: [{ key: "101" }],
+    location_types: ["home", "recent"],
+  });
 });
 
 test("validateMetaConnectionSetup requires production Meta assets", () => {

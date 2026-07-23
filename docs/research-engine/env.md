@@ -21,7 +21,7 @@ Do not print real secret values in logs or docs.
 | `HERMES_DEFAULT_MODEL` | Hermes/OpenRouter | Required model slug unless task-specific model JSON covers every task. |
 | `HERMES_ESCALATION_MODEL` | Hermes/OpenRouter | Escalation model slug. |
 | `OPENROUTER_API_KEY` | OpenRouter client | Required for LLM-backed page resolution, classification, audits, and investigations. |
-| `OPENAI_API_KEY` | Hermes content engine | Required for transcript-to-blog and other content runs. |
+| `OPENAI_API_KEY` | Hermes content engine | Required for transcript-to-guide and other content runs. |
 | `SUPABASE_URL` | Compose and supervisor | Passed through as `HERMES_SUPABASE_URL`. |
 | `SUPABASE_SECRET_KEY` | Compose and supervisor | Preferred current server credential; passed through as `HERMES_SUPABASE_SECRET_KEY`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Compose and supervisor | Legacy JWT fallback; passed through as `HERMES_SUPABASE_SERVICE_ROLE_KEY`. |

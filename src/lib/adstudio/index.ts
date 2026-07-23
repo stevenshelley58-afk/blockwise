@@ -59,6 +59,7 @@ export { metaLeadAdPackSchema } from "./types.ts";
 export type {
   AdStudioBrandKit,
   AdStudioCampaign,
+  AdStudioTargetLocation,
   AdStudioCampaignPack,
   AdStudioCampaignVariant,
   AdStudioCanvasObject,

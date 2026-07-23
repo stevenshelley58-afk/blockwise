@@ -24,7 +24,7 @@ Updates `content_runs`, `content_artifacts`, `prompt_runs`,
 ## Constraints
 
 - Do not write content directly.
-- Do not publish blog, social, or Meta campaigns.
+- Do not publish guides, social posts, or Meta campaigns.
 - Continue only when downstream inputs are available.
 - Failed steps must be visible and rerunnable.
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Create controlled image briefs and prompts for the blog, social, and ad
+Create controlled image briefs and prompts for the guide, social, and ad
 creative slots.
 
 ## Output

@@ -74,7 +74,20 @@ test("the customer chooses fast or high quality without provider jargon", () => 
   assert.match(dialog, /High quality/);
   assert.match(dialog, /Usually ready in about 2–3 minutes/);
   assert.match(dialog, /generationQuality/);
+  assert.match(dialog, /We couldn't create this ad/);
+  assert.match(dialog, /error \? "Try again" : "Generate ad"/);
+  assert.match(dialog, /selectGenerationQuality/);
   assert.doesNotMatch(dialog, /Gemini|GPT Image|OpenAI|fal\.ai/);
+});
+
+test("the generation footer gives its status a full row on mobile", () => {
+  const styles = readFileSync("src/components/adstudio/styles.ts", "utf8");
+
+  assert.match(styles, /\.studio-newad-foot\{flex-wrap:wrap;justify-content:flex-end\}/);
+  assert.match(
+    styles,
+    /\.studio-newad-foot \.studio-newad-sel,\.studio-newad-foot \.studio-newad-error\{flex:1 0 100%;line-height:1\.45\}/,
+  );
 });
 
 test("goal-specific guidance does not introduce a second template recipe", () => {

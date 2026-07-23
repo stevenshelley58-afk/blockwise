@@ -16,7 +16,7 @@ import { createTextProviderForCandidate } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
 import type { AdStudioCloneQa, AdStudioCloneRegion } from "./types.ts";
 import {
-  isRetryableProviderFailure,
+  isProviderFallbackEligible,
   modelCandidateAttempts,
   resolveRuntimeModelProfile,
 } from "../operator/prompts/model-profile-runtime.ts";
@@ -189,7 +189,7 @@ export async function detectCloneRegions(input: DetectCloneRegionsInput): Promis
         attempts.push(execution.attempt);
         if (!execution.ok) {
           lastError = execution.error;
-          if (!isRetryableProviderFailure(execution.error)) break;
+          if (!isProviderFallbackEligible(execution.error)) break;
           continue;
         }
         output = execution.output;

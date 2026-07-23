@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Write the first long-form expert article draft for real estate agents from an
-operator brief and, when supplied, a source transcript.
+Write the first long-form Blockwise field-guide draft for real estate agents
+from an operator brief and, when supplied, a source transcript.
 
 ## Output
 
@@ -13,7 +13,7 @@ Strict JSON with `title`, `subtitle`, `intro`, `body_markdown`,
 ## Constraints
 
 - Direct, expert, practical, no hype.
-- Write a field guide, not a transcript summary.
+- Write a field guide, not a blog post or transcript summary.
 - Preserve useful meaning in fresh Blockwise language. Do not reproduce a
   distinctive run of more than eight words from the transcript.
 - Attribute third-party frameworks when the source is known; never present a

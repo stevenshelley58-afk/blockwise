@@ -21,7 +21,7 @@ export const CONTENT_STEPS = [
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_PROMPT_SET_NAME = "default-blockwise-authority-v1";
-const DEFAULT_APPROVAL_ACTIONS = ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"];
+const DEFAULT_APPROVAL_ACTIONS = ["approve_guide", "approve_images", "approve_social", "approve_ad", "request_changes"];
 
 export async function handleHermesContentRun(job, deps) {
   const contentRunId = job.payload?.contentRunId || job.payload?.content_run_id;
@@ -309,6 +309,8 @@ function buildPromptVariables(run, artifacts) {
     brand_voice: safeObject(run.input_json).tone_profile || "direct, expert, no hype",
     research_summary: artifacts.research_brief?.research_summary || "",
     strategy_brief: artifacts.strategy_brief || {},
+    guide_draft: artifacts.blog_draft || {},
+    guide_final: artifacts.blog_final || {},
     blog_draft: artifacts.blog_draft || {},
     blog_final: artifacts.blog_final || {},
     edited_markdown: artifacts.blog_final?.edited_markdown || "",
@@ -339,11 +341,11 @@ export function artifactsForContentSkill(skillName, output, context = {}) {
     case "blockwise-topic-researcher":
       return [{ artifactType: "research_brief", title: "Research brief", data: output }];
     case "blockwise-content-strategist":
-      return [{ artifactType: "strategy_brief", title: String(output.blog_title || "Strategy brief"), data: output }];
+      return [{ artifactType: "strategy_brief", title: String(output.guide_title || output.blog_title || "Strategy brief"), data: output }];
     case "blockwise-blog-writer":
-      return [{ artifactType: "blog_draft", title: String(output.title || "Blog draft"), data: output }];
+      return [{ artifactType: "blog_draft", title: String(output.title || "Guide draft"), data: output }];
     case "blockwise-blog-editor":
-      return [{ artifactType: "blog_final", title: "Edited blog", data: output }];
+      return [{ artifactType: "blog_final", title: "Edited guide", data: output }];
     case "blockwise-blog-formatter":
       return [{ artifactType: "formatted_page", title: String(output.page_title || "Formatted page"), data: output }];
     case "blockwise-seo-schema-builder":
@@ -458,7 +460,7 @@ export function deterministicContentSkillOutput(skillName, input) {
       };
     case "blockwise-content-strategist":
       return {
-        blog_title: topic,
+        guide_title: topic,
         slug,
         search_intent: "Agents trying to understand why Meta leads are cheap but commercially weak.",
         reader_problem: "They receive enquiries that do not become appraisals or listings.",
@@ -466,14 +468,14 @@ export function deterministicContentSkillOutput(skillName, input) {
         blockwise_point_of_view: "Lead generation works when content, offer, form quality, follow-up, and outcome feedback are designed as one loop.",
         cta,
         lead_magnet: offer,
-        article_outline: ["What agents usually get wrong", "Why Meta behaves this way", "The better system", "The Blockwise framework"],
+        guide_outline: ["What agents usually get wrong", "Why Meta behaves this way", "The better system", "The Blockwise framework"],
       };
     case "blockwise-blog-writer":
       return {
         title: topic,
         subtitle: "Most agents do not have a lead volume problem. They have a signal problem.",
         intro: "A low CPL can look good in a report while the sales team wastes time on people who never become appraisals.",
-        body_markdown: `# ${topic}\n\nMost real estate agents judge Meta campaigns too early and on the wrong metric. A form submit is not a listing opportunity.\n\n## What usually goes wrong\nAgents often optimise for cheap enquiries, broad offers, and fast form volume.\n\n## The Blockwise framework\nBlockwise connects the article, offer, instant form, lead inbox, qualification status, and follow-up action.`,
+        body_markdown: `# ${topic}\n\nMost real estate agents judge Meta campaigns too early and on the wrong metric. A form submit is not a listing opportunity.\n\n## What usually goes wrong\nAgents often optimise for cheap enquiries, broad offers, and fast form volume.\n\n## The Blockwise framework\nBlockwise connects the guide, offer, instant form, lead inbox, qualification status, and follow-up action.`,
         conclusion: "The better question is how to build a system that helps the platform and team recognise useful leads.",
         cta_block: `${offer}: ${cta}.`,
         meta_description: "Why real estate agents get weak Meta leads, and how Blockwise connects content, forms, follow-up, and qualified signals.",
@@ -505,7 +507,7 @@ export function deterministicContentSkillOutput(skillName, input) {
       return {
         seo_title: `${topic} | Blockwise`,
         meta_description: "A practical Blockwise guide to improving real estate Meta lead quality.",
-        canonical: `https://blockwise.sale/blog/${slug}`,
+        canonical: `https://blockwise.sale/guides/${slug}`,
         schema_json_ld: { "@context": "https://schema.org", "@type": "Article", headline: topic, publisher: { "@type": "Organization", name: "Blockwise" } },
         faq_schema: [],
       };
@@ -514,10 +516,10 @@ export function deterministicContentSkillOutput(skillName, input) {
         image_briefs: [{ slot: "hero", aspect_ratio: "16:9", prompt: "Premium SaaS dashboard abstraction showing weak signal becoming qualified outcome feedback.", negative_prompt: "No fake logos, no readable fake UI text, no AI people.", alt_text: "Abstract lead quality signal flow for a real estate Meta ads audit." }],
       };
     case "blockwise-page-builder":
-      return { page_path: `/blog/${slug}`, preview_url: `/operator/content-runs/${run.id || "draft"}#blog-preview`, status: "draft", build_notes: ["Hermes generated draft page data only."] };
+      return { page_path: `/guides/${slug}`, preview_url: `/operator/content-runs/${run.id || "draft"}#guide-preview`, status: "draft", build_notes: ["Hermes generated draft page data only."] };
     case "blockwise-social-post-generator":
       return {
-        facebook_post: { copy: `${topic}\n\nMost agents are not short on leads. They are short on qualified signals.`, link_url: `/blog/${slug}`, cta: "Read the full breakdown" },
+        facebook_post: { copy: `${topic}\n\nMost agents are not short on leads. They are short on qualified signals.`, link_url: `/guides/${slug}`, cta: "Read the full guide" },
         instagram_post: { caption: "Cheap leads are not always good leads. The signal you feed Meta matters.", hashtags: ["#realestateagents", "#metaads", "#sellerleads"] },
         instagram_story: { frames: [{ frame: 1, text: "Your CPL is not the whole problem." }, { frame: 2, text: offer }] },
       };
@@ -538,15 +540,15 @@ export function deterministicContentSkillOutput(skillName, input) {
     case "blockwise-compliance-reviewer":
       return { status: "pass", risk_level: "low", issues: [], required_changes: [], approval_blockers: [] };
     case "blockwise-agent-reviewer":
-      return { overall_score: 88, recommendation: "approve", best_assets: ["Blog framework", "Lead audit CTA"], weak_assets: [], required_edits: [], final_summary_for_operator: "Draft package is ready for operator review." };
+      return { overall_score: 88, recommendation: "approve", best_assets: ["Guide framework", "Lead audit CTA"], weak_assets: [], required_edits: [], final_summary_for_operator: "Draft package is ready for operator review." };
     case "blockwise-artifact-packager":
       return {
-        blog: { title: topic, preview_url: `/operator/content-runs/${run.id || "draft"}#blog-preview`, markdown: input.artifacts.blog_final?.edited_markdown || "", seo: input.artifacts.seo_schema || {} },
+        guide: { title: topic, preview_url: `/operator/content-runs/${run.id || "draft"}#guide-preview`, markdown: input.artifacts.blog_final?.edited_markdown || "", seo: input.artifacts.seo_schema || {} },
         images: input.artifacts.image_prompt?.image_briefs || [],
         social_posts: { facebook: input.artifacts.social_facebook, instagram: input.artifacts.social_instagram },
         lead_ad: input.artifacts.lead_ad || {},
         instant_form: input.artifacts.instant_form || {},
-        approval_actions: ["approve_blog", "approve_images", "approve_social", "approve_ad", "request_changes"],
+        approval_actions: ["approve_guide", "approve_images", "approve_social", "approve_ad", "request_changes"],
       };
     default:
       return {};

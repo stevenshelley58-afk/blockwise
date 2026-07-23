@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { loadPersistedModelProfileVersions } from "../src/lib/ai/model-profile-store.ts";
 import {
-  isRetryableProviderFailure,
+  isProviderFallbackEligible,
   modelCandidateAttempts,
   resolveRuntimeProfileFromVersions,
 } from "../src/lib/operator/prompts/model-profile-runtime.ts";
@@ -82,8 +82,9 @@ test("runtime model attempts expose one primary and at most one declared fallbac
   );
 });
 
-test("provider fallback requires an explicit retryable discriminator", () => {
-  assert.equal(isRetryableProviderFailure(new Error("generic failure")), false);
-  assert.equal(isRetryableProviderFailure({ retryable: false }), false);
-  assert.equal(isRetryableProviderFailure({ retryable: true }), true);
+test("provider fallback requires an explicit fallback or retry discriminator", () => {
+  assert.equal(isProviderFallbackEligible(new Error("generic failure")), false);
+  assert.equal(isProviderFallbackEligible({ retryable: false }), false);
+  assert.equal(isProviderFallbackEligible({ retryable: true }), true);
+  assert.equal(isProviderFallbackEligible({ retryable: false, fallbackEligible: true }), true);
 });

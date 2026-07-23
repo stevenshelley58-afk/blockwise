@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Create SEO metadata and Article schema for the draft blog package.
+Create SEO metadata and Article schema for the draft guide package.
 
 ## Output
 

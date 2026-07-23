@@ -29,6 +29,7 @@ import type {
   AdStudioCreative,
   AdStudioFormat,
   AdStudioOfferTemplate,
+  AdStudioTargetLocation,
   AdStudioTemplate,
   FirstAdInput,
 } from "@/lib/adstudio";
@@ -294,6 +295,7 @@ export function AdStudioWorkbench({
 }: AdStudioWorkbenchProps) {
   const [pack, setPack] = useState(initialPack);
   const searchParams = useSearchParams();
+  const openPublishOnLoad = searchParams.get("publish") === "1";
   const visibleBuiltInTemplates = useMemo(() => builtInAdStudioTemplates(), []);
   const [activeSampleId, setActiveSampleId] = useState<string | undefined>(undefined);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -318,6 +320,20 @@ export function AdStudioWorkbench({
     setDestinationUrl(value);
     studio.setSaveState("saving");
   }
+  function updateCampaignTargeting(locations: AdStudioTargetLocation[], includeSurroundingSuburbs: boolean | undefined) {
+    setPack((current) => ({
+      ...current,
+      campaign: {
+        ...current.campaign,
+        market: {
+          ...current.campaign.market,
+          targetSuburbs: locations,
+          includeSurroundingSuburbs,
+        },
+      },
+    }));
+    studio.setSaveState("saving");
+  }
   const [generation, setGeneration] = useState<GenerationProgress | null>(null);
   const [uploadedAssets, setUploadedAssets] = useState<Array<{ src: string; label: string; type: string; ratio: string }>>([]);
   const [pendingMediaReplacement, setPendingMediaReplacement] = useState<{ src: string; label: string } | null>(null);
@@ -326,6 +342,7 @@ export function AdStudioWorkbench({
   const [samplePickerInitialId, setSamplePickerInitialId] = useState<string | undefined>(undefined);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [brandPromptOpen, setBrandPromptOpen] = useState(false);
+  const [publishCreativeSource, setPublishCreativeSource] = useState<"current" | "library">("current");
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDraftRef = useRef<((options?: { silent?: boolean }) => Promise<boolean>) | null>(null);
   const flushDraftBeaconRef = useRef<(() => boolean) | null>(null);
@@ -335,7 +352,7 @@ export function AdStudioWorkbench({
   const [healthNotice, setHealthNotice] = useState<string | null>(null);
   const [longWait, setLongWait] = useState(false);
 
-  const studio = useAdStudio();
+  const studio = useAdStudio(openPublishOnLoad ? "publish" : "home");
   const { brand, initials } = useBrandKit(brandKit);
   // B2: an unapproved extracted kit can generate and edit, but is flagged as a
   // draft everywhere and keeps publish blocked until it is confirmed.
@@ -510,12 +527,14 @@ export function AdStudioWorkbench({
 
   function goToSection(section: import("./use-ad-studio").StudioSection) {
     setSelectedElement("canvas");
+    if (section !== "publish") setPublishCreativeSource("current");
     studio.setSection(section);
     studio.setMobileTab(section as import("./use-ad-studio").MobileTab);
   }
 
   function openSamplePicker(initialSampleId?: string) {
     setSelectedElement("canvas");
+    setPublishCreativeSource("library");
     setSamplePickerInitialId(initialSampleId);
     setSamplePickerOpen(true);
   }
@@ -805,6 +824,7 @@ export function AdStudioWorkbench({
 
   async function handleGenerateFirstAd(input: FirstAdInput) {
     await generateFirstAd(input);
+    setPublishCreativeSource("current");
     setActiveSampleId(input.templateId);
     setSelectedElement("image");
     studio.setSection("media");
@@ -1171,8 +1191,11 @@ export function AdStudioWorkbench({
         <PublishSetupPanel
           campaignId={pack.campaign.campaignId}
           campaignPack={pack}
+          creativeSource={publishCreativeSource}
+          initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
           destinationUrl={destinationUrl}
           onChangeDestinationUrl={updateDestinationUrl}
+          onChangeTargeting={updateCampaignTargeting}
           onExport={exportCreatives}
           onDelete={deleteCampaign}
           brandApproved={!brandIsDraft}
@@ -1241,6 +1264,7 @@ export function AdStudioWorkbench({
 
       <TopBar
         campaignName={campaignName}
+        minimal={studio.section === "publish"}
         showMore={studio.showMore}
         setShowMore={studio.setShowMore}
         onSave={saveDraft}
@@ -1250,7 +1274,7 @@ export function AdStudioWorkbench({
       />
 
       <div className="studio-desktop-body">
-        <aside className="studio-rail" aria-label="Ad Studio sections">
+        {studio.section !== "publish" && <aside className="studio-rail" aria-label="Ad Studio sections">
           <span className="studio-rail-label">Create ad</span>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -1295,7 +1319,7 @@ export function AdStudioWorkbench({
               </button>
             );
           })}
-        </aside>
+        </aside>}
 
         {studio.section === "home" ? (
           <section className="studio-home-shell" aria-label="Ad Studio home">
@@ -1306,6 +1330,10 @@ export function AdStudioWorkbench({
               </Link>
             )}
             {renderHomePanel()}
+          </section>
+        ) : studio.section === "publish" ? (
+          <section className="studio-publish-shell" aria-label="Publish campaign">
+            {!isMobileViewport ? renderPanel() : null}
           </section>
         ) : (
           <>
@@ -1372,7 +1400,7 @@ export function AdStudioWorkbench({
       </div>
 
       <div className="studio-mobile-body">
-        {brandIsDraft && studio.mobileTab !== "home" && (
+        {brandIsDraft && studio.mobileTab !== "home" && studio.mobileTab !== "publish" && (
           <Link href="/ad-studio/brand" className="studio-draft-brand-chip" style={{ marginTop: 14 }}>
             <CircleAlert aria-hidden size={15} />
             <span><b>Draft brand in use.</b> Confirm your brand before publishing.</span>
@@ -1402,13 +1430,16 @@ export function AdStudioWorkbench({
           </>
         )}
 
-        {studio.mobileTab === "publish" && (
-          <div className="studio-mobile-panel">
+        {studio.mobileTab === "publish" && isMobileViewport && (
+          <div className="studio-mobile-panel studio-mobile-publish-panel">
             <PublishSetupPanel
               campaignId={pack.campaign.campaignId}
               campaignPack={pack}
+              creativeSource={publishCreativeSource}
+              initialStep={openPublishOnLoad || publishCreativeSource === "library" ? 1 : 0}
               destinationUrl={destinationUrl}
               onChangeDestinationUrl={updateDestinationUrl}
+              onChangeTargeting={updateCampaignTargeting}
               onExport={exportCreatives}
               onDelete={deleteCampaign}
               brandApproved={!brandIsDraft}
@@ -1435,7 +1466,7 @@ export function AdStudioWorkbench({
           </div>
         )}
 
-        {(studio.mobileTab === "media" || studio.mobileTab === "text" || studio.mobileTab === "publish") && (
+        {(studio.mobileTab === "media" || studio.mobileTab === "text") && (
           <div className="studio-mobile-variants">
             <VariantStrip
               variants={variants}
@@ -1495,9 +1526,7 @@ export function AdStudioWorkbench({
                   openSamplePicker();
                   return;
                 }
-                setSelectedElement("canvas");
-                studio.setSection(item.id);
-                studio.setMobileTab(item.id);
+                goToSection(item.id);
               }}
             >
               <Icon aria-hidden size={22} />

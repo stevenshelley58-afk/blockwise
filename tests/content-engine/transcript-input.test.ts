@@ -69,22 +69,27 @@ test("operator intake makes transcript the primary required field", () => {
   const page = readFileSync("src/app/(operator)/operator/content-runs/page.tsx", "utf8");
   const css = readFileSync("src/app/globals.css", "utf8");
 
-  assert.match(component, /Create a blog from a transcript/u);
+  assert.match(component, /Create a guide from a transcript/u);
   assert.match(component, /name="source_transcript"|value=\{form\.source_transcript\}/u);
   assert.match(component, /minLength=\{80\}/u);
   assert.match(component, /<details className="content-run-advanced">/u);
-  assert.match(component, /Create blog draft/u);
-  assert.match(page, /title="Transcript to blog"/u);
+  assert.match(component, /Create guide draft/u);
+  assert.match(page, /title="Transcript to guide"/u);
+  assert.doesNotMatch(component, /\bblog\b/iu);
+  assert.doesNotMatch(page, /\bblog\b/iu);
   assert.match(css, /\.content-run-transcript-field/u);
   assert.match(css, /min-height: 44px/u);
 });
 
-test("prompt migration activates transcript-aware editorial prompts", () => {
-  const migration = readFileSync("supabase/migrations/202607190003_transcript_blog_prompt_v2.sql", "utf8");
+test("prompt migration activates transcript-aware guide prompts", () => {
+  const migration = readFileSync("supabase/migrations/202607220001_content_guide_prompt_v3.sql", "utf8");
 
   assert.match(migration, /source_transcript/iu);
   assert.match(migration, /sold-price-list seller-leads guide/iu);
   assert.match(migration, /Do not reproduce a distinctive run of more than eight words/iu);
-  assert.match(migration, /template\.version = 2/iu);
+  assert.match(migration, /'Guide writer'/u);
+  assert.match(migration, /guide_title/u);
+  assert.match(migration, /guide_outline/u);
+  assert.match(migration, /Return strict JSON with guide, images/iu);
   assert.match(migration, /default-blockwise-authority-v1/iu);
 });
