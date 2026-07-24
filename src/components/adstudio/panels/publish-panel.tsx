@@ -97,7 +97,7 @@ type PublishSetupPanelProps = {
   onRetryExportFormat?: (format: AdStudioFormat) => void;
 };
 
-const STEPS = ["Campaign setup", "Creatives", "Lead form", "Destination", "Budget", "Review", "Live"] as const;
+const STEPS = ["Campaign setup", "Creatives", "Lead form", "Budget", "Review", "Live"] as const;
 const BUDGET_PRESETS = [10, 20, 50] as const;
 const DURATION_PRESETS = [7, 14, 30] as const;
 
@@ -490,16 +490,14 @@ export function PublishSetupPanel({
   }
 
   const continueDisabled = stepIndex === 0
-    ? !campaignStepReady
+    ? !campaignStepReady || !destinationReady
     : stepIndex === 1
       ? !creativeStepReady
       : stepIndex === 2
         ? !leadFormStepReady
         : stepIndex === 3
-          ? !destinationReady
-          : stepIndex === 4
-            ? !budgetStepReady
-            : false;
+          ? !budgetStepReady
+          : false;
 
   return (
     <div className="studio-publish-flow">
@@ -656,6 +654,19 @@ export function PublishSetupPanel({
                   </div>
                 </div>
               )}
+
+              <label className="studio-publish-field">
+                <span>Destination URL</span>
+                <input
+                  type="url"
+                  value={destinationUrl}
+                  placeholder="https://your-agency.com.au/appraisal"
+                  aria-invalid={destinationUrl.length > 0 && !destinationReady}
+                  onChange={(event) => onChangeDestinationUrl?.(event.target.value)}
+                  readOnly={!onChangeDestinationUrl}
+                />
+              </label>
+              {destinationUrl.length > 0 && !destinationReady && <p className="studio-field-error">Enter a full http or https URL.</p>}
 
               <div className="studio-connection-row">
                 <Building2 aria-hidden size={18} />
@@ -835,24 +846,6 @@ export function PublishSetupPanel({
           )}
 
           {stepIndex === 3 && (
-            <section className="studio-publish-screen" aria-labelledby="destination-title">
-              <h1 id="destination-title">Destination</h1>
-              <label className="studio-publish-field">
-                <span>Destination URL</span>
-                <input
-                  type="url"
-                  value={destinationUrl}
-                  placeholder="https://your-agency.com.au/appraisal"
-                  aria-invalid={destinationUrl.length > 0 && !destinationReady}
-                  onChange={(event) => onChangeDestinationUrl?.(event.target.value)}
-                  readOnly={!onChangeDestinationUrl}
-                />
-              </label>
-              {destinationUrl.length > 0 && !destinationReady && <p className="studio-field-error">Enter a full http or https URL.</p>}
-            </section>
-          )}
-
-          {stepIndex === 4 && (
             <section className="studio-publish-screen" aria-labelledby="budget-title">
               <h1 id="budget-title">Budget</h1>
 
@@ -969,14 +962,13 @@ export function PublishSetupPanel({
             </section>
           )}
 
-          {stepIndex === 5 && (
+          {stepIndex === 4 && (
             <section className="studio-publish-screen" aria-labelledby="review-title">
               <h1 id="review-title">Review</h1>
               <div className="studio-review-list">
                 <div><span>Campaign</span><strong>{campaignMode === "existing" ? selectedCampaign?.name : campaignPack.campaign.name}</strong></div>
                 <div><span>Creatives</span><strong>{selectedVariantIds.length}</strong></div>
                 <div><span>Lead form</span><strong>{leadForm.questions.filter((q) => q.trim()).length} question{leadForm.questions.filter((q) => q.trim()).length === 1 ? "" : "s"}</strong></div>
-                <div><span>Destination</span><strong>{destinationUrl}</strong></div>
                 <div><span>Audience</span><strong>{campaignMode === "existing" ? "Existing campaign targeting" : formatTargetAudience(targetSuburbs, includeSurroundingSuburbs)}</strong></div>
                 <div><span>Budget</span><strong>${dailyBudgetAud}/day · {scheduleSummary}</strong></div>
               </div>
@@ -1011,7 +1003,7 @@ export function PublishSetupPanel({
             </section>
           )}
 
-          {stepIndex === 6 && (
+          {stepIndex === 5 && (
             <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
               <h1 id="live-title">Live</h1>
               {publishDone ? (
