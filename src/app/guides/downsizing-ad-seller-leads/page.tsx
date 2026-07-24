@@ -7,9 +7,9 @@ import { GuidesShell } from "@/components/guides/guides-shell";
 
 import "../guides.css";
 
-const title = "The downsizing ad that generates seller leads without a seller campaign";
+const title = "How to use a downsizer campaign to uncover seller intent";
 const description =
-  "A downsizing-themed Meta lead ad attracts homeowners who must sell before they buy — generating seller leads without running an expensive seller-specific campaign.";
+  "A downsizer-themed Meta lead ad offers a list of low-maintenance homes and attracts homeowners who may need to sell before they buy — a practical way to uncover seller intent through a buyer-focused campaign.";
 const canonical = "/guides/downsizing-ad-seller-leads";
 
 export const metadata: Metadata = {
@@ -46,12 +46,12 @@ const faqSchema = {
     {
       "@type": "Question",
       name: "Is this deceptive? The ad looks like a buyer ad but I want seller leads.",
-      acceptedAnswer: { "@type": "Answer", text: "No. The ad offers exactly what it promises: a list of homes suited to downsizers. The seller conversation emerges from the follow-up call when you ask whether they need to sell before buying." },
+      acceptedAnswer: { "@type": "Answer", text: "The approach is transparent when the advertised list is genuine, the properties match the stated criteria, the resource is delivered as promised, and follow-up clearly identifies the agent and purpose of contact. Agency, disclosure and conflict requirements vary by state and transaction structure." },
     },
     {
       "@type": "Question",
       name: "What percentage of downsizing leads are actually sellers?",
-      acceptedAnswer: { "@type": "Answer", text: "A well-targeted downsizing ad in a market with a meaningful price gap will typically produce 40–60% leads who already own a home. Of those, a significant portion will need to sell before buying." },
+      acceptedAnswer: { "@type": "Answer", text: "It varies by market and timing. Track what percentage of your leads already own a home from your own campaign data. Then track how many homeowner leads need to sell before buying." },
     },
     {
       "@type": "Question",
@@ -61,7 +61,7 @@ const faqSchema = {
     {
       "@type": "Question",
       name: "How long before I see seller results from this campaign?",
-      acceptedAnswer: { "@type": "Answer", text: "Buyer closings can happen within 30–60 days. Seller listings from the same campaign typically take 60–120 days because the homeowner needs to resolve their buying decision before committing to a sale." },
+      acceptedAnswer: { "@type": "Answer", text: "Results vary by market and individual circumstances. Buyer closings may happen within a shorter planning range. Seller listings from the same campaign typically take longer. Track this campaign on a 90-day horizon at minimum." },
     },
     {
       "@type": "Question",
@@ -87,7 +87,7 @@ export default function DownsizingAdGuidePage() {
               <p className="bw-guides-label">The hidden logic</p>
               <h1>{title}</h1>
               <p className="bw-article-deck">
-                Seller-lead campaigns are the most expensive and most difficult ads in real estate. There is a cheaper path — and it runs through a buyer ad.
+                Offer a useful list of low-maintenance homes, then qualify whether the buyer also needs to sell before purchasing.
               </p>
               <div className="bw-article-byline">
                 <span>By Blockwise</span>
@@ -106,12 +106,24 @@ export default function DownsizingAdGuidePage() {
             </div>
           </header>
 
+          <div className="bw-article-at-glance">
+            <h2>At a glance</h2>
+            <dl>
+              <div><dt>Offer</dt><dd>A list of low-maintenance homes for downsizers</dd></div>
+              <div><dt>Setup time</dt><dd>60 to 90 minutes</dd></div>
+              <div><dt>Initial test</dt><dd>A$20 daily for 14 to 21 days</dd></div>
+              <div><dt>Primary metric</dt><dd>Homeowner rate and seller conversations</dd></div>
+              <div><dt>Review point</dt><dd>90-day horizon, not 14 days</dd></div>
+              <div><dt>Compliance</dt><dd>Consent, disclosure, state agency rules</dd></div>
+            </dl>
+          </div>
+
           <div className="bw-article-body">
             <aside className="bw-article-toc" aria-label="On this page">
               <strong>On this page</strong>
               <a href="#logic">The hidden logic</a>
               <a href="#market">When the market works</a>
-              <a href="#shift">The SHIFT framework</a>
+              <a href="#conditions">Conditions to check</a>
               <a href="#campaign">Build the campaign</a>
               <a href="#follow-up">The follow-up that finds the seller</a>
               <a href="#measure">Measure the campaign</a>
@@ -123,19 +135,19 @@ export default function DownsizingAdGuidePage() {
                   <span>Seller-lead campaigns are the most expensive and most difficult ads in real estate.</span> They ask directly: "Thinking of selling? Get a free home evaluation." That offer attracts two groups — people who are ready to list now (rare) and people who are curious but months away (common). The cost per lead is high because the offer signals a commitment most homeowners are not ready to make.
                 </p>
                 <p>
-                  A downsizing ad is framed as a buyer campaign. It offers a list of homes priced below the local average — the kind of property a downsizer would move to. But the audience it attracts has a second characteristic: these people already own a more expensive home. To buy a cheaper one, they generally need to sell first.
+                  A downsizer campaign is framed as a buyer campaign. It offers a list of low-maintenance homes priced below the local average — the kind of property a downsizer would move to. But the audience it attracts has a second characteristic: these people already own a more expensive home. To buy a cheaper one, they generally need to sell first.
                 </p>
                 <p>
-                  That means every "buyer" lead from a downsizing ad is potentially two transactions: a listing on the more expensive property and a purchase on the cheaper one. The ad costs the same as a standard buyer campaign, but the downstream opportunity is a listing, not just a buyer presentation.
+                  That means a buyer lead from a downsizing ad may also represent a sale opportunity — a listing on the more expensive property and a purchase on the cheaper one. The cost per lead is comparable to a standard buyer campaign, but the downstream opportunity may include both a purchase and a sale.
                 </p>
               </section>
 
               <section id="market" className="bw-flow-section" aria-labelledby="market-title">
                 <div className="bw-section-heading">
                   <span>When the market makes this work</span>
-                  <h2 id="market-title">Downsizing ads need a price gap.</h2>
+                  <h2 id="market-title">Downsizer campaigns need a price gap.</h2>
                 </div>
-                <div className="bw-signal-flow" role="img" aria-label="The market conditions that make a downsizing ad profitable">
+                <div className="bw-signal-flow" role="img" aria-label="The market conditions that make a downsizer campaign worthwhile">
                   <div><b>01</b><strong>Price gap</strong><span>Meaningful difference between average and target</span></div>
                   <span className="bw-flow-arrow" aria-hidden>→</span>
                   <div><b>02</b><strong>Housing stock</strong><span>Single-storey, low-maintenance homes</span></div>
@@ -149,18 +161,18 @@ export default function DownsizingAdGuidePage() {
                 <p className="bw-article-note">If your market has no meaningful price gap between the average home and the next step down, the angle will not produce seller leads — there is no financial reason to downsize.</p>
               </section>
 
-              <section id="shift" className="bw-list-section">
+              <section id="conditions" className="bw-list-section">
                 <div className="bw-section-heading bw-section-heading-split">
-                  <span>The SHIFT framework</span>
-                  <h2>Five conditions for a profitable downsizing ad.</h2>
-                  <p>If three or more conditions are green, a downsizing ad will likely produce a mix of buyer and seller leads. If two or fewer are green, choose a different angle.</p>
+                  <span>Conditions to check</span>
+                  <h2>Five conditions for a profitable downsizer campaign.</h2>
+                  <p>If three or more conditions are green, a downsizer campaign will likely produce a mix of buyer and seller leads. If two or fewer are green, choose a different angle.</p>
                 </div>
                 <div className="bw-list-grid">
-                  <div className="bw-list-item"><b>S</b><div><h3>Spread</h3><p>Is there a meaningful price gap between the average home and the downsizer target?</p><span>Green: Average $700K, target $500K–$650K</span></div></div>
-                  <div className="bw-list-item"><b>H</b><div><h3>Housing stock</h3><p>Does your market have the property type downsizers want?</p><span>Green: Single-storey, low-maintenance villas</span></div></div>
-                  <div className="bw-list-item"><b>I</b><div><h3>Intent signal</h3><p>Are people searching for or enquiring about smaller homes?</p><span>Green: Increasing searches for "single-storey"</span></div></div>
-                  <div className="bw-list-item"><b>F</b><div><h3>Feature recognition</h3><p>Can you name the downsizer property type in one phrase?</p><span>Green: "Single-storey homes under $500K"</span></div></div>
-                  <div className="bw-list-item"><b>T</b><div><h3>Timing</h3><p>Are market conditions pushing people toward downsizing?</p><span>Green: Rising rates, aging demographic, cost pressure</span></div></div>
+                  <div className="bw-list-item"><b>1</b><div><h3>Price gap</h3><p>Is there a meaningful difference between the average home and the downsizer target?</p><span>Green: Average A$700K, target A$500K–A$650K</span></div></div>
+                  <div className="bw-list-item"><b>2</b><div><h3>Housing stock</h3><p>Does your market have the property type downsizers want?</p><span>Green: Single-storey, low-maintenance villas</span></div></div>
+                  <div className="bw-list-item"><b>3</b><div><h3>Intent signal</h3><p>Are people searching for or enquiring about smaller homes?</p><span>Green: Increasing searches for "single-storey"</span></div></div>
+                  <div className="bw-list-item"><b>4</b><div><h3>Feature recognition</h3><p>Can you name the downsizer property type in one phrase?</p><span>Green: "Single-storey homes under A$500K"</span></div></div>
+                  <div className="bw-list-item"><b>5</b><div><h3>Market timing</h3><p>Are market conditions pushing people toward downsizing?</p><span>Green: Rising rates, ageing demographic, cost pressure</span></div></div>
                 </div>
               </section>
 
@@ -174,15 +186,15 @@ export default function DownsizingAdGuidePage() {
                     <div><dt>Objective</dt><dd>Leads</dd></div>
                     <div><dt>Special Ad Category</dt><dd>Housing</dd></div>
                     <div><dt>Conversion location</dt><dd>Instant forms</dd></div>
-                    <div><dt>Budget</dt><dd>$20/day</dd></div>
-                    <div><dt>Location</dt><dd>Market centre, 15-mile radius</dd></div>
-                    <div><dt>Price band</dt><dd>Average + 10% ceiling, $150K below floor</dd></div>
-                    <div><dt>Feature</dt><dd>Single-storey, bungalow, low-maintenance</dd></div>
+                    <div><dt>Budget</dt><dd>A$20/day</dd></div>
+                    <div><dt>Location</dt><dd>Market centre, minimum radius per the housing special ad category</dd></div>
+                    <div><dt>Price band</dt><dd>Average + 10% ceiling, A$150K below floor</dd></div>
+                    <div><dt>Feature</dt><dd>Single-storey, low-maintenance</dd></div>
                   </dl>
                 </div>
                 <div className="bw-copy-specimen">
                   <div className="bw-copy-specimen-labels"><span>Primary text</span><span>Copy specimen</span></div>
-                  <blockquote>Stop scrolling. The most up-to-date list of <mark>single-storey homes</mark> under <mark>[$price]</mark> in <mark>[Suburb]</mark> is here — updated daily, direct from the MLS. Perfect for downsizers, first-home buyers and investors.</blockquote>
+                  <blockquote>Stop scrolling. The most up-to-date list of <mark>single-storey homes</mark> under <mark>[A$price]</mark> in <mark>[Suburb]</mark> is here — updated daily, direct from an authorised property feed. Perfect for downsizers, first-home buyers and investors.</blockquote>
                   <div className="bw-copy-specimen-foot"><strong>[Suburb] single-storey homes under [price] — updated daily</strong><span>Learn more</span></div>
                 </div>
                 <p>The word "downsizers" appears in the copy alongside "first-home buyers" and "investors." The ad does not single out downsizers or ask them to identify as sellers. It offers a list and lets the audience self-select.</p>
@@ -198,7 +210,7 @@ export default function DownsizingAdGuidePage() {
                   <div><b>Q1</b><span /><section><h3>Already looking or browsing?</h3><p>Tells you how warm the lead is.</p></section></div>
                   <div><b>Q2</b><span /><section><h3>Do you currently own a home?</h3><p>This is the key question. If yes, the next question follows naturally.</p></section></div>
                   <div><b>Q3</b><span /><section><h3>Would you need to sell before buying?</h3><p>Most downsizers will say yes. That is your seller lead.</p></section></div>
-                  <div><b>Q4</b><span /><section><h3>What is your timeline?</h3><p>30–60 days means hot. 6–12 months means nurture. Over a year means pipeline.</p></section></div>
+                  <div><b>Q4</b><span /><section><h3>What is your timeline?</h3><p>A shorter planning range means a warmer lead. A longer range means nurture or long-term pipeline.</p></section></div>
                 </div>
                 <p>When they confirm they need to sell, shift the conversation:</p>
                 <div className="bw-copy-specimen">
@@ -207,8 +219,13 @@ export default function DownsizingAdGuidePage() {
                   <div className="bw-copy-specimen-foot"><strong>Not a listing pitch — a practical offer</strong><span>Tied to the buyer conversation</span></div>
                 </div>
                 <aside className="bw-compliance-note">
-                  <strong>The double-end opportunity</strong>
-                  <p>When a downsizing lead confirms they need to sell and buy, you have a chance to represent both sides. Do not assume the listing is yours. Do your buyer job well first. The listing conversation follows naturally from trust built through the process.</p>
+                  <strong>The sale and purchase opportunity</strong>
+                  <p>When a downsizing lead confirms they need to sell and buy, you have a chance to coordinate both the sale and the purchase. Do not assume the listing is yours. Do your buyer job well first. The listing conversation follows naturally from trust built through the process.</p>
+                </aside>
+                <aside className="bw-compliance-note">
+                  <strong>Compliance and disclosure</strong>
+                  <p>Any follow-up — phone, email, SMS or Messenger — must comply with Australian spam and privacy laws. You need consent, clear sender identification, and a functional unsubscribe facility. See the <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">ACMA guidance on avoiding spam</a> and the <a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">OAIC direct marketing guidance</a>.</p>
+                  <p>Agency, disclosure and conflict requirements vary by state and transaction structure. If you are acting for both a buyer and a seller in a related transaction, check your state's requirements for disclosing that relationship and any conflict of interest.</p>
                 </aside>
               </section>
 
@@ -217,20 +234,24 @@ export default function DownsizingAdGuidePage() {
                   <span>At the review date</span>
                   <h2>Measure on a 90-day horizon, not 14 days.</h2>
                 </div>
-                <div className="bw-measure-table" role="table" aria-label="Measures for reviewing a downsizing campaign">
-                  <div role="row" className="bw-measure-head"><span role="columnheader">Measure</span><span role="columnheader">What to look for</span></div>
+                <p>Instead of relying on fixed benchmarks, use a campaign economics calculator to track your own data.</p>
+                <div className="bw-measure-table" role="table" aria-label="Campaign economics calculator for a downsizer campaign">
+                  <div role="row" className="bw-measure-head"><span role="columnheader">Input</span><span role="columnheader">User enters</span></div>
                   {[
-                    ["Total lead volume", "Comparable to a standard buyer-list ad"],
-                    ["Homeowner rate", "40%+ suggests the downsizing angle is working"],
-                    ["Dual-side rate", "20–30% of homeowner leads need to sell"],
-                    ["Listing appointments", "Track over 90 days, not 14"],
-                    ["Buyer closings", "Your baseline revenue from the campaign"],
-                  ].map(([measure, meaning]) => (
-                    <div role="row" key={measure}><strong role="cell">{measure}</strong><span role="cell">{meaning}</span></div>
+                    ["Monthly spend", "A$"],
+                    ["Leads", "Number"],
+                    ["Valid contacts", "Number"],
+                    ["Existing homeowners", "Number"],
+                    ["Qualified selling conversations", "Number"],
+                    ["Appraisals", "Number"],
+                    ["Listings", "Number"],
+                  ].map(([input, userEnters]) => (
+                    <div role="row" key={input}><strong role="cell">{input}</strong><span role="cell">{userEnters}</span></div>
                   ))}
                 </div>
+                <p>Calculate rates from your own data rather than relying on fixed benchmarks. Track what percentage of your leads already own a home — your own campaign data will tell you whether the downsizing angle is working. Track how many homeowner leads need to sell before buying.</p>
                 <div className="bw-decision-strip">
-                  <div><b>Continue</b><span>40%+ homeowners and 20%+ dual-side rate.</span></div>
+                  <div><b>Continue</b><span>The campaign is attracting homeowners and producing seller conversations.</span></div>
                   <div><b>Revise</b><span>Leads coming but few own homes — adjust feature.</span></div>
                   <div><b>Stop</b><span>No price gap in the market — choose another angle.</span></div>
                 </div>
@@ -240,7 +261,7 @@ export default function DownsizingAdGuidePage() {
                 <div>
                   <span>Where Blockwise fits</span>
                   <h2>Build the downsizing campaign.</h2>
-                  <p>Blockwise helps you prepare the creative, the lead form and the approval path, and brings the leads into one review queue. Because a downsizing ad produces a mix of buyer and seller opportunities, having all leads in a single organised view makes the follow-up conversation easier to manage.</p>
+                  <p>Blockwise helps you prepare the creative, the lead form and the approval path, and brings the leads into one review queue. Because a downsizer campaign produces a mix of buyer and seller opportunities, having all leads in a single organised view makes the follow-up conversation easier to manage.</p>
                 </div>
                 <Link href="/signup">Build your campaign <span aria-hidden>→</span></Link>
               </section>
@@ -250,22 +271,36 @@ export default function DownsizingAdGuidePage() {
                   <span>Questions</span>
                   <h2>The practical details.</h2>
                 </div>
-                <details><summary>Is this deceptive? The ad looks like a buyer ad but I want seller leads.</summary><p>No. The ad offers exactly what it promises: a list of homes suited to downsizers. The lead receives that list. The seller conversation emerges from the follow-up call when you ask whether they need to sell before buying — a question that follows naturally from their stated interest in smaller homes.</p></details>
-                <details><summary>What percentage of downsizing leads are actually sellers?</summary><p>A well-targeted downsizing ad in a market with a meaningful price gap will typically produce 40–60% leads who already own a home. Of those, a significant portion will need to sell before buying. Not every homeowner lead is a seller lead, but the cost per lead is low enough that even a 20% seller-conversion rate from the homeowner pool is cheaper than a dedicated seller campaign.</p></details>
+                <details><summary>Is this deceptive? The ad looks like a buyer ad but I want seller leads.</summary><p>The approach is transparent when the advertised list is genuine, the properties match the stated criteria, the resource is delivered as promised, and follow-up clearly identifies the agent and purpose of contact. Agency, disclosure and conflict requirements vary by state and transaction structure — check your obligations before acting for both a buyer and a seller in a related transaction.</p></details>
+                <details><summary>What percentage of downsizing leads are actually sellers?</summary><p>It varies by market and timing. Track what percentage of your leads already own a home from your own campaign data. Then track how many homeowner leads need to sell before buying. Not every homeowner lead is a seller lead, but a well-targeted downsizer campaign in a market with a meaningful price gap will produce a meaningful share of leads who own and need to sell.</p></details>
                 <details><summary>Can I run this alongside a standard custom-list buyer ad?</summary><p>Yes, but run them as separate campaigns with separate ad sets so you can compare performance. Do not combine downsizing and general buyer targeting in one ad set — you will not be able to tell which angle is producing the seller leads.</p></details>
-                <details><summary>How long before I see seller results from this campaign?</summary><p>Buyer closings can happen within 30–60 days. Seller listings from the same campaign typically take 60–120 days because the homeowner needs to resolve their buying decision before committing to a sale. Track this campaign on a 90-day horizon at minimum.</p></details>
+                <details><summary>How long before I see seller results from this campaign?</summary><p>Results vary by market and individual circumstances. Buyer closings may happen within a shorter planning range. Seller listings from the same campaign typically take longer because the homeowner needs to resolve their buying decision before committing to a sale. Track this campaign on a 90-day horizon at minimum.</p></details>
                 <details><summary>What if my market does not have a meaningful price gap?</summary><p>If the average home and the downsizer target are within 5% of each other, there is no financial reason for homeowners to downsize. In that case, choose a different angle — a feature-based list or a first-home-buyer list — rather than forcing a downsizing angle the market does not support.</p></details>
               </section>
 
               <footer className="bw-article-sources">
                 <h2>Sources and further reading</h2>
                 <ol>
-                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/help/special-ad-categories" target="_blank" rel="noreferrer">Special ad categories, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/pricing" target="_blank" rel="noreferrer">Facebook and Instagram ad budgets, Meta for Business</a></li>
+                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a> <span className="bw-source-claim">— supports instant form setup</span></li>
+                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a> <span className="bw-source-claim">— supports Advantage+ default setup</span></li>
+                  <li><a href="https://www.facebook.com/business/help/special-ad-categories" target="_blank" rel="noreferrer">Special ad categories, Meta for Business</a> <span className="bw-source-claim">— supports housing special ad category requirements</span></li>
+                  <li><a href="https://www.facebook.com/business/ads/pricing" target="_blank" rel="noreferrer">Facebook and Instagram ad budgets, Meta for Business</a> <span className="bw-source-claim">— supports daily budget averaging</span></li>
+                  <li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, ACMA</a> <span className="bw-source-claim">— supports consent and unsubscribe requirements</span></li>
+                  <li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing guidance, OAIC</a> <span className="bw-source-claim">— supports direct marketing and privacy obligations</span></li>
                 </ol>
+                <p className="bw-last-reviewed">Last reviewed: 24 July 2026</p>
               </footer>
+
+              <nav className="bw-guide-nav" aria-label="More guides">
+                <Link href="/guides/custom-list-facebook-ad-buyer-leads" className="bw-guide-nav-link">
+                  <span>Related guide</span>
+                  <strong>How to generate buyer enquiries with a tightly filtered property list</strong>
+                </Link>
+                <Link href="/guides/lead-follow-up-playbook" className="bw-guide-nav-link">
+                  <span>Next guide</span>
+                  <strong>A practical follow-up cadence for real estate leads</strong>
+                </Link>
+              </nav>
             </div>
           </div>
         </article>

@@ -7,9 +7,9 @@ import { GuidesShell } from "@/components/guides/guides-shell";
 
 import "../guides.css";
 
-const title = "How to generate seller leads with a sold-price list";
+const title = "How to win seller leads with a suburb sold-price list";
 const description =
-  "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with homeowners without leading with an appraisal request.";
+  "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale.";
 const canonical = "/guides/sold-price-list-seller-leads";
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ const articleSchema = {
   headline: title,
   description,
   datePublished: "2026-07-15",
-  dateModified: "2026-07-15",
+  dateModified: "2026-07-24",
   author: { "@type": "Organization", name: "Blockwise" },
   publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" },
   image: "https://blockwise.sale/guides/sold-price-list/hero.webp",
@@ -77,7 +77,7 @@ export default function SoldPriceListGuidePage() {
               <p className="bw-guides-label">The practical playbook</p>
               <h1>{title}</h1>
               <p className="bw-article-deck">
-                Stop asking homeowners to declare they are selling. Give them the local evidence they are already looking for.
+                Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale.
               </p>
               <div className="bw-article-byline">
                 <span>By Blockwise</span>
@@ -103,6 +103,18 @@ export default function SoldPriceListGuidePage() {
               <div className="bw-hero-pin bw-hero-pin-three" aria-hidden><span /></div>
             </div>
           </header>
+
+          <div className="bw-article-at-glance">
+            <h2>At a glance</h2>
+            <dl>
+              <div><dt>Offer</dt><dd>Recent sold prices in one suburb</dd></div>
+              <div><dt>Setup time</dt><dd>60 to 90 minutes</dd></div>
+              <div><dt>Initial test</dt><dd>A$25 to A$30 daily for 14 days</dd></div>
+              <div><dt>Primary metric</dt><dd>Cost per valid homeowner lead</dd></div>
+              <div><dt>Review point</dt><dd>After enough leads to assess quality</dd></div>
+              <div><dt>Compliance</dt><dd>Data rights, consent, unsubscribe</dd></div>
+            </dl>
+          </div>
 
           <div className="bw-article-body">
             <aside className="bw-article-toc" aria-label="On this page">
@@ -132,6 +144,7 @@ export default function SoldPriceListGuidePage() {
                   </div>
                   <figcaption>
                     <p>of sellers look at sold-property listings to help them find an agent.</p>
+                    <span className="bw-stat-source">External benchmark · realestate.com.au seller-leads guidance, accessed July 2026</span>
                     <a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">
                       Source: realestate.com.au seller-leads guidance
                     </a>
@@ -327,14 +340,26 @@ export default function SoldPriceListGuidePage() {
               <footer className="bw-article-sources">
                 <h2>Sources and further reading</h2>
                 <ol>
-                  <li><a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">Seller Leads Best Practice Guide, realestate.com.au</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/pricing" target="_blank" rel="noreferrer">Facebook and Instagram ad budgets, Meta for Business</a></li>
-                  <li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, Australian Communications and Media Authority</a></li>
-                  <li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing, Office of the Australian Information Commissioner</a></li>
+                  <li><a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">Seller Leads Best Practice Guide, realestate.com.au</a> <span className="bw-source-claim">— supports the 75% sold-price listing statistic</span></li>
+                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a> <span className="bw-source-claim">— supports instant form setup</span></li>
+                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a> <span className="bw-source-claim">— supports Advantage+ default setup</span></li>
+                  <li><a href="https://www.facebook.com/business/ads/pricing" target="_blank" rel="noreferrer">Facebook and Instagram ad budgets, Meta for Business</a> <span className="bw-source-claim">— supports daily budget averaging</span></li>
+                  <li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, Australian Communications and Media Authority</a> <span className="bw-source-claim">— supports consent and unsubscribe requirements</span></li>
+                  <li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing, Office of the Australian Information Commissioner</a> <span className="bw-source-claim">— supports direct marketing and privacy obligations</span></li>
                 </ol>
+                <p className="bw-last-reviewed">Last reviewed: 24 July 2026</p>
               </footer>
+
+              <nav className="bw-guide-nav" aria-label="More guides">
+                <Link href="/guides/downsizing-ad-seller-leads" className="bw-guide-nav-link">
+                  <span>Next guide</span>
+                  <strong>How to use a downsizer campaign to uncover seller intent</strong>
+                </Link>
+                <Link href="/guides/lead-follow-up-playbook" className="bw-guide-nav-link">
+                  <span>Related guide</span>
+                  <strong>A practical follow-up cadence for real estate leads</strong>
+                </Link>
+              </nav>
             </div>
           </div>
         </article>

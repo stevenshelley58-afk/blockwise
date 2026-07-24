@@ -1,13 +1,13 @@
 ---
-title: "How to generate seller leads with a sold-price list"
-subtitle: "A practical Meta ads playbook for turning recent local sales into useful homeowner conversations."
+title: "How to win seller leads with a suburb sold-price list"
+subtitle: "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale."
 slug: "sold-price-list-seller-leads"
-seo_title: "Generate Seller Leads With a Sold-Price List | Blockwise"
-meta_description: "Build a suburb sold-price list, promote it with a Meta lead ad, and follow up with homeowners without leading with an appraisal request."
+seo_title: "Win Seller Leads With a Suburb Sold-Price List | Blockwise"
+meta_description: "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale."
 excerpt: "A specific, current sold-price list gives local homeowners a useful reason to raise their hand before they are ready to request an appraisal."
 canonical: "https://blockwise.sale/guides/sold-price-list-seller-leads"
-og_title: "How to generate seller leads with a sold-price list"
-og_description: "A practical Meta ads playbook for turning recent local sales into useful homeowner conversations."
+og_title: "How to win seller leads with a suburb sold-price list"
+og_description: "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale."
 og_type: "article"
 schema_type: "Article"
 faq_schema: true
@@ -19,20 +19,29 @@ secondary_keywords:
 author: "Blockwise"
 publisher: "Blockwise"
 status: "draft"
-last_updated: "2026-07-15"
+last_updated: "2026-07-24"
 hero_image_brief: "A suburban street seen from slightly above, with three ordinary detached homes and restrained sold-result annotations. No agent portrait, no fake portal interface, no oversized price stickers."
 hero_image_alt: "Three recently sold homes on a suburban street"
 ---
 
-# How to generate seller leads with a sold-price list
+# How to win seller leads with a suburb sold-price list
 
 Most seller ads ask for too much, too soon.
 
-“What is your home worth?” sounds useful, but it also signals an appraisal call. An owner who is only beginning to think about selling may not be ready for that conversation. They are often ready for something smaller: seeing what comparable homes nearby have actually sold for.
+"What is your home worth?" sounds useful, but it also signals an appraisal call. An owner who is only beginning to think about selling may not be ready for that conversation. They are often ready for something smaller: seeing what comparable homes nearby have actually sold for.
 
 That makes a focused sold-price list a strong real estate lead magnet. It gives homeowners useful local information without asking them to declare that they are selling.
 
-The idea is supported by how sellers already behave. In its [seller-leads guidance](https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/), realestate.com.au reports that 75% of sellers look at sold-property listings to help them find an agent. A sold-price campaign meets that behaviour with a clear offer instead of another generic promise about service.
+## At a glance
+
+| Item           | Example                                    |
+| -------------- | ------------------------------------------ |
+| Offer          | Recent sold prices in one suburb           |
+| Setup time     | 60 to 90 minutes                           |
+| Initial test   | A$25 to A$30 daily for 14 days             |
+| Primary metric | Cost per valid homeowner lead              |
+| Review point   | After enough leads exist to assess quality |
+| Compliance     | Data rights, consent and unsubscribe       |
 
 The campaign is simple:
 
@@ -46,7 +55,7 @@ The list is the offer. The ad only introduces it.
 
 ## Why the offer works
 
-A suburb market report is broad. A list of recent sales for “single-storey homes on full blocks in Dianella” feels personal to someone who owns exactly that kind of property.
+A suburb market report is broad. A list of recent sales for "single-storey homes on full blocks in Dianella" feels personal to someone who owns exactly that kind of property.
 
 That specificity does two jobs.
 
@@ -55,6 +64,8 @@ First, it makes the value obvious. The owner can tell in a second whether the li
 Second, it helps qualify the response. The form may still attract buyers, investors and curious neighbours, but the offer gives the right homeowner a stronger reason to submit than a general market update would.
 
 This is not a shortcut to an immediate listing. It is an early-intent campaign. Its job is to identify local owners who care enough about recent comparable sales to ask for the detail.
+
+**External benchmark:** In its seller-leads guidance (accessed July 2026), [realestate.com.au reports that 75% of sellers look at sold-property listings](https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/) to help them find an agent. A sold-price campaign meets that behaviour with a clear offer instead of another generic promise about service.
 
 ## The Blockwise LIST framework
 
@@ -255,3 +266,7 @@ Choose a frequency you can maintain. Monthly is useful in an active suburb, whil
 - [Create ad campaigns in Meta Ads Manager, Meta Help Centre](https://www.facebook.com/help/messenger-app/621956575422138/)
 - [Avoid sending spam, Australian Communications and Media Authority](https://www.acma.gov.au/avoid-sending-spam)
 - [Direct marketing, Office of the Australian Information Commissioner](https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing)
+
+---
+
+Last reviewed: 24 July 2026

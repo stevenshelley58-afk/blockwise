@@ -11,6 +11,21 @@ export const metadata: Metadata = {
   description:
     "Real-estate advertising guides built around clear decisions, reliable evidence and campaign steps your team can use.",
   alternates: { canonical: "/guides" },
+  openGraph: {
+    type: "website",
+    title: "Practical guides for real-estate advertising | Blockwise",
+    description:
+      "Real-estate advertising guides built around clear decisions, reliable evidence and campaign steps your team can use.",
+    url: "/guides",
+    images: [{ url: "/guides/og-guides-index.webp", width: 1200, height: 630, alt: "Blockwise guides for real-estate advertising" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Practical guides for real-estate advertising | Blockwise",
+    description:
+      "Real-estate advertising guides built around clear decisions, reliable evidence and campaign steps your team can use.",
+    images: ["/guides/og-guides-index.webp"],
+  },
 };
 
 const guides = [
@@ -60,7 +75,7 @@ const guides = [
     alt: "A single-storey home typical of a downsizing market",
     label: "Seller lead generation",
     title: "The downsizing ad",
-    hook: "Seller-lead campaigns are the most expensive ads in real estate. There is a cheaper path — a buyer ad that quietly attracts homeowners who must sell before they buy.",
+    hook: "Seller-lead campaigns are the most expensive ads in real estate. A buyer ad targeting downsizers can also uncover homeowners who need to sell before they buy.",
     readTime: "12 minutes",
     category: "Seller leads",
   },
@@ -80,7 +95,7 @@ const guides = [
     alt: "A real estate lead follow-up desk setup with phone and CRM",
     label: "Lead conversion",
     title: "The follow-up playbook",
-    hook: "The average lead converts after seven touch points. The average agent follows up once. This is the 90-day system that closes the gap.",
+    hook: "A documented call, email and SMS cadence for real-estate leads — with scripts, CRM setup and Australian compliance guidance.",
     readTime: "13 minutes",
     category: "Lead conversion",
   },
@@ -90,7 +105,7 @@ const guides = [
     alt: "Meta Ads Manager campaign setup for a custom-list real estate lead ad",
     label: "Buyer lead generation",
     title: "The custom-list Facebook ad",
-    hook: "Most real estate Facebook ads fail because the offer is too generic. A custom list of local homes with one desirable feature fixes that — and produces leads within 24 hours.",
+    hook: "Most real-estate Facebook ads fail because the offer is too generic. A tightly filtered local property list with one useful buying constraint fixes that.",
     readTime: "14 minutes",
     category: "Buyer leads",
   },
