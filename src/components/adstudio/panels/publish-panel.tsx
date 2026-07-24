@@ -432,6 +432,7 @@ export function PublishSetupPanel({
         : end.toISOString();
     return {
       dailyBudgetMinorUnits: Math.max(1, Math.round(dailyBudgetAud * 100)),
+      destinationUrl,
       geo: campaignMode === "new" && targetSuburbs.length > 0
         ? { type: "cities", locations: targetSuburbs, includeSurroundingSuburbs: includeSurroundingSuburbs === true }
         : { type: "country", country: campaignPack.campaign.market.country },
