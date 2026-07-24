@@ -59,9 +59,9 @@ export function createGoogleImageProvider(
         body: JSON.stringify({
           model,
           input: [...referenceParts, { type: "text", text: prompt }],
+          response_modalities: ["text", "image"],
           response_format: {
             type: "image",
-            mime_type: "image/jpeg",
             aspect_ratio: input.aspectRatio,
             image_size: "1K",
           },

@@ -64,9 +64,9 @@ test("Google image provider edits with multiple inline references through the di
   ]);
   assert.equal(body.input[2].type, "text");
   assert.match(body.input[2].text, /Clone the reference ad/);
+  assert.deepEqual(body.response_modalities, ["text", "image"]);
   assert.deepEqual(body.response_format, {
     type: "image",
-    mime_type: "image/jpeg",
     aspect_ratio: "4:5",
     image_size: "1K",
   });
