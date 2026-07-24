@@ -22,13 +22,11 @@ import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.m
 import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
 
 const DEFAULT_POSTCODES = ["ALL"];
-const LOCATION_AD_SEARCH_JOB_TYPE = "blockwise-location-ad-search";
 const COVERAGE_AUDITOR_JOB_TYPE = "blockwise-coverage-auditor";
 const DEFECT_INVESTIGATOR_JOB_TYPE = "blockwise-defect-investigator";
 const HANDLED_JOB_TYPES = [
   "blockwise-agent-census",
   "blockwise-page-resolver",
-  LOCATION_AD_SEARCH_JOB_TYPE,
   "blockwise-ad-collector",
   "blockwise-media-collector",
   "blockwise-ad-classifier",
@@ -79,11 +77,9 @@ const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", 
 const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
 const adPageRefreshScanLimit = Math.max(adPageRefreshBatchSize * 16, adPageRefreshMaxActive + adPageRefreshBatchSize * 4);
 const adPageRefreshMaxConsecutiveFailures = 3;
-const locationAdSearchEnabled = env.HERMES_LOCATION_AD_SEARCH_ENABLED !== "false";
-const locationAdSearchIntervalMinutes = positiveInt("HERMES_LOCATION_AD_SEARCH_INTERVAL_MINUTES", 720);
-const locationAdSearchBatchSize = positiveInt("HERMES_LOCATION_AD_SEARCH_BATCH_SIZE", mode === "build" ? 40 : 12);
-const locationAdSearchMaxActive = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE", mode === "build" ? 120 : 40);
-const locationAdSearchMaxSuburbsPerPostcode = positiveInt("HERMES_LOCATION_AD_SEARCH_MAX_SUBURBS_PER_POSTCODE", 8);
+// Location ad search (Path 2) has been removed. The census → page-resolver →
+// ad-collector pipeline (Path 1) is the sole discovery mechanism.
+const locationAdSearchEnabled = false;
 // Provider for the suburb/keyword discovery search. "hermes_browser" (default) enumerates
 // via the Meta Ad Library capture CLI driven through the Steel browser.
 const locationAdSearchProvider = String(env.HERMES_LOCATION_AD_SEARCH_PROVIDER || "hermes_browser").toLowerCase();
@@ -682,79 +678,9 @@ async function recycleBlockedLocationSearchJobs(limit) {
   return recycled;
 }
 
-async function enqueueDueLocationAdSearchJobs(buildRunId) {
-  if (!locationAdSearchEnabled) return { locationSearchCandidates: 0, locationSearchEnqueued: 0 };
-  const challengeCooldownMs = metaBrowserChallengeCooldownRemaining();
-  if (challengeCooldownMs > 0) {
-    return { locationSearchCandidates: 0, locationSearchEnqueued: 0, locationSearchRecycled: 0, locationSearchSkippedChallengeCooldown: true, locationSearchChallengeCooldownMs: challengeCooldownMs };
-  }
-  const activeSearches = await rest("research", `work_queue?select=id&job_type=eq.${LOCATION_AD_SEARCH_JOB_TYPE}&status=in.(pending,claimed)&limit=${locationAdSearchMaxActive}`);
-  if (activeSearches.length >= locationAdSearchMaxActive) {
-    return { locationSearchCandidates: 0, locationSearchEnqueued: 0, locationSearchSkippedActive: activeSearches.length };
-  }
-
-  const filters = [
-    "active=eq.true",
-    !targetAllPostcodes && targetPostcodes.length ? `postcode=in.(${postgrestIn(targetPostcodes)})` : null,
-    targetStates.length ? `state=in.(${postgrestIn(targetStates)})` : null,
-  ].filter(Boolean).join("&");
-  const policies = await rest(
-    "research",
-    `refresh_policies?select=id,postcode,state,priority,last_refreshed_at&${filters}&order=priority.asc,last_refreshed_at.asc.nullsfirst&limit=${Math.max(locationAdSearchBatchSize * 4, supervisorLimit)}`,
-  );
-  const capacity = Math.max(0, Math.min(locationAdSearchMaxActive - activeSearches.length, locationAdSearchBatchSize));
-  const recycled = await recycleBlockedLocationSearchJobs(capacity);
-  const remainingCapacity = Math.max(0, capacity - recycled);
-  const bucket = Math.floor(Date.now() / Math.max(60_000, locationAdSearchIntervalMinutes * 60_000));
-  let candidates = 0;
-  let enqueued = 0;
-
-  for (const policy of policies) {
-    if (enqueued >= remainingCapacity) break;
-    if (!policy.postcode || !hasCensusSourceForPolicy(policy)) continue;
-    for (const [index, item] of locationSearchQueriesForPolicy(policy).entries()) {
-      if (enqueued >= remainingCapacity) break;
-      candidates += 1;
-      const dedupeKey = `location-ad-search:${policy.state || "WA"}:${policy.postcode}:${normalizeName(item.query)}:${bucket}`;
-      const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(dedupeKey)}&limit=1`);
-      if (existing.length) continue;
-      const created = await rest("research", "work_queue", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: json({
-          queue_name: "research",
-          job_type: LOCATION_AD_SEARCH_JOB_TYPE,
-          dedupe_key: dedupeKey,
-          priority: locationAdSearchPriorityForPolicy(policy),
-          payload: {
-            postcode: policy.postcode,
-            suburb: item.suburb,
-            state: policy.state || "WA",
-            query: item.query,
-            build_run_id: buildRunId,
-            country: "AU",
-            activeStatus: "all",
-            resultsLimit: metaCaptureResultsLimit,
-            location_search_allowed: true,
-            realEstateGate: {
-              verified: true,
-              verifiedBySkill: LOCATION_AD_SEARCH_JOB_TYPE,
-              verifiedAt: now(),
-            },
-          },
-          status: "pending",
-          available_at: new Date(Date.now() + (enqueued + index) * 2_000).toISOString(),
-          max_attempts: 3,
-        }),
-      });
-      if (created?.[0]?.id) {
-        enqueued += 1;
-        await recordEvent("insert", "work_queue", created[0].id, { dedupeKey, job_type: LOCATION_AD_SEARCH_JOB_TYPE, postcode: policy.postcode, suburb: item.suburb, query: item.query }, { work_queue_id: created[0].id });
-      }
-    }
-  }
-
-  return { locationSearchCandidates: candidates, locationSearchEnqueued: enqueued, locationSearchRecycled: recycled, locationSearchActive: activeSearches.length };
+// Location ad search (Path 2) has been removed — no-op stub kept for call site.
+async function enqueueDueLocationAdSearchJobs() {
+  return { locationSearchCandidates: 0, locationSearchEnqueued: 0 };
 }
 
 async function runWatchdogs() {
@@ -1362,8 +1288,7 @@ async function recordMetaBrowserChallenge(kind, input) {
 function shouldDeferMetaBrowserChallengeJob(job) {
   return metaBrowserChallengeCooldownRemaining() > 0
     && (
-      job.job_type === LOCATION_AD_SEARCH_JOB_TYPE
-      || (job.job_type === "blockwise-ad-collector" && metaCaptureProvider === "hermes_browser")
+      job.job_type === "blockwise-ad-collector" && metaCaptureProvider === "hermes_browser"
     );
 }
 
@@ -5186,7 +5111,6 @@ async function handleDefectInvestigator(job) {
 async function handleJob(job) {
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
   if (job.job_type === "blockwise-page-resolver") return handlePageResolver(job);
-  if (job.job_type === LOCATION_AD_SEARCH_JOB_TYPE) return handleLocationAdSearch(job);
   if (job.job_type === "blockwise-ad-collector") return handleAdCollector(job);
   if (job.job_type === "blockwise-media-collector") return handleMediaCollector(job);
   if (job.job_type === "blockwise-ad-classifier") return handleAdClassifier(job);
@@ -5322,7 +5246,7 @@ async function tick() {
 }
 
 async function main() {
-  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive, locationAdSearchEnabled, locationAdSearchIntervalMinutes, locationAdSearchBatchSize, locationAdSearchMaxActive });
+  log("starting", { mode, workerId, intervalMs, targetPostcodes: targetPostcodeLog, targetStates, sourceBackedStates: enabledCensusSourceStates, claimLimit, maxJobsPerTick, censusSourceTemplates: sourceTemplates.length, postcodeSuburbs: postcodeSuburbIndex.size, censusQueuePriority, censusPolicyAutoSeedEnabled, censusPolicySeedBatchSize, censusRecycleBlockedEnabled, adPageRefreshEnabled, adPageRefreshIntervalMinutes, adPageRefreshBatchSize, adPageRefreshMaxActive });
   for (;;) {
     try {
       await tick();

@@ -106,13 +106,6 @@ export function ResearchDrainDashboard({ initialStatus }: { initialStatus: Drain
           <Metric label="cost 24h" value={`$${status.freshness.adFetchCost24hUsd.toFixed(4)}`} />
           <Metric label="per run cap" value={status.paidCapture.perRunCapUsd === null ? "n/a" : `$${status.paidCapture.perRunCapUsd.toFixed(2)}`} />
         </Panel>
-
-        <Panel title="Location Search">
-          <Metric label="pending" value={status.freshness.locationSearchOpen.pending.toLocaleString()} />
-          <Metric label="claimed" value={status.freshness.locationSearchOpen.claimed.toLocaleString()} />
-          <Metric label="failed / blocked" value={(status.freshness.locationSearchOpen.failed + status.freshness.locationSearchOpen.blocked).toLocaleString()} tone={status.freshness.locationSearchOpen.blocked > 0 ? "warn" : "ok"} />
-          <p className="drain-note">Browser-search freshness is tracked separately from page-id refresh so it cannot hide first-fill progress.</p>
-        </Panel>
       </section>
 
       <section className="drain-panel">

@@ -158,12 +158,7 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
     "page capture must delegate to the shared capture CLI",
   );
   assert.match(
-    browserLocationSearchCapture,
-    /runMetaLibraryCaptureCli[\s\S]*kind:\s*["']location_search["'][\s\S]*blocked_reason/u,
-    "location capture must delegate to the CLI and surface bot-challenge/blocked signals",
-  );
-  assert.match(
-    `${adPageRefresh}\n${locationAdSearchQueue}`,
+    `${adPageRefresh}`,
     /metaBrowserChallengeCooldownRemaining[\s\S]*SkippedChallengeCooldown/u,
     "capture schedulers must stop feeding new browser captures while the challenge cooldown is active",
   );
@@ -184,7 +179,7 @@ test("Hermes Meta browser challenges cool down capture instead of masquerading a
   );
   assert.match(
     metaChallengeJobGate,
-    /metaBrowserChallengeCooldownRemaining\(\)[\s\S]*LOCATION_AD_SEARCH_JOB_TYPE[\s\S]*blockwise-ad-collector[\s\S]*metaCaptureProvider === ["']hermes_browser["']/u,
+    /metaBrowserChallengeCooldownRemaining\(\)[\s\S]*blockwise-ad-collector[\s\S]*metaCaptureProvider === ["']hermes_browser["']/u,
     "challenge deferral should apply to free-browser Meta capture jobs while cooldown is active",
   );
   assert.match(
@@ -507,108 +502,15 @@ test("Hermes page resolver collects agency Facebook pages linked from verified a
   );
 });
 
-test("Hermes location ad search is explicit, gated, and separate from page collection", () => {
-  assert.match(
-    researchCompose,
-    /HERMES_LOCATION_AD_SEARCH_PROVIDER:\s*\$\{HERMES_LOCATION_AD_SEARCH_PROVIDER:-hermes_browser\}/u,
-    "location search provider selection must be explicit in the VPS runtime",
-  );
-  assert.match(
-    locationAdSearch,
-    /runHermesLocationSearchCapture\(input,\s*job\)/u,
-    "location ad search must dispatch through the Hermes browser capture path (no Apify)",
-  );
-  assert.doesNotMatch(
-    `${locationAdSearch}`,
-    /apify/iu,
-    "location ad search must not reference Apify after the model/capture cutover",
-  );
-  assert.match(
-    supervisor,
-    /const LOCATION_AD_SEARCH_JOB_TYPE = ["']blockwise-location-ad-search["']/u,
-    "location ad search must be an explicit job type",
-  );
-  assert.match(
-    runtimeTypes,
-    /researchJobKinds\s*=\s*\[[\s\S]*["']blockwise-location-ad-search["'][\s\S]*\]/u,
-    "location search must be part of the shared research job kind contract",
-  );
-  assert.match(
-    runtimeTypes,
-    /locationSearchGateSchema[\s\S]*verifiedBySkill:\s*z\.literal\(["']blockwise-location-ad-search["']\)[\s\S]*locationAdSearchPayloadSchema[\s\S]*location_search_allowed:\s*z\.literal\(true\)/u,
-    "location search payload validation must preserve the explicit gate",
-  );
-  assert.match(
-    locationAdSearchQueue,
-    /\brefresh_policies\b[\s\S]*\bpostcode\b[\s\S]*\bsuburb\b/u,
-    "location searches should be queued from the existing postcode refresh policies",
-  );
-  assert.match(
-    `${locationAdSearchPriority}\n${locationAdSearchQueue}`,
-    /Math\.max\(4[\s\S]*Math\.min\(5[\s\S]*priority:\s*locationAdSearchPriorityForPolicy\(policy\)/u,
-    "location discovery must run ahead of media/classifier enrichment so postcode coverage does not starve",
-  );
-  assert.match(
-    locationAdSearch,
-    /\blocation_search_allowed\b[\s\S]*\brealEstateGate\?\.\bverified\b|\brealEstateGate\?\.\bverified\b[\s\S]*\blocation_search_allowed\b/u,
-    "location search collection must require an explicit verified location-search gate",
-  );
-  assert.match(
-    `${locationSearchUrl}\n${locationAdSearch}`,
-    /\bsearch_type\b[\s\S]*\bkeyword_unordered\b[\s\S]*\bq\b/u,
-    "location search must use Meta Ad Library keyword search instead of pretending to be a page collector",
-  );
-  assert.match(
-    browserLocationSearchCapture,
-    /runMetaLibraryCaptureCli[\s\S]*kind:\s*["']location_search["'][\s\S]*confirmed_absence/u,
-    "location search capture must delegate to the CLI and surface confirmed-absence semantics",
-  );
-  assert.match(
-    locationAdSearch,
-    /confirmed_absence:\s*outcome\.metadata\?\.confirmed_absence === true[\s\S]*count_only:\s*outcome\.metadata\?\.count_only === true/u,
-    "location search summaries should expose absence and count-only proofs for watchdog health checks",
-  );
-  assert.match(
-    locationAdSearch,
-    /\blocationAdMatchForInput\b[\s\S]*\bhasRealEstateAdSignalForLocation\b/u,
-    "location search results must be filtered by exact visible location and real-estate signals before ingest",
-  );
-  assert.match(
-    `${locationAdSearchQueue}\n${locationSearchRecycle}\n${locationSearchRecycleGate}`,
-    /recycled_after_parser_fix_at[\s\S]*Meta Ad Library page loaded but no ad result payload could be parsed/u,
-    "old location-search parser failures should recycle once through the normal active-cap gate",
-  );
-  assert.match(locationAdSearchQueue, /locationSearchRecycled:\s*recycled/u);
-  assert.match(
-    locationRealEstateSignal,
-    /\bpropertyType\b[\s\S]*\bmarketAction\b/u,
-    "location search real-estate filtering should require property-type terms tied to sale/lease/appraisal actions",
-  );
-  assert.match(
-    locationRealEstateSignal,
-    /homesite[\s\S]*land release[\s\S]*residential estate/u,
-    "location search should keep legitimate residential estate and land-release advertising",
-  );
-  assert.match(
-    locationRealEstateGate,
-    /\bhasStrongRealEstateAdSignal\(text\)\s*\|\|\s*hasConservativeRealEstatePageNameSignal\(pageName\)/u,
-    "location search should combine strong ad-copy evidence with conservative page-name evidence",
-  );
-  assert.match(
-    locationPageNameSignal,
-    /ray white[\s\S]*harcourts[\s\S]*buyers agency[\s\S]*realestate\\.com\\.au/u,
-    "location search should keep known real-estate page names without depending on ad-copy jargon",
-  );
-  assert.doesNotMatch(
-    `${locationRealEstateGate}\n${locationRealEstateSignal}\n${locationPageNameSignal}`,
-    /\bhasRealEstatePageSignal\b/u,
-    "location search must not reuse broad page signals where generic property or for-sale text can admit non-real-estate ads",
-  );
-  assert.match(
-    locationAdSearch,
-    /\bupsertExplicitAreaMatchForObservedAd\b|\bexplicitAreaMatch\b/u,
-    "location search ingestion must attach explicit public area attribution without schema changes",
-  );
+test("Hermes location ad search has been removed in favour of census-only discovery", () => {
+  assert.match(supervisor, /Location ad search \(Path 2\) has been removed/u,
+    "supervisor should document the removal");
+  assert.match(supervisor, /const locationAdSearchEnabled = false/u,
+    "location ad search must be hard-disabled");
+  assert.doesNotMatch(supervisor, /if \(job\.job_type === LOCATION_AD_SEARCH_JOB_TYPE\) return handleLocationAdSearch\(job\)/u,
+    "location ad search handler must not be dispatched");
+  assert.doesNotMatch(supervisor, /const LOCATION_AD_SEARCH_JOB_TYPE = ["']blockwise-location-ad-search["']/u,
+    "location ad search job type constant must be removed");
 });
 
 test("Hermes coverage repair jobs are claimed and handled", () => {
@@ -1001,9 +903,6 @@ test("Hermes compose exposes supervisor scheduler tuning knobs", () => {
     "HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES",
     "HERMES_AD_PAGE_REFRESH_BATCH_SIZE",
     "HERMES_AD_PAGE_REFRESH_MAX_ACTIVE",
-    "HERMES_LOCATION_AD_SEARCH_INTERVAL_MINUTES",
-    "HERMES_LOCATION_AD_SEARCH_BATCH_SIZE",
-    "HERMES_LOCATION_AD_SEARCH_MAX_ACTIVE",
     "HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE",
     "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
   ];

@@ -59,7 +59,6 @@ export type DrainStatus = {
     latestAdFetch: LatestAdFetch | null;
     latestIngest: LatestIngest | null;
     adFetchCost24hUsd: number;
-    locationSearchOpen: DrainStageStatusCounts;
   };
   paidCapture: {
     state: string;
@@ -282,7 +281,6 @@ async function loadFreshness(research: ResearchClient): Promise<DrainStatus["fre
     latestAdFetch,
     latestIngest,
     fetchCosts,
-    locationSearchOpen,
   ] = await Promise.all([
     exactCount(research.from("refresh_policies").select("id", { count: "exact", head: true }).eq("active", true)),
     exactCount(
@@ -316,7 +314,6 @@ async function loadFreshness(research: ResearchClient): Promise<DrainStatus["fre
       .select("cost_usd")
       .gte("created_at", spendSince)
       .limit(5000),
-    countOpenStatuses(research, "blockwise-location-ad-search"),
   ]);
 
   if (latestAdFetch.error) throw latestAdFetch.error;
@@ -368,7 +365,6 @@ async function loadFreshness(research: ResearchClient): Promise<DrainStatus["fre
         }
       : null,
     adFetchCost24hUsd: roundCurrency(costRows.reduce((sum, row) => sum + (Number(row.cost_usd) || 0), 0)),
-    locationSearchOpen,
   };
 }
 

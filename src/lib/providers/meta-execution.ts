@@ -277,10 +277,10 @@ export function buildMetaPublishPlan(input: {
     setup: normalizeMetaConnectionSetup(input.setup),
     controls,
     campaign,
-    adSets: buildAdSetPlans(campaignPack, controls, abTest),
+    adSets: buildAdSetPlans(campaignPack, controls),
     leadForms: buildLeadFormPlans(campaignPack, input.setup, controls.destinationUrl),
     creatives: buildCreativePlans(campaignPack, input.setup, Boolean(input.includeCreativeAssets)),
-    ads: buildAdPlans(campaignPack, abTest),
+    ads: buildAdPlans(campaignPack),
     tracking: {
       utmSource: "meta",
       utmMedium: "paid_social",
@@ -533,6 +533,8 @@ async function publishWithMarketingApi(
         objective: plan.campaign.objective,
         status: "PAUSED",
         special_ad_categories: plan.campaign.specialAdCategories,
+        budget_strategy: "CAMPAIGN",
+        daily_budget: String(plan.controls.dailyBudgetMinorUnits ?? 2000),
       });
       reconciledObjects.campaignId = requireMetaId(response, "campaign");
     }
@@ -547,8 +549,10 @@ async function publishWithMarketingApi(
           url: leadForm.privacyPolicyUrl,
           link_text: "Privacy Policy",
         },
+        is_optimized_for_quality: true,
         questions: [
-          { type: "FULL_NAME", key: "full_name" },
+          { type: "FIRST_NAME", key: "first_name" },
+          { type: "LAST_NAME", key: "last_name" },
           { type: "EMAIL", key: "email" },
           { type: "PHONE", key: "phone" },
           ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
@@ -572,9 +576,9 @@ async function publishWithMarketingApi(
         campaign_id: reconciledObjects.campaignId,
         billing_event: adSet.billingEvent,
         optimization_goal: adSet.optimizationGoal,
-        daily_budget: String(adSet.dailyBudgetMinorUnits),
         targeting: adSet.targeting,
         status: "PAUSED",
+        ...(plan.setup.pixelId ? { promoted_object: { pixel_id: plan.setup.pixelId, custom_event_type: "Lead" } } : {}),
         ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
         ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
       });
@@ -586,6 +590,7 @@ async function publishWithMarketingApi(
 
       const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
       const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
+      const utmLink = buildUtmLink(plan.setup.privacyPolicyUrl, plan.tracking, creative.localId);
       const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
         name: creative.name,
         object_story_spec: {
@@ -595,7 +600,7 @@ async function publishWithMarketingApi(
             message: creative.primaryText,
             name: creative.headline,
             description: creative.description,
-            link: plan.setup.privacyPolicyUrl,
+            link: utmLink,
             ...(imageHash ? { image_hash: imageHash } : {}),
             call_to_action: {
               type: creative.cta,
@@ -750,43 +755,39 @@ async function getMetaObjectStatus(
   };
 }
 
-function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls, singleAdSet = false): MetaPublishAdSetPlan[] {
+function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
-  const dailyBudgetMinorUnits = controls.dailyBudgetMinorUnits ?? 5000;
   const targeting = buildTargeting(controls);
-  const primary: MetaPublishAdSetPlan = {
+  return [{
     localId: "adset_primary",
-    name: `${suburb} homeowners broad`,
+    name: `${suburb} homeowners`,
     campaignLocalId: "campaign_main",
     billingEvent: "IMPRESSIONS",
     optimizationGoal: "LEAD_GENERATION",
     status: "PAUSED",
-    dailyBudgetMinorUnits,
+    dailyBudgetMinorUnits: controls.dailyBudgetMinorUnits ?? 2000,
     targeting,
     startTime: controls.schedule?.startTime ?? null,
     endTime: controls.schedule?.endTime ?? null,
-  };
+  }];
+}
 
-  // A/B publish (A6): all variant ads compete inside one ad set.
-  if (singleAdSet) {
-    return [primary];
+/**
+ * Append UTM parameters to the ad link so traffic is attributable in Google Analytics.
+ * The tracking plan already holds utmSource/utmMedium/utmCampaign/utmContentPrefix —
+ * this just formats them into a query string on the destination URL.
+ */
+function buildUtmLink(baseUrl: string, tracking: MetaPublishTrackingPlan, creativeLocalId: string): string {
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set("utm_source", tracking.utmSource);
+    url.searchParams.set("utm_medium", tracking.utmMedium);
+    url.searchParams.set("utm_campaign", tracking.utmCampaign);
+    url.searchParams.set("utm_content", `${tracking.utmContentPrefix}_${creativeLocalId}`);
+    return url.toString();
+  } catch {
+    return baseUrl;
   }
-
-  return [
-    primary,
-    {
-      localId: "adset_learning",
-      name: `${suburb} seller intent test`,
-      campaignLocalId: "campaign_main",
-      billingEvent: "IMPRESSIONS",
-      optimizationGoal: "LEAD_GENERATION",
-      status: "PAUSED",
-      dailyBudgetMinorUnits,
-      targeting,
-      startTime: controls.schedule?.startTime ?? null,
-      endTime: controls.schedule?.endTime ?? null,
-    },
-  ];
 }
 
 function buildTargeting(controls: MetaPublishControls): Record<string, unknown> {
@@ -867,7 +868,7 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
   });
 }
 
-function buildAdPlans(pack: AdStudioCampaignPack, singleAdSet = false): MetaPublishAdPlan[] {
+function buildAdPlans(pack: AdStudioCampaignPack): MetaPublishAdPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
     const variantTag: MetaAdVariantTag | null = variant
@@ -877,7 +878,7 @@ function buildAdPlans(pack: AdStudioCampaignPack, singleAdSet = false): MetaPubl
     return {
       localId: `ad_${index + 1}`,
       name: `${pack.campaign.name} ad ${index + 1}${variantTag ? buildAdVariantTagSuffix(variantTag) : ""}`,
-      adSetLocalId: singleAdSet ? "adset_primary" : index % 2 === 0 ? "adset_primary" : "adset_learning",
+      adSetLocalId: "adset_primary",
       creativeLocalId: `creative_${index + 1}`,
       status: "PAUSED",
       variantTag,
@@ -905,7 +906,7 @@ function normalizeMetaPublishControls(controls: MetaPublishControls | undefined,
   return {
     dailyBudgetMinorUnits: controls?.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
-      : 5000,
+      : 2000,
     geo: controls?.geo ?? { type: "country", country: pack.campaign.market.country },
     schedule: {
       startTime: controls?.schedule?.startTime ?? null,

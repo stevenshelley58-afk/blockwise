@@ -69,11 +69,12 @@ test("buildMetaPublishPlan creates a deterministic paused Meta plan", () => {
   assert.equal(plan.idempotencyKey, idempotencyKey);
   assert.equal(plan.campaign.status, "PAUSED");
   assert.deepEqual(plan.campaign.specialAdCategories, ["HOUSING"]);
-  assert.equal(plan.adSets.length, 2);
+  assert.equal(plan.adSets.length, 1);
   assert.ok(plan.ads.length <= 6);
   assert.ok(plan.ads.length > 0);
   assert.equal(plan.adSets.every((adSet) => adSet.status === "PAUSED"), true);
   assert.equal(plan.ads.every((ad) => ad.status === "PAUSED"), true);
+  assert.equal(plan.ads.every((ad) => ad.adSetLocalId === "adset_primary"), true);
   assert.equal(plan.leadForms.every((form) => form.privacyPolicyUrl === setup.privacyPolicyUrl), true);
 });
 
