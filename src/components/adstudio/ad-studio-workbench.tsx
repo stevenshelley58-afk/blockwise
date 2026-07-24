@@ -1510,13 +1510,6 @@ export function AdStudioWorkbench({
         </div>
       )}
 
-      <footer className="studio-statusbar">
-        {/* L5: data-state attribute lets CSS color the save chip; existing .error class also applies */}
-        <span className={studio.saveState === "error" ? "error" : ""} data-state={studio.saveState}>{studio.statusText}</span>
-        <span>{format.label} | {format.size}</span>
-        <span>Creative preview</span>
-      </footer>
-
       <nav className="studio-mobile-bottom" aria-label="Ad Studio mobile navigation">
         {MOBILE_NAV.map((item) => {
           const Icon = item.icon;

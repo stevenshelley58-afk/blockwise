@@ -982,7 +982,7 @@ export function PublishSetupPanel({
               <details className="studio-readiness-details" open={!allMet}>
                 <summary>
                   <span>Readiness</span>
-                  <strong className={allMet ? "ready" : "needs-work"}>{readiness === null ? "Checking" : allMet ? "Ready" : `${blockingItems.length} to fix`}</strong>
+                  <strong className={allMet ? "ready" : "needs-work"}>{readiness === null ? "Checking" : allMet ? "Ready" : blockingItems.map((item) => item.label).join(", ")}</strong>
                   <ChevronDown aria-hidden size={17} />
                 </summary>
                 <div>

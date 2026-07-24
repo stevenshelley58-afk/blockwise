@@ -43,12 +43,9 @@ export async function GET(request: NextRequest) {
     accountId: metaConnection?.externalAccountId ?? null,
   };
 
-  const [compliance, approval] = campaignId
-    ? await Promise.all([
-        loadLatestComplianceStatus(context.supabase, context.access.workspaceId, campaignId),
-        loadLatestApprovalStatus(context.supabase, context.access.workspaceId, campaignId),
-      ])
-    : [null, null];
+  const approval = campaignId
+    ? await loadLatestApprovalStatus(context.supabase, context.access.workspaceId, campaignId)
+    : null;
 
   const checklist = [
     {
@@ -82,12 +79,6 @@ export async function GET(request: NextRequest) {
     ...(campaignId
       ? [
           {
-            id: "compliance_passed",
-            label: "Compliance check passed",
-            done: compliance === "approved",
-            automatic: true,
-          },
-          {
             id: "approval_ready",
             label: approval === "approved"
               ? "Approval complete"
@@ -118,23 +109,6 @@ export async function GET(request: NextRequest) {
     ready,
     note: "Read-only Meta check - no ads are created. Live publishing remains disabled until every step is complete.",
   });
-}
-
-async function loadLatestComplianceStatus(
-  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
-  workspaceId: string,
-  campaignId: string,
-) {
-  const { data } = await supabase
-    .from("adstudio_compliance_reports")
-    .select("status")
-    .eq("workspace_id", workspaceId)
-    .eq("campaign_id", campaignId)
-    .order("checked_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return typeof data?.status === "string" ? data.status : null;
 }
 
 async function loadLatestApprovalStatus(
