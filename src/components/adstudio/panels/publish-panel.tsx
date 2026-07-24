@@ -299,6 +299,7 @@ export function PublishSetupPanel({
 
     const planId = publishPlanId;
     let cancelled = false;
+    let draftTicks = 0;
     async function pollPlan() {
       const response = await fetch(`/api/integrations/meta/publish-plans/${encodeURIComponent(planId)}`);
       const plan = (await response.json().catch(() => ({}))) as PublishPlanStatus;
@@ -315,6 +316,15 @@ export function PublishSetupPanel({
         const ads = plan.reconciledObjects?.ads ?? 0;
         setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta` : "Creating your paused ads on Meta");
         setPublishPhase("creating");
+      } else if (plan.status === "draft") {
+        draftTicks += 1;
+        // If the plan stays in "draft" for >30s, the Trigger.dev job never picked it up
+        // (provider writes disabled, queue failure, etc.) — surface a clear error.
+        if (draftTicks > 6) {
+          setPublishDone(false);
+          setPublishError("Live publishing is not enabled yet — export your creatives to launch manually.");
+          setPublishPhase("failed");
+        }
       }
     }
 
@@ -467,6 +477,8 @@ export function PublishSetupPanel({
       const body = (await response.json().catch(() => ({}))) as PublishResponse;
       if (!response.ok) throw new Error(body.error ?? "Publish failed.");
 
+      if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled yet — export your creatives to launch manually.");
+
       if (body.metaPublishPlan?.approvalRequestId && !body.triggerRunId) {
         setPublishMessage("Submitting to Meta");
         setPublishPlanId(body.metaPublishPlan.id ?? null);
@@ -478,7 +490,6 @@ export function PublishSetupPanel({
       const queued = Boolean(body.triggerRunId) || body.metaPublishPlan?.status === "paused_live";
       if (!queued) {
         if (body.blockers?.length) throw new Error("Resolve the readiness items before publishing.");
-        if (body.providerWritesEnabled === false) throw new Error("Live publishing is not enabled.");
         throw new Error("Meta did not confirm the publish request.");
       }
 
