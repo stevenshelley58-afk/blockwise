@@ -34,6 +34,8 @@ export type MetaConnectionSetup = {
 
 export type MetaPublishControls = {
   dailyBudgetMinorUnits?: number;
+  /** Destination URL for the lead form thank-you button (falls back to privacy policy). */
+  destinationUrl?: string;
   geo?:
     | { type: "country"; country: string }
     | { type: "custom_radius"; latitude: number; longitude: number; radiusKm: number }
@@ -93,6 +95,7 @@ export type MetaPublishLeadFormPlan = {
   privacyPolicyUrl: string;
   thankYouTitle: string;
   thankYouBody: string;
+  thankYouWebsiteUrl: string;
 };
 
 export type MetaPublishCreativePlan = {
@@ -275,7 +278,7 @@ export function buildMetaPublishPlan(input: {
     controls,
     campaign,
     adSets: buildAdSetPlans(campaignPack, controls, abTest),
-    leadForms: buildLeadFormPlans(campaignPack, input.setup),
+    leadForms: buildLeadFormPlans(campaignPack, input.setup, controls.destinationUrl),
     creatives: buildCreativePlans(campaignPack, input.setup, Boolean(input.includeCreativeAssets)),
     ads: buildAdPlans(campaignPack, abTest),
     tracking: {
@@ -539,18 +542,23 @@ async function publishWithMarketingApi(
 
       const response = await postMetaObject(input, requestLog, responseLog, `lead_form.${leadForm.localId}`, `/${plan.setup.pageId}/leadgen_forms`, {
         name: leadForm.name,
-        follow_up_action_url: plan.setup.privacyPolicyUrl,
+        follow_up_action_url: leadForm.thankYouWebsiteUrl,
         privacy_policy: {
           url: leadForm.privacyPolicyUrl,
           link_text: "Privacy Policy",
         },
-        questions: leadForm.questions.map((question) => ({ type: "CUSTOM", label: question })),
+        questions: [
+          { type: "FULL_NAME", key: "full_name" },
+          { type: "EMAIL", key: "email" },
+          { type: "PHONE", key: "phone" },
+          ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
+        ],
         thank_you_page: {
           title: leadForm.thankYouTitle,
           body: leadForm.thankYouBody,
           button_text: "Visit website",
           button_type: "VIEW_WEBSITE",
-          website_url: plan.setup.privacyPolicyUrl,
+          website_url: leadForm.thankYouWebsiteUrl,
         },
       });
       reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
@@ -817,7 +825,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishLeadFormPlan[] {
+function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => ({
     localId: `form_${index + 1}`,
     name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
@@ -826,6 +834,7 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
     privacyPolicyUrl: setup.privacyPolicyUrl,
     thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
     thankYouBody: copy.meta.leadForm.thankYouScreen.body,
+    thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
   }));
 }
 
