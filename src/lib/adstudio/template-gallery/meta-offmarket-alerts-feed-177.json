@@ -141,14 +141,14 @@
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Request the property details",
+      "headline": "Request off-market property alerts",
       "questions": [
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "Request received",
-        "body": "The agency will be in touch shortly."
+        "body": "The agency will be in touch within 24 hours with off-market property alerts."
       }
     }
   }

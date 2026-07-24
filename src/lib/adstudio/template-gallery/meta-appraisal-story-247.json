@@ -129,14 +129,14 @@
     ],
     "cta": "LEARN_MORE",
     "leadForm": {
-      "headline": "Request the property details",
+      "headline": "Request your free property appraisal",
       "questions": [
         "What is your best contact number?"
       ],
       "privacyPolicyUrl": null,
       "thankYouScreen": {
         "title": "Request received",
-        "body": "The agency will be in touch shortly."
+        "body": "The agency will be in touch within 24 hours to arrange your free property appraisal."
       }
     }
   }
