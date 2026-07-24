@@ -13,6 +13,59 @@ export const metadata: Metadata = {
   alternates: { canonical: "/guides" },
 };
 
+const guides = [
+  {
+    href: "/guides/sold-price-list-seller-leads",
+    image: "/guides/sold-price-list/hero.webp",
+    alt: "Established homes along a tree-lined suburban street",
+    label: "Seller lead generation",
+    title: "The sold-price list",
+    hook: "Turn recent local sales into a focused Meta campaign, a useful homeowner resource and a follow-up path your team can review.",
+    readTime: "12 minutes",
+    category: "Seller leads",
+  },
+  {
+    href: "/guides/custom-list-facebook-ad-buyer-leads",
+    image: "/guides/custom-list/hero.webp",
+    alt: "Meta Ads Manager campaign setup for a custom-list real estate lead ad",
+    label: "Buyer lead generation",
+    title: "The custom-list Facebook ad",
+    hook: "Most real estate Facebook ads fail because the offer is too generic. A custom list of local homes with one desirable feature fixes that — and produces leads within 24 hours.",
+    readTime: "14 minutes",
+    category: "Buyer leads",
+  },
+  {
+    href: "/guides/downsizing-ad-seller-leads",
+    image: "/guides/downsizing/hero.webp",
+    alt: "A single-storey home typical of a downsizing market",
+    label: "Seller lead generation",
+    title: "The downsizing ad",
+    hook: "Seller-lead campaigns are the most expensive ads in real estate. There is a cheaper path — a buyer ad that quietly attracts homeowners who must sell before they buy.",
+    readTime: "12 minutes",
+    category: "Seller leads",
+  },
+  {
+    href: "/guides/lead-follow-up-playbook",
+    image: "/guides/follow-up/hero.webp",
+    alt: "A real estate lead follow-up desk setup with phone and CRM",
+    label: "Lead conversion",
+    title: "The follow-up playbook",
+    hook: "The average lead converts after seven touch points. The average agent follows up once. This is the 90-day system that closes the gap.",
+    readTime: "13 minutes",
+    category: "Lead conversion",
+  },
+  {
+    href: "/guides/google-ads-real-estate-leads",
+    image: "/guides/google-ads/hero.webp",
+    alt: "Google search ad for real estate appearing above organic results",
+    label: "Google Ads",
+    title: "Google Ads for real estate",
+    hook: "Facebook ads are the easiest way to generate leads. Google Ads are the easiest way to generate leads that actually close — because the person typed 'homes for sale' into a search bar.",
+    readTime: "15 minutes",
+    category: "Google Ads",
+  },
+];
+
 export default function GuidesIndexPage() {
   return (
     <GuidesShell>
@@ -31,28 +84,53 @@ export default function GuidesIndexPage() {
         </section>
 
         <section className="bw-guides-feature" aria-labelledby="featured-guide">
-          <Link href="/guides/sold-price-list-seller-leads" className="bw-guides-feature-image">
+          <Link href={guides[0].href} className="bw-guides-feature-image">
             <Image
-              src="/guides/sold-price-list/hero.webp"
-              alt="Established homes along a tree-lined suburban street"
+              src={guides[0].image}
+              alt={guides[0].alt}
               fill
               priority
               sizes="(max-width: 900px) 100vw, 62vw"
             />
           </Link>
           <div className="bw-guides-feature-copy">
-            <span>Seller lead generation</span>
-            <h2 id="featured-guide">The sold-price list</h2>
-            <p>
-              Turn recent local sales into a focused Meta campaign, a useful homeowner resource and a follow-up path your team can review.
-            </p>
+            <span>{guides[0].label}</span>
+            <h2 id="featured-guide">{guides[0].title}</h2>
+            <p>{guides[0].hook}</p>
             <dl className="bw-guides-feature-details">
-              <div><dt>Read time</dt><dd>12 minutes</dd></div>
+              <div><dt>Read time</dt><dd>{guides[0].readTime}</dd></div>
               <div><dt>For</dt><dd>Real-estate agents</dd></div>
             </dl>
-            <Link href="/guides/sold-price-list-seller-leads" className="bw-guides-read-link">
+            <Link href={guides[0].href} className="bw-guides-read-link">
               Read the sold-price guide <span aria-hidden>→</span>
             </Link>
+          </div>
+        </section>
+
+        <section className="bw-guides-grid-section" aria-labelledby="all-guides">
+          <h2 id="all-guides" className="bw-guides-grid-heading">All guides</h2>
+          <div className="bw-guides-grid">
+            {guides.map((guide) => (
+              <Link key={guide.href} href={guide.href} className="bw-guide-card">
+                <div className="bw-guide-card-image">
+                  <Image
+                    src={guide.image}
+                    alt={guide.alt}
+                    fill
+                    sizes="(max-width: 780px) 100vw, (max-width: 1050px) 50vw, 33vw"
+                  />
+                </div>
+                <div className="bw-guide-card-body">
+                  <span className="bw-guide-card-category">{guide.category}</span>
+                  <h3>{guide.title}</h3>
+                  <p>{guide.hook}</p>
+                  <div className="bw-guide-card-foot">
+                    <span>{guide.readTime} read</span>
+                    <span aria-hidden>→</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 

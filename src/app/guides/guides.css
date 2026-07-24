@@ -413,6 +413,28 @@
   .bw-guides-footer { padding-left: 22px; padding-right: 22px; }
 }
 
+.bw-guides-grid-section { border-top: 1px solid var(--ink); margin-top: clamp(72px, 9vw, 128px); padding-top: clamp(32px, 4vw, 56px); }
+.bw-guides-grid-heading { font-family: var(--font-manrope), sans-serif; font-size: clamp(2rem, 3.6vw, 3.5rem); letter-spacing: -.04em; line-height: 1; margin: 0 0 clamp(36px, 5vw, 64px); }
+
+.bw-guides-grid { display: grid; gap: clamp(28px, 4vw, 48px); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+.bw-guide-card { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--rule); text-decoration: none; transition: border-color 200ms ease; }
+.bw-guide-card:hover { border-color: var(--ink); }
+.bw-guide-card-image { aspect-ratio: 16 / 10; overflow: hidden; position: relative; width: 100%; }
+.bw-guide-card-image img { filter: saturate(0.72) contrast(1.04); transition: transform 600ms cubic-bezier(.2,.8,.2,1); }
+.bw-guide-card:hover .bw-guide-card-image img { transform: scale(1.03); }
+.bw-guide-card-body { display: grid; gap: 12px; padding: clamp(22px, 2.5vw, 32px); }
+.bw-guide-card-category { color: var(--blue); font-size: .625rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.bw-guide-card-body h3 { font-family: var(--font-manrope), sans-serif; font-size: 1.375rem; letter-spacing: -.03em; line-height: 1.15; margin: 0; }
+.bw-guide-card-body p { color: var(--muted); font-size: .875rem; line-height: 1.6; margin: 0; }
+.bw-guide-card-foot { align-items: center; border-top: 1px solid var(--rule); color: var(--muted); display: flex; font-size: .75rem; font-weight: 700; justify-content: space-between; margin-top: 14px; padding-top: 16px; }
+.bw-guide-card-foot span:last-child { color: var(--blue); font-size: 1.125rem; transition: transform 180ms cubic-bezier(.22,1,.36,1); }
+.bw-guide-card:hover .bw-guide-card-foot span:last-child { transform: translateX(4px); }
+
+@media (max-width: 780px) {
+  .bw-guides-grid { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bw-guides-page *, .bw-guides-page *::before, .bw-guides-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
