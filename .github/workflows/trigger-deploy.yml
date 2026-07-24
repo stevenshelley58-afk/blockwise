@@ -43,6 +43,9 @@ jobs:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
       TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY }}
+      BLOCKWISE_ENABLE_PROVIDER_WRITES: ${{ secrets.BLOCKWISE_ENABLE_PROVIDER_WRITES }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
     steps:
       - name: Check for trigger.dev credentials
         id: gate
