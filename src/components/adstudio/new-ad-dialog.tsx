@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { FocusEvent, RefObject } from "react";
 import { AlertTriangle, ArrowLeft, ArrowUpRight, Image as ImageIcon, X } from "lucide-react";
 
 import { AssetUploadDropzone } from "@/components/asset-upload-dropzone";
@@ -77,6 +78,23 @@ const COPY_MODES: ReadonlyArray<{ id: CopyMode; label: string }> = [
   { id: "write", label: "Write my own" },
   { id: "sample", label: "Use template sample" },
 ];
+
+/**
+ * Every Meta CTA option that survives the server's 24-char clamp
+ * (src/lib/adstudio/copy-generation.ts). The preview renders the same label
+ * that Ad Studio's publish flow shows on the button.
+ */
+const FEED_COPY_CTA_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "LEARN_MORE", label: "Learn more" },
+  { value: "CONTACT_US", label: "Contact us" },
+  { value: "SIGN_UP", label: "Sign up" },
+  { value: "DOWNLOAD", label: "Download" },
+  { value: "GET_QUOTE", label: "Get quote" },
+  { value: "BOOK_NOW", label: "Book now" },
+];
+function ctaLabelFor(value: string): string {
+  return FEED_COPY_CTA_OPTIONS.find((option) => option.value === value)?.label ?? "Learn more";
+}
 
 const TEMPLATE_FILTERS: ReadonlyArray<{ id: TemplateFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -265,6 +283,256 @@ function domainForPreview(brandKit: AdStudioBrandKit): string {
   return resolveAdvertiserDomain({ brandKit }).host;
 }
 
+/**
+ * Canvas editor: which zone of the live preview each ad-copy field controls.
+ * The on-image text fields (address, price, …) sit inside the ad creative
+ * itself, so they map to no preview zone — their inputs are edited right on
+ * top of the sample image by the generation pipeline.
+ */
+type PreviewZoneKey = "primaryText" | "headline" | "description" | "cta";
+function previewZoneForInputId(id: string): PreviewZoneKey | null {
+  if (!id.startsWith("feedcopy-")) return null;
+  const zone = id.slice("feedcopy-".length);
+  return zone === "primaryText" || zone === "headline" || zone === "description" || zone === "cta"
+    ? zone
+    : null;
+}
+
+/**
+ * Map every ad-copy input id to the DOM element that renders it in the live
+ * preview. Rebuilt on any preview change so the active field's zone stays
+ * highlighted and its text live-updated even while the dialog scrolls.
+ */
+function usePreviewZoneMap(dialogRef: RefObject<HTMLDivElement | null>): Record<PreviewZoneKey, HTMLElement> {
+  const [zoneMap, setZoneMap] = useState<Record<PreviewZoneKey, HTMLElement>>({} as Record<PreviewZoneKey, HTMLElement>);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const root = dialogRef.current;
+    if (!root) return;
+    const observer = new MutationObserver(() => setRevision((current) => current + 1));
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [dialogRef]);
+  useEffect(() => {
+    const root = dialogRef.current;
+    if (!root) return;
+    const next = {} as Record<PreviewZoneKey, HTMLElement>;
+    for (const element of root.querySelectorAll<HTMLElement>("[data-preview-zone]")) {
+      const zone = element.dataset.previewZone as PreviewZoneKey;
+      if (zone in FEED_COPY_LIMITS) next[zone] = element;
+    }
+    setZoneMap(next);
+    // `revision` is deliberate: the map is rebuilt whenever the preview re-renders.
+  }, [dialogRef, revision]);
+  return zoneMap;
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReduced(query.matches);
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
+  return reduced;
+}
+
+/**
+ * Canvas editor: the live Facebook/Instagram-style preview of the ad as the
+ * customer writes it. Every copy region is a button — clicking it jumps
+ * straight to the matching input (the ad is a second input surface). The
+ * region tied to the focused field carries `.is-active`, so the customer
+ * always sees exactly where their words land.
+ */
+function NewAdLivePreview({
+  template,
+  brandKit,
+  imageDataUrls,
+  primaryImageSlotId,
+  onImageCopy,
+  feedCopy,
+  activeZone,
+  reducedMotion,
+  zoneMap,
+  onZoneClick,
+}: {
+  template: AdStudioTemplate | undefined;
+  brandKit: AdStudioBrandKit;
+  imageDataUrls: Record<string, string>;
+  primaryImageSlotId: string;
+  onImageCopy: Record<string, string>;
+  feedCopy: FeedCopy;
+  activeZone: PreviewZoneKey | null;
+  reducedMotion: boolean;
+  zoneMap: Record<PreviewZoneKey, HTMLElement>;
+  onZoneClick: (zone: PreviewZoneKey) => void;
+}) {
+  const brandName = brandNameForPreview(brandKit);
+  const brandInitial = initialForBrand(brandName);
+  const domain = domainForPreview(brandKit);
+  const sample = template ? templateAdCopy(template) : undefined;
+  const primaryText = feedCopy.primaryText.trim() || sample?.primaryText || "Your caption lands here — above the image, in the feed.";
+  const headline = feedCopy.headline.trim() || sample?.headline || "Your headline";
+  const description = feedCopy.description.trim() || sample?.description || "Supporting line";
+  const cta = ctaLabelFor(feedCopy.cta.trim());
+  const mediaSrc = imageDataUrls[primaryImageSlotId] ?? (template ? templatePreviewSrc(template, brandKit) : "");
+  const isFullscreen = template?.format === "9:16";
+
+  const zoneClass = (zone: PreviewZoneKey) =>
+    `newad-pv-zone${activeZone === zone ? " is-active" : ""}`;
+
+  // Text that is burned into the ad image (the customer's "Text on the ad"
+  // fields). Shown as overlay chips so the preview still tells the story of
+  // what the finished creative will carry.
+  const onImageText = template
+    ? template.inputs.text
+        .map((field) => ({ key: field.key, label: field.label, value: onImageCopy[field.key]?.trim() || field.sample }))
+        .filter((field) => field.value)
+    : [];
+
+  const captionButton = (zone: PreviewZoneKey, content: string, ghost: boolean) => (
+    <button
+      type="button"
+      className={zoneClass(zone)}
+      data-preview-zone={zone}
+      onClick={() => onZoneClick(zone)}
+      aria-label={`Edit ${zone === "primaryText" ? "primary text" : zone}`}
+    >
+      <span className={ghost ? "is-ghost" : undefined}>{content}</span>
+    </button>
+  );
+
+  return (
+    <div className="newad-preview">
+      <div className="newad-preview-cap">
+        <span>Live preview</span>
+        <span>{isFullscreen ? "Fullscreen ad" : "Feed ad"} · click any text to edit it</span>
+      </div>
+      <div className={`newad-pv newad-pv--${isFullscreen ? "story" : "feed"}${reducedMotion ? " newad-pv--static" : ""}`}>
+        {isFullscreen ? (
+          <div className="newad-pv-story">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {mediaSrc ? <img src={mediaSrc} alt="" loading="lazy" decoding="async" /> : <span className="newad-pv-story-ph" />}
+            <span className="newad-pv-shade" aria-hidden />
+            <span className="newad-pv-story-top">
+              <span className="studio-template-avatar">{brandInitial}</span>
+              <span><strong>{brandName}</strong><small>Sponsored</small></span>
+            </span>
+            {onImageText.length > 0 && (
+              <span className="newad-pv-chips" aria-hidden>
+                {onImageText.map((field) => (
+                  <span key={field.key} title={field.label}><b>{field.label}</b> {field.value}</span>
+                ))}
+              </span>
+            )}
+            <span className="newad-pv-story-copy">
+              {captionButton("headline", headline, !feedCopy.headline.trim())}
+              {captionButton("primaryText", primaryText, !feedCopy.primaryText.trim())}
+            </span>
+            {captionButton("cta", cta, false)}
+          </div>
+        ) : (
+          <div className="newad-pv-feed">
+            <span className="newad-pv-feed-head">
+              <span className="studio-template-avatar">{brandInitial}</span>
+              <span><strong>{brandName}</strong><small>Sponsored</small></span>
+              <span className="studio-template-dots" aria-hidden>···</span>
+            </span>
+            {captionButton("primaryText", primaryText, !feedCopy.primaryText.trim())}
+            <span className="newad-pv-media">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {mediaSrc ? <img src={mediaSrc} alt="" loading="lazy" decoding="async" /> : <span className="newad-pv-media-ph" />}
+              {onImageText.length > 0 && (
+                <span className="newad-pv-chips" aria-hidden>
+                  {onImageText.slice(0, 3).map((field) => (
+                    <span key={field.key} title={field.label}><b>{field.label}</b> {field.value}</span>
+                  ))}
+                </span>
+              )}
+            </span>
+            <span className="newad-pv-feed-link">
+              <span>
+                <small>{domain}</small>
+                {captionButton("headline", headline, !feedCopy.headline.trim())}
+                {captionButton("description", description, !feedCopy.description.trim())}
+              </span>
+              {captionButton("cta", cta, false)}
+            </span>
+          </div>
+        )}
+      </div>
+      {activeZone && zoneMap[activeZone] ? (
+        <p className="newad-preview-hint">
+          Editing {activeZone === "primaryText" ? "primary text" : activeZone === "cta" ? "call to action" : activeZone}
+        </p>
+      ) : (
+        <p className="newad-preview-hint newad-preview-hint--idle">
+          Focus a field — the matching spot lights up here.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Canvas editor, small screens: the ad tucks into a sticky strip so the
+ * keyboard never covers it. The strip shows the exact line the focused field
+ * controls (live-updated); tap it to expand the full preview, or edit that
+ * line directly from the strip.
+ */
+function NewAdPreviewPeek({
+  collapsed,
+  activeZone,
+  feedCopy,
+  zoneMap,
+  onToggle,
+  onZoneClick,
+}: {
+  collapsed: boolean;
+  activeZone: PreviewZoneKey | null;
+  feedCopy: FeedCopy;
+  zoneMap: Record<PreviewZoneKey, HTMLElement>;
+  onToggle: () => void;
+  onZoneClick: (zone: PreviewZoneKey) => void;
+}) {
+  const zoneName =
+    activeZone === "primaryText" ? "Primary text"
+    : activeZone === "headline" ? "Headline"
+    : activeZone === "description" ? "Supporting line"
+    : activeZone === "cta" ? "Call to action"
+    : "Ad preview";
+  const zoneValue = activeZone ? feedCopy[activeZone] : "";
+
+  return (
+    <div className={`newad-peek${collapsed ? " is-collapsed" : ""}`}>
+      <button
+        type="button"
+        className="newad-peek-toggle"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? "Expand ad preview" : "Tuck ad preview"}
+      >
+        <span className="newad-peek-name">{zoneName}</span>
+        <span className={`newad-peek-caret${collapsed ? " is-closed" : ""}`} aria-hidden>▾</span>
+      </button>
+      {collapsed && activeZone && (
+        <button
+          type="button"
+          className="newad-peek-line"
+          onClick={() => onZoneClick(activeZone)}
+          aria-label={`Edit ${zoneName.toLowerCase()}`}
+        >
+          <span className={zoneValue.trim() ? undefined : "is-ghost"}>
+            {zoneValue.trim() || zoneMap[activeZone]?.textContent?.trim() || "—"}
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function NewAdDialog({
   open,
   onClose,
@@ -312,6 +580,37 @@ export function NewAdDialog({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [trialCreditNote, setTrialCreditNote] = useState("Uses one ad pack. No Meta account is needed until publish.");
   const adStreamLocation = useMemo(() => generationAdLocation(brandKit), [brandKit]);
+
+  // Canvas editor state: which preview zone the focused field controls, the
+  // responsive layout mode (split columns ≥860px, tucked peek below), and the
+  // mobile peek's collapsed state.
+  const [activeZone, setActiveZone] = useState<PreviewZoneKey | null>(null);
+  const [peekCollapsed, setPeekCollapsed] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+  const zoneMap = usePreviewZoneMap(dialogRef);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const query = window.matchMedia("(max-width: 860px)");
+    const apply = () => setIsMobileLayout(query.matches);
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
+
+  const handleFormFocusCapture = useCallback((event: FocusEvent) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const zone = target ? previewZoneForInputId(target.id) : null;
+    setActiveZone(zone);
+    // Small screens: tuck the full preview into the sticky strip so the
+    // keyboard gets the space; the strip keeps showing the active line live.
+    if (zone && isMobileLayout) setPeekCollapsed(true);
+  }, [isMobileLayout]);
+
+  const handleZoneClick = useCallback((zone: PreviewZoneKey) => {
+    document.getElementById(`feedcopy-${zone}`)?.focus();
+  }, []);
 
   const selectedTemplate = templates.find((template) => template.id === templateId);
   const imageRequirements = useMemo(
@@ -403,6 +702,8 @@ export function NewAdDialog({
     setError("");
     setShowRequirementsAlert(false);
     setUploadingImage(false);
+    setActiveZone(null);
+    setPeekCollapsed(false);
     window.setTimeout(() => dialogRef.current?.focus(), 0);
   }, [open, initialTemplateId]);
 
@@ -825,7 +1126,21 @@ export function NewAdDialog({
           )}
 
           {step === "brief" && mediaSourceMode === "details" && (
-            <div className="studio-newad-own">
+            <div className={`studio-newad-canvas${isMobileLayout && peekCollapsed ? " is-peek-collapsed" : ""}`}>
+              {isMobileLayout && (
+                <NewAdPreviewPeek
+                  collapsed={peekCollapsed}
+                  activeZone={activeZone}
+                  feedCopy={feedCopy}
+                  zoneMap={zoneMap}
+                  onToggle={() => setPeekCollapsed((current) => !current)}
+                  onZoneClick={handleZoneClick}
+                />
+              )}
+              <div
+                className="studio-newad-own"
+                onFocusCapture={handleFormFocusCapture}
+              >
               <p className="studio-newad-note">{briefGuidance.note} {trialCreditNote}</p>
               <div className="studio-newad-upload-group">
                 {imageRequirements.map((slot) => (
@@ -963,9 +1278,19 @@ export function NewAdDialog({
                             {field.label}
                             <small>{field.hint}</small>
                           </label>
-                          <span className="studio-newad-charcount" aria-live="polite">{value.length}/{limit}</span>
+                          <span className="studio-newad-charcount" aria-live="polite">{field.key === "cta" ? ctaLabelFor(value) : `${value.length}/${limit}`}</span>
                         </div>
-                        {field.multiline ? (
+                        {field.key === "cta" ? (
+                          <select
+                            id={inputId}
+                            value={value}
+                            onChange={(event) => setFeedCopy((current) => ({ ...current, [field.key]: event.target.value }))}
+                          >
+                            {FEED_COPY_CTA_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        ) : field.multiline ? (
                           <textarea
                             id={inputId}
                             rows={2}
@@ -1041,6 +1366,21 @@ export function NewAdDialog({
                   </label>
                 </div>
               </fieldset>
+              </div>
+              <aside className="studio-newad-previewpane" aria-label="Live ad preview">
+                <NewAdLivePreview
+                  template={selectedTemplate}
+                  brandKit={brandKit}
+                  imageDataUrls={imageDataUrls}
+                  primaryImageSlotId={primaryImageSlot.id}
+                  onImageCopy={onImageCopy}
+                  feedCopy={feedCopy}
+                  activeZone={activeZone}
+                  reducedMotion={reducedMotion}
+                  zoneMap={zoneMap}
+                  onZoneClick={handleZoneClick}
+                />
+              </aside>
             </div>
           )}
 
@@ -1367,5 +1707,86 @@ button.studio-explore-card{padding:0;cursor:pointer}
   .studio-newad-field-head>button{width:100%}
   .studio-newad-quality-options{grid-template-columns:1fr}
 }
+
+/* ── Canvas editor: split form + live preview ─────────────────────────── */
+.studio-newad-canvas{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start}
+@media (min-width:861px){
+  .studio-newad-canvas{grid-template-columns:minmax(0,1fr) 372px}
+  .studio-newad-previewpane{position:sticky;top:0}
+}
+.studio-newad-canvas.is-peek-collapsed .studio-newad-previewpane{display:none}
+
+.newad-preview{display:grid;gap:10px}
+.newad-preview-cap{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.newad-preview-cap>span:first-child{font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent)}
+.newad-preview-cap>span:last-child{font-size:11.5px;color:var(--muted);text-align:right}
+
+.newad-pv{position:relative;border:1px solid var(--line-soft);border-radius:16px;background:#fff;box-shadow:var(--st-sh-1);overflow:hidden}
+.newad-pv--feed{max-width:470px;margin:0 auto;width:100%}
+.newad-pv--story{max-width:270px;margin:0 auto;width:100%}
+
+/* Feed placement */
+.newad-pv-feed-head{display:flex;align-items:center;gap:9px;padding:12px 13px 8px}
+.newad-pv-feed-head .studio-template-avatar{width:32px;height:32px}
+.newad-pv-feed-head>span:nth-child(2){display:grid;gap:1px;min-width:0}
+.newad-pv-feed-head strong{font-size:13.5px;font-weight:760;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-pv-feed-head small{font-size:11px;color:#64748b}
+.newad-pv-feed-head .studio-template-dots{margin-left:auto;color:#64748b;font-size:18px;line-height:1}
+.newad-pv-feed .newad-pv-zone{padding:0 13px 10px;text-align:left;font-size:14px;line-height:1.36;color:#1d2129}
+.newad-pv-media{position:relative;display:block;background:#f1f5f9;border-top:1px solid #edf1f6;border-bottom:1px solid #edf1f6}
+.newad-pv-media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.newad-pv-media-ph{display:block;width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,#e8edf4,#dbe4ef)}
+.newad-pv-chips{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px}
+.newad-pv-chips span{max-width:100%;border-radius:999px;background:rgba(9,14,26,.72);color:#fff;font-size:10.5px;line-height:1.2;padding:4px 9px;backdrop-filter:blur(3px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-pv-chips b{font-weight:800;opacity:.75;text-transform:uppercase;font-size:9px;letter-spacing:.4px}
+.newad-pv-feed-link{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f2f3f5;padding:11px 13px}
+.newad-pv-feed-link>span:first-child{display:grid;gap:3px;min-width:0}
+.newad-pv-feed-link small{font-size:9.5px;text-transform:uppercase;color:#64748b;letter-spacing:.3px}
+.newad-pv-feed-link>span:first-child .newad-pv-zone{width:100%}
+.newad-pv-feed-link .newad-pv-zone[data-preview-zone="headline"]{font-size:13px;font-weight:760;color:#1d2129;line-height:1.25}
+.newad-pv-feed-link .newad-pv-zone[data-preview-zone="description"]{font-size:12px;color:#64748b;line-height:1.3}
+.newad-pv-feed-link>.newad-pv-zone[data-preview-zone="cta"]{flex:0 0 auto;width:auto;min-height:34px;border-radius:6px;background:#e4e6eb;color:#172033;font-size:12px;font-weight:760;padding:0 14px;display:grid;place-items:center;white-space:nowrap}
+.newad-pv-feed-link>.newad-pv-zone[data-preview-zone="cta"].is-active{background:#e4e6eb}
+
+/* Fullscreen (story) placement */
+.newad-pv-story{position:relative;aspect-ratio:9/16;background:#0b1020;color:#fff;overflow:hidden}
+.newad-pv-story img,.newad-pv-story-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.newad-pv-story-ph{background:linear-gradient(160deg,#16213a,#0b1020)}
+.newad-pv-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,18,.5) 0%,rgba(3,7,18,.04) 40%,rgba(3,7,18,.78) 100%)}
+.newad-pv-story-top{position:absolute;left:12px;right:12px;top:14px;display:flex;align-items:center;gap:8px;z-index:2}
+.newad-pv-story-top .studio-template-avatar{width:28px;height:28px;background:rgba(255,255,255,.94);color:#111827}
+.newad-pv-story-top>span:nth-child(2){display:grid;gap:1px;min-width:0;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.newad-pv-story-top strong{font-size:12px;font-weight:760;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-pv-story-top small{font-size:10px;color:rgba(255,255,255,.78)}
+.newad-pv-story-copy{position:absolute;left:13px;right:13px;bottom:58px;display:grid;gap:7px;z-index:2}
+.newad-pv-story-copy .newad-pv-zone{width:100%}
+.newad-pv-story-copy .newad-pv-zone[data-preview-zone="headline"]{font-size:19px;font-weight:820;line-height:1.08;color:#fff}
+.newad-pv-story-copy .newad-pv-zone[data-preview-zone="primaryText"]{font-size:11.5px;line-height:1.34;color:rgba(255,255,255,.92)}
+.newad-pv-story .newad-pv-zone[data-preview-zone="cta"]{position:absolute;left:13px;right:13px;bottom:13px;z-index:2;min-height:36px;border-radius:999px;background:rgba(255,255,255,.95);color:#101827;display:grid;place-items:center;font-size:12.5px;font-weight:800;text-align:center;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+.newad-pv-story .newad-pv-zone[data-preview-zone="cta"].is-active{background:rgba(255,255,255,1)}
+.newad-pv-story .newad-pv-zone[data-preview-zone="cta"]:hover{box-shadow:0 0 0 2px rgba(59,130,246,.8),0 8px 18px rgba(0,0,0,.22)}
+
+/* Editable zones */
+.newad-pv-zone{display:block;width:100%;border:0;background:none;font:inherit;color:inherit;padding:0;margin:0;text-align:left;cursor:pointer;border-radius:6px;transition:box-shadow .16s ease,background .16s ease,transform .16s ease}
+.newad-pv-zone:hover{box-shadow:0 0 0 1.5px rgba(59,130,246,.55)}
+.newad-pv-zone:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.newad-pv-zone.is-active{background:rgba(59,130,246,.09);box-shadow:0 0 0 2px rgba(59,130,246,.75);animation:newad-zone-pulse 1.5s ease-in-out infinite}
+.newad-pv--static .newad-pv-zone.is-active{animation:none}
+.newad-pv-zone .is-ghost{color:#94a3b8;font-style:italic}
+.newad-pv-story .newad-pv-zone .is-ghost{color:rgba(255,255,255,.55)}
+@keyframes newad-zone-pulse{0%,100%{box-shadow:0 0 0 2px rgba(59,130,246,.75)}50%{box-shadow:0 0 0 5px rgba(59,130,246,.22)}}
+.newad-preview-hint{margin:0;font-size:12px;color:var(--accent);font-weight:650}
+.newad-preview-hint--idle{color:var(--muted);font-weight:500}
+
+/* Small-screen sticky peek strip */
+.newad-peek{position:sticky;top:0;z-index:6;display:grid;gap:6px;margin:-4px 0 12px;border:1px solid var(--line-soft);border-radius:12px;background:#fff;box-shadow:var(--st-sh-1);padding:9px 11px}
+.newad-peek-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:none;font:inherit;color:var(--ink);font-size:13px;font-weight:750;padding:2px 0;cursor:pointer}
+.newad-peek-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-peek-caret{color:var(--muted);font-size:13px;transition:transform .18s ease}
+.newad-peek-caret.is-closed{transform:rotate(-90deg)}
+.newad-peek-line{border:1px solid var(--line-soft);border-radius:8px;background:var(--surface-subtle,#f8fafc);font:inherit;color:var(--ink);font-size:13px;line-height:1.4;padding:8px 10px;text-align:left;cursor:pointer;min-width:0}
+.newad-peek-line span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.newad-peek-line .is-ghost{color:#94a3b8;font-style:italic}
+.newad-peek-line:hover{border-color:#b8bec9}
 `;
 // NewAdDialog: choose one gallery sample, then provide its declared assets.
