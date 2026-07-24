@@ -165,6 +165,7 @@ export function PublishSetupPanel({
   const [publishError, setPublishError] = useState("");
   const [publishDone, setPublishDone] = useState(false);
   const [publishMessage, setPublishMessage] = useState("Published");
+  const [publishPhase, setPublishPhase] = useState<"idle" | "submitting" | "creating" | "live" | "failed">("idle");
   const [publishPlanId, setPublishPlanId] = useState<string | null>(null);
   const [deselectedVariantIds, setDeselectedVariantIds] = useState<ReadonlySet<string>>(new Set());
   const [publishedVariantCount, setPublishedVariantCount] = useState<number | null>(null);
@@ -306,11 +307,14 @@ export function PublishSetupPanel({
       if (plan.status === "failed") {
         setPublishDone(false);
         setPublishError(plan.lastError ?? "Meta publish failed.");
+        setPublishPhase("failed");
       } else if (plan.status === "paused_live") {
-        setPublishMessage("Live on Meta (paused)");
+        setPublishMessage("Ad submitted");
+        setPublishPhase("live");
       } else if (plan.status === "publishing" || plan.status === "approved") {
         const ads = plan.reconciledObjects?.ads ?? 0;
-        setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"}` : "Creating your paused ads");
+        setPublishMessage(ads > 0 ? `Creating ${ads} paused ad${ads === 1 ? "" : "s"} on Meta` : "Creating your paused ads on Meta");
+        setPublishPhase("creating");
       }
     }
 
@@ -468,6 +472,7 @@ export function PublishSetupPanel({
         setPublishMessage("Submitted for review");
         setPublishPlanId(body.metaPublishPlan.id ?? null);
         setPublishDone(true);
+        setPublishPhase("submitting");
         return;
       }
 
@@ -480,8 +485,9 @@ export function PublishSetupPanel({
 
       if (!fullSelection) setPublishedVariantCount(body.metaPublishPlan?.variantIds?.length ?? selectedVariantIds.length);
       setPublishPlanId(body.metaPublishPlan?.id ?? null);
-      setPublishMessage(body.metaPublishPlan?.status === "paused_live" ? "Live on Meta (paused)" : "Creating your paused ads");
+      setPublishMessage(body.metaPublishPlan?.status === "paused_live" ? "Ad submitted" : "Creating your paused ads on Meta");
       setPublishDone(true);
+      setPublishPhase(body.metaPublishPlan?.status === "paused_live" ? "live" : "creating");
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
     } finally {
@@ -1000,35 +1006,58 @@ export function PublishSetupPanel({
                   ))}
                 </div>
               )}
+              {publishError && stepIndex === 4 && <p className="studio-publish-error">{publishError}</p>}
+              <button
+                className="studio-btn publish studio-publish-submit"
+                type="button"
+                disabled={!allMet || publishing || Boolean(selectionHint)}
+                onClick={handlePublishLive}
+              >
+                {publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />}
+                {publishing ? "Submitting..." : needsApprovalReview ? "Send for review" : "Submit to Meta"}
+              </button>
+              {onlyBlockedProviderWrite && <button className="studio-btn secondary" type="button" onClick={onExport}>Export creatives</button>}
             </section>
           )}
 
           {stepIndex === 5 && (
             <section className="studio-publish-screen studio-live-screen" aria-labelledby="live-title">
               <h1 id="live-title">Live</h1>
-              {publishDone ? (
+              {publishPhase === "idle" && !publishDone && (
+                <div className="studio-live-status blocked">
+                  <CircleAlert aria-hidden size={20} />
+                  <span><strong>Not submitted yet</strong><small>Go back to Review and submit your ad to Meta.</small></span>
+                </div>
+              )}
+              {(publishPhase === "submitting" || publishing) && (
+                <div className="studio-live-progress">
+                  <span className="studio-live-spinner"><RefreshCw aria-hidden size={24} /></span>
+                  <strong>Submitting to Meta...</strong>
+                  <small>Sending your campaign, creatives, and lead form.</small>
+                </div>
+              )}
+              {publishPhase === "creating" && (
+                <div className="studio-live-progress">
+                  <span className="studio-live-spinner"><RefreshCw aria-hidden size={24} /></span>
+                  <strong>{publishMessage || "Creating your paused ads on Meta..."}</strong>
+                  <small>Building campaign, ad sets, and creatives. This takes a moment.</small>
+                </div>
+              )}
+              {publishPhase === "live" && (
                 <div className="studio-publish-success">
                   <span><Check aria-hidden size={24} /></span>
-                  <strong>{publishMessage}</strong>
-                  {publishedVariantCount && <small>{publishedVariantCount} creatives selected</small>}
+                  <strong>Ad submitted</strong>
+                  {publishedVariantCount && <small>{publishedVariantCount} creatives published (paused)</small>}
+                  <Link href="/results" className="studio-btn publish studio-live-results-btn">View in Results <ChevronRight aria-hidden size={17} /></Link>
                 </div>
-              ) : (
+              )}
+              {publishPhase === "failed" && (
                 <>
-                  <div className={`studio-live-status ${allMet ? "ready" : "blocked"}`}>
-                    {allMet ? <Check aria-hidden size={20} /> : <CircleAlert aria-hidden size={20} />}
-                    <span><strong>{allMet ? "Ready to publish" : "Not ready"}</strong><small>{allMet ? "Ads will be created paused." : `${blockingItems.length} item${blockingItems.length === 1 ? "" : "s"} need attention.`}</small></span>
+                  <div className="studio-live-status blocked">
+                    <CircleAlert aria-hidden size={20} />
+                    <span><strong>Publish failed</strong><small>{publishError || "Something went wrong submitting to Meta."}</small></span>
                   </div>
-                  {publishError && <p className="studio-publish-error">{publishError}</p>}
-                  <button
-                    className="studio-btn publish studio-publish-live-button"
-                    type="button"
-                    disabled={!allMet || publishing || Boolean(selectionHint)}
-                    onClick={handlePublishLive}
-                  >
-                    {publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />}
-                    {publishing ? "Submitting" : needsApprovalReview ? "Send for review" : "Publish paused"}
-                  </button>
-                  {onlyBlockedProviderWrite && <button className="studio-btn secondary" type="button" onClick={onExport}>Export creatives</button>}
+                  <button className="studio-btn publish studio-publish-retry" type="button" onClick={handlePublishLive}><Send aria-hidden size={17} /> Try again</button>
                 </>
               )}
 
@@ -1057,7 +1086,7 @@ export function PublishSetupPanel({
               disabled={continueDisabled}
               onClick={() => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
-              Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} />
+              {stepIndex === 4 ? <>Submit & go live <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>
           )}
         </footer>

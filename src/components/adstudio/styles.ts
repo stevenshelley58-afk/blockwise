@@ -243,6 +243,14 @@
 .studio-publish-success>span{width:52px;height:52px;border-radius:50%;background:#08743d;color:#fff;display:grid;place-items:center}
 .studio-publish-success strong{font-size:19px}
 .studio-publish-success small{color:var(--muted)}
+.studio-live-progress{min-height:210px;border:1px solid var(--line);border-radius:14px;background:var(--surface-subtle,#f6f7f9);display:grid;place-items:center;align-content:center;gap:12px;text-align:center;padding:30px}
+.studio-live-spinner{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;animation:spin 1s linear infinite}
+.studio-live-progress strong{font-size:18px;font-weight:750}
+.studio-live-progress small{color:var(--muted);max-width:340px;line-height:1.5}
+.studio-live-results-btn{margin-top:6px;min-height:44px}
+.studio-publish-submit{width:100%;min-height:48px;margin-top:4px}
+.studio-publish-retry{min-height:44px}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .studio-campaign-options{margin-top:18px}
 .studio-campaign-options summary{justify-content:space-between;color:var(--muted);font-size:13px;font-weight:650}
 .studio-campaign-options button{width:100%;min-height:44px;margin-bottom:12px;border:1px solid #ffdad6;border-radius:9px;background:#fff;color:#ba1a1a;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
