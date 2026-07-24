@@ -263,7 +263,14 @@ async function createAndPersistMetaPlan(input: {
       campaignName: input.campaignPack.campaign.name,
       adapter: input.adapter,
     });
-    approval = createdApproval;
+    // Auto-approve: the review step was removed from the UI, so submissions
+    // are approved immediately instead of waiting for a separate approval action.
+    await input.serviceSupabase
+      .from("approval_requests")
+      .update({ status: "approved" })
+      .eq("id", createdApproval.id)
+      .eq("workspace_id", input.workspaceId);
+    approval = { id: createdApproval.id, status: "approved" };
     plan = buildMetaPublishPlan({
       workspaceId: input.workspaceId,
       campaignPack: input.campaignPack,
