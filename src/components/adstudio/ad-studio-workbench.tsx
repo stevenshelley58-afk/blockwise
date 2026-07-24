@@ -1023,7 +1023,7 @@ export function AdStudioWorkbench({
       },
       {
         title: "Launch",
-        detail: publishReady ? "Ready to export or send for review." : "Check copy, media, brand and destination.",
+        detail: publishReady ? "Ready to submit and go live." : "Check copy, media, brand and destination.",
         done: publishReady,
         action: "Publish",
         onClick: () => goToSection("publish"),

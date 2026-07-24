@@ -330,12 +330,11 @@ export function PublishSetupPanel({
     ? null
     : { id: "brand_kit_approved", label: "Confirm brand kit", met: false };
   const checklist = [...(brandItem ? [brandItem] : []), ...(readiness ?? [])];
-  const blockingItems = checklist.filter((item) => !item.met && (!item.review || item.blocked));
+  const blockingItems = checklist.filter((item) => !item.met);
   const allMet = readiness !== null && blockingItems.length === 0;
   const onlyBlockedProviderWrite = blockingItems.length === 1
     && blockingItems[0]?.id === "provider_writes"
     && blockingItems[0]?.blocked;
-  const needsApprovalReview = checklist.some((item) => item.id === "approval_ready" && item.review && !item.met && !item.blocked);
   const variants = campaignPack.variants;
   const selectedVariantIds = variants.map((variant) => variant.variantId).filter((id) => !deselectedVariantIds.has(id));
   const fullSelection = selectedVariantIds.length === variants.length;
@@ -460,7 +459,6 @@ export function PublishSetupPanel({
         body: JSON.stringify({
           campaignPack,
           controls: buildControls(),
-          requestApproval: true,
           dryRun: false,
           ...(campaignMode === "existing" ? { existingMetaCampaignId: selectedMetaCampaignId } : {}),
           ...(fullSelection ? {} : { variantIds: selectedVariantIds }),
@@ -470,7 +468,7 @@ export function PublishSetupPanel({
       if (!response.ok) throw new Error(body.error ?? "Publish failed.");
 
       if (body.metaPublishPlan?.approvalRequestId && !body.triggerRunId) {
-        setPublishMessage("Submitted for review");
+        setPublishMessage("Submitting to Meta");
         setPublishPlanId(body.metaPublishPlan.id ?? null);
         setPublishDone(true);
         setPublishPhase("submitting");
@@ -994,6 +992,30 @@ export function PublishSetupPanel({
                   ))}
                 </div>
               </details>
+              {variants.length > 0 && (
+                <div className="studio-review-creatives">
+                  <strong>Your {selectedVariantIds.length === 1 ? "ad" : "ads"}</strong>
+                  <div className="studio-creative-selection studio-creative-selection-visual">
+                    {variants.filter((variant) => !deselectedVariantIds.has(variant.variantId)).map((variant) => {
+                      const preview = previewForVariant(campaignPack, variant.variantId);
+                      return (
+                        <article key={variant.variantId}>
+                          <div className="studio-current-creative">
+                            <CreativeThumbnail src={preview?.src ?? null} alt={`${variant.angle} ad preview`} />
+                            <div>
+                              <strong>{variant.headline}</strong>
+                              <dl>
+                                <div><dt>Format</dt><dd>{preview?.format ? formatCreativeFormat(preview.format) : "Feed"}</dd></div>
+                                <div><dt>CTA</dt><dd>{variant.cta}</dd></div>
+                              </dl>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <button className="studio-btn secondary" type="button" onClick={onExport}><Download aria-hidden size={17} /> Export creatives</button>
               {exportStatus && exportStatus.length > 0 && (
                 <div className="studio-export-status">
@@ -1008,15 +1030,6 @@ export function PublishSetupPanel({
                 </div>
               )}
               {publishError && stepIndex === 4 && <p className="studio-publish-error">{publishError}</p>}
-              <button
-                className="studio-btn publish studio-publish-submit"
-                type="button"
-                disabled={!allMet || publishing || Boolean(selectionHint)}
-                onClick={handlePublishLive}
-              >
-                {publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />}
-                {publishing ? "Submitting..." : needsApprovalReview ? "Send for review" : "Submit to Meta"}
-              </button>
               {onlyBlockedProviderWrite && <button className="studio-btn secondary" type="button" onClick={onExport}>Export creatives</button>}
             </section>
           )}
@@ -1084,10 +1097,10 @@ export function PublishSetupPanel({
             <button
               type="button"
               className="studio-publish-continue"
-              disabled={continueDisabled}
-              onClick={() => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
+              disabled={stepIndex === 4 ? (!allMet || publishing || Boolean(selectionHint)) : continueDisabled}
+              onClick={stepIndex === 4 ? () => { void handlePublishLive(); setStepIndex((index) => Math.min(STEPS.length - 1, index + 1)); } : () => setStepIndex((index) => Math.min(STEPS.length - 1, index + 1))}
             >
-              {stepIndex === 4 ? <>Submit & go live <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
+              {stepIndex === 4 ? <>{publishing ? <RefreshCw aria-hidden size={17} /> : <Send aria-hidden size={17} />} {publishing ? "Submitting..." : "Submit & go live"} <ChevronRight aria-hidden size={17} /></> : <>Continue to {STEPS[stepIndex + 1]?.toLowerCase()} <ChevronRight aria-hidden size={17} /></>}
             </button>
           )}
         </footer>

@@ -17,16 +17,18 @@ test("approval workflow stays contextual instead of exposing a standalone sectio
   assert.match(approvalRoute, /approved|rejected/);
 });
 
-test("publish review state is not treated as a hard publish error", () => {
+test("publish review state skips approval and submits directly", () => {
   const readinessRoute = readFileSync("src/app/api/adstudio/publish-readiness/route.ts", "utf8");
   const panel = readFileSync("src/components/adstudio/panels/publish-panel.tsx", "utf8");
 
-  assert.match(readinessRoute, /review: true/);
-  assert.match(readinessRoute, /Submitted for review/);
-  assert.match(panel, /!item\.met && \(!item\.review \|\| item\.blocked\)/);
-  assert.match(panel, /needsApprovalReview/);
-  assert.match(panel, /Send for review/);
-  assert.match(panel, /Submitted for review/);
+  assert.doesNotMatch(readinessRoute, /approval_ready/);
+  assert.doesNotMatch(readinessRoute, /Submitted for review/);
+  assert.doesNotMatch(readinessRoute, /Submit campaign for review/);
+  assert.doesNotMatch(panel, /needsApprovalReview/);
+  assert.doesNotMatch(panel, /Send for review/);
+  assert.doesNotMatch(panel, /requestApproval: true/);
+  assert.match(panel, /Submit & go live/);
+  assert.match(panel, /studio-review-creatives/);
 });
 
 test("publish budget supports presets, custom dates, and campaigns without an end date", () => {

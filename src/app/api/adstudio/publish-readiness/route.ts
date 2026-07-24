@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
   }
 
   const writesEnabled = process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
-  const campaignId = request.nextUrl.searchParams.get("campaignId");
   const connections = await listProviderConnections(context.supabase, context.access.workspaceId);
 
   const metaConnection =
@@ -42,10 +41,6 @@ export async function GET(request: NextRequest) {
     status: metaConnection?.status ?? "not_connected",
     accountId: metaConnection?.externalAccountId ?? null,
   };
-
-  const approval = campaignId
-    ? await loadLatestApprovalStatus(context.supabase, context.access.workspaceId, campaignId)
-    : null;
 
   const checklist = [
     {
@@ -76,22 +71,6 @@ export async function GET(request: NextRequest) {
       automatic: true,
       blocked: !writesEnabled,
     },
-    ...(campaignId
-      ? [
-          {
-            id: "approval_ready",
-            label: approval === "approved"
-              ? "Approval complete"
-              : approval === "requested"
-                ? "Submitted for review"
-                : "Submit campaign for review",
-            done: approval === "approved",
-            automatic: true,
-            review: true,
-            blocked: approval === "rejected" || approval === "cancelled",
-          },
-        ]
-      : []),
   ];
 
   const blockers = checklist.filter((item) => !item.done).map((item) => item.label);
@@ -109,33 +88,4 @@ export async function GET(request: NextRequest) {
     ready,
     note: "Read-only Meta check - no ads are created. Live publishing remains disabled until every step is complete.",
   });
-}
-
-async function loadLatestApprovalStatus(
-  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
-  workspaceId: string,
-  campaignId: string,
-) {
-  const { data: latestPlan } = await supabase
-    .from("meta_publish_plans")
-    .select("id,approval_request_id")
-    .eq("workspace_id", workspaceId)
-    .eq("adstudio_campaign_id", campaignId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const approvalIds = typeof latestPlan?.approval_request_id === "string" ? [latestPlan.approval_request_id] : [];
-  const targetIds = [campaignId, ...(typeof latestPlan?.id === "string" ? [latestPlan.id] : [])];
-  const query = supabase
-    .from("approval_requests")
-    .select("status")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  const { data } = approvalIds.length
-    ? await query.in("id", approvalIds)
-    : await query.in("target_id", targetIds);
-
-  return typeof data?.[0]?.status === "string" ? data[0].status : null;
 }

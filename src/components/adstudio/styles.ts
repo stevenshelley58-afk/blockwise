@@ -135,6 +135,8 @@
 .studio-creative-intro strong{font-size:15px;font-weight:750}
 .studio-creative-intro span{max-width:65ch;color:var(--muted);font-size:13px;line-height:1.45}
 .studio-creative-selection{display:grid;gap:12px}
+.studio-review-creatives{display:grid;gap:12px;margin-top:4px}
+.studio-review-creatives>strong{font-size:14px;font-weight:700}
 .studio-creative-selection article{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#fff}
 .studio-creative-selection article.selected{border-color:#16181d;box-shadow:0 0 0 1px #16181d}
 .studio-creative-selection article>label{min-height:54px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:8px 16px;font-weight:720;cursor:pointer}
