@@ -11,6 +11,7 @@ import {
   appendGenerationAds,
   generationAdMediaUrl,
   generationAdRadarHref,
+  hasGenerationAdImage,
 } from "./generation-ad-stream-data";
 
 type GenerationAdStreamProps = {
@@ -64,8 +65,8 @@ export function GenerationAdStream({ location, quality, titleId }: GenerationAdS
     void getPrimedAds(location)
       .then(({ local, longest }) => {
         if (!active) return;
-        const localAds = local.ads;
-        fallbackRef.current = longest.ads;
+        const localAds = local.ads.filter(hasGenerationAdImage);
+        fallbackRef.current = longest.ads.filter(hasGenerationAdImage);
         setLocationLabel(local.location.label || location || "your area");
         setNextCursor(local.nextCursor);
 
@@ -280,7 +281,10 @@ function GenerationAdCard({
 }) {
   const mediaUrl = generationAdMediaUrl(card);
   const location = [card.suburb, card.state].filter(Boolean).join(", ");
-  const headline = card.headline || card.description || card.body || "Property campaign";
+  const primaryText = card.body || card.headline || card.description;
+  const linkHeadline = (card.body ? card.headline : null) || card.description || card.pageName;
+
+  if (!mediaUrl) return null;
 
   return (
     <article className="studio-generation-card">
@@ -293,29 +297,32 @@ function GenerationAdCard({
             <strong>{card.pageName}</strong>
             <small>Sponsored{location ? ` · ${location}` : ""}</small>
           </span>
-          <em>{card.activeStatus === "active" ? "Active" : "Ad"}</em>
         </span>
-        <span className="studio-generation-card-copy">{headline}</span>
+        {primaryText ? <span className="studio-generation-card-copy">{primaryText}</span> : null}
         <span className="studio-generation-card-media">
-          {mediaUrl ? (
-            <img
-              src={mediaUrl}
-              alt=""
-              loading={eager ? "eager" : "lazy"}
-              decoding="async"
-              fetchPriority={eager ? "high" : "low"}
-            />
-          ) : (
-            <span><ImageIcon aria-hidden size={28} /> Property ad</span>
-          )}
+          <img
+            src={mediaUrl}
+            alt=""
+            loading={eager ? "eager" : "lazy"}
+            decoding="async"
+            fetchPriority={eager ? "high" : "low"}
+          />
         </span>
-        <span className="studio-generation-card-foot">
-          <strong>{card.durationLabel || "Recently seen"}</strong>
-          <small>{card.platforms.slice(0, 2).join(" · ") || "Meta"}</small>
+        <span className="studio-generation-card-linkbar">
+          <span className="studio-generation-card-link">
+            {card.destinationDomain ? <small>{card.destinationDomain}</small> : null}
+            <strong>{linkHeadline}</strong>
+          </span>
+          <span className="studio-generation-card-cta">{generationAdCtaLabel(card.cta)}</span>
         </span>
       </button>
     </article>
   );
+}
+
+function generationAdCtaLabel(cta: string | null): string {
+  const words = cta?.toLowerCase().replace(/[_-]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Learn more";
 }
 
 function getPrimedAds(location: string): Promise<PrimedAds> {

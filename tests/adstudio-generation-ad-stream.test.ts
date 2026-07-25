@@ -20,6 +20,14 @@ test("generation ad batches stay deduplicated and bounded", () => {
   assert.deepEqual(merged.map((item) => item.id), ["one", "two", "three"]);
 });
 
+test("generation ad batches drop ads without an image", () => {
+  const merged = appendGenerationAds(
+    [ad("one")],
+    [ad("two", { media: [] }), ad("three", { media: [{ kind: "video", url: "https://cdn.example/video.mp4", posterUrl: null }] }), ad("four")],
+  );
+  assert.deepEqual(merged.map((item) => item.id), ["one", "four"]);
+});
+
 test("generation cards use images before video posters and link to the advertiser search", () => {
   const card = ad("creative", {
     pageName: "West & Co Property",
@@ -54,7 +62,7 @@ function ad(id: string, patch: Partial<PublicAdRadarCard> = {}): PublicAdRadarCa
     destinationUrl: null,
     destinationDomain: null,
     adType: null,
-    media: [],
+    media: [{ kind: "image", url: "https://cdn.example/image.jpg", posterUrl: null }],
     ...patch,
   };
 }

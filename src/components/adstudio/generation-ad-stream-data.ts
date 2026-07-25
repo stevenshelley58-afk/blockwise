@@ -17,13 +17,17 @@ export function appendGenerationAds(
   const merged = [...existing];
 
   for (const card of incoming) {
-    if (seen.has(card.id)) continue;
+    if (seen.has(card.id) || !hasGenerationAdImage(card)) continue;
     seen.add(card.id);
     merged.push(card);
     if (merged.length >= limit) break;
   }
 
   return merged;
+}
+
+export function hasGenerationAdImage(card: PublicAdRadarCard): boolean {
+  return generationAdMediaUrl(card) !== null;
 }
 
 export function generationAdMediaUrl(card: PublicAdRadarCard): string | null {
