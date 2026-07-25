@@ -278,17 +278,27 @@ async function stealthRender(url) {
 /** Fetch /json/version from a CDP HTTP endpoint and return a usable ws:// URL. */
 async function resolveCdpWsUrl(httpUrl) {
   const base = httpUrl.replace(/\/$/, "");
+  const parsed = new URL(base);
+  // Chrome DevTools rejects Host headers that aren't localhost or an IP.
+  // Resolve the docker hostname to its IP so the Host header is an IP address.
+  const { lookup } = await import("node:dns/promises");
+  let ip = parsed.hostname;
+  try {
+    const resolved = await lookup(parsed.hostname);
+    ip = resolved.address;
+  } catch { /* use hostname as-is */ }
+  const ipBase = `${parsed.protocol}//${ip}:${parsed.port}`;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(`${base}/json/version`, { signal: controller.signal });
+    const res = await fetch(`${ipBase}/json/version`, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const info = await res.json();
     const wsUrl = info.webSocketDebuggerUrl;
     if (!wsUrl) throw new Error("No webSocketDebuggerUrl in /json/version");
-    // Rewrite localhost → actual host so cross-container connections work.
-    const host = new URL(base).host; // e.g. "blockwise-steel:9223"
-    return wsUrl.replace(/ws:\/\/localhost(:\d+)?\//, `ws://${host}/`);
+    // Rewrite ws://localhost/... → ws://<ip>:<port>/...
+    return wsUrl.replace(/ws:\/\/localhost(:\d+)?\//, `ws://${ip}:${parsed.port}/`);
   } finally {
     clearTimeout(timer);
   }
