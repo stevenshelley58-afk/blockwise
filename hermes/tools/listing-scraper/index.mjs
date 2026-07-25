@@ -254,7 +254,7 @@ async function stealthRender(url) {
           userAgent: BROWSER_HEADERS["User-Agent"],
           locale: "en-AU",
           viewport: { width: 1920, height: 1080 },
-          ...(RESIDENTIAL_PROXY_URL ? { proxy: { server: RESIDENTIAL_PROXY_URL } } : {}),
+          ...(parseProxyConfig(RESIDENTIAL_PROXY_URL) ? { proxy: parseProxyConfig(RESIDENTIAL_PROXY_URL) } : {}),
         });
         const page = await context.newPage();
         await page.goto(url, { waitUntil: "networkidle", timeout: STEALTH_TIMEOUT_MS });
