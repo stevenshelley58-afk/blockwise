@@ -479,6 +479,47 @@ export function PublishSetupPanel({
     };
   }
 
+  // Poll the publish plan status until it reaches a terminal state. The submit
+  // handler only confirms the run was queued; the trigger.dev worker resolves
+  // asynchronously, so without polling the "Creating your paused ads on Meta"
+  // spinner would spin forever even on a successful publish.
+  useEffect(() => {
+    if (publishPhase !== "creating" || !publishPlanId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/integrations/meta/publish-plans/${publishPlanId}`, { cache: "no-store" });
+        const body = (await response.json().catch(() => ({}))) as { status?: string; lastError?: string | null };
+        if (cancelled) return;
+
+        if (body.status === "paused_live" || body.status === "completed") {
+          setPublishPhase("live");
+          setPublishMessage("Ad submitted");
+        } else if (body.status === "failed") {
+          setPublishPhase("failed");
+          setPublishError(body.lastError || "Meta rejected the publish. Check your ad account and try again.");
+        } else if (++attempts >= 100) {
+          // ~5 min soft cap. The plan is still queued/running — stop the spinner
+          // and point the user to Results rather than spinning indefinitely.
+          setPublishPhase("live");
+          setPublishMessage("Still processing on Meta — confirm in Results shortly.");
+        }
+      } catch {
+        // Transient fetch error — keep polling.
+      }
+    };
+
+    poll();
+    const interval = window.setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [publishPhase, publishPlanId]);
+
   async function handlePublishLive() {
     if (!allMet || selectionHint || !campaignStepReady || !destinationReady || !budgetStepReady) return;
     setPublishing(true);

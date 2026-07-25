@@ -16,6 +16,7 @@ import {
   loadMetaPublishPlanByIdempotencyKey,
   persistMetaPublishPlan,
   resolveMetaConnectionSetup,
+  validateMetaConnectionSetup,
   validateMetaPublishPlanReadiness,
   type MetaConnectionSetup,
   type MetaExecutionAdapter,
@@ -28,6 +29,7 @@ import {
   loadStoredProviderTokens,
   type ProviderConnectionMetadata,
 } from "@/lib/providers/provider-connections";
+import { checkMetaConnectionHealth } from "@/lib/providers/meta-assets";
 import { fetchEligibleMetaCampaigns } from "@/lib/providers/meta-campaigns";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -63,6 +65,54 @@ type MetaPlanPersistenceResult = {
 
 function providerWritesEnabled() {
   return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
+
+/**
+ * Resolves the Meta connection's real publishable status from live token health
+ * and setup completeness, ignoring the denormalised `status` column. That column
+ * is written by several paths (OAuth callback, Settings GET/PATCH, a scheduled
+ * health task) with inconsistent criteria, and the scheduled task has been
+ * failing to run — so a healthy, fully-configured connection can sit at
+ * "needs_attention" and block every publish. The source of truth is the token
+ * itself plus the setup, so check those and persist the result so the dashboard
+ * and subsequent reads stop trusting the stale flag.
+ */
+async function reconcileMetaConnectionStatus(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  connection: ProviderConnectionMetadata,
+): Promise<ProviderConnectionStatus> {
+  try {
+    const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+    const health = await checkMetaConnectionHealth({
+      accessToken: tokens.accessToken ?? "",
+      tokenExpiresAt: connection.tokenExpiresAt,
+    });
+    const tokenUsable = health.status === "healthy" || health.status === "expiring_soon";
+    const setupClean = validateMetaConnectionSetup(
+      resolveMetaConnectionSetup(connection.metadata, connection.externalAccountId),
+    ).length === 0;
+    const reconciled: ProviderConnectionStatus = tokenUsable && setupClean ? "connected" : "needs_attention";
+
+    if (reconciled !== connection.status) {
+      await serviceSupabase
+        .from("provider_connections")
+        .update({
+          status: reconciled,
+          health_status: health.status,
+          health_checked_at: health.checkedAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id)
+        .eq("workspace_id", connection.workspaceId)
+        .eq("provider", "meta");
+    }
+
+    return reconciled;
+  } catch {
+    // A transient health-check failure must not block publish harder than the
+    // stored status already would — fall back to it.
+    return publishableConnectionStatus(connection.status);
+  }
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -126,8 +176,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Choose an active or paused housing lead campaign from the connected Meta account." }, { status: 422 });
     }
   }
+  // Reconcile the Meta connection from live health/setup rather than the stale
+  // stored status (see reconcileMetaConnectionStatus).
+  const metaConnectionStatus = metaConnection
+    ? await reconcileMetaConnectionStatus(serviceSupabase, metaConnection)
+    : ("not_connected" as ProviderConnectionStatus);
   const providerStatuses = {
-    ...(firstCopyPack?.meta ? { meta: publishableConnectionStatus(metaConnection?.status) } : {}),
+    ...(firstCopyPack?.meta ? { meta: metaConnectionStatus } : {}),
     ...(firstCopyPack?.googleSearch ? { google: publishableConnectionStatus(googleConnection?.status) } : {}),
   };
   const publishRequests = buildAdStudioPublishRequests({
@@ -166,7 +221,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const metaReadiness = metaPublishPlan
     ? validateMetaPublishPlanReadiness(metaPublishPlan, {
         approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
-        providerConnectionStatus: publishableConnectionStatus(metaConnection?.status),
+        providerConnectionStatus: metaConnectionStatus,
         complianceStatus: pack.compliance.status,
       })
     : { ready: false, blockers: firstCopyPack?.meta ? ["Meta account is not connected."] : [] };
