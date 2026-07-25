@@ -35,7 +35,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const BUCKET = "adstudio-media";
 
-const STATIC_TIMEOUT_MS = 5_000;
+const STATIC_TIMEOUT_MS = 10_000;
 const STEALTH_TIMEOUT_MS = 20_000;
 const PHOTO_TIMEOUT_MS = 12_000;
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -231,10 +231,17 @@ async function staticFetch(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), STATIC_TIMEOUT_MS);
   try {
+    // Route through residential proxy if available (defeats IP-based blocking).
+    let dispatcher;
+    if (RESIDENTIAL_PROXY_URL) {
+      const { ProxyAgent } = await import("undici");
+      dispatcher = new ProxyAgent(RESIDENTIAL_PROXY_URL);
+    }
     const response = await fetch(url, {
       headers: BROWSER_HEADERS,
       signal: controller.signal,
       redirect: "follow",
+      ...(dispatcher ? { dispatcher } : {}),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const contentType = response.headers.get("content-type") || "";
