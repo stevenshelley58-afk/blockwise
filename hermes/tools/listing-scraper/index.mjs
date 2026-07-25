@@ -242,7 +242,10 @@ async function stealthRender(url) {
 
   for (const cdpUrl of cdpUrls) {
     try {
-      const browser = await chromium.connectOverCDP(cdpUrl, {
+      // Resolve the WebSocket debugger URL manually. Steel returns
+      // ws://localhost/... which breaks cross-container; we rewrite the host.
+      const wsUrl = await resolveCdpWsUrl(cdpUrl);
+      const browser = await chromium.connectOverCDP(wsUrl, {
         timeout: STEALTH_TIMEOUT_MS,
       });
 
@@ -270,6 +273,25 @@ async function stealthRender(url) {
   }
 
   throw lastError || new Error("No CDP endpoints available");
+}
+
+/** Fetch /json/version from a CDP HTTP endpoint and return a usable ws:// URL. */
+async function resolveCdpWsUrl(httpUrl) {
+  const base = httpUrl.replace(/\/$/, "");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${base}/json/version`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const info = await res.json();
+    const wsUrl = info.webSocketDebuggerUrl;
+    if (!wsUrl) throw new Error("No webSocketDebuggerUrl in /json/version");
+    // Rewrite localhost → actual host so cross-container connections work.
+    const host = new URL(base).host; // e.g. "blockwise-steel:9223"
+    return wsUrl.replace(/ws:\/\/localhost(:\d+)?\//, `ws://${host}/`);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ---------------------------------------------------------------------------
