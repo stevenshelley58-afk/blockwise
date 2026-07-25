@@ -152,10 +152,8 @@ services:
   listing-scraper:
     build:
       context: ../..
-      dockerfile: infra/hermes/Dockerfile
-    image: "${BLOCKWISE_HERMES_IMAGE:-blockwise/hermes-research:2026-06-02}"
+      dockerfile: infra/hermes/Dockerfile.listing-scraper
     container_name: blockwise-listing-scraper
-    command: ["node", "/app/hermes/tools/listing-scraper/index.mjs"]
     restart: unless-stopped
     depends_on:
       - steel
@@ -167,7 +165,7 @@ services:
       STEEL_CDP_URL: http://blockwise-steel:9223
       RESIDENTIAL_PROXY_URL: ${RESIDENTIAL_PROXY_URL:-}
       SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-${HERMES_SUPABASE_SERVICE_ROLE_KEY:-}}
       PORT: "8650"
     networks: [research]
     deploy:
