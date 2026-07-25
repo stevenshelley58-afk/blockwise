@@ -177,6 +177,127 @@ test("buildMetaPublishPlan keeps exact selected suburbs when surrounding areas a
   });
 });
 
+test("buildMetaPublishPlan keeps the destination URL and attaches the finished ad image", () => {
+  const pack = buildPack();
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    controls: { ...controls, destinationUrl: "https://agency.example/appraisal" },
+    approvalRequestId: "approval_123",
+  });
+
+  assert.equal(plan.controls.destinationUrl, "https://agency.example/appraisal");
+  // The fixture clone images are data URLs → inline image assets.
+  assert.equal(plan.creatives.every((creative) => creative.asset?.type === "image" && Boolean(creative.asset.bytesBase64)), true);
+  assert.equal(plan.leadForms.every((form) => form.thankYouWebsiteUrl === "https://agency.example/appraisal"), true);
+});
+
+test("buildMetaPublishPlan resolves stored clone references to storage assets", () => {
+  const pack = buildPack();
+  const storedPack = {
+    ...pack,
+    creatives: pack.creatives.map((creative) => ({
+      ...creative,
+      canvas: {
+        ...creative.canvas,
+        objects: creative.canvas.objects.map((object) => (
+          object.objectId === "template_clone_image"
+            ? { ...object, content: "/api/adstudio/media?path=workspace_demo%2Fclones%2Fad.png", assetId: "" }
+            : object
+        )),
+      },
+    })),
+  };
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: storedPack,
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+
+  assert.equal(plan.creatives.every((creative) => creative.asset?.source === "storage"), true);
+  assert.equal(plan.creatives[0]?.asset?.storagePath, "workspace_demo/clones/ad.png");
+});
+
+test("validateMetaPublishPlanReadiness blocks creatives without a finished ad image", () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    approvalRequestId: "approval_123",
+  });
+  const planWithoutImages = {
+    ...plan,
+    creatives: plan.creatives.map((creative) => ({ ...creative, asset: null })),
+  };
+
+  const readiness = validateMetaPublishPlanReadiness(
+    { ...planWithoutImages, status: "approved" },
+    {
+      approvalStatus: "approved",
+      providerConnectionStatus: "connected",
+      complianceStatus: "approved",
+    },
+  );
+
+  assert.equal(readiness.ready, false);
+  assert.deepEqual(readiness.blockers, ["The finished ad image could not be found for one or more creatives."]);
+});
+
+test("marketing_api adapter links ads to the destination URL, not the privacy policy", async () => {
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: buildPack(),
+    connectionId: "connection_123",
+    setup,
+    controls: { ...controls, destinationUrl: "https://agency.example/appraisal" },
+    approvalRequestId: "approval_123",
+  });
+  const requested: Array<{ url: string; body: Record<string, unknown> }> = [];
+  let nextId = 1;
+  const fetchImpl = async (url: string | URL | Request, init?: RequestInit) => {
+    requested.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown> });
+    return new Response(JSON.stringify({ id: `meta_${nextId++}` }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  await createMetaExecutionAdapter("marketing_api").publish(
+    { ...plan, status: "approved" },
+    { accessToken: "token", fetchImpl },
+  );
+
+  const creativeCreate = requested.find((request) => String(request.url).includes("/adcreatives"));
+  const linkData = (creativeCreate?.body.object_story_spec as Record<string, unknown>).link_data as Record<string, unknown>;
+  assert.ok(String(linkData.link).startsWith("https://agency.example/appraisal?"));
+  assert.match(String(linkData.link), /utm_source=meta/);
+});
+
+test("buildMetaPublishTaskOptions varies the trigger idempotency key per attempt", () => {
+  const first = buildMetaPublishTaskOptions({
+    workspaceId: "workspace_demo",
+    planId: "plan_1",
+    idempotencyKey: "meta_publish:key",
+    attemptKey: "2026-07-25T01:00:00.000Z",
+  });
+  const retry = buildMetaPublishTaskOptions({
+    workspaceId: "workspace_demo",
+    planId: "plan_1",
+    idempotencyKey: "meta_publish:key",
+    attemptKey: "2026-07-25T01:05:00.000Z",
+  });
+
+  // A retry after failure must queue a fresh run instead of getting the
+  // cached original back, while the concurrency key still serialises the plan.
+  assert.notEqual(first.idempotencyKey, retry.idempotencyKey);
+  assert.equal(first.concurrencyKey, retry.concurrencyKey);
+});
+
 test("validateMetaConnectionSetup requires production Meta assets", () => {
   assert.deepEqual(validateMetaConnectionSetup({ ...setup, pageId: "" }), [
     "Meta Page is not configured.",
