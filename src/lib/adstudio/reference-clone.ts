@@ -18,12 +18,25 @@ export type CloneInputs = {
 export const GLOBAL_CLONE_NEGATIVES = [
   "do not retain any name, phone number, URL, handle, logo, address, price, or identifying detail from reference image 1",
   "do not invent or change any text beyond the supplied text values",
-  "do not distort, repaint, relight, or restructure supplied property photos, logos, or faces",
+  "do not distort, repaint, relight, or restructure the original visible content of supplied property photos, logos, or faces",
+  "do not crop away the main subject of a supplied photo; a house, room, or person must never be cut off to fit the frame",
   "no extra logos, watermarks, captions, borders, or platform UI",
   "no fabricated prices, sale results, awards, or claims",
   "no warped windows, rooflines, faces, hands, logos, or text",
   "keep every supplied text value crisp, legible, and inside the canvas",
 ].join("; ");
+
+/**
+ * How a supplied photo is fitted into the design's photo area when their aspect
+ * ratios differ. Extending the scene at the edges is explicitly permitted so the
+ * model is not forced into a destructive crop by the no-repaint rule above.
+ */
+export const PHOTO_FIT_RULE =
+  "Fit each supplied photo to its area in the design so its main subject stays completely in frame. " +
+  "If the photo's aspect ratio does not match its area, choose the better of two options: " +
+  "crop only when the crop still shows the entire main subject; " +
+  "otherwise extend the photo by continuing its own scene naturally past its original edges (more sky, lawn, driveway, wall, or surroundings that match its lighting and perspective). " +
+  "Never solve an aspect-ratio mismatch by cutting off part of the main subject, and never stretch, squash, or add invented objects to the photo.";
 
 /** Resolve every declared field to exact text, using the safe sample value only
  * when a caller does not provide a replacement. */
@@ -78,6 +91,7 @@ export function buildCloneImageRequest(template: AdStudioTemplate, inputs: Clone
       "Clone reference image 1 as closely as possible, preserving its composition, spacing, typography, visual hierarchy, shapes, and image treatment.",
       assetLegend,
       "Customer asset replacement is mandatory: reference image 1 controls the design only; never retain a source image where a supplied replacement asset belongs.",
+      ...(suppliedImages.length ? [PHOTO_FIT_RULE] : []),
       `Use these exact visible text values and no others: ${copyLegend}.`,
       "Every supplied text value is mandatory: render each value character-for-character exactly once, fully visible, and at a readable size.",
       `Use ${brandHex}. Produce one finished ${aspectRatio} Meta real-estate ad with no Meta interface chrome.`,
@@ -114,7 +128,7 @@ export function buildTargetedEditRequest(inputs: TargetedEditInputs): ImageProvi
     : "";
   const requestedChange = inputs.editInstruction?.trim();
   const instruction = inputs.newImage
-    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area.${requestedChange ? ` Apply this direction only to the replacement: ${requestedChange}.` : ""} Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
+    ? `Reference image 1 is an existing finished ad. Replace only the ${inputs.fieldLabel} with reference image 2, fitted naturally into the same area. ${PHOTO_FIT_RULE}${requestedChange ? ` Apply this direction only to the replacement: ${requestedChange}.` : ""} Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
     : requestedChange
       ? `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} according to this direction: ${requestedChange}. Keep every other pixel, including all text, layout, colours, logos, and other photos, unchanged.${preservationInstruction}`
       : `Reference image 1 is an existing finished ad. Change only the ${inputs.fieldLabel} so it reads exactly "${inputs.newValue}" in the same position and type treatment. Keep every other pixel unchanged.${preservationInstruction}`;

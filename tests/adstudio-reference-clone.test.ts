@@ -4,6 +4,7 @@ import test from "node:test";
 import { AD_STUDIO_TEMPLATES } from "../src/lib/adstudio/templates.ts";
 import {
   GLOBAL_CLONE_NEGATIVES,
+  PHOTO_FIT_RULE,
   buildCloneImageRequest,
   buildTargetedEditRequest,
   resolveCloneCopy,
@@ -49,6 +50,36 @@ test("copy is exact, defaulted from safe sample values, and max-length bounded",
   assert.match(request.prompt, /Use these exact visible text values and no others/);
   assert.match(request.prompt, /Customer asset replacement is mandatory/);
   assert.match(request.prompt, /render each value character-for-character exactly once/);
+});
+
+test("supplied photos carry the fit rule: extend past edges instead of cropping the subject", () => {
+  const request = buildCloneImageRequest(template, { images });
+  assert.ok(request.prompt.includes(PHOTO_FIT_RULE));
+  assert.match(request.prompt, /main subject stays completely in frame/);
+  assert.match(request.prompt, /extend the photo by continuing its own scene naturally past its original edges/);
+  assert.match(request.prompt, /crop only when the crop still shows the entire main subject/);
+  assert.match(GLOBAL_CLONE_NEGATIVES, /do not crop away the main subject of a supplied photo/);
+  // The no-repaint negative must protect original content without banning edge extension.
+  assert.match(GLOBAL_CLONE_NEGATIVES, /original visible content of supplied property photos/);
+});
+
+test("photo replacement edits carry the fit rule; text edits do not", () => {
+  const imageEdit = buildTargetedEditRequest({
+    currentImage: "data:image/png;base64,CURRENT",
+    fieldLabel: "property photo",
+    newValue: "",
+    newImage: "data:image/png;base64,NEW_PROPERTY",
+    aspectRatio: "4:5",
+  });
+  assert.ok(imageEdit.prompt.includes(PHOTO_FIT_RULE));
+
+  const textEdit = buildTargetedEditRequest({
+    currentImage: "data:image/png;base64,CURRENT",
+    fieldLabel: "price",
+    newValue: "$1,250,000",
+    aspectRatio: "4:5",
+  });
+  assert.ok(!textEdit.prompt.includes(PHOTO_FIT_RULE));
 });
 
 test("missing required assets fail before any model request", () => {
