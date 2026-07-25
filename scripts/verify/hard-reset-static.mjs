@@ -185,12 +185,23 @@ function checkHermesQueueWorkerContract() {
     supervisor: "hermes/tools/research-runtime/src/supervisor.ts",
     types: "hermes/tools/research-runtime/src/types.ts",
     worker: "hermes/tools/research-runtime/src/worker.ts",
-    capture: "hermes/tools/meta-library-capture/src/capture.ts",
-    captureTypes: "hermes/tools/meta-library-capture/src/types.ts",
   };
+  // The Meta capture tool moved from src/capture.ts + src/types.ts to a set of
+  // .mjs modules (commit 5f80a8b). Scan all of its source so the forbidden
+  // location/search-input check below still covers the active capture runtime.
+  const captureFiles = [
+    "hermes/tools/meta-library-capture/bin/capture.mjs",
+    "hermes/tools/meta-library-capture/src/crawler.mjs",
+    "hermes/tools/meta-library-capture/src/graphql.mjs",
+    "hermes/tools/meta-library-capture/src/map-ad.mjs",
+    "hermes/tools/meta-library-capture/src/outcome.mjs",
+  ];
   const runtimeText = Object.fromEntries(
     Object.entries(runtimeFiles).map(([name, path]) => [name, stripComments(readFileSync(join(root, path), "utf8"))]),
   );
+  const captureRuntime = captureFiles
+    .map((path) => stripComments(readFileSync(join(root, path), "utf8")))
+    .join("\n");
 
   if (!/export\s+\*\s+from\s+["']\.\/worker\.ts["']/.test(runtimeText.index)) {
     failures.push("Hermes research runtime must export its queue worker entrypoint from src/index.ts");
@@ -227,7 +238,7 @@ function checkHermesQueueWorkerContract() {
     failures.push("Hermes ResearchSupervisor must include a media queue planner between collector and classifier");
   }
 
-  const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "locationSearchGateSchema")}\n${runtimeText.capture}\n${runtimeText.captureTypes}`;
+  const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "locationSearchGateSchema")}\n${captureRuntime}`;
   const forbiddenCollectionInputs = [
     /\bsearchQuery\b/i,
     /\bsearch_query\b/i,
