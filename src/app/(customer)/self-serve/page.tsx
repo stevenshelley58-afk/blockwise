@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ChevronRight, Clock3, FileSearch, Radar } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, CircleAlert, Clock3, FileSearch, Megaphone, Package, Palette, Plug, Radar } from "lucide-react";
 import Link from "next/link";
 
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
@@ -164,59 +164,115 @@ export default async function SelfServeHome() {
           </Button>
         </div>
 
-        {/* Workspace status strip */}
-        <Card className="mt-8 overflow-hidden py-0">
-          <CardContent className="p-0">
-            <dl className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
-              <div className="bg-card px-5 py-4">
-                <dt className="text-xs font-medium text-muted-foreground">Ads created</dt>
-                <dd className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums">
-                  {usedAdPacks}
-                </dd>
+        {/* Key numbers */}
+        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Ads created</p>
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
+                  <Megaphone aria-hidden className="size-4" />
+                </span>
               </div>
-              <div className="bg-card px-5 py-4">
-                <dt className="text-xs font-medium text-muted-foreground">Free ad packs left</dt>
-                <dd className="mt-1.5 flex items-baseline gap-1 text-2xl font-bold tracking-tight tabular-nums">
-                  {remainingAdPacks}
-                  <span className="text-sm font-medium text-muted-foreground">
-                    / {INCLUDED_AD_PACKS}
-                  </span>
-                </dd>
-                <Progress
-                  value={(usedAdPacks / INCLUDED_AD_PACKS) * 100}
-                  className="mt-2.5 h-1.5"
-                  aria-label="Ad packs used"
-                />
+              <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{usedAdPacks}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {usedAdPacks === 0
+                  ? "No ads yet"
+                  : usedAdPacks === 1
+                    ? "1 ad published"
+                    : `${usedAdPacks} ads published`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Free ad packs left</p>
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-(--accent-tint) text-(--accent)">
+                  <Package aria-hidden className="size-4" />
+                </span>
               </div>
-              <div className="bg-card px-5 py-4">
-                <dt className="text-xs font-medium text-muted-foreground">Meta connection</dt>
-                <dd className="mt-2 flex items-center gap-2 text-sm font-semibold">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-2 shrink-0 rounded-full",
-                      hasProvider ? "bg-(--green-bright)" : "bg-(--faint)",
-                    )}
-                  />
-                  {hasProvider ? "Connected" : "Not connected"}
-                </dd>
+              <p className="mt-3 flex items-baseline gap-1 text-3xl font-bold tracking-tight tabular-nums">
+                {remainingAdPacks}
+                <span className="text-base font-medium text-muted-foreground">/ {INCLUDED_AD_PACKS}</span>
+              </p>
+              <Progress
+                value={(usedAdPacks / INCLUDED_AD_PACKS) * 100}
+                className="mt-2.5 h-1.5"
+                aria-label="Ad packs used"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Meta connection</p>
+                <span
+                  className={cn(
+                    "grid size-9 shrink-0 place-items-center rounded-lg",
+                    hasProvider
+                      ? "bg-(--green-soft) text-(--green)"
+                      : "bg-(--amber)/10 text-(--amber)",
+                  )}
+                >
+                  <Plug aria-hidden className="size-4" />
+                </span>
               </div>
-              <div className="bg-card px-5 py-4">
-                <dt className="text-xs font-medium text-muted-foreground">Brand pack</dt>
-                <dd className="mt-2 flex items-center gap-2 text-sm font-semibold">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-2 shrink-0 rounded-full",
-                      hasBrand ? "bg-(--green-bright)" : "bg-(--faint)",
-                    )}
-                  />
-                  {hasBrand ? "Ready" : "Incomplete"}
-                </dd>
+              <p
+                className={cn(
+                  "mt-3 flex items-center gap-1.5 text-lg font-semibold",
+                  hasProvider ? "text-(--green)" : "text-(--amber)",
+                )}
+              >
+                {hasProvider ? (
+                  <Check aria-hidden className="size-4" />
+                ) : (
+                  <CircleAlert aria-hidden className="size-4" />
+                )}
+                {hasProvider ? "Connected" : "Not connected"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {hasProvider ? "Ad account linked" : "Link your ad account"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Brand pack</p>
+                <span
+                  className={cn(
+                    "grid size-9 shrink-0 place-items-center rounded-lg",
+                    hasBrand
+                      ? "bg-(--green-soft) text-(--green)"
+                      : "bg-(--amber)/10 text-(--amber)",
+                  )}
+                >
+                  <Palette aria-hidden className="size-4" />
+                </span>
               </div>
-            </dl>
-          </CardContent>
-        </Card>
+              <p
+                className={cn(
+                  "mt-3 flex items-center gap-1.5 text-lg font-semibold",
+                  hasBrand ? "text-(--green)" : "text-(--amber)",
+                )}
+              >
+                {hasBrand ? (
+                  <Check aria-hidden className="size-4" />
+                ) : (
+                  <CircleAlert aria-hidden className="size-4" />
+                )}
+                {hasBrand ? "Ready" : "Incomplete"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {hasBrand ? "Logo and colours set" : "Add your brand details"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Setup + brand */}
         <div className="mt-6 grid gap-6 lg:grid-cols-5">
@@ -274,9 +330,9 @@ export default async function SelfServeHome() {
                             className={cn(
                               "grid size-8 shrink-0 place-items-center rounded-full border text-sm font-bold",
                               step.complete
-                                ? "border-transparent bg-(--accent-tint) text-(--accent)"
+                                ? "border-transparent bg-(--green-soft) text-(--green)"
                                 : isCurrent
-                                  ? "border-(--accent) bg-background text-(--accent)"
+                                  ? "border-transparent bg-(--accent) text-white"
                                   : "border-border bg-muted/50 text-muted-foreground",
                             )}
                           >
@@ -345,7 +401,7 @@ export default async function SelfServeHome() {
                 <Badge
                   variant="secondary"
                   className={cn(
-                    hasBrand ? "bg-(--green-soft) text-(--green)" : "text-muted-foreground",
+                    hasBrand ? "bg-(--green-soft) text-(--green)" : "bg-(--amber)/10 text-(--amber)",
                   )}
                 >
                   {hasBrand ? "Ready" : "Incomplete"}
