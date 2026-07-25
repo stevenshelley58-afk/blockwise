@@ -180,12 +180,14 @@ async function scrapeListing(url, workspaceId) {
     try {
       html = await stealthRender(url);
       usedStealth = true;
-    } catch {
-      // fall through
+      console.log(`[listing-scraper] stealth render ok, html length: ${html?.length || 0}`);
+    } catch (err) {
+      console.error(`[listing-scraper] stealth render failed: ${err.message}`);
     }
   }
 
   if (!html || html.length < 1000) {
+    console.error(`[listing-scraper] blocked: html length ${html?.length || 0}, snippet: ${(html || "").slice(0, 200)}`);
     return {
       ok: false,
       error: "blocked",
