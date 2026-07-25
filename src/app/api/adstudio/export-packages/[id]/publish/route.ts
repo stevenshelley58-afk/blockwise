@@ -115,6 +115,22 @@ async function reconcileMetaConnectionStatus(
   }
 }
 
+/**
+ * Filters the campaign pack's compliance issues to only those relevant to Meta,
+ * then re-evaluates the status. The compliance report is global — Google Search
+ * structural issues (missing headlines, images, etc.) must not block a Meta-only
+ * publish. Only Meta-relevant blocking issues should gate the Meta publish.
+ */
+function metaScopedComplianceStatus(
+  compliance: AdStudioCampaignPack["compliance"],
+): AdStudioCampaignPack["compliance"]["status"] {
+  const metaIssues = compliance.issues.filter((issue) => !issue.code.startsWith("google_"));
+  if (metaIssues.some((issue) => issue.severity === "blocking")) {
+    return "blocked";
+  }
+  return metaIssues.length > 0 ? "needs_review" : "approved";
+}
+
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const access = await requireAdStudioRequest(request);
@@ -212,17 +228,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
       })
     : null;
   let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
+  const scopedComplianceStatus = metaScopedComplianceStatus(pack.compliance);
   const providerPayloadReadiness = resolveAdStudioPublishReadiness({
     providerStatuses,
     approvalStatus: metaPublishPlanResult?.approval.status ?? existingApproval.status,
-    complianceStatus: pack.compliance.status,
+    complianceStatus: scopedComplianceStatus,
     hasDraftPayload: Boolean(firstCopyPack?.meta || firstCopyPack?.googleSearch),
   });
   const metaReadiness = metaPublishPlan
     ? validateMetaPublishPlanReadiness(metaPublishPlan, {
         approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
         providerConnectionStatus: metaConnectionStatus,
-        complianceStatus: pack.compliance.status,
+        complianceStatus: scopedComplianceStatus,
       })
     : { ready: false, blockers: firstCopyPack?.meta ? ["Meta account is not connected."] : [] };
   const adapterBlockers = metaPublishPlan?.adapter && metaPublishPlan.adapter !== "marketing_api"
